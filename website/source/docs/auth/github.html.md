@@ -22,7 +22,8 @@ scope can be used for authentication. If such a token is stolen from a third
 party service, and the attacker is able to make network calls to Vault, they
 will be able to log in as the user that generated the access token. When using
 this backend it is a good idea to ensure that access to Vault is restricted at
-a network level rather than public.
+a network level rather than public. If these risks are unacceptable to you, you
+should use a different backend.
 
 ## Authentication
 
