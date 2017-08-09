@@ -108,11 +108,18 @@ backend running the plugin.
 package main
 
 import (
+	"os"
+	
+	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/plugins"
 )
 
 func main() {
-	plugins.Serve(new(MyPlugin), nil)
+	apiClientMeta := &pluginutil.APIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(os.Args)
+	
+	plugins.Serve(New().(MyPlugin), apiClientMeta.GetTLSConfig())
 }
 ```
 
