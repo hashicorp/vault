@@ -462,9 +462,14 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.corsConfig = &CORSConfig{core: c}
 	// Load CORS config and provide a value for the core field.
 
+	_, txnOK := conf.Physical.(physical.Transactional)
 	// Wrap the physical backend in a cache layer if enabled and not already wrapped
 	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
-		c.physical = physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
+		if txnOK {
+			c.physical = physical.NewTransactionalCache(conf.Physical, conf.CacheSize, conf.Logger)
+		} else {
+			c.physical = physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
+		}
 	}
 
 	if !conf.DisableMlock {
