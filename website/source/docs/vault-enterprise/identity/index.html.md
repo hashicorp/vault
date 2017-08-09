@@ -82,4 +82,4 @@ users.
 ### API
 
 Vault identity can be managed entirely over the HTTP API. Please see [Identity
-API](/api/secrets/identity/index.html) for more details.
+API](/api/secret/identity/index.html) for more details.
