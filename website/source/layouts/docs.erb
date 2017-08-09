@@ -356,6 +356,20 @@
           <li<%= sidebar_current("docs-vault-enterprise-ui") %>>
             <a href="/docs/vault-enterprise/ui/index.html">UI (Web Interface)</a>
           </li>
+          <li <%= sidebar_current("docs-vault-enterprise-mfa")%> >
+            <a href="/docs/vault-enterprise/mfa/index.html">MFA</a>
+            <ul class="nav">
+              <li <%= sidebar_current("docs-vault-enterprise-mfa-totp")%>>
+                <a href="/docs/vault-enterprise/mfa/mfa-totp.html">TOTP MFA</a>
+              </li>
+              <li <%= sidebar_current("docs-vault-enterprise-mfa-okta")%>>
+                <a href="/docs/vault-enterprise/mfa/mfa-okta.html">Okta MFA</a>
+              </li>
+              <li <%= sidebar_current("docs-vault-enterprise-mfa-duo")%>>
+                <a href="/docs/vault-enterprise/mfa/mfa-duo.html">Duo MFA</a>
+              </li>
+            </ul>
+          </li>
         </ul>
       </li>
     </ul>
