@@ -1,4 +1,4 @@
-## 0.8.0 (unreleased)
+## 0.8.0 (August 9th, 2017)
 
 SECURITY:
 
