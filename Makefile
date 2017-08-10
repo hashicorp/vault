@@ -78,6 +78,26 @@ fmtcheck:
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
-	
 
-.PHONY: bin default generate test vet bootstrap fmt fmtcheck
+mysql-database-plugin:
+	@CGO_ENABLED=0 go build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
+
+mysql-legacy-database-plugin:
+	@CGO_ENABLED=0 go build -o bin/mysql-legacy-database-plugin ./plugins/database/mysql/mysql-legacy-database-plugin
+
+cassandra-database-plugin:
+	@CGO_ENABLED=0 go build -o bin/cassandra-database-plugin ./plugins/database/cassandra/cassandra-database-plugin
+
+postgresql-database-plugin:
+	@CGO_ENABLED=0 go build -o bin/postgresql-database-plugin ./plugins/database/postgresql/postgresql-database-plugin
+
+mssql-database-plugin:
+	@CGO_ENABLED=0 go build -o bin/mssql-database-plugin ./plugins/database/mssql/mssql-database-plugin
+
+hana-database-plugin:
+	@CGO_ENABLED=0 go build -o bin/hana-database-plugin ./plugins/database/hana/hana-database-plugin
+
+mongodb-database-plugin:
+	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
+
+.PHONY: bin default generate test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin
