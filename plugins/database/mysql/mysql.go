@@ -58,7 +58,16 @@ func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, erro
 }
 
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
-func Run(legacy bool, apiTLSConfig *api.TLSConfig) error {
+func Run(apiTLSConfig *api.TLSConfig) error {
+	return runCommon(false, apiTLSConfig)
+}
+
+// Run instantiates a MySQL object, and runs the RPC server for the plugin
+func RunLegacy(apiTLSConfig *api.TLSConfig) error {
+	return runCommon(true, apiTLSConfig)
+}
+
+func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
 	var f func() (interface{}, error)
 	if legacy {
 		f = New(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)

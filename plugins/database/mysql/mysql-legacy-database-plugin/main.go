@@ -13,7 +13,7 @@ func main() {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args)
 
-	err := mysql.Run(true, apiClientMeta.GetTLSConfig())
+	err := mysql.RunLegacy(apiClientMeta.GetTLSConfig())
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
