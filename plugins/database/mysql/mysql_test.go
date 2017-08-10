@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
+	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
@@ -66,7 +67,7 @@ func TestMySQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(MetadataLen, UsernameLen)
+	f := New(MetadataLen, MetadataLen, UsernameLen)
 	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
 	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
@@ -105,7 +106,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(MetadataLen, UsernameLen)
+	f := New(MetadataLen, MetadataLen, UsernameLen)
 	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
 
@@ -115,8 +116,8 @@ func TestMySQL_CreateUser(t *testing.T) {
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
+		DisplayName: "test-long-displayname",
+		RoleName:    "test-long-rolename",
 	}
 
 	// Test with no configured Creation Statememt
@@ -137,6 +138,68 @@ func TestMySQL_CreateUser(t *testing.T) {
 	if err := testCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
+
+	// Test a second time to make sure usernames don't collide
+	username, password, err = db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+}
+
+func TestMySQL_CreateUser_Legacy(t *testing.T) {
+	cleanup, connURL := prepareMySQLTestContainer(t)
+	defer cleanup()
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	f := New(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
+	dbRaw, _ := f()
+	db := dbRaw.(*MySQL)
+
+	err := db.Initialize(connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test-long-displayname",
+		RoleName:    "test-long-rolename",
+	}
+
+	// Test with no configured Creation Statememt
+	_, _, err = db.CreateUser(dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
+	if err == nil {
+		t.Fatal("Expected error when no creation statement is provided")
+	}
+
+	statements := dbplugin.Statements{
+		CreationStatements: testMySQLRoleWildCard,
+	}
+
+	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	// Test a second time to make sure usernames don't collide
+	username, password, err = db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
 }
 
 func TestMySQL_RevokeUser(t *testing.T) {
@@ -147,7 +210,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(MetadataLen, UsernameLen)
+	f := New(MetadataLen, MetadataLen, UsernameLen)
 	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
 
