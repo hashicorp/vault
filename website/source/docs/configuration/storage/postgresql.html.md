@@ -41,10 +41,13 @@ CREATE TABLE vault_kv_store (
 CREATE INDEX parent_path_idx ON vault_kv_store (parent_path);
 
 CREATE TABLE vault_lock (
-  key        TEXT COLLATE "C" PRIMARY KEY,
-  value      TEXT COLLATE "C",
-  vault_id   TEXT COLLATE "C" NOT NULL,
-  expiration TIMESTAMP WITHOUT TIME ZONE NOT NULL
+	vault_id   TEXT,
+	key        TEXT,
+	value      TEXT,
+	lock_lease_end TIMESTAMP WITH TIME ZONE,
+	-- row_expiration is used for garbage collection of old Vault instances
+	row_expiration TIMESTAMP WITH TIME ZONE NOT NULL,
+	PRIMARY KEY(vault_id, key)
 );
 ```
 
