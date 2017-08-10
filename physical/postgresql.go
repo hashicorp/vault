@@ -277,7 +277,8 @@ type PostgreSQLLock struct {
 	pollInterval   time.Duration
 	lockTTL        time.Duration
 
-	leader chan struct{}
+	leaderCh   chan struct{}
+	stepDownCh chan struct{}
 
 	key     string
 	value   string
@@ -305,7 +306,6 @@ func (m *PostgreSQLBackend) LockWith(key, value string) (Lock, error) {
 		lockTableName:  m.lockTableName,
 		pollInterval:   m.pollInterval,
 		lockTTL:        m.lockTTL,
-		leader:         make(chan struct{}),
 		key:            key,
 		value:          value,
 		vaultID:        fmt.Sprintf("%s-%s", hostname, id),
@@ -314,39 +314,230 @@ func (m *PostgreSQLBackend) LockWith(key, value string) (Lock, error) {
 
 // Lock grabs a lock, or waits until it is available
 func (m *PostgreSQLLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	m.leaderCh = make(chan struct{})
+	m.stepDownCh = make(chan struct{}, 1)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		<-stopCh
+		m.stepDownCh <- <-stopCh
 		cancel()
 	}()
-	ticker := time.NewTicker(m.pollInterval)
-	defer ticker.Stop()
-	for {
-		cleanupSQL := fmt.Sprintf(
-			"DELETE FROM %s WHERE expiration < now()", m.relationName(),
-		)
-		_, err := m.client.ExecContext(ctx, cleanupSQL)
-		if err != nil {
-			return nil, err
-		}
-		lockSQL := fmt.Sprintf(`INSERT INTO %s (key, value, vault_id,
-			expiration) VALUES ($1, $2, $3, now() + $4::INTERVAL)`,
-			m.relationName())
-		_, err = m.client.ExecContext(ctx, lockSQL, m.key, m.value, m.vaultID,
-			m.lockTTL.String())
-		if err == nil {
-			break
-		}
 
+	leadershipAcquired := make(chan struct{})
+	go m.watch(leadershipAcquired)
+	for {
 		select {
-		case <-ticker.C:
-			continue
 		case <-ctx.Done():
 			return nil, nil
+		case <-leadershipAcquired:
+			return m.leaderCh, nil
 		}
 	}
-	go m.watch()
-	return m.leader, nil
+	return nil, nil
+}
+
+// watch is the main loop containing the locking logic
+func (m *PostgreSQLLock) watch(leadershipAcquired chan<- struct{}) {
+	livenessTicker := time.NewTicker(m.lockTTL * 2)
+	defer livenessTicker.Stop()
+	refreshTicker := time.NewTicker(m.lockTTL / 2) // refresh halfway through
+	defer refreshTicker.Stop()
+	pollTicker := time.NewTicker(m.pollInterval)
+	defer pollTicker.Stop()
+	lockTicker := refreshTicker
+
+	// Initial registration
+	if err := m.createSelfEntry(); err != nil && m.logger.IsWarn() {
+		m.logger.Warn("physical/postgresql: unable to create HA entry:",
+			err.Error())
+	}
+
+	leader := false
+	var lastRefresh time.Time
+	for {
+		select {
+		case <-livenessTicker.C:
+			if err := m.updateSelfEntry(); err != nil && m.logger.IsWarn() {
+				m.logger.Warn(
+					"physical/postgresql: unable to update liveness:",
+					err.Error(),
+				)
+			}
+			if leader {
+				if err := m.removeExpiredEntries(); err != nil &&
+					m.logger.IsWarn() {
+
+					m.logger.Warn(
+						"physical/postgresql: error removing expired rows:",
+						err.Error(),
+					)
+				}
+			}
+		case <-pollTicker.C:
+			if leader {
+				continue
+			}
+			acquired, err := m.pollLock()
+			if err != nil && m.logger.IsWarn() {
+				m.logger.Warn("physical/postgresql: lock polling error:",
+					err.Error())
+			}
+			if acquired {
+				leader = true
+				leadershipAcquired <- struct{}{}
+			}
+		case <-lockTicker.C:
+			if !leader {
+				continue
+			}
+			if err := m.updateLock(nil, true); err != nil {
+				if m.logger.IsWarn() {
+					m.logger.Warn(
+						"physical/postgresql: unable to update HA lock:",
+						err.Error(),
+					)
+				}
+				if lastRefresh.Add(m.lockTTL).Before(time.Now()) {
+					goto end
+				}
+				// Refresh faster
+				lockTicker = pollTicker
+				continue
+			}
+			lockTicker = refreshTicker
+			lastRefresh = time.Now()
+		case <-m.stepDownCh:
+			goto end
+		}
+	}
+end:
+	leader = false
+	close(m.leaderCh)
+
+	// Self-cleanup
+	if err := m.removeSelfEntry(); err != nil && m.logger.IsWarn() {
+		m.logger.Warn("physical/postgresql: unable to remove HA entry:",
+			err.Error())
+	}
+}
+
+// createSelfEntry initializes this Vault instance’s entry in the lock table
+func (m *PostgreSQLLock) createSelfEntry() error {
+	insertSQL := fmt.Sprintf(`INSERT INTO %s (vault_id, key, value,
+		row_expiration) VALUES ($1, $2, $3, NOW() + $4::INTERVAL)`,
+		m.relationName())
+	rowTTL := 2 * m.lockTTL
+	r, err := m.client.Exec(insertSQL, m.vaultID, m.key, m.value,
+		rowTTL.String())
+	if err != nil {
+		return err
+	}
+	if rows, _ := r.RowsAffected(); rows == 0 {
+		return errors.New("No rows affected when creating instance HA entry")
+	}
+	return nil
+}
+
+// updateSelfEntry refreshes this Vault instance’s entry in the lock table so
+// that it does not get removed
+func (m *PostgreSQLLock) updateSelfEntry() error {
+	updateSQL := fmt.Sprintf(`UPDATE %s SET row_expiration = NOW() +
+		$3::INTERVAL WHERE vault_id = $1 AND key = $2`, m.relationName())
+	rowTTL := 2 * m.lockTTL
+	r, err := m.client.Exec(updateSQL, m.vaultID, m.key, rowTTL.String())
+	if err != nil {
+		return err
+	}
+	if rows, _ := r.RowsAffected(); rows == 0 {
+		return errors.New("No rows affected when refreshing instance HA entry")
+	}
+	return nil
+}
+
+// removeSelfEntry cleans up this Vault instance’s entry in the lock table
+func (m *PostgreSQLLock) removeSelfEntry() error {
+	deleteSQL := fmt.Sprintf(`DELETE FROM %s WHERE vault_id = $1 AND key = $2`,
+		m.relationName())
+	r, err := m.client.Exec(deleteSQL, m.vaultID, m.key)
+	if err != nil {
+		return err
+	}
+	if r == nil {
+		return errors.New("No rows affected when cleaning up instance HA entry")
+	}
+	return nil
+}
+
+// removeExpiredEntries cleans up expired lock table entries (e.g. an
+// irresponsive Vault instance)
+func (m *PostgreSQLLock) removeExpiredEntries() error {
+	cleanupSQL := fmt.Sprintf(`DELETE FROM %s WHERE key = $1 AND
+		row_expiration < NOW()`, m.relationName())
+	_, err := m.client.Exec(cleanupSQL, m.key)
+	return err
+}
+
+// pollLock checks the locking state of a desired lock. It grabs the lock
+// automatically if necessary.
+func (m *PostgreSQLLock) pollLock() (bool, error) {
+	tx, err := m.client.Begin()
+	if err != nil {
+		fmt.Println(err.Error(), sql.LevelSerializable)
+		return false, err
+	}
+	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	if err != nil {
+		return false, err
+	}
+	pollSQL := fmt.Sprintf(`SELECT TRUE AS lock_held FROM %s WHERE key = $1 AND
+		lock_lease_end > NOW()`, m.relationName())
+	if r := tx.QueryRow(pollSQL, m.key); r.Scan() != sql.ErrNoRows {
+		tx.Commit()
+		return false, nil
+	}
+	// The lock is available, grab it in the same transaction
+	if err := m.updateLock(tx, false); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// updateLock refreshes or creates a lock that belongs to this Vault instance.
+// It optionally uses an existing SQL transaction.
+func (m *PostgreSQLLock) updateLock(tx *sql.Tx, existing bool) error {
+	if tx == nil {
+		var err error
+		tx, err = m.client.Begin()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+		if err != nil {
+			return err
+		}
+	}
+	existingSQL := `AND (lock_lease_end IS NULL OR lock_lease_end < NOW())`
+	if existing {
+		existingSQL = `AND lock_lease_end >= NOW()`
+	}
+
+	grabSQL := fmt.Sprintf(`UPDATE %s SET lock_lease_end = NOW() + $3::INTERVAL
+		WHERE vault_id = $1 AND key = $2 %s`, m.relationName(), existingSQL)
+	res, err := tx.Exec(grabSQL, m.vaultID, m.key, m.lockTTL.String())
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	if res == nil {
+		tx.Rollback()
+		return errors.New("Tried updating a lock but affected 0 rows")
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		tx.Rollback()
+		return errors.New("Tried updating a lock but affected 0 rows")
+	}
+	tx.Commit()
+	return nil
 }
 
 func (m *PostgreSQLLock) relationName() string {
@@ -361,86 +552,16 @@ func (m *PostgreSQLLock) relationName() string {
 	return relationName
 }
 
-// watch periodically queries the lock table and closes the m.leader channel if
-// the lock is lost
-func (m *PostgreSQLLock) watch() {
-	// refresh the lock halfway through its expiration
-	refreshTicker := time.NewTicker(m.lockTTL / 2)
-	defer refreshTicker.Stop()
-	pollTicker := time.NewTicker(m.pollInterval)
-	defer pollTicker.Stop()
-	ticker := refreshTicker
-
-	defer close(m.leader)
-
-	var lastRefresh time.Time
-	for {
-		select {
-		case <-ticker.C:
-			refreshLockSQL := fmt.Sprintf(
-				`UPDATE %s SET expiration = now() + $1::INTERVAL WHERE key = $2
-				AND vault_id = $3 AND expiration >= now()`,
-				m.relationName(),
-			)
-			r, err := m.client.Exec(refreshLockSQL, m.lockTTL.String(), m.key,
-				m.vaultID)
-			if err != nil {
-				if m.logger.IsWarn() {
-					m.logger.Warn(
-						"physical/postgresql: unable to update HA lock: %s",
-						err.Error(),
-					)
-				}
-				continue
-			}
-			if r == nil {
-				if lastRefresh.Add(m.lockTTL).Before(time.Now()) {
-					// Lock is definitely expired by now
-					return
-				}
-				// Refresh faster
-				ticker = pollTicker
-				continue
-			}
-			ticker = refreshTicker
-
-			if rows, _ := r.RowsAffected(); rows == 0 {
-				// Lock lost!
-				return
-			}
-			lastRefresh = time.Now()
-		}
-	}
-}
-
 // Unlock unlocks a lock. It returns an error if the lock was not in use.
 func (m *PostgreSQLLock) Unlock() error {
-	unlockSQL := fmt.Sprintf(
-		"DELETE FROM %s WHERE key = $1 AND vault_id = $2", m.relationName(),
-	)
-	r, err := m.client.Exec(unlockSQL, m.key, m.vaultID)
-	if err != nil {
-		return err
-	}
-	if r == nil {
-		return errors.New("Unknown error reading a query's result")
-	}
-	rows, err := r.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("Lock not currently held")
-	}
+	m.stepDownCh <- struct{}{}
 	return nil
 }
 
 // Value returns whether the lock is held and the value associated with it
 func (m *PostgreSQLLock) Value() (held bool, value string, err error) {
-	valueSQL := fmt.Sprintf(
-		"SELECT expiration > now(), value FROM %s WHERE key = $1",
-		m.lockTableName,
-	)
+	valueSQL := fmt.Sprintf(`SELECT lock_lease_end > now(), value FROM %s WHERE
+		vault_id = $1 AND key = $1`, m.lockTableName)
 	err = m.client.QueryRow(valueSQL, m.key).Scan(&held, &value)
 	return held, value, err
 }
