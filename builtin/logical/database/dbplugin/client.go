@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
+	log "github.com/mgutz/logxi/v1"
 )
 
 // DatabasePluginClient embeds a databasePluginRPCClient and wraps it's Close
@@ -29,13 +30,13 @@ func (dc *DatabasePluginClient) Close() error {
 // newPluginClient returns a databaseRPCClient with a connection to a running
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
-func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner) (Database, error) {
+func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (Database, error) {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"database": new(DatabasePlugin),
 	}
 
-	client, err := pluginRunner.Run(sys, pluginMap, handshakeConfig, []string{})
+	client, err := pluginRunner.Run(sys, pluginMap, handshakeConfig, []string{}, logger)
 	if err != nil {
 		return nil, err
 	}

@@ -30,7 +30,7 @@ func Backend(conf *logical.BackendConfig) (logical.Backend, error) {
 	name := conf.Config["plugin_name"]
 	sys := conf.System
 
-	b, err := bplugin.NewBackend(name, sys)
+	b, err := bplugin.NewBackend(name, sys, conf.Logger)
 	if err != nil {
 		return nil, err
 	}
