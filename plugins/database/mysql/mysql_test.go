@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -13,10 +12,6 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
-)
-
-var (
-	testMySQLImagePull sync.Once
 )
 
 func prepareMySQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
@@ -30,6 +25,47 @@ func prepareMySQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	}
 
 	resource, err := pool.Run("mysql", "latest", []string{"MYSQL_ROOT_PASSWORD=secret"})
+	if err != nil {
+		t.Fatalf("Could not start local MySQL docker container: %s", err)
+	}
+
+	cleanup = func() {
+		err := pool.Purge(resource)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local container: %s", err)
+		}
+	}
+
+	retURL = fmt.Sprintf("root:secret@(localhost:%s)/mysql?parseTime=true", resource.GetPort("3306/tcp"))
+
+	// exponential backoff-retry
+	if err = pool.Retry(func() error {
+		var err error
+		var db *sql.DB
+		db, err = sql.Open("mysql", retURL)
+		if err != nil {
+			return err
+		}
+		return db.Ping()
+	}); err != nil {
+		t.Fatalf("Could not connect to MySQL docker container: %s", err)
+	}
+
+	return
+}
+
+func prepareMySQLLegacyTestContainer(t *testing.T) (cleanup func(), retURL string) {
+	if os.Getenv("MYSQL_URL") != "" {
+		return func() {}, os.Getenv("MYSQL_URL")
+	}
+
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		t.Fatalf("Failed to connect to docker: %s", err)
+	}
+
+	// Mysql 5.6 is the last MySQL version to limit usernames to 16 characters.
+	resource, err := pool.Run("mysql", "5.6", []string{"MYSQL_ROOT_PASSWORD=secret"})
 	if err != nil {
 		t.Fatalf("Could not start local MySQL docker container: %s", err)
 	}
@@ -151,7 +187,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 }
 
 func TestMySQL_CreateUser_Legacy(t *testing.T) {
-	cleanup, connURL := prepareMySQLTestContainer(t)
+	cleanup, connURL := prepareMySQLLegacyTestContainer(t)
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
