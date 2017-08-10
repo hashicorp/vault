@@ -561,7 +561,7 @@ func (m *PostgreSQLLock) Unlock() error {
 // Value returns whether the lock is held and the value associated with it
 func (m *PostgreSQLLock) Value() (held bool, value string, err error) {
 	valueSQL := fmt.Sprintf(`SELECT lock_lease_end > now(), value FROM %s WHERE
-		vault_id = $1 AND key = $1`, m.lockTableName)
+		vault_id = $1 AND key = $1`, m.relationName())
 	err = m.client.QueryRow(valueSQL, m.key).Scan(&held, &value)
 	return held, value, err
 }
