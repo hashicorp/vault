@@ -25,7 +25,7 @@ This is an authenticated endpoint.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/performance/replication/status
+    https://vault.rocks/v1/sys/replication/performance/status
 ```
 
 ### Sample Response
