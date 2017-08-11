@@ -4,12 +4,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin"
 	"github.com/hashicorp/vault/logical/plugin/mock"
 	"github.com/hashicorp/vault/vault"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func TestBackend(t *testing.T) {
@@ -71,7 +73,7 @@ func testConfig(t *testing.T) (*logical.BackendConfig, func()) {
 	sys := vault.TestDynamicSystemView(core.Core)
 
 	config := &logical.BackendConfig{
-		Logger: nil,
+		Logger: logformat.NewVaultLogger(log.LevelTrace),
 		System: sys,
 		Config: map[string]string{
 			"plugin_name": "mock-plugin",
