@@ -10,6 +10,7 @@ import (
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/plugin"
 )
 
 // Router is used to do prefix based routing of a request to a logical backend
@@ -381,6 +382,14 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		// by a backend
 		req.SetLastRemoteWAL(0)
 	}()
+
+	// Perform ping if this is a a plugin backend
+	if b, ok := re.backend.(*plugin.BackendPluginClient); ok {
+		err := b.Ping()
+		if err != nil {
+			return nil, false, false, err
+		}
+	}
 
 	// Invoke the backend
 	if existenceCheck {
