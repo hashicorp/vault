@@ -27,15 +27,21 @@ const (
 // of the provided length. The string generated takes up to 4 characters
 // of space that are predefined and prepended to ensure password
 // character requirements. It also requires a min length of 10 characters.
-func RandomAlphaNumeric(length int) (string, error) {
+func RandomAlphaNumeric(length int, prependA1a bool) (string, error) {
 	if length < minStrLen {
 		return "", fmt.Errorf("minimum length of %d is required", minStrLen)
 	}
-	size := len(reqStr)
 
-	retBytes := make([]byte, length-size)
-	// Enforce alphanumeric requirements
-	retBytes = append([]byte(reqStr), retBytes...)
+	var size int
+	var retBytes []byte
+	if prependA1a {
+		size = len(reqStr)
+		retBytes = make([]byte, length-size)
+		// Enforce alphanumeric requirements
+		retBytes = append([]byte(reqStr), retBytes...)
+	} else {
+		retBytes = make([]byte, length)
+	}
 
 	for size < length {
 		// Extend the len of the random byte slice to lower odds of having to
