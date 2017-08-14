@@ -68,7 +68,9 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 	if c.Region != "" {
 		def.Config.Region = aws.String(c.Region)
 	}
-	def.Config.HTTPClient = c.HTTPClient
+	if c.HTTPClient != nil {
+		def.Config.HTTPClient = c.HTTPClient
+	}
 
 	providers = append(providers, defaults.RemoteCredProvider(*def.Config, def.Handlers))
 
