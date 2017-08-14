@@ -133,7 +133,7 @@ This example show enabling high availability for the Etcd storage backend.
 ```hcl
 storage "etcd" {
   ha_enabled    = true
-  redirect_addr = "vault-leader.my-company.internal"
+  redirect_addr = "https://vault-leader.my-company.internal"
 }
 ```
 
