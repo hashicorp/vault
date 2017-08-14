@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "HANA Database Plugin"
+page_title: "HANA Database Plugin - Database Secret Backend"
 sidebar_current: "docs-secrets-databases-HANA"
 description: |-
   The HANA plugin for Vault's Database backend generates database credentials to access SAP HANA Database.
@@ -57,4 +57,3 @@ plugin API](/api/secret/databases/HANA.html) page.
 
 For more information on the Database secret backend's HTTP API please see the [Database secret
 backend API](/api/secret/databases/index.html) page.
-

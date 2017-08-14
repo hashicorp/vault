@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Databases"
+page_title: "Database Secret Backend"
 sidebar_current: "docs-secrets-databases"
 description: |-
   Top page for database secret backend information
@@ -100,4 +100,3 @@ plugin](/docs/secrets/databases/custom.html) for more information.
 
 The Database secret backend has a full HTTP API. Please see the [Database secret
 backend API](/api/secret/databases/index.html) for more details.
-
