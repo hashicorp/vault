@@ -29,7 +29,7 @@ func ParsePolicies(policiesRaw interface{}) []string {
 		if policiesRaw.(string) == "" {
 			return []string{"default"}
 		}
-		policies = strings.Split(policiesRaw, ",")
+		policies = strings.Split(policiesRaw.(string), ",")
 	case []string:
 		policies = policiesRaw.([]string)
 	}
