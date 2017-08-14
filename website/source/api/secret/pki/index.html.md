@@ -47,8 +47,9 @@ update your API calls accordingly.
 ## Read CA Certificate
 
 This endpoint retrieves the CA certificate *in raw DER-encoded form*. This is a
-bare endpoint that does not return a standard Vault data structure. If `/pem` is
-added to the endpoint, the CA certificate is returned in PEM format.
+bare endpoint that does not return a standard Vault data structure and cannot
+be read by the Vault CLI. If `/pem` is added to the endpoint, the CA
+certificate is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
@@ -73,7 +74,7 @@ $ curl \
 
 This endpoint retrieves the CA certificate chain, including the CA _in PEM
 format_. This is a bare endpoint that does not return a standard Vault data
-structure.
+structure and cannot be read by the Vault CLI.
 
 This is an unauthenticated endpoint.
 
@@ -459,8 +460,6 @@ $ curl \
     --data @payload.json \
     https://vault.rocks/v1/pki/intermediate/generate/internal
 ```
-
-### Sample Response
 
 ```json
 {
@@ -972,6 +971,25 @@ $ curl \
   },
   "auth": null
 }
+```
+
+## Delete Root
+
+This endpoint deletes the current CA key (the old CA certificate will still be
+accessible for reading until a new certificate/key are generated or uploaded).
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `DELETE`   | `/pki/root`   | `204 (empty body)` |
+
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://vault.rocks/v1/pki/root
 ```
 
 ## Sign Intermediate
