@@ -53,7 +53,7 @@ This role can now be used to retrieve a new set of credentials by querying the
 ## API
 
 The full list of configurable options can be seen in the [HANA database
-plugin API](/api/secret/databases/HANA.html) page.
+plugin API](/api/secret/databases/hanadb.html) page.
 
 For more information on the Database secret backend's HTTP API please see the [Database secret
 backend API](/api/secret/databases/index.html) page.
