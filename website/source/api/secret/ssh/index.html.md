@@ -619,7 +619,7 @@ overridden._
 - `public_key` `(string: "")` – Specifies the public key part of the SSH CA key
   pair; required if `generate_signing_key` is false.
 
-- `generate_signing_key` `(bool: false)` – Specifies if Vault should generate
+- `generate_signing_key` `(bool: true)` – Specifies if Vault should generate
   the signing key pair internally. The generated public key will be returned so
   you can add it to your configuration.
 
