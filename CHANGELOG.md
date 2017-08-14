@@ -1,3 +1,9 @@
+## 0.8.1 (Unreleased)
+
+BUG FIXES:
+
+ * aws: Don't prefer a nil HTTP client over an existing one [GH-3159]
+
 ## 0.8.0 (August 9th, 2017)
 
 SECURITY:
