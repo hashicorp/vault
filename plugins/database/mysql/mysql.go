@@ -36,14 +36,14 @@ type MySQL struct {
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New(metadataLen, usernameLen int) func() (interface{}, error) {
+func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		connProducer := &connutil.SQLConnectionProducer{}
 		connProducer.Type = mySQLTypeName
 
 		credsProducer := &credsutil.SQLCredentialsProducer{
-			DisplayNameLen: metadataLen,
-			RoleNameLen:    metadataLen,
+			DisplayNameLen: displayNameLen,
+			RoleNameLen:    roleNameLen,
 			UsernameLen:    usernameLen,
 			Separator:      "-",
 		}
@@ -59,7 +59,21 @@ func New(metadataLen, usernameLen int) func() (interface{}, error) {
 
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
 func Run(apiTLSConfig *api.TLSConfig) error {
-	f := New(MetadataLen, UsernameLen)
+	return runCommon(false, apiTLSConfig)
+}
+
+// Run instantiates a MySQL object, and runs the RPC server for the plugin
+func RunLegacy(apiTLSConfig *api.TLSConfig) error {
+	return runCommon(true, apiTLSConfig)
+}
+
+func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
+	var f func() (interface{}, error)
+	if legacy {
+		f = New(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
+	} else {
+		f = New(MetadataLen, MetadataLen, UsernameLen)
+	}
 	dbType, err := f()
 	if err != nil {
 		return err

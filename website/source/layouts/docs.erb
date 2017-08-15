@@ -189,6 +189,9 @@
               <li<%= sidebar_current("docs-secrets-databases-cassandra") %>>
                 <a href="/docs/secrets/databases/cassandra.html">Cassandra</a>
               </li>
+              <li<%= sidebar_current("docs-secrets-databases-hanadb") %>>
+                <a href="/docs/secrets/databases/hanadb.html">HanaDB</a>
+              </li>
               <li<%= sidebar_current("docs-secrets-databases-mongodb") %>>
                 <a href="/docs/secrets/databases/mongodb.html">MongoDB</a>
               </li>
@@ -225,6 +228,17 @@
 
           <li<%= sidebar_current("docs-secrets-ssh") %>>
             <a href="/docs/secrets/ssh/index.html">SSH</a>
+            <ul class="nav">
+              <li<%= sidebar_current("docs-secrets-ssh-signed-ssh-certificates") %>>
+                <a href="/docs/secrets/ssh/signed-ssh-certificates.html">Signed Certificates</a>
+              </li>
+              <li<%= sidebar_current("docs-secrets-ssh-one-time-ssh-passwords") %>>
+                <a href="/docs/secrets/ssh/one-time-ssh-passwords.html">SSH OTP</a>
+              </li>
+              <li<%= sidebar_current("docs-secrets-ssh-dynamic-ssh-keys") %>>
+                <a href="/docs/secrets/ssh/dynamic-ssh-keys.html">Dynamic Key</a>
+              </li>
+            </ul>
           </li>
 
           <li<%= sidebar_current("docs-secrets-totp") %>>
@@ -343,17 +357,6 @@
         <ul class="nav">
           <li <%= sidebar_current("docs-vault-enterprise-replication")%> >
             <a href="/docs/vault-enterprise/replication/index.html">Replication</a>
-          </li>
-          <li <%= sidebar_current("docs-vault-enterprise-vsi")%> >
-            <a href="/docs/vault-enterprise/vsi/index.html">Secure Introduction</a>
-            <ul class="nav">
-              <li <%= sidebar_current("docs-vault-enterprise-vsi-configuration")%> >
-                <a href="/docs/vault-enterprise/vsi/configuration.html">Configuration</a>
-              </li>
-              <li <%= sidebar_current("docs-vault-enterprise-vsi-security")%> >
-                <a href="/docs/vault-enterprise/vsi/security.html">Security</a>
-              </li>
-            </ul>
           </li>
           <li <%= sidebar_current("docs-vault-enterprise-hsm")%> >
             <a href="/docs/vault-enterprise/hsm/index.html">HSM Support</a>

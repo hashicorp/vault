@@ -116,7 +116,7 @@ This example show enabling high availability for the DynamoDB storage backend.
 ```hcl
 storage "dynamodb" {
   ha_enabled    = "true"
-  redirect_addr = "vault-leader.my-company.internal"
+  redirect_addr = "https://vault-leader.my-company.internal"
 }
 ```
 

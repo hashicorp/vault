@@ -1,3 +1,17 @@
+## 0.8.1 (Unreleased)
+
+IMPROVEMENTS:
+
+ * auth/approle: Allow array input for policies in addition to comma-delimited
+   strings [GH-3163]
+ * plugins: Send logs through Vault's logger rather than stdout [GH-3142]
+
+BUG FIXES:
+
+ * aws: Don't prefer a nil HTTP client over an existing one [GH-3159]
+ * secret/database: Avoid creating usernames that are too long for legacy MySQL
+   [GH-3138]
+
 ## 0.8.0 (August 9th, 2017)
 
 SECURITY:

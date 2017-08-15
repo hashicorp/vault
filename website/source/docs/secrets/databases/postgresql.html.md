@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "PostgreSQL Database Plugin"
+page_title: "PostgreSQL Database Plugin - Database Secret Backend"
 sidebar_current: "docs-secrets-databases-postgresql"
 description: |-
   The PostgreSQL plugin for Vault's Database backend generates database credentials to access PostgreSQL.
@@ -21,7 +21,7 @@ information about setting up the Database Backend.
 
 After the Database Backend is mounted you can configure a PostgreSQL connection
 by specifying this plugin as the `"plugin_name"` argument. Here is an example
-configuration: 
+configuration:
 
 ```
 $ vault write database/config/postgresql \
@@ -57,4 +57,3 @@ plugin API](/api/secret/databases/postgresql.html) page.
 
 For more information on the Database secret backend's HTTP API please see the [Database secret
 backend API](/api/secret/databases/index.html) page.
-

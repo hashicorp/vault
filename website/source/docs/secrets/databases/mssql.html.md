@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "MSSQL Database Plugin"
+page_title: "MSSQL Database Plugin - Database Secret Backend"
 sidebar_current: "docs-secrets-databases-mssql"
 description: |-
   The MSSQL plugin for Vault's Database backend generates database credentials to access Microsoft SQL Server.
@@ -21,7 +21,7 @@ information about setting up the Database Backend.
 
 After the Database Backend is mounted you can configure a MSSQL connection
 by specifying this plugin as the `"plugin_name"` argument. Here is an example
-configuration: 
+configuration:
 
 ```
 $ vault write database/config/mssql \
@@ -43,7 +43,7 @@ $ vault write database/roles/readonly \
         GRANT SELECT ON SCHEMA::dbo TO [{{name}}];" \
     default_ttl="1h" \
     max_ttl="24h"
-    
+
 Success! Data written to: database/roles/readonly
 ```
 
@@ -57,4 +57,3 @@ plugin API](/api/secret/databases/mssql.html) page.
 
 For more information on the Database secret backend's HTTP API please see the [Database secret
 backend API](/api/secret/databases/index.html) page.
-
