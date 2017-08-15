@@ -37,24 +37,6 @@ func (b *BackendPluginClient) Cleanup() {
 	b.client.Kill()
 }
 
-// Ping checks the RPC connection and attempts to reset it if
-// it's not healthy.
-func (b *BackendPluginClient) Ping() error {
-	b.Lock()
-	defer b.Unlock()
-
-	rawClient, err := b.client.Client()
-	if err != nil {
-		return err
-	}
-
-	if err := rawClient.Ping(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // NewBackend will return an instance of an RPC-based client implementation of the backend for
 // external plugins, or a concrete implementation of the backend if it is a builtin backend.
 // The backend is returned as a logical.Backend interface.

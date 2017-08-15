@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"net/rpc"
 	"strings"
 	"time"
 
@@ -187,14 +186,6 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 	// Route the request
 	resp, routeErr := c.router.Route(req)
-	if routeErr == rpc.ErrShutdown {
-		err := c.reloadMatchingPluginMounts([]string{req.Path})
-		if err != nil {
-			return nil, nil, ErrInternalError
-		}
-		resp, routeErr = c.router.Route(req)
-	}
-
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
@@ -346,15 +337,6 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 	// Route the request
 	resp, routeErr := c.router.Route(req)
-	// If error is rpc.ErrShutdown, reload plugin and route request once again
-	if routeErr == rpc.ErrShutdown {
-		err := c.reloadMatchingPluginMounts([]string{req.Path})
-		if err != nil {
-			return nil, nil, ErrInternalError
-		}
-		resp, routeErr = c.router.Route(req)
-	}
-
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
