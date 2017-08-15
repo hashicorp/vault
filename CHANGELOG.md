@@ -12,6 +12,9 @@ IMPROVEMENTS:
  * auth/approle: Allow array input for policies in addition to comma-delimited
    strings [GH-3163]
  * plugins: Send logs through Vault's logger rather than stdout [GH-3142]
+ * secret/pki: Add `pki/root` delete operation [GH-3165]
+ * secret/pki: Don't overwrite an existing root cert/key when calling generate
+   [GH-3165]
 
 BUG FIXES:
 
