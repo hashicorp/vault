@@ -58,7 +58,7 @@ func (b *backend) reloadBackend() error {
 	pluginName := b.config.Config["plugin_name"]
 	b.Logger().Trace("plugin: reloading plugin backend", "plugin", pluginName)
 
-	nb, err := bplugin.NewBackend(pluginName, b.config.System)
+	nb, err := bplugin.NewBackend(pluginName, b.config.System, b.config.Logger)
 	if err != nil {
 		return err
 	}

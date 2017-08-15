@@ -17,54 +17,22 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
-func TestSystemBackend_enableAuth_plugin(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"plugin": plugin.Factory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
+func TestSystemBackend_Plugin_secret(t *testing.T) {
+	cluster, _ := testSystemBackendMock(t, 1, logical.TypeLogical)
 	defer cluster.Cleanup()
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
-
-	b := vault.NewSystemBackend(core)
-	logger := logformat.NewVaultLogger(log.LevelTrace)
-	bc := &logical.BackendConfig{
-		Logger: logger,
-		System: logical.StaticSystemView{
-			DefaultLeaseTTLVal: time.Hour * 24,
-			MaxLeaseTTLVal:     time.Hour * 24 * 32,
-		},
-	}
-
-	err := b.Backend.Setup(bc)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
-
-	vault.TestAddTestPlugin(t, core, "mock-plugin", "TestBackend_PluginMainCredentials")
-
-	req := logical.TestRequest(t, logical.UpdateOperation, "auth/mock-plugin")
-	req.Data["type"] = "plugin"
-	req.Data["plugin_name"] = "mock-plugin"
-
-	resp, err := b.HandleRequest(req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
 }
 
-func TestSystemBackend_PluginReload(t *testing.T) {
+func TestSystemBackend_Plugin_auth(t *testing.T) {
+	cluster, _ := testSystemBackendMock(t, 1, logical.TypeCredential)
+	defer cluster.Cleanup()
+}
+
+func TestSystemBackend_Plugin_autoReload(t *testing.T) {
+	cluster, _ := testSystemBackendMock(t, 1, logical.TypeLogical)
+	defer cluster.Cleanup()
+}
+
+func TestSystemBackend_Plugin_reload(t *testing.T) {
 	data := map[string]interface{}{
 		"plugin": "mock-plugin",
 	}
@@ -77,7 +45,7 @@ func TestSystemBackend_PluginReload(t *testing.T) {
 }
 
 func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}) {
-	cluster, b := testSystemBackendMock(t, 2)
+	cluster, b := testSystemBackendMock(t, 2, logical.TypeLogical)
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
@@ -127,9 +95,12 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 
 // testSystemBackendMock returns a systemBackend with the desired number
 // of mounted mock plugin backends
-func testSystemBackendMock(t *testing.T, numMounts int) (*vault.TestCluster, *vault.SystemBackend) {
+func testSystemBackendMock(t *testing.T, numMounts int, backendType logical.BackendType) (*vault.TestCluster, *vault.SystemBackend) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
+			"plugin": plugin.Factory,
+		},
+		CredentialBackends: map[string]logical.Factory{
 			"plugin": plugin.Factory,
 		},
 	}
@@ -159,22 +130,41 @@ func testSystemBackendMock(t *testing.T, numMounts int) (*vault.TestCluster, *va
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestAddTestPlugin(t, core, "mock-plugin", "TestBackend_PluginMainLogical")
+	switch backendType {
+	case logical.TypeLogical:
+		vault.TestAddTestPlugin(t, core, "mock-plugin", "TestBackend_PluginMainLogical")
+		for i := 0; i < numMounts; i++ {
+			req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("mounts/mock-%d/", i))
+			req.Data["type"] = "plugin"
+			req.Data["config"] = map[string]interface{}{
+				"plugin_name": "mock-plugin",
+			}
 
-	for i := 0; i < numMounts; i++ {
-		req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("mounts/mock-%d/", i))
-		req.Data["type"] = "plugin"
-		req.Data["config"] = map[string]interface{}{
-			"plugin_name": "mock-plugin",
+			resp, err := b.HandleRequest(req)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if resp != nil {
+				t.Fatalf("bad: %v", resp)
+			}
 		}
+	case logical.TypeCredential:
+		vault.TestAddTestPlugin(t, core, "mock-plugin", "TestBackend_PluginMainCredentials")
+		for i := 0; i < numMounts; i++ {
+			req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("auth/mock-%d", i))
+			req.Data["type"] = "plugin"
+			req.Data["plugin_name"] = "mock-plugin"
 
-		resp, err := b.HandleRequest(req)
-		if err != nil {
-			t.Fatalf("err: %v", err)
+			resp, err := b.HandleRequest(req)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if resp != nil {
+				t.Fatalf("bad: %v", resp)
+			}
 		}
-		if resp != nil {
-			t.Fatalf("bad: %v", resp)
-		}
+	default:
+		t.Fatal("unknown backend type provided")
 	}
 
 	return cluster, b
