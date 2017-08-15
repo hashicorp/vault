@@ -944,6 +944,12 @@ Vault would overwrite the existing cert/key with new values.
   Useful if the CN is not a hostname or email address, but is instead some
   human-readable identifier.
 
+- `permitted_dns_domains` `(string: "")` – A comma separated string (or, string
+  array) containing DNS domains for which certificates are allowed to be issued
+  or signed by this CA certificate. Supports subdomains via a `.` in front of
+  the domain, as per
+  [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+
 ### Sample Payload
 
 ```json
@@ -1052,6 +1058,12 @@ verbatim.
   will be added to the basic set of key usages used for CA certs signed by this
   path; 3) Extensions requested in the CSR will be copied into the issued
   certificate.
+
+- `permitted_dns_domains` `(string: "")` – A comma separated string (or, string
+  array) containing DNS domains for which certificates are allowed to be issued
+  or signed by this CA certificate. Supports subdomains via a `.` in front of
+  the domain, as per
+  [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
 
 ### Sample Payload
 
