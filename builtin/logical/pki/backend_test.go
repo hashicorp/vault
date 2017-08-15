@@ -2247,6 +2247,21 @@ func TestBackend_Root_Idempotentcy(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+
+	_, err = client.Logical().Read("pki/cert/ca_chain")
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 const (
