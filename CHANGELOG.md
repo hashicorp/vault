@@ -1,5 +1,12 @@
 ## 0.8.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * PKI Root Generation: Calling `pki/root/generate` when a CA cert/key already
+   exists will now return a `204` instead of overwriting an existing root. If
+   you want to recreate the root, first run a delete operation on `pki/root`
+   (requires `sudo` capability), then generate it again.
+
 IMPROVEMENTS:
 
  * auth/approle: Allow array input for policies in addition to comma-delimited

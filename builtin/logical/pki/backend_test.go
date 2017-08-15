@@ -22,10 +22,13 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/strutil"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -649,6 +652,11 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 
 		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "root",
+		},
+
+		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -866,6 +874,11 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 
 		// Test a bunch of generation stuff
 		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "root",
+		},
+
+		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -997,6 +1010,11 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		},
 
 		// Do it all again, with EC keys and DER format
+		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "root",
+		},
+
 		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
@@ -1218,7 +1236,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1232,7 +1250,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1290,7 +1308,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1304,7 +1322,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1330,8 +1348,8 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] == nil || resp.Data["error"].(string) == "" {
-					return fmt.Errorf("didn't get an expected error")
+				if resp != nil {
+					return fmt.Errorf("expected no response")
 				}
 
 				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
@@ -1344,8 +1362,8 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] == nil || resp.Data["error"].(string) == "" {
-					return fmt.Errorf("didn't get an expected error")
+				if resp != nil {
+					return fmt.Errorf("expected no response")
 				}
 
 				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
@@ -2153,6 +2171,96 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	}
 	if math.Abs(float64(resp.Secret.TTL-(5*time.Hour))) > float64(5*time.Hour) {
 		t.Fatalf("ttl not default; wanted %v, got %v", b.System().DefaultLeaseTTL(), resp.Secret.TTL)
+	}
+}
+
+func TestBackend_Root_Idempotentcy(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	r1Data := resp.Data
+
+	// Try again, make sure it's a 204 and same CA
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected no ca info")
+	}
+	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	r2Data := resp.Data
+	if !reflect.DeepEqual(r1Data, r2Data) {
+		t.Fatal("got different ca certs")
+	}
+
+	resp, err = client.Logical().Delete("pki/root")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil response")
+	}
+	// Make sure it behaves the same
+	resp, err = client.Logical().Delete("pki/root")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil response")
+	}
+
+	_, err = client.Logical().Read("pki/cert/ca_chain")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+
+	_, err = client.Logical().Read("pki/cert/ca_chain")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

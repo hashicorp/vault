@@ -28,6 +28,21 @@ func pathGenerateRoot(b *backend) *framework.Path {
 	return ret
 }
 
+func pathDeleteRoot(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "root",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.DeleteOperation: b.pathCADeleteRoot,
+		},
+
+		HelpSynopsis:    pathDeleteRootHelpSyn,
+		HelpDescription: pathDeleteRootHelpDesc,
+	}
+
+	return ret
+}
+
 func pathSignIntermediate(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root/sign-intermediate",
@@ -66,9 +81,22 @@ the non-repudiation flag.`,
 	return ret
 }
 
+func (b *backend) pathCADeleteRoot(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return nil, req.Storage.Delete("config/ca_bundle")
+}
+
 func (b *backend) pathCAGenerateRoot(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+
+	entry, err := req.Storage.Get("config/ca_bundle")
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		return nil, nil
+	}
 
 	exported, format, role, errorResp := b.getGenerationParams(data)
 	if errorResp != nil {
@@ -133,7 +161,7 @@ func (b *backend) pathCAGenerateRoot(
 	}
 
 	// Store it as the CA bundle
-	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
+	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
 		return nil, err
 	}
@@ -296,6 +324,14 @@ Generate a new CA certificate and private key used for signing.
 `
 
 const pathGenerateRootHelpDesc = `
+See the API documentation for more information.
+`
+
+const pathDeleteRootHelpSyn = `
+Deletes the root CA key to allow a new one to be generated.
+`
+
+const pathDeleteRootHelpDesc = `
 See the API documentation for more information.
 `
 
