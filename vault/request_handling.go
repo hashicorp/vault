@@ -171,6 +171,9 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		if errType != nil {
 			retErr = multierror.Append(retErr, errType)
 		}
+		if ctErr == ErrInternalError {
+			return nil, auth, retErr
+		}
 		return logical.ErrorResponse(ctErr.Error()), auth, retErr
 	}
 
