@@ -189,7 +189,7 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		}
 	}
 	if certEntry == nil {
-		response = logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found", serial))
+		response = nil
 		goto reply
 	}
 
@@ -244,6 +244,9 @@ reply:
 		}
 	case retErr != nil:
 		response = nil
+		return
+	case response == nil:
+		return
 	case response.IsError():
 		return response, nil
 	default:

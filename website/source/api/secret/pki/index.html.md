@@ -39,6 +39,7 @@ update your API calls accordingly.
 * [List Roles](#list-roles)
 * [Delete Role](#delete-role)
 * [Generate Root](#generate-root)
+* [Delete Root](#delete-root)
 * [Sign Intermediate](#sign-intermediate)
 * [Sign Certificate](#sign-certificate)
 * [Sign Verbatim](#sign-verbatim)
@@ -881,14 +882,18 @@ $ curl \
 
 ## Generate Root
 
-This endpoint generates a new self-signed CA certificate and private key. _This
-will overwrite any previously-existing private key and certificate._ If the path
-ends with `exported`, the private key will be returned in the response; if it is
-`internal` the private key will not be returned and *cannot be retrieved later*.
-Distribution points use the values set via `config/urls`.
+This endpoint generates a new self-signed CA certificate and private key. If
+the path ends with `exported`, the private key will be returned in the
+response; if it is `internal` the private key will not be returned and *cannot
+be retrieved later*.  Distribution points use the values set via `config/urls`.
 
-As with other issued certificates, Vault will automatically revoke the generated
-root at the end of its lease period; the CA certificate will sign its own CRL.
+As with other issued certificates, Vault will automatically revoke the
+generated root at the end of its lease period; the CA certificate will sign its
+own CRL.
+
+As of Vault 0.8.1, if a CA cert/key already exists within the backend, this
+function will return a 204 and will not overwrite it. Previous versions of
+Vault would overwrite the existing cert/key with new values.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -977,6 +982,7 @@ $ curl \
 
 This endpoint deletes the current CA key (the old CA certificate will still be
 accessible for reading until a new certificate/key are generated or uploaded).
+_This endpoint requires sudo/root privileges._
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

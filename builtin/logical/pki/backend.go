@@ -39,6 +39,10 @@ func Backend() *backend {
 				"crl",
 				"certs/",
 			},
+
+			Root: []string{
+				"root",
+			},
 		},
 
 		Paths: []*framework.Path{

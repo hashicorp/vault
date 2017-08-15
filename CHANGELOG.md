@@ -1,5 +1,12 @@
 ## 0.8.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * PKI Root Generation: Calling `pki/root/generate` when a CA cert/key already
+   exists will now return a `204` instead of overwriting an existing root. If
+   you want to recreate the root, first run a delete operation on `pki/root`
+   (requires `sudo` capability), then generate it again.
+
 IMPROVEMENTS:
 
  * plugins: Send logs through Vault's logger rather than stdout [GH-3142]

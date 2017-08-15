@@ -652,6 +652,11 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 
 		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "root",
+		},
+
+		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -869,6 +874,11 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 
 		// Test a bunch of generation stuff
 		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "root",
+		},
+
+		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -1000,6 +1010,11 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		},
 
 		// Do it all again, with EC keys and DER format
+		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "root",
+		},
+
 		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
@@ -1221,7 +1236,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1235,7 +1250,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1293,7 +1308,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1307,7 +1322,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1333,8 +1348,8 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] == nil || resp.Data["error"].(string) == "" {
-					return fmt.Errorf("didn't get an expected error")
+				if resp != nil {
+					return fmt.Errorf("expected no response")
 				}
 
 				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
@@ -1347,8 +1362,8 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] == nil || resp.Data["error"].(string) == "" {
-					return fmt.Errorf("didn't get an expected error")
+				if resp != nil {
+					return fmt.Errorf("expected no response")
 				}
 
 				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
