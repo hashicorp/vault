@@ -3,7 +3,7 @@ layout: "docs"
 page_title: "Vault Enterprise Replication"
 sidebar_current: "docs-vault-enterprise-replication"
 description: |-
-  Vault Enterprise has support for Replication, allowing critical data to be replicated across clusters to support horizontally scaling workloads.
+  Vault Enterprise has support for Replication, allowing critical data to be replicated across clusters to support horizontally scaling and disaster recovery workloads.
 
 ---
 
@@ -17,59 +17,62 @@ policy management.  This functionality is expected to be highly available and
 to scale as the number of clients and their functional needs increase; at the
 same time, operators would like to ensure that a common set of policies are
 enforced globally, and a consistent set of secrets and keys are exposed to
-applications that need to interoperate. Vault replication addresses both of
-these needs.
+applications that need to interoperate. 
 
-Prior to Vault 0.7, Vault nodes could only be paired within clusters using a
-common HA storage backend, where a single active node is backed up by a set of
-standby nodes to ensure high availability. With replication, Vault replicates
-large sets of its data to other nodes (or other HA clusters) to allow
-horizontal scalability between clusters across geographically distributed data
-centers.
+Vault replication addresses both of these needs in providing consistency, 
+scalability, and highly-available disaster recovery. 
 
 ## Architecture
 
-Multiple Vault clusters communicate in a one-to-many near real-time flow.
+The core unit of Vault replication is a **cluster**, which is comprised of a 
+collection of Vault nodes (an active and its corresponding HA nodes). Multiple Vault 
+clusters communicate in a one-to-many near real-time flow.
 
-The primary cluster acts as the system of record and asynchronously replicates
-most Vault data to a series of remote clusters, known as secondary clusters or
-secondaries.
-
-The secondaries keep track of their own tokens and leases but share the
-underlying configuration, policies, and supporting secrets (K/V values,
-encryption keys for `transit`, etc). If a user action would modify underlying
-shared state, the secondary forwards the request to the primary to be handled;
-this is transparent to the client. In practice, most high-volume workloads
-(reads in the `generic` backend, encryption/decryption operations in `transit`,
-etc.) can be satisfied by the local secondary, allowing Vault to scale
-relatively horizontally with the number of secondaries rather than vertically
-as in the past.
+Replication operates on a leader/follower model, wherein a leader cluster (known as a 
+**primary**) is linked to a series of follower **secondary** clusters. The primary 
+cluster acts as the system of record and asynchronously replicates most Vault data.
 
 All communication between primaries and secondaries is end-to-end encrypted
-with mutually-authenticated TLS session, setup via replication tokens which are
+with mutually-authenticated TLS sessions, setup via replication tokens which are
 exchanged during bootstrapping.
 
-## What Is Replicated?
+What data is replicated between the primary and secondary depends on the type of
+replication that is configured between the primary and secondary. These types
+of relationships are either **disaster recovery** or **performance**
+relationships.
 
-The data replicated in Vault 0.7 includes:
+## Performance Replication and Disaster Recovery (DR) Replication
 
- * Secrets
- * Policies
- * Configuration details for secret backends
- * Configuration details for authentication backends
- * Configuration details for audit backends
+*Performance Replication*: 
+In performance replication, secondaries keep track of their own tokens and leases 
+but share the underlying configuration, policies, and supporting secrets (K/V values,
+encryption keys for `transit`, etc). 
 
-Note that secret, authentication, and audit backends can be marked "local"
-which prevents them from being affected by replication.
+If a user action would modify underlying shared state, the secondary forwards the request 
+to the primary to be handled; this is transparent to the client. In practice, most 
+high-volume workloads (reads in the `generic` backend, encryption/decryption operations
+in `transit`, etc.) can be satisfied by the local secondary, allowing Vault to scale
+relatively horizontally with the number of secondaries rather than vertically as 
+in the past.
 
-Access tokens for secrets are not a part of the replication process, as tokens
-are local to a cluster that has generated them. Similarly, dynamic secrets
-(database credentials, etc.) are issued by and their leases are tracked by each
-cluster.
+*Disaster Recovery (DR) Replication*:
+In disaster recovery (or DR) replication, secondaries share the same underlying configuration,
+policy, and supporting secrets  (K/V values, encryption keys for `transit`, etc) infrastructure
+as the primary. They also share the same token and lease infrastructure as the primary, as
+they are designed to allow for continuous operations with applications connecting to the
+original primary on the election of the DR secondary. 
 
-By not replicating leases and tokens, we avoid having each client call be
-forwarded to the primary to check token validity, which enables scaling
-horizontally.
+DR is designed to be a mechanism to protect against catastrophic failure of entire clusters. 
+They do not forward service read or write requests until they are elected and become a new primary. 
+
+| Capability                                                                                                               	| Disaster Recovery 	| Performance                                                              	|
+|--------------------------------------------------------------------------------------------------------------------------	|-------------------	|--------------------------------------------------------------------------	|
+| Mirrors the secrets infrastructure of a primary cluster                                                                  	| Yes               	| Yes                                                                      	|
+| Mirrors the configuration of a primary cluster’s backends (i.e.: auth backends, storage backends, secret backends, etc.) 	| Yes               	| Yes                                                                      	|
+| Contains a local replica of secrets on the secondary and allows the secondary to forward writes                          	| No                	| Yes                                                                      	|
+| Mirrors the token auth infrastructure for applications or users interacting with the primary cluster                     	| Yes               	| No. Upon promotion, applications must re-auth tokens with a new primary. 	|
+
+For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/api/system/replication.html).
 
 ## Internals
 

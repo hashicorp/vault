@@ -840,9 +840,6 @@ data.
 
 - `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
 
-- `format` `(string: "hex")` – Specifies the output encoding. This can be either
-  `hex` or `base64`.
-
 - `signature` `(string: "")` – Specifies the signature output from the
   `/transit/sign` function. Either this must be supplied or `hmac` must be
   supplied.
