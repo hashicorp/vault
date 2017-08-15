@@ -46,7 +46,7 @@ func Backend(conf *logical.BackendConfig) (logical.Backend, error) {
 // backend is a thin wrapper around plugin.BackendPluginClient
 type backend struct {
 	logical.Backend
-	sync.Mutex
+	sync.RWMutex
 
 	config *logical.BackendConfig
 }
@@ -76,7 +76,9 @@ func (b *backend) reloadBackend() error {
 
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
 func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+	b.RLock()
 	resp, err := b.Backend.HandleRequest(req)
+	b.RUnlock()
 	// Need to compare string value for case were err comes from plugin RPC
 	// and is returned as plugin.BasicError type.
 	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
@@ -86,7 +88,9 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 			return nil, err
 		}
 
-		// Try handle request once more
+		// Try request once more
+		b.RLock()
+		defer b.RUnlock()
 		return b.Backend.HandleRequest(req)
 	}
 	return resp, err
@@ -94,7 +98,9 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 
 // HandleExistenceCheck is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
 func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+	b.RLock()
 	checkFound, exists, err := b.Backend.HandleExistenceCheck(req)
+	b.RUnlock()
 	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
 		// Reload plugin if it's an rpc.ErrShutdown
 		err := b.reloadBackend()
@@ -102,7 +108,9 @@ func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error)
 			return false, false, err
 		}
 
-		// Try handle request once more
+		// Try request once more
+		b.RLock()
+		defer b.RUnlock()
 		return b.Backend.HandleExistenceCheck(req)
 	}
 	return checkFound, exists, err

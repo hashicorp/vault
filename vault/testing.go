@@ -636,6 +636,8 @@ func (t *TestCluster) Cleanup() {
 		}
 	}
 
+	t.Cores[0].unloadMounts()
+
 	if t.TempDir != "" {
 		os.RemoveAll(t.TempDir)
 	}
