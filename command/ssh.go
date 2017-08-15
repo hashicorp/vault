@@ -184,11 +184,21 @@ func (c *SSHCommand) Run(args []string) int {
 		// Feel free to try and remove this dependency.
 		sshpassPath, err := exec.LookPath("sshpass")
 		if err == nil {
-			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(resp.Key), "ssh", "-o UserKnownHostsFile=" + userKnownHostsFile, "-o StrictHostKeyChecking=" + strictHostKeyChecking, "-p", resp.Port, username + "@" + ip.String()}...)
+			sshCmdArgs = append(sshCmdArgs, []string{
+				"-e", // Read password for SSHPASS environment variable
+				"ssh",
+				"-o UserKnownHostsFile=" + userKnownHostsFile,
+				"-o StrictHostKeyChecking=" + strictHostKeyChecking,
+				"-p", resp.Port,
+				username + "@" + ip.String(),
+			}...)
 			if len(args) > 1 {
 				sshCmdArgs = append(sshCmdArgs, args[1:]...)
 			}
+			env := os.Environ()
+			env = append(env, fmt.Sprintf("SSHPASS=%s", string(resp.Key)))
 			sshCmd := exec.Command(sshpassPath, sshCmdArgs...)
+			sshCmd.Env = env
 			sshCmd.Stdin = os.Stdin
 			sshCmd.Stdout = os.Stdout
 			err = sshCmd.Run()
