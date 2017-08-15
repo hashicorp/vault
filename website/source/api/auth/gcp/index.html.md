@@ -1,39 +1,45 @@
 ---
 layout: "api"
-page_title: "Google Cloud Platform Auth Backend - HTTP API"
+page_title: "Google Cloud Platform Auth Plugin Backend - HTTP API"
 sidebar_current: "docs-http-auth-gcp"
 description: |-
   This is the API documentation for the Vault GCP authentication
-  backend.
+  backend plugin.
 ---
 
-# GCP Auth Backend HTTP API
+# GCP Auth Plugin HTTP API
 
-This is the API documentation for the Vault GCP authentication backend.
-To learn more about the usage and operation, see the
+This is the API documentation for the Vault GCP authentication backend
+plugin. To learn more about the usage and operation, see the
 [Vault GCP backend documentation](/docs/auth/gcp.html).
 
-This documentation assumes the backend is mounted at the `/auth/gcp`
-path in Vault. Since it is possible to mount auth backends at any location,
-please update your API calls accordingly.
+This documentation assumes the plugin backend is mounted at the
+`/auth/gcp` path in Vault. Since it is possible to mount auth backends
+at any location, please update your API calls accordingly.
 
-## Configure Client
+## Configure
 
-Configures the backend credentials required to perform API calls to GCP.
-These credentials will be used to query the status of IAM entities and get
-service account or other Google public certificates to confirm signed JWTs
-passed in during login.
+Configures the credentials required for the plugin to perform API calls
+to GCP. These credentials will be used to query the status of IAM
+entities and get service account or other Google public certificates
+to confirm signed JWTs passed in during login.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/gcp/config/`          | `204 (empty body)`     |
+| `POST`   | `/auth/gcp/config`          | `204 (empty body)`     |
 
 ### Parameters
 
 - `credentials` `(string: "")` - A marshaled JSON string that is the content
-  of a GCP credentials file. If not provided, the Vault server attempts
-  to use [Application Default Credentials](https://developers.google.com/identity/protocols/application-default-credentials)
+  of a GCP credentials file. If you would rather specify a file, you can use
+  `credentials="@path/to/creds.json`. The GCP permissions
+  Vault currently requires are:
+    - `iam.serviceAccounts.get`
+    - `iam.serviceAccountKeys.get`
 
+  If this value is not specified or if it is explicitly set to empty,
+  Vault will attempt to use [Application Default Credentials](https://developers.google.com/identity/protocols/application-default-credentials)
+  for that server's machine.
 
 ### Sample Payload
 
@@ -73,11 +79,6 @@ $ curl \
 
 ```json
 {
-  "auth":null,
-  "warnings":[
-    "Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any passwords."
-  ],
-
   "data":{
     "client_email":"serviceaccount1@project-123456.iam.gserviceaccount.com",
     "client_id":"...",
@@ -85,9 +86,7 @@ $ curl \
     "private_key_id":"...",
     "project_id":"project-123456"
   },
-  "lease_duration":0,
-  "lease_id":"",
-  "renewable":false,
+  ...
 }
 
 ```
@@ -106,7 +105,7 @@ Deletes the previously configured GCP config and credentials.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/gcp/config/client
+    https://vault.rocks/v1/auth/gcp/config
 ```
 
 ## Create Role
@@ -118,17 +117,14 @@ entities attempting to login.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/gcp/role/:role`       | `204 (empty body)`     |
+| `POST`   | `/auth/gcp/role/:name`       | `204 (empty body)`     |
 
 ### Parameters
-
-- `role` `(string: <required>)` - Name of the role.
-- `type` `(string: "iam")` - The type of this role. Only the  
+- `name` `(string: <required>)` - Name of the role.
+- `type` `(string: <required>)` - The type of this role. Only the
   restrictions applicable to this role type will be allowed to
-  be configured on the role (see below).
-
-  Valid choices are: `iam`.  
-- `project` `(string: "")` - Required. Only entities belonging to this
+  be configured on the role (see below). Valid choices are: `iam`.
+- `project_id` `(string: "")` - Required. Only entities belonging to this
   project can login for this role.
 - `ttl` `(string: "")` - The TTL period of tokens issued using this role in
   seconds.
@@ -137,8 +133,7 @@ entities attempting to login.
 - `period` `(string: "")` - If set, indicates that the token generated using
   this role should never expire. The token should be renewed within the duration
   specified by this value. At each renewal, the token's TTL will be set to the
-  value of this parameter.  The maximum allowed lifetime of tokens issued using
-  this role.
+  value of this parameter.
 - `policies` `(array: [])` - Policies to be set on tokens issued using this
   role.
 - `max_jwt_exp` `(string: "")` - Optional, defaults to 900 (15min).
@@ -148,6 +143,7 @@ entities attempting to login.
   an error prompting the user to create a new signed JWT with a shorter `exp`.
 
 **`iam`-only params**:
+
 - `service_accounts` `(array: [])` - Required for `iam` roles.
   A comma-separated list of service account emails or ids.
   Defines the service accounts that login is restricted to. If set to `\*`, all
@@ -155,7 +151,7 @@ entities attempting to login.
 
 ### Sample Payload
 
-`iam`:
+`iam` Role:
 
 ```json
 {
@@ -187,17 +183,59 @@ $ curl \
     https://vault.rocks/v1/auth/gcp/role/dev-role
 ```
 
+## Edit Service Accounts For IAM Role
+
+Edit service accounts for an existing IAM role in the backend.
+This allows you to add or remove service accounts from the list of
+service accounts on the role.
+
+| Method   | Path                                    | Produces           |
+| :------- | :---------------------------------------| :------------------|
+| `POST`   | `/auth/gcp/role/:name/service-accounts` | `204 (empty body)` |
+
+### Parameters
+- `name` `(string: <required>)` - Name of an existing `iam` role.
+    Returns error if role is not an `iam` role.
+- `add` `(array: [])` - List of service accounts to add to the role's
+    service accounts
+- `remove` `(array: [])` - List of service accounts to remove from the
+    role's service accounts
+
+### Sample Payload
+
+```json
+{
+  "add": [
+      "dev-1@project-123456.iam.gserviceaccount.com",
+      "123456789",
+  ],
+  "remove": [
+      "dev-2@project-123456.iam.gserviceaccount.com",
+  ],
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/auth/gcp/role/dev-role
+```
+
 ## Read Role
 
 Returns the previously registered role configuration.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/gcp/role/:role`        | `200 application/json` |
+| `GET`   | `/auth/gcp/role/:name`        | `200 application/json` |
 
 ### Parameters
 
-- `role` `(string: <required>)` - Name of the role.
+- `name` `(string: <required>)` - Name of the role.
 
 ### Sample Request
 
@@ -211,36 +249,32 @@ $ curl \
 
 ```json
 {
-  "auth":null,
-  "warnings":null,
-  "data":{
-    "max_jwt_exp": 900,
-    "max_ttl": 0,
-    "ttl":0,
-    "period": 0,
-    "policies":[
-      "default",
-      "dev",
-      "prod"],
-    "project_id":"project-123456",
-    "role_type":"iam",
-    "service_accounts": [
-      "dev-1@project-123456.iam.gserviceaccount.com",
-      "dev-2@project-123456.iam.gserviceaccount.com",
-      "123456789",
-    ]
-  },
-  "wrap_info":null,
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
+    "data":{
+        "max_jwt_exp": 900,
+        "max_ttl": 0,
+        "ttl":0,
+        "period": 0,
+        "policies":[
+            "default",
+            "dev",
+            "prod"
+        ],
+        "project_id":"project-123456",
+        "role_type":"iam",
+        "service_accounts": [
+            "dev-1@project-123456.iam.gserviceaccount.com",
+            "dev-2@project-123456.iam.gserviceaccount.com",
+            "123456789",
+        ]
+    },
+    ...
 }
 
 ```
 
 ## List Roles
 
-Lists all the roles that are registered with the backend.
+Lists all the roles that are registered with the plugin.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -259,17 +293,13 @@ $ curl \
 
 ```json  
 {
-  "auth": null,
-  "warnings": null,
-  "data": {
-    "keys": [
-      "dev-role",
-      "prod-role"
-    ]
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
+    "data": {
+        "keys": [
+            "dev-role",
+            "prod-role"
+        ]
+    },
+    ...
 }
 ```
 
@@ -308,8 +338,9 @@ entity and then authorizes the entity for the given role.
 
 - `role` `(string: "")` - Name of the role against which the login is being
   attempted.
-- `jwt` `(string: "")` - Signed JSON Web Token ([JWT](https://tools.ietf.org/html/rfc7519)).
-  For `iam`, this is a JWT generated using the IAM API method [signJwt](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt)
+- `jwt` `(string: "")` - Signed [JSON Web Token](https://tools.ietf.org/html/rfc7519) (JWT).
+  For `iam`, this is a JWT generated using the IAM API method
+  [signJwt](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt)
   or a self-signed JWT.
 
 
@@ -317,8 +348,8 @@ entity and then authorizes the entity for the given role.
 
 ```json
 {
-  "role": "dev-role",
-  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "role": "dev-role",
+    "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
@@ -336,27 +367,22 @@ $ curl \
 
 ```json
 {
-  "auth":{
-    "client_token":"f33f8c72-924e-11f8-cb43-ac59d697597c",
-    "accessor":"0e9e354a-520f-df04-6867-ee81cae3d42d",
-    "policies":[
-      "default",
-      "dev",
-      "prod"
-    ],
-    "metadata":{
-      "role": "dev-role",
-      "service_account_email": "dev1@project-123456.iam.gserviceaccount.com",
-      "service_account_id": "111111111111111111111"
+    "auth":{
+        "client_token":"f33f8c72-924e-11f8-cb43-ac59d697597c",
+        "accessor":"0e9e354a-520f-df04-6867-ee81cae3d42d",
+        "policies":[
+            "default",
+            "dev",
+            "prod"
+        ],
+        "metadata":{
+            "role": "dev-role",
+            "service_account_email": "dev1@project-123456.iam.gserviceaccount.com",
+            "service_account_id": "111111111111111111111"
+        },
+        "lease_duration":2764800,
+        "renewable":true
     },
-    "lease_duration":2764800,
-    "renewable":true
-  },
-  "data": null,
-  "lease_id":"",
-  "renewable": false,
-  "lease_duration": 0,
-  "wrap_info": null,
-  "warnings": null
+    ...
 }
 ```
