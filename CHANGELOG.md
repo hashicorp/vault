@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+ * auth/approle: Allow array input for policies in addition to comma-delimited
+   strings [GH-3163]
  * plugins: Send logs through Vault's logger rather than stdout [GH-3142]
 
 BUG FIXES:
