@@ -5,6 +5,7 @@ import (
 	"net/rpc"
 	"sync"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	bplugin "github.com/hashicorp/vault/logical/plugin"
 )
@@ -49,12 +50,12 @@ type backend struct {
 	sync.RWMutex
 
 	config *logical.BackendConfig
+
+	// Used to detect if we already reloaded
+	canary string
 }
 
 func (b *backend) reloadBackend() error {
-	b.Lock()
-	defer b.Unlock()
-
 	pluginName := b.config.Config["plugin_name"]
 	b.Logger().Trace("plugin: reloading plugin backend", "plugin", pluginName)
 
@@ -77,16 +78,27 @@ func (b *backend) reloadBackend() error {
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
 func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	b.RLock()
+	canary := b.canary
 	resp, err := b.Backend.HandleRequest(req)
 	b.RUnlock()
 	// Need to compare string value for case were err comes from plugin RPC
 	// and is returned as plugin.BasicError type.
 	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
 		// Reload plugin if it's an rpc.ErrShutdown
-		err := b.reloadBackend()
-		if err != nil {
-			return nil, err
+		b.Lock()
+		if b.canary == canary {
+			err := b.reloadBackend()
+			if err != nil {
+				b.Unlock()
+				return nil, err
+			}
+			b.canary, err = uuid.GenerateUUID()
+			if err != nil {
+				b.Unlock()
+				return nil, err
+			}
 		}
+		b.Unlock()
 
 		// Try request once more
 		b.RLock()
@@ -99,14 +111,25 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 // HandleExistenceCheck is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
 func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
 	b.RLock()
+	canary := b.canary
 	checkFound, exists, err := b.Backend.HandleExistenceCheck(req)
 	b.RUnlock()
 	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
 		// Reload plugin if it's an rpc.ErrShutdown
-		err := b.reloadBackend()
-		if err != nil {
-			return false, false, err
+		b.Lock()
+		if b.canary == canary {
+			err := b.reloadBackend()
+			if err != nil {
+				b.Unlock()
+				return false, false, err
+			}
+			b.canary, err = uuid.GenerateUUID()
+			if err != nil {
+				b.Unlock()
+				return false, false, err
+			}
 		}
+		b.Unlock()
 
 		// Try request once more
 		b.RLock()
