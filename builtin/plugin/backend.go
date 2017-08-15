@@ -58,6 +58,9 @@ func (b *backend) reloadBackend() error {
 	pluginName := b.config.Config["plugin_name"]
 	b.Logger().Trace("plugin: reloading plugin backend", "plugin", pluginName)
 
+	// Ensure proper cleanup of the backend (i.e. call client.Kill())
+	b.Backend.Cleanup()
+
 	nb, err := bplugin.NewBackend(pluginName, b.config.System, b.config.Logger)
 	if err != nil {
 		return err
@@ -74,7 +77,9 @@ func (b *backend) reloadBackend() error {
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
 func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	resp, err := b.Backend.HandleRequest(req)
-	if err == rpc.ErrShutdown {
+	// Need to compare string value for case were err comes from plugin RPC
+	// and is returned as plugin.BasicError type.
+	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
 		// Reload plugin if it's an rpc.ErrShutdown
 		err := b.reloadBackend()
 		if err != nil {
@@ -90,7 +95,7 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 // HandleExistenceCheck is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
 func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
 	checkFound, exists, err := b.Backend.HandleExistenceCheck(req)
-	if err == rpc.ErrShutdown {
+	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
 		// Reload plugin if it's an rpc.ErrShutdown
 		err := b.reloadBackend()
 		if err != nil {

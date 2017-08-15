@@ -30,6 +30,42 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 	cluster, _ := testSystemBackendMock(t, 1, logical.TypeLogical)
 	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
+
+	// Update internal value
+	req := logical.TestRequest(t, logical.UpdateOperation, "mock-0/internal")
+	req.ClientToken = core.Client.Token()
+	req.Data["value"] = "baz"
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Call errors/rpc endpoint to trigger reload
+	req = logical.TestRequest(t, logical.ReadOperation, "mock-0/errors/rpc")
+	req.ClientToken = core.Client.Token()
+	resp, err = core.HandleRequest(req)
+	if err == nil {
+		t.Fatalf("expected error from error/rpc request")
+	}
+
+	// Check internal value to make sure it's reset
+	req = logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
+	req.ClientToken = core.Client.Token()
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: response should not be nil")
+	}
+	if resp.Data["value"].(string) == "baz" {
+		t.Fatal("did not expect backend internal value to be 'baz'")
+	}
 }
 
 func TestSystemBackend_Plugin_reload(t *testing.T) {
@@ -78,7 +114,7 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 
 	for i := 0; i < 2; i++ {
 		// Ensure internal backed value is reset
-		req := logical.TestRequest(t, logical.ReadOperation, "mock-1/internal")
+		req := logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("mock-%d/internal", i))
 		req.ClientToken = core.Client.Token()
 		resp, err := core.HandleRequest(req)
 		if err != nil {
