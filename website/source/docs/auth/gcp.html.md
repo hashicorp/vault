@@ -220,82 +220,82 @@ We use the Go OAuth2 libraries, GCP IAM API, and Vault API.
 ```go
 # Abbreviated imports to show libraries.
 import (
-  vaultapi "github.com/hashicorp/vault/api"
-  "golang.org/x/oauth2"
-  "golang.org/x/oauth2/google"
-  "google.golang.org/api/iam/v1"
-  ...
+	vaultapi "github.com/hashicorp/vault/api"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iam/v1"
+	...
 )
 
 func main() {
-  // Start [PARAMS]
-  project := "project-123456"
-  serviceAccount := "myserviceaccount@project-123456.iam.gserviceaccount.com"
-  credsPath := "path/to/creds.json"
+	// Start [PARAMS]
+	project := "project-123456"
+	serviceAccount := "myserviceaccount@project-123456.iam.gserviceaccount.com"
+	credsPath := "path/to/creds.json"
 
-  os.Setenv("VAULT_ADDR", "https://vault.mycompany.com")
-  defer os.Setenv("VAULT_ADDR", "")
-  // End [PARAMS]
+	os.Setenv("VAULT_ADDR", "https://vault.mycompany.com")
+	defer os.Setenv("VAULT_ADDR", "")
+	// End [PARAMS]
 
-  // Start [GCP IAM Setup]
-  jsonBytes, err := ioutil.ReadFile(credsPath)
-  if err != nil {
-  log.Fatal(err)
-  }
-  config, err := google.JWTConfigFromJSON(jsonBytes, iam.CloudPlatformScope)
-  if err != nil {
-  log.Fatal(err)
-  }
+	// Start [GCP IAM Setup]
+	jsonBytes, err := ioutil.ReadFile(credsPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	config, err := google.JWTConfigFromJSON(jsonBytes, iam.CloudPlatformScope)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  httpClient := config.Client(oauth2.NoContext)
-  iamClient, err := iam.New(httpClient)
-  if err != nil {
-  log.Fatal(err)
-  }
-  // End [GCP IAM Setup]
+	httpClient := config.Client(oauth2.NoContext)
+	iamClient, err := iam.New(httpClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// End [GCP IAM Setup]
 
-  // 1. Generate signed JWT using IAM.
-  resourceName := fmt.Sprintf("projects/%s/serviceAccounts/%s", project, serviceAccount)
-  jwtPayload := map[string]interface{}{
-  "aud": "auth/gcp/login",
-  "sub": serviceAccount,
-  "exp": time.Now().Add(time.Minute * 10).Unix(),
-  }
+	// 1. Generate signed JWT using IAM.
+	resourceName := fmt.Sprintf("projects/%s/serviceAccounts/%s", project, serviceAccount)
+	jwtPayload := map[string]interface{}{
+		"aud": "auth/gcp/login",
+		"sub": serviceAccount,
+		"exp": time.Now().Add(time.Minute * 10).Unix(),
+	}
 
-  payloadBytes, err := json.Marshal(jwtPayload)
-  if err != nil {
-  log.Fatal(err)
-  }
-  signJwtReq := &iam.SignJwtRequest{
-  Payload: string(payloadBytes),
-  }
+	payloadBytes, err := json.Marshal(jwtPayload)
+	if err != nil {
+		log.Fatal(err)
+	}
+	signJwtReq := &iam.SignJwtRequest{
+		Payload: string(payloadBytes),
+	}
 
-  resp, err := iamClient.Projects.ServiceAccounts.SignJwt(resourceName, signJwtReq).Do()
-  if err != nil {
-  log.Fatal(err)
-  }
+	resp, err := iamClient.Projects.ServiceAccounts.SignJwt(resourceName, signJwtReq).Do()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  // 2. Send signed JWT in login request to Vault.
-  vaultClient, err := vaultapi.NewClient(vaultapi.DefaultConfig())
-  if err != nil {
-  log.Fatal(err)
-  }
+	// 2. Send signed JWT in login request to Vault.
+	vaultClient, err := vaultapi.NewClient(vaultapi.DefaultConfig())
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  vaultResp, err := vaultClient.Logical().Write(
-  "auth/gcp/login",
-  map[string]interface{}{
-  "role": "test",
-  "jwt":  resp.SignedJwt,
-  })
+	vaultResp, err := vaultClient.Logical().Write(
+		"auth/gcp/login",
+		map[string]interface{}{
+			"role": "test",
+			"jwt":  resp.SignedJwt,
+	})
 
-  if err != nil {
-  log.Fatal(err)
-  }
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  // 3. Use auth token from response.
-  log.Println("Access token: %s", vaultResp.Auth.ClientToken)
-  vaultClient.SetToken(vaultResp.Auth.ClientToken)
-  // ...
+	// 3. Use auth token from response.
+	log.Println("Access token: %s", vaultResp.Auth.ClientToken)
+	vaultClient.SetToken(vaultResp.Auth.ClientToken)
+	// ...
 }
 ```
 
