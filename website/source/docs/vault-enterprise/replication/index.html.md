@@ -24,7 +24,7 @@ scalability, and highly-available disaster recovery.
 
 ## Architecture
 
-The core unit of Vault replication is a **cluster**, which is comprised of a 
+The core unit of Vault replication is a **cluster**, which is composed of a 
 collection of Vault nodes (an active and its corresponding HA nodes). Multiple Vault 
 clusters communicate in a one-to-many near real-time flow.
 
