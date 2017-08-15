@@ -144,5 +144,10 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 		Description: "The maximum allowable path length",
 	}
 
+	fields["permitted_dns_domains"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `Domains for which this certificate is allowed to sign or issue child certificates. If set, all DNS names (subject and alt) on child certs must be exact matches or subsets of the given domains (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
+	}
+
 	return fields
 }

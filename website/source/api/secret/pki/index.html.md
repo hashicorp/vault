@@ -39,6 +39,7 @@ update your API calls accordingly.
 * [List Roles](#list-roles)
 * [Delete Role](#delete-role)
 * [Generate Root](#generate-root)
+* [Delete Root](#delete-root)
 * [Sign Intermediate](#sign-intermediate)
 * [Sign Certificate](#sign-certificate)
 * [Sign Verbatim](#sign-verbatim)
@@ -47,8 +48,9 @@ update your API calls accordingly.
 ## Read CA Certificate
 
 This endpoint retrieves the CA certificate *in raw DER-encoded form*. This is a
-bare endpoint that does not return a standard Vault data structure. If `/pem` is
-added to the endpoint, the CA certificate is returned in PEM format.
+bare endpoint that does not return a standard Vault data structure and cannot
+be read by the Vault CLI. If `/pem` is added to the endpoint, the CA
+certificate is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
@@ -73,7 +75,7 @@ $ curl \
 
 This endpoint retrieves the CA certificate chain, including the CA _in PEM
 format_. This is a bare endpoint that does not return a standard Vault data
-structure.
+structure and cannot be read by the Vault CLI.
 
 This is an unauthenticated endpoint.
 
@@ -459,8 +461,6 @@ $ curl \
     --data @payload.json \
     https://vault.rocks/v1/pki/intermediate/generate/internal
 ```
-
-### Sample Response
 
 ```json
 {
@@ -882,14 +882,18 @@ $ curl \
 
 ## Generate Root
 
-This endpoint generates a new self-signed CA certificate and private key. _This
-will overwrite any previously-existing private key and certificate._ If the path
-ends with `exported`, the private key will be returned in the response; if it is
-`internal` the private key will not be returned and *cannot be retrieved later*.
-Distribution points use the values set via `config/urls`.
+This endpoint generates a new self-signed CA certificate and private key. If
+the path ends with `exported`, the private key will be returned in the
+response; if it is `internal` the private key will not be returned and *cannot
+be retrieved later*.  Distribution points use the values set via `config/urls`.
 
-As with other issued certificates, Vault will automatically revoke the generated
-root at the end of its lease period; the CA certificate will sign its own CRL.
+As with other issued certificates, Vault will automatically revoke the
+generated root at the end of its lease period; the CA certificate will sign its
+own CRL.
+
+As of Vault 0.8.1, if a CA cert/key already exists within the backend, this
+function will return a 204 and will not overwrite it. Previous versions of
+Vault would overwrite the existing cert/key with new values.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -940,6 +944,12 @@ root at the end of its lease period; the CA certificate will sign its own CRL.
   Useful if the CN is not a hostname or email address, but is instead some
   human-readable identifier.
 
+- `permitted_dns_domains` `(string: "")` – A comma separated string (or, string
+  array) containing DNS domains for which certificates are allowed to be issued
+  or signed by this CA certificate. Supports subdomains via a `.` in front of
+  the domain, as per
+  [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+
 ### Sample Payload
 
 ```json
@@ -972,6 +982,26 @@ $ curl \
   },
   "auth": null
 }
+```
+
+## Delete Root
+
+This endpoint deletes the current CA key (the old CA certificate will still be
+accessible for reading until a new certificate/key are generated or uploaded).
+_This endpoint requires sudo/root privileges._
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `DELETE`   | `/pki/root`   | `204 (empty body)` |
+
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://vault.rocks/v1/pki/root
 ```
 
 ## Sign Intermediate
@@ -1028,6 +1058,12 @@ verbatim.
   will be added to the basic set of key usages used for CA certs signed by this
   path; 3) Extensions requested in the CSR will be copied into the issued
   certificate.
+
+- `permitted_dns_domains` `(string: "")` – A comma separated string (or, string
+  array) containing DNS domains for which certificates are allowed to be issued
+  or signed by this CA certificate. Supports subdomains via a `.` in front of
+  the domain, as per
+  [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
 
 ### Sample Payload
 

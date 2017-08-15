@@ -20,5 +20,5 @@ branches:
 
 script:
   - make bootstrap
-  - travis_wait 30 make test
-  - travis_wait 30 make testrace
+  - travis_wait 45 make test
+  - travis_wait 45 make testrace

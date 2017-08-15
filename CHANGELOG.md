@@ -1,14 +1,33 @@
 ## 0.8.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * PKI Root Generation: Calling `pki/root/generate` when a CA cert/key already
+   exists will now return a `204` instead of overwriting an existing root. If
+   you want to recreate the root, first run a delete operation on `pki/root`
+   (requires `sudo` capability), then generate it again.
+
+FEATURES:
+
+ * **Permitted DNS Domains Support in PKI**: The `pki` backend now supports
+   specifying permitted DNS domains for CA certificates, allowing you to
+   narrowly scope the set of domains for which a CA can issue or sign child
+   certificates.
+
 IMPROVEMENTS:
 
  * auth/approle: Allow array input for policies in addition to comma-delimited
    strings [GH-3163]
  * plugins: Send logs through Vault's logger rather than stdout [GH-3142]
+ * secret/pki: Add `pki/root` delete operation [GH-3165]
+ * secret/pki: Don't overwrite an existing root cert/key when calling generate
+   [GH-3165]
 
 BUG FIXES:
 
  * aws: Don't prefer a nil HTTP client over an existing one [GH-3159]
+ * core: If there is an error when checking for create/update existence, return
+   500 instead of 400 [GH-3162]
  * secret/database: Avoid creating usernames that are too long for legacy MySQL
    [GH-3138]
 

@@ -45,12 +45,13 @@ type creationBundle struct {
 	KeyType        string
 	KeyBits        int
 	SigningBundle  *caInfoBundle
-	TTL            time.Duration
+	NotAfter       time.Time
 	KeyUsage       x509.KeyUsage
 	ExtKeyUsage    certExtKeyUsage
 
 	// Only used when signing a CA cert
-	UseCSRValues bool
+	UseCSRValues        bool
+	PermittedDNSDomains []string
 
 	// URLs to encode into the certificate
 	URLs *urlEntries
@@ -434,6 +435,8 @@ func generateCert(b *backend,
 	if isCA {
 		creationBundle.IsCA = isCA
 
+		creationBundle.PermittedDNSDomains = data.Get("permitted_dns_domains").([]string)
+
 		if signingBundle == nil {
 			// Generating a self-signed root certificate
 			entries, err := getURLs(req)
@@ -581,6 +584,10 @@ func signCert(b *backend,
 	creationBundle.IsCA = isCA
 	creationBundle.UseCSRValues = useCSRValues
 
+	if isCA {
+		creationBundle.PermittedDNSDomains = data.Get("permitted_dns_domains").([]string)
+	}
+
 	parsedBundle, err := signCertificate(creationBundle, csr)
 	if err != nil {
 		return nil, err
@@ -724,6 +731,7 @@ func generateCreationBundle(b *backend,
 	var ttlField string
 	var ttl time.Duration
 	var maxTTL time.Duration
+	var notAfter time.Time
 	var ttlFieldInt interface{}
 	{
 		ttlFieldInt, ok = data.GetOk("ttl")
@@ -764,10 +772,13 @@ func generateCreationBundle(b *backend,
 			}
 		}
 
+		notAfter = time.Now().Add(ttl)
+
 		// If it's not self-signed, verify that the issued certificate won't be
 		// valid past the lifetime of the CA certificate
 		if signingBundle != nil &&
-			time.Now().Add(ttl).After(signingBundle.Certificate.NotAfter) {
+			notAfter.After(signingBundle.Certificate.NotAfter) {
+
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"cannot satisfy request, as TTL is beyond the expiration of the CA certificate")}
 		}
@@ -800,7 +811,7 @@ func generateCreationBundle(b *backend,
 		KeyType:        role.KeyType,
 		KeyBits:        role.KeyBits,
 		SigningBundle:  signingBundle,
-		TTL:            ttl,
+		NotAfter:       notAfter,
 		KeyUsage:       x509.KeyUsage(parseKeyUsages(role.KeyUsage)),
 		ExtKeyUsage:    extUsage,
 	}
@@ -893,7 +904,7 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		SerialNumber:   serialNumber,
 		Subject:        subject,
 		NotBefore:      time.Now().Add(-30 * time.Second),
-		NotAfter:       time.Now().Add(creationInfo.TTL),
+		NotAfter:       creationInfo.NotAfter,
 		IsCA:           false,
 		SubjectKeyId:   subjKeyID,
 		DNSNames:       creationInfo.DNSNames,
@@ -904,6 +915,12 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 	// Add this before calling addKeyUsages
 	if creationInfo.SigningBundle == nil {
 		certTemplate.IsCA = true
+	}
+
+	// This will only be filled in from the generation paths
+	if len(creationInfo.PermittedDNSDomains) > 0 {
+		certTemplate.PermittedDNSDomains = creationInfo.PermittedDNSDomains
+		certTemplate.PermittedDNSDomainsCritical = true
 	}
 
 	addKeyUsages(creationInfo, certTemplate)
@@ -922,6 +939,11 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		}
 
 		caCert := creationInfo.SigningBundle.Certificate
+
+		err = checkPermittedDNSDomains(certTemplate, caCert)
+		if err != nil {
+			return nil, errutil.UserError{Err: err.Error()}
+		}
 
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), creationInfo.SigningBundle.PrivateKey)
 	} else {
@@ -1057,7 +1079,7 @@ func signCertificate(creationInfo *creationBundle,
 		SerialNumber: serialNumber,
 		Subject:      subject,
 		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     time.Now().Add(creationInfo.TTL),
+		NotAfter:     creationInfo.NotAfter,
 		SubjectKeyId: subjKeyID[:],
 	}
 
@@ -1106,6 +1128,15 @@ func signCertificate(creationInfo *creationBundle,
 		}
 	}
 
+	if len(creationInfo.PermittedDNSDomains) > 0 {
+		certTemplate.PermittedDNSDomains = creationInfo.PermittedDNSDomains
+		certTemplate.PermittedDNSDomainsCritical = true
+	}
+	err = checkPermittedDNSDomains(certTemplate, caCert)
+	if err != nil {
+		return nil, errutil.UserError{Err: err.Error()}
+	}
+
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, csr.PublicKey, creationInfo.SigningBundle.PrivateKey)
 
 	if err != nil {
@@ -1121,4 +1152,40 @@ func signCertificate(creationInfo *creationBundle,
 	result.CAChain = creationInfo.SigningBundle.GetCAChain()
 
 	return result, nil
+}
+
+func checkPermittedDNSDomains(template, ca *x509.Certificate) error {
+	if len(ca.PermittedDNSDomains) == 0 {
+		return nil
+	}
+
+	namesToCheck := map[string]struct{}{
+		template.Subject.CommonName: struct{}{},
+	}
+	for _, name := range template.DNSNames {
+		namesToCheck[name] = struct{}{}
+	}
+
+	var badName string
+NameCheck:
+	for name := range namesToCheck {
+		for _, perm := range ca.PermittedDNSDomains {
+			switch {
+			case strings.HasPrefix(perm, ".") && strings.HasSuffix(name, perm):
+				// .example.com matches my.host.example.com and
+				// host.example.com but does not match example.com
+				break NameCheck
+			case perm == name:
+				break NameCheck
+			}
+		}
+		badName = name
+		break
+	}
+
+	if badName == "" {
+		return nil
+	}
+
+	return fmt.Errorf("name %q disallowed by CA's permitted DNS domains", badName)
 }
