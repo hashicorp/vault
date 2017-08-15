@@ -7,6 +7,13 @@ DEPRECATIONS/CHANGES:
    you want to recreate the root, first run a delete operation on `pki/root`
    (requires `sudo` capability), then generate it again.
 
+FEATURES:
+
+ * **Permitted DNS Domains Support in PKI**: The `pki` backend now supports
+   specifying permitted DNS domains for CA certificates, allowing you to
+   narrowly scope the set of domains for which a CA can issue or sign child
+   certificates.
+
 IMPROVEMENTS:
 
  * auth/approle: Allow array input for policies in addition to comma-delimited
