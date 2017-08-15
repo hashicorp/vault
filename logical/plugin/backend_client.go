@@ -11,9 +11,8 @@ import (
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendPluginClient struct {
-	broker       *plugin.MuxBroker
-	client       *rpc.Client
-	pluginClient *plugin.Client
+	broker *plugin.MuxBroker
+	client *rpc.Client
 
 	system logical.SystemView
 	logger log.Logger
