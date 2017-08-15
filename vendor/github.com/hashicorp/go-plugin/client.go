@@ -271,8 +271,11 @@ func NewClient(config *ClientConfig) (c *Client) {
 	}
 
 	if config.Logger == nil {
-		config.Logger = hclog.Default()
-		config.Logger = config.Logger.ResetNamed("plugin")
+		config.Logger = hclog.New(&hclog.LoggerOptions{
+			Output: hclog.DefaultOutput,
+			Level:  hclog.Trace,
+			Name:   "plugin",
+		})
 	}
 
 	c = &Client{
@@ -737,9 +740,9 @@ func (c *Client) logStderr(r io.Reader) {
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
 
 			l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
-			// If output is not JSON format, print directly as error
+			// If output is not JSON format, print directly to Debug
 			if !isJSON(line) {
-				l.Debug("log from plugin", "entry", line)
+				l.Debug(line)
 			} else {
 				// Parse JSON line received from the plugin into logEntry, and print via
 				// the client's logger
