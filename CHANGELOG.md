@@ -26,6 +26,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * aws: Don't prefer a nil HTTP client over an existing one [GH-3159]
+ * core: If there is an error when checking for create/update existence, return
+   500 instead of 400 [GH-3162]
  * secret/database: Avoid creating usernames that are too long for legacy MySQL
    [GH-3138]
 
