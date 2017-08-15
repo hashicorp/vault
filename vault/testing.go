@@ -617,8 +617,8 @@ type TestCluster struct {
 	TempDir       string
 }
 
-func (t *TestCluster) Start() {
-	for _, core := range t.Cores {
+func (c *TestCluster) Start() {
+	for _, core := range c.Cores {
 		if core.Server != nil {
 			for _, ln := range core.Listeners {
 				go core.Server.Serve(ln)
@@ -627,8 +627,9 @@ func (t *TestCluster) Start() {
 	}
 }
 
-func (t *TestCluster) Cleanup() {
-	for _, core := range t.Cores {
+func (c *TestCluster) Cleanup() {
+	// Close listeners
+	for _, core := range c.Cores {
 		if core.Listeners != nil {
 			for _, ln := range core.Listeners {
 				ln.Close()
@@ -636,8 +637,30 @@ func (t *TestCluster) Cleanup() {
 		}
 	}
 
-	if t.TempDir != "" {
-		os.RemoveAll(t.TempDir)
+	// Seal the cores
+	for _, core := range c.Cores {
+		if err := core.Shutdown(); err != nil {
+			continue
+		}
+		timeout := time.Now().Add(60 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				continue
+			}
+			sealed, err := core.Sealed()
+			if err != nil {
+				continue
+			}
+			if sealed {
+				break
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+
+	// Remove any temp dir that exists
+	if c.TempDir != "" {
+		os.RemoveAll(c.TempDir)
 	}
 
 	// Give time to actually shut down/clean up before the next test
