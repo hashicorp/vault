@@ -1,14 +1,14 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise Duo MFA"
-sidebar_current: "docs-vault-enterprise-mfa-duo"
+page_title: "Vault Enterprise PingID MFA"
+sidebar_current: "docs-vault-enterprise-mfa-pingid"
 description: |-
-  Vault Enterprise supports Duo MFA type.
+  Vault Enterprise supports PingID MFA type.
 ---
 
-# Duo MFA
+# PingID MFA
 
-This page demonstrates the Duo MFA on ACL'd paths of Vault.
+This page demonstrates PingID MFA on ACL'd paths of Vault.
 
 ## Steps
 
@@ -31,10 +31,10 @@ userpass/  userpass  auth_userpass_54b8e339  system       system   replicated
 ```
 
 
-### Configure Duo MFA method
+### Configure PingID MFA method
 
 ```
-vault write sys/mfa/method/duo/my_duo mount_accessor=auth_userpass_54b8e339 integration_key=BIACEUEAXI20BNWTEYXT secret_key=HIGTHtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz api_hostname=api-2b5c39f5.duosecurity.com
+vault write sys/mfa/method/pingid/ping mount_accessor=auth_userpass_54b8e339 settings_file_base64="AABDwWaR..."
 ```
 
 ### Create Policy
@@ -47,12 +47,12 @@ above.
 ```hcl
 path "secret/foo" {
     capabilities = ["read"]
-    mfa_methods = ["my_duo"]
+    mfa_methods = ["ping"]
 }
 ```
 
 ```
-vault policy-write duo-policy payload.hcl
+vault policy-write ping-policy payload.hcl
 ```
 
 ### Create User
@@ -64,7 +64,7 @@ authenticate against it.
 
 
 ```
-vault write auth/userpass/users/testuser password=testpassword policies=duo-policy
+vault write auth/userpass/users/testuser password=testpassword policies=ping-policy
 ```
 
 ### Create Login Token
@@ -80,7 +80,7 @@ token                   70f97438-e174-c03c-40fe-6bcdc1028d6c
 token_accessor          a91d97f4-1c7d-6af3-e4bf-971f74f9fab9
 token_duration          768h0m0s
 token_renewable         true
-token_policies          [default duo-policy]
+token_policies          [default ping-policy]
 token_meta_username     "testuser"
 ```
 
@@ -111,7 +111,7 @@ meta                    map[username:testuser]
 num_uses                0
 orphan                  true
 path                    auth/userpass/login/testuser
-policies                [default duo-policy]
+policies                [default ping-policy]
 renewable               true
 ttl                     2764623
 ```
@@ -126,7 +126,7 @@ vault auth 70f97438-e174-c03c-40fe-6bcdc1028d6c
 
 ### Read Secret
 
-Reading the secret will trigger a Duo push. This will be a blocking call until
+Reading the secret will trigger a PingID push. This will be a blocking call until
 the push notification is either approved or declined.
 
 ```
