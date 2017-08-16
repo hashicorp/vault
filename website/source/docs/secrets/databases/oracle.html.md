@@ -14,8 +14,8 @@ The Oracle Database Plugin is an external plugin for the Database
 backend. This plugin generates database credentials dynamically based on
 configured roles for the Oracle database.
 
-The Oracle Database Plugin does not live in the core vault code and can be found
-at it's own github repository here: [hashicorp/vault-plugin-database-oracle](https://github.com/hashicorp/vault-plugin-database-oracle)
+The Oracle Database Plugin does not live in the core Vault code tree and can be found
+at its own git repository here: [hashicorp/vault-plugin-database-oracle](https://github.com/hashicorp/vault-plugin-database-oracle)
 
 See the [Database Backend](/docs/secrets/databases/index.html) docs for more
 information about setting up the Database Backend.
