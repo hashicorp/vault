@@ -13,6 +13,8 @@ FEATURES:
    specifying permitted DNS domains for CA certificates, allowing you to
    narrowly scope the set of domains for which a CA can issue or sign child
    certificates.
+ * **PingID Push Support for Path MFA (Enterprise)**: PingID Push can now be
+   used for MFA with the new path-based MFA introduced in Vault Enterprise 0.8.
 
 IMPROVEMENTS:
 
