@@ -74,14 +74,14 @@ func (c *MountCommand) Run(args []string) int {
 		return 2
 	}
 
-	mountPart := fmt.Sprintf("'%s'", mountType)
+	mountTypeOutput := fmt.Sprintf("'%s'", mountType)
 	if mountType == "plugin" {
-		mountPart = fmt.Sprintf("plugin '%s'", pluginName)
+		mountTypeOutput = fmt.Sprintf("plugin '%s'", pluginName)
 	}
 
 	c.Ui.Output(fmt.Sprintf(
 		"Successfully mounted %s at '%s'!",
-		mountPart, path))
+		mountTypeOutput, path))
 
 	return 0
 }

@@ -64,9 +64,14 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		return 2
 	}
 
+	authTypeOutput := fmt.Sprintf("'%s'", authType)
+	if authType == "plugin" {
+		authTypeOutput = fmt.Sprintf("plugin '%s'", pluginName)
+	}
+
 	c.Ui.Output(fmt.Sprintf(
-		"Successfully enabled '%s' at '%s'!",
-		authType, path))
+		"Successfully enabled %s at '%s'!",
+		authTypeOutput, path))
 
 	return 0
 }
