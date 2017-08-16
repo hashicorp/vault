@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/version"
 
+	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -93,6 +94,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"cert":     credCert.Factory,
 					"aws":      credAws.Factory,
 					"app-id":   credAppId.Factory,
+					"gcp":      credGcp.Factory,
 					"github":   credGitHub.Factory,
 					"userpass": credUserpass.Factory,
 					"ldap":     credLdap.Factory,
