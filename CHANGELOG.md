@@ -14,12 +14,15 @@ FEATURES:
  * **GCP IAM Auth Backend**: There is now an authentication backend that allows
    using GCP IAM credentials to retrieve Vault tokens. This is available as
    both a plugin and built-in to Vault.
- * **PingID Push Support for Path MFA (Enterprise)**: PingID Push can now be
-   used for MFA with the new path-based MFA introduced in Vault Enterprise 0.8.
+ * **PingID Push Support for Path-Baased MFA (Enterprise)**: PingID Push can
+   now be used for MFA with the new path-based MFA introduced in Vault
+   Enterprise 0.8.
  * **Permitted DNS Domains Support in PKI**: The `pki` backend now supports
    specifying permitted DNS domains for CA certificates, allowing you to
    narrowly scope the set of domains for which a CA can issue or sign child
    certificates.
+ * **Self-Reloading Plugins**: The plugin system will now attempt to reload a
+   crashed or stopped plugin, once per request.
  
 IMPROVEMENTS:
 
