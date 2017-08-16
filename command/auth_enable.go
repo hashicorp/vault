@@ -70,7 +70,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	}
 
 	c.Ui.Output(fmt.Sprintf(
-		"Successfully enabled '%s' at '%s'!",
+		"Successfully enabled %s at '%s'!",
 		authTypeOutput, path))
 
 	return 0
