@@ -6,7 +6,7 @@ description: |-
   Vault Enterprise supports Okta MFA type.
 ---
 
-# MFA Okta
+# Okta MFA
 
 This page demonstrates the Okta MFA on ACL'd paths of Vault.
 
@@ -34,7 +34,7 @@ userpass/  userpass  auth_userpass_54b8e339  system       system   replicated
 ### Configure Okta MFA method
 
 ```
-vault write sys/mfa/method/okta/okta mount_accessor=auth_userpass_54b8e339 org_name="dev-262775" api_token="0071u8PrReNkzmATGJAP2oDyIXwwveqx9vIOEyCZDC"
+vault write sys/mfa/method/okta/my_okta mount_accessor=auth_userpass_54b8e339 org_name="dev-262775" api_token="0071u8PrReNkzmATGJAP2oDyIXwwveqx9vIOEyCZDC"
 ```
 
 ### Create Policy
