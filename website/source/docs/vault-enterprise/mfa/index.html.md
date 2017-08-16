@@ -32,6 +32,11 @@ MFA in Vault can be of the following types.
   to the API. The Duo username will be derived from the caller identity's
   persona.
 
+- `PingID` - If PingID push is configured and enabled on a path, then the
+  enrolled device of the user will get a push notification to approve or deny
+  the access to the API. The PingID username will be derived from the caller
+  identity's persona.
+
 ## Configuring MFA Methods
 
 MFA methods are globally managed within the `System Backend` using the HTTP API.
