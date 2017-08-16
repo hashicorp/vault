@@ -726,9 +726,6 @@ be used.
 
 - `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
 
-- `format` `(string: "hex")` – Specifies the output encoding. This can be either
-  `hex` or `base64`.
-
 ### Sample Payload
 
 ```json
