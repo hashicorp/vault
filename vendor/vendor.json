@@ -1035,6 +1035,18 @@
 			"revisionTime": "2017-07-14T18:26:01Z"
 		},
 		{
+			"checksumSHA1": "UsbYUscv6YGOBS7qNcCr3mVwuX8=",
+			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
+			"revision": "1b25f3546a463fbfac29a932ba144a62485f300c",
+			"revisionTime": "2017-08-16T04:25:34Z"
+		},
+		{
+			"checksumSHA1": "2Fk5xIPOoKD4Of9cUIQPKXb2htg=",
+			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/util",
+			"revision": "1b25f3546a463fbfac29a932ba144a62485f300c",
+			"revisionTime": "2017-08-16T04:25:34Z"
+		},
+		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",
 			"path": "github.com/hashicorp/yamux",
 			"revision": "d1caa6c97c9fc1cc9e83bbe34d0603f9ff0ce8bd",
