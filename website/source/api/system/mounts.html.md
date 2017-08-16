@@ -79,6 +79,7 @@ This endpoint mounts a new secret backend at the given path.
     - `default_lease_ttl`
     - `max_lease_ttl`
     - `force_no_cache`
+    - `plugin_name`
 
     These control the default and maximum lease time-to-live, and force
     disabling backend caching respectively. If set on a specific mount, this

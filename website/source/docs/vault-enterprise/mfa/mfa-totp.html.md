@@ -6,7 +6,7 @@ description: |-
   Vault Enterprise supports TOTP MFA type.
 ---
 
-# MFA TOTP
+# TOTP MFA
 
 This page demonstrates the TOTP MFA on ACL'd paths of Vault.
 

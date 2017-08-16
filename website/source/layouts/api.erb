@@ -44,6 +44,9 @@
               <li<%= sidebar_current("docs-http-secret-databases-postgresql") %>>
                 <a href="/api/secret/databases/postgresql.html">PostgreSQL</a>
               </li>
+              <li<%= sidebar_current("docs-http-secret-databases-oracle") %>>
+                <a href="/api/secret/databases/oracle.html">Oracle</a>
+              </li>
             </ul>
           </li>
 
@@ -100,6 +103,9 @@
           </li>
           <li<%= sidebar_current("docs-http-auth-github") %>>
             <a href="/api/auth/github/index.html">Github</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-gcp") %>>
+            <a href="/api/auth/gcp/index.html">Google Cloud</a>
           </li>
           <li<%= sidebar_current("docs-http-auth-ldap") %>>
             <a href="/api/auth/ldap/index.html">LDAP</a>
@@ -176,22 +182,25 @@
           <li<%= sidebar_current("docs-http-system-mfa") %>>
             <a href="/api/system/mfa.html"><tt>/sys/mfa</tt></a>
               <ul class="nav">
-                <li<%= sidebar_current("docs-http-system-mfa-totp") %>>
-                  <a href="/api/system/mfa-totp.html"><tt>/sys/mfa/method/totp</tt></a>
+                <li<%= sidebar_current("docs-http-system-mfa-duo") %>>
+                  <a href="/api/system/mfa-duo.html"><tt>/sys/mfa/method/duo</tt></a>
                 </li>
                 <li<%= sidebar_current("docs-http-system-mfa-okta") %>>
                   <a href="/api/system/mfa-okta.html"><tt>/sys/mfa/method/okta</tt></a>
                 </li>
-                <li<%= sidebar_current("docs-http-system-mfa-duo") %>>
-                  <a href="/api/system/mfa-duo.html"><tt>/sys/mfa/method/duo</tt></a>
+                <li<%= sidebar_current("docs-http-system-mfa-pingid") %>>
+                  <a href="/api/system/mfa-pingid.html"><tt>/sys/mfa/method/pingid</tt></a>
+                </li>
+                <li<%= sidebar_current("docs-http-system-mfa-totp") %>>
+                  <a href="/api/system/mfa-totp.html"><tt>/sys/mfa/method/totp</tt></a>
                 </li>
               </ul>
           </li>
           <li<%= sidebar_current("docs-http-system-mounts") %>>
             <a href="/api/system/mounts.html"><tt>/sys/mounts</tt></a>
           </li>
-          <li<%= sidebar_current("docs-http-system-plugins-backend-reload") %>>
-            <a href="/api/system/plugins-backend-reload.html"><tt>/sys/plugins/backend/reload</tt></a>
+          <li<%= sidebar_current("docs-http-system-plugins-reload-backend") %>>
+            <a href="/api/system/plugins-reload-backend.html"><tt>/sys/plugins/reload/backend</tt></a>
           </li>
           <li<%= sidebar_current("docs-http-system-plugins-catalog") %>>
             <a href="/api/system/plugins-catalog.html"><tt>/sys/plugins/catalog</tt></a>

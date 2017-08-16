@@ -1,8 +1,12 @@
 package physical
 
 import (
-	"fmt"
+	"errors"
 	"strings"
+)
+
+var (
+	ErrRelativePath = errors.New("relative paths not supported")
 )
 
 // View represents a prefixed view of a physical backend
@@ -74,7 +78,7 @@ func (v *View) Delete(key string) error {
 // sanityCheck is used to perform a sanity check on a key
 func (v *View) sanityCheck(key string) error {
 	if strings.Contains(key, "..") {
-		return fmt.Errorf("key cannot be relative path")
+		return ErrRelativePath
 	}
 	return nil
 }

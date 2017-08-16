@@ -806,6 +806,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["plugin-catalog_name"][0]),
 					},
+					"sha256": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
+					},
 					"sha_256": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
@@ -826,7 +830,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 			},
 			&framework.Path{
-				Pattern: "plugins/backend/reload$",
+				Pattern: "plugins/reload/backend$",
 
 				Fields: map[string]*framework.FieldSchema{
 					"plugin": &framework.FieldSchema{
@@ -939,9 +943,12 @@ func (b *SystemBackend) handlePluginCatalogUpdate(req *logical.Request, d *frame
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 
-	sha256 := d.Get("sha_256").(string)
+	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
-		return logical.ErrorResponse("missing SHA-256 value"), nil
+		sha256 = d.Get("sha_256").(string)
+		if sha256 == "" {
+			return logical.ErrorResponse("missing SHA-256 value"), nil
+		}
 	}
 
 	command := d.Get("command").(string)

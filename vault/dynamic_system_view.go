@@ -121,6 +121,12 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It
 // returns a PluginRunner or an error if no plugin was found.
 func (d dynamicSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.pluginCatalog == nil {
+		return nil, fmt.Errorf("system view core plugin catalog is nil")
+	}
 	r, err := d.core.pluginCatalog.Get(name)
 	if err != nil {
 		return nil, err

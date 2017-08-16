@@ -61,8 +61,7 @@ $ curl \
 
 ## Configure Lease
 
-This endpoint configures the lease settings for generated credentials. This is
-endpoint requires sudo privileges.
+This endpoint configures the lease settings for generated credentials.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

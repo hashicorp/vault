@@ -18,12 +18,21 @@ const (
 // all other policies will be ignored, the result will contain
 // just the 'root'. In cases where 'root' is not present, if
 // 'default' policy is not already present, it will be added.
-func ParsePolicies(policiesRaw string) []string {
-	if policiesRaw == "" {
+func ParsePolicies(policiesRaw interface{}) []string {
+	if policiesRaw == nil {
 		return []string{"default"}
 	}
 
-	policies := strings.Split(policiesRaw, ",")
+	var policies []string
+	switch policiesRaw.(type) {
+	case string:
+		if policiesRaw.(string) == "" {
+			return []string{"default"}
+		}
+		policies = strings.Split(policiesRaw.(string), ",")
+	case []string:
+		policies = policiesRaw.([]string)
+	}
 
 	return SanitizePolicies(policies, true)
 }

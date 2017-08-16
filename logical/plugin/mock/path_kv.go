@@ -7,22 +7,29 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-// pathKV is used to test CRUD and List operations. It is a simplified
+// kvPaths is used to test CRUD and List operations. It is a simplified
 // version of the passthrough backend that only accepts string values.
-func pathKV(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "kv/" + framework.GenericNameRegex("key"),
-		Fields: map[string]*framework.FieldSchema{
-			"key":   &framework.FieldSchema{Type: framework.TypeString},
-			"value": &framework.FieldSchema{Type: framework.TypeString},
+func kvPaths(b *backend) []*framework.Path {
+	return []*framework.Path{
+		&framework.Path{
+			Pattern: "kv/?",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ListOperation: b.pathKVList,
+			},
 		},
-		ExistenceCheck: b.pathExistenceCheck,
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathKVRead,
-			logical.CreateOperation: b.pathKVCreateUpdate,
-			logical.UpdateOperation: b.pathKVCreateUpdate,
-			logical.DeleteOperation: b.pathKVDelete,
-			logical.ListOperation:   b.pathKVList,
+		&framework.Path{
+			Pattern: "kv/" + framework.GenericNameRegex("key"),
+			Fields: map[string]*framework.FieldSchema{
+				"key":   &framework.FieldSchema{Type: framework.TypeString},
+				"value": &framework.FieldSchema{Type: framework.TypeString},
+			},
+			ExistenceCheck: b.pathExistenceCheck,
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   b.pathKVRead,
+				logical.CreateOperation: b.pathKVCreateUpdate,
+				logical.UpdateOperation: b.pathKVCreateUpdate,
+				logical.DeleteOperation: b.pathKVDelete,
+			},
 		},
 	}
 }

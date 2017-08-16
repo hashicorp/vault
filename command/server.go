@@ -74,11 +74,12 @@ type ServerCommand struct {
 func (c *ServerCommand) Run(args []string) int {
 	var dev, verifyOnly, devHA, devTransactional, devLeasedGeneric, devThreeNode bool
 	var configPath []string
-	var logLevel, devRootTokenID, devListenAddress string
+	var logLevel, devRootTokenID, devListenAddress, devPluginDir string
 	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
 	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
 	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
+	flags.StringVar(&devPluginDir, "dev-plugin-dir", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.BoolVar(&devHA, "dev-ha", false, "")
@@ -262,6 +263,10 @@ func (c *ServerCommand) Run(args []string) int {
 		if devLeasedGeneric {
 			coreConfig.LogicalBackends["generic"] = vault.LeasedPassthroughBackendFactory
 		}
+		if devPluginDir != "" {
+			coreConfig.PluginDirectory = devPluginDir
+		}
+
 	}
 
 	if devThreeNode {
