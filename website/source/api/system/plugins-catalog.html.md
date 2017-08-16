@@ -62,7 +62,7 @@ supplied name.
   is what is used to look up plugins in the catalog. This is part of the request
   URL.
 
-- `sha_256` `(string: <required>)` – This is the SHA256 sum of the plugin's
+- `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
   binary. Before a plugin is run it's SHA will be checked against this value, if
   they do not match the plugin can not be run.
 
