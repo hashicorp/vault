@@ -98,7 +98,7 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 	}
 
 	// Perform plugin reload
-	resp, err := client.Logical().Write("sys/plugins/backend/reload", reqData)
+	resp, err := client.Logical().Write("sys/plugins/reload/backend", reqData)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

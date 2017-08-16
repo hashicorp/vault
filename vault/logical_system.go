@@ -830,7 +830,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 			},
 			&framework.Path{
-				Pattern: "plugins/backend/reload$",
+				Pattern: "plugins/reload/backend$",
 
 				Fields: map[string]*framework.FieldSchema{
 					"plugin": &framework.FieldSchema{

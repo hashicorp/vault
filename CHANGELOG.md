@@ -22,7 +22,7 @@ FEATURES:
    narrowly scope the set of domains for which a CA can issue or sign child
    certificates.
  * **Plugin Backend Reload Endpoint**: Plugin backends can now be triggered to
-   reload using the `sys/plugins/backend/reload` endpoint and providing either
+   reload using the `sys/plugins/reload/backend` endpoint and providing either
    the plugin name or the mounts to reload.
  * **Self-Reloading Plugins**: The plugin system will now attempt to reload a
    crashed or stopped plugin, once per request.
