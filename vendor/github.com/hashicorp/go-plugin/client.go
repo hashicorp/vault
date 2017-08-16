@@ -21,8 +21,6 @@ import (
 	"time"
 	"unicode"
 
-	"encoding/json"
-
 	hclog "github.com/hashicorp/go-hclog"
 )
 
@@ -740,16 +738,12 @@ func (c *Client) logStderr(r io.Reader) {
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
 
 			l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
+
+			entry, err := parseJSON(line)
 			// If output is not JSON format, print directly to Debug
-			if !isJSON(line) {
+			if err != nil {
 				l.Debug(line)
 			} else {
-				// Parse JSON line received from the plugin into logEntry, and print via
-				// the client's logger
-				entry, err := parseJSON(line)
-				if err != nil {
-					l.Error("error parsing json from plugin", "error", err)
-				}
 				out := flattenKVPairs(entry.KVPairs)
 
 				l = l.With("timestamp", entry.Timestamp.Format(hclog.TimeFormat))
@@ -775,9 +769,4 @@ func (c *Client) logStderr(r io.Reader) {
 
 	// Flag that we've completed logging for others
 	close(c.doneLogging)
-}
-
-func isJSON(str string) bool {
-	var js json.RawMessage
-	return json.Unmarshal([]byte(str), &js) == nil
 }
