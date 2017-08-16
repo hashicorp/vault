@@ -43,5 +43,5 @@ This endpoint reloads mounted plugin backends.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT
-    https://vault.rocks/v1/sys/backends/reload
+    https://vault.rocks/v1/sys/plugins/backend/reload
 ```
