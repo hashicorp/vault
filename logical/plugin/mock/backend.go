@@ -38,10 +38,13 @@ func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: "",
-		Paths: []*framework.Path{
-			pathKV(&b),
-			pathInternal(&b),
-		},
+		Paths: framework.PathAppend(
+			errorPaths(&b),
+			kvPaths(&b),
+			[]*framework.Path{
+				pathInternal(&b),
+			},
+		),
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"special",

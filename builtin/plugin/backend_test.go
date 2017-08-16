@@ -14,6 +14,10 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
+func TestBackend_impl(t *testing.T) {
+	var _ logical.Backend = &backend{}
+}
+
 func TestBackend(t *testing.T) {
 	config, cleanup := testConfig(t)
 	defer cleanup()

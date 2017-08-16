@@ -1347,6 +1347,9 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.ensureWrappingKey(); err != nil {
 		return err
 	}
+	if err := c.setupPluginCatalog(); err != nil {
+		return err
+	}
 	if err := c.loadMounts(); err != nil {
 		return err
 	}
@@ -1378,9 +1381,6 @@ func (c *Core) postUnseal() (retErr error) {
 		return err
 	}
 	if err := c.setupAuditedHeadersConfig(); err != nil {
-		return err
-	}
-	if err := c.setupPluginCatalog(); err != nil {
 		return err
 	}
 
