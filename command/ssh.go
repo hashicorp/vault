@@ -42,8 +42,10 @@ type SSHCommand struct {
 	userKnownHostsFile    string
 
 	// SSH CA backend specific options
-	publicKeyPath  string
-	privateKeyPath string
+	publicKeyPath     string
+	privateKeyPath    string
+	hostKeyMountPoint string
+	hostKeyHostnames  string
 }
 
 // Structure to hold the fields returned when asked for a credential from SSHh backend.
@@ -92,6 +94,8 @@ func (c *SSHCommand) Run(args []string) int {
 		expandPath("~/.ssh/id_rsa.pub"), "")
 	flags.StringVar(&c.privateKeyPath, "private-key-path",
 		expandPath("~/.ssh/id_rsa"), "")
+	flags.StringVar(&c.hostKeyMountPoint, "host-key-mount-point", "", "")
+	flags.StringVar(&c.hostKeyHostnames, "host-key-hostnames", "*", "")
 
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -240,7 +244,7 @@ func (c *SSHCommand) handleTypeCA() error {
 		return errors.Wrap(err, "failed to sign public key")
 	}
 	if secret == nil || secret.Data == nil {
-		return fmt.Errorf("vault returned empty credentials")
+		return fmt.Errorf("client signing returned empty credentials")
 	}
 
 	// Handle no-exec
@@ -258,6 +262,41 @@ func (c *SSHCommand) handleTypeCA() error {
 		return fmt.Errorf("missing signed key")
 	}
 
+	// Capture the current value - this could be overwritten later if the user
+	// enabled host key signing verification.
+	userKnownHostsFile := c.userKnownHostsFile
+	strictHostKeyChecking := c.strictHostKeyChecking
+
+	// Handle host key signing verification. If the user specified a mount point,
+	// download the public key, trust it with the given domains, and use that
+	// instead of the user's regular known_hosts file.
+	if c.hostKeyMountPoint != "" {
+		secret, err := c.client.Logical().Read(c.hostKeyMountPoint + "/config/ca")
+		if err != nil {
+			return errors.Wrap(err, "failed to get host signing key")
+		}
+		if secret == nil || secret.Data == nil {
+			return fmt.Errorf("missing host signing key")
+		}
+		publicKey, ok := secret.Data["public_key"].(string)
+		if !ok {
+			return fmt.Errorf("host signing key is empty")
+		}
+
+		// Write the known_hosts file
+		name := fmt.Sprintf("vault_ssh_ca_known_hosts_%s_%s", c.username, c.ip)
+		data := fmt.Sprintf("@cert-authority %s %s", c.hostKeyHostnames, publicKey)
+		knownHosts, err, closer := c.writeTemporaryFile(name, []byte(data), 0644)
+		defer closer()
+		if err != nil {
+			return errors.Wrap(err, "failed to write host public key")
+		}
+
+		// Update the variables
+		userKnownHostsFile = knownHosts
+		strictHostKeyChecking = "yes"
+	}
+
 	// Write the signed public key to disk
 	name := fmt.Sprintf("vault_ssh_ca_%s_%s", c.username, c.ip)
 	signedPublicKeyPath, err, closer := c.writeTemporaryKey(name, []byte(key))
@@ -269,8 +308,8 @@ func (c *SSHCommand) handleTypeCA() error {
 	args := append([]string{
 		"-i", c.privateKeyPath,
 		"-i", signedPublicKeyPath,
-		"-o UserKnownHostsFile=" + c.userKnownHostsFile,
-		"-o StrictHostKeyChecking=" + c.strictHostKeyChecking,
+		"-o UserKnownHostsFile=" + userKnownHostsFile,
+		"-o StrictHostKeyChecking=" + strictHostKeyChecking,
 		c.username + "@" + c.ip,
 	}, c.sshArgs...)
 
@@ -442,9 +481,9 @@ func (c *SSHCommand) generateCredential() (*api.Secret, *SSHCredentialResp, erro
 	return secret, &resp, nil
 }
 
-// writeTemporaryKey writes the key to a temporary file and returns the path.
-// The caller should defer the closer to cleanup the key.
-func (c *SSHCommand) writeTemporaryKey(name string, data []byte) (string, error, func() error) {
+// writeTemporaryFile writes a file to a temp location with the given data and
+// file permissions.
+func (c *SSHCommand) writeTemporaryFile(name string, data []byte, perms os.FileMode) (string, error, func() error) {
 	// default closer to prevent panic
 	closer := func() error { return nil }
 
@@ -455,11 +494,17 @@ func (c *SSHCommand) writeTemporaryKey(name string, data []byte) (string, error,
 
 	closer = func() error { return os.Remove(f.Name()) }
 
-	if err := ioutil.WriteFile(f.Name(), data, 0600); err != nil {
+	if err := ioutil.WriteFile(f.Name(), data, perms); err != nil {
 		return "", errors.Wrap(err, "writing temporary key"), closer
 	}
 
 	return f.Name(), nil, closer
+}
+
+// writeTemporaryKey writes the key to a temporary file and returns the path.
+// The caller should defer the closer to cleanup the key.
+func (c *SSHCommand) writeTemporaryKey(name string, data []byte) (string, error, func() error) {
+	return c.writeTemporaryFile(name, data, 0600)
 }
 
 // If user did not provide the role with which SSH connection has
@@ -558,6 +603,15 @@ Usage: vault ssh [options] username@ip [ssh options]
 
       $ vault ssh -mode=ca -role=my-role user@1.2.3.4
 
+  SSH using CA mode with host key verification:
+
+      $ vault ssh \
+          -mode=ca \
+          -role=my-role \
+          -host-key-mount-point=host-signer \
+          -host-key-hostnames=example.com \
+          user@example.com
+
   For the full list of options and arguments, please see the documentation.
 
 General Options:
@@ -596,6 +650,32 @@ SSH Options:
                    checking can be avoided while establishing the connection.
                    Defaults to "~/.ssh/known_hosts". Can also be specified with
                    "VAULT_SSH_USER_KNOWN_HOSTS_FILE" environment variable.
+
+CA Mode Options:
+
+  - public-key-path=<path>
+      The path to the public key to send to Vault for signing. The default value
+      is ~/.ssh/id_rsa.pub.
+
+  - private-key-path=<path>
+      The path to the private key to use for authentication. This must be the
+      corresponding private key to -public-key-path. The default value is
+      ~/.ssh/id_rsa.
+
+  - host-key-mount-point=<string>
+      The mount point to the SSH backend where host keys are signed. When given
+      a value, Vault will generate a custom known_hosts file with delegation to
+      the CA at the provided mount point and verify the SSH connection's host
+      keys against the provided CA. By default, this command uses the users's
+      existing known_hosts file. When this flag is set, this command will force
+      strict host key checking and will override any values provided for a
+      custom -user-known-hosts-file.
+
+  - host-key-hostnames=<string>
+      The list of hostnames to delegate for this certificate authority. By
+      default, this is "*", which allows all domains and IPs. To restrict
+      validation to a series of hostnames, specify them as comma-separated
+      values here.
 `
 	return strings.TrimSpace(helpText)
 }
