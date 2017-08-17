@@ -159,8 +159,10 @@ func (c *SSHCommand) Run(args []string) int {
 			"WARNING: No -mode specified. Use -mode to tell Vault which ssh\n" +
 			"authentication mode to use. In the future, you will need to tell\n" +
 			"Vault which mode to use. For now, Vault will attempt to guess based\n" +
-			"on the API response.")
-		_, cred, err := c.generateCredential()
+			"on the API response. This guess involves creating a temporary\n" +
+			"credential, reading its type, and then revoking it. To reduce the\n" +
+			"number of API calls and surface area, specify -mode directly.")
+		secret, cred, err := c.generateCredential()
 		if err != nil {
 			// This is _very_ hacky, but is the only sane backwards-compatible way
 			// to do this. If the error is "key type unknown", we just assume the
@@ -173,6 +175,14 @@ func (c *SSHCommand) Run(args []string) int {
 			}
 		} else {
 			c.mode = cred.KeyType
+		}
+
+		// Revoke the secret, since the child functions will generate their own
+		// credential. Users wishing to avoid this should specify -mode.
+		if secret != nil {
+			if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+				c.Ui.Warn(fmt.Sprintf("Failed to revoke temporary key: %s", err))
+			}
 		}
 	}
 
