@@ -179,10 +179,12 @@ key.
     $ ssh-keygen -Lf ~/.ssh/signed-cert.pub
     ```
 
-1. SSH into the host machine using the signed key.
+1. SSH into the host machine using the signed key. You must supply both the
+signed public key from Vault **and** the corresponding private key as
+authentication to the SSH call.
 
     ```text
-    $ ssh -i signed-cert.pub username@10.0.23.5
+    $ ssh -i signed-cert.pub -i ~/.ssh/id_rsa username@10.0.23.5
     ```
 
 ## Host Key Signing
