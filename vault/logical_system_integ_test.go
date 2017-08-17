@@ -15,12 +15,12 @@ import (
 )
 
 func TestSystemBackend_Plugin_secret(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeLogical)
+	cluster := testSystemBackendMock(t, 2, logical.TypeLogical)
 	defer cluster.Cleanup()
 }
 
 func TestSystemBackend_Plugin_auth(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeCredential)
+	cluster := testSystemBackendMock(t, 2, logical.TypeCredential)
 	defer cluster.Cleanup()
 }
 
@@ -148,12 +148,18 @@ func testSystemBackendMock(t *testing.T, numMounts int, backendType logical.Back
 	case logical.TypeLogical:
 		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMainLogical")
 		for i := 0; i < numMounts; i++ {
-			resp, err := client.Logical().Write(fmt.Sprintf("sys/mounts/mock-%d", i), map[string]interface{}{
+			// Alternate input styles for plugin_name on every other mount
+			options := map[string]interface{}{
 				"type": "plugin",
-				"config": map[string]interface{}{
+			}
+			if (i+1)%2 == 0 {
+				options["config"] = map[string]interface{}{
 					"plugin_name": "mock-plugin",
-				},
-			})
+				}
+			} else {
+				options["plugin_name"] = "mock-plugin"
+			}
+			resp, err := client.Logical().Write(fmt.Sprintf("sys/mounts/mock-%d", i), options)
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
@@ -164,10 +170,18 @@ func testSystemBackendMock(t *testing.T, numMounts int, backendType logical.Back
 	case logical.TypeCredential:
 		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMainCredentials")
 		for i := 0; i < numMounts; i++ {
-			resp, err := client.Logical().Write(fmt.Sprintf("sys/auth/mock-%d", i), map[string]interface{}{
-				"type":        "plugin",
-				"plugin_name": "mock-plugin",
-			})
+			// Alternate input styles for plugin_name on every other mount
+			options := map[string]interface{}{
+				"type": "plugin",
+			}
+			if (i+1)%2 == 0 {
+				options["config"] = map[string]interface{}{
+					"plugin_name": "mock-plugin",
+				}
+			} else {
+				options["plugin_name"] = "mock-plugin"
+			}
+			resp, err := client.Logical().Write(fmt.Sprintf("sys/auth/mock-%d", i), options)
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
