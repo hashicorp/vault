@@ -146,6 +146,21 @@ the contents begin with `ssh-rsa ...`.
     The result will include the serial and the signed key. This signed key is
     another public key.
 
+    To customize the signing options, use a JSON payload:
+
+    ```text
+    $ vault write ssh-client-signer/sign/my-role -<<"EOH"
+    {
+      "public_key": "ssh-rsa AAA...",
+      "valid_principals": "my-user",
+      "key_id": "custom-prefix",
+      "extension": {
+        "permit-pty": ""
+      }
+    }
+    EOH
+    ```
+
 1. Save the resulting signed, public key to disk. Limit permissions as needed.
 
     ```text
