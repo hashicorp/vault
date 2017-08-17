@@ -317,6 +317,49 @@ $ tail -f /var/log/auth.log | grep --line-buffered "sshd"
 If you are unable to make a connection to the host, the SSH server logs may
 provide guidance and insights.
 
+### Name is not a listed principal
+
+If the `auth.log` displays the following messages:
+
+```text
+# /var/log/auth.log
+key_cert_check_authority: invalid certificate
+Certificate invalid: name is not a listed principal
+```
+
+The certificate does not permit the username as a listed principal for
+authenticating to the system. This is most likely due to an OpenSSH bug (see
+[known issues](#known-issues) for more information). This bug does not respect
+the `allowed_users` option value of "\*". Here are ways to work around this
+issue:
+
+1. Set `default_user` in the role. If you are always authenticating as the same
+user, set the `default_user` in the role to the username you are SSHing into the
+target machine:
+
+    ```text
+    $ vault write ssh/roles/my-role -<<"EOH"
+    {
+      "default_user": "YOUR_USER",
+      // ...
+    }
+    EOH
+    ```
+
+1. Set `valid_principals` during signing. In situations where multiple users may
+be authenticating to SSH via Vault, set the list of valid principles during key
+signing to include the current username:
+
+    ```text
+    $ vault write ssh-client-signer/sign/my-role -<<"EOH"
+    {
+      "valid_principals": "my-user"
+      // ...
+    }
+    EOH
+    ```
+
+
 ### No Prompt After Login
 
 If you do not see a prompt after authenticating to the host machine, the signed
@@ -343,11 +386,10 @@ this extension to the signed certificate.
     ```text
     $ vault write ssh-client-signer/sign/my-role -<<"EOH"
     {
-      "public_key": "ssh-rsa AAA...",
-      "cert_type": "user",
       "extension": {
         "permit-pty": ""
       }
+      // ...
     }
     EOH
     ```
