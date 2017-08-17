@@ -10,15 +10,40 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/meta"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 )
 
-// SSHCommand is a Command that establishes a SSH connection
-// with target by generating a dynamic key
+// SSHCommand is a Command that establishes a SSH connection with target by
+// generating a dynamic key
 type SSHCommand struct {
 	meta.Meta
+
+	// API
+	client    *api.Client
+	sshClient *api.SSH
+
+	// Common options
+	mode       string
+	noExec     bool
+	format     string
+	mountPoint string
+	role       string
+	username   string
+	ip         string
+	sshArgs    []string
+
+	// Key options
+	strictHostKeyChecking string
+	userKnownHostsFile    string
+
+	// SSH CA backend specific options
+	publicKeyPath  string
+	privateKeyPath string
 }
 
 // Structure to hold the fields returned when asked for a credential from SSHh backend.
@@ -31,40 +56,46 @@ type SSHCredentialResp struct {
 }
 
 func (c *SSHCommand) Run(args []string) int {
-	var role, mountPoint, format, userKnownHostsFile, strictHostKeyChecking string
-	var noExec bool
-	var sshCmdArgs []string
+
 	flags := c.Meta.FlagSet("ssh", meta.FlagSetDefault)
-	flags.StringVar(&strictHostKeyChecking, "strict-host-key-checking", "", "")
-	flags.StringVar(&userKnownHostsFile, "user-known-hosts-file", "", "")
-	flags.StringVar(&format, "format", "table", "")
-	flags.StringVar(&role, "role", "", "")
-	flags.StringVar(&mountPoint, "mount-point", "ssh", "")
-	flags.BoolVar(&noExec, "no-exec", false, "")
+
+	envOrDefault := func(key string, def string) string {
+		if k := os.Getenv(key); k != "" {
+			return k
+		}
+		return def
+	}
+
+	expandPath := func(p string) string {
+		e, err := homedir.Expand(p)
+		if err != nil {
+			return p
+		}
+		return e
+	}
+
+	// Common options
+	flags.StringVar(&c.mode, "mode", "", "")
+	flags.BoolVar(&c.noExec, "no-exec", false, "")
+	flags.StringVar(&c.format, "format", "table", "")
+	flags.StringVar(&c.mountPoint, "mount-point", "ssh", "")
+	flags.StringVar(&c.role, "role", "", "")
+
+	// Key options
+	flags.StringVar(&c.strictHostKeyChecking, "strict-host-key-checking",
+		envOrDefault("VAULT_SSH_STRICT_HOST_KEY_CHECKING", "ask"), "")
+	flags.StringVar(&c.userKnownHostsFile, "user-known-hosts-file",
+		envOrDefault("VAULT_SSH_USER_KNOWN_HOSTS_FILE", expandPath("~/.ssh/known_hosts")), "")
+
+	// CA-specific options
+	flags.StringVar(&c.publicKeyPath, "public-key-path",
+		expandPath("~/.ssh/id_rsa.pub"), "")
+	flags.StringVar(&c.privateKeyPath, "private-key-path",
+		expandPath("~/.ssh/id_rsa"), "")
 
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
-	}
-
-	// If the flag is already set then it takes the precedence. If the flag is not
-	// set, try setting it from env var.
-	if os.Getenv("VAULT_SSH_STRICT_HOST_KEY_CHECKING") != "" && strictHostKeyChecking == "" {
-		strictHostKeyChecking = os.Getenv("VAULT_SSH_STRICT_HOST_KEY_CHECKING")
-	}
-	// Assign default value if both flag and env var are not set
-	if strictHostKeyChecking == "" {
-		strictHostKeyChecking = "ask"
-	}
-
-	// If the flag is already set then it takes the precedence. If the flag is not
-	// set, try setting it from env var.
-	if os.Getenv("VAULT_SSH_USER_KNOWN_HOSTS_FILE") != "" && userKnownHostsFile == "" {
-		userKnownHostsFile = os.Getenv("VAULT_SSH_USER_KNOWN_HOSTS_FILE")
-	}
-	// Assign default value if both flag and env var are not set
-	if userKnownHostsFile == "" {
-		userKnownHostsFile = "~/.ssh/known_hosts"
 	}
 
 	args = flags.Args()
@@ -78,46 +109,35 @@ func (c *SSHCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf("Error initializing client: %v", err))
 		return 1
 	}
+	c.client = client
+	c.sshClient = client.SSHWithMountPoint(c.mountPoint)
 
-	// split the parameter username@ip
-	input := strings.Split(args[0], "@")
-	var username string
-	var ipAddr string
-
-	// If only IP is mentioned and username is skipped, assume username to
-	// be the current username. Vault SSH role's default username could have
-	// been used, but in order to retain the consistency with SSH command,
-	// current username is employed.
-	if len(input) == 1 {
-		u, err := user.Current()
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error fetching username: %v", err))
-			return 1
-		}
-		username = u.Username
-		ipAddr = input[0]
-	} else if len(input) == 2 {
-		username = input[0]
-		ipAddr = input[1]
-	} else {
-		c.Ui.Error(fmt.Sprintf("Invalid parameter: %q", args[0]))
+	// Extract the username and IP.
+	c.username, c.ip, err = c.userAndIP(args[0])
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Error parsing user and IP: %s", err))
 		return 1
 	}
 
-	// Resolving domain names to IP address on the client side.
-	// Vault only deals with IP addresses.
-	ip, err := net.ResolveIPAddr("ip", ipAddr)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error resolving IP Address: %v", err))
-		return 1
+	// The rest of the args are ssh args
+	if len(args) > 1 {
+		c.sshArgs = args[1:]
 	}
 
 	// Credentials are generated only against a registered role. If user
 	// does not specify a role with the SSH command, then lookup API is used
 	// to fetch all the roles with which this IP is associated. If there is
 	// only one role associated with it, use it to establish the connection.
-	if role == "" {
-		role, err = c.defaultRole(mountPoint, ip.String())
+	//
+	// TODO: remove in 0.9.0, convert to validation error
+	if c.role == "" {
+		c.Ui.Warn("" +
+			"WARNING: No -role specified. Use -role to tell Vault which ssh role\n" +
+			"to use for authentication. In the future, you will need to tell Vault\n" +
+			"which role to use. For now, Vault will attempt to guess based on a\n" +
+			"the API response.")
+
+		role, err := c.defaultRole(c.mountPoint, c.ip)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error choosing role: %v", err))
 			return 1
@@ -127,118 +147,309 @@ func (c *SSHCommand) Run(args []string) int {
 		// be used by the user (ACL enforcement), then user should see an
 		// error message accordingly.
 		c.Ui.Output(fmt.Sprintf("Vault SSH: Role: %q", role))
+		c.role = role
 	}
 
-	data := map[string]interface{}{
-		"username": username,
-		"ip":       ip.String(),
-	}
-
-	keySecret, err := client.SSHWithMountPoint(mountPoint).Credential(role, data)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error getting key for SSH session: %v", err))
-		return 1
-	}
-
-	// if no-exec was chosen, just print out the secret and return.
-	if noExec {
-		return OutputSecret(c.Ui, format, keySecret)
-	}
-
-	// Port comes back as a json.Number which mapstructure doesn't like, so convert it
-	if keySecret.Data["port"] != nil {
-		keySecret.Data["port"] = keySecret.Data["port"].(json.Number).String()
-	}
-	var resp SSHCredentialResp
-	if err := mapstructure.Decode(keySecret.Data, &resp); err != nil {
-		c.Ui.Error(fmt.Sprintf("Error parsing the credential response: %v", err))
-		return 1
-	}
-
-	if resp.KeyType == ssh.KeyTypeDynamic {
-		if len(resp.Key) == 0 {
-			c.Ui.Error(fmt.Sprintf("Invalid key"))
-			return 1
-		}
-		sshDynamicKeyFile, err := ioutil.TempFile("", fmt.Sprintf("vault_ssh_%s_%s_", username, ip.String()))
+	// If no mode was given, perform the old-school lookup. Keep this now for
+	// backwards-compatability, but print a warning.
+	//
+	// TODO: remove in 0.9.0, convert to validation error
+	if c.mode == "" {
+		c.Ui.Warn("" +
+			"WARNING: No -mode specified. Use -mode to tell Vault which ssh\n" +
+			"authentication mode to use. In the future, you will need to tell\n" +
+			"Vault which mode to use. For now, Vault will attempt to guess based\n" +
+			"on the API response.")
+		_, cred, err := c.generateCredential()
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error creating temporary file: %v", err))
+			// This is _very_ hacky, but is the only sane backwards-compatible way
+			// to do this. If the error is "key type unknown", we just assume the
+			// type is "ca". In the future, mode will be required as an option.
+			if strings.Contains(err.Error(), "key type unknown") {
+				c.mode = ssh.KeyTypeCA
+			} else {
+				c.Ui.Error(fmt.Sprintf("Error getting credential: %s", err))
+				return 1
+			}
+		} else {
+			c.mode = cred.KeyType
+		}
+	}
+
+	switch strings.ToLower(c.mode) {
+	case ssh.KeyTypeCA:
+		if err := c.handleTypeCA(); err != nil {
+			c.Ui.Error(err.Error())
 			return 1
 		}
-
-		// Ensure that we delete the temporary file
-		defer os.Remove(sshDynamicKeyFile.Name())
-
-		if err = ioutil.WriteFile(sshDynamicKeyFile.Name(),
-			[]byte(resp.Key), 0600); err != nil {
-			c.Ui.Error(fmt.Sprintf("Error storing the dynamic key into the temporary file: %v", err))
+	case ssh.KeyTypeOTP:
+		if err := c.handleTypeOTP(); err != nil {
+			c.Ui.Error(err.Error())
 			return 1
 		}
-		sshCmdArgs = append(sshCmdArgs, []string{"-i", sshDynamicKeyFile.Name()}...)
-
-	} else if resp.KeyType == ssh.KeyTypeOTP {
-		// Check if the application 'sshpass' is installed in the client machine.
-		// If it is then, use it to automate typing in OTP to the prompt. Unfortunately,
-		// it was not possible to automate it without a third-party application, with
-		// only the Go libraries.
-		// Feel free to try and remove this dependency.
-		sshpassPath, err := exec.LookPath("sshpass")
-		if err == nil {
-			sshCmdArgs = append(sshCmdArgs, []string{
-				"-e", // Read password for SSHPASS environment variable
-				"ssh",
-				"-o UserKnownHostsFile=" + userKnownHostsFile,
-				"-o StrictHostKeyChecking=" + strictHostKeyChecking,
-				"-p", resp.Port,
-				username + "@" + ip.String(),
-			}...)
-			if len(args) > 1 {
-				sshCmdArgs = append(sshCmdArgs, args[1:]...)
-			}
-			env := os.Environ()
-			env = append(env, fmt.Sprintf("SSHPASS=%s", string(resp.Key)))
-			sshCmd := exec.Command(sshpassPath, sshCmdArgs...)
-			sshCmd.Env = env
-			sshCmd.Stdin = os.Stdin
-			sshCmd.Stdout = os.Stdout
-			err = sshCmd.Run()
-			if err != nil {
-				c.Ui.Error(fmt.Sprintf("Failed to establish SSH connection: %q", err))
-			}
-			return 0
+	case ssh.KeyTypeDynamic:
+		if err := c.handleTypeDynamic(); err != nil {
+			c.Ui.Error(err.Error())
+			return 1
 		}
-		c.Ui.Output("OTP for the session is " + resp.Key)
-		c.Ui.Output("[Note: Install 'sshpass' to automate typing in OTP]")
-	}
-	sshCmdArgs = append(sshCmdArgs, []string{"-o UserKnownHostsFile=" + userKnownHostsFile, "-o StrictHostKeyChecking=" + strictHostKeyChecking, "-p", resp.Port, username + "@" + ip.String()}...)
-	if len(args) > 1 {
-		sshCmdArgs = append(sshCmdArgs, args[1:]...)
-	}
-
-	sshCmd := exec.Command("ssh", sshCmdArgs...)
-	sshCmd.Stdin = os.Stdin
-	sshCmd.Stdout = os.Stdout
-
-	// Running the command as a separate command. The reason for using exec.Command instead
-	// of using crypto/ssh package is that, this way, user can have the same feeling of
-	// connecting to remote hosts with the ssh command. Package crypto/ssh did not have a way
-	// to establish an independent session like this.
-	err = sshCmd.Run()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error while running ssh command: %q", err))
-	}
-
-	// If the session established was longer than the lease expiry, the secret
-	// might have been revoked already. If not, then revoke it. Since the key
-	// file is deleted and since user doesn't know the credential anymore, there
-	// is not point in Vault maintaining this secret anymore. Every time the command
-	// is run, a fresh credential is generated anyways.
-	err = client.Sys().Revoke(keySecret.LeaseID)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error revoking the key: %q", err))
+	default:
+		c.Ui.Error(fmt.Sprintf("Unknown SSH mode: %s", c.mode))
+		return 1
 	}
 
 	return 0
+}
+
+// handleTypeCA is used to handle SSH logins using the "CA" key type.
+func (c *SSHCommand) handleTypeCA() error {
+	// Read the key from disk
+	publicKey, err := ioutil.ReadFile(c.publicKeyPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to read public key")
+	}
+
+	// Attempt to sign the public key
+	secret, err := c.sshClient.SignKey(c.role, map[string]interface{}{
+		// WARNING: publicKey is []byte, which is b64 encoded on JSON upload. We
+		// have to convert it to a string. SV lost many hours to this...
+		"public_key":       string(publicKey),
+		"valid_principals": c.username,
+		"cert_type":        "user",
+
+		// TODO: let the user configure these. In the interim, if users want to
+		// customize these values, they can produce the key themselves.
+		"extensions": map[string]string{
+			"permit-X11-forwarding":   "",
+			"permit-agent-forwarding": "",
+			"permit-port-forwarding":  "",
+			"permit-pty":              "",
+			"permit-user-rc":          "",
+		},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to sign public key")
+	}
+	if secret == nil || secret.Data == nil {
+		return fmt.Errorf("vault returned empty credentials")
+	}
+
+	// Handle no-exec
+	if c.noExec {
+		// This is hacky, but OutputSecret returns an int, not an error :(
+		if i := OutputSecret(c.Ui, c.format, secret); i != 0 {
+			return fmt.Errorf("an error occurred outputting the secret")
+		}
+		return nil
+	}
+
+	// Extract public key
+	key, ok := secret.Data["signed_key"].(string)
+	if !ok {
+		return fmt.Errorf("missing signed key")
+	}
+
+	// Write the signed public key to disk
+	name := fmt.Sprintf("vault_ssh_ca_%s_%s", c.username, c.ip)
+	signedPublicKeyPath, err, closer := c.writeTemporaryKey(name, []byte(key))
+	defer closer()
+	if err != nil {
+		return errors.Wrap(err, "failed to write signed public key")
+	}
+
+	args := append([]string{
+		"-i", c.privateKeyPath,
+		"-i", signedPublicKeyPath,
+		"-o UserKnownHostsFile=" + c.userKnownHostsFile,
+		"-o StrictHostKeyChecking=" + c.strictHostKeyChecking,
+		c.username + "@" + c.ip,
+	}, c.sshArgs...)
+
+	cmd := exec.Command("ssh", args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	if err != nil {
+		return errors.Wrap(err, "failed to run ssh command")
+	}
+
+	// Revoke the key if it's longer than expected
+	if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+		return errors.Wrap(err, "failed to revoke key")
+	}
+
+	return nil
+}
+
+// handleTypeOTP is used to handle SSH logins using the "otp" key type.
+func (c *SSHCommand) handleTypeOTP() error {
+	secret, cred, err := c.generateCredential()
+	if err != nil {
+		return errors.Wrap(err, "failed to generate credential")
+	}
+
+	// Handle no-exec
+	if c.noExec {
+		// This is hacky, but OutputSecret returns an int, not an error :(
+		if i := OutputSecret(c.Ui, c.format, secret); i != 0 {
+			return fmt.Errorf("an error occurred outputting the secret")
+		}
+		return nil
+	}
+
+	var cmd *exec.Cmd
+
+	// Check if the application 'sshpass' is installed in the client machine.
+	// If it is then, use it to automate typing in OTP to the prompt. Unfortunately,
+	// it was not possible to automate it without a third-party application, with
+	// only the Go libraries.
+	// Feel free to try and remove this dependency.
+	sshpassPath, err := exec.LookPath("sshpass")
+	if err != nil {
+		c.Ui.Warn("" +
+			"Vault could not locate sshpass. The OTP code for the session will be\n" +
+			"displayed below. Enter this code in the SSH password prompt. If you\n" +
+			"install sshpass, Vault can automatically perform this step for you.")
+		c.Ui.Output("OTP for the session is " + cred.Key)
+
+		args := append([]string{
+			"-o UserKnownHostsFile=" + c.userKnownHostsFile,
+			"-o StrictHostKeyChecking=" + c.strictHostKeyChecking,
+			"-p", cred.Port,
+			c.username + "@" + c.ip,
+		}, c.sshArgs...)
+		cmd = exec.Command("ssh", args...)
+	} else {
+		args := append([]string{
+			"-e", // Read password for SSHPASS environment variable
+			"ssh",
+			"-o UserKnownHostsFile=" + c.userKnownHostsFile,
+			"-o StrictHostKeyChecking=" + c.strictHostKeyChecking,
+			"-p", cred.Port,
+			c.username + "@" + c.ip,
+		}, c.sshArgs...)
+		cmd = exec.Command(sshpassPath, args...)
+		env := os.Environ()
+		env = append(env, fmt.Sprintf("SSHPASS=%s", string(cred.Key)))
+		cmd.Env = env
+	}
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	if err != nil {
+		return errors.Wrap(err, "failed to run ssh command")
+	}
+
+	// Revoke the key if it's longer than expected
+	if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+		return errors.Wrap(err, "failed to revoke key")
+	}
+
+	return nil
+}
+
+// handleTypeDynamic is used to handle SSH logins using the "dyanmic" key type.
+func (c *SSHCommand) handleTypeDynamic() error {
+	// Generate the credential
+	secret, cred, err := c.generateCredential()
+	if err != nil {
+		return errors.Wrap(err, "failed to generate credential")
+	}
+
+	// Handle no-exec
+	if c.noExec {
+		// This is hacky, but OutputSecret returns an int, not an error :(
+		if i := OutputSecret(c.Ui, c.format, secret); i != 0 {
+			return fmt.Errorf("an error occurred outputting the secret")
+		}
+		return nil
+	}
+
+	// Write the dynamic key to disk
+	name := fmt.Sprintf("vault_ssh_dynamic_%s_%s", c.username, c.ip)
+	keyPath, err, closer := c.writeTemporaryKey(name, []byte(cred.Key))
+	defer closer()
+	if err != nil {
+		return errors.Wrap(err, "failed to save dyanmic key")
+	}
+
+	args := append([]string{
+		"-i", keyPath,
+		"-o UserKnownHostsFile=" + c.userKnownHostsFile,
+		"-o StrictHostKeyChecking=" + c.strictHostKeyChecking,
+		"-p", cred.Port,
+		c.username + "@" + c.ip,
+	}, c.sshArgs...)
+
+	cmd := exec.Command("ssh", args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	if err != nil {
+		return errors.Wrap(err, "failed to run ssh command")
+	}
+
+	// Revoke the key if it's longer than expected
+	if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+		return errors.Wrap(err, "failed to revoke key")
+	}
+
+	return nil
+}
+
+// generateCredential generates a credential for the given role and returns the
+// decoded secret data.
+func (c *SSHCommand) generateCredential() (*api.Secret, *SSHCredentialResp, error) {
+	// Attempt to generate the credential.
+	secret, err := c.sshClient.Credential(c.role, map[string]interface{}{
+		"username": c.username,
+		"ip":       c.ip,
+	})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get credentials")
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, nil, fmt.Errorf("vault returned empty credentials")
+	}
+
+	// Port comes back as a json.Number which mapstructure doesn't like, so
+	// convert it
+	if d, ok := secret.Data["port"].(json.Number); ok {
+		secret.Data["port"] = d.String()
+	}
+
+	// Use mapstructure to decode the response
+	var resp SSHCredentialResp
+	if err := mapstructure.Decode(secret.Data, &resp); err != nil {
+		return nil, nil, errors.Wrap(err, "failed to decode credential")
+	}
+
+	// Check for an empty key response
+	if len(resp.Key) == 0 {
+		return nil, nil, fmt.Errorf("vault returned an invalid key")
+	}
+
+	return secret, &resp, nil
+}
+
+// writeTemporaryKey writes the key to a temporary file and returns the path.
+// The caller should defer the closer to cleanup the key.
+func (c *SSHCommand) writeTemporaryKey(name string, data []byte) (string, error, func() error) {
+	// default closer to prevent panic
+	closer := func() error { return nil }
+
+	f, err := ioutil.TempFile("", name)
+	if err != nil {
+		return "", errors.Wrap(err, "creating temporary file"), closer
+	}
+
+	closer = func() error { return os.Remove(f.Name()) }
+
+	if err := ioutil.WriteFile(f.Name(), data, 0600); err != nil {
+		return "", errors.Wrap(err, "writing temporary key"), closer
+	}
+
+	return f.Name(), nil, closer
 }
 
 // If user did not provide the role with which SSH connection has
@@ -257,7 +468,7 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 		return "", fmt.Errorf("Error finding roles for IP %q: %q", ip, err)
 
 	}
-	if secret == nil {
+	if secret == nil || secret.Data == nil {
 		return "", fmt.Errorf("Error finding roles for IP %q: %q", ip, err)
 	}
 
@@ -280,24 +491,64 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	}
 }
 
+// userAndIP takes an argument in the format foo@1.2.3.4 and separates the IP
+// and user parts, returning any errors.
+func (c *SSHCommand) userAndIP(s string) (string, string, error) {
+	// split the parameter username@ip
+	input := strings.Split(s, "@")
+	var username, address string
+
+	// If only IP is mentioned and username is skipped, assume username to
+	// be the current username. Vault SSH role's default username could have
+	// been used, but in order to retain the consistency with SSH command,
+	// current username is employed.
+	switch len(input) {
+	case 1:
+		u, err := user.Current()
+		if err != nil {
+			return "", "", errors.Wrap(err, "failed to fetch current user")
+		}
+		username, address = u.Username, input[0]
+	case 2:
+		username, address = input[0], input[1]
+	default:
+		return "", "", fmt.Errorf("invalid arguments: %q", s)
+	}
+
+	// Resolving domain names to IP address on the client side.
+	// Vault only deals with IP addresses.
+	ipAddr, err := net.ResolveIPAddr("ip", address)
+	if err != nil {
+		return "", "", errors.Wrap(err, "failed to resolve IP address")
+	}
+	ip := ipAddr.String()
+
+	return username, ip, nil
+}
+
 func (c *SSHCommand) Synopsis() string {
 	return "Initiate an SSH session"
 }
 
 func (c *SSHCommand) Help() string {
 	helpText := `
-Usage: vault ssh [options] username@ip
+Usage: vault ssh [options] username@ip [ssh options]
 
   Establishes an SSH connection with the target machine.
 
-  This command generates a key and uses it to establish an SSH
-  connection with the target machine. This operation requires
-  that the SSH backend is mounted and at least one 'role' is
-  registered with Vault beforehand.
+  This command uses one of the SSH authentication backends to authenticate and
+  automatically establish an SSH connection to a host. This operation requires
+  that the SSH backend is mounted and configured.
 
-  For setting up SSH backends with one-time-passwords, installation
-  of vault-ssh-helper or a compatible agent on target machines
-  is required. See [https://github.com/hashicorp/vault-ssh-agent].
+  SSH using the OTP mode (requires sshpass for full automation):
+
+      $ vault ssh -mode=otp -role=my-role user@1.2.3.4
+
+  SSH using the CA mode:
+
+      $ vault ssh -mode=ca -role=my-role user@1.2.3.4
+
+  For the full list of options and arguments, please see the documentation.
 
 General Options:
 ` + meta.GeneralOptionsUsage() + `
