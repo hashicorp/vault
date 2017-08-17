@@ -317,6 +317,92 @@ $ tail -f /var/log/auth.log | grep --line-buffered "sshd"
 If you are unable to make a connection to the host, the SSH server logs may
 provide guidance and insights.
 
+### No Prompt After Login
+
+If you do not see a prompt after authenticating to the host machine, the signed
+certificate may not have the `permit-pty` extension. There are two ways to add
+this extension to the signed certificate.
+
+- As part of the role creation
+
+    ```text
+    $ vault write ssh-client-signer/roles/my-role -<<"EOH"
+    {
+      "default_extensions": [
+        {
+          "permit-pty": ""
+        }
+      ]
+      // ...
+    }
+    EOH
+    ```
+
+- As part of the signing operation itself:
+
+    ```text
+    $ vault write ssh-client-signer/sign/my-role -<<"EOH"
+    {
+      "public_key": "ssh-rsa AAA...",
+      "cert_type": "user",
+      "extension": {
+        "permit-pty": ""
+      }
+    }
+    EOH
+    ```
+
+### No Port Forwarding
+
+If port forwarding from the guest to the host is not working, the signed
+certificate may not have the `permit-port-forwarding` extension. Add the
+extension as part of the role creation or signing process to enable port
+forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
+
+```json
+{
+  "default_extensions": [
+    {
+      "permit-port-forwarding": ""
+    }
+  ]
+}
+```
+
+### No X11 Forwarding
+
+If X11 forwarding from the guest to the host is not working, the signed
+certificate may not have the `permit-X11-forwarding` extension. Add the
+extension as part of the role creation or signing process to enable X11
+forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
+
+```json
+{
+  "default_extensions": [
+    {
+      "permit-X11-forwarding": ""
+    }
+  ]
+}
+```
+
+### No Agent Forwarding
+
+If agent forwarding from the guest to the host is not working, the signed
+certificate may not have the `permit-agent-forwarding` extension. Add the
+extension as part of the role creation or signing process to enable agent
+forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
+
+```json
+{
+  "default_extensions": [
+    {
+      "permit-agent-forwarding": ""
+    }
+  ]
+}
+```
+
 ### Known Issues
 
 - On SELinux-enforcing systems, you may need to adjust related types so that the
