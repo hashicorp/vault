@@ -31,7 +31,7 @@ policy is shown below:
 
 ```javascript
 path "secret/*" {
-  capabilities = ["write"]
+  capabilities = ["create"]
 }
 
 path "secret/foo" {
