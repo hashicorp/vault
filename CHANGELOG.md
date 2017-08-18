@@ -8,9 +8,14 @@ DEPRECATIONS:
 
 FEATURES:
 
-* **SSH CA Login with `vault ssh`**: The `vault ssh` now supports the SSH CA
+* **SSH CA Login with `vault ssh`**: `vault ssh` now supports the SSH CA
   backend for authenticating to machines. It also supports remote host key
   verification through the SSH CA backend, if enabled.
+
+BUG FIXES:
+
+ * core: Policy-related commands would sometimes fail to act case-insensitively
+   [GH-3210]
 
 ## 0.8.1 (August 16th, 2017)
 
