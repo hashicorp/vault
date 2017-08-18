@@ -321,10 +321,7 @@ func (c *SSHCommand) handleTypeCA() error {
 		return errors.Wrap(err, "failed to run ssh command")
 	}
 
-	// Revoke the key if it's longer than expected
-	if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
-		return errors.Wrap(err, "failed to revoke key")
-	}
+	// There is no secret to revoke, since it's a certificate signing
 
 	return nil
 }
