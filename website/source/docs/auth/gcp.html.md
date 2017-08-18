@@ -31,13 +31,13 @@ v0.8.0+ to use plugins.
 
 ### IAM
 
-The Vault authentication workflow for IAM service accounts is as follows
-(or see diagram below):
+The Vault authentication workflow for IAM service accounts is as follows:
 
   1. A client with IAM service account credentials generates a signed JWT using the IAM [projects.serviceAccounts.signJwt](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt) method. See [usage](#iam-authentication-token) for the expected format and example code.
   2. The client sends this JWT to Vault in a login request with a role name. This role should have type `iam`
   3. Vault grabs the `kid` header value, which contains the ID of the key-pair used to generate the JWT, and the `sub` ID/email to find the service account key. If the service account does not exist or the key is not linked to the service account, Vault will deny authentication.
   4. Vault authorizes the confirmed service account against the given role. See [authorization section](#authorization) to see how each type of role handles authorization.
+
 [![IAM Login Workflow](/assets/images/vault-gcp-iam-auth-workflow.svg)](/assets/images/vault-gcp-iam-auth-workflow.svg)
 
 #### The `iam` Authentication Token
@@ -52,7 +52,7 @@ The expected format of the JWT payload is as follows:
 }
 ```
 
-Values:
+* Values:
   * `[SERVICE ACCOUNT ID OR EMAIL]`: Either the email or the unique ID of a service account.
   * `[ROLE NAME]`: Name of the role that this token will be used to login against. The full expected `aud` string should be "vault/$roleName".
   * `[EXPIRATION]` : A [NumericDate](https://tools.ietf.org/html/rfc7519#section-2) value (seconds from Epoch). This value must be before the max JWT expiration allowed for a role (see `max_jwt_exp` parameter for creating a role). This defaults to 15 minutes and cannot be more than a hour.
@@ -78,7 +78,7 @@ curl -H "Authorization: Bearer $OAUTH_TOKEN" \
 We use the Go OAuth2 libraries, GCP IAM API, and Vault API.
 
 ```go
-# Abbreviated imports to show libraries.
+// Abbreviated imports to show libraries.
 import (
 	vaultapi "github.com/hashicorp/vault/api"
 	"golang.org/x/oauth2"
@@ -268,18 +268,16 @@ parameters for role creation and updates.
 #### Login to get a Vault Token
 
 Once the backend is setup and roles are registered with the backend,
-the user can login against a specific role:
+the user can login against a specific role.
 
 ```
 $ vault write auth/gcp/login role='dev-role' jwt='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-Parameters:
-  * `role`: Required. Name of the role to login against.
-  * `jwt`: Required. A signed JWT token for authenticating a role. Format
-    depends on entity type.
-
-The format of the provided JWT differs depending on the authenticating entity.
+The `role` and `jwt` parameters are required. These map to the name of the
+role to login against, and the signed JWT token for authenticating a role
+respectively. The format of the provided JWT differs depending on the
+authenticating entity.
 
 ### Via the API
 
