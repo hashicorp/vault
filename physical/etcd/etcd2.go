@@ -410,55 +410,21 @@ func (c *Etcd2Lock) periodicallyRenewSemaphoreKey(stopCh chan struct{}) {
 	for {
 		select {
 		case <-time.After(Etcd2LockRenewInterval):
-			c.renewSemaphoreKey()
+			_, _, err := c.renewSemaphoreKey()
+			if errorIsMissingKey(err) {
+				select {
+				case _, ok := <-stopCh:
+					if !ok {
+						return
+					}
+				default:
+					close(stopCh)
+				}
+			}
 		case <-stopCh:
 			return
 		}
 	}
-}
-
-// watchForKeyRemoval continuously watches a single non-directory key starting
-// from the provided etcd index and closes the provided channel when it's
-// deleted, expires, or appears to be missing.
-func (c *Etcd2Lock) watchForKeyRemoval(key string, etcdIndex uint64, closeCh chan struct{}) {
-	retries := Etcd2WatchRetryMax
-
-	for {
-		// Start a non-recursive watch of the given key.
-		w := c.kAPI.Watcher(key, &client.WatcherOptions{AfterIndex: etcdIndex, Recursive: false})
-		response, err := w.Next(context.TODO())
-		if err != nil {
-
-			// If the key is just missing, we can exit the loop.
-			if errorIsMissingKey(err) {
-				break
-			}
-
-			// If the error is something else, there's nothing we can do but retry
-			// the watch. Check that we still have retries left.
-			retries -= 1
-			if retries == 0 {
-				break
-			}
-
-			// Sleep for a period of time to avoid slamming etcd.
-			time.Sleep(Etcd2WatchRetryInterval)
-			continue
-		}
-
-		// Check if the key we are concerned with has been removed. If it has, we
-		// can exit the loop.
-		if response.Node.Key == key &&
-			(response.Action == "delete" || response.Action == "expire") {
-			break
-		}
-
-		// Update the etcd index.
-		etcdIndex = response.Index + 1
-	}
-
-	// Regardless of what happened, we need to close the close channel.
-	close(closeCh)
 }
 
 // Lock attempts to acquire the lock by waiting for a new semaphore key in etcd
@@ -505,7 +471,11 @@ func (c *Etcd2Lock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr
 	done := make(chan struct{})
 	defer func() {
 		if retErr != nil {
-			close(done)
+			select {
+			case <-done:
+			default:
+				close(done)
+			}
 		}
 	}()
 
@@ -514,6 +484,11 @@ func (c *Etcd2Lock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr
 	// Loop until the we current semaphore key matches ours.
 	for semaphoreKey != currentSemaphoreKey {
 		var err error
+		select {
+		case <-done:
+			return nil, EtcdSemaphoreKeyRemovedError
+		default:
+		}
 
 		// Start a watch of the entire lock directory
 		w := c.kAPI.Watcher(c.semaphoreDirKey, &client.WatcherOptions{AfterIndex: currentEtcdIndex, Recursive: true})
@@ -547,7 +522,6 @@ func (c *Etcd2Lock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr
 		}
 	}
 
-	go c.watchForKeyRemoval(c.semaphoreKey, currentEtcdIndex, done)
 	return done, nil
 }
 
