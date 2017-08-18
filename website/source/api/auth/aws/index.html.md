@@ -35,29 +35,29 @@ capabilities, the credentials are fetched automatically.
 
 ### Parameters
 
-- `access_key` `(string: "")` - AWS Access key with permissions to query AWS 
+- `access_key` `(string: "")` - AWS Access key with permissions to query AWS
   APIs. The permissions required depend on the specific configurations. If using
-  the `iam` auth method without inferencing, then no credentials are necessary. 
-  If using the `ec2` auth method or using the `iam` auth method with 
+  the `iam` auth method without inferencing, then no credentials are necessary.
+  If using the `ec2` auth method or using the `iam` auth method with
   inferencing, then these credentials need access to `ec2:DescribeInstances`. If
-  additionally a `bound_iam_role` is specified, then these credentials also need 
-  access to `iam:GetInstanceProfile`. If, however, an alternate sts 
+  additionally a `bound_iam_role` is specified, then these credentials also need
+  access to `iam:GetInstanceProfile`. If, however, an alternate sts
   configuration is set for the target account, then the credentials must be
-  permissioned to call `sts:AssumeRole` on the configured role, and that role 
+  permissioned to call `sts:AssumeRole` on the configured role, and that role
   must have the permissions described here.
-- `secret_key` `(string: "")` - AWS Secret key with permissions to query AWS 
-  APIs. 
+- `secret_key` `(string: "")` - AWS Secret key with permissions to query AWS
+  APIs.
 - `endpoint` `(string: "")` - URL to override the default generated endpoint for
   making AWS EC2 API calls.
 - `iam_endpoint` `(string: "")` - URL to override the default generated endpoint
   for making AWS IAM API calls.
 - `sts_endpoint` `(string: "")` - URL to override the default generated endpoint
   for making AWS STS API calls.
-- `iam_server_id_header_value` `(string: "")` - The value to require in the 
-  `X-Vault-AWS-IAM-Server-ID` header as part of GetCallerIdentity requests that 
-  are used in the iam auth method. If not set, then no value is required or 
+- `iam_server_id_header_value` `(string: "")` - The value to require in the
+  `X-Vault-AWS-IAM-Server-ID` header as part of GetCallerIdentity requests that
+  are used in the iam auth method. If not set, then no value is required or
   validated. If set, clients must include an X-Vault-AWS-IAM-Server-ID header in
-  the headers of login requests, and further this header must be among the 
+  the headers of login requests, and further this header must be among the
   signed headers validated by AWS. This is to protect against different types of
   replay attacks, for example a signed request sent to a dev server being resent
   to a production server. Consider setting this to the Vault server's DNS name.
@@ -149,12 +149,12 @@ using the "type" parameter.
 ### Parameters
 
 - `cert_name` `(string: <required>)` - Name of the certificate.
-- `aws_public_cert` `(string: <required>)` - AWS Public key required to verify 
+- `aws_public_cert` `(string: <required>)` - AWS Public key required to verify
   PKCS7 signature of the EC2 instance metadata.
-- `type` `(string: "pkcs7")` - Takes the value of either "pkcs7" or "identity", 
-  indicating the type of document which can be verified using the given 
-  certificate. The PKCS#7 document will have a DSA digest and the identity 
-  signature will have an RSA signature, and accordingly the public certificates 
+- `type` `(string: "pkcs7")` - Takes the value of either "pkcs7" or "identity",
+  indicating the type of document which can be verified using the given
+  certificate. The PKCS#7 document will have a DSA digest and the identity
+  signature will have an RSA signature, and accordingly the public certificates
   to verify those also vary. Defaults to "pkcs7".
 
 ### Sample Payload
@@ -258,11 +258,11 @@ be verified using credentials obtained by assumption of these STS roles.
 
 ### Parameters
 
-- `account_id` `(string: <required>)` - AWS account ID to be associated with 
-  STS role. If set, Vault will use assumed credentials to verify any login 
+- `account_id` `(string: <required>)` - AWS account ID to be associated with
+  STS role. If set, Vault will use assumed credentials to verify any login
   attempts from EC2 instances in this account.
-- `sts_role` `(string: <required>)` - AWS ARN for STS role to be assumed when 
-  interacting with the account specified.  The Vault server must have 
+- `sts_role` `(string: <required>)` - AWS ARN for STS role to be assumed when
+  interacting with the account specified.  The Vault server must have
   permissions to assume this role.
 
 ### Sample Payload
@@ -293,8 +293,8 @@ Returns the previously configured STS role.
 
 ### Parameters
 
-- `account_id` `(string: <required>)` - AWS account ID to be associated with 
-  STS role. If set, Vault will use assumed credentials to verify any login 
+- `account_id` `(string: <required>)` - AWS account ID to be associated with
+  STS role. If set, Vault will use assumed credentials to verify any login
   attempts from EC2 instances in this account.
 
 ### Sample Request
@@ -382,10 +382,10 @@ Configures the periodic tidying operation of the whitelisted identity entries.
 
 ### Parameters
 
-- `safety_buffer` `(string: "72h")` - The amount of extra time that must have 
-  passed beyond the `roletag` expiration, before it is removed from the backend 
+- `safety_buffer` `(string: "72h")` - The amount of extra time that must have
+  passed beyond the `roletag` expiration, before it is removed from the backend
   storage. Defaults to 72h.
-- `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the 
+- `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the
   periodic tidying of the `identity-whitelist/<instance_id>` entries.
 
 ### Sample Payload
@@ -465,10 +465,10 @@ Configures the periodic tidying operation of the blacklisted role tag entries.
 
 ### Parameters
 
-- `safety_buffer` `(string: "72h")` - The amount of extra time that must have 
-  passed beyond the `roletag` expiration, before it is removed from the backend 
+- `safety_buffer` `(string: "72h")` - The amount of extra time that must have
+  passed beyond the `roletag` expiration, before it is removed from the backend
   storage. Defaults to 72h.
-- `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the 
+- `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the
   periodic tidying of the `roletag-blacklist/<instance_id>` entries.
 
 ### Sample Payload
@@ -557,115 +557,121 @@ inferencing configuration of that role.
 ### Parameters
 
 - `role` `(string: <required>)` - Name of the role.
-- `auth_type` `(string: "iam")` - The auth type permitted for this role. Valid 
-  choices are "ec2" or "iam".  If no value is specified, then it will default to 
-  "iam" (except for legacy `aws-ec2` auth types, for which it will default to 
+- `auth_type` `(string: "iam")` - The auth type permitted for this role. Valid
+  choices are "ec2" or "iam".  If no value is specified, then it will default to
+  "iam" (except for legacy `aws-ec2` auth types, for which it will default to
   "ec2"). Only those bindings applicable to the auth type chosen will be allowed
   to be configured on the role.
-- `bound_ami_id` `(string: "")` - If set, defines a constraint on the EC2 
-  instances that they should be using the AMI ID specified by this parameter. 
-  This constraint is checked during ec2 auth as well as the iam auth method only 
+- `bound_ami_id` `(string: "")` - If set, defines a constraint on the EC2
+  instances that they should be using the AMI ID specified by this parameter.
+  This constraint is checked during ec2 auth as well as the iam auth method only
   when inferring an EC2 instance.
-- `bound_account_id` `(string: "")` - If set, defines a constraint on the EC2 
-  instances that the account ID in its identity document to match the one 
-  specified by this parameter. This constraint is checked during ec2 auth as 
+- `bound_account_id` `(string: "")` - If set, defines a constraint on the EC2
+  instances that the account ID in its identity document to match the one
+  specified by this parameter. This constraint is checked during ec2 auth as
   well as the iam auth method only when inferring an EC2 instance.
-- `bound_region` `(string: "")` - If set, defines a constraint on the EC2 
-  instances that the region in its identity document must match the one 
-  specified by this parameter. This constraint is only checked by the ec2 auth 
+- `bound_region` `(string: "")` - If set, defines a constraint on the EC2
+  instances that the region in its identity document must match the one
+  specified by this parameter. This constraint is only checked by the ec2 auth
   method as well as the iam auth method only when inferring an ec2 instance.
-- `bound_vpc_id` `(string: "")` - If set, defines a constraint on the EC2 
-  instance to be associated with the VPC ID that matches the value specified by 
+- `bound_vpc_id` `(string: "")` - If set, defines a constraint on the EC2
+  instance to be associated with the VPC ID that matches the value specified by
   this parameter. This constraint is only checked by the ec2 auth method as well
   as the iam auth method only when inferring an ec2 instance.
-- `bound_subnet_id` `(string: "")` - If set, defines a constraint on the EC2 
-  instance to be associated with the subnet ID that matches the value specified 
-  by this parameter. This constraint is only checked by the ec2 auth method as 
+- `bound_subnet_id` `(string: "")` - If set, defines a constraint on the EC2
+  instance to be associated with the subnet ID that matches the value specified
+  by this parameter. This constraint is only checked by the ec2 auth method as
   well as the iam auth method only when inferring an ec2 instance.
-- `bound_iam_role_arn` `(string: "")` - If set, defines a constraint on the 
-  authenticating EC2 instance that it must match the IAM role ARN specified by 
-  this parameter.  The value is refix-matched (as though it were a glob ending 
-  in `*`).  The configured IAM user or EC2 instance role must be allowed to 
-  execute the `iam:GetInstanceProfile` action if this is specified. This 
-  constraint is checked by the ec2 auth method as well as the iam auth method 
+- `bound_iam_role_arn` `(string: "")` - If set, defines a constraint on the
+  authenticating EC2 instance that it must match the IAM role ARN specified by
+  this parameter.  The value is refix-matched (as though it were a glob ending
+  in `*`).  The configured IAM user or EC2 instance role must be allowed to
+  execute the `iam:GetInstanceProfile` action if this is specified. This
+  constraint is checked by the ec2 auth method as well as the iam auth method
   only when inferring an EC2 instance.
-- `bound_iam_instance_profile_arn` `(string: "")` - If set, defines a constraint 
-  on the EC2 instances to be associated with an IAM instance profile ARN which 
-  has a prefix that matches the value specified by this parameter. The value is 
-  prefix-matched (as though it were a glob ending in `*`). This constraint is 
-  checked by the ec2 auth method as well as the iam auth method only when 
+- `bound_iam_instance_profile_arn` `(string: "")` - If set, defines a constraint
+  on the EC2 instances to be associated with an IAM instance profile ARN which
+  has a prefix that matches the value specified by this parameter. The value is
+  prefix-matched (as though it were a glob ending in `*`). This constraint is
+  checked by the ec2 auth method as well as the iam auth method only when
   inferring an ec2 instance.
-- `role_tag` `(string: "")` - If set, enables the role tags for this role. The 
-  value set for this field should be the 'key' of the tag on the EC2 instance. 
-  The 'value' of the tag should be generated using `role/<role>/tag` endpoint.  
-  Defaults to an empty string, meaning that role tags are disabled. This 
-  constraint is valid only with the ec2 auth method and is not allowed when an 
+- `role_tag` `(string: "")` - If set, enables the role tags for this role. The
+  value set for this field should be the 'key' of the tag on the EC2 instance.
+  The 'value' of the tag should be generated using `role/<role>/tag` endpoint.
+  Defaults to an empty string, meaning that role tags are disabled. This
+  constraint is valid only with the ec2 auth method and is not allowed when an
   auth_type is iam.
 - `bound_iam_principal_arn` `(string: "")` - Defines the IAM principal that must
   be authenticated using the iam auth method. It should look like
   "arn:aws:iam::123456789012:user/MyUserName" or
-  "arn:aws:iam::123456789012:role/MyRoleName". This constraint is only checked 
-  by the iam auth method.
-- `inferred_entity_type` `(string: "")` -  When set, instructs Vault to turn on 
-  inferencing. The only current valid value is "ec2_instance" instructing Vault 
-  to infer that the role comes from an EC2 instance in an IAM instance profile. 
-  This only applies to the iam auth method. If you set this on an existing role 
-  where it had not previously been set, tokens that had been created prior will 
+  "arn:aws:iam::123456789012:role/MyRoleName". Wildcards are supported at the
+  end of the ARN, e.g., "arn:aws:iam::123456789012:\*" will match any IAM
+  principal in the AWS account 123456789012. This constraint is only checked by
+  the iam auth method. Wildcards are supported at the end of the ARN, e.g.,
+  "arn:aws:iam::123456789012:role/\*" will match all roles in the AWS account.
+- `inferred_entity_type` `(string: "")` -  When set, instructs Vault to turn on
+  inferencing. The only current valid value is "ec2\_instance" instructing Vault
+  to infer that the role comes from an EC2 instance in an IAM instance profile.
+  This only applies to the iam auth method. If you set this on an existing role
+  where it had not previously been set, tokens that had been created prior will
   not be renewable; clients will need to get a new token.
-- `inferred_aws_region` `(string: "")` - When role inferencing is activated, the 
-  region to search for the inferred entities (e.g., EC2 instances). Required if 
+- `inferred_aws_region` `(string: "")` - When role inferencing is activated, the
+  region to search for the inferred entities (e.g., EC2 instances). Required if
   role inferencing is activated. This only applies to the iam auth method.
-- `resolve_aws_unique_ids` `(bool: false)` - When set, resolves the 
-  `bound_iam_principal_arn` to the [AWS Unique ID](http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids).
-  This requires Vault to be able to call `iam:GetUser` or `iam:GetRole` on the 
-  `bound_iam_principal_arn` that is being bound. Resolving to internal AWS IDs 
-  more closely mimics the behavior of AWS services in that if an IAM user or 
+- `resolve_aws_unique_ids` `(bool: false)` - When set, resolves the
+  `bound_iam_principal_arn` to the
+  [AWS Unique ID](http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
+  for the bound principal ARN. This field is ignored when
+  `bound_iam_principal_arn` ends with a wildcard character.
+  This requires Vault to be able to call `iam:GetUser` or `iam:GetRole` on the
+  `bound_iam_principal_arn` that is being bound. Resolving to internal AWS IDs
+  more closely mimics the behavior of AWS services in that if an IAM user or
   role is deleted and a new one is recreated with the same name, those new users
-  or roles won't get access to roles in Vault that were permissioned to the 
-  prior principals of the same name. The default value for new roles is true, 
-  while the default value for roles that existed prior to this option existing 
+  or roles won't get access to roles in Vault that were permissioned to the
+  prior principals of the same name. The default value for new roles is true,
+  while the default value for roles that existed prior to this option existing
   is false (you can check the value for a given role using the GET method on the
   role). Any authentication tokens created prior to this being supported won't
-  verify the unique ID upon token renewal.  When this is changed from false to 
-  true on an existing role, Vault will attempt to resolve the role's bound IAM 
-  ARN to the unique ID and, if unable to do so, will fail to enable this option.  
-  Changing this from `true` to `false` is not supported; if absolutely 
-  necessary, you would need to delete the role and recreate it explicitly 
-  setting it to `false`. However; the instances in which you would want to do 
-  this should be rare. If the role creation (or upgrading to use this) succeed, 
-  then Vault has already been able to resolve internal IDs, and it doesn't need 
-  any further IAM permissions to authenticate users. If a role has been deleted 
-  and recreated, and Vault has cached the old unique ID, you should just call 
-  this endpoint specifying the same `bound_iam_principal_arn` and, as long as 
-  Vault still has the necessary IAM permissions to resolve the unique ID, Vault 
-  will update the unique ID. (If it does not have the necessary permissions to 
+  verify the unique ID upon token renewal.  When this is changed from false to
+  true on an existing role, Vault will attempt to resolve the role's bound IAM
+  ARN to the unique ID and, if unable to do so, will fail to enable this option.
+  Changing this from `true` to `false` is not supported; if absolutely
+  necessary, you would need to delete the role and recreate it explicitly
+  setting it to `false`. However; the instances in which you would want to do
+  this should be rare. If the role creation (or upgrading to use this) succeed,
+  then Vault has already been able to resolve internal IDs, and it doesn't need
+  any further IAM permissions to authenticate users. If a role has been deleted
+  and recreated, and Vault has cached the old unique ID, you should just call
+  this endpoint specifying the same `bound_iam_principal_arn` and, as long as
+  Vault still has the necessary IAM permissions to resolve the unique ID, Vault
+  will update the unique ID. (If it does not have the necessary permissions to
   resolve the unique ID, then it will fail to update.) If this option is set to
-  false, then you MUST leave out the path component in bound_iam_principal_arn 
+  false, then you MUST leave out the path component in bound_iam_principal_arn
   for **roles** only, but not IAM users. That is, if your IAM role ARN is of the
   form `arn:aws:iam::123456789012:role/some/path/to/MyRoleName`, you **must**
   specify a bound_iam_principal_arn of
   `arn:aws:iam::123456789012:role/MyRoleName` for authentication to work.
-- `ttl` `(string: "")` - The TTL period of tokens issued using this role, 
+- `ttl` `(string: "")` - The TTL period of tokens issued using this role,
   provided as "1h", where hour is the largest suffix.
 - `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued using
   this role.
-- `period` `(string: "")` - If set, indicates that the token generated using 
+- `period` `(string: "")` - If set, indicates that the token generated using
   this role should never expire. The token should be renewed within the duration
-  specified by this value. At each renewal, the token's TTL will be set to the 
+  specified by this value. At each renewal, the token's TTL will be set to the
   value of this parameter.  The maximum allowed lifetime of tokens issued using
   this role.
-- `policies` `(array: [])` - Policies to be set on tokens issued using this 
+- `policies` `(array: [])` - Policies to be set on tokens issued using this
   role.
-- `allow_instance_migration` `(bool: false)` - If set, allows migration of the 
-  underlying instance where the client resides. This keys off of pendingTime in 
-  the metadata document, so essentially, this disables the client nonce check 
-  whenever the instance is migrated to a new host and pendingTime is newer than 
+- `allow_instance_migration` `(bool: false)` - If set, allows migration of the
+  underlying instance where the client resides. This keys off of pendingTime in
+  the metadata document, so essentially, this disables the client nonce check
+  whenever the instance is migrated to a new host and pendingTime is newer than
   the previously-remembered time. Use with caution. This only applies to
   authentications via the ec2 auth method.
-- `disallow_reauthentication` `(bool: false)` - If set, only allows a single 
-  token to be granted per instance ID. In order to perform a fresh login, the 
+- `disallow_reauthentication` `(bool: false)` - If set, only allows a single
+  token to be granted per instance ID. In order to perform a fresh login, the
   entry in whitelist for the instance ID needs to be cleared using
-  'auth/aws/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'. 
+  'auth/aws/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'.
   This only applies to authentications via the ec2 auth method.
 
 ### Sample Payload
@@ -819,20 +825,20 @@ given instance can be allowed to gain in a worst-case scenario.
 ### Parameters
 
 - `role` `(string: <required>)` - Name of the role.
-- `policies` `(array: [])` - Policies to be associated with the tag. If set, 
-  must be a subset of the role's policies. If set, but set to an empty value, 
+- `policies` `(array: [])` - Policies to be associated with the tag. If set,
+  must be a subset of the role's policies. If set, but set to an empty value,
   only the 'default' policy will be given to issued tokens.
 - `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued using
   this role.
-- `instance_id` `(string: "")` - Instance ID for which this tag is intended for. 
+- `instance_id` `(string: "")` - Instance ID for which this tag is intended for.
   If set, the created tag can only be used by the instance with the given ID.
-- `allow_instance_migration` `(bool: false)` - If set, allows migration of the 
-  underlying instance where the client resides. This keys off of pendingTime in 
-  the metadata document, so essentially, this disables the client nonce check 
-  whenever the instance is migrated to a new host and pendingTime is newer than 
+- `allow_instance_migration` `(bool: false)` - If set, allows migration of the
+  underlying instance where the client resides. This keys off of pendingTime in
+  the metadata document, so essentially, this disables the client nonce check
+  whenever the instance is migrated to a new host and pendingTime is newer than
   the previously-remembered time. Use with caution. Defaults to 'false'.
-- `disallow_reauthentication` `(bool: false)` - If set, only allows a single 
-  token to be granted per instance ID. This can be cleared with the 
+- `disallow_reauthentication` `(bool: false)` - If set, only allows a single
+  token to be granted per instance ID. This can be cleared with the
   auth/aws/identity-whitelist endpoint. Defaults to 'false'.
 
 ### Sample Payload
@@ -885,54 +891,54 @@ along with its RSA digest can be supplied to this endpoint.
 
 ### Sample Payload
 
-- `role` `(string: "")` - Name of the role against which the login is being 
-  attempted.  If `role` is not specified, then the login endpoint looks for a 
+- `role` `(string: "")` - Name of the role against which the login is being
+  attempted.  If `role` is not specified, then the login endpoint looks for a
   role bearing the name of the AMI ID of the EC2 instance that is trying to
   login if using the ec2 auth method, or the "friendly name" (i.e., role name or
   username) of the IAM principal authenticated. If a matching role is not found,
   login fails.
-- `identity` `(string: <required-ec2>)` - Base64 encoded EC2 instance identity 
-  document. This needs to be supplied along with the `signature` parameter. If 
-  using `curl` for fetching the identity document, consider using the option 
+- `identity` `(string: <required-ec2>)` - Base64 encoded EC2 instance identity
+  document. This needs to be supplied along with the `signature` parameter. If
+  using `curl` for fetching the identity document, consider using the option
   `-w 0` while piping the output to `base64` binary.
-- `signature` `(string: <required-ec2>)` - Base64 encoded SHA256 RSA signature of 
-  the instance identity document. This needs to be supplied along with 
+- `signature` `(string: <required-ec2>)` - Base64 encoded SHA256 RSA signature of
+  the instance identity document. This needs to be supplied along with
   `identity` parameter when using the ec2 auth method.
 - `pkcs7` `(string: <required-ec2>)` - PKCS7 signature of the identity document with
   all `\n` characters removed.  Either this needs to be set *OR* both `identity`
   and `signature` need to be set when using the ec2 auth method.
-- `nonce` `(string: "")` - The nonce to be used for subsequent login requests. 
-  If this parameter is not specified at all and if reauthentication is allowed, 
+- `nonce` `(string: "")` - The nonce to be used for subsequent login requests.
+  If this parameter is not specified at all and if reauthentication is allowed,
   then the backend will generate a random nonce, attaches it to the instance's
-  identity-whitelist entry and returns the nonce back as part of auth metadata. 
-  This value should be used with further login requests, to establish client 
-  authenticity. Clients can choose to set a custom nonce if preferred, in which 
-  case, it is recommended that clients provide a strong nonce.  If a nonce is 
-  provided but with an empty value, it indicates intent to disable 
-  reauthentication. Note that, when `disallow_reauthentication` option is 
+  identity-whitelist entry and returns the nonce back as part of auth metadata.
+  This value should be used with further login requests, to establish client
+  authenticity. Clients can choose to set a custom nonce if preferred, in which
+  case, it is recommended that clients provide a strong nonce.  If a nonce is
+  provided but with an empty value, it indicates intent to disable
+  reauthentication. Note that, when `disallow_reauthentication` option is
   enabled on either the role or the role tag, the `nonce` holds no significance.
   This is ignored unless using the ec2 auth method.
-- `iam_http_request_method` `(string: <required-iam>)` - HTTP method used in the 
-  signed request. Currently only POST is supported, but other methods may be 
+- `iam_http_request_method` `(string: <required-iam>)` - HTTP method used in the
+  signed request. Currently only POST is supported, but other methods may be
   supported in the future. This is required when using the iam auth method.
 - `iam_request_url` `(string: <required-iam>)` - Base64-encoded HTTP URL used in
-  the signed request. Most likely just `aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8=` 
-  (base64-encoding of `https://sts.amazonaws.com/`) as most requests will 
+  the signed request. Most likely just `aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8=`
+  (base64-encoding of `https://sts.amazonaws.com/`) as most requests will
   probably use POST with an empty URI. This is required when using the iam auth
   method.
-- `iam_request_body` `(string: <required-iam>)` - Base64-encoded body of the 
+- `iam_request_body` `(string: <required-iam>)` - Base64-encoded body of the
   signed request. Most likely
-  `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==` which is the 
-  base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is 
+  `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==` which is the
+  base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is
   required when using the iam auth method.
-- `iam_request_headers` `(string: <required-iam>)` - Base64-encoded, 
+- `iam_request_headers` `(string: <required-iam>)` - Base64-encoded,
   JSON-serialized representation of the sts:GetCallerIdentity HTTP request
-  headers. The JSON serialization assumes that each header key maps to either a 
-  string value or an array of string values (though the length of that array 
-  will probably only be one). If the `iam_server_id_header_value` is configured 
+  headers. The JSON serialization assumes that each header key maps to either a
+  string value or an array of string values (though the length of that array
+  will probably only be one). If the `iam_server_id_header_value` is configured
   in Vault for the aws auth mount, then the headers must include the
-  X-Vault-AWS-IAM-Server-ID header, its value must match the value configured, 
-  and the header must be included in the signed headers.  This is required when 
+  X-Vault-AWS-IAM-Server-ID header, its value must match the value configured,
+  and the header must be included in the signed headers.  This is required when
   using the iam auth method.
 
 
@@ -996,7 +1002,7 @@ token.
 ### Parameters
 
 - `role_tag` `(string: <required>)` - Role tag to be blacklisted. The tag can be
-  supplied as-is. In order to avoid any encoding problems, it can be base64 
+  supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
 ### Sample Request
@@ -1019,7 +1025,7 @@ Returns the blacklist entry of a previously blacklisted role tag.
 ### Parameters
 
 - `role_tag` `(string: <required>)` - Role tag to be blacklisted. The tag can be
-  supplied as-is. In order to avoid any encoding problems, it can be base64 
+  supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
 ### Sample Request
@@ -1092,7 +1098,7 @@ Deletes a blacklisted role tag.
 ### Parameters
 
 - `role_tag` `(string: <required>)` - Role tag to be blacklisted. The tag can be
-  supplied as-is. In order to avoid any encoding problems, it can be base64 
+  supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
 
@@ -1116,8 +1122,8 @@ Cleans up the entries in the blacklist based on expiration time on the entry and
 
 ### Parameters
 
-- `safety_buffer` `(string: "72h")` - The amount of extra time that must have 
-  passed beyond the `roletag` expiration, before it is removed from the backend 
+- `safety_buffer` `(string: "72h")` - The amount of extra time that must have
+  passed beyond the `roletag` expiration, before it is removed from the backend
   storage. Defaults to 72h.
 
 ### Sample Request
@@ -1131,7 +1137,7 @@ $ curl \
 
 ### Read Identity Whitelist Information
 
-Returns an entry in the whitelist. An entry will be created/updated by every 
+Returns an entry in the whitelist. An entry will be created/updated by every
 successful login.
 
 | Method   | Path                         | Produces               |
@@ -1140,8 +1146,8 @@ successful login.
 
 ### Parameters
 
-- `instance_id` `(string: <required>)` - EC2 instance ID. A successful login 
-  operation from an EC2 instance gets cached in this whitelist, keyed off of 
+- `instance_id` `(string: <required>)` - EC2 instance ID. A successful login
+  operation from an EC2 instance gets cached in this whitelist, keyed off of
   instance ID.
 
 ### Sample Request
@@ -1216,8 +1222,8 @@ Deletes a cache of the successful login from an instance.
 
 ### Parameters
 
-- `instance_id` `(string: <required>)` - EC2 instance ID. A successful login 
-  operation from an EC2 instance gets cached in this whitelist, keyed off of 
+- `instance_id` `(string: <required>)` - EC2 instance ID. A successful login
+  operation from an EC2 instance gets cached in this whitelist, keyed off of
   instance ID.
 
 ### Sample Request
@@ -1231,7 +1237,7 @@ $ curl \
 
 ## Tidy Identity Whitelist Entries
 
-Cleans up the entries in the whitelist based on expiration time and 
+Cleans up the entries in the whitelist based on expiration time and
 `safety_buffer`.
 
 | Method   | Path                         | Produces               |
@@ -1240,8 +1246,8 @@ Cleans up the entries in the whitelist based on expiration time and
 
 ### Parameters
 
-- `safety_buffer` `(string: "72h")` - The amount of extra time that must have 
-  passed beyond the `roletag` expiration, before it is removed from the backend 
+- `safety_buffer` `(string: "72h")` - The amount of extra time that must have
+  passed beyond the `roletag` expiration, before it is removed from the backend
   storage. Defaults to 72h.
 
 ### Sample Request

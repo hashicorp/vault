@@ -60,6 +60,11 @@ type backend struct {
 	// will be flushed. The empty STS role signifies the master account
 	IAMClientsMap map[string]map[string]*iam.IAM
 
+	// Map of AWS unique IDs to the full ARN corresponding to that unique ID
+	// This avoids the overhead of an AWS API hit for every login request
+	// using the IAM auth method when bound_iam_principal_arn contains a wildcard
+	iamUserIdToArn map[string]*awsUniqueIdMapEntry
+
 	// AWS Account ID of the "default" AWS credentials
 	// This cache avoids the need to call GetCallerIdentity repeatedly to learn it
 	// We can't store this because, in certain pathological cases, it could change
@@ -77,6 +82,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		tidyCooldownPeriod: time.Hour,
 		EC2ClientsMap:      make(map[string]map[string]*ec2.EC2),
 		IAMClientsMap:      make(map[string]map[string]*iam.IAM),
+		iamUserIdToArn:     make(map[string]*awsUniqueIdMapEntry),
 	}
 
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
@@ -124,7 +130,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 // Currently this will be triggered once in a minute by the RollbackManager.
 //
 // The tasks being done currently by this function are to cleanup the expired
-// entries of both blacklist role tags and whitelist identities. Tidying is done
+// entries of both blacklist role tags and whitelist identities as well as stale
+// entries in the iamUserIdToArn cache. Tidying is done
 // not once in a minute, but once in an hour, controlled by 'tidyCooldownPeriod'.
 // Tidying of blacklist and whitelist are by default enabled. This can be
 // changed using `config/tidy/roletags` and `config/tidy/identities` endpoints.
@@ -173,6 +180,9 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 		if !skipWhitelistTidy {
 			b.tidyWhitelistIdentity(req.Storage, safety_buffer)
 		}
+
+		// get rid of old unique ID entries
+		b.cleanOldCachedUniqueIdMapping()
 
 		// Update the time at which to run the tidy functions again.
 		b.nextTidyTime = time.Now().Add(b.tidyCooldownPeriod)
