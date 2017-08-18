@@ -1279,10 +1279,8 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	// fullParts[5] would now be something like user/<UserName> or assumed-role/<RoleName>/<RoleSessionName>
 	parts := strings.Split(fullParts[5], "/")
 	entity.Type = parts[0]
-	if len(parts) > 1 {
-		entity.Path = strings.Join(parts[1:len(parts)-1], "/")
-		entity.FriendlyName = parts[len(parts)-1]
-	}
+	entity.Path = strings.Join(parts[1:len(parts)-1], "/")
+	entity.FriendlyName = parts[len(parts)-1]
 	// now, entity.FriendlyName should either be <UserName> or <RoleName>
 	switch entity.Type {
 	case "assumed-role":
@@ -1294,7 +1292,6 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	case "user":
 	case "role":
 	case "instance-profile":
-	case "root":
 	default:
 		return &iamEntity{}, fmt.Errorf("unrecognized principal type: %q", entity.Type)
 	}
@@ -1516,11 +1513,7 @@ func (e *iamEntity) canonicalArn() string {
 	// make an AWS API call to look up the role by FriendlyName, which introduces more complexity to
 	// code and test, and it also breaks backwards compatibility in an area where we would really want
 	// it
-	ret := fmt.Sprintf("arn:%s:iam::%s:%s", e.Partition, e.AccountNumber, entityType)
-	if e.FriendlyName != "" {
-		ret = fmt.Sprintf("%s/%s", ret, e.FriendlyName)
-	}
-	return ret
+	return fmt.Sprintf("arn:%s:iam::%s:%s/%s", e.Partition, e.AccountNumber, entityType, e.FriendlyName)
 }
 
 const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"
