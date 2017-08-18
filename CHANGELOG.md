@@ -1,3 +1,17 @@
+## 0.8.2 (Unreleased)
+
+DEPRECATIONS:
+
+* `vault ssh` users should supply `-mode` and `-role` to reduce the number of
+  API calls. A future version of Vault will mark these optional values are
+  required. Failure to supply `-mode` or `-role` will result in a warning.
+
+FEATURES:
+
+* **SSH CA Login with `vault ssh`**: The `vault ssh` now supports the SSH CA
+  backend for authenticating to machines. It also supports remote host key
+  verification through the SSH CA backend, if enabled.
+
 ## 0.8.1 (August 16th, 2017)
 
 DEPRECATIONS/CHANGES:
@@ -26,7 +40,7 @@ FEATURES:
    the plugin name or the mounts to reload.
  * **Self-Reloading Plugins**: The plugin system will now attempt to reload a
    crashed or stopped plugin, once per request.
- 
+
 IMPROVEMENTS:
 
  * auth/approle: Allow array input for policies in addition to comma-delimited
@@ -57,9 +71,9 @@ SECURITY:
 DEPRECATIONS/CHANGES:
 
  * Database Plugin Backends: Passwords generated for these backends now
-   enforce stricter password requirements, as opposed to the previous behavior 
-   of returning a randomized UUID. Passwords are of length 20, and have a `A1a-` 
-   characters prepended to ensure stricter requirements. No regressions are 
+   enforce stricter password requirements, as opposed to the previous behavior
+   of returning a randomized UUID. Passwords are of length 20, and have a `A1a-`
+   characters prepended to ensure stricter requirements. No regressions are
    expected from this change. (For database backends that were previously
    substituting underscores for hyphens in passwords, this will remain the
    case.)
@@ -87,8 +101,8 @@ FEATURES:
    list of authorized addresses (IPs or subnets) can be defined and
    accept/reject behavior controlled.
  * **Lease Lookup and Browsing in the Vault Enterprise UI**: Vault Enterprise UI
-   now supports lookup and listing of leases and the associated actions from the 
-   `sys/leases` endpoints in the API. These are located in the new top level 
+   now supports lookup and listing of leases and the associated actions from the
+   `sys/leases` endpoints in the API. These are located in the new top level
    navigation item "Leases".
  * **Filtered Mounts for Performance Mode Replication**: Whitelists or
    blacklists of mounts can be defined per-secondary to control which mounts
@@ -99,8 +113,8 @@ FEATURES:
    replication (including tokens and leases) to DR secondaries. DR secondaries
    cannot handle client requests, but can be promoted to primary as needed for
    failover.
- * **Manage New Replication Features in the Vault Enterprise UI**: Support for 
-   Replication features in Vault Enterprise UI has expanded to include new DR 
+ * **Manage New Replication Features in the Vault Enterprise UI**: Support for
+   Replication features in Vault Enterprise UI has expanded to include new DR
    Replication mode and management of Filtered Mounts in Performance Replication
    mode.
  * **Vault Identity (Enterprise Only)**: Vault's new Identity system allows
@@ -167,7 +181,7 @@ BUG FIXES:
  * auth/token: Don't allow using the same token ID twice when manually
    specifying [GH-2916]
  * cli: Fix issue with parsing keys that start with special characters [GH-2998]
- * core: Relocated `sys/leases/renew` returns same payload as original 
+ * core: Relocated `sys/leases/renew` returns same payload as original
    `sys/leases` endpoint [GH-2891]
  * secret/ssh: Fix panic when signing with incorrect key type [GH-3072]
  * secret/totp: Ensure codes can only be used once. This makes some automated
@@ -227,18 +241,18 @@ IMPROVEMENTS:
  * core/forwarding: Request forwarding now heartbeats to prevent unused
    connections from being terminated by firewalls or proxies
  * plugins/databases: Add MongoDB as an internal database plugin [GH-2698]
- * storage/dynamodb: Add a method for checking the existence of children, 
+ * storage/dynamodb: Add a method for checking the existence of children,
    speeding up deletion operations in the DynamoDB storage backend [GH-2722]
  * storage/mysql: Add max_parallel parameter to MySQL backend [GH-2760]
  * secret/databases: Support listing connections [GH-2823]
- * secret/databases: Support custom renewal statements in Postgres database 
+ * secret/databases: Support custom renewal statements in Postgres database
    plugin [GH-2788]
  * secret/databases: Use the role name as part of generated credentials
    [GH-2812]
  * ui (Enterprise): Transit key and secret browsing UI handle large lists better
  * ui (Enterprise): root tokens are no longer persisted
  * ui (Enterprise): support for mounting Database and TOTP secret backends
- 
+
 BUG FIXES:
 
  * auth/app-id: Fix regression causing loading of salts to be skipped
@@ -299,13 +313,13 @@ FEATURES:
    revoke-force) have also been relocated to `sys/leases/`, but they also work
    at the old paths for compatibility. Reading (but not listing) leases via
    `sys/leases/lookup` is now a part of the current `default` policy. [GH-2650]
- * **TOTP Secret Backend**: You can now store multi-factor authentication keys 
-   in Vault and use the API to retrieve time-based one-time use passwords on 
-   demand. The backend can also be used to generate a new key and validate 
+ * **TOTP Secret Backend**: You can now store multi-factor authentication keys
+   in Vault and use the API to retrieve time-based one-time use passwords on
+   demand. The backend can also be used to generate a new key and validate
    passwords generated by that key. [GH-2492]
- * **Database Secret Backend & Secure Plugins (Beta)**: This new secret backend 
-   combines the functionality of the MySQL, PostgreSQL, MSSQL, and Cassandra 
-   backends. It also provides a plugin interface for extendability through 
+ * **Database Secret Backend & Secure Plugins (Beta)**: This new secret backend
+   combines the functionality of the MySQL, PostgreSQL, MSSQL, and Cassandra
+   backends. It also provides a plugin interface for extendability through
    custom databases. [GH-2200]
 
 IMPROVEMENTS:
@@ -493,11 +507,11 @@ FEATURES:
  * **Configurable Audited HTTP Headers**: You can now specify headers that you
    want to have included in each audit entry, along with whether each header
    should be HMAC'd or kept plaintext. This can be useful for adding additional
-   client or network metadata to the audit logs. 
+   client or network metadata to the audit logs.
  * **Transit Backend UI (Enterprise)**: Vault Enterprise UI now supports the transit
    backend, allowing creation, viewing and editing of named keys as well as using
    those keys to perform supported transit operations directly in the UI.
- * **Socket Audit Backend** A new socket audit backend allows audit logs to be sent 
+ * **Socket Audit Backend** A new socket audit backend allows audit logs to be sent
    through TCP, UDP, or UNIX Sockets.
 
 IMPROVEMENTS:
