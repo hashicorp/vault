@@ -52,16 +52,15 @@ The expected format of the JWT payload is as follows:
 }
 ```
 
-* Values:
-  * `[SERVICE ACCOUNT ID OR EMAIL]`: Either the email or the unique ID of a service account.
-  * `[ROLE NAME]`: Name of the role that this token will be used to login against. The full expected `aud` string should be "vault/$roleName".
-  * `[EXPIRATION]` : A [NumericDate](https://tools.ietf.org/html/rfc7519#section-2) value (seconds from Epoch). This value must be before the max JWT expiration allowed for a role (see `max_jwt_exp` parameter for creating a role). This defaults to 15 minutes and cannot be more than a hour.
+* `[SERVICE ACCOUNT ID OR EMAIL]`: Either the email or the unique ID of a service account.
+* `[ROLE NAME]`: Name of the role that this token will be used to login against. The full expected `aud` string should be "vault/$roleName".
+* `[EXPIRATION]` : A [NumericDate](https://tools.ietf.org/html/rfc7519#section-2) value (seconds from Epoch). This value must be before the max JWT expiration allowed for a role (see `max_jwt_exp` parameter for creating a role). This defaults to 15 minutes and cannot be more than a hour.
 
 **Note:** By default, we enforce a shorter `exp` period than the default length
 for a given token (1 hour) in order to make reuse of tokens difficult. You can
 customize this value for a given role but it will be capped at an hour.
 
-To generate this token, we use the IAM API method.
+To generate this token, we use the Google IAM API method.
 
 **HTTP Request Example**
 
@@ -74,7 +73,8 @@ curl -H "Authorization: Bearer $OAUTH_TOKEN" \
     -X POST -d '{"payload":"'$PAYLOAD'"}' https://iam.googleapis.com/v1/projects/$PROJECT/serviceAccounts/$SERVICE_ACCOUNT:signJwt
 ```
 
-**Golang example**:
+**Golang Example**
+
 We use the Go OAuth2 libraries, GCP IAM API, and Vault API.
 
 ```go
@@ -165,11 +165,13 @@ For `gcp`, login is per-role. Each role has a specific set of restrictions that
 an authorized entity must fit in order to login. These restrictions are specific
 to the role type.
 
-Currently supported role types are: `iam`
+Currently supported role types are:
+
+* `iam`
 
 Vault validates an authenticated entity against the role and uses the role to
 determine information about the lease, including Vault policies assigned and
-TTLs. For a full list of accepted arguments, see [role API docs](/api/auth/gcp/index.html#create-role)
+TTLs. For a full list of accepted arguments, see [role API docs](/api/auth/gcp/index.html#create-role).
 
 ### About `iam` Roles
 
