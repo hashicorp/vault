@@ -146,6 +146,21 @@ the contents begin with `ssh-rsa ...`.
     The result will include the serial and the signed key. This signed key is
     another public key.
 
+    To customize the signing options, use a JSON payload:
+
+    ```text
+    $ vault write ssh-client-signer/sign/my-role -<<"EOH"
+    {
+      "public_key": "ssh-rsa AAA...",
+      "valid_principals": "my-user",
+      "key_id": "custom-prefix",
+      "extension": {
+        "permit-pty": ""
+      }
+    }
+    EOH
+    ```
+
 1. Save the resulting signed, public key to disk. Limit permissions as needed.
 
     ```text
@@ -164,10 +179,12 @@ key.
     $ ssh-keygen -Lf ~/.ssh/signed-cert.pub
     ```
 
-1. SSH into the host machine using the signed key.
+1. SSH into the host machine using the signed key. You must supply both the
+signed public key from Vault **and** the corresponding private key as
+authentication to the SSH call.
 
     ```text
-    $ ssh -i signed-cert.pub username@10.0.23.5
+    $ ssh -i signed-cert.pub -i ~/.ssh/id_rsa username@10.0.23.5
     ```
 
 ## Host Key Signing
@@ -316,6 +333,134 @@ $ tail -f /var/log/auth.log | grep --line-buffered "sshd"
 
 If you are unable to make a connection to the host, the SSH server logs may
 provide guidance and insights.
+
+### Name is not a listed principal
+
+If the `auth.log` displays the following messages:
+
+```text
+# /var/log/auth.log
+key_cert_check_authority: invalid certificate
+Certificate invalid: name is not a listed principal
+```
+
+The certificate does not permit the username as a listed principal for
+authenticating to the system. This is most likely due to an OpenSSH bug (see
+[known issues](#known-issues) for more information). This bug does not respect
+the `allowed_users` option value of "\*". Here are ways to work around this
+issue:
+
+1. Set `default_user` in the role. If you are always authenticating as the same
+user, set the `default_user` in the role to the username you are SSHing into the
+target machine:
+
+    ```text
+    $ vault write ssh/roles/my-role -<<"EOH"
+    {
+      "default_user": "YOUR_USER",
+      // ...
+    }
+    EOH
+    ```
+
+1. Set `valid_principals` during signing. In situations where multiple users may
+be authenticating to SSH via Vault, set the list of valid principles during key
+signing to include the current username:
+
+    ```text
+    $ vault write ssh-client-signer/sign/my-role -<<"EOH"
+    {
+      "valid_principals": "my-user"
+      // ...
+    }
+    EOH
+    ```
+
+
+### No Prompt After Login
+
+If you do not see a prompt after authenticating to the host machine, the signed
+certificate may not have the `permit-pty` extension. There are two ways to add
+this extension to the signed certificate.
+
+- As part of the role creation
+
+    ```text
+    $ vault write ssh-client-signer/roles/my-role -<<"EOH"
+    {
+      "default_extensions": [
+        {
+          "permit-pty": ""
+        }
+      ]
+      // ...
+    }
+    EOH
+    ```
+
+- As part of the signing operation itself:
+
+    ```text
+    $ vault write ssh-client-signer/sign/my-role -<<"EOH"
+    {
+      "extension": {
+        "permit-pty": ""
+      }
+      // ...
+    }
+    EOH
+    ```
+
+### No Port Forwarding
+
+If port forwarding from the guest to the host is not working, the signed
+certificate may not have the `permit-port-forwarding` extension. Add the
+extension as part of the role creation or signing process to enable port
+forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
+
+```json
+{
+  "default_extensions": [
+    {
+      "permit-port-forwarding": ""
+    }
+  ]
+}
+```
+
+### No X11 Forwarding
+
+If X11 forwarding from the guest to the host is not working, the signed
+certificate may not have the `permit-X11-forwarding` extension. Add the
+extension as part of the role creation or signing process to enable X11
+forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
+
+```json
+{
+  "default_extensions": [
+    {
+      "permit-X11-forwarding": ""
+    }
+  ]
+}
+```
+
+### No Agent Forwarding
+
+If agent forwarding from the guest to the host is not working, the signed
+certificate may not have the `permit-agent-forwarding` extension. Add the
+extension as part of the role creation or signing process to enable agent
+forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
+
+```json
+{
+  "default_extensions": [
+    {
+      "permit-agent-forwarding": ""
+    }
+  ]
+}
+```
 
 ### Known Issues
 
