@@ -989,39 +989,72 @@ func testConnState(certPath, keyPath, rootCertPath string) (tls.ConnectionState,
 	}
 	dialConf := new(tls.Config)
 	*dialConf = *listenConf
+	// start a server
 	list, err := tls.Listen("tcp", "127.0.0.1:0", listenConf)
 	if err != nil {
 		return tls.ConnectionState{}, err
 	}
 	defer list.Close()
 
+	// Accept connections.
+	serverErrors := make(chan error, 1)
+	connState := make(chan tls.ConnectionState)
+	go func() {
+		defer close(connState)
+		serverConn, err := list.Accept()
+		serverErrors <- err
+		if err != nil {
+			close(serverErrors)
+			return
+		}
+		defer serverConn.Close()
+
+		// Read the ping
+		buf := make([]byte, 4)
+		_, err = serverConn.Read(buf)
+		if (err != nil) && (err != io.EOF) {
+			serverErrors <- err
+			close(serverErrors)
+			return
+		} else {
+			// EOF is a reasonable error condition, so swallow it.
+			serverErrors <- nil
+		}
+		close(serverErrors)
+		connState <- serverConn.(*tls.Conn).ConnectionState()
+	}()
+
+	// Establish a connection from the client side and write a few bytes.
+	clientErrors := make(chan error, 1)
 	go func() {
 		addr := list.Addr().String()
 		conn, err := tls.Dial("tcp", addr, dialConf)
+		clientErrors <- err
 		if err != nil {
-			// FIXME
-			// disabled, as a t.Fatalf in a goroutine is silently dropped
-			// t.Fatalf("err: %v", err)
+			close(clientErrors)
+			return
 		}
 		defer conn.Close()
 
 		// Write ping
-		conn.Write([]byte("ping"))
+		_, err = conn.Write([]byte("ping"))
+		clientErrors <- err
+		close(clientErrors)
 	}()
 
-	serverConn, err := list.Accept()
-	if err != nil {
-		return tls.ConnectionState{}, err
+	for err = range clientErrors {
+		if err != nil {
+			return tls.ConnectionState{}, fmt.Errorf("error in client goroutine:%v", err)
+		}
 	}
-	defer serverConn.Close()
 
-	// Read the pign
-	buf := make([]byte, 4)
-	serverConn.Read(buf)
-
+	for err = range serverErrors {
+		if err != nil {
+			return tls.ConnectionState{}, fmt.Errorf("error in server goroutine:%v", err)
+		}
+	}
 	// Grab the current state
-	connState := serverConn.(*tls.Conn).ConnectionState()
-	return connState, nil
+	return <-connState, nil
 }
 
 func Test_Renew(t *testing.T) {
