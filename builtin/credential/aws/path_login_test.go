@@ -88,9 +88,6 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 		"",
 		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "instance-profile", Path: "profilePath", FriendlyName: "InstanceProfileName"},
 	)
-	testParser("arn:aws:iam::123456789012:root", "arn:aws:iam::123456789012:root",
-		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "root"},
-	)
 }
 
 func TestBackend_validateVaultHeaderValue(t *testing.T) {

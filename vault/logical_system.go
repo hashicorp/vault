@@ -1846,7 +1846,7 @@ func (b *SystemBackend) handlePolicyRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"name":  name,
+			"name":  policy.Name,
 			"rules": policy.Raw,
 		},
 	}, nil
@@ -1873,8 +1873,9 @@ func (b *SystemBackend) handlePolicySet(
 		return handleError(err)
 	}
 
-	// Override the name
-	parse.Name = strings.ToLower(name)
+	if name != "" {
+		parse.Name = name
+	}
 
 	// Update the policy
 	if err := b.Core.policyStore.SetPolicy(parse); err != nil {
