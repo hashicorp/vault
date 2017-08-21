@@ -316,6 +316,7 @@ func (c *SSHCommand) handleTypeCA() error {
 	cmd := exec.Command("ssh", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
 		return errors.Wrap(err, "failed to run ssh command")
@@ -381,6 +382,7 @@ func (c *SSHCommand) handleTypeOTP() error {
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
 		return errors.Wrap(err, "failed to run ssh command")
@@ -430,6 +432,7 @@ func (c *SSHCommand) handleTypeDynamic() error {
 	cmd := exec.Command("ssh", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
 		return errors.Wrap(err, "failed to run ssh command")
