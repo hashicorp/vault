@@ -943,7 +943,13 @@ func (b *backend) pathLoginRenewIam(
 		}
 	}
 
-	return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+	// If 'Period' is set on the role, then the token should never expire.
+	if roleEntry.Period > time.Duration(0) {
+		req.Auth.TTL = roleEntry.Period
+		return &logical.Response{Auth: req.Auth}, nil
+	} else {
+		return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+	}
 }
 
 func (b *backend) pathLoginRenewEc2(
