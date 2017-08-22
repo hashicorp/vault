@@ -23,6 +23,7 @@ import (
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
 	testing "github.com/mitchellh/go-testing-interface"
+	"github.com/posener/complete"
 
 	"google.golang.org/grpc/grpclog"
 
@@ -1236,6 +1237,20 @@ General Options:
                           "warn", "err"
 `
 	return strings.TrimSpace(helpText)
+}
+
+func (c *ServerCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *ServerCommand) AutocompleteFlags() complete.Flags {
+	return complete.Flags{
+		"-config":             complete.PredictOr(complete.PredictFiles("*.hcl"), complete.PredictFiles("*.json")),
+		"-dev":                complete.PredictNothing,
+		"-dev-root-token-id":  complete.PredictNothing,
+		"-dev-listen-address": complete.PredictNothing,
+		"-log-level":          complete.PredictSet("trace", "debug", "info", "warn", "err"),
+	}
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

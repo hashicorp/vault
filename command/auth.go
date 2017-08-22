@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
+	"github.com/posener/complete"
 	"github.com/ryanuber/columnize"
 )
 
@@ -301,15 +302,22 @@ func (c *AuthCommand) Run(args []string) int {
 
 }
 
-func (c *AuthCommand) listMethods() int {
+func (c *AuthCommand) getMethods() (map[string]*api.AuthMount, error) {
 	client, err := c.Client()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 1
+		return nil, err
 	}
 
 	auth, err := client.Sys().ListAuth()
+	if err != nil {
+		return nil, err
+	}
+
+	return auth, nil
+}
+
+func (c *AuthCommand) listMethods() int {
+	auth, err := c.getMethods()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error reading auth table: %s", err))
@@ -457,4 +465,36 @@ tokens are created via the API or command line interface (with the
 `
 
 	return strings.TrimSpace(help)
+}
+
+func (c *AuthCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *AuthCommand) AutocompleteFlags() complete.Flags {
+	var predictFunc complete.PredictFunc = func(a complete.Args) []string {
+		auths, err := c.getMethods()
+		if err != nil {
+			return []string{}
+		}
+
+		methods := make([]string, 0, len(auths))
+		for _, auth := range auths {
+			if strings.HasPrefix(auth.Type, a.Last) {
+				methods = append(methods, auth.Type)
+			}
+		}
+
+		return methods
+	}
+
+	return complete.Flags{
+		"-method":      predictFunc,
+		"-methods":     complete.PredictNothing,
+		"-method-help": complete.PredictNothing,
+		"-no-verify":   complete.PredictNothing,
+		"-no-store":    complete.PredictNothing,
+		"-token-only":  complete.PredictNothing,
+		"-path":        complete.PredictNothing,
+	}
 }

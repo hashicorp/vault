@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/meta"
+	"github.com/posener/complete"
 )
 
 // RekeyCommand is a Command that rekeys the vault.
@@ -417,4 +418,24 @@ Rekey Options:
                           barrier key. Only used with Vault HSM.
 `
 	return strings.TrimSpace(helpText)
+}
+
+func (c *RekeyCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *RekeyCommand) AutocompleteFlags() complete.Flags {
+	return complete.Flags{
+		"-init":          complete.PredictNothing,
+		"-cancel":        complete.PredictNothing,
+		"-status":        complete.PredictNothing,
+		"-retrieve":      complete.PredictNothing,
+		"-delete":        complete.PredictNothing,
+		"-key-shares":    complete.PredictNothing,
+		"-key-threshold": complete.PredictNothing,
+		"-nonce":         complete.PredictNothing,
+		"-pgp-keys":      complete.PredictNothing,
+		"-backup":        complete.PredictNothing,
+		"-recovery-key":  complete.PredictNothing,
+	}
 }
