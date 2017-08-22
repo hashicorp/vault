@@ -605,14 +605,14 @@ endpoint.
 ### Parameters
 
 - `role_name` `(string: <required>)` – The name of the token role.
-- `allowed_policies` `(list: [])` – If set, tokens can be created with any 
+- `allowed_policies` `(array: [])` – If set, tokens can be created with any 
   subset of the policies in this list, rather than the normal semantics of 
   tokens being a subset of the calling token's policies. The parameter is a 
   comma-delimited string of policy names. If at creation time 
   `no_default_policy` is not set and `"default"` is not contained in 
   `disallowed_policies`, the `"default"` policy will be added to the created 
   token automatically.
-- `disallowed_policies` `(list: [])` – If set, successful token creation via 
+- `disallowed_policies` `(array: [])` – If set, successful token creation via 
   this role will require that no policies in the given list are requested. The 
   parameter is a comma-delimited string of policy names. Adding `"default"` to 
   this list will prevent `"default"` from being added automatically to created
