@@ -39,7 +39,7 @@ list of additional parameters.
 - `verify_connection` `(bool: true)` – Specifies if the connection is verified
   during initial configuration. Defaults to true.
 
-- `allowed_roles` `(slice: [])` - Array or comma separated string of the roles
+- `allowed_roles` `(array: [])` - Array or comma-separated string of the roles
   allowed to use this connection. Defaults to empty (no roles), if contains a
   "*" any role can use this connection. 
 
