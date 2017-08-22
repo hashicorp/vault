@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -38,7 +37,7 @@ func pathUsers(b *backend) *framework.Path {
 			},
 
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
 			},
 			"ttl": &framework.FieldSchema{
@@ -137,9 +136,10 @@ func (b *backend) pathUserRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policies": strings.Join(user.Policies, ","),
-			"ttl":      user.TTL.Seconds(),
-			"max_ttl":  user.MaxTTL.Seconds(),
+			"policies":     strings.Join(user.Policies, ","),
+			"policies_raw": user.Policies,
+			"ttl":          user.TTL.Seconds(),
+			"max_ttl":      user.MaxTTL.Seconds(),
 		},
 	}, nil
 }
@@ -166,7 +166,7 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 	}
 
 	if policiesRaw, ok := d.GetOk("policies"); ok {
-		userEntry.Policies = policyutil.ParsePolicies(policiesRaw.(string))
+		userEntry.Policies = policiesRaw.([]string)
 	}
 
 	ttlStr := userEntry.TTL.String()

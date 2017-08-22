@@ -30,8 +30,8 @@ Create a new user or update an existing user. This path honors the distinction b
 - `username` `(string: <required>)` – The username for the user.
 - `password` `(string: <required>)` - The password for the user. Only required 
   when creating the user.
-- `policies` `(string: "")` – Comma-separated list of policies. If set to empty
-  string, only the `default` policy will be applicable to the user.
+- `policies` `(array: [])` – Array or comma-separated list of policies. If set 
+  to empty, only the `default` policy will be applicable to the user.
 - `ttl` `(string: "")` - The lease duration which decides login expiration.
 - `max_ttl` `(string: "")` - Maximum duration after which login should expire.
 
