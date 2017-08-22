@@ -16,6 +16,8 @@ BUG FIXES:
 
  * core: Policy-related commands would sometimes fail to act case-insensitively
    [GH-3210]
+ * auth/aws: Properly use role-set period values for IAM-derived token renewals
+   [GH-3220]
 
 ## 0.8.1 (August 16th, 2017)
 
