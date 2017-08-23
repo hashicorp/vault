@@ -184,6 +184,7 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/postgresql/roles`          | `200 application/json` |
+| `GET`    | `/postgresql/roles?list=true` | `200 application/json` |
 
 ### Sample Request
 
