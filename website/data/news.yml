@@ -1,16 +1,23 @@
-default_link_text: 'Read more'
+default_link_text: "Read more"
 posts:
   -
-    title: 'Vault 0.7.3 released'
-    body: 'We are pleased to announce the release of Vault 0.7.3. This release includes ed25519 signing/verification in transit with key derivation, key version specification for encryption in transit, replication primary discovery (enterprise), and more.'
-    link_url: 'https://www.hashicorp.com/blog/vault-0-7-3/'
+    title: "Vault 0.8.1 released"
+    body: >-
+      We are proud to announce the release of HashiCorp Vault 0.8.1. This
+      version includes Google Cloud IAM authentication, Oracle database
+      backends, self-reloading plugins, and much more!
+    link_url: "https://www.hashicorp.com/blog/vault-0-8-1/"
   -
-    title: 'Webinar: Build a Secure Cloud with AWS and HashiCorp Vault'
-    body: 'Watch our recent webinar to learn how to use Vault for securing AWS infrastructure and resources.'
-    link_url: 'http://hashi.co/2rgjci3'
-    link_text: 'Watch Now'
+    title: "Vault 0.8.0 released"
+    body: >-
+      We are proud to announce the release of HashiCorp Vault 0.8. This version
+      of Vault brings secure plugins, disaster recovery, mount filters for
+      replication, and MFA on paths.
+    link_url: "https://www.hashicorp.com/blog/vault-0-8/"
   -
-    title: 'Webinar: How HashiCorp Vault Solves The Top 3 Cloud Security Challenges'
-    body: 'Watch our recent webinar to learn about new Vault product releases and see a demo.'
-    link_url: 'https://youtu.be/3q9_gxqkZA8'
-    link_text: 'Watch Now'
+    title: "Why New Relic uses Vault for secrets management"
+    body: >-
+      As New Relic's systems and infrastructure grew, they faced challenges with
+      securely storing and managing credentials. Vault provides them with a
+      consistent approach to manage secrets and credentials.
+    link_url: "https://www.hashicorp.com/blog/hashicorp-vault-helps-new-relic-manage-secrets-for-their-digital-intelligence-platform/"
