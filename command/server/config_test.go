@@ -99,6 +99,8 @@ func TestLoadConfigFile_json(t *testing.T) {
 			DisableClustering: true,
 		},
 
+		ClusterCipherSuites: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+
 		Telemetry: &Telemetry{
 			StatsiteAddr:                       "baz",
 			StatsdAddr:                         "",
