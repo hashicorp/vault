@@ -279,6 +279,7 @@ Lists all the roles that are registered with the plugin.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/gcp/roles`            | `200 application/json` |
+| `GET`   | `/auth/gcp/roles?list=true`   | `200 application/json` |
 
 ### Sample Request
 

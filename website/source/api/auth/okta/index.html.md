@@ -97,6 +97,7 @@ List the users configurated in the Okta backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/okta/users`           | `200 application/json` |
+| `GET`   | `/auth/okta/users?list=true`  | `200 application/json` |
 
 ### Sample Request
 
@@ -222,6 +223,7 @@ List the groups configurated in the Okta backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/okta/groups`           | `200 application/json` |
+| `GET`   | `/auth/okta/groups?list=true`  | `200 application/json` |
 
 ### Sample Request
 
