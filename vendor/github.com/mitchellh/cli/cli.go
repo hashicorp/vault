@@ -85,13 +85,17 @@ type CLI struct {
 	// for the flag name. These default to `autocomplete-install` and
 	// `autocomplete-uninstall` respectively.
 	//
+	// AutocompleteNoDefaultFlags is a boolean which controls if the default auto-
+	// complete flags like -help and -version are added to the output.
+	//
 	// AutocompleteGlobalFlags are a mapping of global flags for
 	// autocompletion. The help and version flags are automatically added.
-	Autocomplete            bool
-	AutocompleteInstall     string
-	AutocompleteUninstall   string
-	AutocompleteGlobalFlags complete.Flags
-	autocompleteInstaller   autocompleteInstaller // For tests
+	Autocomplete               bool
+	AutocompleteInstall        string
+	AutocompleteUninstall      string
+	AutocompleteNoDefaultFlags bool
+	AutocompleteGlobalFlags    complete.Flags
+	autocompleteInstaller      autocompleteInstaller // For tests
 
 	// HelpFunc and HelpWriter are used to output help information, if
 	// requested.
@@ -153,6 +157,14 @@ func (c *CLI) IsVersion() bool {
 func (c *CLI) Run() (int, error) {
 	c.once.Do(c.init)
 
+	// If this is a autocompletion request, satisfy it. This must be called
+	// first before anything else since its possible to be autocompleting
+	// -help or -version or other flags and we want to show completions
+	// and not actually write the help or version.
+	if c.Autocomplete && c.autocomplete.Complete() {
+		return 0, nil
+	}
+
 	// Just show the version and exit if instructed.
 	if c.IsVersion() && c.Version != "" {
 		c.HelpWriter.Write([]byte(c.Version + "\n"))
@@ -195,11 +207,6 @@ func (c *CLI) Run() (int, error) {
 				return 1, err
 			}
 
-			return 0, nil
-		}
-
-		// If this is a autocompletion request, satisfy it
-		if c.autocomplete.Complete() {
 			return 0, nil
 		}
 	}
@@ -372,11 +379,13 @@ func (c *CLI) initAutocomplete() {
 
 	// For the root, we add the global flags to the "Flags". This way
 	// they don't show up on every command.
-	cmd.Flags = map[string]complete.Predictor{
-		"-" + c.AutocompleteInstall:   complete.PredictNothing,
-		"-" + c.AutocompleteUninstall: complete.PredictNothing,
-		"-help":    complete.PredictNothing,
-		"-version": complete.PredictNothing,
+	if !c.AutocompleteNoDefaultFlags {
+		cmd.Flags = map[string]complete.Predictor{
+			"-" + c.AutocompleteInstall:   complete.PredictNothing,
+			"-" + c.AutocompleteUninstall: complete.PredictNothing,
+			"-help":    complete.PredictNothing,
+			"-version": complete.PredictNothing,
+		}
 	}
 	cmd.GlobalFlags = c.AutocompleteGlobalFlags
 
