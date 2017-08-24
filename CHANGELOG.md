@@ -14,6 +14,7 @@ FEATURES:
 
 BUG FIXES:
 
+ * core: Fix PROXY when underlying connection is TLS [GH-3195]
  * core: Policy-related commands would sometimes fail to act case-insensitively
    [GH-3210]
  * auth/aws: Properly use role-set period values for IAM-derived token renewals

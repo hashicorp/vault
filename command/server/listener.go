@@ -12,6 +12,7 @@ import (
 	"net"
 
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"
 )
@@ -33,6 +34,37 @@ func NewListener(t string, config map[string]interface{}, logger io.Writer) (net
 	}
 
 	return f(config, logger)
+}
+
+func listenerWrapProxy(ln net.Listener, config map[string]interface{}) (net.Listener, error) {
+	behaviorRaw, ok := config["proxy_protocol_behavior"]
+	if !ok {
+		return ln, nil
+	}
+
+	behavior, ok := behaviorRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("failed parsing proxy_protocol_behavior value: not a string")
+	}
+
+	authorizedAddrsRaw, ok := config["proxy_protocol_authorized_addrs"]
+	if !ok {
+		return nil, fmt.Errorf("proxy_protocol_behavior set but no proxy_protocol_authorized_addrs value")
+	}
+
+	proxyProtoConfig := &proxyutil.ProxyProtoConfig{
+		Behavior: behavior,
+	}
+	if err := proxyProtoConfig.SetAuthorizedAddrs(authorizedAddrsRaw); err != nil {
+		return nil, fmt.Errorf("failed parsing proxy_protocol_authorized_addrs: %v", err)
+	}
+
+	newLn, err := proxyutil.WrapInProxyProto(ln, proxyProtoConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed configuring PROXY protocol wrapper: %s", err)
+	}
+
+	return newLn, nil
 }
 
 func listenerWrapTLS(

@@ -39,7 +39,6 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/helper/reload"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
@@ -458,43 +457,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				"Error initializing listener of type %s: %s",
 				lnConfig.Type, err))
 			return 1
-		}
-
-		if val, ok := lnConfig.Config["proxy_protocol_behavior"]; ok {
-			behavior, ok := val.(string)
-			if !ok {
-				c.Ui.Output(fmt.Sprintf(
-					"Error parsing proxy_protocol_behavior value for listener of type %s: not a string",
-					lnConfig.Type))
-				return 1
-			}
-
-			authorizedAddrsRaw, ok := lnConfig.Config["proxy_protocol_authorized_addrs"]
-			if !ok {
-				c.Ui.Output(fmt.Sprintf(
-					"proxy_protocol_behavior set but no proxy_protocol_authorized_addrs value for listener of type %s",
-					lnConfig.Type))
-				return 1
-			}
-
-			proxyProtoConfig := &proxyutil.ProxyProtoConfig{
-				Behavior: behavior,
-			}
-			if err := proxyProtoConfig.SetAuthorizedAddrs(authorizedAddrsRaw); err != nil {
-				c.Ui.Output(fmt.Sprintf(
-					"Error parsing proxy_protocol_authorized_addrs for listener of type %s: %v",
-					lnConfig.Type, err))
-				return 1
-			}
-
-			newLn, err := proxyutil.WrapInProxyProto(ln, proxyProtoConfig)
-			if err != nil {
-				c.Ui.Output(fmt.Sprintf(
-					"Error configuring PROXY protocol wrapper: %s", err))
-				return 1
-			}
-
-			ln = newLn
 		}
 
 		lns = append(lns, ln)

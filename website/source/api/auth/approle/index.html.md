@@ -23,6 +23,7 @@ This endpoint returns a list the existing AppRoles in the backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/approle/role`          | `200 application/json` |
+| `GET`   | `/auth/approle/role?list=true` | `200 application/json` |
 
 ### Sample Request
 
@@ -334,6 +335,7 @@ This includes the accessors for "custom" SecretIDs as well.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/approle/role/:role_name/secret-id` | `200 application/json` |
+| `GET`   | `/auth/approle/role/:role_name/secret-id?list=true` | `200 application/json` |
 
 ### Parameters
 
