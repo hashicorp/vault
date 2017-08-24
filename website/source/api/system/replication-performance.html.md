@@ -96,8 +96,8 @@ $ curl \
 
 ## Demote Performance Primary
 
-This endpoint demotes a performance primary cluster to a performance secondary. 
-This secondary cluster will not attempt to connect to a primary (see the update-primary call), 
+This endpoint demotes a performance primary cluster to a performance secondary.
+This secondary cluster will not attempt to connect to a primary (see the update-primary call),
 but will maintain knowledge of its cluster ID and can be reconnected to the same
 replication set without wiping local storage.
 
@@ -228,9 +228,9 @@ $ curl \
 ## Create Mounts Filter
 
 This endpoint is used to modify the mounts that are filtered to a secondary.
-Filtering can be specified in whitelist mode or blacklist mode.  In whitelist 
-mode the secret and auth mounts that are specified are included to the 
-selected secondary.  In blacklist mode, the mouunt paths are excluded.
+Filtering can be specified in whitelist mode or blacklist mode.  In whitelist
+mode the secret and auth mounts that are specified are included to the
+selected secondary.  In blacklist mode, the mount paths are excluded.
 
 | Method   | Path                                                     | Produces               |
 | :------- | :------------------------------------------------------- | :--------------------- |
@@ -366,7 +366,7 @@ $ curl \
 
 This endpoint promotes the performance secondary cluster to performance primary.
 For data safety and security reasons, new secondary tokens will need to be
-issued to other secondaries, and there should never be more than one performance 
+issued to other secondaries, and there should never be more than one performance
 primary at a time.
 
 | Method   | Path                         | Produces               |
