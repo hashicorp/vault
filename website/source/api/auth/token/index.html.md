@@ -21,7 +21,7 @@ large numbers of tokens and their associated leases at once.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/token/accessors`      | `200 application/json` |
-| `GEt`    | `/auth/token/accessors?list=true` | `200 application/json` |
+| `GET`    | `/auth/token/accessors?list=true` | `200 application/json` |
 
 ### Sample Request
 

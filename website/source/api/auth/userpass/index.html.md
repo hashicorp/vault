@@ -177,7 +177,7 @@ List available userpass users.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/userpass/users`          | `200 application/json` |
-| `GEt`    | `/auth/userpass/users?list=true` | `200 application/json` |
+| `GET`    | `/auth/userpass/users?list=true` | `200 application/json` |
 
 ### Sample Request
 
