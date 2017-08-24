@@ -12,6 +12,10 @@ FEATURES:
   backend for authenticating to machines. It also supports remote host key
   verification through the SSH CA backend, if enabled.
 
+IMPROVEMENTS:
+ * cli: Add subcommand autocompletion that can be enabled with 
+   `vault -autocomplete-install` [GH-3223]
+
 BUG FIXES:
 
  * core: Fix PROXY when underlying connection is TLS [GH-3195]
