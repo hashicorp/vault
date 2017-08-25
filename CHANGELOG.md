@@ -15,6 +15,8 @@ FEATURES:
 IMPROVEMENTS:
  * cli: Add subcommand autocompletion that can be enabled with 
    `vault -autocomplete-install` [GH-3223]
+ * auth/okta: Compare groups case-insensitively since Okta is only
+   case-preserving [GH-3240]
 
 BUG FIXES:
 
