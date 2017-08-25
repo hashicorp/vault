@@ -1,6 +1,9 @@
 package okta
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -62,11 +65,42 @@ func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, error) {
 	return &result, nil
 }
 
+// This is a helper function to look up policies against groups in a
+// case-insensitive manner since Okta is case-preserving but case-insensitive
+// for comparisons
+func (b *backend) groupPolicies(s logical.Storage, n string) ([]string, error) {
+	// First try the actual name
+	entry, err := b.Group(s, n)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		return entry.Policies, nil
+	}
+	entries, err := s.List("group/")
+	if err != nil {
+		return nil, err
+	}
+	for _, groupName := range entries {
+		if strings.ToLower(groupName) == strings.ToLower(n) {
+			entry, err = b.Group(s, groupName)
+			if err != nil {
+				return nil, err
+			}
+			if entry == nil {
+				return nil, fmt.Errorf("retrieved nil entry %s from list", n)
+			}
+			return entry.Policies, nil
+		}
+	}
+	return nil, nil
+}
+
 func (b *backend) pathGroupDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if len(name) == 0 {
-		return logical.ErrorResponse("Error empty name"), nil
+		return logical.ErrorResponse("'name' must be supplied"), nil
 	}
 
 	err := req.Storage.Delete("group/" + name)
@@ -81,7 +115,7 @@ func (b *backend) pathGroupRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if len(name) == 0 {
-		return logical.ErrorResponse("Error empty name"), nil
+		return logical.ErrorResponse("'name' must be supplied"), nil
 	}
 
 	group, err := b.Group(req.Storage, name)
@@ -103,7 +137,7 @@ func (b *backend) pathGroupWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if len(name) == 0 {
-		return logical.ErrorResponse("Error empty name"), nil
+		return logical.ErrorResponse("'name' must be supplied"), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("group/"+name, &GroupEntry{

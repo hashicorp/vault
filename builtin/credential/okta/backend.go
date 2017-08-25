@@ -84,6 +84,11 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	var allGroups []string
 	// Import the custom added groups from okta backend
 	user, err := b.User(req.Storage, username)
+	if err != nil {
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/okta: error looking up user", "error", err)
+		}
+	}
 	if err == nil && user != nil && user.Groups != nil {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/okta: adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
@@ -96,9 +101,14 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// Retrieve policies
 	var policies []string
 	for _, groupName := range allGroups {
-		group, err := b.Group(req.Storage, groupName)
-		if err == nil && group != nil && group.Policies != nil {
-			policies = append(policies, group.Policies...)
+		gp, err := b.groupPolicies(req.Storage, groupName)
+		if err != nil {
+			if b.Logger().IsDebug() {
+				b.Logger().Debug("auth/okta: error looking up group policies", "error", err)
+			}
+		}
+		if err == nil && gp != nil {
+			policies = append(policies, gp...)
 		}
 	}
 
