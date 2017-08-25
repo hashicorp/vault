@@ -101,14 +101,14 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// Retrieve policies
 	var policies []string
 	for _, groupName := range allGroups {
-		gp, err := b.groupPolicies(req.Storage, groupName)
+		entry, _, err := b.Group(req.Storage, groupName)
 		if err != nil {
 			if b.Logger().IsDebug() {
 				b.Logger().Debug("auth/okta: error looking up group policies", "error", err)
 			}
 		}
-		if err == nil && gp != nil {
-			policies = append(policies, gp...)
+		if err == nil && entry != nil && entry.Policies != nil {
+			policies = append(policies, entry.Policies...)
 		}
 	}
 

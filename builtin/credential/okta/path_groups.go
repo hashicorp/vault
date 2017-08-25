@@ -1,7 +1,6 @@
 package okta
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -48,52 +47,40 @@ func pathGroups(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, error) {
+// We look up groups in a case-insensitive manner since Okta is case-preserving
+// but case-insensitive for comparisons
+func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, string, error) {
+	canonicalName := n
 	entry, err := s.Get("group/" + n)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if entry == nil {
-		return nil, nil
+		entries, err := s.List("group/")
+		if err != nil {
+			return nil, "", err
+		}
+		for _, groupName := range entries {
+			if strings.ToLower(groupName) == strings.ToLower(n) {
+				entry, err = s.Get("group/" + groupName)
+				if err != nil {
+					return nil, "", err
+				}
+				canonicalName = groupName
+				break
+			}
+		}
+	}
+	if entry == nil {
+		return nil, "", nil
 	}
 
 	var result GroupEntry
 	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return &result, nil
-}
-
-// This is a helper function to look up policies against groups in a
-// case-insensitive manner since Okta is case-preserving but case-insensitive
-// for comparisons
-func (b *backend) groupPolicies(s logical.Storage, n string) ([]string, error) {
-	// First try the actual name
-	entry, err := b.Group(s, n)
-	if err != nil {
-		return nil, err
-	}
-	if entry != nil {
-		return entry.Policies, nil
-	}
-	entries, err := s.List("group/")
-	if err != nil {
-		return nil, err
-	}
-	for _, groupName := range entries {
-		if strings.ToLower(groupName) == strings.ToLower(n) {
-			entry, err = b.Group(s, groupName)
-			if err != nil {
-				return nil, err
-			}
-			if entry == nil {
-				return nil, fmt.Errorf("retrieved nil entry %s from list", n)
-			}
-			return entry.Policies, nil
-		}
-	}
-	return nil, nil
+	return &result, canonicalName, nil
 }
 
 func (b *backend) pathGroupDelete(
@@ -103,9 +90,15 @@ func (b *backend) pathGroupDelete(
 		return logical.ErrorResponse("'name' must be supplied"), nil
 	}
 
-	err := req.Storage.Delete("group/" + name)
+	entry, canonicalName, err := b.Group(req.Storage, name)
 	if err != nil {
 		return nil, err
+	}
+	if entry != nil {
+		err := req.Storage.Delete("group/" + canonicalName)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -118,7 +111,7 @@ func (b *backend) pathGroupRead(
 		return logical.ErrorResponse("'name' must be supplied"), nil
 	}
 
-	group, err := b.Group(req.Storage, name)
+	group, _, err := b.Group(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +131,18 @@ func (b *backend) pathGroupWrite(
 	name := d.Get("name").(string)
 	if len(name) == 0 {
 		return logical.ErrorResponse("'name' must be supplied"), nil
+	}
+
+	// Check for an existing group, possibly lowercased so that we keep using
+	// existing user set values
+	_, canonicalName, err := b.Group(req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if canonicalName != "" {
+		name = canonicalName
+	} else {
+		name = strings.ToLower(name)
 	}
 
 	entry, err := logical.StorageEntryJSON("group/"+name, &GroupEntry{
