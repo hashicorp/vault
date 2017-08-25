@@ -23,6 +23,8 @@ BUG FIXES:
    [GH-3210]
  * auth/aws: Properly use role-set period values for IAM-derived token renewals
    [GH-3220]
+ * auth/okta: Fix updating organization/ttl/max_ttl after initial setting
+   [GH-3236]
 
 ## 0.8.1 (August 16th, 2017)
 
