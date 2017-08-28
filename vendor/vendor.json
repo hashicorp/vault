@@ -1273,7 +1273,13 @@
 			"revisionTime": "2017-06-28T15:29:38Z"
 		},
 		{
-			"checksumSHA1": "A3ymiEhz0WaT+sfK1aJhlqhf41o=",
+			"checksumSHA1": "uulQHQ7IsRKqDudBC8Go9J0gtAc=",
+			"path": "github.com/kr/text",
+			"revision": "7cafcd837844e784b526369c9bce262804aebc60",
+			"revisionTime": "2016-05-04T02:26:26Z"
+		},
+		{
+			"checksumSHA1": "ZAj/o03zG8Ui4mZ4XmzU4yyKC04=",
 			"path": "github.com/lib/pq",
 			"revision": "e42267488fe361b9dc034be7a6bffef5b195bceb",
 			"revisionTime": "2017-08-10T06:12:20Z"
