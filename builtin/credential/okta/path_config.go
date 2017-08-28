@@ -3,12 +3,14 @@ package okta
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"time"
 
+	"github.com/chrismalek/oktasdk-go/okta"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/sstarcher/go-okta"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -19,14 +21,27 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Okta organization to authenticate against",
 			},
+			"org_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the organization to be used in the Okta API.",
+			},
 			"token": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Okta admin API token",
+			},
+			"api_token": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Okta API key.",
 			},
 			"base_url": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `The API endpoint to use. Useful if you
 are using Okta development accounts.`,
+			},
+			"production": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: `If set, production API URL prefix will be used to communicate with Okta and if not set, a preview production API URL prefix will be used. Defaults to true.`,
 			},
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
@@ -84,10 +99,14 @@ func (b *backend) pathConfigRead(
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"organization": cfg.Org,
-			"base_url":     cfg.BaseURL,
+			"org_name":     cfg.Org,
+			"production":   *cfg.Production,
 			"ttl":          cfg.TTL,
 			"max_ttl":      cfg.MaxTTL,
 		},
+	}
+	if cfg.BaseURL != "" {
+		resp.Data["base_url"] = cfg.BaseURL
 	}
 
 	return resp, nil
@@ -106,18 +125,32 @@ func (b *backend) pathConfigWrite(
 		cfg = &ConfigEntry{}
 	}
 
-	org, ok := d.GetOk("organization")
+	org, ok := d.GetOk("org_name")
 	if ok {
 		cfg.Org = org.(string)
-	} else if req.Operation == logical.CreateOperation {
-		cfg.Org = d.Get("organization").(string)
+	}
+	if cfg.Org == "" {
+		org, ok = d.GetOk("organization")
+		if ok {
+			cfg.Org = org.(string)
+		}
+	}
+	if cfg.Org == "" && req.Operation == logical.CreateOperation {
+		return logical.ErrorResponse("org_name is missing"), nil
 	}
 
-	token, ok := d.GetOk("token")
+	token, ok := d.GetOk("api_token")
 	if ok {
 		cfg.Token = token.(string)
-	} else if req.Operation == logical.CreateOperation {
-		cfg.Token = d.Get("token").(string)
+	}
+	if cfg.Token == "" {
+		token, ok = d.GetOk("token")
+		if ok {
+			cfg.Token = token.(string)
+		}
+	}
+	if cfg.Token == "" && req.Operation == logical.CreateOperation {
+		return logical.ErrorResponse("api_token is missing"), nil
 	}
 
 	baseURL, ok := d.GetOk("base_url")
@@ -133,6 +166,8 @@ func (b *backend) pathConfigWrite(
 	} else if req.Operation == logical.CreateOperation {
 		cfg.BaseURL = d.Get("base_url").(string)
 	}
+
+	cfg.Production = d.Get("production").(*bool)
 
 	ttl, ok := d.GetOk("ttl")
 	if ok {
@@ -171,25 +206,26 @@ func (b *backend) pathConfigExistenceCheck(
 
 // OktaClient creates a basic okta client connection
 func (c *ConfigEntry) OktaClient() *okta.Client {
-	client := okta.NewClient(c.Org)
+	production := true
+	if c.Production != nil {
+		production = *c.Production
+	}
 	if c.BaseURL != "" {
-		client.Url = c.BaseURL
+		if strings.Contains(c.BaseURL, "oktapreview.com") {
+			production = false
+		}
 	}
-
-	if c.Token != "" {
-		client.ApiToken = c.Token
-	}
-
-	return client
+	return okta.NewClient(cleanhttp.DefaultClient(), c.Org, c.Token, production)
 }
 
 // ConfigEntry for Okta
 type ConfigEntry struct {
-	Org     string        `json:"organization"`
-	Token   string        `json:"token"`
-	BaseURL string        `json:"base_url"`
-	TTL     time.Duration `json:"ttl"`
-	MaxTTL  time.Duration `json:"max_ttl"`
+	Org        string        `json:"organization"`
+	Token      string        `json:"token"`
+	BaseURL    string        `json:"base_url"`
+	Production *bool         `json:"is_production,omitempty"`
+	TTL        time.Duration `json:"ttl"`
+	MaxTTL     time.Duration `json:"max_ttl"`
 }
 
 const pathConfigHelp = `
