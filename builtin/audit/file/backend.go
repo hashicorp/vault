@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/audit"
@@ -26,6 +27,11 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		if !ok {
 			return nil, fmt.Errorf("file_path is required")
 		}
+	}
+
+	// normalize path if configured for stdout
+	if strings.ToLower(path) == "stdout" {
+		path = "stdout"
 	}
 
 	format, ok := conf.Config["format"]
