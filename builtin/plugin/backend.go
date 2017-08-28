@@ -32,14 +32,6 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 // or as a concrete implementation if builtin, casted as logical.Backend.
 func Backend(conf *logical.BackendConfig) (logical.Backend, error) {
 	var b backend
-	// name := conf.Config["plugin_name"]
-	// sys := conf.System
-
-	// raw, err := bplugin.NewBackend(name, sys, conf.Logger)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	// Initialize b.Backend with dummy backend since plugin
 	// backends will need to be lazy loaded.
 	b.Backend = &framework.Backend{
@@ -106,7 +98,6 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 			b.Unlock()
 			return nil, err
 		}
-		b.loaded = true
 		b.Unlock()
 		b.RLock()
 	}

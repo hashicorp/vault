@@ -478,7 +478,6 @@ func (c *Core) setupCredentialPlugins() error {
 	defer c.authLock.Unlock()
 
 	for _, entry := range c.auth.Entries {
-		// Skip plugin backends
 		if entry.Type != "plugin" {
 			continue
 		}

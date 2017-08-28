@@ -320,36 +320,6 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 	return &dynamicSystemView{c, me}
 }
 
-// func TestClusterAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
-// 	file, err := os.Open(os.Args[0])
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer file.Close()
-
-// 	hash := sha256.New()
-
-// 	_, err = io.Copy(hash, file)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	sum := hash.Sum(nil)
-// 	pluginPath := filepath.Join(c.pluginDirectory, filepath.Base(os.Args[0]))
-// 	ioutil.WriteFile(, []byte(testFunc), 0666)
-// 	// c.pluginCatalog.directory, err = filepath.EvalSymlinks(os.Args[0])
-// 	// if err != nil {
-// 	// 	t.Fatal(err)
-// 	// }
-// 	// c.pluginCatalog.directory = filepath.Dir(c.pluginCatalog.directory)
-
-// 	command := fmt.Sprintf("%s --test.run=%s", filepath.Base(os.Args[0]), testFunc)
-// 	err = c.pluginCatalog.Set(name, command, sum)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// }
-
 func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
