@@ -15,28 +15,45 @@ import (
 // that returning nothing.
 var defaultPredictVaultMounts = []string{"cubbyhole/"}
 
-// PredictVaultPaths returns a predictor for Vault mounts and paths based on the
+// PredictVaultFiles returns a predictor for Vault mounts and paths based on the
 // configured client for the base command. Unfortunately this happens pre-flag
 // parsing, so users must rely on environment variables for autocomplete if they
 // are not using Vault at the default endpoints.
-func (b *BaseCommand) PredictVaultPaths() complete.Predictor {
+func (b *BaseCommand) PredictVaultFiles() complete.Predictor {
 	client, err := b.Client()
 	if err != nil {
 		return nil
 	}
-	return PredictVaultPaths(client)
+	return PredictVaultFiles(client)
 }
 
-// PredictVaultPaths returns a predictor for Vault paths. This is a public API
-// for consumers, but you probably want BaseCommand.PredictVaultPaths instead.
-func PredictVaultPaths(client *api.Client) complete.Predictor {
-	return predictVaultPaths(client)
+// PredictVaultFolders returns a predictor for "folders". See PredictVaultFiles
+// for more information and restrictions.
+func (b *BaseCommand) PredictVaultFolders() complete.Predictor {
+	client, err := b.Client()
+	if err != nil {
+		return nil
+	}
+	return PredictVaultFolders(client)
+}
+
+// PredictVaultFiles returns a predictor for Vault "files". This is a public API
+// for consumers, but you probably want BaseCommand.PredictVaultFiles instead.
+func PredictVaultFiles(client *api.Client) complete.Predictor {
+	return predictVaultPaths(client, true)
+}
+
+// PredictVaultFolders returns a predictor for Vault "folders". This is a public
+// API for consumers, but you probably want BaseCommand.PredictVaultFolders
+// instead.
+func PredictVaultFolders(client *api.Client) complete.Predictor {
+	return predictVaultPaths(client, false)
 }
 
 // predictVaultPaths parses the CLI options and returns the "best" list of
 // possible paths. If there are any errors, this function returns an empty
 // result. All errors are suppressed since this is a prediction function.
-func predictVaultPaths(client *api.Client) complete.PredictFunc {
+func predictVaultPaths(client *api.Client, includeFiles bool) complete.PredictFunc {
 	return func(args complete.Args) []string {
 		// Do not predict more than one paths
 		if predictHasPathArg(args.All) {
@@ -47,7 +64,7 @@ func predictVaultPaths(client *api.Client) complete.PredictFunc {
 
 		var predictions []string
 		if strings.Contains(path, "/") {
-			predictions = predictPaths(client, path)
+			predictions = predictPaths(client, path, includeFiles)
 		} else {
 			predictions = predictMounts(client, path)
 		}
@@ -70,7 +87,7 @@ func predictVaultPaths(client *api.Client) complete.PredictFunc {
 
 		// Re-predict with the remaining path
 		args.Last = predictions[0]
-		return predictVaultPaths(client).Predict(args)
+		return predictVaultPaths(client, includeFiles).Predict(args)
 	}
 }
 
@@ -90,7 +107,7 @@ func predictMounts(client *api.Client, path string) []string {
 }
 
 // predictPaths predicts all paths which start with the given path.
-func predictPaths(client *api.Client, path string) []string {
+func predictPaths(client *api.Client, path string, includeFiles bool) []string {
 	// Vault does not support listing based on a sub-key, so we have to back-pedal
 	// to the last "/" and return all paths on that "folder". Then we perform
 	// client-side filtering.
@@ -108,7 +125,10 @@ func predictPaths(client *api.Client, path string) []string {
 		p = root + p
 
 		if strings.HasPrefix(p, path) {
-			predictions = append(predictions, p)
+			// Ensure this is a directory or we've asked to include files.
+			if includeFiles || strings.HasSuffix(p, "/") {
+				predictions = append(predictions, p)
+			}
 		}
 	}
 
