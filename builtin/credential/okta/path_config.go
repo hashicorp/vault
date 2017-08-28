@@ -19,7 +19,7 @@ func pathConfig(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"organization": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Okta organization to authenticate against",
+				Description: "Okta organization to authenticate against (DEPRECATED)",
 			},
 			"org_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -27,7 +27,7 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"token": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Okta admin API token",
+				Description: "Okta admin API token (DEPRECATED)",
 			},
 			"api_token": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -36,7 +36,7 @@ func pathConfig(b *backend) *framework.Path {
 			"base_url": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `The API endpoint to use. Useful if you
-are using Okta development accounts.`,
+are using Okta development accounts. (DEPRECATED)`,
 			},
 			"production": &framework.FieldSchema{
 				Type:        framework.TypeBool,
