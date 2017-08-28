@@ -1374,6 +1374,12 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupExpiration(); err != nil {
 		return err
 	}
+	if err := c.setupSecretPlugins(); err != nil {
+		return err
+	}
+	if err := c.setupCredentialPlugins(); err != nil {
+		return err
+	}
 	if err := c.loadAudits(); err != nil {
 		return err
 	}

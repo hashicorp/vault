@@ -143,7 +143,7 @@ func Serve(opts *ServeConfig) {
 	if opts.TLSProvider != nil {
 		tlsConfig, err = opts.TLSProvider()
 		if err != nil {
-			logger.Error("plugin tls init", "error", err)
+			logger.Error("plugin tls init", "error", err.Error())
 			return
 		}
 	}

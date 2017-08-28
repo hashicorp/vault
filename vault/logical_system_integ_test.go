@@ -65,6 +65,44 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
+	cluster := testSystemBackendMock(t, 1, logical.TypeLogical)
+	defer func() {
+		fmt.Println(" ===> Cleaning up test cluster...")
+		cluster.Cleanup()
+	}()
+
+	//core := cluster.Cores[0]
+	rootToken := cluster.RootToken
+	keys := cluster.BarrierKeys
+
+	for _, core := range cluster.Cores {
+		fmt.Println(" ===> Sealing test cluster...")
+		// Seal the cluster
+		vault.TestWaitActive(t, core.Core)
+		err := core.Core.Seal(rootToken)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for _, core := range cluster.Cores {
+		fmt.Println(" ===> Unsealing test cluster...")
+		// Unseal the cluster
+		var err error
+		var unsealed bool
+		fmt.Println(len(keys))
+		for _, key := range keys {
+			if unsealed, err = core.Unseal(key); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if !unsealed {
+			t.Fatal("expected to be unsealed")
+		}
+	}
+}
+
 func TestSystemBackend_Plugin_reload(t *testing.T) {
 	data := map[string]interface{}{
 		"plugin": "mock-plugin",
