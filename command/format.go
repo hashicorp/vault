@@ -1,7 +1,6 @@
 package command
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -53,17 +52,15 @@ var Formatters = map[string]Formatter{
 }
 
 // An output formatter for json output of an object
-type JsonFormatter struct {
-}
+type JsonFormatter struct{}
 
 func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	b, err := json.Marshal(data)
-	if err == nil {
-		var out bytes.Buffer
-		json.Indent(&out, b, "", "\t")
-		ui.Output(out.String())
+	b, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
 	}
-	return err
+	ui.Output(string(b))
+	return nil
 }
 
 // An output formatter for yaml output format of an object
