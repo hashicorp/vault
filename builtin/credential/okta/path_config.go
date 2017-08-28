@@ -167,7 +167,8 @@ func (b *backend) pathConfigWrite(
 		cfg.BaseURL = d.Get("base_url").(string)
 	}
 
-	cfg.Production = d.Get("production").(*bool)
+	productionRaw := d.Get("production").(bool)
+	cfg.Production = &productionRaw
 
 	ttl, ok := d.GetOk("ttl")
 	if ok {
