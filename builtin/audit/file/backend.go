@@ -93,7 +93,7 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	}
 
 	switch path {
-	case "STDOUT":
+	case "stdout":
 		// no need to test opening file if outputting to stdout
 	default:
 		// Ensure that the file can be successfully opened for writing;
@@ -160,7 +160,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
-	if b.path == "STDOUT" {
+	if b.path == "stdout" {
 		return b.formatter.FormatRequest(os.Stdout, b.formatConfig, auth, req, outerErr)
 	}
 
@@ -192,7 +192,7 @@ func (b *Backend) LogResponse(
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
-	if b.path == "STDOUT" {
+	if b.path == "stdout" {
 		return b.formatter.FormatResponse(os.Stdout, b.formatConfig, auth, req, resp, err)
 	}
 
@@ -245,7 +245,7 @@ func (b *Backend) open() error {
 }
 
 func (b *Backend) Reload() error {
-	if b.path == "STDOUT" {
+	if b.path == "stdout" {
 		return nil
 	}
 
