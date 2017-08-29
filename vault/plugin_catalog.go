@@ -37,6 +37,9 @@ func (c *Core) setupPluginCatalog() error {
 		directory:   c.pluginDirectory,
 	}
 
+	if c.logger.IsInfo() {
+		c.logger.Info("core: successfully plugin catalog", "plugin-directory", c.pluginDirectory)
+	}
 	return nil
 }
 

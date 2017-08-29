@@ -335,11 +335,17 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 	}
 
 	sum := hash.Sum(nil)
-	c.pluginCatalog.directory, err = filepath.EvalSymlinks(os.Args[0])
+
+	// Determine plugin directory path
+	fullPath, err := filepath.EvalSymlinks(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.pluginCatalog.directory = filepath.Dir(c.pluginCatalog.directory)
+	directoryPath := filepath.Dir(fullPath)
+
+	// Set core's plugin directory and plugin catalog directory
+	c.pluginDirectory = directoryPath
+	c.pluginCatalog.directory = directoryPath
 
 	command := fmt.Sprintf("%s --test.run=%s", filepath.Base(os.Args[0]), testFunc)
 	err = c.pluginCatalog.Set(name, command, sum)
