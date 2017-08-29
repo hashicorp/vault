@@ -634,6 +634,28 @@ func (c *TestCluster) Start() {
 	}
 }
 
+func (c *TestCluster) EnsureCoresSealed(t testing.T) {
+	for _, core := range c.Cores {
+		if err := core.Shutdown(); err != nil {
+			t.Fatal(err)
+		}
+		timeout := time.Now().Add(3 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				t.Fatal("timeout waiting for core to seal")
+			}
+			sealed, err := core.Sealed()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if sealed {
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
+
 func (c *TestCluster) Cleanup() {
 	// Close listeners
 	for _, core := range c.Cores {

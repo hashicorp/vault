@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -18,7 +17,7 @@ import (
 func TestSystemBackend_Plugin_secret(t *testing.T) {
 	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
 	// Seal the cluster
-	ensureCoresSealed(t, cluster)
+	cluster.EnsureCoresSealed(t)
 
 	barrierKeys := cluster.BarrierKeys
 
@@ -48,7 +47,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 	cluster := testSystemBackendMock(t, 1, 1, logical.TypeCredential)
 
 	// Seal the cluster
-	ensureCoresSealed(t, cluster)
+	cluster.EnsureCoresSealed(t)
 
 	barrierKeys := cluster.BarrierKeys
 
@@ -116,18 +115,15 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeLogical)
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
 	defer func() {
-		fmt.Println(" ===> Cleaning up test cluster...")
 		cluster.Cleanup()
 	}()
 
-	//core := cluster.Cores[0]
 	rootToken := cluster.RootToken
 	keys := cluster.BarrierKeys
 
 	for _, core := range cluster.Cores {
-		fmt.Println(" ===> Sealing test cluster...")
 		// Seal the cluster
 		vault.TestWaitActive(t, core.Core)
 		err := core.Core.Seal(rootToken)
@@ -137,7 +133,6 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 	}
 
 	for _, core := range cluster.Cores {
-		fmt.Println(" ===> Unsealing test cluster...")
 		// Unseal the cluster
 		var err error
 		var unsealed bool
@@ -271,28 +266,6 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 	}
 
 	return cluster
-}
-
-func ensureCoresSealed(t *testing.T, c *vault.TestCluster) {
-	for _, core := range c.Cores {
-		if err := core.Shutdown(); err != nil {
-			t.Fatal(err)
-		}
-		timeout := time.Now().Add(3 * time.Second)
-		for {
-			if time.Now().After(timeout) {
-				t.Fatal("timeout waiting for core to seal")
-			}
-			sealed, err := core.Sealed()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if sealed {
-				break
-			}
-			time.Sleep(1 * time.Second)
-		}
-	}
 }
 
 func TestBackend_PluginMainLogical(t *testing.T) {
