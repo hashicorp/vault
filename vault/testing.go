@@ -668,7 +668,7 @@ func (c *TestCluster) ensureCoresSealed() error {
 		if err := core.Shutdown(); err != nil {
 			return err
 		}
-		timeout := time.Now().Add(10 * time.Second)
+		timeout := time.Now().Add(60 * time.Second)
 		for {
 			if time.Now().After(timeout) {
 				return fmt.Errorf("timeout waiting for core to seal")
