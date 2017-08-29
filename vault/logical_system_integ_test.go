@@ -15,17 +15,66 @@ import (
 )
 
 func TestSystemBackend_Plugin_secret(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeLogical)
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	barrierKeys := cluster.BarrierKeys
+
+	for _, core := range cluster.Cores {
+		for _, key := range barrierKeys {
+			_, err := core.Unseal(vault.TestKeyCopy(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		sealed, err := core.Sealed()
+		if err != nil {
+			t.Fatalf("err checking seal status: %s", err)
+		}
+		if sealed {
+			t.Fatal("should not be sealed")
+		}
+		// Wait for active so post-unseal takes place
+		// If it fails, it means unseal process failed
+		vault.TestWaitActive(t, core.Core)
+	}
+
 	defer cluster.Cleanup()
 }
 
 func TestSystemBackend_Plugin_auth(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeCredential)
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeCredential)
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	barrierKeys := cluster.BarrierKeys
+
+	for _, core := range cluster.Cores {
+		for _, key := range barrierKeys {
+			_, err := core.Unseal(vault.TestKeyCopy(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		sealed, err := core.Sealed()
+		if err != nil {
+			t.Fatalf("err checking seal status: %s", err)
+		}
+		if sealed {
+			t.Fatal("should not be sealed")
+		}
+		// Wait for active so post-unseal takes place
+		// If it fails, it means unseal process failed
+		vault.TestWaitActive(t, core.Core)
+	}
+
 	defer cluster.Cleanup()
 }
 
 func TestSystemBackend_Plugin_autoReload(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeLogical)
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
@@ -66,18 +115,15 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeLogical)
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
 	defer func() {
-		fmt.Println(" ===> Cleaning up test cluster...")
 		cluster.Cleanup()
 	}()
 
-	//core := cluster.Cores[0]
 	rootToken := cluster.RootToken
 	keys := cluster.BarrierKeys
 
 	for _, core := range cluster.Cores {
-		fmt.Println(" ===> Sealing test cluster...")
 		// Seal the cluster
 		vault.TestWaitActive(t, core.Core)
 		err := core.Core.Seal(rootToken)
@@ -87,7 +133,6 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 	}
 
 	for _, core := range cluster.Cores {
-		fmt.Println(" ===> Unsealing test cluster...")
 		// Unseal the cluster
 		var err error
 		var unsealed bool
@@ -115,8 +160,9 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 	t.Run("mounts", func(t *testing.T) { testSystemBackend_PluginReload(t, data) })
 }
 
+// Helper func to test different reload methods on plugin reload endpoint
 func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}) {
-	cluster := testSystemBackendMock(t, 2, logical.TypeLogical)
+	cluster := testSystemBackendMock(t, 1, 2, logical.TypeLogical)
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
@@ -161,7 +207,7 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 
 // testSystemBackendMock returns a systemBackend with the desired number
 // of mounted mock plugin backends
-func testSystemBackendMock(t *testing.T, numMounts int, backendType logical.BackendType) *vault.TestCluster {
+func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType logical.BackendType) *vault.TestCluster {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"plugin": plugin.Factory,
@@ -172,7 +218,9 @@ func testSystemBackendMock(t *testing.T, numMounts int, backendType logical.Back
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+		HandlerFunc:        vaulthttp.Handler,
+		KeepStandbysSealed: true,
+		NumCores:           numCores,
 	})
 	cluster.Start()
 
