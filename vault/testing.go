@@ -585,6 +585,7 @@ func GenerateRandBytes(length int) ([]byte, error) {
 }
 
 func TestWaitActive(t testing.T, core *Core) {
+	t.Helper()
 	start := time.Now()
 	var standby bool
 	var err error
@@ -692,9 +693,26 @@ type TestClusterOptions struct {
 	KeepStandbysSealed bool
 	HandlerFunc        func(*Core) http.Handler
 	BaseListenAddress  string
+	NumCores           int
 }
 
+var DefaultNumCores = 3
+
+type certInfo struct {
+	cert      *x509.Certificate
+	certPEM   []byte
+	certBytes []byte
+	key       *ecdsa.PrivateKey
+	keyPEM    []byte
+}
+
+// NewTestCluster creates a new test cluster based on the provided core config
+// and test cluster options.
 func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
+	if opts.NumCores == 0 {
+		opts.NumCores = DefaultNumCores
+	}
+
 	certIPs := []net.IP{
 		net.IPv6loopback,
 		net.ParseIP("127.0.0.1"),
@@ -770,270 +788,131 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		t.Fatal(err)
 	}
 
-	s1Key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s1CertTemplate := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "localhost",
-		},
-		DNSNames:    []string{"localhost"},
-		IPAddresses: certIPs,
-		ExtKeyUsage: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageServerAuth,
-			x509.ExtKeyUsageClientAuth,
-		},
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
-		SerialNumber: big.NewInt(mathrand.Int63()),
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     time.Now().Add(262980 * time.Hour),
-	}
-	s1CertBytes, err := x509.CreateCertificate(rand.Reader, s1CertTemplate, caCert, s1Key.Public(), caKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s1Cert, err := x509.ParseCertificate(s1CertBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s1CertPEMBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: s1CertBytes,
-	}
-	s1CertPEM := pem.EncodeToMemory(s1CertPEMBlock)
-	s1MarshaledKey, err := x509.MarshalECPrivateKey(s1Key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s1KeyPEMBlock := &pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: s1MarshaledKey,
-	}
-	s1KeyPEM := pem.EncodeToMemory(s1KeyPEMBlock)
+	var certInfoSlice []*certInfo
 
-	s2Key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s2CertTemplate := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "localhost",
-		},
-		DNSNames:    []string{"localhost"},
-		IPAddresses: certIPs,
-		ExtKeyUsage: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageServerAuth,
-			x509.ExtKeyUsageClientAuth,
-		},
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
-		SerialNumber: big.NewInt(mathrand.Int63()),
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     time.Now().Add(262980 * time.Hour),
-	}
-	s2CertBytes, err := x509.CreateCertificate(rand.Reader, s2CertTemplate, caCert, s2Key.Public(), caKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s2Cert, err := x509.ParseCertificate(s2CertBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s2CertPEMBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: s2CertBytes,
-	}
-	s2CertPEM := pem.EncodeToMemory(s2CertPEMBlock)
-	s2MarshaledKey, err := x509.MarshalECPrivateKey(s2Key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s2KeyPEMBlock := &pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: s2MarshaledKey,
-	}
-	s2KeyPEM := pem.EncodeToMemory(s2KeyPEMBlock)
+	//
+	// Certs generation
+	//
+	for i := 0; i < opts.NumCores; i++ {
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		certTemplate := &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: "localhost",
+			},
+			DNSNames:    []string{"localhost"},
+			IPAddresses: certIPs,
+			ExtKeyUsage: []x509.ExtKeyUsage{
+				x509.ExtKeyUsageServerAuth,
+				x509.ExtKeyUsageClientAuth,
+			},
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+			SerialNumber: big.NewInt(mathrand.Int63()),
+			NotBefore:    time.Now().Add(-30 * time.Second),
+			NotAfter:     time.Now().Add(262980 * time.Hour),
+		}
+		certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, caCert, key.Public(), caKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cert, err := x509.ParseCertificate(certBytes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		certPEMBlock := &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: certBytes,
+		}
+		certPEM := pem.EncodeToMemory(certPEMBlock)
+		marshaledKey, err := x509.MarshalECPrivateKey(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keyPEMBlock := &pem.Block{
+			Type:  "EC PRIVATE KEY",
+			Bytes: marshaledKey,
+		}
+		keyPEM := pem.EncodeToMemory(keyPEMBlock)
 
-	s3Key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
+		certInfoSlice = append(certInfoSlice, &certInfo{
+			cert:      cert,
+			certPEM:   certPEM,
+			certBytes: certBytes,
+			key:       key,
+			keyPEM:    keyPEM,
+		})
 	}
-	s3CertTemplate := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "localhost",
-		},
-		DNSNames:    []string{"localhost"},
-		IPAddresses: certIPs,
-		ExtKeyUsage: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageServerAuth,
-			x509.ExtKeyUsageClientAuth,
-		},
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
-		SerialNumber: big.NewInt(mathrand.Int63()),
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     time.Now().Add(262980 * time.Hour),
-	}
-	s3CertBytes, err := x509.CreateCertificate(rand.Reader, s3CertTemplate, caCert, s3Key.Public(), caKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s3Cert, err := x509.ParseCertificate(s3CertBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s3CertPEMBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: s3CertBytes,
-	}
-	s3CertPEM := pem.EncodeToMemory(s3CertPEMBlock)
-	s3MarshaledKey, err := x509.MarshalECPrivateKey(s3Key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s3KeyPEMBlock := &pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: s3MarshaledKey,
-	}
-	s3KeyPEM := pem.EncodeToMemory(s3KeyPEMBlock)
-
-	logger := logformat.NewVaultLogger(log.LevelTrace)
 
 	//
 	// Listener setup
 	//
-	ports := []int{0, 0, 0}
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	ports := make([]int, opts.NumCores)
 	if baseAddr != nil {
-		ports = []int{baseAddr.Port, baseAddr.Port + 1, baseAddr.Port + 2}
+		for i := 0; i < opts.NumCores; i++ {
+			ports[i] = baseAddr.Port + i
+		}
 	} else {
 		baseAddr = &net.TCPAddr{
 			IP:   net.ParseIP("127.0.0.1"),
 			Port: 0,
 		}
 	}
-	baseAddr.Port = ports[0]
-	ln, err := net.ListenTCP("tcp", baseAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s1CertFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node1_port_%d_cert.pem", ln.Addr().(*net.TCPAddr).Port))
-	s1KeyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node1_port_%d_key.pem", ln.Addr().(*net.TCPAddr).Port))
-	err = ioutil.WriteFile(s1CertFile, s1CertPEM, 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(s1KeyFile, s1KeyPEM, 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s1TLSCert, err := tls.X509KeyPair(s1CertPEM, s1KeyPEM)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s1CertGetter := reload.NewCertificateGetter(s1CertFile, s1KeyFile)
-	s1TLSConfig := &tls.Config{
-		Certificates:   []tls.Certificate{s1TLSCert},
-		RootCAs:        testCluster.RootCAs,
-		ClientCAs:      testCluster.RootCAs,
-		ClientAuth:     tls.VerifyClientCertIfGiven,
-		NextProtos:     []string{"h2", "http/1.1"},
-		GetCertificate: s1CertGetter.GetCertificate,
-	}
-	s1TLSConfig.BuildNameToCertificate()
-	c1lns := []*TestListener{&TestListener{
-		Listener: tls.NewListener(ln, s1TLSConfig),
-		Address:  ln.Addr().(*net.TCPAddr),
-	},
-	}
-	var handler1 http.Handler = http.NewServeMux()
-	server1 := &http.Server{
-		Handler: handler1,
-	}
-	if err := http2.ConfigureServer(server1, nil); err != nil {
-		t.Fatal(err)
-	}
 
-	baseAddr.Port = ports[1]
-	ln, err = net.ListenTCP("tcp", baseAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s2CertFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node2_port_%d_cert.pem", ln.Addr().(*net.TCPAddr).Port))
-	s2KeyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node2_port_%d_key.pem", ln.Addr().(*net.TCPAddr).Port))
-	err = ioutil.WriteFile(s2CertFile, s2CertPEM, 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(s2KeyFile, s2KeyPEM, 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s2TLSCert, err := tls.X509KeyPair(s2CertPEM, s2KeyPEM)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s2CertGetter := reload.NewCertificateGetter(s2CertFile, s2KeyFile)
-	s2TLSConfig := &tls.Config{
-		Certificates:   []tls.Certificate{s2TLSCert},
-		RootCAs:        testCluster.RootCAs,
-		ClientCAs:      testCluster.RootCAs,
-		ClientAuth:     tls.VerifyClientCertIfGiven,
-		NextProtos:     []string{"h2", "http/1.1"},
-		GetCertificate: s2CertGetter.GetCertificate,
-	}
-	s2TLSConfig.BuildNameToCertificate()
-	c2lns := []*TestListener{&TestListener{
-		Listener: tls.NewListener(ln, s2TLSConfig),
-		Address:  ln.Addr().(*net.TCPAddr),
-	},
-	}
-	var handler2 http.Handler = http.NewServeMux()
-	server2 := &http.Server{
-		Handler: handler2,
-	}
-	if err := http2.ConfigureServer(server2, nil); err != nil {
-		t.Fatal(err)
-	}
-
-	baseAddr.Port = ports[2]
-	ln, err = net.ListenTCP("tcp", baseAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s3CertFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node3_port_%d_cert.pem", ln.Addr().(*net.TCPAddr).Port))
-	s3KeyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node3_port_%d_key.pem", ln.Addr().(*net.TCPAddr).Port))
-	err = ioutil.WriteFile(s3CertFile, s3CertPEM, 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(s3KeyFile, s3KeyPEM, 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s3TLSCert, err := tls.X509KeyPair(s3CertPEM, s3KeyPEM)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s3CertGetter := reload.NewCertificateGetter(s3CertFile, s3KeyFile)
-	s3TLSConfig := &tls.Config{
-		Certificates:   []tls.Certificate{s3TLSCert},
-		RootCAs:        testCluster.RootCAs,
-		ClientCAs:      testCluster.RootCAs,
-		ClientAuth:     tls.VerifyClientCertIfGiven,
-		NextProtos:     []string{"h2", "http/1.1"},
-		GetCertificate: s3CertGetter.GetCertificate,
-	}
-	s3TLSConfig.BuildNameToCertificate()
-	c3lns := []*TestListener{&TestListener{
-		Listener: tls.NewListener(ln, s3TLSConfig),
-		Address:  ln.Addr().(*net.TCPAddr),
-	},
-	}
-	var handler3 http.Handler = http.NewServeMux()
-	server3 := &http.Server{
-		Handler: handler3,
-	}
-	if err := http2.ConfigureServer(server3, nil); err != nil {
-		t.Fatal(err)
+	listeners := [][]*TestListener{}
+	servers := []*http.Server{}
+	handlers := []http.Handler{}
+	tlsConfigs := []*tls.Config{}
+	certGetters := []*reload.CertificateGetter{}
+	for i := 0; i < opts.NumCores; i++ {
+		baseAddr.Port = ports[i]
+		ln, err := net.ListenTCP("tcp", baseAddr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		certFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_cert.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
+		keyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_key.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
+		err = ioutil.WriteFile(certFile, certInfoSlice[i].certPEM, 0755)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(keyFile, certInfoSlice[i].keyPEM, 0755)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tlsCert, err := tls.X509KeyPair(certInfoSlice[i].certPEM, certInfoSlice[i].keyPEM)
+		if err != nil {
+			t.Fatal(err)
+		}
+		certGetter := reload.NewCertificateGetter(certFile, keyFile)
+		certGetters = append(certGetters, certGetter)
+		tlsConfig := &tls.Config{
+			Certificates:   []tls.Certificate{tlsCert},
+			RootCAs:        testCluster.RootCAs,
+			ClientCAs:      testCluster.RootCAs,
+			ClientAuth:     tls.VerifyClientCertIfGiven,
+			NextProtos:     []string{"h2", "http/1.1"},
+			GetCertificate: certGetter.GetCertificate,
+		}
+		tlsConfig.BuildNameToCertificate()
+		tlsConfigs = append(tlsConfigs, tlsConfig)
+		lns := []*TestListener{&TestListener{
+			Listener: tls.NewListener(ln, tlsConfig),
+			Address:  ln.Addr().(*net.TCPAddr),
+		},
+		}
+		listeners = append(listeners, lns)
+		var handler http.Handler = http.NewServeMux()
+		handlers = append(handlers, handler)
+		server := &http.Server{
+			Handler: handler,
+		}
+		servers = append(servers, server)
+		if err := http2.ConfigureServer(server, nil); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Create three cores with the same physical and different redirect/cluster
@@ -1049,8 +928,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends:      make(map[string]audit.Factory),
-		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port),
-		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port+105),
+		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
+		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port+105),
 		DisableMlock:       true,
 		EnableUI:           true,
 	}
@@ -1124,39 +1003,21 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.HAPhysical = haPhys.(physical.HABackend)
 	}
 
-	c1, err := NewCore(coreConfig)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if opts != nil && opts.HandlerFunc != nil {
-		handler1 = opts.HandlerFunc(c1)
-		server1.Handler = handler1
-	}
-
-	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port)
-	if coreConfig.ClusterAddr != "" {
-		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port+105)
-	}
-	c2, err := NewCore(coreConfig)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if opts != nil && opts.HandlerFunc != nil {
-		handler2 = opts.HandlerFunc(c2)
-		server2.Handler = handler2
-	}
-
-	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port)
-	if coreConfig.ClusterAddr != "" {
-		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port+105)
-	}
-	c3, err := NewCore(coreConfig)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if opts != nil && opts.HandlerFunc != nil {
-		handler3 = opts.HandlerFunc(c3)
-		server3.Handler = handler3
+	cores := []*Core{}
+	for i := 0; i < opts.NumCores; i++ {
+		coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
+		if coreConfig.ClusterAddr != "" {
+			coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
+		}
+		c, err := NewCore(coreConfig)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		cores = append(cores, c)
+		if opts != nil && opts.HandlerFunc != nil {
+			handlers[i] = opts.HandlerFunc(c)
+			servers[i].Handler = handlers[i]
+		}
 	}
 
 	//
@@ -1173,16 +1034,19 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		return ret
 	}
 
-	c2.SetClusterListenerAddrs(clusterAddrGen(c2lns))
-	c2.SetClusterHandler(handler2)
-	c3.SetClusterListenerAddrs(clusterAddrGen(c3lns))
-	c3.SetClusterHandler(handler3)
+	if opts.NumCores > 1 {
+		for i := 1; i < opts.NumCores; i++ {
+			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i]))
+			cores[i].SetClusterHandler(handlers[i])
+		}
+	}
 
-	keys, root := TestCoreInitClusterWrapperSetup(t, c1, clusterAddrGen(c1lns), handler1)
+	keys, root := TestCoreInitClusterWrapperSetup(t, cores[0], clusterAddrGen(listeners[0]), handlers[0])
 	barrierKeys, _ := copystructure.Copy(keys)
 	testCluster.BarrierKeys = barrierKeys.([][]byte)
 	testCluster.RootToken = root
 
+	// Write root token and barrier keys
 	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(root), 0755)
 	if err != nil {
 		t.Fatal(err)
@@ -1199,14 +1063,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		t.Fatal(err)
 	}
 
+	// Unseal first core
 	for _, key := range keys {
-		if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
+		if _, err := cores[0].Unseal(TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
 		}
 	}
 
 	// Verify unsealed
-	sealed, err := c1.Sealed()
+	sealed, err := cores[0].Sealed()
 	if err != nil {
 		t.Fatalf("err checking seal status: %s", err)
 	}
@@ -1214,41 +1079,38 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		t.Fatal("should not be sealed")
 	}
 
-	TestWaitActive(t, c1)
+	TestWaitActive(t, cores[0])
 
-	if opts == nil || !opts.KeepStandbysSealed {
-		for _, key := range keys {
-			if _, err := c2.Unseal(TestKeyCopy(key)); err != nil {
-				t.Fatalf("unseal err: %s", err)
-			}
-		}
-		for _, key := range keys {
-			if _, err := c3.Unseal(TestKeyCopy(key)); err != nil {
-				t.Fatalf("unseal err: %s", err)
+	// Unseal other cores unless otherwise specified
+	if (opts == nil || !opts.KeepStandbysSealed) && opts.NumCores > 1 {
+		for i := 1; i < opts.NumCores; i++ {
+			for _, key := range keys {
+				if _, err := cores[i].Unseal(TestKeyCopy(key)); err != nil {
+					t.Fatalf("unseal err: %s", err)
+				}
 			}
 		}
 
 		// Let them come fully up to standby
 		time.Sleep(2 * time.Second)
 
-		// Ensure cluster connection info is populated
-		isLeader, _, _, err := c2.Leader()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if isLeader {
-			t.Fatal("c2 should not be leader")
-		}
-		isLeader, _, _, err = c3.Leader()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if isLeader {
-			t.Fatal("c3 should not be leader")
+		// Ensure cluster connection info is populated.
+		// Other cores should not come up as leaders.
+		for i := 1; i < opts.NumCores; i++ {
+			isLeader, _, _, err := cores[i].Leader()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if isLeader {
+				t.Fatalf("core[%d] should not be leader", i)
+			}
 		}
 	}
 
-	cluster, err := c1.Cluster()
+	//
+	// Set test cluster core(s) and test cluster
+	//
+	cluster, err := cores[0].Cluster()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1276,65 +1138,27 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	var ret []*TestClusterCore
-	t1 := &TestClusterCore{
-		Core:            c1,
-		ServerKey:       s1Key,
-		ServerKeyPEM:    s1KeyPEM,
-		ServerCert:      s1Cert,
-		ServerCertBytes: s1CertBytes,
-		ServerCertPEM:   s1CertPEM,
-		Listeners:       c1lns,
-		Handler:         handler1,
-		Server:          server1,
-		TLSConfig:       s1TLSConfig,
-		Client:          getAPIClient(c1lns[0].Address.Port, s1TLSConfig),
+	for i := 0; i < opts.NumCores; i++ {
+		tcc := &TestClusterCore{
+			Core:            cores[i],
+			ServerKey:       certInfoSlice[i].key,
+			ServerKeyPEM:    certInfoSlice[i].keyPEM,
+			ServerCert:      certInfoSlice[i].cert,
+			ServerCertBytes: certInfoSlice[i].certBytes,
+			ServerCertPEM:   certInfoSlice[i].certPEM,
+			Listeners:       listeners[i],
+			Handler:         handlers[i],
+			Server:          servers[i],
+			TLSConfig:       tlsConfigs[i],
+			Client:          getAPIClient(listeners[i][0].Address.Port, tlsConfigs[i]),
+		}
+		tcc.ReloadFuncs = &cores[i].reloadFuncs
+		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
+		tcc.ReloadFuncsLock.Lock()
+		(*tcc.ReloadFuncs)["listener|tcp"] = []reload.ReloadFunc{certGetters[i].Reload}
+		tcc.ReloadFuncsLock.Unlock()
+		ret = append(ret, tcc)
 	}
-	t1.ReloadFuncs = &c1.reloadFuncs
-	t1.ReloadFuncsLock = &c1.reloadFuncsLock
-	t1.ReloadFuncsLock.Lock()
-	(*t1.ReloadFuncs)["listener|tcp"] = []reload.ReloadFunc{s1CertGetter.Reload}
-	t1.ReloadFuncsLock.Unlock()
-	ret = append(ret, t1)
-
-	t2 := &TestClusterCore{
-		Core:            c2,
-		ServerKey:       s2Key,
-		ServerKeyPEM:    s2KeyPEM,
-		ServerCert:      s2Cert,
-		ServerCertBytes: s2CertBytes,
-		ServerCertPEM:   s2CertPEM,
-		Listeners:       c2lns,
-		Handler:         handler2,
-		Server:          server2,
-		TLSConfig:       s2TLSConfig,
-		Client:          getAPIClient(c2lns[0].Address.Port, s2TLSConfig),
-	}
-	t2.ReloadFuncs = &c2.reloadFuncs
-	t2.ReloadFuncsLock = &c2.reloadFuncsLock
-	t2.ReloadFuncsLock.Lock()
-	(*t2.ReloadFuncs)["listener|tcp"] = []reload.ReloadFunc{s2CertGetter.Reload}
-	t2.ReloadFuncsLock.Unlock()
-	ret = append(ret, t2)
-
-	t3 := &TestClusterCore{
-		Core:            c3,
-		ServerKey:       s3Key,
-		ServerKeyPEM:    s3KeyPEM,
-		ServerCert:      s3Cert,
-		ServerCertBytes: s3CertBytes,
-		ServerCertPEM:   s3CertPEM,
-		Listeners:       c3lns,
-		Handler:         handler3,
-		Server:          server3,
-		TLSConfig:       s3TLSConfig,
-		Client:          getAPIClient(c3lns[0].Address.Port, s3TLSConfig),
-	}
-	t3.ReloadFuncs = &c3.reloadFuncs
-	t3.ReloadFuncsLock = &c3.reloadFuncsLock
-	t3.ReloadFuncsLock.Lock()
-	(*t3.ReloadFuncs)["listener|tcp"] = []reload.ReloadFunc{s3CertGetter.Reload}
-	t3.ReloadFuncsLock.Unlock()
-	ret = append(ret, t3)
 
 	testCluster.Cores = ret
 	return &testCluster

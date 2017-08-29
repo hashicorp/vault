@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -15,17 +16,66 @@ import (
 )
 
 func TestSystemBackend_Plugin_secret(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeLogical)
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
+	// Seal the cluster
+	ensureCoresSealed(t, cluster)
+
+	barrierKeys := cluster.BarrierKeys
+
+	for _, core := range cluster.Cores {
+		for _, key := range barrierKeys {
+			_, err := core.Unseal(vault.TestKeyCopy(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		sealed, err := core.Sealed()
+		if err != nil {
+			t.Fatalf("err checking seal status: %s", err)
+		}
+		if sealed {
+			t.Fatal("should not be sealed")
+		}
+		// Wait for active so post-unseal takes place
+		// If it fails, it means unseal process failed
+		vault.TestWaitActive(t, core.Core)
+	}
+
 	defer cluster.Cleanup()
 }
 
 func TestSystemBackend_Plugin_auth(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeCredential)
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeCredential)
+
+	// Seal the cluster
+	ensureCoresSealed(t, cluster)
+
+	barrierKeys := cluster.BarrierKeys
+
+	for _, core := range cluster.Cores {
+		for _, key := range barrierKeys {
+			_, err := core.Unseal(vault.TestKeyCopy(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		sealed, err := core.Sealed()
+		if err != nil {
+			t.Fatalf("err checking seal status: %s", err)
+		}
+		if sealed {
+			t.Fatal("should not be sealed")
+		}
+		// Wait for active so post-unseal takes place
+		// If it fails, it means unseal process failed
+		vault.TestWaitActive(t, core.Core)
+	}
+
 	defer cluster.Cleanup()
 }
 
 func TestSystemBackend_Plugin_autoReload(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, logical.TypeLogical)
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
@@ -77,8 +127,9 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 	t.Run("mounts", func(t *testing.T) { testSystemBackend_PluginReload(t, data) })
 }
 
+// Helper func to test different reload methods on plugin reload endpoint
 func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}) {
-	cluster := testSystemBackendMock(t, 2, logical.TypeLogical)
+	cluster := testSystemBackendMock(t, 1, 2, logical.TypeLogical)
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
@@ -123,7 +174,7 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 
 // testSystemBackendMock returns a systemBackend with the desired number
 // of mounted mock plugin backends
-func testSystemBackendMock(t *testing.T, numMounts int, backendType logical.BackendType) *vault.TestCluster {
+func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType logical.BackendType) *vault.TestCluster {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"plugin": plugin.Factory,
@@ -134,7 +185,9 @@ func testSystemBackendMock(t *testing.T, numMounts int, backendType logical.Back
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+		HandlerFunc:        vaulthttp.Handler,
+		KeepStandbysSealed: true,
+		NumCores:           numCores,
 	})
 	cluster.Start()
 
@@ -180,6 +233,28 @@ func testSystemBackendMock(t *testing.T, numMounts int, backendType logical.Back
 	}
 
 	return cluster
+}
+
+func ensureCoresSealed(t *testing.T, c *vault.TestCluster) {
+	for _, core := range c.Cores {
+		if err := core.Shutdown(); err != nil {
+			t.Fatal(err)
+		}
+		timeout := time.Now().Add(3 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				t.Fatal("timeout waiting for core to seal")
+			}
+			sealed, err := core.Sealed()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if sealed {
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
+	}
 }
 
 func TestBackend_PluginMainLogical(t *testing.T) {
