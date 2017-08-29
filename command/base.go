@@ -48,85 +48,75 @@ type BaseCommand struct {
 
 	tokenHelper TokenHelperFunc
 
-	client     *api.Client
-	clientErr  error
-	clientOnce sync.Once
+	// For testing
+	client *api.Client
 }
 
 // Client returns the HTTP API client. The client is cached on the command to
 // save performance on future calls.
 func (c *BaseCommand) Client() (*api.Client, error) {
-	c.clientOnce.Do(func() {
-		// This should never happen in reality and is just for testing. Nothing
-		// should be setting the underlying client.
-		if c.client != nil {
-			return
+	// Read the test client if present
+	if c.client != nil {
+		return c.client, nil
+	}
+
+	config := api.DefaultConfig()
+
+	if err := config.ReadEnvironment(); err != nil {
+		return nil, errors.Wrap(err, "failed to read environment")
+	}
+
+	if c.flagAddress != "" {
+		config.Address = c.flagAddress
+	}
+
+	// If we need custom TLS configuration, then set it
+	if c.flagCACert != "" || c.flagCAPath != "" || c.flagClientCert != "" ||
+		c.flagClientKey != "" || c.flagTLSServerName != "" || c.flagTLSSkipVerify {
+		t := &api.TLSConfig{
+			CACert:        c.flagCACert,
+			CAPath:        c.flagCAPath,
+			ClientCert:    c.flagClientCert,
+			ClientKey:     c.flagClientKey,
+			TLSServerName: c.flagTLSServerName,
+			Insecure:      c.flagTLSSkipVerify,
 		}
+		config.ConfigureTLS(t)
+	}
 
-		config := api.DefaultConfig()
+	// Build the client
+	client, err := api.NewClient(config)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create client")
+	}
 
-		if err := config.ReadEnvironment(); err != nil {
-			c.clientErr = errors.Wrap(err, "failed to read environment")
-			return
-		}
+	// Set the wrapping function
+	client.SetWrappingLookupFunc(c.DefaultWrappingLookupFunc)
 
-		if c.flagAddress != "" {
-			config.Address = c.flagAddress
-		}
+	// Get the token if it came in from the environment
+	token := client.Token()
 
-		// If we need custom TLS configuration, then set it
-		if c.flagCACert != "" || c.flagCAPath != "" || c.flagClientCert != "" ||
-			c.flagClientKey != "" || c.flagTLSServerName != "" || c.flagTLSSkipVerify {
-			t := &api.TLSConfig{
-				CACert:        c.flagCACert,
-				CAPath:        c.flagCAPath,
-				ClientCert:    c.flagClientCert,
-				ClientKey:     c.flagClientKey,
-				TLSServerName: c.flagTLSServerName,
-				Insecure:      c.flagTLSSkipVerify,
+	// If we don't have a token, check the token helper
+	if token == "" {
+		if c.tokenHelper != nil {
+			// If we have a token, then set that
+			tokenHelper, err := c.tokenHelper()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get token helper")
 			}
-			config.ConfigureTLS(t)
-		}
-
-		// Build the client
-		client, err := api.NewClient(config)
-		if err != nil {
-			c.clientErr = errors.Wrap(err, "failed to create client")
-			return
-		}
-
-		// Set the wrapping function
-		client.SetWrappingLookupFunc(c.DefaultWrappingLookupFunc)
-
-		// Get the token if it came in from the environment
-		token := client.Token()
-
-		// If we don't have a token, check the token helper
-		if token == "" {
-			if c.tokenHelper != nil {
-				// If we have a token, then set that
-				tokenHelper, err := c.tokenHelper()
-				if err != nil {
-					c.clientErr = errors.Wrap(err, "failed to get token helper")
-					return
-				}
-				token, err = tokenHelper.Get()
-				if err != nil {
-					c.clientErr = errors.Wrap(err, "failed to retrieve from token helper")
-					return
-				}
+			token, err = tokenHelper.Get()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to retrieve from token helper")
 			}
 		}
+	}
 
-		// Set the token
-		if token != "" {
-			client.SetToken(token)
-		}
+	// Set the token
+	if token != "" {
+		client.SetToken(token)
+	}
 
-		c.client = client
-	})
-
-	return c.client, c.clientErr
+	return client, nil
 }
 
 // DefaultWrappingLookupFunc is the default wrapping function based on the

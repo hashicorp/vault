@@ -189,7 +189,10 @@ func TestPredictVaultPaths(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				f := predictVaultPaths(client, tc.includeFiles)
+				p := NewPredict()
+				p.client = client
+
+				f := p.vaultPaths(tc.includeFiles)
 				act := f(tc.args)
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
@@ -199,7 +202,7 @@ func TestPredictVaultPaths(t *testing.T) {
 	})
 }
 
-func TestPredictMounts(t *testing.T) {
+func TestPredict_Mounts(t *testing.T) {
 	t.Parallel()
 
 	client, closer := testVaultServer(t)
@@ -233,7 +236,10 @@ func TestPredictMounts(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				act := predictMounts(client, tc.path)
+				p := NewPredict()
+				p.client = client
+
+				act := p.mounts(tc.path)
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}
@@ -242,7 +248,7 @@ func TestPredictMounts(t *testing.T) {
 	})
 }
 
-func TestPredictPaths(t *testing.T) {
+func TestPredict_Paths(t *testing.T) {
 	t.Parallel()
 
 	client, closer := testVaultServer(t)
@@ -303,7 +309,10 @@ func TestPredictPaths(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				act := predictPaths(client, tc.path, tc.includeFiles)
+				p := NewPredict()
+				p.client = client
+
+				act := p.paths(tc.path, tc.includeFiles)
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}
@@ -312,7 +321,7 @@ func TestPredictPaths(t *testing.T) {
 	})
 }
 
-func TestPredictListMounts(t *testing.T) {
+func TestPredict_ListMounts(t *testing.T) {
 	t.Parallel()
 
 	client, closer := testVaultServer(t)
@@ -345,7 +354,10 @@ func TestPredictListMounts(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				act := predictListMounts(tc.client)
+				p := NewPredict()
+				p.client = client
+
+				act := p.listMounts()
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}
@@ -354,7 +366,7 @@ func TestPredictListMounts(t *testing.T) {
 	})
 }
 
-func TestPredictListPaths(t *testing.T) {
+func TestPredict_ListPaths(t *testing.T) {
 	t.Parallel()
 
 	client, closer := testVaultServer(t)
@@ -394,7 +406,10 @@ func TestPredictListPaths(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				act := predictListPaths(tc.client, tc.path)
+				p := NewPredict()
+				p.client = client
+
+				act := p.listPaths(tc.path)
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}
@@ -403,7 +418,7 @@ func TestPredictListPaths(t *testing.T) {
 	})
 }
 
-func TestPredictHasPathArg(t *testing.T) {
+func TestPredict_HasPathArg(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -443,7 +458,8 @@ func TestPredictHasPathArg(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if act := predictHasPathArg(tc.args); act != tc.exp {
+			p := NewPredict()
+			if act := p.hasPathArg(tc.args); act != tc.exp {
 				t.Errorf("expected %t to be %t", act, tc.exp)
 			}
 		})
