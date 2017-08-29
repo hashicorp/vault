@@ -635,24 +635,9 @@ func (c *TestCluster) Start() {
 }
 
 func (c *TestCluster) EnsureCoresSealed(t testing.T) {
-	for _, core := range c.Cores {
-		if err := core.Shutdown(); err != nil {
-			t.Fatal(err)
-		}
-		timeout := time.Now().Add(3 * time.Second)
-		for {
-			if time.Now().After(timeout) {
-				t.Fatal("timeout waiting for core to seal")
-			}
-			sealed, err := core.Sealed()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if sealed {
-				break
-			}
-			time.Sleep(1 * time.Second)
-		}
+	t.Helper()
+	if err := c.ensureCoresSealed(); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -667,25 +652,7 @@ func (c *TestCluster) Cleanup() {
 	}
 
 	// Seal the cores
-	for _, core := range c.Cores {
-		if err := core.Shutdown(); err != nil {
-			continue
-		}
-		timeout := time.Now().Add(60 * time.Second)
-		for {
-			if time.Now().After(timeout) {
-				continue
-			}
-			sealed, err := core.Sealed()
-			if err != nil {
-				continue
-			}
-			if sealed {
-				break
-			}
-			time.Sleep(250 * time.Millisecond)
-		}
-	}
+	c.ensureCoresSealed()
 
 	// Remove any temp dir that exists
 	if c.TempDir != "" {
@@ -694,6 +661,29 @@ func (c *TestCluster) Cleanup() {
 
 	// Give time to actually shut down/clean up before the next test
 	time.Sleep(time.Second)
+}
+
+func (c *TestCluster) ensureCoresSealed() error {
+	for _, core := range c.Cores {
+		if err := core.Shutdown(); err != nil {
+			return err
+		}
+		timeout := time.Now().Add(10 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				return fmt.Errorf("timeout waiting for core to seal")
+			}
+			sealed, err := core.Sealed()
+			if err != nil {
+				return err
+			}
+			if sealed {
+				break
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+	return nil
 }
 
 type TestListener struct {
