@@ -727,8 +727,11 @@ type certInfo struct {
 // NewTestCluster creates a new test cluster based on the provided core config
 // and test cluster options.
 func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
-	if opts.NumCores == 0 {
-		opts.NumCores = DefaultNumCores
+	var numCores int
+	if opts == nil || opts.NumCores == 0 {
+		numCores = DefaultNumCores
+	} else {
+		numCores = opts.NumCores
 	}
 
 	certIPs := []net.IP{
@@ -811,7 +814,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Certs generation
 	//
-	for i := 0; i < opts.NumCores; i++ {
+	for i := 0; i < numCores; i++ {
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			t.Fatal(err)
@@ -867,9 +870,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	// Listener setup
 	//
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	ports := make([]int, opts.NumCores)
+	ports := make([]int, numCores)
 	if baseAddr != nil {
-		for i := 0; i < opts.NumCores; i++ {
+		for i := 0; i < numCores; i++ {
 			ports[i] = baseAddr.Port + i
 		}
 	} else {
@@ -884,7 +887,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	handlers := []http.Handler{}
 	tlsConfigs := []*tls.Config{}
 	certGetters := []*reload.CertificateGetter{}
-	for i := 0; i < opts.NumCores; i++ {
+	for i := 0; i < numCores; i++ {
 		baseAddr.Port = ports[i]
 		ln, err := net.ListenTCP("tcp", baseAddr)
 		if err != nil {
@@ -1022,7 +1025,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	cores := []*Core{}
-	for i := 0; i < opts.NumCores; i++ {
+	for i := 0; i < numCores; i++ {
 		coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
 		if coreConfig.ClusterAddr != "" {
 			coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
@@ -1052,8 +1055,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		return ret
 	}
 
-	if opts.NumCores > 1 {
-		for i := 1; i < opts.NumCores; i++ {
+	if numCores > 1 {
+		for i := 1; i < numCores; i++ {
 			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i]))
 			cores[i].SetClusterHandler(handlers[i])
 		}
@@ -1100,8 +1103,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	TestWaitActive(t, cores[0])
 
 	// Unseal other cores unless otherwise specified
-	if (opts == nil || !opts.KeepStandbysSealed) && opts.NumCores > 1 {
-		for i := 1; i < opts.NumCores; i++ {
+	if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
+		for i := 1; i < numCores; i++ {
 			for _, key := range keys {
 				if _, err := cores[i].Unseal(TestKeyCopy(key)); err != nil {
 					t.Fatalf("unseal err: %s", err)
@@ -1114,7 +1117,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		// Ensure cluster connection info is populated.
 		// Other cores should not come up as leaders.
-		for i := 1; i < opts.NumCores; i++ {
+		for i := 1; i < numCores; i++ {
 			isLeader, _, _, err := cores[i].Leader()
 			if err != nil {
 				t.Fatal(err)
@@ -1156,7 +1159,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	var ret []*TestClusterCore
-	for i := 0; i < opts.NumCores; i++ {
+	for i := 0; i < numCores; i++ {
 		tcc := &TestClusterCore{
 			Core:            cores[i],
 			ServerKey:       certInfoSlice[i].key,
