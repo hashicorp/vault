@@ -1446,20 +1446,20 @@
 		{
 			"checksumSHA1": "NB7uVS0/BJDmNu68vPAlbrq4TME=",
 			"path": "github.com/posener/complete/cmd",
-			"revision": "88e59760adaddb8276c9b15511302890690e2dae",
-			"revisionTime": "2017-09-08T12:52:45Z"
+			"revision": "9f41f7636a724791a3b8b1d35e84caa1124f0d3c",
+			"revisionTime": "2017-08-29T17:11:12Z"
 		},
 		{
-			"checksumSHA1": "Hwojin3GxRyKwPAiz5r7UszqkPc=",
+			"checksumSHA1": "gSX86Xl0w9hvtntdT8h23DZtSag=",
 			"path": "github.com/posener/complete/cmd/install",
-			"revision": "88e59760adaddb8276c9b15511302890690e2dae",
-			"revisionTime": "2017-09-08T12:52:45Z"
+			"revision": "9f41f7636a724791a3b8b1d35e84caa1124f0d3c",
+			"revisionTime": "2017-08-29T17:11:12Z"
 		},
 		{
 			"checksumSHA1": "DMo94FwJAm9ZCYCiYdJU2+bh4no=",
 			"path": "github.com/posener/complete/match",
-			"revision": "88e59760adaddb8276c9b15511302890690e2dae",
-			"revisionTime": "2017-09-08T12:52:45Z"
+			"revision": "9f41f7636a724791a3b8b1d35e84caa1124f0d3c",
+			"revisionTime": "2017-08-29T17:11:12Z"
 		},
 		{
 			"checksumSHA1": "vCogt04lbcE8fUgvRCOaZQUo+Pk=",
