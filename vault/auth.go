@@ -406,6 +406,82 @@ func (c *Core) setupCredentials() error {
 	defer c.authLock.Unlock()
 
 	for _, entry := range c.auth.Entries {
+		// Skip plugin backends
+		if entry.Type == "plugin" {
+			continue
+		}
+
+		// Work around some problematic code that existed in master for a while
+		if strings.HasPrefix(entry.Path, credentialRoutePrefix) {
+			entry.Path = strings.TrimPrefix(entry.Path, credentialRoutePrefix)
+			persistNeeded = true
+		}
+
+		// Create a barrier view using the UUID
+		viewPath := credentialBarrierPrefix + entry.UUID + "/"
+		view = NewBarrierView(c.barrier, viewPath)
+		sysView := c.mountEntrySysView(entry)
+
+		// Initialize the backend
+		backend, err = c.newCredentialBackend(entry.Type, sysView, view, nil)
+		if err != nil {
+			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
+			return errLoadAuthFailed
+		}
+		if backend == nil {
+			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+		}
+
+		if err := backend.Initialize(); err != nil {
+			return err
+		}
+
+		// Mount the backend
+		path := credentialRoutePrefix + entry.Path
+		err = c.router.Mount(backend, path, entry, view)
+		if err != nil {
+			c.logger.Error("core: failed to mount auth entry", "path", entry.Path, "error", err)
+			return errLoadAuthFailed
+		}
+
+		// Ensure the path is tainted if set in the mount table
+		if entry.Tainted {
+			c.router.Taint(path)
+		}
+
+		// Check if this is the token store
+		if entry.Type == "token" {
+			c.tokenStore = backend.(*TokenStore)
+
+			// this is loaded *after* the normal mounts, including cubbyhole
+			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
+			c.tokenStore.cubbyholeBackend = c.router.MatchingBackend("cubbyhole/").(*CubbyholeBackend)
+		}
+	}
+
+	if persistNeeded {
+		return c.persistAuth(c.auth, false)
+	}
+
+	return nil
+}
+
+// setupCredentialPlugins will mount secret plugin backends.
+// setupCredentials should *NOT* handle plugin backends
+func (c *Core) setupCredentialPlugins() error {
+	var backend logical.Backend
+	var view *BarrierView
+	var err error
+	var persistNeeded bool
+
+	c.authLock.Lock()
+	defer c.authLock.Unlock()
+
+	for _, entry := range c.auth.Entries {
+		if entry.Type != "plugin" {
+			continue
+		}
+
 		// Work around some problematic code that existed in master for a while
 		if strings.HasPrefix(entry.Path, credentialRoutePrefix) {
 			entry.Path = strings.TrimPrefix(entry.Path, credentialRoutePrefix)
@@ -433,7 +509,7 @@ func (c *Core) setupCredentials() error {
 
 		// Check for the correct backend type
 		backendType := backend.Type()
-		if entry.Type == "plugin" && backendType != logical.TypeCredential {
+		if backendType != logical.TypeCredential {
 			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 		}
 

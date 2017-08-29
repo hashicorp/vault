@@ -7,6 +7,7 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 	bplugin "github.com/hashicorp/vault/logical/plugin"
 )
 
@@ -31,14 +32,11 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 // or as a concrete implementation if builtin, casted as logical.Backend.
 func Backend(conf *logical.BackendConfig) (logical.Backend, error) {
 	var b backend
-	name := conf.Config["plugin_name"]
-	sys := conf.System
-
-	raw, err := bplugin.NewBackend(name, sys, conf.Logger)
-	if err != nil {
-		return nil, err
+	// Initialize b.Backend with dummy backend since plugin
+	// backends will need to be lazy loaded.
+	b.Backend = &framework.Backend{
+		BackendType: logical.TypeLogical,
 	}
-	b.Backend = raw
 	b.config = conf
 
 	return &b, nil
@@ -53,11 +51,19 @@ type backend struct {
 
 	// Used to detect if we already reloaded
 	canary string
+
+	// Used to detect if plugin is set
+	loaded bool
 }
 
 func (b *backend) reloadBackend() error {
+	b.Logger().Trace("plugin: reloading plugin backend", "plugin", b.config.Config["plugin_name"])
+	return b.startBackend()
+}
+
+// startBackend starts a plugin backend
+func (b *backend) startBackend() error {
 	pluginName := b.config.Config["plugin_name"]
-	b.Logger().Trace("plugin: reloading plugin backend", "plugin", pluginName)
 
 	// Ensure proper cleanup of the backend (i.e. call client.Kill())
 	b.Backend.Cleanup()
@@ -71,6 +77,7 @@ func (b *backend) reloadBackend() error {
 		return err
 	}
 	b.Backend = nb
+	b.loaded = true
 
 	return nil
 }
@@ -79,6 +86,21 @@ func (b *backend) reloadBackend() error {
 func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	b.RLock()
 	canary := b.canary
+
+	// Lazy-load backend
+	if !b.loaded {
+		// Upgrade lock
+		b.RUnlock()
+		b.Lock()
+
+		err := b.startBackend()
+		if err != nil {
+			b.Unlock()
+			return nil, err
+		}
+		b.Unlock()
+		b.RLock()
+	}
 	resp, err := b.Backend.HandleRequest(req)
 	b.RUnlock()
 	// Need to compare string value for case were err comes from plugin RPC
@@ -112,6 +134,21 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
 	b.RLock()
 	canary := b.canary
+
+	// Lazy-load backend
+	if !b.loaded {
+		// Upgrade lock
+		b.RUnlock()
+		b.Lock()
+		err := b.startBackend()
+		if err != nil {
+			b.Unlock()
+			return false, false, err
+		}
+		b.Unlock()
+		b.RLock()
+	}
+
 	checkFound, exists, err := b.Backend.HandleExistenceCheck(req)
 	b.RUnlock()
 	if err != nil && err.Error() == rpc.ErrShutdown.Error() {

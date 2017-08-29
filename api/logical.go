@@ -142,6 +142,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 		if resp != nil && resp.StatusCode != 404 {
 			return nil, err
 		}
+		// return nil, err
 	}
 	if resp == nil {
 		return nil, nil

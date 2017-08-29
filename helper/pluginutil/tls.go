@@ -157,7 +157,10 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 		clientConf := api.DefaultConfig()
 		clientConf.Address = vaultAddr
 		if apiTLSConfig != nil {
-			clientConf.ConfigureTLS(apiTLSConfig)
+			err := clientConf.ConfigureTLS(apiTLSConfig)
+			if err != nil {
+				return nil, errwrap.Wrapf("error configuring api client {{err}}", err)
+			}
 		}
 		client, err := api.NewClient(clientConf)
 		if err != nil {
@@ -169,7 +172,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 			return nil, errwrap.Wrapf("error during token unwrap request: {{err}}", err)
 		}
 		if secret == nil {
-			return nil, errors.New("error during token unwrap request: secret is nil")
+			return nil, fmt.Errorf("error during token unwrap request: secret is nil, %s", unwrapToken)
 		}
 
 		// Retrieve and parse the server's certificate
