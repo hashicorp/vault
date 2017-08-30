@@ -270,7 +270,7 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 
 func TestBackend_PluginMainLogical(t *testing.T) {
 	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadaModeEnv) != "true" {
 		return
 	}
 
@@ -299,7 +299,7 @@ func TestBackend_PluginMainLogical(t *testing.T) {
 
 func TestBackend_PluginMainCredentials(t *testing.T) {
 	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadaModeEnv) != "true" {
 		return
 	}
 

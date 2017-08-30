@@ -41,7 +41,7 @@ func TestBackend_Factory(t *testing.T) {
 
 func TestBackend_PluginMain(t *testing.T) {
 	args := []string{}
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadaModeEnv) != "true" {
 		return
 	}
 
