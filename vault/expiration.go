@@ -284,7 +284,7 @@ func (m *ExpirationManager) Restore(errorFunc func() error, loadDelay time.Durat
 						time.Sleep(loadDelay)
 					}
 
-					le, err := m.loadEntry(leaseID)
+					le, err := m.loadEntryOnly(leaseID)
 					if err != nil {
 						errs <- err
 						continue
@@ -923,6 +923,18 @@ func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry,
 
 // loadEntry is used to read a lease entry
 func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
+	le, err := m.loadEntryOnly(leaseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read lease entry: %v", err)
+	}
+
+	if atomic.LoadInt64(&m.restoreLock) == 1 {
+		m.restoreLease(le)
+	}
+	return le, err
+}
+
+func (m *ExpirationManager) loadEntryOnly(leaseID string) (*leaseEntry, error) {
 	out, err := m.idView.Get(leaseID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lease entry: %v", err)
@@ -933,10 +945,6 @@ func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
 	le, err := decodeLeaseEntry(out.Value)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode lease entry: %v", err)
-	}
-
-	if atomic.LoadInt64(&m.restoreLock) == 1 {
-		m.restoreLease(le)
 	}
 
 	return le, nil
