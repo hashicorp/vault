@@ -60,7 +60,7 @@ type ExpirationManager struct {
 	logger     log.Logger
 
 	pending     map[string]*time.Timer
-	pendingLock sync.Mutex
+	pendingLock sync.RWMutex
 
 	tidyLock int64
 }
@@ -100,9 +100,17 @@ func (c *Core) setupExpiration() error {
 
 	// Restore the existing state
 	c.logger.Info("expiration: restoring leases")
-	if err := c.expiration.Restore(); err != nil {
-		return fmt.Errorf("expiration state restore failed: %v", err)
+
+	// Accumulate existing leases
+	c.logger.Debug("expiration: collecting leases")
+	existing, err := logical.CollectKeys(mgr.idView)
+	if err != nil {
+		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
+	c.logger.Debug("expiration: leases collected", "num_existing", len(existing))
+
+	go c.expiration.Restore(existing)
+
 	return nil
 }
 
@@ -233,18 +241,7 @@ func (m *ExpirationManager) Tidy() error {
 
 // Restore is used to recover the lease states when starting.
 // This is used after starting the vault.
-func (m *ExpirationManager) Restore() error {
-	m.pendingLock.Lock()
-	defer m.pendingLock.Unlock()
-
-	// Accumulate existing leases
-	m.logger.Debug("expiration: collecting leases")
-	existing, err := logical.CollectKeys(m.idView)
-	if err != nil {
-		return fmt.Errorf("failed to scan for leases: %v", err)
-	}
-	m.logger.Debug("expiration: leases collected", "num_existing", len(existing))
-
+func (m *ExpirationManager) Restore(existing []string) {
 	// Make the channels used for the worker pool
 	broker := make(chan string)
 	quit := make(chan bool)
@@ -291,7 +288,7 @@ func (m *ExpirationManager) Restore() error {
 	go func() {
 		defer wg.Done()
 		for i, leaseID := range existing {
-			if i%500 == 0 {
+			if i > 0 && i%500 == 0 {
 				m.logger.Trace("expiration: leases loading", "progress", i)
 			}
 
@@ -309,13 +306,14 @@ func (m *ExpirationManager) Restore() error {
 	}()
 
 	// Restore each key by pulling from the result chan
+	restoredCount := 0
 	for i := 0; i < len(existing); i++ {
 		select {
 		case err := <-errs:
 			// Close all go routines
 			close(quit)
-
-			return err
+			m.logger.Trace("expiration: error restoring leases", "error", err)
+			return
 
 		case le := <-result:
 
@@ -329,6 +327,8 @@ func (m *ExpirationManager) Restore() error {
 				continue
 			}
 
+			restoredCount++
+
 			// Determine the remaining time to expiration
 			expires := le.ExpireTime.Sub(time.Now())
 			if expires <= 0 {
@@ -336,22 +336,24 @@ func (m *ExpirationManager) Restore() error {
 			}
 
 			// Setup revocation timer
+			m.pendingLock.Lock()
 			m.pending[le.LeaseID] = time.AfterFunc(expires, func() {
 				m.expireID(le.LeaseID)
 			})
+			m.pendingLock.Unlock()
 		}
 	}
 
 	// Let all go routines finish
 	wg.Wait()
 
+	m.pendingLock.RLock()
 	if len(m.pending) > 0 {
 		if m.logger.IsInfo() {
-			m.logger.Info("expire: leases restored", "restored_lease_count", len(m.pending))
+			m.logger.Info("expire: leases restored", "restored_lease_count", restoredCount)
 		}
 	}
-
-	return nil
+	m.pendingLock.RUnlock()
 }
 
 // Stop is used to prevent further automatic revocations.
@@ -394,10 +396,10 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 		if err := m.revokeEntry(le); err != nil {
 			if !force {
 				return err
-			} else {
-				if m.logger.IsWarn() {
-					m.logger.Warn("revocation from the backend failed, but in force mode so ignoring", "error", err)
-				}
+			}
+
+			if m.logger.IsWarn() {
+				m.logger.Warn("revocation from the backend failed, but in force mode so ignoring", "error", err)
 			}
 		}
 	}
@@ -1035,9 +1037,9 @@ func (m *ExpirationManager) lookupByToken(token string) ([]string, error) {
 
 // emitMetrics is invoked periodically to emit statistics
 func (m *ExpirationManager) emitMetrics() {
-	m.pendingLock.Lock()
+	m.pendingLock.RLock()
 	num := len(m.pending)
-	m.pendingLock.Unlock()
+	m.pendingLock.RUnlock()
 	metrics.SetGauge([]string{"expire", "num_leases"}, float32(num))
 }
 
