@@ -22,6 +22,7 @@ type Looker interface {
 // Wrapper interface defines the functions needed by the runner to wrap the
 // metadata needed to run a plugin process. This includes looking up Mlock
 // configuration and wrapping data in a respose wrapped token.
+// logical.SystemView implementataions satisfy this interface.
 type RunnerUtil interface {
 	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
@@ -44,8 +45,9 @@ type PluginRunner struct {
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 }
 
-// Run takes a wrapper instance, and the go-plugin paramaters and executes a
-// plugin.
+// Run takes a wrapper RunnerUtil instance along with the go-plugin paramaters and
+// returns a configured plugin.Client with TLS Configured and a wrapping token set
+// on PluginUnwrapTokenEnv for plugin process consumption.
 func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
 	// Get a CA TLS Certificate
 	certBytes, key, err := generateCert()
@@ -98,6 +100,42 @@ func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugi
 	return client, nil
 }
 
+// RunMeta returns a configured plugin.Client that will dispense a plugin with
+// the --metadata flag enabled. The flag is passed to logical/plugin.Serve and
+// determines whether it should be ran with TLS enabled. These types of plugins
+// should not be long-running.
+func (r *PluginRunner) RunMeta(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	args := append(r.Args, "--metadata")
+	cmd := exec.Command(r.Command, args...)
+	cmd.Env = append(cmd.Env, env...)
+
+	// Add the mlock setting to the ENV of the plugin
+	if wrapper.MlockEnabled() {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
+	}
+
+	secureConfig := &plugin.SecureConfig{
+		Checksum: r.Sha256,
+		Hash:     sha256.New(),
+	}
+
+	// Create logger for the plugin client
+	clogger := &hclogFaker{
+		logger: logger,
+	}
+	namedLogger := clogger.ResetNamed("plugin.metadata")
+
+	client := plugin.NewClient(&plugin.ClientConfig{
+		HandshakeConfig: hs,
+		Plugins:         pluginMap,
+		Cmd:             cmd,
+		SecureConfig:    secureConfig,
+		Logger:          namedLogger,
+	})
+
+	return client, nil
+}
+
 type APIClientMeta struct {
 	// These are set by the command line flags.
 	flagCACert     string
@@ -105,18 +143,24 @@ type APIClientMeta struct {
 	flagClientCert string
 	flagClientKey  string
 	flagInsecure   bool
+	flagMetadata   bool
 }
 
 func (f *APIClientMeta) FlagSet() *flag.FlagSet {
-	fs := flag.NewFlagSet("tls settings", flag.ContinueOnError)
+	fs := flag.NewFlagSet("vault plugin settings", flag.ContinueOnError)
 
 	fs.StringVar(&f.flagCACert, "ca-cert", "", "")
 	fs.StringVar(&f.flagCAPath, "ca-path", "", "")
 	fs.StringVar(&f.flagClientCert, "client-cert", "", "")
 	fs.StringVar(&f.flagClientKey, "client-key", "", "")
 	fs.BoolVar(&f.flagInsecure, "tls-skip-verify", false, "")
+	fs.BoolVar(&f.flagMetadata, "metadata", false, "")
 
 	return fs
+}
+
+func (f *APIClientMeta) FetchMetadata() bool {
+	return f.flagMetadata
 }
 
 func (f *APIClientMeta) GetTLSConfig() *api.TLSConfig {

@@ -23,6 +23,7 @@ func main() {
 	err := plugin.Serve(&plugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
 		TLSProviderFunc:    tlsProviderFunc,
+		FetchMetadata:      apiClientMeta.FetchMetadata(),
 	})
 	if err != nil {
 		log.Println(err)
