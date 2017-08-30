@@ -2209,6 +2209,10 @@ func TestBackend_Root_Idempotentcy(t *testing.T) {
 		t.Fatal("expected ca info")
 	}
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	if err != nil {
+		t.Fatalf("error reading ca_chain: %v", err)
+	}
+
 	r1Data := resp.Data
 
 	// Try again, make sure it's a 204 and same CA
@@ -2222,6 +2226,9 @@ func TestBackend_Root_Idempotentcy(t *testing.T) {
 		t.Fatal("expected no ca info")
 	}
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	if err != nil {
+		t.Fatalf("error reading ca_chain: %v", err)
+	}
 	r2Data := resp.Data
 	if !reflect.DeepEqual(r1Data, r2Data) {
 		t.Fatal("got different ca certs")

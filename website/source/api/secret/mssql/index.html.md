@@ -169,6 +169,7 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/mssql/roles`               | `200 application/json` |
+| `GET`   | `/mssql/roles?list=true`      | `200 application/json` |
 
 ### Sample Request
 

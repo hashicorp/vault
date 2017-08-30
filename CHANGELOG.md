@@ -12,12 +12,24 @@ FEATURES:
   backend for authenticating to machines. It also supports remote host key
   verification through the SSH CA backend, if enabled.
 
+IMPROVEMENTS:
+ * audit/file: Allow specifying `stdout` as the `file_path` to log to standard
+   output [GH-3235]
+ * auth/okta: Compare groups case-insensitively since Okta is only
+   case-preserving [GH-3240]
+ * cli: Add subcommand autocompletion that can be enabled with 
+   `vault -autocomplete-install` [GH-3223]
+ * storage/gcp: Use application default credentials if they exist [GH-3248]
+
 BUG FIXES:
 
- * core: Policy-related commands would sometimes fail to act case-insensitively
-   [GH-3210]
  * auth/aws: Properly use role-set period values for IAM-derived token renewals
    [GH-3220]
+ * auth/okta: Fix updating organization/ttl/max_ttl after initial setting
+   [GH-3236]
+ * core: Fix PROXY when underlying connection is TLS [GH-3195]
+ * core: Policy-related commands would sometimes fail to act case-insensitively
+   [GH-3210]
 
 ## 0.8.1 (August 16th, 2017)
 
