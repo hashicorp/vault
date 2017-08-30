@@ -2,6 +2,7 @@ package file
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -32,6 +33,9 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	// normalize path if configured for stdout
 	if strings.ToLower(path) == "stdout" {
 		path = "stdout"
+	}
+	if strings.ToLower(path) == "discard" {
+		path = "discard"
 	}
 
 	format, ok := conf.Config["format"]
@@ -99,8 +103,8 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	}
 
 	switch path {
-	case "stdout":
-		// no need to test opening file if outputting to stdout
+	case "stdout", "discard":
+		// no need to test opening file if outputting to stdout or discarding
 	default:
 		// Ensure that the file can be successfully opened for writing;
 		// otherwise it will be too late to catch later without problems
@@ -166,8 +170,11 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
-	if b.path == "stdout" {
+	switch b.path {
+	case "stdout":
 		return b.formatter.FormatRequest(os.Stdout, b.formatConfig, auth, req, outerErr)
+	case "discard":
+		return b.formatter.FormatRequest(ioutil.Discard, b.formatConfig, auth, req, outerErr)
 	}
 
 	if err := b.open(); err != nil {
@@ -198,8 +205,11 @@ func (b *Backend) LogResponse(
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
-	if b.path == "stdout" {
+	switch b.path {
+	case "stdout":
 		return b.formatter.FormatResponse(os.Stdout, b.formatConfig, auth, req, resp, err)
+	case "discard":
+		return b.formatter.FormatResponse(ioutil.Discard, b.formatConfig, auth, req, resp, err)
 	}
 
 	if err := b.open(); err != nil {
@@ -251,7 +261,8 @@ func (b *Backend) open() error {
 }
 
 func (b *Backend) Reload() error {
-	if b.path == "stdout" {
+	switch b.path {
+	case "stdout", "discard":
 		return nil
 	}
 
