@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"os"
 
@@ -15,15 +16,18 @@ func main() {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args[1:]) // Ignore command, strictly parse flags
 
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	// Set tlsProviderFunc if -metadata not passed in
+	var tlsProviderFunc func() (*tls.Config, error)
+	if !apiClientMeta.FetchMetadata() {
+		tlsConfig := apiClientMeta.GetTLSConfig()
+		tlsProviderFunc = pluginutil.VaultPluginTLSProvider(tlsConfig)
+	}
 
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := plugin.Serve(&plugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
 		TLSProviderFunc:    tlsProviderFunc,
-		FetchMetadata:      apiClientMeta.FetchMetadata(),
 	})
 	if err != nil {
 		log.Println(err)

@@ -18,10 +18,10 @@ type TLSProdiverFunc func() (*tls.Config, error)
 type ServeOpts struct {
 	BackendFactoryFunc BackendFactoryFunc
 	TLSProviderFunc    TLSProdiverFunc
-	FetchMetadata      bool
 }
 
-// Serve is used to serve a backend plugin
+// Serve is a helper function used to serve a backend plugin. This
+// should be ran on the plugin's main process.
 func Serve(opts *ServeOpts) error {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
@@ -36,18 +36,11 @@ func Serve(opts *ServeOpts) error {
 	}
 
 	// If FetchMetadata is true, run without TLSProvider
-	if opts.FetchMetadata {
-		plugin.Serve(&plugin.ServeConfig{
-			HandshakeConfig: handshakeConfig,
-			Plugins:         pluginMap,
-		})
-	} else {
-		plugin.Serve(&plugin.ServeConfig{
-			HandshakeConfig: handshakeConfig,
-			Plugins:         pluginMap,
-			TLSProvider:     opts.TLSProviderFunc,
-		})
-	}
+	plugin.Serve(&plugin.ServeConfig{
+		HandshakeConfig: handshakeConfig,
+		Plugins:         pluginMap,
+		TLSProvider:     opts.TLSProviderFunc,
+	})
 
 	return nil
 }

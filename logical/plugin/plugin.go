@@ -41,7 +41,7 @@ func (b *BackendPluginClient) Cleanup() {
 // NewBackend will return an instance of an RPC-based client implementation of the backend for
 // external plugins, or a concrete implementation of the backend if it is a builtin backend.
 // The backend is returned as a logical.Backend interface. The isMeta param determines whether
-// the plugin should run with the --metadata flag.
+// the plugin should run with the -metadata flag.
 func NewBackend(pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger, isMetadata bool) (logical.Backend, error) {
 	// Look for plugin in the plugin catalog
 	pluginRunner, err := sys.LookupPlugin(pluginName)

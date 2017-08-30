@@ -101,11 +101,11 @@ func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugi
 }
 
 // RunMeta returns a configured plugin.Client that will dispense a plugin with
-// the --metadata flag enabled. The flag is passed to logical/plugin.Serve and
+// the -metadata flag enabled. The flag is passed to logical/plugin.Serve and
 // determines whether it should be ran with TLS enabled. These types of plugins
 // should not be long-running.
 func (r *PluginRunner) RunMeta(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
-	args := append(r.Args, "--metadata")
+	args := append(r.Args, "-metadata")
 	cmd := exec.Command(r.Command, args...)
 	cmd.Env = append(cmd.Env, env...)
 
