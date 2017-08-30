@@ -100,7 +100,7 @@ func (c *Core) setupExpiration() error {
 	// Link the token store to this
 	c.tokenStore.SetExpirationManager(mgr)
 
-	go c.expiration.Restore(c.Shutdown, 1*time.Second)
+	go c.expiration.Restore(c.Shutdown, 0)
 
 	return nil
 }
