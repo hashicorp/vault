@@ -930,7 +930,7 @@ func (b *backend) pathLoginRenewIam(
 
 	// Note that the error messages below can leak a little bit of information about the role information
 	// For example, if on renew, the client gets the "error parsing ARN..." error message, the client
-	// will konw that it's a wildcard bind (but not the actual bind), even if the client can't actually
+	// will know that it's a wildcard bind (but not the actual bind), even if the client can't actually
 	// read the role directly to know what the bind is. It's a relatively small amount of leakage, in
 	// some fairly corner cases, and in the most likely error case (role has been changed to a new ARN),
 	// the error message is identical.
