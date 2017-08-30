@@ -2,7 +2,6 @@ package awsauth
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
@@ -142,45 +141,22 @@ func (b *backend) flushCachedIAMClients() {
 	}
 }
 
-// Deletes old cached mappings of unique IDs to ARNs
-// Write locks configMutex
-func (b *backend) cleanOldCachedUniqueIdMapping() {
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
-	for id, mapEntry := range b.iamUserIdToArn {
-		// clean all entries last accessed more than MaxLeaseTTL ago
-		if time.Since(mapEntry.LastAccessed) > b.System().MaxLeaseTTL() {
-			delete(b.iamUserIdToArn, id)
-		}
-	}
-}
-
 // Gets an entry out of the user ID cache
-// Write locks configMutex
 func (b *backend) getCachedUserId(userId string) string {
 	if userId == "" {
 		return ""
 	}
-	b.configMutex.Lock()
-	defer b.configMutex.Unlock()
-	if entry, ok := b.iamUserIdToArn[userId]; ok {
-		entry.LastAccessed = time.Now()
-		return entry.Arn
+	if entry, ok := b.iamUserIdToArnCache.Get(userId); ok {
+		b.iamUserIdToArnCache.SetDefault(userId, entry)
+		return entry.(string)
 	}
 	return ""
 }
 
 // Sets an entry in the user ID cache
-// Write locks configMutex
 func (b *backend) setCachedUserId(userId, arn string) {
 	if userId != "" {
-		b.configMutex.Lock()
-		defer b.configMutex.Unlock()
-		entry := awsUniqueIdMapEntry{
-			LastAccessed: time.Now(),
-			Arn:          arn,
-		}
-		b.iamUserIdToArn[userId] = &entry
+		b.iamUserIdToArnCache.SetDefault(userId, arn)
 	}
 }
 
@@ -292,9 +268,4 @@ func (b *backend) clientIAM(s logical.Storage, region, accountID string) (*iam.I
 		b.IAMClientsMap[region][stsRole] = client
 	}
 	return b.IAMClientsMap[region][stsRole], nil
-}
-
-type awsUniqueIdMapEntry struct {
-	LastAccessed time.Time // This is primarily so we can clean up the cache so it doesn't monotonically grow
-	Arn          string
 }

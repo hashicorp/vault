@@ -122,12 +122,12 @@ can only be used for login by EC2 instances that are deployed on the same AMI.
 The iam authentication method allows you to specify a bound IAM principal ARN.
 Clients authenticating to Vault must have an ARN that matches the ARN bound to
 the role they are attempting to login to. The bound ARN allows specifying a
-wildcard at the end of the bound ARN. For example, if the bound ARN was
+wildcard at the end of the bound ARN. For example, if the bound ARN were
 `arn:aws:iam::123456789012:*` it would allow any principal in AWS account
 123456789012 to login to it. Similarly, if it were
 `arn:aws:iam::123456789012:role/*` it would allow any IAM role in the AWS
 account to login to it. If you wish to specify a wildcard, you must give Vault
-`iam:GetUser` and `iam:GetRole` permissions to properly resole the full user
+`iam:GetUser` and `iam:GetRole` permissions to properly resolve the full user
 path.
 
 In general, role bindings that are specific to an EC2 instance are only checked
@@ -276,7 +276,11 @@ comparison of the two authentication methods.
 
 ## Recommended Vault IAM Policy
 
-This specifies the recommended IAM policy to run Vault with.
+This specifies the recommended IAM policy needed by the AWS auth backend. Note
+that if you are using the same credentials for the AWS auth and secret backends
+(e.g., if you're running Vault on an EC2 instance in an IAM instance profile),
+then you will need to add additional permissions as required by the AWS secret
+backend.
 
 ```json
 {

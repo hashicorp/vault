@@ -1330,10 +1330,6 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Calling this once here to ensure it won't raise any unexpected errors on an empty
-	// cache
-	b.cleanOldCachedUniqueIdMapping()
-
 	// Override the default AWS env vars (if set) with our test creds
 	// so that the credential provider chain will pick them up
 	// NOTE that I'm not bothing to override the shared config file location,
@@ -1606,9 +1602,6 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if cachedArn == "" {
 		t.Errorf("got empty ARN back from user ID cache; expected full arn")
 	}
-	// Calling this again to ensure it won't panic or raise unexpected errors when there
-	// are cached values
-	b.cleanOldCachedUniqueIdMapping()
 }
 
 func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Request {

@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/patrickmn/go-cache"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -63,7 +64,7 @@ type backend struct {
 	// Map of AWS unique IDs to the full ARN corresponding to that unique ID
 	// This avoids the overhead of an AWS API hit for every login request
 	// using the IAM auth method when bound_iam_principal_arn contains a wildcard
-	iamUserIdToArn map[string]*awsUniqueIdMapEntry
+	iamUserIdToArnCache *cache.Cache
 
 	// AWS Account ID of the "default" AWS credentials
 	// This cache avoids the need to call GetCallerIdentity repeatedly to learn it
@@ -79,10 +80,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
-		tidyCooldownPeriod: time.Hour,
-		EC2ClientsMap:      make(map[string]map[string]*ec2.EC2),
-		IAMClientsMap:      make(map[string]map[string]*iam.IAM),
-		iamUserIdToArn:     make(map[string]*awsUniqueIdMapEntry),
+		tidyCooldownPeriod:  time.Hour,
+		EC2ClientsMap:       make(map[string]map[string]*ec2.EC2),
+		IAMClientsMap:       make(map[string]map[string]*iam.IAM),
+		iamUserIdToArnCache: cache.New(7*24*time.Hour, 24*time.Hour),
 	}
 
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
@@ -130,8 +131,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 // Currently this will be triggered once in a minute by the RollbackManager.
 //
 // The tasks being done currently by this function are to cleanup the expired
-// entries of both blacklist role tags and whitelist identities as well as stale
-// entries in the iamUserIdToArn cache. Tidying is done
+// entries of both blacklist role tags and whitelist identities. Tidying is done
 // not once in a minute, but once in an hour, controlled by 'tidyCooldownPeriod'.
 // Tidying of blacklist and whitelist are by default enabled. This can be
 // changed using `config/tidy/roletags` and `config/tidy/identities` endpoints.
@@ -180,9 +180,6 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 		if !skipWhitelistTidy {
 			b.tidyWhitelistIdentity(req.Storage, safety_buffer)
 		}
-
-		// get rid of old unique ID entries
-		b.cleanOldCachedUniqueIdMapping()
 
 		// Update the time at which to run the tidy functions again.
 		b.nextTidyTime = time.Now().Add(b.tidyCooldownPeriod)
