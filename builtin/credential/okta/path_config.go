@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"net/url"
 
+	"time"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/sstarcher/go-okta"
-	"time"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -94,7 +95,6 @@ func (b *backend) pathConfigRead(
 
 func (b *backend) pathConfigWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	org := d.Get("organization").(string)
 	cfg, err := b.Config(req.Storage)
 	if err != nil {
 		return nil, err
@@ -103,9 +103,14 @@ func (b *backend) pathConfigWrite(
 	// Due to the existence check, entry will only be nil if it's a create
 	// operation, so just create a new one
 	if cfg == nil {
-		cfg = &ConfigEntry{
-			Org: org,
-		}
+		cfg = &ConfigEntry{}
+	}
+
+	org, ok := d.GetOk("organization")
+	if ok {
+		cfg.Org = org.(string)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.Org = d.Get("organization").(string)
 	}
 
 	token, ok := d.GetOk("token")
@@ -129,11 +134,19 @@ func (b *backend) pathConfigWrite(
 		cfg.BaseURL = d.Get("base_url").(string)
 	}
 
-	ttl := d.Get("ttl").(int)
-	cfg.TTL = time.Duration(ttl) * time.Second
+	ttl, ok := d.GetOk("ttl")
+	if ok {
+		cfg.TTL = time.Duration(ttl.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		cfg.TTL = time.Duration(d.Get("ttl").(int)) * time.Second
+	}
 
-	maxTTL := d.Get("max_ttl").(int)
-	cfg.MaxTTL = time.Duration(maxTTL) * time.Second
+	maxTTL, ok := d.GetOk("max_ttl")
+	if ok {
+		cfg.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		cfg.MaxTTL = time.Duration(d.Get("max_ttl").(int)) * time.Second
+	}
 
 	jsonCfg, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {

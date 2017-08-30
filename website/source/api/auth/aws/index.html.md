@@ -217,6 +217,7 @@ Lists all the AWS public certificates that are registered with the backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/config/certificates` | `200 application/json` |
+| `GET`   | `/auth/aws/config/certificates?list=true` | `200 application/json` |
 
 ### Sample Request
 
@@ -327,6 +328,7 @@ Lists all the AWS Account IDs for which an STS role is registered.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/config/sts`       | `200 application/json` |
+| `GET`   | `/auth/aws/config/sts?list=true`       | `200 application/json` |
 
 ### Sample Request
 
@@ -752,6 +754,7 @@ Lists all the roles that are registered with the backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/roles`       | `200 application/json` |
+| `GET`   | `/auth/aws/roles?list=true`       | `200 application/json` |
 
 ### Sample Request
 
@@ -1060,6 +1063,7 @@ Lists all the role tags that are blacklisted.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/roletag-blacklist`       | `200 application/json` |
+| `GET`   | `/auth/aws/roletag-blacklist?list=true`       | `200 application/json` |
 
 ### Sample Request
 
@@ -1185,6 +1189,7 @@ $ curl \
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/identity-whitelist`       | `200 application/json` |
+| `GET`   | `/auth/aws/identity-whitelist?list=true`       | `200 application/json` |
 
 ### Sample Request
 

@@ -140,6 +140,7 @@ This endpoint returns a list of the current certificates by serial number only.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/pki/certs`                 | `200 application/json` |
+| `GET`    | `/pki/certs?list=true`       | `200 application/json` |
 
 
 ### Sample Request
@@ -833,6 +834,7 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/pki/roles`                 | `200 application/json` |
+| `GET`    | `/pki/roles?list=true`       | `200 application/json` |
 
 ### Sample Request
 

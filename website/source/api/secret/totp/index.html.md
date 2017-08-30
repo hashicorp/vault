@@ -150,6 +150,7 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/totp/keys`                 | `200 application/json` |
+| `GET`    | `/totp/keys?list=true`       | `200 application/json` |
 
 ### Sample Request
 
