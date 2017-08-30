@@ -16,6 +16,7 @@ IMPROVEMENTS:
 
  * audit/file: Allow specifying `stdout` as the `file_path` to log to standard
    output [GH-3235]
+ * auth/aws: Allow wildcards in `bound_iam_principal_id` [GH-3213]
  * auth/okta: Compare groups case-insensitively since Okta is only
    case-preserving [GH-3240]
  * cli: Add subcommand autocompletion that can be enabled with 
