@@ -1,11 +1,11 @@
 package command
 
 import (
-	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"regexp"
 	"strings"
 	"sync"
@@ -287,19 +287,24 @@ func printFlagDetail(w io.Writer, f *flag.Flag) {
 	}
 
 	usage := reRemoveWhitespace.ReplaceAllString(f.Usage, " ")
-	indented := wrapAtLength(usage, 6)
+	indented := wrapAtLengthWithPadding(usage, 6)
 	fmt.Fprintf(w, "%s\n\n", indented)
 }
 
-// wrapAtLength wraps the given text at the maxLineLength, taking into account
-// any provided left padding.
-func wrapAtLength(s string, pad int) string {
+// wrapAtLengthWithPadding wraps the given text at the maxLineLength, taking
+// into account any provided left padding.
+func wrapAtLengthWithPadding(s string, pad int) string {
 	wrapped := text.Wrap(s, maxLineLength-pad)
 	lines := strings.Split(wrapped, "\n")
 	for i, line := range lines {
 		lines[i] = strings.Repeat(" ", pad) + line
 	}
 	return strings.Join(lines, "\n")
+}
+
+// wrapAtLength wraps the given text to maxLineLength.
+func wrapAtLength(s string) string {
+	return wrapAtLengthWithPadding(s, 0)
 }
 
 // FlagSets is a group of flag sets.
