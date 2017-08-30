@@ -13,12 +13,15 @@ FEATURES:
   verification through the SSH CA backend, if enabled.
 
 IMPROVEMENTS:
+
  * audit/file: Allow specifying `stdout` as the `file_path` to log to standard
    output [GH-3235]
  * auth/okta: Compare groups case-insensitively since Okta is only
    case-preserving [GH-3240]
  * cli: Add subcommand autocompletion that can be enabled with 
    `vault -autocomplete-install` [GH-3223]
+ * core: TLS cipher suites used for cluster behavior can now be set via
+   `cluster_cipher_suites` in configuration [GH-3228]
  * storage/gcp: Use application default credentials if they exist [GH-3248]
 
 BUG FIXES:
