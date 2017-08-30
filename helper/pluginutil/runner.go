@@ -142,7 +142,6 @@ type APIClientMeta struct {
 	flagClientCert string
 	flagClientKey  string
 	flagInsecure   bool
-	flagMetadata   bool
 }
 
 func (f *APIClientMeta) FlagSet() *flag.FlagSet {
@@ -153,13 +152,8 @@ func (f *APIClientMeta) FlagSet() *flag.FlagSet {
 	fs.StringVar(&f.flagClientCert, "client-cert", "", "")
 	fs.StringVar(&f.flagClientKey, "client-key", "", "")
 	fs.BoolVar(&f.flagInsecure, "tls-skip-verify", false, "")
-	fs.BoolVar(&f.flagMetadata, "metadata", false, "")
 
 	return fs
-}
-
-func (f *APIClientMeta) FetchMetadata() bool {
-	return f.flagMetadata
 }
 
 func (f *APIClientMeta) GetTLSConfig() *api.TLSConfig {
