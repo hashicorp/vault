@@ -97,7 +97,7 @@ and relies upon AWS to authenticate that signature.
 While AWS API endpoints support both signed GET and POST requests, for
 simplicity, the aws backend supports only POST requests. It also does not
 support `presigned` requests, i.e., requests with `X-Amz-Credential`,
-`X-Amz-signature`, and `X-Amz-SignedHeaders` GET query parameters containing the
+`X-Amz-Signature`, and `X-Amz-SignedHeaders` GET query parameters containing the
 authenticating information.
 
 It's also important to note that Amazon does NOT appear to include any sort
@@ -118,6 +118,17 @@ on the generated tokens. Each role can be specified with the constraints that
 are to be met during the login. For example, one such constraint that is
 supported is to bind against AMI ID. A role which is bound to a specific AMI,
 can only be used for login by EC2 instances that are deployed on the same AMI.
+
+The iam authentication method allows you to specify a bound IAM principal ARN.
+Clients authenticating to Vault must have an ARN that matches the ARN bound to
+the role they are attempting to login to. The bound ARN allows specifying a
+wildcard at the end of the bound ARN. For example, if the bound ARN were
+`arn:aws:iam::123456789012:*` it would allow any principal in AWS account
+123456789012 to login to it. Similarly, if it were
+`arn:aws:iam::123456789012:role/*` it would allow any IAM role in the AWS
+account to login to it. If you wish to specify a wildcard, you must give Vault
+`iam:GetUser` and `iam:GetRole` permissions to properly resolve the full user
+path.
 
 In general, role bindings that are specific to an EC2 instance are only checked
 when the ec2 auth method is used to login, while bindings specific to IAM
@@ -262,6 +273,60 @@ comparison of the two authentication methods.
     for each different Vault role you would want them to authenticate
     to, or make use of inferencing. If you need to make use of role tags, then
     you will need to use the ec2 auth method.
+
+## Recommended Vault IAM Policy
+
+This specifies the recommended IAM policy needed by the AWS auth backend. Note
+that if you are using the same credentials for the AWS auth and secret backends
+(e.g., if you're running Vault on an EC2 instance in an IAM instance profile),
+then you will need to add additional permissions as required by the AWS secret
+backend.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "iam:GetInstanceProfile",
+        "iam:GetUser",
+        "iam:GetRole"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["sts:AssumeRole"],
+      "Resource": [
+        "arn:aws:iam:<AccountId>:role/<VaultRole>"
+      ]
+    }
+  ]
+}
+```
+
+Here are some of the scenarios in which Vault would need to use each of these
+permissions. This isn't intended to be an exhaustive list of all the scenarios
+in which Vault might make an AWS API call, but rather illustrative of why these
+are needed.
+
+* `ec2:DescribeInstances` is necessary when you are using the `ec2` auth method
+  or when you are inferring an `ec2_instance` entity type to validate the EC2
+  instance meets binding requirements of the role
+* `iam:GetInstanceProfile` is used when you have a `bound_iam_role_arn` in the
+  ec2 auth method. Vault needs determine which IAM role is attached to the
+  instance profile.
+* `iam:GetUser` and `iam:GetRole` are used when using the iam auth method and
+  binding to an IAM user or role principal to determine the unique AWS user ID
+  or when using a wildcard on the bound ARN to resolve the full ARN of the user
+  or role.
+* The `sts:AssumeRole` stanza is necessary when you are using [Cross Account
+  Access](#cross-account-access). The `Resource`s specified should be a list of
+  all the roles for which you have configured cross-account access, and each of
+  those roles should have this IAM policy attached (except for the
+  `sts:AssumeRole` statement).
 
 ## Client Nonce
 
