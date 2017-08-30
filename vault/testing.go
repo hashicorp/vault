@@ -1005,6 +1005,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			coreConfig.Logger = base.Logger
 		}
 
+		coreConfig.ClusterCipherSuites = base.ClusterCipherSuites
+
 		coreConfig.DisableCache = base.DisableCache
 
 		coreConfig.DevToken = base.DevToken
