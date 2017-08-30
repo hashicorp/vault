@@ -56,20 +56,25 @@ type IntVar struct {
 }
 
 func (f *FlagSet) IntVar(i *IntVar) {
-	def := i.Default
+	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
 		if i, err := strconv.ParseInt(v, 0, 64); err != nil {
-			def = int(i)
+			initial = int(i)
 		}
+	}
+
+	def := ""
+	if i.Default != 0 {
+		def = strconv.FormatInt(int64(i.Default), 10)
 	}
 
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Default:    strconv.FormatInt(int64(i.Default), 10),
+		Default:    def,
 		EnvVar:     i.EnvVar,
-		Value:      newIntValue(def, i.Target),
+		Value:      newIntValue(initial, i.Target),
 		Completion: i.Completion,
 	})
 }
@@ -85,20 +90,25 @@ type Int64Var struct {
 }
 
 func (f *FlagSet) Int64Var(i *Int64Var) {
-	def := i.Default
+	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
 		if i, err := strconv.ParseInt(v, 0, 64); err != nil {
-			def = i
+			initial = i
 		}
+	}
+
+	def := ""
+	if i.Default != 0 {
+		def = strconv.FormatInt(int64(i.Default), 10)
 	}
 
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Default:    strconv.FormatInt(i.Default, 10),
+		Default:    def,
 		EnvVar:     i.EnvVar,
-		Value:      newInt64Value(def, i.Target),
+		Value:      newInt64Value(initial, i.Target),
 		Completion: i.Completion,
 	})
 }
@@ -114,20 +124,25 @@ type UintVar struct {
 }
 
 func (f *FlagSet) UintVar(i *UintVar) {
-	def := i.Default
+	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
 		if i, err := strconv.ParseUint(v, 0, 64); err != nil {
-			def = uint(i)
+			initial = uint(i)
 		}
+	}
+
+	def := ""
+	if i.Default != 0 {
+		def = strconv.FormatUint(uint64(i.Default), 10)
 	}
 
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Default:    strconv.FormatUint(uint64(i.Default), 10),
+		Default:    def,
 		EnvVar:     i.EnvVar,
-		Value:      newUintValue(def, i.Target),
+		Value:      newUintValue(initial, i.Target),
 		Completion: i.Completion,
 	})
 }
@@ -143,20 +158,25 @@ type Uint64Var struct {
 }
 
 func (f *FlagSet) Uint64Var(i *Uint64Var) {
-	def := i.Default
+	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
 		if i, err := strconv.ParseUint(v, 0, 64); err != nil {
-			def = i
+			initial = i
 		}
+	}
+
+	def := ""
+	if i.Default != 0 {
+		strconv.FormatUint(i.Default, 10)
 	}
 
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Default:    strconv.FormatUint(i.Default, 10),
+		Default:    def,
 		EnvVar:     i.EnvVar,
-		Value:      newUint64Value(def, i.Target),
+		Value:      newUint64Value(initial, i.Target),
 		Completion: i.Completion,
 	})
 }
@@ -172,18 +192,23 @@ type StringVar struct {
 }
 
 func (f *FlagSet) StringVar(i *StringVar) {
-	def := i.Default
+	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
-		def = v
+		initial = v
+	}
+
+	def := ""
+	if i.Default != "" {
+		def = i.Default
 	}
 
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Default:    i.Default,
+		Default:    def,
 		EnvVar:     i.EnvVar,
-		Value:      newStringValue(def, i.Target),
+		Value:      newStringValue(initial, i.Target),
 		Completion: i.Completion,
 	})
 }
@@ -199,20 +224,25 @@ type Float64Var struct {
 }
 
 func (f *FlagSet) Float64Var(i *Float64Var) {
-	def := i.Default
+	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
 		if i, err := strconv.ParseFloat(v, 64); err != nil {
-			def = i
+			initial = i
 		}
+	}
+
+	def := ""
+	if i.Default != 0 {
+		def = strconv.FormatFloat(i.Default, 'e', -1, 64)
 	}
 
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Default:    strconv.FormatFloat(i.Default, 'e', -1, 64),
+		Default:    def,
 		EnvVar:     i.EnvVar,
-		Value:      newFloat64Value(def, i.Target),
+		Value:      newFloat64Value(initial, i.Target),
 		Completion: i.Completion,
 	})
 }
@@ -228,20 +258,25 @@ type DurationVar struct {
 }
 
 func (f *FlagSet) DurationVar(i *DurationVar) {
-	def := i.Default
+	initial := i.Default
 	if v := os.Getenv(i.EnvVar); v != "" {
 		if d, err := time.ParseDuration(v); err != nil {
-			def = d
+			initial = d
 		}
+	}
+
+	def := ""
+	if i.Default != 0 {
+		def = i.Default.String()
 	}
 
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Default:    i.Default.String(),
+		Default:    def,
 		EnvVar:     i.EnvVar,
-		Value:      newDurationValue(def, i.Target),
+		Value:      newDurationValue(initial, i.Target),
 		Completion: i.Completion,
 	})
 }
