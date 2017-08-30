@@ -48,7 +48,7 @@ type PluginRunner struct {
 // Run takes a wrapper RunnerUtil instance along with the go-plugin paramaters and
 // returns a configured plugin.Client with TLS Configured and a wrapping token set
 // on PluginUnwrapTokenEnv for plugin process consumption.
-func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger, isMetadataMode bool) (*plugin.Client, error) {
 	// Get a CA TLS Certificate
 	certBytes, key, err := generateCert()
 	if err != nil {
@@ -88,47 +88,18 @@ func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugi
 	}
 	namedLogger := clogger.ResetNamed("plugin")
 
+	// Handle case where plugin is being ran in metadata-mode
+	if isMetadataMode {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "true"))
+		namedLogger = clogger.ResetNamed("plugin.metadata")
+		clientTLSConfig = nil
+	}
+
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: hs,
 		Plugins:         pluginMap,
 		Cmd:             cmd,
 		TLSConfig:       clientTLSConfig,
-		SecureConfig:    secureConfig,
-		Logger:          namedLogger,
-	})
-
-	return client, nil
-}
-
-// RunMeta returns a configured plugin.Client that will dispense a plugin with
-// the -metadata flag enabled. The flag is passed to logical/plugin.Serve and
-// determines whether it should be ran with TLS enabled. These types of plugins
-// should not be long-running.
-func (r *PluginRunner) RunMeta(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
-	args := append(r.Args, "-metadata")
-	cmd := exec.Command(r.Command, args...)
-	cmd.Env = append(cmd.Env, env...)
-
-	// Add the mlock setting to the ENV of the plugin
-	if wrapper.MlockEnabled() {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
-	}
-
-	secureConfig := &plugin.SecureConfig{
-		Checksum: r.Sha256,
-		Hash:     sha256.New(),
-	}
-
-	// Create logger for the plugin client
-	clogger := &hclogFaker{
-		logger: logger,
-	}
-	namedLogger := clogger.ResetNamed("plugin.metadata")
-
-	client := plugin.NewClient(&plugin.ClientConfig{
-		HandshakeConfig: hs,
-		Plugins:         pluginMap,
-		Cmd:             cmd,
 		SecureConfig:    secureConfig,
 		Logger:          namedLogger,
 	})

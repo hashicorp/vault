@@ -36,7 +36,7 @@ func Backend(conf *logical.BackendConfig) (logical.Backend, error) {
 	name := conf.Config["plugin_name"]
 	sys := conf.System
 
-	// NewBackend with isMeta set to true
+	// NewBackend with isMetadataMode set to true
 	raw, err := bplugin.NewBackend(name, sys, conf.Logger, true)
 	if err != nil {
 		return nil, err

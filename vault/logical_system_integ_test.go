@@ -269,6 +269,7 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 }
 
 func TestBackend_PluginMainLogical(t *testing.T) {
+	args := []string{}
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
 	}
@@ -277,16 +278,16 @@ func TestBackend_PluginMainLogical(t *testing.T) {
 	if caPEM == "" {
 		t.Fatal("CA cert not passed in")
 	}
-
-	factoryFunc := mock.FactoryType(logical.TypeLogical)
-
-	args := []string{"--ca-cert=" + caPEM}
+	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+
+	factoryFunc := mock.FactoryType(logical.TypeLogical)
+
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
 		TLSProviderFunc:    tlsProviderFunc,
@@ -297,6 +298,7 @@ func TestBackend_PluginMainLogical(t *testing.T) {
 }
 
 func TestBackend_PluginMainCredentials(t *testing.T) {
+	args := []string{}
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
 	}
@@ -305,16 +307,16 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 	if caPEM == "" {
 		t.Fatal("CA cert not passed in")
 	}
-
-	factoryFunc := mock.FactoryType(logical.TypeCredential)
-
-	args := []string{"--ca-cert=" + caPEM}
+	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+
+	factoryFunc := mock.FactoryType(logical.TypeCredential)
+
 	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
 		TLSProviderFunc:    tlsProviderFunc,

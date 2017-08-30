@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -39,6 +40,7 @@ func TestBackend_Factory(t *testing.T) {
 }
 
 func TestBackend_PluginMain(t *testing.T) {
+	args := []string{}
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
 	}
@@ -48,7 +50,7 @@ func TestBackend_PluginMain(t *testing.T) {
 		t.Fatal("CA cert not passed in")
 	}
 
-	args := []string{"--ca-cert=" + caPEM}
+	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
