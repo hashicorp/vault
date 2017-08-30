@@ -313,17 +313,10 @@ type FlagSets struct {
 // NewFlagSets creates a new flag sets.
 func NewFlagSets(ui cli.Ui) *FlagSets {
 	mainSet := flag.NewFlagSet("", flag.ContinueOnError)
-	mainSet.Usage = func() {}
 
-	// Pull errors from the flagset into the ui's error
-	errR, errW := io.Pipe()
-	errScanner := bufio.NewScanner(errR)
-	go func() {
-		for errScanner.Scan() {
-			ui.Error(errScanner.Text())
-		}
-	}()
-	mainSet.SetOutput(errW)
+	// Errors and usage are controlled by the CLI.
+	mainSet.Usage = func() {}
+	mainSet.SetOutput(ioutil.Discard)
 
 	return &FlagSets{
 		flagSets:    make([]*FlagSet, 0, 6),
