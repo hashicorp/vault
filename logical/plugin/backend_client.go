@@ -11,8 +11,9 @@ import (
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendPluginClient struct {
-	broker *plugin.MuxBroker
-	client *rpc.Client
+	broker       *plugin.MuxBroker
+	client       *rpc.Client
+	metadataMode bool
 
 	system logical.SystemView
 	logger log.Logger
@@ -182,21 +183,33 @@ func (b *backendPluginClient) InvalidateKey(key string) {
 
 func (b *backendPluginClient) Setup(config *logical.BackendConfig) error {
 	// Shim logical.Storage
+	storageImpl := config.StorageView
+	if b.metadataMode {
+		storageImpl = &NOOPStorage{}
+	}
 	storageID := b.broker.NextId()
 	go b.broker.AcceptAndServe(storageID, &StorageServer{
-		impl: config.StorageView,
+		impl: storageImpl,
 	})
 
 	// Shim log.Logger
+	loggerImpl := config.Logger
+	if b.metadataMode {
+		loggerImpl = log.NullLog
+	}
 	loggerID := b.broker.NextId()
 	go b.broker.AcceptAndServe(loggerID, &LoggerServer{
-		logger: config.Logger,
+		logger: loggerImpl,
 	})
 
 	// Shim logical.SystemView
+	sysViewImpl := config.System
+	if b.metadataMode {
+		sysViewImpl = &logical.StaticSystemView{}
+	}
 	sysViewID := b.broker.NextId()
 	go b.broker.AcceptAndServe(sysViewID, &SystemViewServer{
-		impl: config.System,
+		impl: sysViewImpl,
 	})
 
 	args := &SetupArgs{

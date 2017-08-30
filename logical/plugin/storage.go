@@ -117,3 +117,23 @@ type StoragePutReply struct {
 type StorageDeleteReply struct {
 	Error *plugin.BasicError
 }
+
+// NOOPStorage is used to deny access to the storage interface while running a
+// backend plugin in metadata mode.
+type NOOPStorage struct{}
+
+func (s *NOOPStorage) List(prefix string) ([]string, error) {
+	return []string{}, nil
+}
+
+func (s *NOOPStorage) Get(key string) (*logical.StorageEntry, error) {
+	return nil, nil
+}
+
+func (s *NOOPStorage) Put(entry *logical.StorageEntry) error {
+	return nil
+}
+
+func (s *NOOPStorage) Delete(key string) error {
+	return nil
+}

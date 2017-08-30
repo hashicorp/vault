@@ -36,7 +36,7 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 		"database": new(DatabasePlugin),
 	}
 
-	client, err := pluginRunner.Run(sys, pluginMap, handshakeConfig, []string{}, logger, false)
+	client, err := pluginRunner.Run(sys, pluginMap, handshakeConfig, []string{}, logger)
 	if err != nil {
 		return nil, err
 	}

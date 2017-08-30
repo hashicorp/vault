@@ -48,7 +48,7 @@ type PluginRunner struct {
 // Run takes a wrapper RunnerUtil instance along with the go-plugin paramaters and
 // returns a configured plugin.Client with TLS Configured and a wrapping token set
 // on PluginUnwrapTokenEnv for plugin process consumption.
-func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger, isMetadataMode bool) (*plugin.Client, error) {
+func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
 	// Get a CA TLS Certificate
 	certBytes, key, err := generateCert()
 	if err != nil {
@@ -72,6 +72,8 @@ func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugi
 	cmd.Env = append(cmd.Env, env...)
 	// Add the response wrap token to the ENV of the plugin
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
+	// Add the metadata mode ENV and set it to false
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "false"))
 	// Add the mlock setting to the ENV of the plugin
 	if wrapper.MlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
@@ -88,13 +90,6 @@ func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugi
 	}
 	namedLogger := clogger.ResetNamed("plugin")
 
-	// Handle case where plugin is being ran in metadata-mode
-	if isMetadataMode {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "true"))
-		namedLogger = clogger.ResetNamed("plugin.metadata")
-		clientTLSConfig = nil
-	}
-
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: hs,
 		Plugins:         pluginMap,
@@ -105,6 +100,39 @@ func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugi
 	})
 
 	return client, nil
+}
+
+func (r *PluginRunner) RunMetadataMode(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	cmd := exec.Command(r.Command, r.Args...)
+	cmd.Env = append(cmd.Env, env...)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "true"))
+
+	// Add the mlock setting to the ENV of the plugin
+	if wrapper.MlockEnabled() {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
+	}
+
+	secureConfig := &plugin.SecureConfig{
+		Checksum: r.Sha256,
+		Hash:     sha256.New(),
+	}
+
+	// Create logger for the plugin client
+	clogger := &hclogFaker{
+		logger: logger,
+	}
+	namedLogger := clogger.ResetNamed("plugin.metadata")
+
+	client := plugin.NewClient(&plugin.ClientConfig{
+		HandshakeConfig: hs,
+		Plugins:         pluginMap,
+		Cmd:             cmd,
+		SecureConfig:    secureConfig,
+		Logger:          namedLogger,
+	})
+
+	return client, nil
+
 }
 
 type APIClientMeta struct {
