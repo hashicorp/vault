@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/reload"
+	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -285,6 +286,8 @@ type Core struct {
 	//
 	// Name
 	clusterName string
+	// Specific cipher suites to use for clustering, if any
+	clusterCipherSuites []uint16
 	// Used to modify cluster parameters
 	clusterParamsLock sync.RWMutex
 	// The private key stored in the barrier used for establishing
@@ -395,6 +398,8 @@ type CoreConfig struct {
 
 	ClusterName string `json:"cluster_name" structs:"cluster_name" mapstructure:"cluster_name"`
 
+	ClusterCipherSuites string `json:"cluster_cipher_suites" structs:"cluster_cipher_suites" mapstructure:"cluster_cipher_suites"`
+
 	EnableUI bool `json:"ui" structs:"ui" mapstructure:"ui"`
 
 	PluginDirectory string `json:"plugin_directory" structs:"plugin_directory" mapstructure:"plugin_directory"`
@@ -457,6 +462,14 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
 		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
+	}
+
+	if conf.ClusterCipherSuites != "" {
+		suites, err := tlsutil.ParseCiphers(conf.ClusterCipherSuites)
+		if err != nil {
+			return nil, errwrap.Wrapf("error parsing cluster cipher suites: {{err}}", err)
+		}
+		c.clusterCipherSuites = suites
 	}
 
 	c.corsConfig = &CORSConfig{core: c}
@@ -1372,12 +1385,6 @@ func (c *Core) postUnseal() (retErr error) {
 		return err
 	}
 	if err := c.setupExpiration(); err != nil {
-		return err
-	}
-	if err := c.setupSecretPlugins(); err != nil {
-		return err
-	}
-	if err := c.setupCredentialPlugins(); err != nil {
 		return err
 	}
 	if err := c.loadAudits(); err != nil {

@@ -668,80 +668,12 @@ func (c *Core) setupMounts() error {
 	var err error
 
 	for _, entry := range c.mounts.Entries {
-		// Skip plugin mounts
-		if entry.Type == "plugin" {
-			continue
-		}
-
 		// Initialize the backend, special casing for system
 		barrierPath := backendBarrierPrefix + entry.UUID + "/"
 		if entry.Type == "system" {
 			barrierPath = systemBarrierPrefix
 		}
 
-		// Create a barrier view using the UUID
-		view = NewBarrierView(c.barrier, barrierPath)
-		sysView := c.mountEntrySysView(entry)
-		// Create the new backend
-		backend, err = c.newLogicalBackend(entry.Type, sysView, view, nil)
-		if err != nil {
-			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
-			return errLoadMountsFailed
-		}
-		if backend == nil {
-			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
-		}
-
-		if err := backend.Initialize(); err != nil {
-			return err
-		}
-
-		switch entry.Type {
-		case "system":
-			c.systemBarrierView = view
-		case "cubbyhole":
-			ch := backend.(*CubbyholeBackend)
-			ch.saltUUID = entry.UUID
-			ch.storageView = view
-		}
-
-		// Mount the backend
-		err = c.router.Mount(backend, entry.Path, entry, view)
-		if err != nil {
-			c.logger.Error("core: failed to mount entry", "path", entry.Path, "error", err)
-			return errLoadMountsFailed
-		}
-		if c.logger.IsInfo() {
-			c.logger.Info("core: successfully mounted backend", "type", entry.Type, "path", entry.Path)
-		}
-
-		// Ensure the path is tainted if set in the mount table
-		if entry.Tainted {
-			c.router.Taint(entry.Path)
-		}
-	}
-	return nil
-}
-
-// setupPlugins will mount secret plugin backends.
-// setupMounts should *NOT* handle plugin backends
-func (c *Core) setupSecretPlugins() error {
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
-
-	var backend logical.Backend
-	var view *BarrierView
-	var err error
-
-	// Secret backends
-	for _, entry := range c.mounts.Entries {
-		// Skip unless mounts are plugins
-		if entry.Type != "plugin" {
-			continue
-		}
-
-		// Initialize the backend, special casing for system
-		barrierPath := backendBarrierPrefix + entry.UUID + "/"
 		// Create a barrier view using the UUID
 		view = NewBarrierView(c.barrier, barrierPath)
 		sysView := c.mountEntrySysView(entry)
@@ -762,12 +694,21 @@ func (c *Core) setupSecretPlugins() error {
 
 		// Check for the correct backend type
 		backendType := backend.Type()
-		if backendType != logical.TypeLogical {
+		if entry.Type == "plugin" && backendType != logical.TypeLogical {
 			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 		}
 
 		if err := backend.Initialize(); err != nil {
 			return err
+		}
+
+		switch entry.Type {
+		case "system":
+			c.systemBarrierView = view
+		case "cubbyhole":
+			ch := backend.(*CubbyholeBackend)
+			ch.saltUUID = entry.UUID
+			ch.storageView = view
 		}
 
 		// Mount the backend
