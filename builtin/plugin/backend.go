@@ -101,6 +101,11 @@ func (b *backend) startBackend() error {
 	b.Backend = nb
 	b.loaded = true
 
+	// Call initialize
+	if err := b.Backend.Initialize(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
