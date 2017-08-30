@@ -19,6 +19,7 @@ IMPROVEMENTS:
    case-preserving [GH-3240]
  * cli: Add subcommand autocompletion that can be enabled with 
    `vault -autocomplete-install` [GH-3223]
+ * storage/gcp: Use application default credentials if they exist [GH-3248]
 
 BUG FIXES:
 
