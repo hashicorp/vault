@@ -939,6 +939,7 @@ func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
 	if restoreMode {
 		m.restoreLock.Lock()
 		defer m.restoreLock.Unlock()
+		restoreMode = m.inRestoreMode()
 	}
 	return m.loadEntryInternal(leaseID, restoreMode)
 }
