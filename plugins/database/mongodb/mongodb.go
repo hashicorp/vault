@@ -127,9 +127,9 @@ func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernameConfig dbpl
 	}
 
 	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
-	switch err {
-	case nil:
-	case io.EOF || strings.Contains(err.Error(), "EOF"):
+	switch {
+	case err == nil:
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
 		if err := m.ConnectionProducer.Close(); err != nil {
 			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
@@ -182,10 +182,9 @@ func (m *MongoDB) RevokeUser(statements dbplugin.Statements, username string) er
 	}
 
 	err = session.DB(db).RemoveUser(username)
-	switch err {
-	case nil:
-	case mgo.ErrNotFound:
-	case io.EOF || strings.Contains(err.Error(), "EOF"):
+	switch {
+	case err == nil, err == mgo.ErrNotFound:
+	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
 		if err := m.ConnectionProducer.Close(); err != nil {
 			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
