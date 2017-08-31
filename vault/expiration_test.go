@@ -210,7 +210,7 @@ func TestExpiration_Tidy(t *testing.T) {
 
 	if !(err1 != nil && err1.Error() == "tidy operation on leases is already in progress") &&
 		!(err2 != nil && err2.Error() == "tidy operation on leases is already in progress") {
-		t.Fatal("expected at least one of err1 or err2 to be set; err1: %#v\n err2:%#v\n", err1, err2)
+		t.Fatalf("expected at least one of err1 or err2 to be set; err1: %#v\n err2:%#v\n", err1, err2)
 	}
 
 	root, err := exp.tokenStore.rootToken()
@@ -309,8 +309,9 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 		}
 
 		req := &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      "prod/aws/" + pathUUID,
+			Operation:   logical.ReadOperation,
+			Path:        "prod/aws/" + pathUUID,
+			ClientToken: "root",
 		}
 		resp := &logical.Response{
 			Secret: &logical.Secret{
@@ -337,7 +338,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err = exp.Restore()
+		err = exp.Restore(func() error { return nil }, 0)
 		// Restore
 		if err != nil {
 			b.Fatalf("err: %v", err)
@@ -395,7 +396,7 @@ func TestExpiration_Restore(t *testing.T) {
 	}
 
 	// Restore
-	err = exp.Restore()
+	err = exp.Restore(func() error { return nil }, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
