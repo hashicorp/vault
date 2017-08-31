@@ -26,6 +26,8 @@ IMPROVEMENTS:
  * core: The `plugin_name` can now either be specified directly as part of the
    parameter or within the `config` object when mounting a secret or auth backend
    via `sys/mounts/:path` or `sys/auth/:path` respectively [GH-3202]
+ * secret/databases/mongo: If an EOF is encountered, attempt reconnecting and
+   retrying the operation [GH-3269]
  * secret/pki: TTLs can now be specified as a string or an integer number of
    seconds [GH-3270]
  * storage/gcp: Use application default credentials if they exist [GH-3248]
