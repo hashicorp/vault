@@ -764,7 +764,10 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	}
 
 	// Setup revocation timer if there is a lease
-	m.updatePending(&le, resp.Secret.LeaseTotal())
+	leaseTotal := resp.Secret.LeaseTotal()
+	if leaseTotal > 0 {
+		m.updatePending(&le, leaseTotal)
+	}
 
 	// Done
 	return le.LeaseID, nil
@@ -805,7 +808,10 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	}
 
 	// Setup revocation timer
-	m.updatePending(&le, auth.LeaseTotal())
+	leaseTotal := auth.LeaseTotal()
+	if leaseTotal > 0 {
+		m.updatePending(&le, leaseTotal)
+	}
 	return nil
 }
 
