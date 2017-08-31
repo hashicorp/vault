@@ -276,8 +276,11 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 		}
 	}()
 
+	// Put expiration manager in restore mode.  We don't defer the switch back
+	// out of restore mode because any error will result in vault getting sealed
+	// which will tear down the expiration manager.  Only after a successful
+	// restore will the mode get switched back.
 	atomic.StoreInt64(&m.restoreMode, 1)
-	defer atomic.StoreInt64(&m.restoreMode, 0)
 
 	// Accumulate existing leases
 	m.logger.Debug("expiration: collecting leases")
@@ -355,11 +358,8 @@ func (m *ExpirationManager) restoreLease(le *leaseEntry) {
 		return
 	}
 
-	// Determine the remaining time to expiration
-	expires := le.ExpireTime.Sub(time.Now())
-
 	// Setup revocation timer
-	m.updatePending(le, expires)
+	m.updatePending(le, le.ExpireTime.Sub(time.Now()))
 }
 
 // Stop is used to prevent further automatic revocations.
@@ -869,7 +869,7 @@ func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Durati
 	timer, ok := m.pending[le.LeaseID]
 
 	// Create entry if it does not exist
-	if !ok && leaseTotal > 0 {
+	if !ok {
 		timer := time.AfterFunc(leaseTotal, func() {
 			m.expireID(le.LeaseID)
 		})
@@ -877,17 +877,8 @@ func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Durati
 		return
 	}
 
-	// Delete the timer if the expiration time is zero
-	if ok && leaseTotal == 0 {
-		timer.Stop()
-		delete(m.pending, le.LeaseID)
-		return
-	}
-
 	// Extend the timer by the lease total
-	if ok && leaseTotal > 0 {
-		timer.Reset(leaseTotal)
-	}
+	timer.Reset(leaseTotal)
 }
 
 // expireID is invoked when a given ID is expired
@@ -975,7 +966,7 @@ func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
 		return nil, fmt.Errorf("failed to read lease entry: %v", err)
 	}
 
-	if atomic.LoadInt64(&m.restoreMode) == 1 {
+	if m.inRestoreMode() {
 		m.restoreLease(le)
 	}
 	return le, err
