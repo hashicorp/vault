@@ -21,6 +21,9 @@ IMPROVEMENTS:
    case-preserving [GH-3240]
  * cli: Add subcommand autocompletion that can be enabled with 
    `vault -autocomplete-install` [GH-3223]
+ * cli: Add ability to handle wrapped responses when using `vault auth`. What
+   is output depends on the other given flags; see the help output for that
+   command for more information. [GH-3263]
  * core: TLS cipher suites used for cluster behavior can now be set via
    `cluster_cipher_suites` in configuration [GH-3228]
  * core: The `plugin_name` can now either be specified directly as part of the
