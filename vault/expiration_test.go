@@ -37,6 +37,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	var err error
 
 	exp := mockExpiration(t)
+	exp.restoreMode = 0
 
 	// Set up a count function to calculate number of leases
 	count := 0
