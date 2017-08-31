@@ -180,7 +180,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 			return nil, errwrap.Wrapf("error during token unwrap request: {{err}}", err)
 		}
 		if secret == nil {
-			return nil, fmt.Errorf("error during token unwrap request: secret is nil, %s", unwrapToken)
+			return nil, errors.New("error during token unwrap request: secret is nil")
 		}
 
 		// Retrieve and parse the server's certificate
