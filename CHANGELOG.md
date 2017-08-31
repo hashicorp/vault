@@ -24,6 +24,9 @@ IMPROVEMENTS:
  * core: TLS cipher suites used for cluster behavior can now be set via
    `cluster_cipher_suites` in configuration [GH-3228]
  * storage/gcp: Use application default credentials if they exist [GH-3248]
+ * core: The `plugin_name` can now either be specified directly as part of the
+   parameter or within the `config` object when mounting a secret or auth backend
+   via `sys/mounts/:path` or `sys/auth/:path` respectively [GH-3202]
 
 BUG FIXES:
 
@@ -34,6 +37,8 @@ BUG FIXES:
  * core: Fix PROXY when underlying connection is TLS [GH-3195]
  * core: Policy-related commands would sometimes fail to act case-insensitively
    [GH-3210]
+ * storage/consul: Fix parsing TLS configuration when using a bare IPv6 address
+   [GH-3268]
 
 ## 0.8.1 (August 16th, 2017)
 
