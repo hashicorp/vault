@@ -24,6 +24,9 @@ IMPROVEMENTS:
  * core: TLS cipher suites used for cluster behavior can now be set via
    `cluster_cipher_suites` in configuration [GH-3228]
  * storage/gcp: Use application default credentials if they exist [GH-3248]
+ * core: The `plugin_name` can now either be specified directly as part of the
+   parameter or within the `config` object when mounting a secret or auth backend
+   via `sys/mounts/:path` or `sys/auth/:path` respectively [GH-3202]
 
 BUG FIXES:
 
