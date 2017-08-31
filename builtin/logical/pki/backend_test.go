@@ -402,7 +402,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 	}
 
 	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 10 {
-		return nil, fmt.Errorf("Validity period of %d too large vs max of 10", cert.NotAfter.Unix())
+		return nil, fmt.Errorf("Certificate validity end: %s; expected within 10 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
 	}
 
 	return parsedCertBundle, nil
@@ -1845,6 +1845,8 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		addTests(nil)
 
 		roleTestStep.ErrorOk = false
+		roleVals.TTL = ""
+		roleVals.MaxTTL = "12h"
 	}
 
 	// Listing test
@@ -2126,11 +2128,30 @@ func TestBackend_SignVerbatim(t *testing.T) {
 			"ttl": "12h",
 		},
 	})
-	if resp != nil && !resp.IsError() {
-		t.Fatalf("sign-verbatim signed too-large-ttl'd CSR: %#v", *resp)
-	}
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf(resp.Error().Error())
+	}
+	if resp.Data == nil || resp.Data["certificate"] == nil {
+		t.Fatal("did not get expected data")
+	}
+	certString := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(certString))
+	if block == nil {
+		t.Fatal("nil pem block")
+	}
+	certs, err := x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(certs) != 1 {
+		t.Fatalf("expected a single cert, got %d", len(certs))
+	}
+	cert := certs[0]
+	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
+		t.Fatalf("sign-verbatim did not properly cap validiaty period on signed CSR")
 	}
 
 	// now check that if we set generate-lease it takes it from the role and the TTLs match
@@ -2326,6 +2347,7 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 
 	// Direct issuing from root
 	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+		"ttl":                   "40h",
 		"common_name":           "myvault.com",
 		"permitted_dns_domains": []string{"foobar.com", ".zipzap.com"},
 	})

@@ -1,6 +1,8 @@
 package pki
 
 import (
+	"time"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -27,7 +29,7 @@ func (b *backend) getGenerationParams(
 	}
 
 	role = &roleEntry{
-		TTL:              data.Get("ttl").(string),
+		TTL:              (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		KeyType:          data.Get("key_type").(string),
 		KeyBits:          data.Get("key_bits").(int),
 		AllowLocalhost:   true,
