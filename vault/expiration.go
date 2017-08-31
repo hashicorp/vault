@@ -76,12 +76,16 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 
 	}
 	exp := &ExpirationManager{
-		router:        router,
-		idView:        view.SubView(leaseViewPrefix),
-		tokenView:     view.SubView(tokenViewPrefix),
-		tokenStore:    ts,
-		logger:        logger,
-		pending:       make(map[string]*time.Timer),
+		router:     router,
+		idView:     view.SubView(leaseViewPrefix),
+		tokenView:  view.SubView(tokenViewPrefix),
+		tokenStore: ts,
+		logger:     logger,
+		pending:    make(map[string]*time.Timer),
+
+		// new instances of the expiration manager will go immediately into
+		// restore mode
+		restoreMode:   1,
 		restoreLoaded: make(map[string]struct{}),
 	}
 	return exp
@@ -277,7 +281,6 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 
 	// Restore each key by pulling from the result chan
 	for i, leaseID := range existing {
-
 		if i > 0 && i%500 == 0 {
 			m.logger.Trace("expiration: leases loading", "progress", i)
 		}
@@ -313,7 +316,7 @@ func (m *ExpirationManager) loadAndRestoreLease(leaseID string) error {
 		return nil
 	}
 
-	_, err := m.loadEntry(leaseID)
+	_, err := m.loadEntryInternal(leaseID, true)
 	if err != nil {
 		return err
 	}
@@ -354,11 +357,6 @@ func (m *ExpirationManager) Stop() error {
 // Revoke is used to revoke a secret named by the given LeaseID
 func (m *ExpirationManager) Revoke(leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke"}, time.Now())
-
-	if m.inRestoreMode() {
-		m.restoreLock.Lock()
-		defer m.restoreLock.Unlock()
-	}
 
 	return m.revokeCommon(leaseID, false, false)
 }
@@ -418,11 +416,6 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 func (m *ExpirationManager) RevokeForce(prefix string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-force"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreLock.Lock()
-		defer m.restoreLock.Unlock()
-	}
-
 	return m.revokePrefixCommon(prefix, true)
 }
 
@@ -431,11 +424,6 @@ func (m *ExpirationManager) RevokeForce(prefix string) error {
 // to reason about.
 func (m *ExpirationManager) RevokePrefix(prefix string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-prefix"}, time.Now())
-
-	if m.inRestoreMode() {
-		m.restoreLock.Lock()
-		defer m.restoreLock.Unlock()
-	}
 
 	return m.revokePrefixCommon(prefix, false)
 }
@@ -446,11 +434,6 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 // token store's revokeSalted function.
 func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
-
-	if m.inRestoreMode() {
-		m.restoreLock.Lock()
-		defer m.restoreLock.Unlock()
-	}
 
 	// Lookup the leases
 	existing, err := m.lookupByToken(te.ID)
@@ -515,11 +498,6 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreLock.Lock()
-		defer m.restoreLock.Unlock()
-	}
-
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
@@ -577,6 +555,8 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 // restore mode.  If we are not in restore mode, the lease has already been
 // restored or the lease still has time left, it returns true.
 func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool, error) {
+	defer metrics.MeasureSince([]string{"expire", "restore-token-check"}, time.Now())
+
 	// Return immediately if we are not in retore mode, expiration manager is
 	// already loaded
 	if !m.inRestoreMode() {
@@ -586,7 +566,10 @@ func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool
 	m.restoreLock.Lock()
 	defer m.restoreLock.Unlock()
 
-	defer metrics.MeasureSince([]string{"expire", "restore-token-check"}, time.Now())
+	// Check again after we obtain the lock
+	if !m.inRestoreMode() {
+		return true, nil
+	}
 
 	// Compute the Lease ID
 	saltedID, err := m.tokenStore.SaltID(token)
@@ -595,7 +578,7 @@ func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool
 	}
 	leaseID := path.Join(source, saltedID)
 
-	le, err := m.loadEntry(leaseID)
+	le, err := m.loadEntryInternal(leaseID, true)
 	if err != nil {
 		return false, err
 	}
@@ -614,11 +597,6 @@ func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool
 func (m *ExpirationManager) RenewToken(req *logical.Request, source string, token string,
 	increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
-
-	if m.inRestoreMode() {
-		m.restoreLock.Lock()
-		defer m.restoreLock.Unlock()
-	}
 
 	// Compute the Lease ID
 	saltedID, err := m.tokenStore.SaltID(token)
@@ -817,11 +795,6 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(source, token string) (*lease
 func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error) {
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreLock.Lock()
-		defer m.restoreLock.Unlock()
-	}
-
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
@@ -962,6 +935,17 @@ func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry,
 
 // loadEntry is used to read a lease entry
 func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
+	restoreMode := m.inRestoreMode()
+	if restoreMode {
+		m.restoreLock.Lock()
+		defer m.restoreLock.Unlock()
+	}
+	return m.loadEntryInternal(leaseID, restoreMode)
+}
+
+// loadEntryInternal is used when you need to load an entry but also need to
+// control the lifecycle of the restoreLock
+func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool) (*leaseEntry, error) {
 	out, err := m.idView.Get(leaseID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lease entry: %v", err)
@@ -974,7 +958,7 @@ func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
 		return nil, fmt.Errorf("failed to decode lease entry: %v", err)
 	}
 
-	if m.inRestoreMode() {
+	if restoreMode {
 		m.restoreLease(le)
 	}
 	return le, err
