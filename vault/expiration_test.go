@@ -338,7 +338,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err = exp.Restore(func() error { return nil }, 0)
+		err = exp.Restore(nil, 0)
 		// Restore
 		if err != nil {
 			b.Fatalf("err: %v", err)
@@ -396,7 +396,7 @@ func TestExpiration_Restore(t *testing.T) {
 	}
 
 	// Restore
-	err = exp.Restore(func() error { return nil }, 0)
+	err = exp.Restore(nil, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
