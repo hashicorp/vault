@@ -34,6 +34,8 @@ BUG FIXES:
  * core: Fix PROXY when underlying connection is TLS [GH-3195]
  * core: Policy-related commands would sometimes fail to act case-insensitively
    [GH-3210]
+ * storage/consul: Fix parsing TLS configuration when using a bare IPv6 address
+   [GH-3268]
 
 ## 0.8.1 (August 16th, 2017)
 
