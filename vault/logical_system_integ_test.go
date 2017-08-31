@@ -16,11 +16,7 @@ import (
 )
 
 func TestSystemBackend_Plugin_secret(t *testing.T) {
-<<<<<<< HEAD
 	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
-=======
-	cluster := testSystemBackendMock(t, 2, logical.TypeLogical)
->>>>>>> master-oss
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
@@ -62,7 +58,6 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_auth(t *testing.T) {
-<<<<<<< HEAD
 	cluster := testSystemBackendMock(t, 1, 1, logical.TypeCredential)
 	defer cluster.Cleanup()
 
@@ -146,9 +141,6 @@ func TestSystemBackend_Plugin_CatalogRemoved(t *testing.T) {
 
 func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMount bool) {
 	cluster := testSystemBackendMock(t, 1, 1, btype)
-=======
-	cluster := testSystemBackendMock(t, 2, logical.TypeCredential)
->>>>>>> master-oss
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
