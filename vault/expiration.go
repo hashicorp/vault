@@ -353,11 +353,6 @@ func (m *ExpirationManager) restoreLease(le *leaseEntry) {
 	// the lazy loaded restore process
 	m.restoreLoaded[le.LeaseID] = struct{}{}
 
-	// If there is no expiry time, don't do anything
-	if le.ExpireTime.IsZero() {
-		return
-	}
-
 	// Setup revocation timer
 	m.updatePending(le, le.ExpireTime.Sub(time.Now()))
 }
@@ -599,8 +594,6 @@ func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool
 	}
 
 	defer metrics.MeasureSince([]string{"expire", "restore-token-check"}, time.Now())
-	m.restoreMutex.Lock()
-	defer m.restoreMutex.Unlock()
 
 	// Compute the Lease ID
 	saltedID, err := m.tokenStore.SaltID(token)
@@ -613,7 +606,7 @@ func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool
 	if err != nil {
 		return false, err
 	}
-	if le != nil {
+	if le != nil && !le.ExpireTime.IsZero() {
 		expires := le.ExpireTime.Sub(time.Now())
 		if expires <= 0 {
 			return false, nil
@@ -764,10 +757,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	}
 
 	// Setup revocation timer if there is a lease
-	leaseTotal := resp.Secret.LeaseTotal()
-	if leaseTotal > 0 {
-		m.updatePending(&le, leaseTotal)
-	}
+	m.updatePending(&le, resp.Secret.LeaseTotal())
 
 	// Done
 	return le.LeaseID, nil
@@ -808,10 +798,7 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	}
 
 	// Setup revocation timer
-	leaseTotal := auth.LeaseTotal()
-	if leaseTotal > 0 {
-		m.updatePending(&le, leaseTotal)
-	}
+	m.updatePending(&le, auth.LeaseTotal())
 	return nil
 }
 
@@ -873,6 +860,17 @@ func (m *ExpirationManager) updatePending(le *leaseEntry, leaseTotal time.Durati
 
 	// Check for an existing timer
 	timer, ok := m.pending[le.LeaseID]
+
+	// If there is no expiry time, don't do anything
+	if le.ExpireTime.IsZero() {
+		// if the timer happened to exist, stop the time and delete it from the
+		// pending timers.
+		if ok {
+			timer.Stop()
+			delete(m.pending, le.LeaseID)
+		}
+		return
+	}
 
 	// Create entry if it does not exist
 	if !ok {
