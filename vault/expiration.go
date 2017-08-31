@@ -379,10 +379,8 @@ func (m *ExpirationManager) Stop() error {
 func (m *ExpirationManager) Revoke(leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreMutex.Lock()
-		defer m.restoreMutex.Unlock()
-	}
+	m.restoreLock()
+	defer m.restoreUnock()
 
 	return m.revokeCommon(leaseID, false, false)
 }
@@ -442,10 +440,8 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 func (m *ExpirationManager) RevokeForce(prefix string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-force"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreMutex.Lock()
-		defer m.restoreMutex.Unlock()
-	}
+	m.restoreLock()
+	defer m.restoreUnock()
 
 	return m.revokePrefixCommon(prefix, true)
 }
@@ -456,10 +452,8 @@ func (m *ExpirationManager) RevokeForce(prefix string) error {
 func (m *ExpirationManager) RevokePrefix(prefix string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-prefix"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreMutex.Lock()
-		defer m.restoreMutex.Unlock()
-	}
+	m.restoreLock()
+	defer m.restoreUnock()
 
 	return m.revokePrefixCommon(prefix, false)
 }
@@ -471,10 +465,8 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreMutex.Lock()
-		defer m.restoreMutex.Unlock()
-	}
+	m.restoreLock()
+	defer m.restoreUnock()
 
 	// Lookup the leases
 	existing, err := m.lookupByToken(te.ID)
@@ -539,10 +531,8 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreMutex.Lock()
-		defer m.restoreMutex.Unlock()
-	}
+	m.restoreLock()
+	defer m.restoreUnock()
 
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
@@ -603,10 +593,8 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreMutex.Lock()
-		defer m.restoreMutex.Unlock()
-	}
+	m.restoreLock()
+	defer m.restoreUnock()
 
 	// Compute the Lease ID
 	saltedID, err := m.tokenStore.SaltID(token)
@@ -805,10 +793,8 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(source, token string) (*lease
 func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error) {
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreMutex.Lock()
-		defer m.restoreMutex.Unlock()
-	}
+	m.restoreLock()
+	defer m.restoreUnock()
 
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
