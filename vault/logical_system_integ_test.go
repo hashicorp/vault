@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -98,6 +99,28 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
+
+	// Replace the plugin with a credential backend
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMainCredentials")
+
+	// Make a request to lazy load the now-credential plugin
+	// and expect an error
+	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
+	req.ClientToken = core.Client.Token()
+	_, err := core.HandleRequest(req)
+	if err == nil {
+		t.Fatalf("expected error due to mismatch on error type: %s", err)
+	}
+
+	// Sleep a bit before cleanup is called
+	time.Sleep(1 * time.Second)
+}
+
 func TestSystemBackend_Plugin_CatalogRemoved(t *testing.T) {
 	t.Run("secret", func(t *testing.T) {
 		testPlugin_CatalogRemoved(t, logical.TypeLogical, false)
@@ -158,7 +181,8 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 		// Add plugin back to the catalog
 		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMainLogical")
 
-		// Mount the plugin at the failed path, expect an error
+		// Mount the plugin at the same path after plugin is re-added to the catalog
+		// and expect an error due to existing path.
 		var err error
 		switch btype {
 		case logical.TypeLogical:

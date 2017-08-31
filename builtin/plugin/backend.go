@@ -3,12 +3,18 @@ package plugin
 import (
 	"fmt"
 	"net/rpc"
+	"reflect"
 	"sync"
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	bplugin "github.com/hashicorp/vault/logical/plugin"
+)
+
+var (
+	ErrMismatchType  = fmt.Errorf("mismatch on mounted backend and plugin backend type")
+	ErrMismatchPaths = fmt.Errorf("mismatch on mounted backend and plugin backend special paths")
 )
 
 // Factory returns a configured plugin logical.Backend.
@@ -98,6 +104,22 @@ func (b *backend) startBackend() error {
 	if err != nil {
 		return err
 	}
+
+	// If the backend has not been loaded (i.e. still in metadata mode),
+	// check if type and special paths still matches
+	if !b.loaded {
+		if b.Backend.Type() != nb.Type() {
+			nb.Cleanup()
+			b.Logger().Warn("plugin: failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchType)
+			return ErrMismatchType
+		}
+		if !reflect.DeepEqual(b.Backend.SpecialPaths(), nb.SpecialPaths()) {
+			nb.Cleanup()
+			b.Logger().Warn("plugin: failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchPaths)
+			return ErrMismatchPaths
+		}
+	}
+
 	b.Backend = nb
 	b.loaded = true
 
