@@ -739,7 +739,7 @@ func generateCreationBundle(b *backend,
 				ttl, err = parseutil.ParseDurationSecond(role.TTL)
 				if err != nil {
 					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"invalid requested ttl: %s", err)}
+						"invalid role ttl: %s", err)}
 				}
 			}
 		}
@@ -748,7 +748,7 @@ func generateCreationBundle(b *backend,
 			maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"invalid ttl: %s", err)}
+					"invalid role max_ttl: %s", err)}
 			}
 		}
 
