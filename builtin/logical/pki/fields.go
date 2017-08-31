@@ -59,7 +59,7 @@ email addresses.`,
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
-		Type: framework.TypeString,
+		Type: framework.TypeDurationSecond,
 		Description: `The requested Time To Live for the certificate;
 sets the expiration date. If not specified
 the role default, backend default, or system
@@ -92,7 +92,7 @@ must still be specified in alt_names or ip_sans.`,
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
-		Type: framework.TypeString,
+		Type: framework.TypeDurationSecond,
 		Description: `The requested Time To Live for the certificate;
 sets the expiration date. If not specified
 the role default, backend default, or system

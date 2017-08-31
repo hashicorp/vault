@@ -3,6 +3,7 @@ package pki
 import (
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
@@ -80,6 +81,34 @@ the non-repudiation flag.`,
 
 	return ret
 }
+
+/*
+func pathSignSelfIssued(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "root/sign-self-issued",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathCASignIntermediate,
+		},
+
+		HelpSynopsis:    pathSignSelfIssuedHelpSyn,
+		HelpDescription: pathSignSelfIssuedHelpDesc,
+	}
+
+	ret.Fields["certificate"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Default:     "",
+		Description: `PEM-format self-issued certificate to be signed.`,
+	}
+
+	ret.Fields["ttl"] = &framework.FieldSchema{
+		Type:        framework.TypeDurationSecond,
+		Description: `Time-to-live for the signed certificate. This is not bounded by the lifetime of this root CA.`,
+	}
+
+	return ret
+}
+*/
 
 func (b *backend) pathCADeleteRoot(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -214,7 +243,7 @@ func (b *backend) pathCASignIntermediate(
 	}
 
 	role := &roleEntry{
-		TTL:              data.Get("ttl").(string),
+		TTL:              (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		AllowLocalhost:   true,
 		AllowAnyName:     true,
 		AllowIPSANs:      true,
@@ -340,5 +369,17 @@ Issue an intermediate CA certificate based on the provided CSR.
 `
 
 const pathSignIntermediateHelpDesc = `
-See the API documentation for more information.
+see the API documentation for more information.
 `
+
+/*
+const pathSignSelfIssuedHelpSyn = `
+Signs another CA's self-issued certificate.
+`
+
+const pathSignSelfIssuedHelpDesc = `
+Signs another CA's self-issued certificate. This is most often used for rolling roots; unless you know you need this you probably want to use sign-intermediate instead.
+
+Note that this is a very "god-mode" operation and should be extremely restricted in terms of who is allowed to use it. All values will be taken directly from the incoming certificate and no verification of host names, path lengths, or any other values will be performed.
+`
+*/
