@@ -728,32 +728,23 @@ func generateCreationBundle(b *backend,
 	}
 
 	// Get the TTL and very it against the max allowed
-	var ttlField string
 	var ttl time.Duration
 	var maxTTL time.Duration
 	var notAfter time.Time
-	var ttlFieldInt interface{}
 	{
-		ttlFieldInt, ok = data.GetOk("ttl")
-		if !ok {
-			ttlField = role.TTL
-		} else {
-			ttlField = ttlFieldInt.(string)
-		}
+		ttl = time.Duration(data.Get("ttl").(int)) * time.Second
 
-		if len(ttlField) == 0 {
-			ttl = b.System().DefaultLeaseTTL()
-		} else {
-			ttl, err = parseutil.ParseDurationSecond(ttlField)
-			if err != nil {
-				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"invalid requested ttl: %s", err)}
+		if ttl == 0 {
+			if role.TTL != "" {
+				ttl, err = parseutil.ParseDurationSecond(role.TTL)
+				if err != nil {
+					return nil, errutil.UserError{Err: fmt.Sprintf(
+						"invalid requested ttl: %s", err)}
+				}
 			}
 		}
 
-		if len(role.MaxTTL) == 0 {
-			maxTTL = b.System().MaxLeaseTTL()
-		} else {
+		if role.MaxTTL != "" {
 			maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
@@ -761,15 +752,14 @@ func generateCreationBundle(b *backend,
 			}
 		}
 
+		if ttl == 0 {
+			ttl = b.System().DefaultLeaseTTL()
+		}
+		if maxTTL == 0 {
+			maxTTL = b.System().MaxLeaseTTL()
+		}
 		if ttl > maxTTL {
-			// Don't error if they were using system defaults, only error if
-			// they specifically chose a bad TTL
-			if len(ttlField) == 0 {
-				ttl = maxTTL
-			} else {
-				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"ttl is larger than maximum allowed (%d)", maxTTL/time.Second)}
-			}
+			ttl = maxTTL
 		}
 
 		notAfter = time.Now().Add(ttl)
