@@ -664,11 +664,12 @@ func (c *Core) setupMounts() error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	var backend logical.Backend
 	var view *BarrierView
 	var err error
 
 	for _, entry := range c.mounts.Entries {
+		var backend logical.Backend
+
 		// Initialize the backend, special casing for system
 		barrierPath := backendBarrierPrefix + entry.UUID + "/"
 		if entry.Type == "system" {
@@ -688,7 +689,7 @@ func (c *Core) setupMounts() error {
 		if err != nil {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
 			if errwrap.Contains(err, ErrPluginNotFound.Error()) && entry.Type == "plugin" {
-				continue
+				goto ROUTER_MOUNT
 			}
 			return errLoadMountsFailed
 		}
@@ -697,9 +698,8 @@ func (c *Core) setupMounts() error {
 		}
 
 		// Check for the correct backend type
-		backendType := backend.Type()
-		if entry.Type == "plugin" && backendType != logical.TypeLogical {
-			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
+		if entry.Type == "plugin" && backend.Type() != logical.TypeLogical {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backend.Type())
 		}
 
 		if err := backend.Initialize(); err != nil {
@@ -714,7 +714,7 @@ func (c *Core) setupMounts() error {
 			ch.saltUUID = entry.UUID
 			ch.storageView = view
 		}
-
+	ROUTER_MOUNT:
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {

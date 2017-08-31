@@ -64,9 +64,12 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 
 	// Build the paths
-	paths := backend.SpecialPaths()
-	if paths == nil {
-		paths = new(logical.Paths)
+	paths := new(logical.Paths)
+	if backend != nil {
+		specialPaths := backend.SpecialPaths()
+		if specialPaths != nil {
+			paths = specialPaths
+		}
 	}
 
 	// Create a mount entry

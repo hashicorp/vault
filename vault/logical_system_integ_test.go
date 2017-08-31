@@ -100,19 +100,25 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 
 func TestSystemBackend_Plugin_CatalogRemoved(t *testing.T) {
 	t.Run("secret", func(t *testing.T) {
-		testPlugin_CatalogRemoved(t, logical.TypeLogical)
+		testPlugin_CatalogRemoved(t, logical.TypeLogical, false)
 	})
 
 	t.Run("auth", func(t *testing.T) {
-		testPlugin_CatalogRemoved(t, logical.TypeCredential)
+		testPlugin_CatalogRemoved(t, logical.TypeCredential, false)
+	})
+
+	t.Run("secret-mount-existing", func(t *testing.T) {
+		testPlugin_CatalogRemoved(t, logical.TypeLogical, true)
+	})
+
+	t.Run("auth-mount-existing", func(t *testing.T) {
+		testPlugin_CatalogRemoved(t, logical.TypeCredential, true)
 	})
 }
 
-func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType) {
+func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMount bool) {
 	cluster := testSystemBackendMock(t, 1, 1, btype)
-	defer func() {
-		cluster.Cleanup()
-	}()
+	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
 
@@ -146,6 +152,31 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType) {
 		// Wait for active so post-unseal takes place
 		// If it fails, it means unseal process failed
 		vault.TestWaitActive(t, core.Core)
+	}
+
+	if testMount {
+		// Add plugin back to the catalog
+		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMainLogical")
+
+		// Mount the plugin at the failed path, expect an error
+		var err error
+		switch btype {
+		case logical.TypeLogical:
+			_, err = core.Client.Logical().Write("sys/mounts/mock-0", map[string]interface{}{
+				"type": "plugin",
+				"config": map[string]interface{}{
+					"plugin_name": "mock-plugin",
+				},
+			})
+		case logical.TypeCredential:
+			_, err = core.Client.Logical().Write("sys/auth/mock-0", map[string]interface{}{
+				"type":        "plugin",
+				"plugin_name": "mock-plugin",
+			})
+		}
+		if err == nil {
+			t.Fatal("expected error when mounting on existing path")
+		}
 	}
 }
 
