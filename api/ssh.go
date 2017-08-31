@@ -36,3 +36,20 @@ func (c *SSH) Credential(role string, data map[string]interface{}) (*Secret, err
 
 	return ParseSecret(resp.Body)
 }
+
+// SignKey signs the given public key and returns a signed public key to pass
+// along with the SSH request.
+func (c *SSH) SignKey(role string, data map[string]interface{}) (*Secret, error) {
+	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/%s/sign/%s", c.MountPoint, role))
+	if err := r.SetJSONBody(data); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}

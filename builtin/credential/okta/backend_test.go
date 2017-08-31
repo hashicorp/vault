@@ -10,9 +10,10 @@ import (
 	"github.com/hashicorp/vault/helper/policyutil"
 	log "github.com/mgutz/logxi/v1"
 
+	"time"
+
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
-	"time"
 )
 
 func TestBackend_Config(t *testing.T) {
@@ -52,15 +53,15 @@ func TestBackend_Config(t *testing.T) {
 			testConfigCreate(t, configData),
 			testLoginWrite(t, username, "wrong", "E0000004", 0, nil),
 			testLoginWrite(t, username, password, "user is not a member of any authorized policy", 0, nil),
-			testAccUserGroups(t, username, "local_group,local_group2"),
-			testAccGroups(t, "local_group", "local_group_policy"),
+			testAccUserGroups(t, username, "local_grouP,lOcal_group2"),
+			testAccGroups(t, "local_groUp", "loCal_group_policy"),
 			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy"}),
-			testAccGroups(t, "Everyone", "everyone_group_policy,every_group_policy2"),
+			testAccGroups(t, "everyoNe", "everyone_grouP_policy,eveRy_group_policy2"),
 			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy"}),
 			testConfigUpdate(t, configDataToken),
 			testConfigRead(t, token, configData),
 			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy"}),
-			testAccGroups(t, "local_group2", "testgroup_group_policy"),
+			testAccGroups(t, "locAl_group2", "testgroup_group_policy"),
 			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy"}),
 		},
 	})

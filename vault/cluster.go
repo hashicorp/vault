@@ -398,7 +398,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 		//c.logger.Trace("core: performing server config lookup")
 		for _, v := range clientHello.SupportedProtos {
 			switch v {
-			case "h2", "req_fw_sb-act_v1":
+			case "h2", requestForwardingALPN:
 			default:
 				return nil, fmt.Errorf("unknown ALPN proto %s", v)
 			}
@@ -414,6 +414,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 			RootCAs:              caPool,
 			ClientCAs:            caPool,
 			NextProtos:           clientHello.SupportedProtos,
+			CipherSuites:         c.clusterCipherSuites,
 		}
 
 		switch {
@@ -438,6 +439,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 		GetClientCertificate: clientLookup,
 		GetConfigForClient:   serverConfigLookup,
 		MinVersion:           tls.VersionTLS12,
+		CipherSuites:         c.clusterCipherSuites,
 	}
 
 	var localCert bytes.Buffer

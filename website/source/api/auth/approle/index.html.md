@@ -23,6 +23,7 @@ This endpoint returns a list the existing AppRoles in the backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/approle/role`          | `200 application/json` |
+| `GET`   | `/auth/approle/role?list=true` | `200 application/json` |
 
 ### Sample Request
 
@@ -69,7 +70,7 @@ enabled while creating or updating a role.
 - `role_name` `(string: <required>)` - Name of the AppRole.
 - `bind_secret_id` `(bool: true)` - Require `secret_id` to be presented when 
   logging in using this AppRole.
-- `bind_cidr_list` `(array: [])` - Comma-separated list of CIDR blocks; if set,
+- `bound_cidr_list` `(array: [])` - Comma-separated list of CIDR blocks; if set,
   specifies blocks of IP addresses which can perform the login operation.
 - `policies` `(array: [])` - Comma-separated list of policies set on tokens 
   issued via this AppRole.
@@ -239,6 +240,7 @@ Updates the RoleID of an existing AppRole to a custom value.
 {
   "role_id": "custom-role-id"
 }
+```
 
 ### Sample Request
 
@@ -285,7 +287,7 @@ itself, and also to delete the SecretID from the AppRole.
   metadata will be set on tokens issued with this SecretID, and is logged in 
   audit logs _in plaintext_.
 - `cidr_list` `(string: "")` -  Comma separated list of CIDR blocks enforcing
-  secret IDs to be used from ppecific set of IP addresses. If 'bound_cidr_list' 
+  secret IDs to be used from specific set of IP addresses. If 'bound_cidr_list' 
   is set on the role, then the list of CIDR blocks listed here should be a 
   subset of the CIDR blocks listed on the role.
 
@@ -334,6 +336,7 @@ This includes the accessors for "custom" SecretIDs as well.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/approle/role/:role_name/secret-id` | `200 application/json` |
+| `GET`   | `/auth/approle/role/:role_name/secret-id?list=true` | `200 application/json` |
 
 ### Parameters
 

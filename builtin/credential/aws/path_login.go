@@ -928,6 +928,12 @@ func (b *backend) pathLoginRenewIam(
 		}
 	}
 
+	// Note that the error messages below can leak a little bit of information about the role information
+	// For example, if on renew, the client gets the "error parsing ARN..." error message, the client
+	// will know that it's a wildcard bind (but not the actual bind), even if the client can't actually
+	// read the role directly to know what the bind is. It's a relatively small amount of leakage, in
+	// some fairly corner cases, and in the most likely error case (role has been changed to a new ARN),
+	// the error message is identical.
 	if roleEntry.BoundIamPrincipalARN != "" {
 		// We might not get here if all bindings were on the inferred entity, which we've already validated
 		// above
@@ -936,14 +942,41 @@ func (b *backend) pathLoginRenewIam(
 			// Resolving unique IDs is enabled and the auth metadata contains the unique ID, so checking the
 			// unique ID is authoritative at this stage
 			if roleEntry.BoundIamPrincipalID != clientUserId {
-				return nil, fmt.Errorf("role no longer bound to ID %q", clientUserId)
+				return nil, fmt.Errorf("role no longer bound to ARN %q", canonicalArn)
+			}
+		} else if strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
+			fullArn := b.getCachedUserId(clientUserId)
+			if fullArn == "" {
+				entity, err := parseIamArn(canonicalArn)
+				if err != nil {
+					return nil, fmt.Errorf("error parsing ARN %q: %v", canonicalArn, err)
+				}
+				fullArn, err = b.fullArn(entity, req.Storage)
+				if err != nil {
+					return nil, fmt.Errorf("error looking up full ARN of entity %v: %v", entity, err)
+				}
+				if fullArn == "" {
+					return nil, fmt.Errorf("got empty string back when looking up full ARN of entity %v", entity)
+				}
+				if clientUserId != "" {
+					b.setCachedUserId(clientUserId, fullArn)
+				}
+			}
+			if !strutil.GlobbedStringsMatch(roleEntry.BoundIamPrincipalARN, fullArn) {
+				return nil, fmt.Errorf("role no longer bound to ARN %q", canonicalArn)
 			}
 		} else if roleEntry.BoundIamPrincipalARN != canonicalArn {
-			return nil, fmt.Errorf("role no longer bound to arn %q", canonicalArn)
+			return nil, fmt.Errorf("role no longer bound to ARN %q", canonicalArn)
 		}
 	}
 
-	return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+	// If 'Period' is set on the role, then the token should never expire.
+	if roleEntry.Period > time.Duration(0) {
+		req.Auth.TTL = roleEntry.Period
+		return &logical.Response{Auth: req.Auth}, nil
+	} else {
+		return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+	}
 }
 
 func (b *backend) pathLoginRenewEc2(
@@ -1123,7 +1156,7 @@ func (b *backend) pathLoginUpdateIam(
 	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
 	entity, err := parseIamArn(callerID.Arn)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error parsing arn: %v", err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("error parsing arn %q: %v", callerID.Arn, err)), nil
 	}
 
 	roleName := data.Get("role").(string)
@@ -1152,8 +1185,27 @@ func (b *backend) pathLoginUpdateIam(
 		if callerUniqueId != roleEntry.BoundIamPrincipalID {
 			return logical.ErrorResponse(fmt.Sprintf("expected IAM %s %s to resolve to unique AWS ID %q but got %q instead", entity.Type, entity.FriendlyName, roleEntry.BoundIamPrincipalID, callerUniqueId)), nil
 		}
-	} else if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != entity.canonicalArn() {
-		return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
+	} else if roleEntry.BoundIamPrincipalARN != "" {
+		if strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
+			fullArn := b.getCachedUserId(callerUniqueId)
+			if fullArn == "" {
+				fullArn, err = b.fullArn(entity, req.Storage)
+				if err != nil {
+					return logical.ErrorResponse(fmt.Sprintf("error looking up full ARN of entity %v: %v", entity, err)), nil
+				}
+				if fullArn == "" {
+					return logical.ErrorResponse(fmt.Sprintf("got empty string back when looking up full ARN of entity %v", entity)), nil
+				}
+				b.setCachedUserId(callerUniqueId, fullArn)
+			}
+			if !strutil.GlobbedStringsMatch(roleEntry.BoundIamPrincipalARN, fullArn) {
+				// Note: Intentionally giving the exact same error message as a few lines below. Otherwise, we might leak information
+				// about whether the bound IAM principal ARN is a wildcard or not, and what that wildcard is.
+				return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
+			}
+		} else if roleEntry.BoundIamPrincipalARN != entity.canonicalArn() {
+			return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
+		}
 	}
 
 	policies := roleEntry.Policies
@@ -1279,10 +1331,8 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	// fullParts[5] would now be something like user/<UserName> or assumed-role/<RoleName>/<RoleSessionName>
 	parts := strings.Split(fullParts[5], "/")
 	entity.Type = parts[0]
-	if len(parts) > 1 {
-		entity.Path = strings.Join(parts[1:len(parts)-1], "/")
-		entity.FriendlyName = parts[len(parts)-1]
-	}
+	entity.Path = strings.Join(parts[1:len(parts)-1], "/")
+	entity.FriendlyName = parts[len(parts)-1]
 	// now, entity.FriendlyName should either be <UserName> or <RoleName>
 	switch entity.Type {
 	case "assumed-role":
@@ -1294,7 +1344,6 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	case "user":
 	case "role":
 	case "instance-profile":
-	case "root":
 	default:
 		return &iamEntity{}, fmt.Errorf("unrecognized principal type: %q", entity.Type)
 	}
@@ -1505,6 +1554,7 @@ type iamEntity struct {
 	SessionInfo   string
 }
 
+// Returns a Vault-internal canonical ARN for referring to an IAM entity
 func (e *iamEntity) canonicalArn() string {
 	entityType := e.Type
 	// canonicalize "assumed-role" into "role"
@@ -1516,11 +1566,47 @@ func (e *iamEntity) canonicalArn() string {
 	// make an AWS API call to look up the role by FriendlyName, which introduces more complexity to
 	// code and test, and it also breaks backwards compatibility in an area where we would really want
 	// it
-	ret := fmt.Sprintf("arn:%s:iam::%s:%s", e.Partition, e.AccountNumber, entityType)
-	if e.FriendlyName != "" {
-		ret = fmt.Sprintf("%s/%s", ret, e.FriendlyName)
+	return fmt.Sprintf("arn:%s:iam::%s:%s/%s", e.Partition, e.AccountNumber, entityType, e.FriendlyName)
+}
+
+// This returns the "full" ARN of an iamEntity, how it would be referred to in AWS proper
+func (b *backend) fullArn(e *iamEntity, s logical.Storage) (string, error) {
+	// Not assuming path is reliable for any entity types
+	client, err := b.clientIAM(s, getAnyRegionForAwsPartition(e.Partition).ID(), e.AccountNumber)
+	if err != nil {
+		return "", fmt.Errorf("error creating IAM client: %v", err)
 	}
-	return ret
+
+	switch e.Type {
+	case "user":
+		input := iam.GetUserInput{
+			UserName: aws.String(e.FriendlyName),
+		}
+		resp, err := client.GetUser(&input)
+		if err != nil {
+			return "", fmt.Errorf("error fetching user %q: %v", e.FriendlyName, err)
+		}
+		if resp == nil {
+			return "", fmt.Errorf("nil response from GetUser")
+		}
+		return *(resp.User.Arn), nil
+	case "assumed-role":
+		fallthrough
+	case "role":
+		input := iam.GetRoleInput{
+			RoleName: aws.String(e.FriendlyName),
+		}
+		resp, err := client.GetRole(&input)
+		if err != nil {
+			return "", fmt.Errorf("error fetching role %q: %v", e.FriendlyName, err)
+		}
+		if resp == nil {
+			return "", fmt.Errorf("nil response form GetRole")
+		}
+		return *(resp.Role.Arn), nil
+	default:
+		return "", fmt.Errorf("unrecognized entity type: %s", e.Type)
+	}
 }
 
 const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"

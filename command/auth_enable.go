@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/meta"
+	"github.com/posener/complete"
 )
 
 // AuthEnableCommand is a Command that enables a new endpoint.
@@ -111,4 +112,30 @@ Auth Enable Options:
                           removed by replication.
 `
 	return strings.TrimSpace(helpText)
+}
+
+func (c *AuthEnableCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictSet(
+		"approle",
+		"cert",
+		"aws",
+		"app-id",
+		"gcp",
+		"github",
+		"userpass",
+		"ldap",
+		"okta",
+		"radius",
+		"plugin",
+	)
+
+}
+
+func (c *AuthEnableCommand) AutocompleteFlags() complete.Flags {
+	return complete.Flags{
+		"-description": complete.PredictNothing,
+		"-path":        complete.PredictNothing,
+		"-plugin-name": complete.PredictNothing,
+		"-local":       complete.PredictNothing,
+	}
 }

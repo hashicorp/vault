@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/meta"
+	"github.com/posener/complete"
 )
 
 // ReadCommand is a Command that reads data from the Vault.
@@ -94,4 +95,15 @@ Read Options:
 
 `
 	return strings.TrimSpace(helpText)
+}
+
+func (c *ReadCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *ReadCommand) AutocompleteFlags() complete.Flags {
+	return complete.Flags{
+		"-format": predictFormat,
+		"-field":  complete.PredictNothing,
+	}
 }

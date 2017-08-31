@@ -1239,8 +1239,12 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if resp != nil {
-		t.Fatalf("err: expected nil response, got %#v", *resp)
+	exp = map[string]interface{}{
+		"name":  "foo",
+		"rules": rules,
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
 
 	// List the policies
