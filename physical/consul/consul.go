@@ -242,7 +242,11 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 
 func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	serverName, _, err := net.SplitHostPort(conf["address"])
-	if err != nil {
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "missing port"):
+		serverName = conf["address"]
+	default:
 		return nil, err
 	}
 
