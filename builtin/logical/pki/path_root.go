@@ -1,10 +1,15 @@
 package pki
 
 import (
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
+	"reflect"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -82,33 +87,27 @@ the non-repudiation flag.`,
 	return ret
 }
 
-/*
 func pathSignSelfIssued(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root/sign-self-issued",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathCASignIntermediate,
+			logical.UpdateOperation: b.pathCASignSelfIssued,
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"certificate": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `PEM-format self-issued certificate to be signed.`,
+			},
 		},
 
 		HelpSynopsis:    pathSignSelfIssuedHelpSyn,
 		HelpDescription: pathSignSelfIssuedHelpDesc,
 	}
 
-	ret.Fields["certificate"] = &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Default:     "",
-		Description: `PEM-format self-issued certificate to be signed.`,
-	}
-
-	ret.Fields["ttl"] = &framework.FieldSchema{
-		Type:        framework.TypeDurationSecond,
-		Description: `Time-to-live for the signed certificate. This is not bounded by the lifetime of this root CA.`,
-	}
-
 	return ret
 }
-*/
 
 func (b *backend) pathCADeleteRoot(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -348,6 +347,76 @@ func (b *backend) pathCASignIntermediate(
 	return resp, nil
 }
 
+func (b *backend) pathCASignSelfIssued(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var err error
+
+	certPem := data.Get("certificate").(string)
+	block, _ := pem.Decode([]byte(certPem))
+	if block == nil || len(block.Bytes) == 0 {
+		return logical.ErrorResponse("certificate could not be PEM-decoded"), nil
+	}
+	certs, err := x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error parsing certificate: %s", err)), nil
+	}
+	if len(certs) != 1 {
+		return logical.ErrorResponse(fmt.Sprintf("%d certificates found in PEM file, expected 1", len(certs))), nil
+	}
+
+	cert := certs[0]
+	if !cert.IsCA {
+		return logical.ErrorResponse("given certificate is not a CA certificate"), nil
+	}
+	if !reflect.DeepEqual(cert.Issuer, cert.Subject) {
+		return logical.ErrorResponse("given certificate is not self-issued"), nil
+	}
+
+	var caErr error
+	signingBundle, caErr := fetchCAInfo(req)
+	switch caErr.(type) {
+	case errutil.UserError:
+		return nil, errutil.UserError{Err: fmt.Sprintf(
+			"could not fetch the CA certificate (was one set?): %s", caErr)}
+	case errutil.InternalError:
+		return nil, errutil.InternalError{Err: fmt.Sprintf(
+			"error fetching CA certificate: %s", caErr)}
+	}
+
+	signingCB, err := signingBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting raw signing bundle to cert bundle: %s", err)
+	}
+
+	cert.AuthorityKeyId = signingBundle.Certificate.SubjectKeyId
+	urls := &urlEntries{}
+	if signingBundle.URLs != nil {
+		urls = signingBundle.URLs
+	}
+	cert.IssuingCertificateURL = urls.IssuingCertificates
+	cert.CRLDistributionPoints = urls.CRLDistributionPoints
+	cert.OCSPServer = urls.OCSPServers
+
+	newCert, err := x509.CreateCertificate(rand.Reader, cert, cert, signingBundle.PrivateKey.Public(), signingBundle.PrivateKey)
+	if err != nil {
+		return nil, errwrap.Wrapf("error signing self-issued certificate: {{err}}", err)
+	}
+	if len(newCert) == 0 {
+		return nil, fmt.Errorf("nil cert was created when signing self-issued certificate")
+	}
+	pemCert := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: newCert,
+	})
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"certificate": string(pemCert),
+			"issuing_ca":  signingCB.Certificate,
+		},
+	}, nil
+}
+
 const pathGenerateRootHelpSyn = `
 Generate a new CA certificate and private key used for signing.
 `
@@ -372,7 +441,6 @@ const pathSignIntermediateHelpDesc = `
 see the API documentation for more information.
 `
 
-/*
 const pathSignSelfIssuedHelpSyn = `
 Signs another CA's self-issued certificate.
 `
@@ -380,6 +448,5 @@ Signs another CA's self-issued certificate.
 const pathSignSelfIssuedHelpDesc = `
 Signs another CA's self-issued certificate. This is most often used for rolling roots; unless you know you need this you probably want to use sign-intermediate instead.
 
-Note that this is a very "god-mode" operation and should be extremely restricted in terms of who is allowed to use it. All values will be taken directly from the incoming certificate and no verification of host names, path lengths, or any other values will be performed.
+Note that this is a very privileged operation and should be extremely restricted in terms of who is allowed to use it. All values will be taken directly from the incoming certificate and no verification of host names, path lengths, or any other values will be performed.
 `
-*/

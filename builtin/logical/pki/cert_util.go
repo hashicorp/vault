@@ -929,6 +929,7 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		}
 
 		caCert := creationInfo.SigningBundle.Certificate
+		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
 
 		err = checkPermittedDNSDomains(certTemplate, caCert)
 		if err != nil {
@@ -952,6 +953,7 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 		}
 
+		certTemplate.AuthorityKeyId = subjKeyID
 		certTemplate.BasicConstraintsValid = true
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
 	}
@@ -1059,6 +1061,8 @@ func signCertificate(creationInfo *creationBundle,
 	}
 	subjKeyID := sha1.Sum(marshaledKey)
 
+	caCert := creationInfo.SigningBundle.Certificate
+
 	subject := pkix.Name{
 		CommonName:         creationInfo.CommonName,
 		OrganizationalUnit: creationInfo.OU,
@@ -1066,11 +1070,12 @@ func signCertificate(creationInfo *creationBundle,
 	}
 
 	certTemplate := &x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject:      subject,
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     creationInfo.NotAfter,
-		SubjectKeyId: subjKeyID[:],
+		SerialNumber:   serialNumber,
+		Subject:        subject,
+		NotBefore:      time.Now().Add(-30 * time.Second),
+		NotAfter:       creationInfo.NotAfter,
+		SubjectKeyId:   subjKeyID[:],
+		AuthorityKeyId: caCert.SubjectKeyId,
 	}
 
 	switch creationInfo.SigningBundle.PrivateKeyType {
@@ -1097,7 +1102,6 @@ func signCertificate(creationInfo *creationBundle,
 	addKeyUsages(creationInfo, certTemplate)
 
 	var certBytes []byte
-	caCert := creationInfo.SigningBundle.Certificate
 
 	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints
