@@ -82,10 +82,15 @@ func (c *Sys) DisableAuth(path string) error {
 // documentation. Please refer to that documentation for more details.
 
 type EnableAuthOptions struct {
-	Type        string `json:"type" structs:"type"`
-	Description string `json:"description" structs:"description"`
-	Local       bool   `json:"local" structs:"local"`
-	PluginName  string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	Type        string          `json:"type" structs:"type"`
+	Description string          `json:"description" structs:"description"`
+	Config      AuthConfigInput `json:"config" structs:"config"`
+	Local       bool            `json:"local" structs:"local"`
+	PluginName  string          `json:"plugin_name,omitempty" structs:"plugin_name,omitempty"`
+}
+
+type AuthConfigInput struct {
+	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
 type AuthMount struct {

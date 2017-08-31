@@ -57,8 +57,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	if err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
 		Type:        authType,
 		Description: description,
-		PluginName:  pluginName,
-		Local:       local,
+		Config: api.AuthConfigInput{
+			PluginName: pluginName,
+		},
+		Local: local,
 	}); err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error: %s", err))
