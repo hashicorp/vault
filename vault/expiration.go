@@ -129,11 +129,14 @@ func (c *Core) stopExpiration() error {
 	return nil
 }
 
-// restoreLock takes out a lock only when in restore mode
-func (m *ExpirationManager) restoreLock() {
+// restoreLock takes out a lock only when in restore mode and returns if in
+// restore mode
+func (m *ExpirationManager) restoreLock() bool {
 	if m.inRestoreMode() {
 		m.restoreMutex.Lock()
+		return true
 	}
+	return false
 }
 
 // restoreUnlock unlocks only when in restore mode
@@ -293,11 +296,11 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 			m.logger.Trace("expiration: leases loading", "progress", i)
 		}
 
-		restored, err := m.loadAndRestoreLease(leaseID)
+		le, err := m.loadAndRestoreLease(leaseID)
 		if err != nil {
 			return err
 		}
-		if restored {
+		if le != nil {
 			restoredCount++
 		}
 
@@ -317,7 +320,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	return nil
 }
 
-func (m *ExpirationManager) loadAndRestoreLease(leaseID string) (bool, error) {
+func (m *ExpirationManager) loadAndRestoreLease(leaseID string) (*leaseEntry, error) {
 	m.restoreMutex.Lock()
 	defer m.restoreMutex.Unlock()
 
@@ -325,16 +328,16 @@ func (m *ExpirationManager) loadAndRestoreLease(leaseID string) (bool, error) {
 	// restore, skip the entry since it may have been updated since we
 	// loaded it
 	if _, ok := m.restoreLoaded[leaseID]; ok {
-		return false, nil
+		return nil, nil
 	}
 
 	le, err := m.loadEntryOnly(leaseID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	m.restoreLease(le)
-	return true, nil
+	return le, nil
 }
 
 // restoreLease takes a lease entry that has not been added to the expiration
@@ -585,6 +588,37 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 
 	// Return the response
 	return resp, nil
+}
+
+func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool, error) {
+	defer metrics.MeasureSince([]string{"expire", "check-token"}, time.Now())
+
+	inRestoreMode := m.restoreLock()
+	defer m.restoreUnock()
+
+	if !inRestoreMode {
+		return true, nil
+	}
+
+	// Compute the Lease ID
+	saltedID, err := m.tokenStore.SaltID(token)
+	if err != nil {
+		return false, err
+	}
+	leaseID := path.Join(source, saltedID)
+
+	le, err := m.loadAndRestoreLease(leaseID)
+	if err != nil {
+		return false, err
+	}
+	if le != nil {
+		expires := le.ExpireTime.Sub(time.Now())
+		if expires <= 0 {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 // RenewToken is used to renew a token which does not need to

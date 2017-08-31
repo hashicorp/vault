@@ -652,6 +652,16 @@ func (c *Core) fetchACLandTokenEntry(req *logical.Request) (*ACL, *TokenEntry, e
 		return nil, nil, logical.ErrPermissionDenied
 	}
 
+	// If we are still restoring the expiration manager, we want to ensure the
+	// token is not expired
+	check, err := c.expiration.RestoreTokenCheck(te.Path, te.ID)
+	if err != nil {
+		return nil, nil, ErrInternalError
+	}
+	if !check {
+		return nil, nil, logical.ErrPermissionDenied
+	}
+
 	// Construct the corresponding ACL object
 	acl, err := c.policyStore.ACL(te.Policies...)
 	if err != nil {
