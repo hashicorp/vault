@@ -16,11 +16,26 @@ import (
 
 func TestSystemBackend_Plugin_secret(t *testing.T) {
 	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
+
+	// Make a request to lazy load the plugin
+	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
+	req.ClientToken = core.Client.Token()
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: response should not be nil")
+	}
+
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
 
+	// Unseal the cluster
 	barrierKeys := cluster.BarrierKeys
-
 	for _, core := range cluster.Cores {
 		for _, key := range barrierKeys {
 			_, err := core.Unseal(vault.TestKeyCopy(key))
@@ -39,18 +54,30 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 		// If it fails, it means unseal process failed
 		vault.TestWaitActive(t, core.Core)
 	}
-
-	defer cluster.Cleanup()
 }
 
 func TestSystemBackend_Plugin_auth(t *testing.T) {
 	cluster := testSystemBackendMock(t, 1, 1, logical.TypeCredential)
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
+
+	// Make a request to lazy load the plugin
+	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
+	req.ClientToken = core.Client.Token()
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: response should not be nil")
+	}
 
 	// Seal the cluster
 	cluster.EnsureCoresSealed(t)
 
+	// Unseal the cluster
 	barrierKeys := cluster.BarrierKeys
-
 	for _, core := range cluster.Cores {
 		for _, key := range barrierKeys {
 			_, err := core.Unseal(vault.TestKeyCopy(key))
@@ -69,8 +96,47 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 		// If it fails, it means unseal process failed
 		vault.TestWaitActive(t, core.Core)
 	}
+}
 
-	defer cluster.Cleanup()
+func TestSystemBackend_Plugin_CatalogRemoved(t *testing.T) {
+	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
+	defer func() {
+		cluster.Cleanup()
+	}()
+
+	core := cluster.Cores[0]
+
+	// Remove the plugin from the catalog
+	req := logical.TestRequest(t, logical.DeleteOperation, "sys/plugins/catalog/mock-plugin")
+	req.ClientToken = core.Client.Token()
+	resp, err := core.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	// Unseal the cluster
+	barrierKeys := cluster.BarrierKeys
+	for _, core := range cluster.Cores {
+		for _, key := range barrierKeys {
+			_, err := core.Unseal(vault.TestKeyCopy(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		sealed, err := core.Sealed()
+		if err != nil {
+			t.Fatalf("err checking seal status: %s", err)
+		}
+		if sealed {
+			t.Fatal("should not be sealed")
+		}
+		// Wait for active so post-unseal takes place
+		// If it fails, it means unseal process failed
+		vault.TestWaitActive(t, core.Core)
+	}
 }
 
 func TestSystemBackend_Plugin_autoReload(t *testing.T) {
@@ -116,35 +182,30 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 
 func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
-	defer func() {
-		cluster.Cleanup()
-	}()
+	defer cluster.Cleanup()
 
-	rootToken := cluster.RootToken
-	keys := cluster.BarrierKeys
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
 
+	// Unseal the cluster
+	barrierKeys := cluster.BarrierKeys
 	for _, core := range cluster.Cores {
-		// Seal the cluster
-		vault.TestWaitActive(t, core.Core)
-		err := core.Core.Seal(rootToken)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for _, core := range cluster.Cores {
-		// Unseal the cluster
-		var err error
-		var unsealed bool
-		fmt.Println(len(keys))
-		for _, key := range keys {
-			if unsealed, err = core.Unseal(key); err != nil {
+		for _, key := range barrierKeys {
+			_, err := core.Unseal(vault.TestKeyCopy(key))
+			if err != nil {
 				t.Fatal(err)
 			}
 		}
-		if !unsealed {
-			t.Fatal("expected to be unsealed")
+		sealed, err := core.Sealed()
+		if err != nil {
+			t.Fatalf("err checking seal status: %s", err)
 		}
+		if sealed {
+			t.Fatal("should not be sealed")
+		}
+		// Wait for active so post-unseal takes place
+		// If it fails, it means unseal process failed
+		vault.TestWaitActive(t, core.Core)
 	}
 }
 
