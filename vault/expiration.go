@@ -39,9 +39,6 @@ const (
 	// revokeRetryBase is a baseline retry time
 	revokeRetryBase = 10 * time.Second
 
-	// minRevokeDelay is used to prevent an instant revoke on restore
-	minRevokeDelay = 5 * time.Second
-
 	// maxLeaseDuration is the default maximum lease duration
 	maxLeaseTTL = 32 * 24 * time.Hour
 
@@ -130,6 +127,20 @@ func (c *Core) stopExpiration() error {
 		c.expiration = nil
 	}
 	return nil
+}
+
+// restoreLock takes out a lock only when in restore mode
+func (m *ExpirationManager) restoreLock() {
+	if m.inRestoreMode() {
+		m.restoreMutex.Lock()
+	}
+}
+
+// restoreUnlock unlocks only when in restore mode
+func (m *ExpirationManager) restoreUnock() {
+	if m.inRestoreMode() {
+		m.restoreMutex.Unlock()
+	}
 }
 
 // inRestoreMode returns if we are currently in restore mode
@@ -343,9 +354,6 @@ func (m *ExpirationManager) restoreLease(le *leaseEntry) {
 
 	// Determine the remaining time to expiration
 	expires := le.ExpireTime.Sub(time.Now())
-	if expires <= 0 {
-		expires = minRevokeDelay
-	}
 
 	// Setup revocation timer
 	m.updatePending(le, expires)
