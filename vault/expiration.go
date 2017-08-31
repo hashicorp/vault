@@ -63,9 +63,10 @@ type ExpirationManager struct {
 	tidyLock int64
 
 	// A set of locks to handle restoration
-	restoreMode   int64
-	restoreLock   sync.Mutex
-	restoreLoaded map[string]struct{}
+	restoreMode     int64
+	restoreModeLock sync.RWMutex
+	restoreLocks    []*locksutil.LockEntry
+	restoreLoaded   sync.Map
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -85,8 +86,8 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 
 		// new instances of the expiration manager will go immediately into
 		// restore mode
-		restoreMode:   1,
-		restoreLoaded: make(map[string]struct{}),
+		restoreMode:  1,
+		restoreLocks: locksutil.CreateLocks(),
 	}
 	return exp
 }
@@ -131,6 +132,16 @@ func (c *Core) stopExpiration() error {
 		c.expiration = nil
 	}
 	return nil
+}
+
+// lockLease takes out a lock for a given lease ID
+func (m *ExpirationManager) lockLease(leaseID string) {
+	locksutil.LockForKey(m.restoreLocks, leaseID).Lock()
+}
+
+// unlockLease unlocks a given lease ID
+func (m *ExpirationManager) unlockLease(leaseID string) {
+	locksutil.LockForKey(m.restoreLocks, leaseID).Unlock()
 }
 
 // inRestoreMode returns if we are currently in restore mode
@@ -265,11 +276,11 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 		}
 	}()
 
-	// Put expiration manager in restore mode.  We don't defer the switch back
-	// out of restore mode because any error will result in vault getting sealed
-	// which will tear down the expiration manager.  Only after a successful
-	// restore will the mode get switched back.
+	// Put expiration manager in restore mode.  All new instances of the exp manager
+	// should automatically be in restore mode, let's set it just in case
+	m.restoreModeLock.Lock()
 	atomic.StoreInt64(&m.restoreMode, 1)
+	m.restoreModeLock.Unlock()
 
 	// Accumulate existing leases
 	m.logger.Debug("expiration: collecting leases")
@@ -279,62 +290,138 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	}
 	m.logger.Debug("expiration: leases collected", "num_existing", len(existing))
 
+	// Make the channels used for the worker pool
+	broker := make(chan string)
+	quit := make(chan bool)
+	// Buffer these channels to prevent deadlocks
+	errs := make(chan error, len(existing))
+	result := make(chan *leaseEntry, len(existing))
+
+	// Use a wait group
+	wg := &sync.WaitGroup{}
+
+	// Create 64 workers to distribute work to
+	for i := 0; i < consts.ExpirationRestoreWorkerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for {
+				select {
+				case leaseID, ok := <-broker:
+					// broker has been closed, we are done
+					if !ok {
+						return
+					}
+
+					// If we loaded a lease elsewhere in the expiration manager during
+					// restore, send a nil entry to the loop waiting for all
+					// existing to be processed
+					if _, ok := m.restoreLoaded.Load(leaseID); ok {
+						result <- nil
+						continue
+					}
+
+					// Useful for testing to add latency to all load requests
+					if loadDelay > 0 {
+						time.Sleep(loadDelay)
+					}
+
+					m.lockLease(leaseID)
+					le, err := m.loadEntryInternal(leaseID, false)
+					m.unlockLease(leaseID)
+					if err != nil {
+						errs <- err
+						continue
+					}
+
+					// Write results out to the result channel
+					result <- le
+
+				// quit early
+				case <-quit:
+					return
+				}
+			}
+		}()
+	}
+
+	// Distribute the collected keys to the workers in a go routine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i, leaseID := range existing {
+			if i > 0 && i%500 == 0 {
+				m.logger.Trace("expiration: leases loading", "progress", i)
+			}
+
+			select {
+			case <-quit:
+				return
+
+			default:
+				broker <- leaseID
+			}
+		}
+
+		// Close the broker, causing worker routines to exit
+		close(broker)
+	}()
+
 	// Restore each key by pulling from the result chan
-	for i, leaseID := range existing {
-		if i > 0 && i%500 == 0 {
-			m.logger.Trace("expiration: leases loading", "progress", i)
-		}
+	for i := 0; i < len(existing); i++ {
+		select {
+		case err := <-errs:
+			// Close all go routines
+			close(quit)
 
-		if err := m.loadAndRestoreLease(leaseID); err != nil {
 			return err
-		}
 
-		// This exists for test only to add latency to load calls
-		if loadDelay > 0 {
-			time.Sleep(loadDelay)
+		case le := <-result:
+			// If there is no entry, nothing to restore
+			if le == nil {
+				continue
+			}
+
+			m.lockLease(le.LeaseID)
+			m.restoreLease(le, true)
+			m.unlockLease(le.LeaseID)
 		}
 	}
 
+	// Let all go routines finish
+	wg.Wait()
+
 	// Clear our the restored entries and turn off restore mode
-	m.restoreLock.Lock()
-	m.restoreLoaded = nil
+	m.restoreModeLock.Lock()
+	m.restoreLoaded = sync.Map{}
 	atomic.StoreInt64(&m.restoreMode, 0)
-	m.restoreLock.Unlock()
+	m.restoreModeLock.Unlock()
 
 	m.logger.Info("expiration: lease restore complete")
 	return nil
 }
 
-func (m *ExpirationManager) loadAndRestoreLease(leaseID string) error {
-	m.restoreLock.Lock()
-	defer m.restoreLock.Unlock()
-
-	// If we loaded a lease elsewhere in the expiration manager while in
-	// restore, skip the entry since it may have been updated since we
-	// loaded it
-	if _, ok := m.restoreLoaded[leaseID]; ok {
-		return nil
-	}
-
-	_, err := m.loadEntryInternal(leaseID, true)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // restoreLease takes a lease entry that has not been added to the expiration
 // manager and adds it back in
-func (m *ExpirationManager) restoreLease(le *leaseEntry) {
+func (m *ExpirationManager) restoreLease(le *leaseEntry, unseenOnly bool) {
 	// If there is no entry, nothing to restore
 	if le == nil {
 		return
 	}
 
+	if unseenOnly {
+		// If we loaded a lease elsewhere in the expiration manager while in
+		// restore, skip the entry since it may have been updated since we
+		// loaded it
+		if _, ok := m.restoreLoaded.Load(le.LeaseID); ok {
+			return
+		}
+	}
+
 	// Update the cache of restored leases, either synchronously or through
 	// the lazy loaded restore process
-	m.restoreLoaded[le.LeaseID] = struct{}{}
+	m.restoreLoaded.Store(le.LeaseID, struct{}{})
 
 	// Setup revocation timer
 	m.updatePending(le, le.ExpireTime.Sub(time.Now()))
@@ -563,8 +650,8 @@ func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool
 		return true, nil
 	}
 
-	m.restoreLock.Lock()
-	defer m.restoreLock.Unlock()
+	m.restoreModeLock.RLock()
+	defer m.restoreModeLock.RUnlock()
 
 	// Check again after we obtain the lock
 	if !m.inRestoreMode() {
@@ -935,17 +1022,24 @@ func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry,
 
 // loadEntry is used to read a lease entry
 func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
+	// Take out the lease locks after we ensure we are in restore mode
 	restoreMode := m.inRestoreMode()
 	if restoreMode {
-		m.restoreLock.Lock()
-		defer m.restoreLock.Unlock()
+		m.restoreModeLock.RLock()
+		defer m.restoreModeLock.RUnlock()
+
+		restoreMode = m.inRestoreMode()
+		if restoreMode {
+			m.lockLease(leaseID)
+			defer m.unlockLease(leaseID)
+		}
 	}
 	return m.loadEntryInternal(leaseID, restoreMode)
 }
 
 // loadEntryInternal is used when you need to load an entry but also need to
 // control the lifecycle of the restoreLock
-func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool) (*leaseEntry, error) {
+func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreLease bool) (*leaseEntry, error) {
 	out, err := m.idView.Get(leaseID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lease entry: %v", err)
@@ -958,8 +1052,8 @@ func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool) 
 		return nil, fmt.Errorf("failed to decode lease entry: %v", err)
 	}
 
-	if restoreMode {
-		m.restoreLease(le)
+	if restoreLease {
+		m.restoreLease(le, false)
 	}
 	return le, err
 }
