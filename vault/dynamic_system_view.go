@@ -135,7 +135,6 @@ func (d dynamicSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, 
 	}
 	if r == nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("{{err}}: %s", name), ErrPluginNotFound)
-		// return nil, fmt.Errorf("no plugin found with name: %s", name)
 	}
 
 	return r, nil
