@@ -13,7 +13,7 @@ import (
 type CLIHandler struct{}
 
 // Auth cli method
-func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
+func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	mount, ok := m["mount"]
 	if !ok {
 		mount = "okta"
@@ -21,7 +21,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	username, ok := m["username"]
 	if !ok {
-		return "", fmt.Errorf("'username' var must be set")
+		return nil, fmt.Errorf("'username' var must be set")
 	}
 	password, ok := m["password"]
 	if !ok {
@@ -30,7 +30,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		password, err = pwd.Read(os.Stdin)
 		fmt.Println()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
@@ -41,13 +41,13 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
 	secret, err := c.Logical().Write(path, data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if secret == nil {
-		return "", fmt.Errorf("empty response from credential provider")
+		return nil, fmt.Errorf("empty response from credential provider")
 	}
 
-	return secret.Auth.ClientToken, nil
+	return secret, nil
 }
 
 // Help method for okta cli
