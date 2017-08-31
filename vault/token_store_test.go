@@ -445,6 +445,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 
 	// New store should share the salt
 	ts2, err := NewTokenStore(c, getBackendConfig(c))
+	ts2.SetExpirationManager(ts.expiration)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -490,6 +491,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 
 	// New store should share the salt
 	ts2, err := NewTokenStore(c, getBackendConfig(c))
+	ts2.SetExpirationManager(ts.expiration)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

@@ -403,7 +403,8 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 }
 
 // restoreLease takes a lease entry that has not been added to the expiration
-// manager and adds it back in
+// manager and adds it back in.
+// NOTE: You must enter this method with the restoreLock
 func (m *ExpirationManager) restoreLease(le *leaseEntry, unseenOnly bool) {
 	// If there is no entry, nothing to restore
 	if le == nil {
