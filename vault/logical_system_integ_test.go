@@ -99,7 +99,17 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_CatalogRemoved(t *testing.T) {
-	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
+	t.Run("secret", func(t *testing.T) {
+		testPlugin_CatalogRemoved(t, logical.TypeLogical)
+	})
+
+	t.Run("auth", func(t *testing.T) {
+		testPlugin_CatalogRemoved(t, logical.TypeCredential)
+	})
+}
+
+func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType) {
+	cluster := testSystemBackendMock(t, 1, 1, btype)
 	defer func() {
 		cluster.Cleanup()
 	}()

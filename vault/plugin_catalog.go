@@ -19,6 +19,7 @@ import (
 var (
 	pluginCatalogPath         = "core/plugin-catalog/"
 	ErrDirectoryNotConfigured = errors.New("could not set plugin, plugin directory is not configured")
+	ErrPluginNotFound         = errors.New("plugin not found in the catalog")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
