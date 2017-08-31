@@ -314,25 +314,28 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 						return
 					}
 
+					// Take the lease lock
+					m.lockLease(leaseID)
+
 					// If we loaded a lease elsewhere in the expiration manager during
 					// restore, send a nil entry to the loop waiting for all
 					// existing to be processed
 					if _, ok := m.restoreLoaded.Load(leaseID); ok {
+						m.unlockLease(leaseID)
 						result <- nil
+						continue
+					}
+
+					le, err := m.loadEntryInternal(leaseID, false)
+					m.unlockLease(leaseID)
+					if err != nil {
+						errs <- err
 						continue
 					}
 
 					// Useful for testing to add latency to all load requests
 					if loadDelay > 0 {
 						time.Sleep(loadDelay)
-					}
-
-					m.lockLease(leaseID)
-					le, err := m.loadEntryInternal(leaseID, false)
-					m.unlockLease(leaseID)
-					if err != nil {
-						errs <- err
-						continue
 					}
 
 					// Write results out to the result channel
