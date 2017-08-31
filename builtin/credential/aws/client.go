@@ -141,6 +141,25 @@ func (b *backend) flushCachedIAMClients() {
 	}
 }
 
+// Gets an entry out of the user ID cache
+func (b *backend) getCachedUserId(userId string) string {
+	if userId == "" {
+		return ""
+	}
+	if entry, ok := b.iamUserIdToArnCache.Get(userId); ok {
+		b.iamUserIdToArnCache.SetDefault(userId, entry)
+		return entry.(string)
+	}
+	return ""
+}
+
+// Sets an entry in the user ID cache
+func (b *backend) setCachedUserId(userId, arn string) {
+	if userId != "" {
+		b.iamUserIdToArnCache.SetDefault(userId, arn)
+	}
+}
+
 func (b *backend) stsRoleForAccount(s logical.Storage, accountID string) (string, error) {
 	// Check if an STS configuration exists for the AWS account
 	sts, err := b.lockedAwsStsEntry(s, accountID)

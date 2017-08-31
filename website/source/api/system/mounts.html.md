@@ -74,16 +74,22 @@ This endpoint mounts a new secret backend at the given path.
   mount.
 
 - `config` `(map<string|string>: nil)` – Specifies configuration options for
-  this mount. This is an object with three possible values:
+  this mount. This is an object with four possible values:
 
     - `default_lease_ttl`
     - `max_lease_ttl`
     - `force_no_cache`
     - `plugin_name`
 
-    These control the default and maximum lease time-to-live, and force
-    disabling backend caching respectively. If set on a specific mount, this
-    overrides the global defaults.
+    These control the default and maximum lease time-to-live, force
+    disabling backend caching, and option plugin name for plugin backends 
+    respectively. The first three options override the global defaults if
+    set on a specific mount. The plugin_name can be provided in the config
+    map or as a top-level option, with the former taking precedence.
+
+- `plugin_name` `(string: "")` – Specifies the name of the plugin to
+  use based from the name in the plugin catalog. Applies only to plugin
+  backends.
 
 Additionally, the following options are allowed in Vault open-source, but 
 relevant functionality is only supported in Vault Enterprise:

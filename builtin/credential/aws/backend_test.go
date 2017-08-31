@@ -1522,22 +1522,14 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatalf("bad: expected valid login: resp:%#v", resp)
 	}
 
-	renewReq := &logical.Request{
-		Storage: storage,
-		Auth:    &logical.Auth{},
-	}
+	renewReq := generateRenewRequest(storage, resp.Auth)
+	// dump a fake ARN into the metadata to ensure that we ONLY look
+	// at the unique ID that has been generated
+	renewReq.Auth.Metadata["canonical_arn"] = "fake_arn"
 	empty_login_fd := &framework.FieldData{
 		Raw:    map[string]interface{}{},
 		Schema: pathLogin(b).Fields,
 	}
-	renewReq.Auth.InternalData = resp.Auth.InternalData
-	renewReq.Auth.Metadata = resp.Auth.Metadata
-	renewReq.Auth.LeaseOptions = resp.Auth.LeaseOptions
-	renewReq.Auth.Policies = resp.Auth.Policies
-	renewReq.Auth.IssueTime = time.Now()
-	// dump a fake ARN into the metadata to ensure that we ONLY look
-	// at the unique ID that has been generated
-	renewReq.Auth.Metadata["canonical_arn"] = "fake_arn"
 	// ensure we can renew
 	resp, err = b.pathLoginRenew(renewReq, empty_login_fd)
 	if err != nil {
@@ -1571,5 +1563,57 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if err == nil || (resp != nil && !resp.IsError()) {
 		t.Errorf("bad: expected failed renew due to changed AWS role ID: resp: %#v", resp, err)
 	}
+	// Undo the fake resolver...
+	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
 
+	// Now test that wildcard matching works
+	wildcardRoleName := "valid_wildcard"
+	wildcardEntity := *entity
+	wildcardEntity.FriendlyName = "*"
+	roleData["bound_iam_principal_arn"] = wildcardEntity.canonicalArn()
+	roleRequest.Path = "role/" + wildcardRoleName
+	resp, err = b.HandleRequest(roleRequest)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to create wildcard role: resp:%#v\nerr:%v", resp, err)
+	}
+
+	loginData["role"] = wildcardRoleName
+	resp, err = b.HandleRequest(loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("bad: expected valid login: resp:%#v", resp)
+	}
+	// and ensure we can renew
+	renewReq = generateRenewRequest(storage, resp.Auth)
+	resp, err = b.pathLoginRenew(renewReq, empty_login_fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error when renewing: %#v", *resp)
+	}
+	// ensure the cache is populated
+	cachedArn := b.getCachedUserId(resp.Auth.Metadata["client_user_id"])
+	if cachedArn == "" {
+		t.Errorf("got empty ARN back from user ID cache; expected full arn")
+	}
+}
+
+func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Request {
+	renewReq := &logical.Request{
+		Storage: s,
+		Auth:    &logical.Auth{},
+	}
+	renewReq.Auth.InternalData = auth.InternalData
+	renewReq.Auth.Metadata = auth.Metadata
+	renewReq.Auth.LeaseOptions = auth.LeaseOptions
+	renewReq.Auth.Policies = auth.Policies
+	renewReq.Auth.IssueTime = time.Now()
+
+	return renewReq
 }

@@ -180,6 +180,7 @@ This endpoint returns a list of available entities by their identifiers.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/identity/entity/id`        | `200 application/json` |
+| `GET`   | `/identity/entity/id?list=true` | `200 application/json` |
 
 ### Sample Request
 
@@ -391,6 +392,7 @@ This endpoint returns a list of available personas by their identifiers.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/identity/persona/id`       | `200 application/json` |
+| `GET`    | `/identity/persona/id?list=true` | `200 application/json` |
 
 ### Sample Request
 
