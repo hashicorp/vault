@@ -131,12 +131,10 @@ func (c *Core) stopExpiration() error {
 
 // restoreLock takes out a lock only when in restore mode and returns if in
 // restore mode
-func (m *ExpirationManager) restoreLock() bool {
+func (m *ExpirationManager) restoreLock() {
 	if m.inRestoreMode() {
 		m.restoreMutex.Lock()
-		return true
 	}
-	return false
 }
 
 // restoreUnlock unlocks only when in restore mode
@@ -590,15 +588,19 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	return resp, nil
 }
 
+// RestoreTokenCheck verifies that the token is not expired while running in
+// restore mode.  If we are not in restore mode, the lease has already been
+// restored or the lease still has time left, it returns true.
 func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool, error) {
-	defer metrics.MeasureSince([]string{"expire", "check-token"}, time.Now())
-
-	inRestoreMode := m.restoreLock()
-	defer m.restoreUnock()
-
-	if !inRestoreMode {
+	// Return immediately if we are not in retore mode, expiration manager is
+	// already loaded
+	if !m.inRestoreMode() {
 		return true, nil
 	}
+
+	defer metrics.MeasureSince([]string{"expire", "restore-token-check"}, time.Now())
+	m.restoreMutex.Lock()
+	defer m.restoreMutex.Unlock()
 
 	// Compute the Lease ID
 	saltedID, err := m.tokenStore.SaltID(token)
