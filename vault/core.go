@@ -1369,9 +1369,6 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupMounts(); err != nil {
 		return err
 	}
-	if err := c.startRollback(); err != nil {
-		return err
-	}
 	if err := c.setupPolicyStore(); err != nil {
 		return err
 	}
@@ -1382,6 +1379,9 @@ func (c *Core) postUnseal() (retErr error) {
 		return err
 	}
 	if err := c.setupCredentials(); err != nil {
+		return err
+	}
+	if err := c.startRollback(); err != nil {
 		return err
 	}
 	if err := c.setupExpiration(); err != nil {

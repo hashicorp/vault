@@ -19,6 +19,7 @@ import (
 var (
 	pluginCatalogPath         = "core/plugin-catalog/"
 	ErrDirectoryNotConfigured = errors.New("could not set plugin, plugin directory is not configured")
+	ErrPluginNotFound         = errors.New("plugin not found in the catalog")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -35,6 +36,10 @@ func (c *Core) setupPluginCatalog() error {
 	c.pluginCatalog = &PluginCatalog{
 		catalogView: NewBarrierView(c.barrier, pluginCatalogPath),
 		directory:   c.pluginDirectory,
+	}
+
+	if c.logger.IsInfo() {
+		c.logger.Info("core: successfully setup plugin catalog", "plugin-directory", c.pluginDirectory)
 	}
 
 	return nil
