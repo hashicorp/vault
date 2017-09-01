@@ -22,6 +22,7 @@ import (
 const (
 	clusterListenerAcceptDeadline = 500 * time.Millisecond
 	heartbeatInterval             = 30 * time.Second
+	requestForwardingALPN         = "req_fw_sb-act_v1"
 )
 
 // Starts the listeners and servers necessary to handle forwarded requests
@@ -45,7 +46,7 @@ func (c *Core) startForwarding() error {
 	}
 
 	// The server supports all of the possible protos
-	tlsConfig.NextProtos = []string{"h2", "req_fw_sb-act_v1"}
+	tlsConfig.NextProtos = []string{"h2", requestForwardingALPN}
 
 	// Create our RPC server and register the request handler server
 	c.clusterParamsLock.Lock()
@@ -144,13 +145,13 @@ func (c *Core) startForwarding() error {
 				}
 
 				switch tlsConn.ConnectionState().NegotiatedProtocol {
-				case "req_fw_sb-act_v1":
+				case requestForwardingALPN:
 					if !ha {
 						conn.Close()
 						continue
 					}
 
-					c.logger.Trace("core: got req_fw_sb-act_v1 connection")
+					c.logger.Trace("core: got request forwarding connection")
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: c.rpcServer,
 					})
@@ -227,7 +228,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	// the TLS state.
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host,
-		grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "", nil)),
+		grpc.WithDialer(c.getGRPCDialer(requestForwardingALPN, "", nil)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time: 2 * heartbeatInterval,

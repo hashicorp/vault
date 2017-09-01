@@ -27,11 +27,12 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 ### Parameters
 
-- `organization` `(string: <required>)` - Okta organization to authenticate 
-  against.
-- `token` `(string: "")` - Okta admin API token.
-- `base_url` `(string: "")` - The API endpoint to use. Useful if you are using 
-  Okta development accounts.
+- `org_name` `(string: <required>)` - Name of the organization to be used in the
+  Okta API.
+- `api_token` `(string: <required>)` - Okta API key.
+- `production` `(bool: true)` -  If set, production API URL prefix will be used 
+  to communicate with Okta and if not set, a preview production API URL prefix 
+  will be used. Defaults to true.
 - `ttl` `(string: "")` - Duration after which authentication will be expired.
 - `max_ttl` `(string: "")` - Maximum duration after which authentication will 
   be expired.
@@ -40,8 +41,8 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 ```json
 {
-  "organization": "example",
-  "token": "abc123"
+  "org_name": "example",
+  "api_token": "abc123"
 }
 ```
 
@@ -80,9 +81,9 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
-    "organization": "example",
-    "token": "abc123",
-    "base_url": "",
+    "org_name": "example",
+    "api_token": "abc123",
+    "production": true,
     "ttl": "",
     "max_ttl": ""
   },
@@ -97,6 +98,7 @@ List the users configurated in the Okta backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/okta/users`           | `200 application/json` |
+| `GET`   | `/auth/okta/users?list=true`  | `200 application/json` |
 
 ### Sample Request
 
@@ -222,6 +224,7 @@ List the groups configurated in the Okta backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/okta/groups`           | `200 application/json` |
+| `GET`   | `/auth/okta/groups?list=true`  | `200 application/json` |
 
 ### Sample Request
 

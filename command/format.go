@@ -14,8 +14,11 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 	"github.com/ryanuber/columnize"
 )
+
+var predictFormat complete.Predictor = complete.PredictSet("json", "yaml")
 
 func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
 	return outputWithFormat(ui, format, secret, secret)

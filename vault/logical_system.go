@@ -291,6 +291,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Default:     false,
 						Description: strings.TrimSpace(sysHelp["mount_local"][0]),
 					},
+					"plugin_name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["mount_plugin_name"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -493,14 +497,18 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
-					"plugin_name": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
+					"config": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["auth_config"][0]),
 					},
 					"local": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Default:     false,
 						Description: strings.TrimSpace(sysHelp["mount_local"][0]),
+					},
+					"plugin_name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
 					},
 				},
 
@@ -1256,6 +1264,7 @@ func (b *SystemBackend) handleMount(
 	path := data.Get("path").(string)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
+	pluginName := data.Get("plugin_name").(string)
 
 	path = sanitizeMountPath(path)
 
@@ -1310,9 +1319,19 @@ func (b *SystemBackend) handleMount(
 			logical.ErrInvalidRequest
 	}
 
-	// Only set plugin-name if mount is of type plugin
-	if logicalType == "plugin" && apiConfig.PluginName != "" {
-		config.PluginName = apiConfig.PluginName
+	// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
+	// option taking precedence.
+	if logicalType == "plugin" {
+		switch {
+		case apiConfig.PluginName != "":
+			config.PluginName = apiConfig.PluginName
+		case pluginName != "":
+			config.PluginName = pluginName
+		default:
+			return logical.ErrorResponse(
+					"plugin_name must be provided for plugin backend"),
+				logical.ErrInvalidRequest
+		}
 	}
 
 	// Copy over the force no cache if set
@@ -1754,10 +1773,31 @@ func (b *SystemBackend) handleEnableAuth(
 	pluginName := data.Get("plugin_name").(string)
 
 	var config MountConfig
+	var apiConfig APIMountConfig
 
-	// Only set plugin name if mount is of type plugin
-	if logicalType == "plugin" && pluginName != "" {
-		config.PluginName = pluginName
+	configMap := data.Get("config").(map[string]interface{})
+	if configMap != nil && len(configMap) != 0 {
+		err := mapstructure.Decode(configMap, &apiConfig)
+		if err != nil {
+			return logical.ErrorResponse(
+					"unable to convert given auth config information"),
+				logical.ErrInvalidRequest
+		}
+	}
+
+	// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
+	// option taking precedence.
+	if logicalType == "plugin" {
+		switch {
+		case apiConfig.PluginName != "":
+			config.PluginName = apiConfig.PluginName
+		case pluginName != "":
+			config.PluginName = pluginName
+		default:
+			return logical.ErrorResponse(
+					"plugin_name must be provided for plugin backend"),
+				logical.ErrInvalidRequest
+		}
 	}
 
 	if logicalType == "" {
@@ -2541,6 +2581,11 @@ and max_lease_ttl.`,
 and is unaffected by replication.`,
 	},
 
+	"mount_plugin_name": {
+		`Name of the plugin to mount based from the name registered 
+in the plugin catalog.`,
+	},
+
 	"tune_default_lease_ttl": {
 		`The default lease TTL for this mount.`,
 	},
@@ -2675,6 +2720,10 @@ Example: you might have an OAuth backend for GitHub, and one for Google Apps.
 	"auth_desc": {
 		`User-friendly description for this crential backend.`,
 		"",
+	},
+
+	"auth_config": {
+		`Configuration for this mount, such as plugin_name.`,
 	},
 
 	"auth_plugin": {

@@ -155,6 +155,7 @@ List the users registered with the backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/radius/users`         | `200 application/json` |
+| `GET`   | `/auth/radius/users?list=true` | `200 application/json` |
 
 ### Sample Request
 

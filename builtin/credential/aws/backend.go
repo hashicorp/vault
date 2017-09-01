@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/patrickmn/go-cache"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -60,6 +61,11 @@ type backend struct {
 	// will be flushed. The empty STS role signifies the master account
 	IAMClientsMap map[string]map[string]*iam.IAM
 
+	// Map of AWS unique IDs to the full ARN corresponding to that unique ID
+	// This avoids the overhead of an AWS API hit for every login request
+	// using the IAM auth method when bound_iam_principal_arn contains a wildcard
+	iamUserIdToArnCache *cache.Cache
+
 	// AWS Account ID of the "default" AWS credentials
 	// This cache avoids the need to call GetCallerIdentity repeatedly to learn it
 	// We can't store this because, in certain pathological cases, it could change
@@ -74,9 +80,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
-		tidyCooldownPeriod: time.Hour,
-		EC2ClientsMap:      make(map[string]map[string]*ec2.EC2),
-		IAMClientsMap:      make(map[string]map[string]*iam.IAM),
+		tidyCooldownPeriod:  time.Hour,
+		EC2ClientsMap:       make(map[string]map[string]*ec2.EC2),
+		IAMClientsMap:       make(map[string]map[string]*iam.IAM),
+		iamUserIdToArnCache: cache.New(7*24*time.Hour, 24*time.Hour),
 	}
 
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId

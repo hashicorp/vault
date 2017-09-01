@@ -31,6 +31,12 @@ func tcpListenerFactory(config map[string]interface{}, _ io.Writer) (net.Listene
 	}
 
 	ln = tcpKeepAliveListener{ln.(*net.TCPListener)}
+
+	ln, err = listenerWrapProxy(ln, config)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	props := map[string]string{"addr": addr}
 	return listenerWrapTLS(ln, props, config)
 }

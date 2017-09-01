@@ -17,11 +17,6 @@ import (
 	"google.golang.org/api/option"
 )
 
-var ConsistencyDelays = physical.Delays{
-	BeforeList: 5 * time.Second,
-	BeforeGet:  0 * time.Second,
-}
-
 func TestGCSBackend(t *testing.T) {
 	credentialsFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
@@ -55,7 +50,6 @@ func TestGCSBackend(t *testing.T) {
 	defer func() {
 		objects_it := bucket.Objects(context.Background(), nil)
 
-		time.Sleep(ConsistencyDelays.BeforeList)
 		// have to delete all objects before deleting bucket
 		for {
 			objAttrs, err := objects_it.Next()
@@ -71,8 +65,6 @@ func TestGCSBackend(t *testing.T) {
 			bucket.Object(objAttrs.Name).Delete(context.Background())
 		}
 
-		// not a list operation, but google lists to make sure the bucket is empty on delete
-		time.Sleep(ConsistencyDelays.BeforeList)
 		err := bucket.Delete(context.Background())
 		if err != nil {
 			t.Fatalf("error deleting bucket '%s': '%v'", bucketName, err)
@@ -90,7 +82,7 @@ func TestGCSBackend(t *testing.T) {
 		t.Fatalf("error creating google cloud storage backend: '%s'", err)
 	}
 
-	physical.ExerciseEventuallyConsistentBackend(t, b, ConsistencyDelays)
-	physical.ExerciseEventuallyConsistentBackend_ListPrefix(t, b, ConsistencyDelays)
+	physical.ExerciseBackend(t, b)
+	physical.ExerciseBackend_ListPrefix(t, b)
 
 }
