@@ -295,7 +295,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	quit := make(chan bool)
 	// Buffer these channels to prevent deadlocks
 	errs := make(chan error, len(existing))
-	result := make(chan *leaseEntry, len(existing))
+	result := make(chan struct{}, len(existing))
 
 	// Use a wait group
 	wg := &sync.WaitGroup{}
@@ -314,32 +314,12 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 						return
 					}
 
-					// Take the lease lock
-					m.lockLease(leaseID)
-
-					// If we loaded a lease elsewhere in the expiration manager during
-					// restore, send a nil entry to the loop waiting for all
-					// existing to be processed
-					if _, ok := m.restoreLoaded.Load(leaseID); ok {
-						m.unlockLease(leaseID)
-						result <- nil
-						continue
-					}
-
-					le, err := m.loadEntryInternal(leaseID, false)
-					m.unlockLease(leaseID)
-					if err != nil {
-						errs <- err
-						continue
-					}
-
 					// Useful for testing to add latency to all load requests
 					if loadDelay > 0 {
 						time.Sleep(loadDelay)
 					}
 
-					// Write results out to the result channel
-					result <- le
+					m.processRestore(leaseID, result, errs)
 
 				// quit early
 				case <-quit:
@@ -371,7 +351,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 		close(broker)
 	}()
 
-	// Restore each key by pulling from the result chan
+	// Ensure all keys on the chan are processed
 	for i := 0; i < len(existing); i++ {
 		select {
 		case err := <-errs:
@@ -380,15 +360,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 
 			return err
 
-		case le := <-result:
-			// If there is no entry, nothing to restore
-			if le == nil {
-				continue
-			}
-
-			m.lockLease(le.LeaseID)
-			m.restoreLease(le, true)
-			m.unlockLease(le.LeaseID)
+		case <-result:
 		}
 	}
 
@@ -405,30 +377,27 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	return nil
 }
 
-// restoreLease takes a lease entry that has not been added to the expiration
-// manager and adds it back in.
-// NOTE: You must enter this method with the restoreLock
-func (m *ExpirationManager) restoreLease(le *leaseEntry, unseenOnly bool) {
-	// If there is no entry, nothing to restore
-	if le == nil {
+func (m *ExpirationManager) processRestore(leaseID string, resultChan chan struct{}, errChan chan error) {
+	// Take the lease lock
+	m.lockLease(leaseID)
+	defer m.unlockLease(leaseID)
+
+	// If we loaded a lease elsewhere in the expiration manager during
+	// restore, send a nil entry to the loop waiting for all
+	// existing to be processed
+	if _, ok := m.restoreLoaded.Load(leaseID); ok {
+		resultChan <- struct{}{}
 		return
 	}
 
-	if unseenOnly {
-		// If we loaded a lease elsewhere in the expiration manager while in
-		// restore, skip the entry since it may have been updated since we
-		// loaded it
-		if _, ok := m.restoreLoaded.Load(le.LeaseID); ok {
-			return
-		}
+	_, err := m.loadEntryInternal(leaseID, true)
+	if err != nil {
+		errChan <- err
+		return
 	}
 
-	// Update the cache of restored leases, either synchronously or through
-	// the lazy loaded restore process
-	m.restoreLoaded.Store(le.LeaseID, struct{}{})
-
-	// Setup revocation timer
-	m.updatePending(le, le.ExpireTime.Sub(time.Now()))
+	// Write results out to the result channel
+	resultChan <- struct{}{}
 }
 
 // Stop is used to prevent further automatic revocations.
@@ -1057,7 +1026,12 @@ func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreLease bool)
 	}
 
 	if restoreLease {
-		m.restoreLease(le, false)
+		// Update the cache of restored leases, either synchronously or through
+		// the lazy loaded restore process
+		m.restoreLoaded.Store(le.LeaseID, struct{}{})
+
+		// Setup revocation timer
+		m.updatePending(le, le.ExpireTime.Sub(time.Now()))
 	}
 	return le, err
 }
