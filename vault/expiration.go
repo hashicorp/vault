@@ -67,6 +67,8 @@ type ExpirationManager struct {
 	restoreModeLock sync.RWMutex
 	restoreLocks    []*locksutil.LockEntry
 	restoreLoaded   sync.Map
+
+	quitRestore int64
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -269,6 +271,12 @@ func (m *ExpirationManager) Tidy() error {
 func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (retErr error) {
 	defer func() {
 		if retErr != nil {
+			if errwrap.Contains(retErr, ErrBarrierSealed.Error()) {
+				// Don't run error func because we're likely already shutting down
+				m.logger.Warn("expiration: barrier sealed while restoring leases, stopping lease loading")
+				retErr = nil
+				return
+			}
 			m.logger.Error("expiration: error restoring leases", "error", retErr)
 			if errorFunc != nil {
 				errorFunc()
@@ -286,7 +294,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	m.logger.Debug("expiration: collecting leases")
 	existing, err := logical.CollectKeys(m.idView)
 	if err != nil {
-		return fmt.Errorf("failed to scan for leases: %v", err)
+		return errwrap.Wrapf("failed to scan for leases: {{err}}", err)
 	}
 	m.logger.Debug("expiration: leases collected", "num_existing", len(existing))
 
@@ -347,6 +355,10 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 				m.logger.Trace("expiration: leases loading", "progress", i)
 			}
 
+			if atomic.LoadInt64(&m.quitRestore) == 1 {
+				return
+			}
+
 			select {
 			case <-quit:
 				return
@@ -398,6 +410,19 @@ func (m *ExpirationManager) Stop() error {
 		timer.Stop()
 	}
 	m.pending = make(map[string]*time.Timer)
+
+	if m.inRestoreMode() {
+		atomic.StoreInt64(&m.quitRestore, 1)
+		for {
+			if !m.inRestoreMode() {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	// Just for safety
+	atomic.StoreInt64(&m.quitRestore, 0)
+
 	return nil
 }
 
