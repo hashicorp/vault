@@ -2532,9 +2532,14 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 			t.Fatalf("expected error")
 		}
 
+		time.Sleep(2 * time.Second)
+
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
 		resp, err = core.HandleRequest(req)
+		if resp != nil && err == nil {
+			t.Fatalf("expected error, response is %#v", *resp)
+		}
 		if err == nil {
 			t.Fatalf("expected error")
 		}

@@ -52,6 +52,7 @@ const (
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
 	router     *Router
+	topView    *BarrierView
 	idView     *BarrierView
 	tokenView  *BarrierView
 	tokenStore *TokenStore
@@ -67,8 +68,7 @@ type ExpirationManager struct {
 	restoreModeLock sync.RWMutex
 	restoreLocks    []*locksutil.LockEntry
 	restoreLoaded   sync.Map
-
-	quitRestore int64
+	quitCh          chan struct{}
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -78,8 +78,10 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 		logger = log.New("expiration_manager")
 
 	}
+
 	exp := &ExpirationManager{
 		router:     router,
+		topView:    view,
 		idView:     view.SubView(leaseViewPrefix),
 		tokenView:  view.SubView(tokenViewPrefix),
 		tokenStore: ts,
@@ -90,6 +92,7 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 		// restore mode
 		restoreMode:  1,
 		restoreLocks: locksutil.CreateLocks(),
+		quitCh:       make(chan struct{}),
 	}
 	return exp
 }
@@ -271,6 +274,7 @@ func (m *ExpirationManager) Tidy() error {
 func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (retErr error) {
 	defer func() {
 		// Clear our the restored entries and turn off restore mode
+		m.logger.Debug("expiration: clearing out loading state")
 		m.restoreModeLock.Lock()
 		m.restoreLoaded = sync.Map{}
 		m.restoreLocks = nil
@@ -289,6 +293,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 				errorFunc()
 			}
 		}
+		m.logger.Debug("expiration: finished clearing out loading state")
 	}()
 
 	// Accumulate existing leases
@@ -342,6 +347,9 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 				// quit early
 				case <-quit:
 					return
+
+				case <-m.quitCh:
+					return
 				}
 			}
 		}()
@@ -356,12 +364,11 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 				m.logger.Trace("expiration: leases loading", "progress", i)
 			}
 
-			if atomic.LoadInt64(&m.quitRestore) == 1 {
-				return
-			}
-
 			select {
 			case <-quit:
+				return
+
+			case <-m.quitCh:
 				return
 
 			default:
@@ -379,8 +386,11 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 		case err := <-errs:
 			// Close all go routines
 			close(quit)
-
 			return err
+
+		case <-m.quitCh:
+			close(quit)
+			return nil
 
 		case <-result:
 		}
@@ -397,16 +407,18 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
 	// Stop all the pending expiration timers
-	m.pendingLock.Lock()
-	defer m.pendingLock.Unlock()
+	m.logger.Debug("expiration: stop triggered")
+	defer m.logger.Debug("expiration: finished stopping")
 
+	m.pendingLock.Lock()
 	for _, timer := range m.pending {
 		timer.Stop()
 	}
 	m.pending = make(map[string]*time.Timer)
+	m.pendingLock.Unlock()
 
+	close(m.quitCh)
 	if m.inRestoreMode() {
-		atomic.StoreInt64(&m.quitRestore, 1)
 		for {
 			if !m.inRestoreMode() {
 				break
@@ -414,8 +426,6 @@ func (m *ExpirationManager) Stop() error {
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
-	// Just for safety
-	atomic.StoreInt64(&m.quitRestore, 0)
 
 	return nil
 }
@@ -431,6 +441,7 @@ func (m *ExpirationManager) Revoke(leaseID string) error {
 // during revocation and still remove entries/index/lease timers
 func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
+
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
@@ -623,7 +634,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool, error) {
 	defer metrics.MeasureSince([]string{"expire", "restore-token-check"}, time.Now())
 
-	// Return immediately if we are not in retore mode, expiration manager is
+	// Return immediately if we are not in restore mode, expiration manager is
 	// already loaded
 	if !m.inRestoreMode() {
 		return true, nil
@@ -932,17 +943,21 @@ func (m *ExpirationManager) expireID(leaseID string) {
 	m.pendingLock.Unlock()
 
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
+		if _, ok := <-m.quitCh; !ok {
+			m.logger.Error("expiration: shutting down, not attempting further revocation of lease", "lease_id", leaseID)
+			return
+		}
 		err := m.Revoke(leaseID)
 		if err == nil {
 			if m.logger.IsInfo() {
-				m.logger.Info("expire: revoked lease", "lease_id", leaseID)
+				m.logger.Info("expiration: revoked lease", "lease_id", leaseID)
 			}
 			return
 		}
-		m.logger.Error("expire: failed to revoke lease", "lease_id", leaseID, "error", err)
+		m.logger.Error("expiration: failed to revoke lease", "lease_id", leaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
-	m.logger.Error("expire: maximum revoke attempts reached", "lease_id", leaseID)
+	m.logger.Error("expiration: maximum revoke attempts reached", "lease_id", leaseID)
 }
 
 // revokeEntry is used to attempt revocation of an internal entry
