@@ -382,14 +382,6 @@ func (m *ExpirationManager) processRestore(leaseID string, resultChan chan struc
 	m.lockLease(leaseID)
 	defer m.unlockLease(leaseID)
 
-	// If we loaded a lease elsewhere in the expiration manager during
-	// restore, send a nil entry to the loop waiting for all
-	// existing to be processed
-	if _, ok := m.restoreLoaded.Load(leaseID); ok {
-		resultChan <- struct{}{}
-		return
-	}
-
 	_, err := m.loadEntryInternal(leaseID, true)
 	if err != nil {
 		errChan <- err
@@ -1015,7 +1007,7 @@ func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
 
 // loadEntryInternal is used when you need to load an entry but also need to
 // control the lifecycle of the restoreLock
-func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreLease bool) (*leaseEntry, error) {
+func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool) (*leaseEntry, error) {
 	out, err := m.idView.Get(leaseID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lease entry: %v", err)
@@ -1028,7 +1020,14 @@ func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreLease bool)
 		return nil, fmt.Errorf("failed to decode lease entry: %v", err)
 	}
 
-	if restoreLease {
+	if restoreMode {
+		// If we have already loaded this lease, we don't need to update on
+		// load. In the case of renewal and revocation, updatePending will be
+		// done after making the appropriate modifications to the lease.
+		if _, ok := m.restoreLoaded.Load(leaseID); ok {
+			return le, nil
+		}
+
 		// Update the cache of restored leases, either synchronously or through
 		// the lazy loaded restore process
 		m.restoreLoaded.Store(le.LeaseID, struct{}{})
@@ -1036,7 +1035,7 @@ func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreLease bool)
 		// Setup revocation timer
 		m.updatePending(le, le.ExpireTime.Sub(time.Now()))
 	}
-	return le, err
+	return le, nil
 }
 
 // persistEntry is used to persist a lease entry
