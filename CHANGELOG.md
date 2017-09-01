@@ -55,9 +55,9 @@ BUG FIXES:
  * storage/consul: Fix parsing TLS configuration when using a bare IPv6 address
    [GH-3268]
  * plugins: Lazy-load plugins to prevent crash/deadlock during unseal process.
-   Skip mounting plugin-based secret and credential mounts when setting up mounts
-   if the plugin is no longer present in the catalog (the mount entry will still
-   be present in the mount table to preserve the storage view). [GH-3255]
+   [GH-3255]
+ * plugins: Skip mounting plugin-based secret and credential mounts when setting
+   up mounts if the plugin is no longer present in the catalog. [GH-3255]
 
 ## 0.8.1 (August 16th, 2017)
 
