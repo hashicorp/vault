@@ -279,7 +279,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 		default:
 			m.logger.Error("expiration: error restoring leases", "error", retErr)
 			if errorFunc != nil {
-				errorFunc()
+				go errorFunc()
 			}
 		}
 
