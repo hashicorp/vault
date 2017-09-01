@@ -338,10 +338,10 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 					m.unlockLease(leaseID)
 					if err != nil {
 						errs <- err
-						return
+						continue
 					}
 
-					// Write results out to the result channel
+					// Send message that lease is done
 					result <- struct{}{}
 
 				// quit early
