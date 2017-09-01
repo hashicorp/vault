@@ -270,6 +270,13 @@ func (m *ExpirationManager) Tidy() error {
 // This is used after starting the vault.
 func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (retErr error) {
 	defer func() {
+		// Clear our the restored entries and turn off restore mode
+		m.restoreModeLock.Lock()
+		m.restoreLoaded = sync.Map{}
+		m.restoreLocks = nil
+		atomic.StoreInt64(&m.restoreMode, 0)
+		m.restoreModeLock.Unlock()
+
 		switch {
 		case retErr == nil:
 		case errwrap.Contains(retErr, ErrBarrierSealed.Error()):
@@ -279,16 +286,9 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 		default:
 			m.logger.Error("expiration: error restoring leases", "error", retErr)
 			if errorFunc != nil {
-				go errorFunc()
+				errorFunc()
 			}
 		}
-
-		// Clear our the restored entries and turn off restore mode
-		m.restoreModeLock.Lock()
-		m.restoreLoaded = sync.Map{}
-		m.restoreLocks = nil
-		atomic.StoreInt64(&m.restoreMode, 0)
-		m.restoreModeLock.Unlock()
 	}()
 
 	// Accumulate existing leases
