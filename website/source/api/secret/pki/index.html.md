@@ -41,6 +41,7 @@ update your API calls accordingly.
 * [Generate Root](#generate-root)
 * [Delete Root](#delete-root)
 * [Sign Intermediate](#sign-intermediate)
+* [Sign Self-Issued](#sign-self-issued)
 * [Sign Certificate](#sign-certificate)
 * [Sign Verbatim](#sign-verbatim)
 * [Tidy](#tidy)
@@ -1073,7 +1074,6 @@ verbatim.
 {
   "csr": "...",
   "common_name": "example.com"
-
 }
 ```
 
@@ -1103,6 +1103,63 @@ $ curl \
   "auth": null
 }
 ```
+## Sign Self-Issued
+
+This endpoint uses the configured CA certificate to sign a self-issued
+certificate (which will usually be a self-signed certificate as well).
+
+**_This is an extremely privileged endpoint_**. The given certificate will be
+signed as-is with only minimal validation performed (is it a CA cert, and is it
+actually self-issued). The only values that will be changed will be the
+authority key ID and, if set, any distribution points.
+
+This is generally only needed for root certificate rolling. If you don't know
+whether you need this endpoint, you most likely should be using a different
+endpoint (such as `sign-intermediate`).
+
+This endpoint requires `sudo` capability.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/pki/root/sign-self-issued` | `200 application/json` |
+
+### Parameters
+
+- `certificate` `(string: <required>)` – Specifies the PEM-encoded self-issued certificate.
+
+### Sample Payload
+
+```json
+{
+  "certificate": "..."
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/pki/root/sign-self-issued
+```
+
+### Sample Response
+
+```json
+{
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
+    "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
+  },
+  "auth": null
+}
+```
+
 
 ## Sign Certificate
 

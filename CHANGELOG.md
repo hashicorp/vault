@@ -11,6 +11,8 @@ FEATURES:
 * **SSH CA Login with `vault ssh`**: `vault ssh` now supports the SSH CA
   backend for authenticating to machines. It also supports remote host key
   verification through the SSH CA backend, if enabled.
+* **Signing of Self-Issued Certs in PKI**: The `pki` backend now supports
+  signing self-issued CA certs. This is useful when switching root CAs.
 
 IMPROVEMENTS:
 
@@ -33,6 +35,8 @@ IMPROVEMENTS:
    retrying the operation [GH-3269]
  * secret/pki: TTLs can now be specified as a string or an integer number of
    seconds [GH-3270]
+ * secret/pki: Self-issued certs can now be signed via
+   `pki/root/sign-self-issued` [GH-3274]
  * storage/gcp: Use application default credentials if they exist [GH-3248]
 
 BUG FIXES:
