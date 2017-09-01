@@ -319,7 +319,16 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 						time.Sleep(loadDelay)
 					}
 
-					m.processRestore(leaseID, result, errs)
+					m.lockLease(leaseID)
+					_, err := m.loadEntryInternal(leaseID, true)
+					m.unlockLease(leaseID)
+					if err != nil {
+						errs <- err
+						return
+					}
+
+					// Write results out to the result channel
+					result <- struct{}{}
 
 				// quit early
 				case <-quit:
@@ -370,26 +379,12 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	// Clear our the restored entries and turn off restore mode
 	m.restoreModeLock.Lock()
 	m.restoreLoaded = sync.Map{}
+	m.restoreLocks = nil
 	atomic.StoreInt64(&m.restoreMode, 0)
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("expiration: lease restore complete")
 	return nil
-}
-
-func (m *ExpirationManager) processRestore(leaseID string, resultChan chan struct{}, errChan chan error) {
-	// Take the lease lock
-	m.lockLease(leaseID)
-	defer m.unlockLease(leaseID)
-
-	_, err := m.loadEntryInternal(leaseID, true)
-	if err != nil {
-		errChan <- err
-		return
-	}
-
-	// Write results out to the result channel
-	resultChan <- struct{}{}
 }
 
 // Stop is used to prevent further automatic revocations.
