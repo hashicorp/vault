@@ -120,13 +120,11 @@ $ curl \
 ```javascript
 {
 	"data": {
-		"plugin": {
-			"args": [],
-			"builtin": false,
-			"command": "/tmp/vault-plugins/mysql-database-plugin",
-			"name": "example-plugin",
-			"sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek="
-		}
+		"args": [],
+		"builtin": false,
+		"command": "/tmp/vault-plugins/mysql-database-plugin",
+		"name": "example-plugin",
+		"sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek="
 	}
 }
 ```
