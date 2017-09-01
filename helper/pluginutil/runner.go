@@ -2,6 +2,7 @@ package pluginutil
 
 import (
 	"crypto/sha256"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"os/exec"
@@ -49,39 +50,24 @@ type PluginRunner struct {
 // returns a configured plugin.Client with TLS Configured and a wrapping token set
 // on PluginUnwrapTokenEnv for plugin process consumption.
 func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
-	// Get a CA TLS Certificate
-	certBytes, key, err := generateCert()
-	if err != nil {
-		return nil, err
-	}
+	return r.runCommon(wrapper, pluginMap, hs, env, logger, false)
+}
 
-	// Use CA to sign a client cert and return a configured TLS config
-	clientTLSConfig, err := createClientTLSConfig(certBytes, key)
-	if err != nil {
-		return nil, err
-	}
+// RunMetadataMode returns a configured plugin.Client that will dispense a plugin
+// in metadata mode. The PluginMetadaModeEnv is passed in as part of the Cmd to
+// plugin.Client, and consumed by the plugin process on pluginutil.VaultPluginTLSProvider.
+func (r *PluginRunner) RunMetadataMode(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	return r.runCommon(wrapper, pluginMap, hs, env, logger, true)
 
-	// Use CA to sign a server cert and wrap the values in a response wrapped
-	// token.
-	wrapToken, err := wrapServerConfig(wrapper, certBytes, key)
-	if err != nil {
-		return nil, err
-	}
+}
 
+func (r *PluginRunner) runCommon(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger, isMetadataMode bool) (*plugin.Client, error) {
 	cmd := exec.Command(r.Command, r.Args...)
 	cmd.Env = append(cmd.Env, env...)
-	// Add the response wrap token to the ENV of the plugin
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
-	// Add the metadata mode ENV and set it to false
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "false"))
+
 	// Add the mlock setting to the ENV of the plugin
 	if wrapper.MlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
-	}
-
-	secureConfig := &plugin.SecureConfig{
-		Checksum: r.Sha256,
-		Hash:     sha256.New(),
 	}
 
 	// Create logger for the plugin client
@@ -90,26 +76,35 @@ func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugi
 	}
 	namedLogger := clogger.ResetNamed("plugin")
 
-	client := plugin.NewClient(&plugin.ClientConfig{
-		HandshakeConfig: hs,
-		Plugins:         pluginMap,
-		Cmd:             cmd,
-		TLSConfig:       clientTLSConfig,
-		SecureConfig:    secureConfig,
-		Logger:          namedLogger,
-	})
+	var clientTLSConfig *tls.Config
+	if !isMetadataMode {
+		// Add the metadata mode ENV and set it to false
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "false"))
 
-	return client, nil
-}
+		// Get a CA TLS Certificate
+		certBytes, key, err := generateCert()
+		if err != nil {
+			return nil, err
+		}
 
-func (r *PluginRunner) RunMetadataMode(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
-	cmd := exec.Command(r.Command, r.Args...)
-	cmd.Env = append(cmd.Env, env...)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "true"))
+		// Use CA to sign a client cert and return a configured TLS config
+		clientTLSConfig, err = createClientTLSConfig(certBytes, key)
+		if err != nil {
+			return nil, err
+		}
 
-	// Add the mlock setting to the ENV of the plugin
-	if wrapper.MlockEnabled() {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
+		// Use CA to sign a server cert and wrap the values in a response wrapped
+		// token.
+		wrapToken, err := wrapServerConfig(wrapper, certBytes, key)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add the response wrap token to the ENV of the plugin
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
+	} else {
+		namedLogger = clogger.ResetNamed("plugin.metadata")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "true"))
 	}
 
 	secureConfig := &plugin.SecureConfig{
@@ -117,22 +112,18 @@ func (r *PluginRunner) RunMetadataMode(wrapper RunnerUtil, pluginMap map[string]
 		Hash:     sha256.New(),
 	}
 
-	// Create logger for the plugin client
-	clogger := &hclogFaker{
-		logger: logger,
-	}
-	namedLogger := clogger.ResetNamed("plugin.metadata")
-
-	client := plugin.NewClient(&plugin.ClientConfig{
+	clientConfig := &plugin.ClientConfig{
 		HandshakeConfig: hs,
 		Plugins:         pluginMap,
 		Cmd:             cmd,
 		SecureConfig:    secureConfig,
+		TLSConfig:       clientTLSConfig,
 		Logger:          namedLogger,
-	})
+	}
+
+	client := plugin.NewClient(clientConfig)
 
 	return client, nil
-
 }
 
 type APIClientMeta struct {

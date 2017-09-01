@@ -64,7 +64,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 	core := cluster.Cores[0]
 
 	// Make a request to lazy load the plugin
-	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
+	req := logical.TestRequest(t, logical.ReadOperation, "auth/mock-0/internal")
 	req.ClientToken = core.Client.Token()
 	resp, err := core.HandleRequest(req)
 	if err != nil {
