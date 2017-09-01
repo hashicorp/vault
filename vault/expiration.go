@@ -269,27 +269,26 @@ func (m *ExpirationManager) Tidy() error {
 // Restore is used to recover the lease states when starting.
 // This is used after starting the vault.
 func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (retErr error) {
-	// This is only required in error cases where the restore loop exits prematurely. This is required to
-	// appropriately stop the expiration manager during a shutdown.
 	defer func() {
-		m.restoreModeLock.Lock()
-		atomic.StoreInt64(&m.restoreMode, 0)
-		m.restoreModeLock.Unlock()
-	}()
-
-	defer func() {
-		if retErr != nil {
-			if errwrap.Contains(retErr, ErrBarrierSealed.Error()) {
-				// Don't run error func because we're likely already shutting down
-				m.logger.Warn("expiration: barrier sealed while restoring leases, stopping lease loading")
-				retErr = nil
-				return
-			}
+		switch {
+		case retErr == nil:
+		case errwrap.Contains(retErr, ErrBarrierSealed.Error()):
+			// Don't run error func because we're likely already shutting down
+			m.logger.Warn("expiration: barrier sealed while restoring leases, stopping lease loading")
+			retErr = nil
+		default:
 			m.logger.Error("expiration: error restoring leases", "error", retErr)
 			if errorFunc != nil {
 				errorFunc()
 			}
 		}
+
+		// Clear our the restored entries and turn off restore mode
+		m.restoreModeLock.Lock()
+		m.restoreLoaded = sync.Map{}
+		m.restoreLocks = nil
+		atomic.StoreInt64(&m.restoreMode, 0)
+		m.restoreModeLock.Unlock()
 	}()
 
 	// Accumulate existing leases
@@ -389,13 +388,6 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 
 	// Let all go routines finish
 	wg.Wait()
-
-	// Clear our the restored entries and turn off restore mode
-	m.restoreModeLock.Lock()
-	m.restoreLoaded = sync.Map{}
-	m.restoreLocks = nil
-	atomic.StoreInt64(&m.restoreMode, 0)
-	m.restoreModeLock.Unlock()
 
 	m.logger.Info("expiration: lease restore complete")
 	return nil
