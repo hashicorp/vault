@@ -638,6 +638,9 @@ func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool
 	}
 	leaseID := path.Join(source, saltedID)
 
+	m.lockLease(leaseID)
+	defer m.unlockLease(leaseID)
+
 	le, err := m.loadEntryInternal(leaseID, true)
 	if err != nil {
 		return false, err
