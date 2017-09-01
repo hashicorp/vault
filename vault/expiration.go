@@ -396,7 +396,6 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	m.restoreModeLock.Lock()
 	m.restoreLoaded = sync.Map{}
 	m.restoreLocks = nil
-	atomic.StoreInt64(&m.restoreMode, 0)
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("expiration: lease restore complete")
