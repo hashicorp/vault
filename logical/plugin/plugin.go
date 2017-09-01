@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"encoding/gob"
 	"fmt"
+	"time"
 
 	"sync"
 
@@ -19,6 +20,7 @@ import (
 func init() {
 	gob.Register(rsa.PublicKey{})
 	gob.Register(ecdsa.PublicKey{})
+	gob.Register(time.Duration(0))
 }
 
 // BackendPluginClient is a wrapper around backendPluginClient
