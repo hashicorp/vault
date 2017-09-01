@@ -943,9 +943,11 @@ func (m *ExpirationManager) expireID(leaseID string) {
 	m.pendingLock.Unlock()
 
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
-		if _, ok := <-m.quitCh; !ok {
+		select {
+		case <-m.quitCh:
 			m.logger.Error("expiration: shutting down, not attempting further revocation of lease", "lease_id", leaseID)
 			return
+		default:
 		}
 		err := m.Revoke(leaseID)
 		if err == nil {
