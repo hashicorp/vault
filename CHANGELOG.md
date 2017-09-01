@@ -11,6 +11,8 @@ FEATURES:
 * **SSH CA Login with `vault ssh`**: `vault ssh` now supports the SSH CA
   backend for authenticating to machines. It also supports remote host key
   verification through the SSH CA backend, if enabled.
+* **Signing of Self-Issued Certs in PKI**: The `pki` backend now supports
+  signing self-issued CA certs. This is useful when switching root CAs.
 
 IMPROVEMENTS:
 
