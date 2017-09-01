@@ -241,7 +241,14 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 }
 
 func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
-	serverName := strings.Split(conf["address"], ":")
+	serverName, _, err := net.SplitHostPort(conf["address"])
+	switch {
+	case err == nil:
+	case strings.Contains(err.Error(), "missing port"):
+		serverName = conf["address"]
+	default:
+		return nil, err
+	}
 
 	insecureSkipVerify := false
 	if _, ok := conf["tls_skip_verify"]; ok {
@@ -262,7 +269,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	tlsClientConfig := &tls.Config{
 		MinVersion:         tlsMinVersion,
 		InsecureSkipVerify: insecureSkipVerify,
-		ServerName:         serverName[0],
+		ServerName:         serverName,
 	}
 
 	_, okCert := conf["tls_cert_file"]

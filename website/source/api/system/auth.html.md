@@ -74,15 +74,24 @@ For example, mounting the "foo" auth backend will make it accessible at
 - `type` `(string: <required>)` – Specifies the name of the authentication
   backend type, such as "github" or "token".
 
+- `config` `(map<string|string>: nil)` – Specifies configuration options for
+  this mount. These are the possible values:
+
+    - `plugin_name`
+
+    The plugin_name can be provided in the config map or as a top-level option, 
+    with the former taking precedence.
+
+- `plugin_name` `(string: "")` – Specifies the name of the auth plugin to
+  use based from the name in the plugin catalog. Applies only to plugin
+  backends.
+
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
 - `local` `(bool: false)` – Specifies if the auth backend is a local mount
   only. Local mounts are not replicated nor (if a secondary) removed by
   replication.
-
-- `plugin_name` `(string: "")` – Specifies the name of the auth plugin to
-  use based from the name in the plugin catalog.
 
 ### Sample Payload
 

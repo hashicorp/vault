@@ -728,48 +728,38 @@ func generateCreationBundle(b *backend,
 	}
 
 	// Get the TTL and very it against the max allowed
-	var ttlField string
 	var ttl time.Duration
 	var maxTTL time.Duration
 	var notAfter time.Time
-	var ttlFieldInt interface{}
 	{
-		ttlFieldInt, ok = data.GetOk("ttl")
-		if !ok {
-			ttlField = role.TTL
-		} else {
-			ttlField = ttlFieldInt.(string)
-		}
+		ttl = time.Duration(data.Get("ttl").(int)) * time.Second
 
-		if len(ttlField) == 0 {
-			ttl = b.System().DefaultLeaseTTL()
-		} else {
-			ttl, err = parseutil.ParseDurationSecond(ttlField)
-			if err != nil {
-				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"invalid requested ttl: %s", err)}
+		if ttl == 0 {
+			if role.TTL != "" {
+				ttl, err = parseutil.ParseDurationSecond(role.TTL)
+				if err != nil {
+					return nil, errutil.UserError{Err: fmt.Sprintf(
+						"invalid role ttl: %s", err)}
+				}
 			}
 		}
 
-		if len(role.MaxTTL) == 0 {
-			maxTTL = b.System().MaxLeaseTTL()
-		} else {
+		if role.MaxTTL != "" {
 			maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"invalid ttl: %s", err)}
+					"invalid role max_ttl: %s", err)}
 			}
 		}
 
+		if ttl == 0 {
+			ttl = b.System().DefaultLeaseTTL()
+		}
+		if maxTTL == 0 {
+			maxTTL = b.System().MaxLeaseTTL()
+		}
 		if ttl > maxTTL {
-			// Don't error if they were using system defaults, only error if
-			// they specifically chose a bad TTL
-			if len(ttlField) == 0 {
-				ttl = maxTTL
-			} else {
-				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"ttl is larger than maximum allowed (%d)", maxTTL/time.Second)}
-			}
+			ttl = maxTTL
 		}
 
 		notAfter = time.Now().Add(ttl)
@@ -939,6 +929,7 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		}
 
 		caCert := creationInfo.SigningBundle.Certificate
+		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
 
 		err = checkPermittedDNSDomains(certTemplate, caCert)
 		if err != nil {
@@ -962,6 +953,7 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 		}
 
+		certTemplate.AuthorityKeyId = subjKeyID
 		certTemplate.BasicConstraintsValid = true
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
 	}
@@ -1069,6 +1061,8 @@ func signCertificate(creationInfo *creationBundle,
 	}
 	subjKeyID := sha1.Sum(marshaledKey)
 
+	caCert := creationInfo.SigningBundle.Certificate
+
 	subject := pkix.Name{
 		CommonName:         creationInfo.CommonName,
 		OrganizationalUnit: creationInfo.OU,
@@ -1076,11 +1070,12 @@ func signCertificate(creationInfo *creationBundle,
 	}
 
 	certTemplate := &x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject:      subject,
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     creationInfo.NotAfter,
-		SubjectKeyId: subjKeyID[:],
+		SerialNumber:   serialNumber,
+		Subject:        subject,
+		NotBefore:      time.Now().Add(-30 * time.Second),
+		NotAfter:       creationInfo.NotAfter,
+		SubjectKeyId:   subjKeyID[:],
+		AuthorityKeyId: caCert.SubjectKeyId,
 	}
 
 	switch creationInfo.SigningBundle.PrivateKeyType {
@@ -1107,7 +1102,6 @@ func signCertificate(creationInfo *creationBundle,
 	addKeyUsages(creationInfo, certTemplate)
 
 	var certBytes []byte
-	caCert := creationInfo.SigningBundle.Certificate
 
 	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints

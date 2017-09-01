@@ -447,6 +447,12 @@
 			"revisionTime": "2017-07-11T19:02:43Z"
 		},
 		{
+			"checksumSHA1": "QZtBo/fc3zeQFxPFgPVMyDiw70M=",
+			"path": "github.com/chrismalek/oktasdk-go/okta",
+			"revision": "7d4ce0a254ec5f9eda3397523f6cf183e1d46c5e",
+			"revisionTime": "2017-02-07T05:01:14Z"
+		},
+		{
 			"checksumSHA1": "Ymghbn2vkOAdT9rNQxKR2qNuxtA=",
 			"path": "github.com/circonus-labs/circonus-gometrics",
 			"revision": "55add91cfb689b0fd6e9fa67c58c7a948310a80e",
@@ -1357,12 +1363,6 @@
 			"path": "github.com/sirupsen/logrus",
 			"revision": "e49c59d69b89746796d48156991108c80faf1d7d",
 			"revisionTime": "2017-07-18T14:06:42Z"
-		},
-		{
-			"checksumSHA1": "7b7psq20O8IOCr885W2Ld6a3KTc=",
-			"path": "github.com/sstarcher/go-okta",
-			"revision": "64b3cb9e3a7b6d0c4e4432576c873e492d152666",
-			"revisionTime": "2017-04-28T20:44:25Z"
 		},
 		{
 			"checksumSHA1": "9Zw986fuQM/hCoVd8vmHoSM+8sU=",

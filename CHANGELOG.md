@@ -11,6 +11,8 @@ FEATURES:
 * **SSH CA Login with `vault ssh`**: `vault ssh` now supports the SSH CA
   backend for authenticating to machines. It also supports remote host key
   verification through the SSH CA backend, if enabled.
+* **Signing of Self-Issued Certs in PKI**: The `pki` backend now supports
+  signing self-issued CA certs. This is useful when switching root CAs.
 
 IMPROVEMENTS:
 
@@ -21,8 +23,20 @@ IMPROVEMENTS:
    case-preserving [GH-3240]
  * cli: Add subcommand autocompletion that can be enabled with 
    `vault -autocomplete-install` [GH-3223]
+ * cli: Add ability to handle wrapped responses when using `vault auth`. What
+   is output depends on the other given flags; see the help output for that
+   command for more information. [GH-3263]
  * core: TLS cipher suites used for cluster behavior can now be set via
    `cluster_cipher_suites` in configuration [GH-3228]
+ * core: The `plugin_name` can now either be specified directly as part of the
+   parameter or within the `config` object when mounting a secret or auth backend
+   via `sys/mounts/:path` or `sys/auth/:path` respectively [GH-3202]
+ * secret/databases/mongo: If an EOF is encountered, attempt reconnecting and
+   retrying the operation [GH-3269]
+ * secret/pki: TTLs can now be specified as a string or an integer number of
+   seconds [GH-3270]
+ * secret/pki: Self-issued certs can now be signed via
+   `pki/root/sign-self-issued` [GH-3274]
  * storage/gcp: Use application default credentials if they exist [GH-3248]
 
 BUG FIXES:
@@ -34,6 +48,8 @@ BUG FIXES:
  * core: Fix PROXY when underlying connection is TLS [GH-3195]
  * core: Policy-related commands would sometimes fail to act case-insensitively
    [GH-3210]
+ * storage/consul: Fix parsing TLS configuration when using a bare IPv6 address
+   [GH-3268]
 
 ## 0.8.1 (August 16th, 2017)
 
@@ -323,9 +339,9 @@ FEATURES:
    Lambda instances, and more. Signed client identity information retrieved
    using the AWS API `sts:GetCallerIdentity` is validated against the AWS STS
    service before issuing a Vault token. This backend is unified with the
-   `aws-ec2` authentication backend, and allows additional EC2-related
-   restrictions to be applied during the IAM authentication; the previous EC2
-   behavior is also still available. [GH-2441]
+   `aws-ec2` authentication backend under the name `aws`, and allows additional
+   EC2-related restrictions to be applied during the IAM authentication; the
+   previous EC2 behavior is also still available. [GH-2441]
  * **MSSQL Physical Backend**: You can now use Microsoft SQL Server as your
    Vault physical data store [GH-2546]
  * **Lease Listing and Lookup**: You can now introspect a lease to get its
