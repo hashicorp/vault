@@ -285,10 +285,14 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	}()
 
 	// Put expiration manager in restore mode.  All new instances of the exp manager
-	// should automatically be in restore mode, let's set it just in case
+	// should automatically be in restore mode, let's set it just in case.
 	m.restoreModeLock.Lock()
 	atomic.StoreInt64(&m.restoreMode, 1)
 	m.restoreModeLock.Unlock()
+
+	// This is only required in error cases where the restore loop exits prematurely. This is required to
+	// appropriately stop the expiration manager during a shutdown.
+	defer atomic.StoreInt64(&m.restoreMode, 0)
 
 	// Accumulate existing leases
 	m.logger.Debug("expiration: collecting leases")
