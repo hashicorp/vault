@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 	"reflect"
 	"sort"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -445,10 +447,11 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 
 	// New store should share the salt
 	ts2, err := NewTokenStore(c, getBackendConfig(c))
-	ts2.SetExpirationManager(ts.expiration)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	ts2.SetExpirationManager(c.expiration)
+
 	if err := ts2.Initialize(); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -491,10 +494,11 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 
 	// New store should share the salt
 	ts2, err := NewTokenStore(c, getBackendConfig(c))
-	ts2.SetExpirationManager(ts.expiration)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	ts2.SetExpirationManager(c.expiration)
+
 	if err := ts2.Initialize(); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -506,6 +510,65 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 	if !reflect.DeepEqual(out, ent) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
+	}
+}
+
+func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
+	_, ts, _, _ := TestCoreWithTokenStore(t)
+
+	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
+	if err := ts.create(ent); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if ent.ID == "" {
+		t.Fatalf("missing ID")
+	}
+
+	// Replace the lease with a lease with an expire time in the past
+	saltedID, err := ts.SaltID(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Create a lease entry
+	leaseID := path.Join(ent.Path, saltedID)
+	le := &leaseEntry{
+		LeaseID:     leaseID,
+		ClientToken: ent.ID,
+		Path:        ent.Path,
+		IssueTime:   time.Now(),
+		ExpireTime:  time.Now().Add(1 * time.Hour),
+	}
+	if err := ts.expiration.persistEntry(le); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	out, err := ts.Lookup(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(out, ent) {
+		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
+	}
+
+	// Set to expired lease time
+	le.ExpireTime = time.Now().Add(-1 * time.Hour)
+	if err := ts.expiration.persistEntry(le); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Reset expiration manager to restore mode
+	ts.expiration.restoreMode = 1
+	ts.expiration.restoreLocks = locksutil.CreateLocks()
+
+	// Test that the token lookup does not return the token entry due to the
+	// expired lease
+	out, err = ts.Lookup(ent.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("lease expired, no token expected: %#v", out)
 	}
 }
 

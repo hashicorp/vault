@@ -631,7 +631,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 // RestoreTokenCheck verifies that the token is not expired while running in
 // restore mode.  If we are not in restore mode, the lease has already been
 // restored or the lease still has time left, it returns true.
-func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool, error) {
+func (m *ExpirationManager) RestoreSaltedTokenCheck(source string, saltedID string) (bool, error) {
 	defer metrics.MeasureSince([]string{"expire", "restore-token-check"}, time.Now())
 
 	// Return immediately if we are not in restore mode, expiration manager is
@@ -648,11 +648,6 @@ func (m *ExpirationManager) RestoreTokenCheck(source string, token string) (bool
 		return true, nil
 	}
 
-	// Compute the Lease ID
-	saltedID, err := m.tokenStore.SaltID(token)
-	if err != nil {
-		return false, err
-	}
 	leaseID := path.Join(source, saltedID)
 
 	m.lockLease(leaseID)
