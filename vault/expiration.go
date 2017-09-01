@@ -110,7 +110,7 @@ func (c *Core) setupExpiration() error {
 	// Restore the existing state
 	c.logger.Info("expiration: restoring leases")
 	errorFunc := func() {
-		c.logger.Fatal("shutting down")
+		c.logger.Error("shutting down")
 		if err := c.Shutdown(); err != nil {
 			c.logger.Error("core: error shutting down")
 		}
