@@ -87,8 +87,8 @@ func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath
 	go func() {
 		defer close(connState)
 		serverConn, err := list.Accept()
-		serverErrors <- err
 		if err != nil {
+			serverErrors <- err
 			close(serverErrors)
 			return
 		}
@@ -101,9 +101,6 @@ func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath
 			serverErrors <- err
 			close(serverErrors)
 			return
-		} else {
-			// EOF is a reasonable error condition, so swallow it.
-			serverErrors <- nil
 		}
 		close(serverErrors)
 		connState <- serverConn.(*tls.Conn).ConnectionState()
@@ -114,8 +111,8 @@ func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath
 	go func() {
 		addr := list.Addr().String()
 		conn, err := tls.Dial("tcp", addr, dialConf)
-		clientErrors <- err
 		if err != nil {
+			clientErrors <- err
 			close(clientErrors)
 			return
 		}
@@ -123,7 +120,9 @@ func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath
 
 		// Write ping
 		_, err = conn.Write([]byte("ping"))
-		clientErrors <- err
+		if err != nil {
+			clientErrors <- err
+		}
 		close(clientErrors)
 	}()
 
