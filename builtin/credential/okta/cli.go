@@ -53,13 +53,27 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 // Help method for okta cli
 func (h *CLIHandler) Help() string {
 	help := `
-The Okta credential provider allows you to authenticate with Okta.
-To use it, first configure it through the "config" endpoint, and then
-login by specifying username and password. If password is not provided
-on the command line, it will be read from stdin.
+Usage: vault auth -method=okta [CONFIG K=V...]
 
-    Example: vault auth -method=okta username=john
+  The OKTA authentication provider allows users to authenticate using OKTA.
 
+  Authenticate as "sally":
+
+      $ vault auth -method=okta username=sally
+      Password (will be hidden):
+
+  Authenticate as "bob":
+
+      $ vault auth -method=okta username=bob password=password
+
+Configuration:
+
+  password=<string>
+      OKTA password to use for authentication. If not provided, the CLI will
+      prompt for this on stdin.
+
+  username=<string>
+      OKTA username to use for authentication.
     `
 
 	return strings.TrimSpace(help)
