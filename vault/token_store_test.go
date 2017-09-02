@@ -557,9 +557,17 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	err = ts.expiration.Stop()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Reset expiration manager to restore mode
+	ts.expiration.restoreModeLock.Lock()
 	ts.expiration.restoreMode = 1
 	ts.expiration.restoreLocks = locksutil.CreateLocks()
+	ts.expiration.quitCh = make(chan struct{})
+	ts.expiration.restoreModeLock.Unlock()
 
 	// Test that the token lookup does not return the token entry due to the
 	// expired lease
