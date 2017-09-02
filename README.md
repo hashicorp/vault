@@ -57,7 +57,7 @@ Developing Vault
 --------------------
 
 If you wish to work on Vault itself or any of its built-in systems, you'll
-first need [Go](https://www.golang.org) installed on your machine (version 1.8+
+first need [Go](https://www.golang.org) installed on your machine (version 1.9+
 is *required*).
 
 For local dev first make sure Go is properly installed, including setting up a

@@ -427,6 +427,9 @@ func (c *Core) setupCredentials() error {
 		if err != nil {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
 			if errwrap.Contains(err, ErrPluginNotFound.Error()) && entry.Type == "plugin" {
+				// If we encounter an error instantiating the backend due to it being missing from the catalog,
+				// skip backend initialization but register the entry to the mount table to preserve storage
+				// and path.
 				goto ROUTER_MOUNT
 			}
 			return errLoadAuthFailed

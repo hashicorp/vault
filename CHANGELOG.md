@@ -1,10 +1,14 @@
 ## 0.8.2 (Unreleased)
 
-DEPRECATIONS:
+DEPRECATIONS/CHANGES:
 
 * `vault ssh` users should supply `-mode` and `-role` to reduce the number of
   API calls. A future version of Vault will mark these optional values are
   required. Failure to supply `-mode` or `-role` will result in a warning.
+* Vault plugins will first briefly run a restricted version of the plugin to
+  fetch metadata, and then lazy-load the plugin on first request to prevent
+  crash/deadlock of Vault during the unseal process. Plugins will need to be
+  built with the latest changes in order for them to run properly.
 
 FEATURES:
 
@@ -50,6 +54,10 @@ BUG FIXES:
    [GH-3210]
  * storage/consul: Fix parsing TLS configuration when using a bare IPv6 address
    [GH-3268]
+ * plugins: Lazy-load plugins to prevent crash/deadlock during unseal process.
+   [GH-3255]
+ * plugins: Skip mounting plugin-based secret and credential mounts when setting
+   up mounts if the plugin is no longer present in the catalog. [GH-3255]
 
 ## 0.8.1 (August 16th, 2017)
 
