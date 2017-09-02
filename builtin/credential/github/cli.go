@@ -39,20 +39,27 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 func (h *CLIHandler) Help() string {
 	help := `
-The GitHub credential provider allows you to authenticate with GitHub.
-To use it, specify the "token" parameter. The value should be a personal access
-token for your GitHub account. You can generate a personal access token on your
-account settings page on GitHub.
+Usage: vault auth -method=github [CONFIG K=V...]
 
-    Example: vault auth -method=github token=<token>
+  The GitHub authentication provider allows users to authenticate using a
+  GitHub personal access token. Users can generate a personal access token
+  from the settings page on their GitHub account.
 
-Key/Value Pairs:
+  Authenticate using a GitHub token:
 
-    mount=github      The mountpoint for the GitHub credential provider.
-                      Defaults to "github"
+      $ vault auth -method=github token=abcd1234
 
-    token=<token>     The GitHub personal access token for authentication.
-	`
+Configuration:
+
+  mount=<string>
+      Path where the GitHub credential provider is mounted. This is usually
+      provided via the -path flag in the "vault auth" command, but it can be
+      specified here as well. If specified here, it takes precedence over
+      the value for -path. The default value is "github".
+
+  token=<string>
+      GitHub personal access token to use for authentication.
+`
 
 	return strings.TrimSpace(help)
 }
