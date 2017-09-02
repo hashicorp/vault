@@ -273,13 +273,11 @@ func (m *ExpirationManager) Tidy() error {
 // This is used after starting the vault.
 func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (retErr error) {
 	defer func() {
-		// Clear our the restored entries and turn off restore mode
-		m.logger.Debug("expiration: clearing out loading state")
-		m.restoreModeLock.Lock()
-		m.restoreLoaded = sync.Map{}
-		m.restoreLocks = nil
+		// Turn off restore mode. We can do this safely without the lock because
+		// if restore mode finished successfully, restore mode was already
+		// disabled with the lock. In an error state, this will allow the
+		// Stop() function to shut everything down.
 		atomic.StoreInt64(&m.restoreMode, 0)
-		m.restoreModeLock.Unlock()
 
 		switch {
 		case retErr == nil:
@@ -293,7 +291,6 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 				errorFunc()
 			}
 		}
-		m.logger.Debug("expiration: finished clearing out loading state")
 	}()
 
 	// Accumulate existing leases
@@ -398,6 +395,12 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 
 	// Let all go routines finish
 	wg.Wait()
+
+	m.restoreModeLock.Lock()
+	m.restoreLoaded = sync.Map{}
+	m.restoreLocks = nil
+	atomic.StoreInt64(&m.restoreMode, 0)
+	m.restoreModeLock.Unlock()
 
 	m.logger.Info("expiration: lease restore complete")
 	return nil
