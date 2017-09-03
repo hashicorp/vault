@@ -120,7 +120,7 @@ func (c *Core) setupExpiration() error {
 			c.logger.Error("expiration: error shutting down core: %v", err)
 		}
 	}
-	go c.expiration.Restore(errorFunc, 0)
+	go c.expiration.Restore(errorFunc, 50*time.Millisecond)
 
 	return nil
 }
@@ -325,17 +325,23 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 						return
 					}
 
-					// Useful for testing to add latency to all load requests
-					if loadDelay > 0 {
-						time.Sleep(loadDelay)
-					}
-
-					m.lockLease(leaseID)
-					_, err := m.loadEntryInternal(leaseID, true)
-					m.unlockLease(leaseID)
-					if err != nil {
-						errs <- err
-						continue
+					// Only locak and load from storage if we have not
+					// already restored it
+					if _, ok := m.restoreLoaded.Load(leaseID); !ok {
+						var err error
+						m.lockLease(leaseID)
+						if _, ok := m.restoreLoaded.Load(leaseID); !ok {
+							// Useful for testing to add latency to all load requests
+							if loadDelay > 0 {
+								time.Sleep(loadDelay)
+							}
+							_, err = m.loadEntryInternal(leaseID, true, false)
+						}
+						m.unlockLease(leaseID)
+						if err != nil {
+							errs <- err
+							continue
+						}
 					}
 
 					// Send message that lease is done
@@ -631,8 +637,8 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	return resp, nil
 }
 
-// RestoreTokenCheck verifies that the token is not expired while running in
-// restore mode.  If we are not in restore mode, the lease has already been
+// RestoreSaltedTokenCheck verifies that the token is not expired while running
+// in restore mode.  If we are not in restore mode, the lease has already been
 // restored or the lease still has time left, it returns true.
 func (m *ExpirationManager) RestoreSaltedTokenCheck(source string, saltedID string) (bool, error) {
 	defer metrics.MeasureSince([]string{"expire", "restore-token-check"}, time.Now())
@@ -656,7 +662,7 @@ func (m *ExpirationManager) RestoreSaltedTokenCheck(source string, saltedID stri
 	m.lockLease(leaseID)
 	defer m.unlockLease(leaseID)
 
-	le, err := m.loadEntryInternal(leaseID, true)
+	le, err := m.loadEntryInternal(leaseID, true, true)
 	if err != nil {
 		return false, err
 	}
@@ -1031,12 +1037,12 @@ func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
 			defer m.unlockLease(leaseID)
 		}
 	}
-	return m.loadEntryInternal(leaseID, restoreMode)
+	return m.loadEntryInternal(leaseID, restoreMode, true)
 }
 
 // loadEntryInternal is used when you need to load an entry but also need to
 // control the lifecycle of the restoreLock
-func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool) (*leaseEntry, error) {
+func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool, checkRestored bool) (*leaseEntry, error) {
 	out, err := m.idView.Get(leaseID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lease entry: %v", err)
@@ -1050,11 +1056,13 @@ func (m *ExpirationManager) loadEntryInternal(leaseID string, restoreMode bool) 
 	}
 
 	if restoreMode {
-		// If we have already loaded this lease, we don't need to update on
-		// load. In the case of renewal and revocation, updatePending will be
-		// done after making the appropriate modifications to the lease.
-		if _, ok := m.restoreLoaded.Load(leaseID); ok {
-			return le, nil
+		if checkRestored {
+			// If we have already loaded this lease, we don't need to update on
+			// load. In the case of renewal and revocation, updatePending will be
+			// done after making the appropriate modifications to the lease.
+			if _, ok := m.restoreLoaded.Load(leaseID); ok {
+				return le, nil
+			}
 		}
 
 		// Update the cache of restored leases, either synchronously or through
