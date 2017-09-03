@@ -2,8 +2,8 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"os"
-	"reflect"
 	"time"
 
 	"github.com/hashicorp/vault/api"
@@ -83,19 +83,31 @@ func RawField(secret *api.Secret, field string) (string, bool) {
 func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 	str, ok := RawField(secret, field)
 	if !ok {
-		ui.Error(fmt.Sprintf("Field %s not present in secret", field))
+		ui.Error(fmt.Sprintf("Field %q not present in secret", field))
 		return 1
 	}
 
-	// c.Ui.Output() prints a CR character which in this case is
-	// not desired. Since Vault CLI currently only uses BasicUi,
-	// which writes to standard output, os.Stdout is used here to
-	// directly print the message. If mitchellh/cli exposes method
-	// to print without CR, this check needs to be removed.
-	if reflect.TypeOf(ui).String() == "*cli.BasicUi" {
-		fmt.Fprintf(os.Stdout, str)
-	} else {
-		ui.Output(str)
-	}
+	// The cli.Ui prints a CR, which is not wanted since the user probably wants
+	// just the raw value.
+	w := getWriterFromUI(ui)
+	fmt.Fprintf(w, str)
 	return 0
+}
+
+// getWriterFromUI accepts a cli.Ui and returns the underlying io.Writer by
+// unwrapping as many wrapped Uis as necessary. If there is an unknown UI
+// type, this falls back to os.Stdout.
+func getWriterFromUI(ui cli.Ui) io.Writer {
+	switch t := ui.(type) {
+	case *cli.BasicUi:
+		return t.Writer
+	case *cli.ColoredUi:
+		return getWriterFromUI(t.Ui)
+	case *cli.ConcurrentUi:
+		return getWriterFromUI(t.Ui)
+	case *cli.MockUi:
+		return t.OutputWriter
+	default:
+		return os.Stdout
+	}
 }
