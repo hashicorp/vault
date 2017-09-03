@@ -11,7 +11,9 @@ import (
 )
 
 type CLIHandler struct {
-	testStdout io.Writer // for tests
+	// for tests
+	testStdin  io.Reader
+	testStdout io.Writer
 }
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
@@ -28,13 +30,18 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		var err error
 		token, err = password.Read(os.Stdin)
 		fmt.Fprintf(stdout, "\n")
+
 		if err != nil {
-			return nil, fmt.Errorf(
-				"Error attempting to ask for token. The raw error message\n"+
-					"is shown below, but the most common reason for this error is\n"+
-					"that you attempted to pipe a value into auth. If you want to\n"+
-					"pipe the token, please pass '-' as the token argument.\n\n"+
-					"Raw error: %s", err)
+			if err == password.ErrInterrupted {
+				return nil, fmt.Errorf("user interrupted")
+			}
+
+			return nil, fmt.Errorf("An error occurred attempting to "+
+				"ask for a token. The raw error message is shown below, but usually "+
+				"this is because you attempted to pipe a value into the command or "+
+				"you are executing outside of a terminal (tty). If you want to pipe "+
+				"the value, pass \"-\" as the argument to read from stdin. The raw "+
+				"error was: %s", err)
 		}
 	}
 
@@ -43,8 +50,8 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 	if token == "" {
 		return nil, fmt.Errorf(
-			"A token must be passed to auth. Please view the help\n" +
-				"for more information.")
+			"A token must be passed to auth. Please view the help for more " +
+				"information.")
 	}
 
 	return &api.Secret{
