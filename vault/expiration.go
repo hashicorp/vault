@@ -52,7 +52,6 @@ const (
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
 	router     *Router
-	topView    *BarrierView
 	idView     *BarrierView
 	tokenView  *BarrierView
 	tokenStore *TokenStore
@@ -82,7 +81,6 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 
 	exp := &ExpirationManager{
 		router:     router,
-		topView:    view,
 		idView:     view.SubView(leaseViewPrefix),
 		tokenView:  view.SubView(tokenViewPrefix),
 		tokenStore: ts,
