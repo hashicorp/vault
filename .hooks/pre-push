@@ -2,7 +2,7 @@
 
 remote="$1"
 
-if [ "$remote" == "enterprise" ]; then
+if [ "$remote" = "enterprise" ]; then
     exit 0
 fi
 
