@@ -544,7 +544,7 @@ func (c *Core) loadMounts() error {
 			// ensure this comes over. If we upgrade first, we simply don't
 			// create the mount, so we won't conflict when we sync. If this is
 			// local (e.g. cubbyhole) we do still add it.
-			if !foundRequired && (c.replicationState != consts.ReplicationSecondary || requiredMount.Local) {
+			if !foundRequired && (c.replicationState.HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 				needPersist = true
 			}

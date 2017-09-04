@@ -1891,11 +1891,9 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 }
 
 func (c *Core) ReplicationState() consts.ReplicationState {
-	var state consts.ReplicationState
-	c.clusterParamsLock.RLock()
-	state = c.replicationState
-	c.clusterParamsLock.RUnlock()
-	return state
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	return c.replicationState
 }
 
 func (c *Core) SealAccess() *SealAccess {

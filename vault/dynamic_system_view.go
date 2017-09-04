@@ -86,11 +86,7 @@ func (d dynamicSystemView) CachingDisabled() bool {
 
 // Checks if this is a primary Vault instance.
 func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
-	var state consts.ReplicationState
-	d.core.clusterParamsLock.RLock()
-	state = d.core.replicationState
-	d.core.clusterParamsLock.RUnlock()
-	return state
+	return d.core.replicationState
 }
 
 // ResponseWrapData wraps the given data in a cubbyhole and returns the
