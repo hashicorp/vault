@@ -709,7 +709,7 @@ type TestClusterCore struct {
 
 type TestClusterOptions struct {
 	KeepStandbysSealed bool
-	DoNotInit          bool
+	SkipInit           bool
 	HandlerFunc        func(*Core) http.Handler
 	BaseListenAddress  string
 	NumCores           int
@@ -1065,7 +1065,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 	}
 
-	if !opts.DoNotInit {
+	if !opts.SkipInit {
 		keys, root := TestCoreInitClusterWrapperSetup(t, cores[0], clusterAddrGen(listeners[0]), handlers[0])
 		barrierKeys, _ := copystructure.Copy(keys)
 		testCluster.BarrierKeys = barrierKeys.([][]byte)
@@ -1159,7 +1159,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !opts.DoNotInit {
+		if !opts.SkipInit {
 			apiClient.SetToken(testCluster.RootToken)
 		}
 		return apiClient
