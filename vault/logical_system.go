@@ -230,6 +230,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
 					},
+					"description": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
@@ -254,6 +258,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"max_lease_ttl": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
+					},
+					"description": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
 				},
 
@@ -1550,40 +1558,52 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		lock = &b.Core.mountsLock
 	}
 
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Check again after grabbing the lock
+	mountEntry = b.Core.router.MatchingMountEntry(path)
+	if mountEntry == nil {
+		b.Backend.Logger().Error("sys: tune failed: no mount entry found", "path", path)
+		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
+	}
+	if mountEntry != nil && !mountEntry.Local && repState == consts.ReplicationSecondary {
+		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
+	}
+
 	// Timing configuration parameters
 	{
-		var newDefault, newMax *time.Duration
+		var newDefault, newMax time.Duration
 		defTTL := data.Get("default_lease_ttl").(string)
 		switch defTTL {
 		case "":
+			newDefault = mountEntry.Config.DefaultLeaseTTL
 		case "system":
-			tmpDef := time.Duration(0)
-			newDefault = &tmpDef
+			newDefault = time.Duration(0)
 		default:
 			tmpDef, err := parseutil.ParseDurationSecond(defTTL)
 			if err != nil {
 				return handleError(err)
 			}
-			newDefault = &tmpDef
+			newDefault = tmpDef
 		}
 
 		maxTTL := data.Get("max_lease_ttl").(string)
 		switch maxTTL {
 		case "":
+			newMax = mountEntry.Config.MaxLeaseTTL
 		case "system":
-			tmpMax := time.Duration(0)
-			newMax = &tmpMax
+			newMax = time.Duration(0)
 		default:
 			tmpMax, err := parseutil.ParseDurationSecond(maxTTL)
 			if err != nil {
 				return handleError(err)
 			}
-			newMax = &tmpMax
+			newMax = tmpMax
 		}
 
-		if newDefault != nil || newMax != nil {
-			lock.Lock()
-			defer lock.Unlock()
+		if newDefault != mountEntry.Config.DefaultLeaseTTL ||
+			newMax != mountEntry.Config.MaxLeaseTTL {
 
 			if err := b.tuneMountTTLs(path, mountEntry, newDefault, newMax); err != nil {
 				b.Backend.Logger().Error("sys: tuning failed", "path", path, "error", err)
@@ -1592,7 +1612,31 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		}
 	}
 
-	return nil, nil
+	var resp *logical.Response
+
+	description := data.Get("description").(string)
+	if description != "" {
+		oldDesc := mountEntry.Description
+		mountEntry.Description = description
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Description = oldDesc
+			return handleError(err)
+		}
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of description successful", "path", path)
+		}
+	}
+
+	return resp, nil
 }
 
 // handleLease is use to view the metadata for a given LeaseID
