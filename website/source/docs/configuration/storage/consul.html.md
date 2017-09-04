@@ -100,6 +100,13 @@ connection. You can read more about encrypting Consul connections on the
   [`ca_file`](https://www.consul.io/docs/agent/options.html#ca_file) setting in
   Consul.
 
+- `tls_ca_path` `(string: "")` – Specifies the path to a directory of
+  certificate authority files for Consul communication.  Is an alternative to
+  `tls_ca_file`.  This defaults to the system bundle if not specified.
+  This should be set according to the
+  [`ca_path`](https://www.consul.io/docs/agent/options.html#ca_path) setting in
+  Consul.
+
 - `tls_cert_file` `(string: "")` (optional) – Specifies the path to the
   certificate for Consul communication. This should be set according to the
   [`cert_file`](https://www.consul.io/docs/agent/options.html#cert_file) setting
@@ -109,6 +116,13 @@ connection. You can read more about encrypting Consul connections on the
   Consul communication. This should be set according to the
   [`key_file`](https://www.consul.io/docs/agent/options.html#key_file) setting
   in Consul.
+
+- `tls_server_name` `(string: "")` (optional) – Specifies the server name to
+  use as the SNI host for Consul communication via TLS.  This defaults to the
+  server name portion of `address`.
+  This should be set according to the
+  [`server_name`](https://www.consul.io/docs/agent/options.html#server_name)
+  setting in Consul.
 
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum TLS version to
   use. Accepted values are `"tls10"`, `"tls11"` or `"tls12"`.
