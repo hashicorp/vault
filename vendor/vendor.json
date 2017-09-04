@@ -921,10 +921,10 @@
 			"revisionTime": "2017-02-11T01:34:15Z"
 		},
 		{
-			"checksumSHA1": "miVF4/7JP0lRwZvFJGKwZWk7aAQ=",
+			"checksumSHA1": "0OUXdKhaE6TzpHevY0VFlAA5YJ8=",
 			"path": "github.com/hashicorp/go-hclog",
-			"revision": "b4e5765d1e5f00a0550911084f45f8214b5b83b9",
-			"revisionTime": "2017-07-16T17:45:23Z"
+			"revision": "8105cc0a3736cc153a2025f5d0d91b80045fc9ff",
+			"revisionTime": "2017-09-03T16:32:58Z"
 		},
 		{
 			"checksumSHA1": "g7uHECbzuaWwdxvwoyxBwgeERPk=",
