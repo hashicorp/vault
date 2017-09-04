@@ -1065,7 +1065,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 	}
 
-	if opts != nil && !opts.SkipInit {
+	if opts == nil || !opts.SkipInit {
 		keys, root := TestCoreInitClusterWrapperSetup(t, cores[0], clusterAddrGen(listeners[0]), handlers[0])
 		barrierKeys, _ := copystructure.Copy(keys)
 		testCluster.BarrierKeys = barrierKeys.([][]byte)
@@ -1159,7 +1159,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatal(err)
 		}
-		if opts != nil && !opts.SkipInit {
+		if opts == nil || !opts.SkipInit {
 			apiClient.SetToken(testCluster.RootToken)
 		}
 		return apiClient
