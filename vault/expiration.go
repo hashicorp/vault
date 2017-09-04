@@ -400,26 +400,34 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	return nil
 }
 
+// processRestore takes a lease and restores it in the expiration manager if it has
+// not already been seen
 func (m *ExpirationManager) processRestore(leaseID string, loadDelay time.Duration) error {
 	m.restoreRequestLock.RLock()
 	defer m.restoreRequestLock.RUnlock()
 
-	// Only locak and load from storage if we have not
-	// already restored it
-	if _, ok := m.restoreLoaded.Load(leaseID); !ok {
-		m.lockLease(leaseID)
-		defer m.unlockLease(leaseID)
+	// Check if the lease has been seen
+	if _, ok := m.restoreLoaded.Load(leaseID); ok {
+		return nil
+	}
 
-		if _, ok := m.restoreLoaded.Load(leaseID); !ok {
-			// Useful for testing to add latency to all load requests
-			if loadDelay > 0 {
-				time.Sleep(loadDelay)
-			}
-			_, err := m.loadEntryInternal(leaseID, true, false)
-			if err != nil {
-				return err
-			}
-		}
+	m.lockLease(leaseID)
+	defer m.unlockLease(leaseID)
+
+	// Check again with the lease locked
+	if _, ok := m.restoreLoaded.Load(leaseID); ok {
+		return nil
+	}
+
+	// Useful for testing to add latency to all load requests
+	if loadDelay > 0 {
+		time.Sleep(loadDelay)
+	}
+
+	// Load lease and restore expiration timer
+	_, err := m.loadEntryInternal(leaseID, true, false)
+	if err != nil {
+		return err
 	}
 	return nil
 }
