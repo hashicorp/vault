@@ -455,11 +455,6 @@ func (m *ExpirationManager) Stop() error {
 func (m *ExpirationManager) Revoke(leaseID string) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreRequestLock.Lock()
-		defer m.restoreRequestLock.Unlock()
-	}
-
 	return m.revokeCommon(leaseID, false, false)
 }
 
@@ -538,11 +533,6 @@ func (m *ExpirationManager) RevokePrefix(prefix string) error {
 func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"expire", "revoke-by-token"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreRequestLock.Lock()
-		defer m.restoreRequestLock.Unlock()
-	}
-
 	// Lookup the leases
 	existing, err := m.lookupByToken(te.ID)
 	if err != nil {
@@ -611,11 +601,6 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew"}, time.Now())
 
-	if m.inRestoreMode() {
-		m.restoreRequestLock.Lock()
-		defer m.restoreRequestLock.Unlock()
-	}
-
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
 	if err != nil {
@@ -681,9 +666,6 @@ func (m *ExpirationManager) RestoreSaltedTokenCheck(source string, saltedID stri
 		return true, nil
 	}
 
-	m.restoreRequestLock.Lock()
-	defer m.restoreRequestLock.Unlock()
-
 	m.restoreModeLock.RLock()
 	defer m.restoreModeLock.RUnlock()
 
@@ -716,11 +698,6 @@ func (m *ExpirationManager) RestoreSaltedTokenCheck(source string, saltedID stri
 func (m *ExpirationManager) RenewToken(req *logical.Request, source string, token string,
 	increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
-
-	if m.inRestoreMode() {
-		m.restoreRequestLock.Lock()
-		m.restoreRequestLock.Unlock()
-	}
 
 	// Compute the Lease ID
 	saltedID, err := m.tokenStore.SaltID(token)
@@ -918,11 +895,6 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(source, token string) (*lease
 // those values copied over.
 func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error) {
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times"}, time.Now())
-
-	if m.inRestoreMode() {
-		m.restoreRequestLock.RLock()
-		defer m.restoreRequestLock.RUnlock()
-	}
 
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
