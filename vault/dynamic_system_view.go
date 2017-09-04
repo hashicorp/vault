@@ -84,7 +84,8 @@ func (d dynamicSystemView) CachingDisabled() bool {
 	return d.core.cachingDisabled || (d.mountEntry != nil && d.mountEntry.Config.ForceNoCache)
 }
 
-// Checks if this is a primary Vault instance.
+// Checks if this is a primary Vault instance. Caller should hold the stateLock
+// in read mode.
 func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
 	return d.core.replicationState
 }
