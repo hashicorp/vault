@@ -1251,12 +1251,10 @@ func (b *SystemBackend) handleMountTable(
 // handleMount is used to mount a new path
 func (b *SystemBackend) handleMount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	local := data.Get("local").(bool)
-	if !local && repState == consts.ReplicationSecondary {
+	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
 	}
 
@@ -1381,9 +1379,9 @@ func (b *SystemBackend) handleUnmount(
 	path := data.Get("path").(string)
 	path = sanitizeMountPath(path)
 
-	repState := b.Core.ReplicationState()
+	repState := b.Core.replicationState
 	entry := b.Core.router.MatchingMountEntry(path)
-	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
+	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
 	}
 
@@ -1406,9 +1404,7 @@ func (b *SystemBackend) handleUnmount(
 // handleRemount is used to remount a path
 func (b *SystemBackend) handleRemount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	// Get the paths
 	fromPath := data.Get("from").(string)
@@ -1423,7 +1419,7 @@ func (b *SystemBackend) handleRemount(
 	toPath = sanitizeMountPath(toPath)
 
 	entry := b.Core.router.MatchingMountEntry(fromPath)
-	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
+	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot remount a non-local mount on a replication secondary"), nil
 	}
 
@@ -1519,9 +1515,7 @@ func (b *SystemBackend) handleMountTuneWrite(
 // handleTuneWriteCommon is used to set config settings on a path
 func (b *SystemBackend) handleTuneWriteCommon(
 	path string, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	path = sanitizeMountPath(path)
 
@@ -1538,7 +1532,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		b.Backend.Logger().Error("sys: tune failed: no mount entry found", "path", path)
 		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
 	}
-	if mountEntry != nil && !mountEntry.Local && repState == consts.ReplicationSecondary {
+	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
 	}
 
@@ -1757,12 +1751,10 @@ func (b *SystemBackend) handleAuthTable(
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	local := data.Get("local").(bool)
-	if !local && repState == consts.ReplicationSecondary {
+	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
 	}
 
@@ -1833,9 +1825,9 @@ func (b *SystemBackend) handleDisableAuth(
 	path = sanitizeMountPath(path)
 	fullPath := credentialRoutePrefix + path
 
-	repState := b.Core.ReplicationState()
+	repState := b.Core.replicationState
 	entry := b.Core.router.MatchingMountEntry(fullPath)
-	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
+	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
 	}
 
@@ -1984,12 +1976,10 @@ func (b *SystemBackend) handleAuditHash(
 // handleEnableAudit is used to enable a new audit backend
 func (b *SystemBackend) handleEnableAudit(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	local := data.Get("local").(bool)
-	if !local && repState == consts.ReplicationSecondary {
+	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
 	}
 
@@ -2132,10 +2122,8 @@ func (b *SystemBackend) handleKeyStatus(
 // handleRotate is used to trigger a key rotation
 func (b *SystemBackend) handleRotate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
-	if repState == consts.ReplicationSecondary {
+	if repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
 	}
 
