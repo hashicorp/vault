@@ -1318,6 +1318,9 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	// most people would expect, which is arn:aws:iam::<account_id>:role/<RoleName>
 	var entity iamEntity
 	fullParts := strings.Split(iamArn, ":")
+	if len(fullParts) != 6 {
+		return nil, fmt.Errorf("unrecognized arn: contains %d colon-separated parts, expected 6", len(fullParts))
+	}
 	if fullParts[0] != "arn" {
 		return nil, fmt.Errorf("unrecognized arn: does not begin with arn:")
 	}
@@ -1330,6 +1333,9 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	entity.AccountNumber = fullParts[4]
 	// fullParts[5] would now be something like user/<UserName> or assumed-role/<RoleName>/<RoleSessionName>
 	parts := strings.Split(fullParts[5], "/")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("unrecognized arn: %q contains fewer than 2 slash-separated parts", fullParts[5])
+	}
 	entity.Type = parts[0]
 	entity.Path = strings.Join(parts[1:len(parts)-1], "/")
 	entity.FriendlyName = parts[len(parts)-1]
