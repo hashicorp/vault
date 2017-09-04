@@ -709,6 +709,7 @@ type TestClusterCore struct {
 
 type TestClusterOptions struct {
 	KeepStandbysSealed bool
+	DoNotInit          bool
 	HandlerFunc        func(*Core) http.Handler
 	BaseListenAddress  string
 	NumCores           int
@@ -1064,80 +1065,82 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 	}
 
-	keys, root := TestCoreInitClusterWrapperSetup(t, cores[0], clusterAddrGen(listeners[0]), handlers[0])
-	barrierKeys, _ := copystructure.Copy(keys)
-	testCluster.BarrierKeys = barrierKeys.([][]byte)
-	testCluster.RootToken = root
+	if !opts.DoNotInit {
+		keys, root := TestCoreInitClusterWrapperSetup(t, cores[0], clusterAddrGen(listeners[0]), handlers[0])
+		barrierKeys, _ := copystructure.Copy(keys)
+		testCluster.BarrierKeys = barrierKeys.([][]byte)
+		testCluster.RootToken = root
 
-	// Write root token and barrier keys
-	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(root), 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var buf bytes.Buffer
-	for i, key := range testCluster.BarrierKeys {
-		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
-		if i < len(testCluster.BarrierKeys)-1 {
-			buf.WriteRune('\n')
+		// Write root token and barrier keys
+		err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(root), 0755)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}
-	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "barrier_keys"), buf.Bytes(), 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Unseal first core
-	for _, key := range keys {
-		if _, err := cores[0].Unseal(TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
+		var buf bytes.Buffer
+		for i, key := range testCluster.BarrierKeys {
+			buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+			if i < len(testCluster.BarrierKeys)-1 {
+				buf.WriteRune('\n')
+			}
 		}
-	}
+		err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "barrier_keys"), buf.Bytes(), 0755)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// Verify unsealed
-	sealed, err := cores[0].Sealed()
-	if err != nil {
-		t.Fatalf("err checking seal status: %s", err)
-	}
-	if sealed {
-		t.Fatal("should not be sealed")
-	}
+		// Unseal first core
+		for _, key := range keys {
+			if _, err := cores[0].Unseal(TestKeyCopy(key)); err != nil {
+				t.Fatalf("unseal err: %s", err)
+			}
+		}
 
-	TestWaitActive(t, cores[0])
+		// Verify unsealed
+		sealed, err := cores[0].Sealed()
+		if err != nil {
+			t.Fatalf("err checking seal status: %s", err)
+		}
+		if sealed {
+			t.Fatal("should not be sealed")
+		}
 
-	// Unseal other cores unless otherwise specified
-	if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
-		for i := 1; i < numCores; i++ {
-			for _, key := range keys {
-				if _, err := cores[i].Unseal(TestKeyCopy(key)); err != nil {
-					t.Fatalf("unseal err: %s", err)
+		TestWaitActive(t, cores[0])
+
+		// Unseal other cores unless otherwise specified
+		if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
+			for i := 1; i < numCores; i++ {
+				for _, key := range keys {
+					if _, err := cores[i].Unseal(TestKeyCopy(key)); err != nil {
+						t.Fatalf("unseal err: %s", err)
+					}
+				}
+			}
+
+			// Let them come fully up to standby
+			time.Sleep(2 * time.Second)
+
+			// Ensure cluster connection info is populated.
+			// Other cores should not come up as leaders.
+			for i := 1; i < numCores; i++ {
+				isLeader, _, _, err := cores[i].Leader()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if isLeader {
+					t.Fatalf("core[%d] should not be leader", i)
 				}
 			}
 		}
 
-		// Let them come fully up to standby
-		time.Sleep(2 * time.Second)
-
-		// Ensure cluster connection info is populated.
-		// Other cores should not come up as leaders.
-		for i := 1; i < numCores; i++ {
-			isLeader, _, _, err := cores[i].Leader()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if isLeader {
-				t.Fatalf("core[%d] should not be leader", i)
-			}
+		//
+		// Set test cluster core(s) and test cluster
+		//
+		cluster, err := cores[0].Cluster()
+		if err != nil {
+			t.Fatal(err)
 		}
+		testCluster.ID = cluster.ID
 	}
-
-	//
-	// Set test cluster core(s) and test cluster
-	//
-	cluster, err := cores[0].Cluster()
-	if err != nil {
-		t.Fatal(err)
-	}
-	testCluster.ID = cluster.ID
 
 	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
 		transport := cleanhttp.DefaultPooledTransport()
@@ -1156,7 +1159,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatal(err)
 		}
-		apiClient.SetToken(root)
+		if !opts.DoNotInit {
+			apiClient.SetToken(testCluster.RootToken)
+		}
 		return apiClient
 	}
 
