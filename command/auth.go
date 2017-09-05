@@ -1,22 +1,13 @@
 package command
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/kv-builder"
-	"github.com/hashicorp/vault/helper/password"
-	"github.com/hashicorp/vault/meta"
-	"github.com/mitchellh/mapstructure"
 	"github.com/posener/complete"
-	"github.com/ryanuber/columnize"
 )
 
 // AuthHandler is the interface that any auth handlers must implement
@@ -28,39 +19,318 @@ type AuthHandler interface {
 
 // AuthCommand is a Command that handles authentication.
 type AuthCommand struct {
-	meta.Meta
+	*BaseCommand
 
 	Handlers map[string]AuthHandler
 
-	// The fields below can be overwritten for tests
-	testStdin io.Reader
+	flagMethod    string
+	flagPath      string
+	flagNoVerify  bool
+	flagNoStore   bool
+	flagOnlyToken bool
+
+	// Deprecations
+	// TODO: remove in 0.9.0
+	flagTokenOnly  bool
+	flagMethods    bool
+	flagMethodHelp bool
+
+	testStdin io.Reader // for tests
+}
+
+func (c *AuthCommand) Synopsis() string {
+	return "Authenticates users or machines"
+}
+
+func (c *AuthCommand) Help() string {
+	helpText := `
+Usage: vault auth [options] [AUTH K=V...]
+
+  Authenticates users or machines to Vault using the provided arguments. By
+  default, the authentication method is "token". If not supplied via the CLI,
+  Vault will prompt for input. If argument is "-", the configuration options
+  are read from stdin.
+
+  The -method flag allows alternative authentication providers to be used,
+  such as userpass, github, or cert. For these, additional "key=value" pairs
+  may be required. For example, to authenticate to the userpass auth backend:
+
+      $ vault auth -method=userpass username=my-username
+
+  Use "vault auth-help TYPE" for more information about the list of
+  configuration parameters and examples for a particular provider. Use the
+  "vault auth-list" command to see a list of enabled authentication providers.
+
+  If an authentication provider is mounted at a different path, the -method
+  flag should by the canonical type, and the -path flag should be set to the
+  mount path. If a github authentication provider was mounted at "github-ent",
+  you would authenticate to this backend like this:
+
+      $ vault auth -method=github -path=github-prod
+
+  If the authentication is requested with response wrapping (via -wrap-ttl),
+  the returned token is automatically unwrapped unless:
+
+    - The -only-token flag is used, in which case this command will output
+      the wrapping token
+
+    - The -no-store flag is used, in which case this command will output
+      the details of the wrapping token.
+
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+
+	return strings.TrimSpace(helpText)
+}
+
+func (c *AuthCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.StringVar(&StringVar{
+		Name:       "method",
+		Target:     &c.flagMethod,
+		Default:    "token",
+		Completion: c.PredictVaultAvailableAuths(),
+		Usage: "Type of authentication to use such as \"userpass\" or " +
+			"\"ldap\". Note this corresponds to the TYPE, not the mount path. Use " +
+			"-path to specify the path where the authentication is mounted.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "path",
+		Target:     &c.flagPath,
+		Default:    "",
+		Completion: c.PredictVaultAuths(),
+		Usage: "Mount point where the auth backend is enabled. This defaults to " +
+			"the TYPE of backend (e.g. userpass -> userpass/).",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "no-verify",
+		Target:  &c.flagNoVerify,
+		Default: false,
+		Usage: "Do not verify the token after authentication. By default, Vault " +
+			"issue a request to get more metdata about the token. This request " +
+			"against the use-limit of the token. Set this to true to disable the " +
+			"post-authenication lookup.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "no-store",
+		Target:  &c.flagNoStore,
+		Default: false,
+		Usage: "Do not persist the token to the token helper (usually the " +
+			"local filesystem) after authentication for use in future requests. " +
+			"The token will only be displayed in the command output.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "only-token",
+		Target:  &c.flagOnlyToken,
+		Default: false,
+		Usage: "Output only the token with no verification. This flag is a " +
+			"shortcut for \"-field=token -no-store -no-verify\". Setting those " +
+			"flags to other values will have no affect.",
+	})
+
+	// Deprecations
+	// TODO: remove in Vault 0.9.0
+
+	f.BoolVar(&BoolVar{
+		Name:    "token-only", // Prefer only-token
+		Target:  &c.flagTokenOnly,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "methods", // Prefer auth-list
+		Target:  &c.flagMethods,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "method-help", // Prefer auth-help
+		Target:  &c.flagMethodHelp,
+		Default: false,
+		Hidden:  true,
+	})
+
+	return set
+}
+
+func (c *AuthCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (c *AuthCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
 }
 
 func (c *AuthCommand) Run(args []string) int {
-	var method, authPath string
-	var methods, methodHelp, noVerify, noStore, tokenOnly bool
-	flags := c.Meta.FlagSet("auth", meta.FlagSetDefault)
-	flags.BoolVar(&methods, "methods", false, "")
-	flags.BoolVar(&methodHelp, "method-help", false, "")
-	flags.BoolVar(&noVerify, "no-verify", false, "")
-	flags.BoolVar(&noStore, "no-store", false, "")
-	flags.BoolVar(&tokenOnly, "token-only", false, "")
-	flags.StringVar(&method, "method", "", "method")
-	flags.StringVar(&authPath, "path", "", "")
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
 		return 1
 	}
 
-	if methods {
-		return c.listMethods()
+	args = f.Args()
+
+	// Deprecations - do this before any argument validations
+	// TODO: remove in 0.9.0
+	switch {
+	case c.flagMethods:
+		c.UI.Warn(wrapAtLength(
+			"WARNING! The -methods flag is deprecated. Please use " +
+				"\"vault auth-list\". This flag will be removed in the next major " +
+				"release of Vault."))
+		cmd := &AuthListCommand{
+			BaseCommand: &BaseCommand{
+				UI:     c.UI,
+				client: c.client,
+			},
+		}
+		return cmd.Run(nil)
+	case c.flagMethodHelp:
+		c.UI.Warn(wrapAtLength(
+			"WARNING! The -method-help flag is deprecated. Please use " +
+				"\"vault auth-help\". This flag will be removed in the next major " +
+				"release of Vault."))
+		cmd := &AuthHelpCommand{
+			BaseCommand: &BaseCommand{
+				UI:     c.UI,
+				client: c.client,
+			},
+			Handlers: c.Handlers,
+		}
+		return cmd.Run([]string{c.flagMethod})
 	}
 
-	args = flags.Args()
+	// TODO: remove in 0.9.0
+	if c.flagTokenOnly {
+		c.UI.Warn(wrapAtLength(
+			"WARNING! The -token-only flag is deprecated. Plase use -only-token " +
+				"instead. This flag will be removed in the next major release of " +
+				"Vault."))
+		c.flagOnlyToken = c.flagTokenOnly
+	}
+
+	// Set the right flags if the user requested only-token - this overrides
+	// any previously configured values, as documented.
+	if c.flagOnlyToken {
+		c.flagNoStore = true
+		c.flagNoVerify = true
+		c.flagField = "token"
+	}
+
+	// Get the auth method
+	authMethod := sanitizePath(c.flagMethod)
+	if authMethod == "" {
+		authMethod = "token"
+	}
+
+	// If no path is specified, we default the path to the backend type
+	// or use the plugin name if it's a plugin backend
+	authPath := c.flagPath
+	if authPath == "" {
+		authPath = ensureTrailingSlash(authMethod)
+	}
+
+	// Get the handler function
+	authHandler, ok := c.Handlers[authMethod]
+	if !ok {
+		c.UI.Error(wrapAtLength(fmt.Sprintf(
+			"Unknown authentication method: %s. Use \"vault auth-list\" to see the "+
+				"complete list of authentication providers. Additionally, some "+
+				"authentication providers are only available via the HTTP API.",
+			authMethod)))
+		return 1
+	}
+
+	// Pull our fake stdin if needed
+	stdin := (io.Reader)(os.Stdin)
+	if c.testStdin != nil {
+		stdin = c.testStdin
+	}
+
+	// If the user provided a token, pass it along to the auth provier.
+	if authMethod == "token" && len(args) == 1 {
+		args = []string{"token=" + args[0]}
+	}
+
+	config, err := parseArgsDataString(stdin, args)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error parsing configuration: %s", err))
+		return 1
+	}
+
+	// If the user did not specify a mount path, use the provided mount path.
+	if config["mount"] == "" && authPath != "" {
+		config["mount"] = authPath
+	}
+
+	// Create the client
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	// Authenticate delegation to the auth handler
+	secret, err := authHandler.Auth(client, config)
+	if err != nil {
+		c.UI.Error(wrapAtLength(fmt.Sprintf(
+			"Error authenticating: %s", err)))
+		return 2
+	}
+
+	// Unset any previous token wrapping functionality. If the original request
+	// was for a wrapped token, we don't want future requests to be wrapped.
+	client.SetWrappingLookupFunc(func(string, string) string { return "" })
+
+	// Recursively extract the token, handling wrapping
+	unwrap := !c.flagOnlyToken && !c.flagNoStore
+	secret, isWrapped, err := c.extractToken(client, secret, unwrap)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error extracting token: %s", err))
+		return 2
+	}
+	if secret == nil {
+		c.UI.Error("Vault returned an empty secret")
+		return 2
+	}
+
+	// Handle special cases if the token was wrapped
+	if isWrapped {
+		if c.flagOnlyToken {
+			return PrintRawField(c.UI, secret, "wrapping_token")
+		}
+		if c.flagNoStore {
+			return OutputSecret(c.UI, c.flagFormat, secret)
+		}
+	}
+
+	// If we got this far, verify we have authentication data before continuing
+	if secret.Auth == nil {
+		c.UI.Error(wrapAtLength(
+			"Vault returned a secret, but the secret has no authentication " +
+				"information attached. This should never happen and is likely a " +
+				"bug."))
+		return 2
+	}
+
+	// Pull the token itself out, since we don't need the rest of the auth
+	// information anymore/.
+	token := secret.Auth.ClientToken
 
 	tokenHelper, err := c.TokenHelper()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
+		c.UI.Error(fmt.Sprintf(
 			"Error initializing token helper: %s\n\n"+
 				"Please verify that the token helper is available and properly\n"+
 				"configured for your system. Please refer to the documentation\n"+
@@ -69,489 +339,114 @@ func (c *AuthCommand) Run(args []string) int {
 		return 1
 	}
 
-	// token is where the final token will go
-	handler := c.Handlers[method]
+	if !c.flagNoVerify {
+		// Verify the token and pull it's list of policies
+		client.SetToken(token)
+		client.SetWrappingLookupFunc(func(string, string) string { return "" })
 
-	// Read token from stdin if first arg is exactly "-"
-	var stdin io.Reader = os.Stdin
-	if c.testStdin != nil {
-		stdin = c.testStdin
-	}
-
-	if len(args) > 0 && args[0] == "-" {
-		stdinR := bufio.NewReader(stdin)
-		args[0], err = stdinR.ReadString('\n')
-		if err != nil && err != io.EOF {
-			c.Ui.Error(fmt.Sprintf("Error reading from stdin: %s", err))
-			return 1
+		secret, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error verifying token: %s", err))
+			return 2
 		}
-		args[0] = strings.TrimSpace(args[0])
-	}
-
-	if method == "" {
-		token := ""
-		if len(args) > 0 {
-			token = args[0]
-		}
-
-		handler = &tokenAuthHandler{Token: token}
-		args = nil
-
-		switch authPath {
-		case "", "auth/token":
-		default:
-			c.Ui.Error("Token authentication does not support custom paths")
-			return 1
+		if secret == nil {
+			c.UI.Error("Empty response from lookup-self")
+			return 2
 		}
 	}
 
-	if handler == nil {
-		methods := make([]string, 0, len(c.Handlers))
-		for k := range c.Handlers {
-			methods = append(methods, k)
-		}
-		sort.Strings(methods)
-
-		c.Ui.Error(fmt.Sprintf(
-			"Unknown authentication method: %s\n\n"+
-				"Please use a supported authentication method. The list of supported\n"+
-				"authentication methods is shown below. Note that this list may not\n"+
-				"be exhaustive: Vault may support other auth methods. For auth methods\n"+
-				"unsupported by the CLI, please use the HTTP API.\n\n"+
-				"%s",
-			method,
-			strings.Join(methods, ", ")))
-		return 1
-	}
-
-	if methodHelp {
-		c.Ui.Output(handler.Help())
-		return 0
-	}
-
-	// Warn if the VAULT_TOKEN environment variable is set, as that will take
-	// precedence. Don't output on token-only since we're likely piping output.
-	if os.Getenv("VAULT_TOKEN") != "" && !tokenOnly {
-		c.Ui.Output("==> WARNING: VAULT_TOKEN environment variable set!\n")
-		c.Ui.Output("  The environment variable takes precedence over the value")
-		c.Ui.Output("  set by the auth command. Either update the value of the")
-		c.Ui.Output("  environment variable or unset it to use the new token.\n")
-	}
-
-	var vars map[string]string
-	if len(args) > 0 {
-		builder := kvbuilder.Builder{Stdin: os.Stdin}
-		if err := builder.Add(args...); err != nil {
-			c.Ui.Error(err.Error())
-			return 1
+	if !c.flagNoStore {
+		// Store the token in the local client
+		if err := tokenHelper.Store(token); err != nil {
+			c.UI.Error(fmt.Sprintf("Error storing token: %s", err))
+			c.UI.Error(wrapAtLength(
+				"Authentication was successful, but the token was not persisted. The " +
+					"resulting token is shown below for your records."))
+			OutputSecret(c.UI, c.flagFormat, secret)
+			return 2
 		}
 
-		if err := mapstructure.Decode(builder.Map(), &vars); err != nil {
-			c.Ui.Error(fmt.Sprintf("Error parsing options: %s", err))
-			return 1
+		// Warn if the VAULT_TOKEN environment variable is set, as that will take
+		// precedence. Don't output on token-only since we're likely piping output.
+		if c.flagField == "" && c.flagFormat == "table" {
+			if os.Getenv("VAULT_TOKEN") != "" {
+				c.UI.Warn(wrapAtLength("WARNING! The VAULT_TOKEN environment variable " +
+					"is set! This takes precedence over the value set by this command. To " +
+					"use the value set by this command, unset the VAULT_TOKEN environment " +
+					"variable or set it to the token displayed below."))
+			}
 		}
+	}
+
+	// If the user requested a particular field, print that out now since we
+	// are likely piping to another process.
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	// Output the secret as json or yaml if requested. We have to maintain
+	// backwards compatiability
+	if c.flagFormat != "table" {
+		return OutputSecret(c.UI, c.flagFormat, secret)
+	}
+
+	output := "Success! You are now authenticated. "
+	if c.flagNoVerify {
+		output += "The token was not verified for validity. "
+	}
+	if c.flagNoStore {
+		output += "The token was not stored in the token helper. "
 	} else {
-		vars = make(map[string]string)
+		output += "The token information displayed below is already stored in " +
+			"the token helper. You do NOT need to run \"vault auth\" again."
+	}
+	c.UI.Output(wrapAtLength(output) + "\n")
+
+	// TODO make this consistent with other printed token secrets.
+	c.UI.Output(fmt.Sprintf("token: %s", secret.TokenID()))
+	c.UI.Output(fmt.Sprintf("accessor: %s", secret.TokenAccessor()))
+
+	if ttl := secret.TokenTTL(); ttl != 0 {
+		c.UI.Output(fmt.Sprintf("duration: %s", ttl))
 	}
 
-	// Build the client so we can auth
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client to auth: %s", err))
-		return 1
+	c.UI.Output(fmt.Sprintf("renewable: %t", secret.TokenIsRenewable()))
+
+	if policies := secret.TokenPolicies(); len(policies) > 0 {
+		c.UI.Output(fmt.Sprintf("policies: %s", policies))
 	}
 
-	if authPath != "" {
-		vars["mount"] = authPath
-	}
+	return 0
+}
 
-	// Authenticate
-	secret, err := handler.Auth(client, vars)
-	if err != nil {
-		c.Ui.Error(err.Error())
-		return 1
-	}
-	if secret == nil {
-		c.Ui.Error("Empty response from auth helper")
-		return 1
-	}
-
-	// If we had requested a wrapped token, we want to unset that request
-	// before performing further functions
-	client.SetWrappingLookupFunc(func(string, string) string {
-		return ""
-	})
-
-CHECK_TOKEN:
-	var token string
+// extractToken extracts the token from the given secret, automatically
+// unwrapping responses and handling error conditions if unwrap is true. The
+// result also returns whether it was a wrapped resonse that was not unwrapped.
+func (c *AuthCommand) extractToken(client *api.Client, secret *api.Secret, unwrap bool) (*api.Secret, bool, error) {
 	switch {
 	case secret == nil:
-		c.Ui.Error("Empty response from auth helper")
-		return 1
+		return nil, false, fmt.Errorf("empty response from auth helper")
 
 	case secret.Auth != nil:
-		token = secret.Auth.ClientToken
+		return secret, false, nil
 
 	case secret.WrapInfo != nil:
 		if secret.WrapInfo.WrappedAccessor == "" {
-			c.Ui.Error("Got a wrapped response from Vault but wrapped reply does not seem to contain a token")
-			return 1
+			return nil, false, fmt.Errorf("wrapped response does not contain a token")
 		}
-		if tokenOnly {
-			c.Ui.Output(secret.WrapInfo.Token)
-			return 0
+
+		if !unwrap {
+			return secret, true, nil
 		}
-		if noStore {
-			return OutputSecret(c.Ui, "table", secret)
-		}
+
 		client.SetToken(secret.WrapInfo.Token)
-		secret, err = client.Logical().Unwrap("")
-		goto CHECK_TOKEN
+		secret, err := client.Logical().Unwrap("")
+		if err != nil {
+			return nil, false, err
+		}
+		return c.extractToken(client, secret, unwrap)
 
 	default:
-		c.Ui.Error("No auth or wrapping info in auth helper response")
-		return 1
-	}
-
-	// Cache the previous token so that it can be restored if authentication fails
-	var previousToken string
-	if previousToken, err = tokenHelper.Get(); err != nil {
-		c.Ui.Error(fmt.Sprintf("Error caching the previous token: %s\n\n", err))
-		return 1
-	}
-
-	if tokenOnly {
-		c.Ui.Output(token)
-		return 0
-	}
-
-	// Store the token!
-	if !noStore {
-		if err := tokenHelper.Store(token); err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error storing token: %s\n\n"+
-					"Authentication was not successful and did not persist.\n"+
-					"Please reauthenticate, or fix the issue above if possible.",
-				err))
-			return 1
-		}
-	}
-
-	if noVerify {
-		c.Ui.Output(fmt.Sprintf(
-			"Authenticated - no token verification has been performed.",
-		))
-
-		if noStore {
-			if err := tokenHelper.Erase(); err != nil {
-				c.Ui.Error(fmt.Sprintf(
-					"Error removing prior token: %s\n\n"+
-						"Authentication was successful, but unable to remove the\n"+
-						"previous token.",
-					err))
-				return 1
-			}
-		}
-		return 0
-	}
-
-	// Build the client again so it can read the token we just wrote
-	client, err = c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client to verify the token: %s", err))
-		if !noStore {
-			if err := tokenHelper.Store(previousToken); err != nil {
-				c.Ui.Error(fmt.Sprintf(
-					"Error restoring the previous token: %s\n\n"+
-						"Please reauthenticate with a valid token.",
-					err))
-			}
-		}
-		return 1
-	}
-	client.SetWrappingLookupFunc(func(string, string) string {
-		return ""
-	})
-
-	// If in no-store mode it won't have read the token from a token-helper (or
-	// will read an old one) so set it explicitly
-	if noStore {
-		client.SetToken(token)
-	}
-
-	// Verify the token
-	secret, err = client.Auth().Token().LookupSelf()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error validating token: %s", err))
-		if err := tokenHelper.Store(previousToken); err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error restoring the previous token: %s\n\n"+
-					"Please reauthenticate with a valid token.",
-				err))
-		}
-		return 1
-	}
-	if secret == nil && !noStore {
-		c.Ui.Error(fmt.Sprintf("Error: Invalid token"))
-		if err := tokenHelper.Store(previousToken); err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error restoring the previous token: %s\n\n"+
-					"Please reauthenticate with a valid token.",
-				err))
-		}
-		return 1
-	}
-
-	if noStore {
-		if err := tokenHelper.Erase(); err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error removing prior token: %s\n\n"+
-					"Authentication was successful, but unable to remove the\n"+
-					"previous token.",
-				err))
-			return 1
-		}
-	}
-
-	// Get the policies we have
-	policiesRaw, ok := secret.Data["policies"]
-	if !ok || policiesRaw == nil {
-		policiesRaw = []interface{}{"unknown"}
-	}
-	var policies []string
-	for _, v := range policiesRaw.([]interface{}) {
-		policies = append(policies, v.(string))
-	}
-
-	output := "Successfully authenticated! You are now logged in."
-	if noStore {
-		output += "\nThe token has not been stored to the configured token helper."
-	}
-	if method != "" {
-		output += "\nThe token below is already saved in the session. You do not"
-		output += "\nneed to \"vault auth\" again with the token."
-	}
-	output += fmt.Sprintf("\ntoken: %s", secret.Data["id"])
-	output += fmt.Sprintf("\ntoken_duration: %s", secret.Data["ttl"].(json.Number).String())
-	if len(policies) > 0 {
-		output += fmt.Sprintf("\ntoken_policies: %v", policies)
-	}
-
-	c.Ui.Output(output)
-
-	return 0
-
-}
-
-func (c *AuthCommand) getMethods() (map[string]*api.AuthMount, error) {
-	client, err := c.Client()
-	if err != nil {
-		return nil, err
-	}
-	client.SetWrappingLookupFunc(func(string, string) string {
-		return ""
-	})
-
-	auth, err := client.Sys().ListAuth()
-	if err != nil {
-		return nil, err
-	}
-
-	return auth, nil
-}
-
-func (c *AuthCommand) listMethods() int {
-	auth, err := c.getMethods()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error reading auth table: %s", err))
-		return 1
-	}
-
-	paths := make([]string, 0, len(auth))
-	for path := range auth {
-		paths = append(paths, path)
-	}
-	sort.Strings(paths)
-
-	columns := []string{"Path | Type | Accessor | Default TTL | Max TTL | Replication Behavior | Description"}
-	for _, path := range paths {
-		auth := auth[path]
-		defTTL := "system"
-		if auth.Config.DefaultLeaseTTL != 0 {
-			defTTL = strconv.Itoa(auth.Config.DefaultLeaseTTL)
-		}
-		maxTTL := "system"
-		if auth.Config.MaxLeaseTTL != 0 {
-			maxTTL = strconv.Itoa(auth.Config.MaxLeaseTTL)
-		}
-		replicatedBehavior := "replicated"
-		if auth.Local {
-			replicatedBehavior = "local"
-		}
-		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s | %s | %s | %s", path, auth.Type, auth.Accessor, defTTL, maxTTL, replicatedBehavior, auth.Description))
-	}
-
-	c.Ui.Output(columnize.SimpleFormat(columns))
-	return 0
-}
-
-func (c *AuthCommand) Synopsis() string {
-	return "Prints information about how to authenticate with Vault"
-}
-
-func (c *AuthCommand) Help() string {
-	helpText := `
-Usage: vault auth [options] [auth-information]
-
-  Authenticate with Vault using the given token or via any supported
-  authentication backend.
-
-  By default, the -method is assumed to be token. If not supplied via the
-  command-line, a prompt for input will be shown. If the authentication
-  information is "-", it will be read from stdin.
-
-  The -method option allows alternative authentication methods to be used,
-  such as userpass, GitHub, or TLS certificates. For these, additional
-  values as "key=value" pairs may be required. For example, to authenticate
-  to the userpass auth backend:
-
-      $ vault auth -method=userpass username=my-username
-
-  Use "-method-help" to get help for a specific method.
-
-  If an auth backend is enabled at a different path, the "-method" flag
-  should still point to the canonical name, and the "-path" flag should be
-  used. If a GitHub auth backend was mounted as "github-private", one would
-  authenticate to this backend via:
-
-      $ vault auth -method=github -path=github-private
-
-  The value of the "-path" flag is supplied to auth providers as the "mount"
-  option in the payload to specify the mount point.
-
-  If response wrapping is used (via -wrap-ttl), the returned token will be
-  automatically unwrapped unless:
-    * -token-only is used, in which case the wrapping token will be output
-    * -no-store is used, in which case the details of the wrapping token
-      will be printed
-
-General Options:
-
-  ` + meta.GeneralOptionsUsage() + `
-
-Auth Options:
-
-  -method=name      Use the method given here, which is a type of backend, not
-                    the path. If this authentication method is not available,
-                    exit with code 1.
-
-  -method-help      If set, the help for the selected method will be shown.
-
-  -methods          List the available auth methods.
-
-  -no-verify        Do not verify the token after creation; avoids a use count
-                    decrement.
-
-  -no-store         Do not store the token after creation; it will only be
-                    displayed in the command output.
-
-  -token-only       Output only the token to stdout. This implies -no-verify
-                    and -no-store.
-
-  -path             The path at which the auth backend is enabled. If an auth
-                    backend is mounted at multiple paths, this option can be
-                    used to authenticate against specific paths.
-`
-	return strings.TrimSpace(helpText)
-}
-
-// tokenAuthHandler handles retrieving the token from the command-line.
-type tokenAuthHandler struct {
-	Token string
-}
-
-func (h *tokenAuthHandler) Auth(*api.Client, map[string]string) (*api.Secret, error) {
-	token := h.Token
-	if token == "" {
-		var err error
-
-		// No arguments given, read the token from user input
-		fmt.Printf("Token (will be hidden): ")
-		token, err = password.Read(os.Stdin)
-		fmt.Printf("\n")
-		if err != nil {
-			return nil, fmt.Errorf(
-				"Error attempting to ask for token. The raw error message\n"+
-					"is shown below, but the most common reason for this error is\n"+
-					"that you attempted to pipe a value into auth. If you want to\n"+
-					"pipe the token, please pass '-' as the token argument.\n\n"+
-					"Raw error: %s", err)
-		}
-	}
-
-	if token == "" {
-		return nil, fmt.Errorf(
-			"A token must be passed to auth. Please view the help\n" +
-				"for more information.")
-	}
-
-	return &api.Secret{
-		Auth: &api.SecretAuth{
-			ClientToken: token,
-		},
-	}, nil
-}
-
-func (h *tokenAuthHandler) Help() string {
-	help := `
-No method selected with the "-method" flag, so the "auth" command assumes
-you'll be using raw token authentication. For this, specify the token to
-authenticate as the parameter to "vault auth". Example:
-
-    vault auth 123456
-
-The token used to authenticate must come from some other source. A root
-token is created when Vault is first initialized. After that, subsequent
-tokens are created via the API or command line interface (with the
-"token"-prefixed commands).
-`
-
-	return strings.TrimSpace(help)
-}
-
-func (c *AuthCommand) AutocompleteArgs() complete.Predictor {
-	return complete.PredictNothing
-}
-
-func (c *AuthCommand) AutocompleteFlags() complete.Flags {
-	var predictFunc complete.PredictFunc = func(a complete.Args) []string {
-		auths, err := c.getMethods()
-		if err != nil {
-			return []string{}
-		}
-
-		methods := make([]string, 0, len(auths))
-		for _, auth := range auths {
-			if strings.HasPrefix(auth.Type, a.Last) {
-				methods = append(methods, auth.Type)
-			}
-		}
-
-		return methods
-	}
-
-	return complete.Flags{
-		"-method":      predictFunc,
-		"-methods":     complete.PredictNothing,
-		"-method-help": complete.PredictNothing,
-		"-no-verify":   complete.PredictNothing,
-		"-no-store":    complete.PredictNothing,
-		"-token-only":  complete.PredictNothing,
-		"-path":        complete.PredictNothing,
+		return nil, false, fmt.Errorf("no auth or wrapping info in response")
 	}
 }

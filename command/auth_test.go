@@ -1,400 +1,538 @@
 package command
 
 import (
-	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/logical"
+	"github.com/mitchellh/cli"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
+	credToken "github.com/hashicorp/vault/builtin/credential/token"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/command/token"
 )
 
-func TestAuth_methods(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testAuthCommand(tb testing.TB) (*cli.MockUi, *AuthCommand) {
+	tb.Helper()
 
-	testAuthInit(t)
+	ui := cli.NewMockUi()
+	return ui, &AuthCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
 
-	ui := new(cli.MockUi)
-	c := &AuthCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
+			// Override to our own token helper
+			tokenHelper: token.NewTestingTokenHelper(),
 		},
-	}
-
-	args := []string{
-		"-address", addr,
-		"-methods",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-
-	output := ui.OutputWriter.String()
-	if !strings.Contains(output, "token") {
-		t.Fatalf("bad: %#v", output)
+		Handlers: map[string]AuthHandler{
+			"token":    &credToken.CLIHandler{},
+			"userpass": &credUserpass.CLIHandler{},
+		},
 	}
 }
 
-func TestAuth_token(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func TestAuthCommand_Run(t *testing.T) {
+	t.Parallel()
 
-	testAuthInit(t)
-
-	ui := new(cli.MockUi)
-	c := &AuthCommand{
-		Meta: meta.Meta{
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
+	deprecations := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"methods",
+			[]string{"-methods"},
+			"token/",
+			0,
+		},
+		{
+			"method_help",
+			[]string{"-method", "userpass", "-method-help"},
+			"Usage: vault auth -method=userpass",
+			0,
 		},
 	}
 
-	args := []string{
-		"-address", addr,
-		token,
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+	t.Run("deprecations", func(t *testing.T) {
+		t.Parallel()
 
-	helper, err := c.TokenHelper()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		for _, tc := range deprecations {
+			tc := tc
 
-	actual, err := helper.Get()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 
-	if actual != token {
-		t.Fatalf("bad: %s", actual)
-	}
-}
+				client, closer := testVaultServer(t)
+				defer closer()
 
-func TestAuth_wrapping(t *testing.T) {
-	baseConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": credUserpass.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, baseConfig, &vault.TestClusterOptions{
-		HandlerFunc:       http.Handler,
-		BaseListenAddress: "127.0.0.1:8200",
+				ui, cmd := testAuthCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			})
+		}
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	testAuthInit(t)
+	t.Run("custom_path", func(t *testing.T) {
+		t.Parallel()
 
-	client := cluster.Cores[0].Client
-	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
-		Type: "userpass",
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		if err := client.Sys().EnableAuth("my-auth", "userpass", ""); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Logical().Write("auth/my-auth/users/test", map[string]interface{}{
+			"password": "test",
+			"policies": "default",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		ui, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		code := cmd.Run([]string{
+			"-method", "userpass",
+			"-path", "my-auth",
+			"username=test",
+			"password=test",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! You are now authenticated."
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to be %q", combined, expected)
+		}
+
+		storedToken, err := tokenHelper.Get()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if l, exp := len(storedToken), 36; l != exp {
+			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, storedToken)
+		}
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
-		"password": "bar",
-		"policies": "zip,zap",
+
+	t.Run("no_verify", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+			TTL:      "30m",
+			NumUses:  1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		_, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-no-verify",
+			token,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		lookup, err := client.Auth().Token().Lookup(token)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// There was 1 use to start, make sure we didn't use it (verifying would
+		// use it).
+		uses := lookup.TokenRemainingUses()
+		if uses != 1 {
+			t.Errorf("expected %d to be %d", uses, 1)
+		}
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	ui := new(cli.MockUi)
-	c := &AuthCommand{
-		Meta: meta.Meta{
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
-		},
-		Handlers: map[string]AuthHandler{
-			"userpass": &credUserpass.CLIHandler{DefaultMount: "userpass"},
-		},
-	}
+	t.Run("no_store", func(t *testing.T) {
+		t.Parallel()
 
-	args := []string{
-		"-address",
-		"https://127.0.0.1:8200",
-		"-tls-skip-verify",
-		"-method",
-		"userpass",
-		"username=foo",
-		"password=bar",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+		client, closer := testVaultServer(t)
+		defer closer()
 
-	// Test again with wrapping
-	ui = new(cli.MockUi)
-	c = &AuthCommand{
-		Meta: meta.Meta{
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
-		},
-		Handlers: map[string]AuthHandler{
-			"userpass": &credUserpass.CLIHandler{DefaultMount: "userpass"},
-		},
-	}
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+			TTL:      "30m",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
 
-	args = []string{
-		"-address",
-		"https://127.0.0.1:8200",
-		"-tls-skip-verify",
-		"-wrap-ttl",
-		"5m",
-		"-method",
-		"userpass",
-		"username=foo",
-		"password=bar",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+		_, cmd := testAuthCommand(t)
+		cmd.client = client
 
-	// Test again with no-store
-	ui = new(cli.MockUi)
-	c = &AuthCommand{
-		Meta: meta.Meta{
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
-		},
-		Handlers: map[string]AuthHandler{
-			"userpass": &credUserpass.CLIHandler{DefaultMount: "userpass"},
-		},
-	}
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	args = []string{
-		"-address",
-		"https://127.0.0.1:8200",
-		"-tls-skip-verify",
-		"-wrap-ttl",
-		"5m",
-		"-no-store",
-		"-method",
-		"userpass",
-		"username=foo",
-		"password=bar",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+		// Ensure we have no token to start
+		if storedToken, err := tokenHelper.Get(); err != nil || storedToken != "" {
+			t.Errorf("expected token helper to be empty: %s: %q", err, storedToken)
+		}
 
-	// Test again with wrapping and token-only
-	ui = new(cli.MockUi)
-	c = &AuthCommand{
-		Meta: meta.Meta{
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
-		},
-		Handlers: map[string]AuthHandler{
-			"userpass": &credUserpass.CLIHandler{DefaultMount: "userpass"},
-		},
-	}
+		code := cmd.Run([]string{
+			"-no-store",
+			token,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
 
-	args = []string{
-		"-address",
-		"https://127.0.0.1:8200",
-		"-tls-skip-verify",
-		"-wrap-ttl",
-		"5m",
-		"-token-only",
-		"-method",
-		"userpass",
-		"username=foo",
-		"password=bar",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-	token := strings.TrimSpace(ui.OutputWriter.String())
-	if token == "" {
-		t.Fatal("expected to find token in output")
-	}
-	secret, err := client.Logical().Unwrap(token)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret.Auth.ClientToken == "" {
-		t.Fatal("no client token found")
-	}
+		storedToken, err := tokenHelper.Get()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if exp := ""; storedToken != exp {
+			t.Errorf("expected %q to be %q", storedToken, exp)
+		}
+	})
+
+	t.Run("stores", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+			TTL:      "30m",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		_, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		code := cmd.Run([]string{
+			token,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		storedToken, err := tokenHelper.Get()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if storedToken != token {
+			t.Errorf("expected %q to be %q", storedToken, token)
+		}
+	})
+
+	t.Run("only_token", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+			"password": "test",
+			"policies": "default",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		ui, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		code := cmd.Run([]string{
+			"-only-token",
+			"-method", "userpass",
+			"username=test",
+			"password=test",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		// Verify only the token was printed
+		token := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if l, exp := len(token), 36; l != exp {
+			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, token)
+		}
+
+		// Verify the token was not stored
+		if storedToken, err := tokenHelper.Get(); err != nil || storedToken != "" {
+			t.Fatalf("expted token to not be stored: %s: %q", err, storedToken)
+		}
+	})
+
+	t.Run("failure_no_store", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		code := cmd.Run([]string{
+			"not-a-real-token",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error verifying token: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		if storedToken, err := tokenHelper.Get(); err != nil || storedToken != "" {
+			t.Fatalf("expected token to not be stored: %s: %q", err, storedToken)
+		}
+	})
+
+	t.Run("wrap_auto_unwrap", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+			"password": "test",
+			"policies": "default",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		_, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		// Set the wrapping ttl to 5s. We can't set this via the flag because we
+		// override the client object before that particular flag is parsed.
+		client.SetWrappingLookupFunc(func(string, string) string { return "5m" })
+
+		code := cmd.Run([]string{
+			"-method", "userpass",
+			"username=test",
+			"password=test",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		// Unset the wrapping
+		client.SetWrappingLookupFunc(func(string, string) string { return "" })
+
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		token, err := tokenHelper.Get()
+		if err != nil || token == "" {
+			t.Fatalf("expected token from helper: %s: %q", err, token)
+		}
+
+		// Ensure the resulting token is unwrapped
+		secret, err := client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Error(err)
+		}
+
+		if secret.WrapInfo != nil {
+			t.Errorf("expected to be unwrapped: %#v", secret)
+		}
+	})
+
+	t.Run("wrap_only_token", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+			"password": "test",
+			"policies": "default",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		ui, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		// Set the wrapping ttl to 5s. We can't set this via the flag because we
+		// override the client object before that particular flag is parsed.
+		client.SetWrappingLookupFunc(func(string, string) string { return "5m" })
+
+		code := cmd.Run([]string{
+			"-only-token",
+			"-method", "userpass",
+			"username=test",
+			"password=test",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		// Unset the wrapping
+		client.SetWrappingLookupFunc(func(string, string) string { return "" })
+
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		storedToken, err := tokenHelper.Get()
+		if err != nil || storedToken != "" {
+			t.Fatalf("expected token to not be stored: %s: %q", err, storedToken)
+		}
+
+		token := ui.OutputWriter.String()
+		if token == "" {
+			t.Errorf("expected %q to not be %q", token, "")
+		}
+		if strings.Contains(token, "\n") {
+			t.Errorf("expected %q to not contain %q", token, "\n")
+		}
+
+		// Ensure the resulting token is, in fact, still wrapped.
+		client.SetToken(token)
+		secret, err := client.Logical().Unwrap("")
+		if err != nil {
+			t.Error(err)
+		}
+		if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+			t.Fatalf("expected secret to have auth: %#v", secret)
+		}
+	})
+
+	t.Run("wrap_no_store", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+			"password": "test",
+			"policies": "default",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		ui, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		// Set the wrapping ttl to 5s. We can't set this via the flag because we
+		// override the client object before that particular flag is parsed.
+		client.SetWrappingLookupFunc(func(string, string) string { return "5m" })
+
+		code := cmd.Run([]string{
+			"-no-store",
+			"-method", "userpass",
+			"username=test",
+			"password=test",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		// Unset the wrapping
+		client.SetWrappingLookupFunc(func(string, string) string { return "" })
+
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		storedToken, err := tokenHelper.Get()
+		if err != nil || storedToken != "" {
+			t.Fatalf("expected token to not be stored: %s: %q", err, storedToken)
+		}
+
+		expected := "wrapping_token"
+		output := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(output, expected) {
+			t.Errorf("expected %q to contain %q", output, expected)
+		}
+	})
+
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"token",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error verifying token: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testAuthCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }
-
-func TestAuth_token_nostore(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
-
-	testAuthInit(t)
-
-	ui := new(cli.MockUi)
-	c := &AuthCommand{
-		Meta: meta.Meta{
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
-		},
-	}
-
-	args := []string{
-		"-address", addr,
-		"-no-store",
-		token,
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-
-	helper, err := c.TokenHelper()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	actual, err := helper.Get()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if actual != "" {
-		t.Fatalf("bad: %s", actual)
-	}
-}
-
-func TestAuth_stdin(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
-
-	testAuthInit(t)
-
-	stdinR, stdinW := io.Pipe()
-	ui := new(cli.MockUi)
-	c := &AuthCommand{
-		Meta: meta.Meta{
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
-		},
-		testStdin: stdinR,
-	}
-
-	go func() {
-		stdinW.Write([]byte(token))
-		stdinW.Close()
-	}()
-
-	args := []string{
-		"-address", addr,
-		"-",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-}
-
-func TestAuth_badToken(t *testing.T) {
-	core, _, _ := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
-
-	testAuthInit(t)
-
-	ui := new(cli.MockUi)
-	c := &AuthCommand{
-		Meta: meta.Meta{
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
-		},
-	}
-
-	args := []string{
-		"-address", addr,
-		"not-a-valid-token",
-	}
-	if code := c.Run(args); code != 1 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-}
-
-func TestAuth_method(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
-
-	testAuthInit(t)
-
-	ui := new(cli.MockUi)
-	c := &AuthCommand{
-		Handlers: map[string]AuthHandler{
-			"test": &testAuthHandler{},
-		},
-		Meta: meta.Meta{
-			Ui:          ui,
-			TokenHelper: DefaultTokenHelper,
-		},
-	}
-
-	args := []string{
-		"-address", addr,
-		"-method=test",
-		"foo=" + token,
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-
-	helper, err := c.TokenHelper()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	actual, err := helper.Get()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if actual != token {
-		t.Fatalf("bad: %s", actual)
-	}
-}
-
-func testAuthInit(t *testing.T) {
-	td, err := ioutil.TempDir("", "vault")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// Set the HOME env var so we get that right
-	os.Setenv("HOME", td)
-
-	// Write a .vault config to use our custom token helper
-	config := fmt.Sprintf(
-		"token_helper = \"\"\n")
-	ioutil.WriteFile(filepath.Join(td, ".vault"), []byte(config), 0644)
-}
-
-type testAuthHandler struct{}
-
-func (h *testAuthHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
-	return &api.Secret{
-		Auth: &api.SecretAuth{
-			ClientToken: m["foo"],
-		},
-	}, nil
-}
-
-func (h *testAuthHandler) Help() string { return "" }
