@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/crypto/ssh/terminal"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
@@ -80,6 +82,7 @@ func RawField(secret *api.Secret, field string) (string, bool) {
 	return str, val != nil
 }
 
+// PrintRawField prints raw field from the secret.
 func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 	str, ok := RawField(secret, field)
 	if !ok {
@@ -87,10 +90,21 @@ func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 		return 1
 	}
 
-	// The cli.Ui prints a CR, which is not wanted since the user probably wants
-	// just the raw value.
-	w := getWriterFromUI(ui)
-	fmt.Fprintf(w, str)
+	return PrintRaw(ui, str)
+}
+
+// PrintRaw prints a raw value to the terminal. If the process is being "piped"
+// to something else, the "raw" value is printed without a newline character.
+// Otherwise the value is printed as normal.
+func PrintRaw(ui cli.Ui, str string) int {
+	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+		ui.Output(str)
+	} else {
+		// The cli.Ui prints a CR, which is not wanted since the user probably wants
+		// just the raw value.
+		w := getWriterFromUI(ui)
+		fmt.Fprintf(w, str)
+	}
 	return 0
 }
 
