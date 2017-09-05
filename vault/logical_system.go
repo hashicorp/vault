@@ -1561,7 +1561,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		b.Backend.Logger().Error("sys: tune failed: no mount entry found", "path", path)
 		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
 	}
-	if mountEntry != nil && !mountEntry.Local && repState == consts.ReplicationSecondary {
+	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
 	}
 
@@ -1606,8 +1606,6 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		}
 	}
 
-	var resp *logical.Response
-
 	description := data.Get("description").(string)
 	if description != "" {
 		oldDesc := mountEntry.Description
@@ -1630,7 +1628,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		}
 	}
 
-	return resp, nil
+	return nil, nil
 }
 
 // handleLease is use to view the metadata for a given LeaseID
