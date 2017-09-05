@@ -602,7 +602,7 @@ func TestSysTuneMount(t *testing.T) {
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
 		"default_lease_ttl": "72000h",
 	})
-	testResponseStatus(t, resp, 400)
+	testResponseStatus(t, resp, 204)
 
 	// Longer than system default
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
