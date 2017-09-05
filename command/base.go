@@ -26,8 +26,6 @@ const maxLineLength int = 78
 // a string.
 var reRemoveWhitespace = regexp.MustCompile(`[\s]+`)
 
-type TokenHelperFunc func() (token.TokenHelper, error)
-
 type BaseCommand struct {
 	UI cli.Ui
 
@@ -46,7 +44,7 @@ type BaseCommand struct {
 	flagFormat string
 	flagField  string
 
-	tokenHelper TokenHelperFunc
+	tokenHelper token.TokenHelper
 
 	// For testing
 	client *api.Client
@@ -98,16 +96,13 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	// If we don't have a token, check the token helper
 	if token == "" {
-		if c.tokenHelper != nil {
-			// If we have a token, then set that
-			tokenHelper, err := c.tokenHelper()
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to get token helper")
-			}
-			token, err = tokenHelper.Get()
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to retrieve from token helper")
-			}
+		helper, err := c.TokenHelper()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get token helper")
+		}
+		token, err = helper.Get()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get token from token helper")
 		}
 	}
 
@@ -117,6 +112,19 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	}
 
 	return client, nil
+}
+
+// TokenHelper returns the token helper attached to the command.
+func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
+	if c.tokenHelper != nil {
+		return c.tokenHelper, nil
+	}
+
+	helper, err := DefaultTokenHelper()
+	if err != nil {
+		return nil, err
+	}
+	return helper, nil
 }
 
 // DefaultWrappingLookupFunc is the default wrapping function based on the
