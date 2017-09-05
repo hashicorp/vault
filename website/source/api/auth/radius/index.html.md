@@ -35,9 +35,7 @@ RADIUS.
 - `unregistered_user_policies` `(string: "")` - A comma-separated list of 
   policies to be granted to unregistered users.
 - `dial_timeout` `(integer: 10)` - Number of second to wait for a backend 
-  connection before timing out. Defaults is 10.
-- `read_timeout` `(integer: 10)` - Number of second to wait for a backend 
-  response before timing out. Defaults is 10.
+  connection before timing out. Default is 10.
 - `nas_port` `(integer: 10)` - The NAS-Port attribute of the RADIUS request. 
   Defaults is 10.
 

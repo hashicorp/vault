@@ -39,7 +39,7 @@ func pathConfig(b *backend) *framework.Path {
 			"read_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     10,
-				Description: "Number of seconds before response times out (default: 10)",
+				Description: "Number of seconds before response times out (default: 10). Note: kept for backwards compatibility, currently unused.",
 			},
 			"nas_port": &framework.FieldSchema{
 				Type:        framework.TypeInt,

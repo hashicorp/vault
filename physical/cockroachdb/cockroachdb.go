@@ -1,6 +1,7 @@
 package cockroachdb
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sort"
@@ -204,7 +205,7 @@ func (c *CockroachDBBackend) Transaction(txns []physical.TxnEntry) error {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	return crdb.ExecuteTx(c.client, func(tx *sql.Tx) error {
+	return crdb.ExecuteTx(context.Background(), c.client, nil, func(tx *sql.Tx) error {
 		return c.transaction(tx, txns)
 	})
 }
