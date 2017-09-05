@@ -268,29 +268,6 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 	return c.flags
 }
 
-// printFlagTitle prints a consistently-formatted title to the given writer.
-func printFlagTitle(w io.Writer, s string) {
-	fmt.Fprintf(w, "%s\n\n", s)
-}
-
-// printFlagDetail prints a single flag to the given writer.
-func printFlagDetail(w io.Writer, f *flag.Flag) {
-	example := ""
-	if t, ok := f.Value.(FlagExample); ok {
-		example = t.Example()
-	}
-
-	if example != "" {
-		fmt.Fprintf(w, "  -%s=<%s>\n", f.Name, example)
-	} else {
-		fmt.Fprintf(w, "  -%s\n", f.Name)
-	}
-
-	usage := reRemoveWhitespace.ReplaceAllString(f.Usage, " ")
-	indented := wrapAtLengthWithPadding(usage, 6)
-	fmt.Fprintf(w, "%s\n\n", indented)
-}
-
 // wrapAtLengthWithPadding wraps the given text at the maxLineLength, taking
 // into account any provided left padding.
 func wrapAtLengthWithPadding(s string, pad int) string {
@@ -334,17 +311,13 @@ func NewFlagSets(ui cli.Ui) *FlagSets {
 // NewFlagSet creates a new flag set from the given flag sets.
 func (f *FlagSets) NewFlagSet(name string) *FlagSet {
 	flagSet := NewFlagSet(name)
-	f.AddFlagSet(flagSet)
+	flagSet.mainSet = f.mainSet
+	flagSet.completions = f.completions
+	f.flagSets = append(f.flagSets, flagSet)
 	return flagSet
 }
 
-// AddFlagSet adds a new flag set to this flag set.
-func (f *FlagSets) AddFlagSet(set *FlagSet) {
-	set.mainSet = f.mainSet
-	set.completions = f.completions
-	f.flagSets = append(f.flagSets, set)
-}
-
+// Completions returns the completions for this flag set.
 func (f *FlagSets) Completions() complete.Flags {
 	return f.completions
 }
@@ -359,21 +332,6 @@ func (f *FlagSets) Args() []string {
 	return f.mainSet.Args()
 }
 
-// HideFlag excludes the flag from the list of flags to print in help. This is
-// useful when you want to include a flag in parsing for deprecations/bc, but
-// you don't want to include it in help output.
-func (f *FlagSets) HideFlag(n string) {
-	if _, ok := f.hiddens[n]; !ok {
-		f.hiddens[n] = struct{}{}
-	}
-}
-
-// HiddenFlag returns true if the flag with the given name is hidden.
-func (f *FlagSets) HiddenFlag(n string) bool {
-	_, ok := f.hiddens[n]
-	return ok
-}
-
 // Help builds custom help for this command, grouping by flag set.
 func (fs *FlagSets) Help() string {
 	var out bytes.Buffer
@@ -382,7 +340,7 @@ func (fs *FlagSets) Help() string {
 		printFlagTitle(&out, set.name+":")
 		set.VisitAll(func(f *flag.Flag) {
 			// Skip any hidden flags
-			if fs.HiddenFlag(f.Name) {
+			if v, ok := f.Value.(FlagVisibility); ok && v.Hidden() {
 				return
 			}
 			printFlagDetail(&out, f)
@@ -419,4 +377,34 @@ func (f *FlagSet) Visit(fn func(*flag.Flag)) {
 
 func (f *FlagSet) VisitAll(fn func(*flag.Flag)) {
 	f.flagSet.VisitAll(fn)
+}
+
+// printFlagTitle prints a consistently-formatted title to the given writer.
+func printFlagTitle(w io.Writer, s string) {
+	fmt.Fprintf(w, "%s\n\n", s)
+}
+
+// printFlagDetail prints a single flag to the given writer.
+func printFlagDetail(w io.Writer, f *flag.Flag) {
+	// Check if the flag is hidden - do not print any flag detail or help output
+	// if it is hidden.
+	if h, ok := f.Value.(FlagVisibility); ok && h.Hidden() {
+		return
+	}
+
+	// Check for a detailed example
+	example := ""
+	if t, ok := f.Value.(FlagExample); ok {
+		example = t.Example()
+	}
+
+	if example != "" {
+		fmt.Fprintf(w, "  -%s=<%s>\n", f.Name, example)
+	} else {
+		fmt.Fprintf(w, "  -%s\n", f.Name)
+	}
+
+	usage := reRemoveWhitespace.ReplaceAllString(f.Usage, " ")
+	indented := wrapAtLengthWithPadding(usage, 6)
+	fmt.Fprintf(w, "%s\n\n", indented)
 }
