@@ -4,66 +4,88 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
+
+// Ensure we are implementing the right interfaces.
+var _ cli.Command = (*AuthDisableCommand)(nil)
+var _ cli.CommandAutocomplete = (*AuthDisableCommand)(nil)
 
 // AuthDisableCommand is a Command that enables a new endpoint.
 type AuthDisableCommand struct {
-	meta.Meta
-}
-
-func (c *AuthDisableCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("auth-disable", meta.FlagSetDefault)
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	args = flags.Args()
-	if len(args) != 1 {
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\nauth-disable expects one argument: the path to disable."))
-		return 1
-	}
-
-	path := args[0]
-
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 2
-	}
-
-	if err := client.Sys().DisableAuth(path); err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error: %s", err))
-		return 2
-	}
-
-	c.Ui.Output(fmt.Sprintf(
-		"Disabled auth provider at path '%s' if it was enabled", path))
-
-	return 0
+	*BaseCommand
 }
 
 func (c *AuthDisableCommand) Synopsis() string {
-	return "Disable an auth provider"
+	return "Disables an auth provider"
 }
 
 func (c *AuthDisableCommand) Help() string {
 	helpText := `
-Usage: vault auth-disable [options] path
+Usage: vault auth-disable [options] PATH
 
-  Disable an already-enabled auth provider.
+  Disables an existing authentication provider at the given PATH. The argument
+  corresponds to the PATH of the mount, not the TYPE!. Once the auth provider
+  is disabled its path can no longer be used to authenticate. All access tokens
+  generated via the disabled auth provider are revoked.
 
-  Once the auth provider is disabled its path can no longer be used
-  to authenticate. All access tokens generated via the disabled auth provider
-  will be revoked. This command will block until all tokens are revoked.
-  If the command is exited early the tokens will still be revoked.
+  This command will block until all tokens are revoked.
 
-General Options:
-` + meta.GeneralOptionsUsage()
+  Disable the authentication provider at userpass/:
+
+      $ vault auth-disable userpass
+
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+
 	return strings.TrimSpace(helpText)
+}
+
+func (c *AuthDisableCommand) Flags() *FlagSets {
+	return c.flagSet(FlagSetHTTP)
+}
+
+func (c *AuthDisableCommand) AutocompleteArgs() complete.Predictor {
+	return c.PredictVaultAuths()
+}
+
+func (c *AuthDisableCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
+}
+
+func (c *AuthDisableCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = f.Args()
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		return 1
+	case len(args) > 1:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	path := ensureTrailingSlash(sanitizePath(args[0]))
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	if err := client.Sys().DisableAuth(path); err != nil {
+		c.UI.Error(fmt.Sprintf("Error disabling auth at %s: %s", path, err))
+		return 2
+	}
+
+	c.UI.Output(fmt.Sprintf("Success! Disabled the auth provider (if it existed) at: %s", path))
+	return 0
 }
