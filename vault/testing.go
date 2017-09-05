@@ -267,17 +267,16 @@ func testTokenStore(t testing.T, c *Core) *TokenStore {
 	}
 	ts := tokenstore.(*TokenStore)
 
-	router := NewRouter()
-	err = router.Mount(ts, "auth/token/", &MountEntry{Table: credentialTableType, UUID: "authtokenuuid", Path: "auth/token", Accessor: "authtokenaccessor"}, ts.view)
+	err = c.router.Unmount("auth/token/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = c.router.Mount(ts, "auth/token/", &MountEntry{Table: credentialTableType, UUID: "authtokenuuid", Path: "auth/token", Accessor: "authtokenaccessor"}, ts.view)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	subview := c.systemBarrierView.SubView(expirationSubPath)
-	logger := logformat.NewVaultLogger(log.LevelTrace)
-
-	exp := NewExpirationManager(router, subview, ts, logger)
-	ts.SetExpirationManager(exp)
+	ts.SetExpirationManager(c.expiration)
 
 	return ts
 }
