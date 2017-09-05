@@ -3,87 +3,126 @@ package command
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
+
+// Ensure we are implementing the right interfaces.
+var _ cli.Command = (*MountTuneCommand)(nil)
+var _ cli.CommandAutocomplete = (*MountTuneCommand)(nil)
 
 // MountTuneCommand is a Command that remounts a mounted secret backend
 // to a new endpoint.
 type MountTuneCommand struct {
-	meta.Meta
-}
+	*BaseCommand
 
-func (c *MountTuneCommand) Run(args []string) int {
-	var defaultLeaseTTL, maxLeaseTTL string
-	flags := c.Meta.FlagSet("mount-tune", meta.FlagSetDefault)
-	flags.StringVar(&defaultLeaseTTL, "default-lease-ttl", "", "")
-	flags.StringVar(&maxLeaseTTL, "max-lease-ttl", "", "")
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	args = flags.Args()
-	if len(args) != 1 {
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\nmount-tune expects one arguments: the mount path"))
-		return 1
-	}
-
-	path := args[0]
-
-	mountConfig := api.MountConfigInput{
-		DefaultLeaseTTL: defaultLeaseTTL,
-		MaxLeaseTTL:     maxLeaseTTL,
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 2
-	}
-
-	if err := client.Sys().TuneMount(path, mountConfig); err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Mount tune error: %s", err))
-		return 2
-	}
-
-	c.Ui.Output(fmt.Sprintf(
-		"Successfully tuned mount '%s'!", path))
-
-	return 0
+	flagDefaultLeaseTTL time.Duration
+	flagMaxLeaseTTL     time.Duration
 }
 
 func (c *MountTuneCommand) Synopsis() string {
-	return "Tune mount configuration parameters"
+	return "Tunes an existing mount's configuration"
 }
 
 func (c *MountTuneCommand) Help() string {
 	helpText := `
-  Usage: vault mount-tune [options] path
+Usage: vault mount-tune [options] PATH
 
-  Tune configuration options for a mounted secret backend.
+  Tune the configuration options for a mounted secret backend at the given
+  path. The argument corresponds to the PATH of the mount, not the TYPE!
 
-  Example: vault mount-tune -default-lease-ttl="24h" secret
+  Tune the default lease for the PKI secret backend:
 
-General Options:
-` + meta.GeneralOptionsUsage() + `
-Mount Options:
+      $ vault mount-tune -default-lease-ttl=72h pki/
 
-  -default-lease-ttl=<duration>  Default lease time-to-live for this backend.
-                                 If not specified, uses the system default, or
-                                 the previously set value. Set to 'system' to
-                                 explicitly set it to use the system default.
+  For a full list of examples and paths, please see the documentation that
+  corresponds to the secret backend in use.
 
-  -max-lease-ttl=<duration>      Max lease time-to-live for this backend.
-                                 If not specified, uses the system default, or
-                                 the previously set value. Set to 'system' to
-                                 explicitly set it to use the system default.
+` + c.Flags().Help()
 
-`
 	return strings.TrimSpace(helpText)
+}
+
+func (c *MountTuneCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.DurationVar(&DurationVar{
+		Name:       "default-lease-ttl",
+		Target:     &c.flagDefaultLeaseTTL,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "The default lease TTL for this backend. If unspecified, this " +
+			"defaults to the Vault server's globally configured default lease TTL, " +
+			"or a previously configured value for the backend.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "max-lease-ttl",
+		Target:     &c.flagMaxLeaseTTL,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "The maximum lease TTL for this backend. If unspecified, this " +
+			"defaults to the Vault server's globally configured maximum lease TTL, " +
+			"or a previously configured value for the backend.",
+	})
+
+	return set
+}
+
+func (c *MountTuneCommand) AutocompleteArgs() complete.Predictor {
+	return c.PredictVaultMounts()
+}
+
+func (c *MountTuneCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
+}
+
+func (c *MountTuneCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = f.Args()
+	mountPath, remaining, err := extractPath(args)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	if len(remaining) > 0 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	// Append a trailing slash to indicate it's a path in output
+	mountPath = ensureTrailingSlash(mountPath)
+
+	mountConfig := api.MountConfigInput{
+		DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
+		MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
+	}
+
+	if err := client.Sys().TuneMount(mountPath, mountConfig); err != nil {
+		c.UI.Error(fmt.Sprintf("Error tuning mount %s: %s", mountPath, err))
+		return 2
+	}
+
+	c.UI.Output(fmt.Sprintf("Success! Tuned the mount at: %s", mountPath))
+	return 0
 }
