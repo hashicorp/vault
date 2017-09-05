@@ -76,10 +76,16 @@ This endpoint mounts a new secret backend at the given path.
 - `config` `(map<string|string>: nil)` – Specifies configuration options for
   this mount. This is an object with four possible values:
 
-    - `default_lease_ttl`
-    - `max_lease_ttl`
-    - `force_no_cache`
-    - `plugin_name`
+    - `default_lease_ttl` `(string: "")` - the default lease duration, specified
+      as a go string duration like "5s" or "30m".
+
+    - `max_lease_ttl` `(string: "")` - the maximum lease duration, specified as
+      a go string duration like "5s" or "30m".
+
+    - `force_no_cache` `(bool: false)` - disable caching.
+
+    - `plugin_name` `(string: "")` - the name of the plugin in the plugin
+      catalog to use.
 
     These control the default and maximum lease time-to-live, force
     disabling backend caching, and option plugin name for plugin backends 
@@ -91,7 +97,7 @@ This endpoint mounts a new secret backend at the given path.
   use based from the name in the plugin catalog. Applies only to plugin
   backends.
 
-Additionally, the following options are allowed in Vault open-source, but 
+Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
 - `local` `(bool: false)` – Specifies if the secret backend is a local mount  
