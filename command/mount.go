@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/meta"
+	"github.com/posener/complete"
 )
 
 // MountCommand is a Command that mounts a new mount.
@@ -74,14 +75,14 @@ func (c *MountCommand) Run(args []string) int {
 		return 2
 	}
 
-	mountPart := fmt.Sprintf("'%s'", mountType)
+	mountTypeOutput := fmt.Sprintf("'%s'", mountType)
 	if mountType == "plugin" {
-		mountPart = fmt.Sprintf("plugin '%s'", pluginName)
+		mountTypeOutput = fmt.Sprintf("plugin '%s'", pluginName)
 	}
 
 	c.Ui.Output(fmt.Sprintf(
 		"Successfully mounted %s at '%s'!",
-		mountPart, path))
+		mountTypeOutput, path))
 
 	return 0
 }
@@ -132,4 +133,32 @@ Mount Options:
                                  removed by replication.
 `
 	return strings.TrimSpace(helpText)
+}
+
+func (c *MountCommand) AutocompleteArgs() complete.Predictor {
+	// This list does not contain deprecated backends
+	return complete.PredictSet(
+		"aws",
+		"consul",
+		"pki",
+		"transit",
+		"ssh",
+		"rabbitmq",
+		"database",
+		"totp",
+		"plugin",
+	)
+
+}
+
+func (c *MountCommand) AutocompleteFlags() complete.Flags {
+	return complete.Flags{
+		"-description":       complete.PredictNothing,
+		"-path":              complete.PredictNothing,
+		"-default-lease-ttl": complete.PredictNothing,
+		"-max-lease-ttl":     complete.PredictNothing,
+		"-force-no-cache":    complete.PredictNothing,
+		"-plugin-name":       complete.PredictNothing,
+		"-local":             complete.PredictNothing,
+	}
 }

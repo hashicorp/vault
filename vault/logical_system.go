@@ -230,6 +230,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
 					},
+					"description": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
@@ -254,6 +258,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"max_lease_ttl": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
+					},
+					"description": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
 				},
 
@@ -290,6 +298,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeBool,
 						Default:     false,
 						Description: strings.TrimSpace(sysHelp["mount_local"][0]),
+					},
+					"plugin_name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["mount_plugin_name"][0]),
 					},
 				},
 
@@ -493,14 +505,18 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
-					"plugin_name": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
+					"config": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["auth_config"][0]),
 					},
 					"local": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Default:     false,
 						Description: strings.TrimSpace(sysHelp["mount_local"][0]),
+					},
+					"plugin_name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
 					},
 				},
 
@@ -1243,12 +1259,10 @@ func (b *SystemBackend) handleMountTable(
 // handleMount is used to mount a new path
 func (b *SystemBackend) handleMount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	local := data.Get("local").(bool)
-	if !local && repState == consts.ReplicationSecondary {
+	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
 	}
 
@@ -1256,6 +1270,7 @@ func (b *SystemBackend) handleMount(
 	path := data.Get("path").(string)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
+	pluginName := data.Get("plugin_name").(string)
 
 	path = sanitizeMountPath(path)
 
@@ -1310,9 +1325,19 @@ func (b *SystemBackend) handleMount(
 			logical.ErrInvalidRequest
 	}
 
-	// Only set plugin-name if mount is of type plugin
-	if logicalType == "plugin" && apiConfig.PluginName != "" {
-		config.PluginName = apiConfig.PluginName
+	// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
+	// option taking precedence.
+	if logicalType == "plugin" {
+		switch {
+		case apiConfig.PluginName != "":
+			config.PluginName = apiConfig.PluginName
+		case pluginName != "":
+			config.PluginName = pluginName
+		default:
+			return logical.ErrorResponse(
+					"plugin_name must be provided for plugin backend"),
+				logical.ErrInvalidRequest
+		}
 	}
 
 	// Copy over the force no cache if set
@@ -1362,9 +1387,9 @@ func (b *SystemBackend) handleUnmount(
 	path := data.Get("path").(string)
 	path = sanitizeMountPath(path)
 
-	repState := b.Core.ReplicationState()
+	repState := b.Core.replicationState
 	entry := b.Core.router.MatchingMountEntry(path)
-	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
+	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
 	}
 
@@ -1387,9 +1412,7 @@ func (b *SystemBackend) handleUnmount(
 // handleRemount is used to remount a path
 func (b *SystemBackend) handleRemount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	// Get the paths
 	fromPath := data.Get("from").(string)
@@ -1404,7 +1427,7 @@ func (b *SystemBackend) handleRemount(
 	toPath = sanitizeMountPath(toPath)
 
 	entry := b.Core.router.MatchingMountEntry(fromPath)
-	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
+	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot remount a non-local mount on a replication secondary"), nil
 	}
 
@@ -1500,9 +1523,7 @@ func (b *SystemBackend) handleMountTuneWrite(
 // handleTuneWriteCommon is used to set config settings on a path
 func (b *SystemBackend) handleTuneWriteCommon(
 	path string, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	path = sanitizeMountPath(path)
 
@@ -1519,7 +1540,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		b.Backend.Logger().Error("sys: tune failed: no mount entry found", "path", path)
 		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
 	}
-	if mountEntry != nil && !mountEntry.Local && repState == consts.ReplicationSecondary {
+	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
 	}
 
@@ -1531,45 +1552,79 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		lock = &b.Core.mountsLock
 	}
 
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Check again after grabbing the lock
+	mountEntry = b.Core.router.MatchingMountEntry(path)
+	if mountEntry == nil {
+		b.Backend.Logger().Error("sys: tune failed: no mount entry found", "path", path)
+		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
+	}
+	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
+	}
+
 	// Timing configuration parameters
 	{
-		var newDefault, newMax *time.Duration
+		var newDefault, newMax time.Duration
 		defTTL := data.Get("default_lease_ttl").(string)
 		switch defTTL {
 		case "":
+			newDefault = mountEntry.Config.DefaultLeaseTTL
 		case "system":
-			tmpDef := time.Duration(0)
-			newDefault = &tmpDef
+			newDefault = time.Duration(0)
 		default:
 			tmpDef, err := parseutil.ParseDurationSecond(defTTL)
 			if err != nil {
 				return handleError(err)
 			}
-			newDefault = &tmpDef
+			newDefault = tmpDef
 		}
 
 		maxTTL := data.Get("max_lease_ttl").(string)
 		switch maxTTL {
 		case "":
+			newMax = mountEntry.Config.MaxLeaseTTL
 		case "system":
-			tmpMax := time.Duration(0)
-			newMax = &tmpMax
+			newMax = time.Duration(0)
 		default:
 			tmpMax, err := parseutil.ParseDurationSecond(maxTTL)
 			if err != nil {
 				return handleError(err)
 			}
-			newMax = &tmpMax
+			newMax = tmpMax
 		}
 
-		if newDefault != nil || newMax != nil {
-			lock.Lock()
-			defer lock.Unlock()
+		if newDefault != mountEntry.Config.DefaultLeaseTTL ||
+			newMax != mountEntry.Config.MaxLeaseTTL {
 
 			if err := b.tuneMountTTLs(path, mountEntry, newDefault, newMax); err != nil {
 				b.Backend.Logger().Error("sys: tuning failed", "path", path, "error", err)
 				return handleError(err)
 			}
+		}
+	}
+
+	description := data.Get("description").(string)
+	if description != "" {
+		oldDesc := mountEntry.Description
+		mountEntry.Description = description
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Description = oldDesc
+			return handleError(err)
+		}
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of description successful", "path", path)
 		}
 	}
 
@@ -1738,12 +1793,10 @@ func (b *SystemBackend) handleAuthTable(
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	local := data.Get("local").(bool)
-	if !local && repState == consts.ReplicationSecondary {
+	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
 	}
 
@@ -1754,10 +1807,31 @@ func (b *SystemBackend) handleEnableAuth(
 	pluginName := data.Get("plugin_name").(string)
 
 	var config MountConfig
+	var apiConfig APIMountConfig
 
-	// Only set plugin name if mount is of type plugin
-	if logicalType == "plugin" && pluginName != "" {
-		config.PluginName = pluginName
+	configMap := data.Get("config").(map[string]interface{})
+	if configMap != nil && len(configMap) != 0 {
+		err := mapstructure.Decode(configMap, &apiConfig)
+		if err != nil {
+			return logical.ErrorResponse(
+					"unable to convert given auth config information"),
+				logical.ErrInvalidRequest
+		}
+	}
+
+	// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
+	// option taking precedence.
+	if logicalType == "plugin" {
+		switch {
+		case apiConfig.PluginName != "":
+			config.PluginName = apiConfig.PluginName
+		case pluginName != "":
+			config.PluginName = pluginName
+		default:
+			return logical.ErrorResponse(
+					"plugin_name must be provided for plugin backend"),
+				logical.ErrInvalidRequest
+		}
 	}
 
 	if logicalType == "" {
@@ -1793,9 +1867,9 @@ func (b *SystemBackend) handleDisableAuth(
 	path = sanitizeMountPath(path)
 	fullPath := credentialRoutePrefix + path
 
-	repState := b.Core.ReplicationState()
+	repState := b.Core.replicationState
 	entry := b.Core.router.MatchingMountEntry(fullPath)
-	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
+	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
 	}
 
@@ -1846,7 +1920,7 @@ func (b *SystemBackend) handlePolicyRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"name":  name,
+			"name":  policy.Name,
 			"rules": policy.Raw,
 		},
 	}, nil
@@ -1873,8 +1947,9 @@ func (b *SystemBackend) handlePolicySet(
 		return handleError(err)
 	}
 
-	// Override the name
-	parse.Name = strings.ToLower(name)
+	if name != "" {
+		parse.Name = name
+	}
 
 	// Update the policy
 	if err := b.Core.policyStore.SetPolicy(parse); err != nil {
@@ -1943,12 +2018,10 @@ func (b *SystemBackend) handleAuditHash(
 // handleEnableAudit is used to enable a new audit backend
 func (b *SystemBackend) handleEnableAudit(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
 
 	local := data.Get("local").(bool)
-	if !local && repState == consts.ReplicationSecondary {
+	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
 	}
 
@@ -2091,10 +2164,8 @@ func (b *SystemBackend) handleKeyStatus(
 // handleRotate is used to trigger a key rotation
 func (b *SystemBackend) handleRotate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
 	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
-	if repState == consts.ReplicationSecondary {
+	if repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
 	}
 
@@ -2540,6 +2611,11 @@ and max_lease_ttl.`,
 and is unaffected by replication.`,
 	},
 
+	"mount_plugin_name": {
+		`Name of the plugin to mount based from the name registered 
+in the plugin catalog.`,
+	},
+
 	"tune_default_lease_ttl": {
 		`The default lease TTL for this mount.`,
 	},
@@ -2674,6 +2750,10 @@ Example: you might have an OAuth backend for GitHub, and one for Google Apps.
 	"auth_desc": {
 		`User-friendly description for this crential backend.`,
 		"",
+	},
+
+	"auth_config": {
+		`Configuration for this mount, such as plugin_name.`,
 	},
 
 	"auth_plugin": {

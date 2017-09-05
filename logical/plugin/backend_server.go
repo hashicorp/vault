@@ -1,10 +1,17 @@
 package plugin
 
 import (
+	"errors"
 	"net/rpc"
+	"os"
 
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
+)
+
+var (
+	ErrServerInMetadataMode = errors.New("plugin server can not perform action while in metadata mode")
 )
 
 // backendPluginServer is the RPC server that backendPluginClient talks to,
@@ -19,7 +26,15 @@ type backendPluginServer struct {
 	storageClient *rpc.Client
 }
 
+func inMetadataMode() bool {
+	return os.Getenv(pluginutil.PluginMetadaModeEnv) == "true"
+}
+
 func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *HandleRequestReply) error {
+	if inMetadataMode() {
+		return ErrServerInMetadataMode
+	}
+
 	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
 
@@ -40,6 +55,10 @@ func (b *backendPluginServer) SpecialPaths(_ interface{}, reply *SpecialPathsRep
 }
 
 func (b *backendPluginServer) HandleExistenceCheck(args *HandleExistenceCheckArgs, reply *HandleExistenceCheckReply) error {
+	if inMetadataMode() {
+		return ErrServerInMetadataMode
+	}
+
 	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
 
@@ -64,11 +83,19 @@ func (b *backendPluginServer) Cleanup(_ interface{}, _ *struct{}) error {
 }
 
 func (b *backendPluginServer) Initialize(_ interface{}, _ *struct{}) error {
+	if inMetadataMode() {
+		return ErrServerInMetadataMode
+	}
+
 	err := b.backend.Initialize()
 	return err
 }
 
 func (b *backendPluginServer) InvalidateKey(args string, _ *struct{}) error {
+	if inMetadataMode() {
+		return ErrServerInMetadataMode
+	}
+
 	b.backend.InvalidateKey(args)
 	return nil
 }
@@ -145,6 +172,10 @@ func (b *backendPluginServer) Type(_ interface{}, reply *TypeReply) error {
 }
 
 func (b *backendPluginServer) RegisterLicense(args *RegisterLicenseArgs, reply *RegisterLicenseReply) error {
+	if inMetadataMode() {
+		return ErrServerInMetadataMode
+	}
+
 	err := b.backend.RegisterLicense(args.License)
 	if err != nil {
 		*reply = RegisterLicenseReply{

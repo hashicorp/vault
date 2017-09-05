@@ -88,9 +88,27 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 		"",
 		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "instance-profile", Path: "profilePath", FriendlyName: "InstanceProfileName"},
 	)
-	testParser("arn:aws:iam::123456789012:root", "arn:aws:iam::123456789012:root",
-		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "root"},
-	)
+
+	// Test that it properly handles pathological inputs...
+	_, err := parseIamArn("")
+	if err == nil {
+		t.Error("expected error from empty input string")
+	}
+
+	_, err = parseIamArn("arn:aws:iam::123456789012:role")
+	if err == nil {
+		t.Error("expected error from malformed ARN without a role name")
+	}
+
+	_, err = parseIamArn("arn:aws:iam")
+	if err == nil {
+		t.Error("expected error from incomplete ARN (arn:aws:iam)")
+	}
+
+	_, err = parseIamArn("arn:aws:iam::1234556789012:/")
+	if err == nil {
+		t.Error("expected error from empty principal type and no principal name (arn:aws:iam::1234556789012:/)")
+	}
 }
 
 func TestBackend_validateVaultHeaderValue(t *testing.T) {

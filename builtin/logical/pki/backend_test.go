@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -12,6 +13,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math"
+	"math/big"
 	mathrand "math/rand"
 	"net"
 	"os"
@@ -401,8 +403,8 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		return nil, fmt.Errorf("Validity period not far enough in the past")
 	}
 
-	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 10 {
-		return nil, fmt.Errorf("Validity period of %d too large vs max of 10", cert.NotAfter.Unix())
+	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 20 {
+		return nil, fmt.Errorf("Certificate validity end: %s; expected within 20 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
 	}
 
 	return parsedCertBundle, nil
@@ -1845,6 +1847,8 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		addTests(nil)
 
 		roleTestStep.ErrorOk = false
+		roleVals.TTL = ""
+		roleVals.MaxTTL = "12h"
 	}
 
 	// Listing test
@@ -2126,11 +2130,30 @@ func TestBackend_SignVerbatim(t *testing.T) {
 			"ttl": "12h",
 		},
 	})
-	if resp != nil && !resp.IsError() {
-		t.Fatalf("sign-verbatim signed too-large-ttl'd CSR: %#v", *resp)
-	}
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf(resp.Error().Error())
+	}
+	if resp.Data == nil || resp.Data["certificate"] == nil {
+		t.Fatal("did not get expected data")
+	}
+	certString := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(certString))
+	if block == nil {
+		t.Fatal("nil pem block")
+	}
+	certs, err := x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(certs) != 1 {
+		t.Fatalf("expected a single cert, got %d", len(certs))
+	}
+	cert := certs[0]
+	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
+		t.Fatalf("sign-verbatim did not properly cap validiaty period on signed CSR")
 	}
 
 	// now check that if we set generate-lease it takes it from the role and the TTLs match
@@ -2209,6 +2232,10 @@ func TestBackend_Root_Idempotentcy(t *testing.T) {
 		t.Fatal("expected ca info")
 	}
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	if err != nil {
+		t.Fatalf("error reading ca_chain: %v", err)
+	}
+
 	r1Data := resp.Data
 
 	// Try again, make sure it's a 204 and same CA
@@ -2222,6 +2249,9 @@ func TestBackend_Root_Idempotentcy(t *testing.T) {
 		t.Fatal("expected no ca info")
 	}
 	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	if err != nil {
+		t.Fatalf("error reading ca_chain: %v", err)
+	}
 	r2Data := resp.Data
 	if !reflect.DeepEqual(r1Data, r2Data) {
 		t.Fatal("got different ca certs")
@@ -2319,6 +2349,7 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 
 	// Direct issuing from root
 	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+		"ttl":                   "40h",
 		"common_name":           "myvault.com",
 		"permitted_dns_domains": []string{"foobar.com", ".zipzap.com"},
 	})
@@ -2428,6 +2459,160 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 	checkIssue(false, "common_name", "xyz.com")
 	checkIssue(true, "common_name", "abc.com")
 	checkIssue(true, "common_name", "host.xyz.com")
+}
+
+func TestBackend_SignSelfIssued(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend()
+	err := b.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name": "test.com",
+		"ttl":         "172800",
+	}
+
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	getSelfSigned := func(subject, issuer *x509.Certificate) (string, *x509.Certificate) {
+		selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cert, err := x509.ParseCertificate(selfSigned)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pemSS := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: selfSigned,
+		})
+		return string(pemSS), cert
+	}
+
+	template := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "foo.bar.com",
+		},
+		SerialNumber: big.NewInt(1234),
+		IsCA:         false,
+		BasicConstraintsValid: true,
+	}
+
+	ss, _ := getSelfSigned(template, template)
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error due to non-CA; got: %#v", *resp)
+	}
+
+	// Set CA to true, but leave issuer alone
+	template.IsCA = true
+
+	issuer := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "bar.foo.com",
+		},
+		SerialNumber: big.NewInt(2345),
+		IsCA:         true,
+		BasicConstraintsValid: true,
+	}
+	ss, ssCert := getSelfSigned(template, issuer)
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error due to different issuer; cert info is\nIssuer\n%#v\nSubject\n%#v\n", ssCert.Issuer, ssCert.Subject)
+	}
+
+	ss, ssCert = getSelfSigned(template, template)
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("error in response: %s", resp.Error().Error())
+	}
+
+	newCertString := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(newCertString))
+	newCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signingBundle, err := fetchCAInfo(&logical.Request{Storage: storage})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(newCert.Subject, newCert.Issuer) {
+		t.Fatal("expected same subject/issuer")
+	}
+	if bytes.Equal(newCert.AuthorityKeyId, newCert.SubjectKeyId) {
+		t.Fatal("expected different authority/subject")
+	}
+	if !bytes.Equal(newCert.AuthorityKeyId, signingBundle.Certificate.SubjectKeyId) {
+		t.Fatal("expected authority on new cert to be same as signing subject")
+	}
+	if newCert.Subject.CommonName != "foo.bar.com" {
+		t.Fatalf("unexpected common name on new cert: %s", newCert.Subject.CommonName)
+	}
 }
 
 const (

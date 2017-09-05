@@ -299,7 +299,7 @@ target machines.
     ```
 
     ```text
-    $ vault -field=public_key read ssh-host-signer/config/ca
+    $ vault read -field=public_key ssh-host-signer/config/ca
     ```
 
 1. Add the resulting public key to the `known_hosts` file with authority.

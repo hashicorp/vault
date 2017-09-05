@@ -21,7 +21,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 		}
 
 		repState := core.ReplicationState()
-		if repState == consts.ReplicationSecondary {
+		if repState.HasState(consts.ReplicationPerformanceSecondary) {
 			respondError(w, http.StatusBadRequest,
 				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"))
 			return

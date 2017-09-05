@@ -240,6 +240,7 @@ Updates the RoleID of an existing AppRole to a custom value.
 {
   "role_id": "custom-role-id"
 }
+```
 
 ### Sample Request
 

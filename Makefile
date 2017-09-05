@@ -9,30 +9,30 @@ GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 default: dev
 
 # bin generates the releaseable binaries for Vault
-bin: fmtcheck generate
+bin: fmtcheck prep
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin, except for quickdev which
 # is only put into /bin/
-quickdev: generate
+quickdev: prep
 	@CGO_ENABLED=0 go build -i -tags='$(BUILD_TAGS)' -o bin/vault
-dev: fmtcheck generate
+dev: fmtcheck prep
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
-dev-dynamic: generate
+dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # test runs the unit tests and vets the code
-test: fmtcheck generate
+test: fmtcheck prep
 	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=20m -parallel=4
 
-testcompile: fmtcheck generate
+testcompile: fmtcheck prep
 	@for pkg in $(TEST) ; do \
 		go test -v -c -tags='$(BUILD_TAGS)' $$pkg -parallel=4 ; \
 	done
 
 # testacc runs acceptance tests
-testacc: fmtcheck generate
+testacc: fmtcheck prep
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
@@ -40,7 +40,7 @@ testacc: fmtcheck generate
 	VAULT_ACC=1 go test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout 45m
 
 # testrace runs the race checker
-testrace: fmtcheck generate
+testrace: fmtcheck prep
 	CGO_ENABLED=1 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=45m -parallel=4
 
 cover:
@@ -57,10 +57,11 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
-# generate runs `go generate` to build the dynamically generated
+# prep runs `go generate` to build the dynamically generated
 # source files.
-generate:
+prep:
 	go generate $(go list ./... | grep -v /vendor/)
+	cp .hooks/* .git/hooks/
 
 # bootstrap the build by downloading additional tools
 bootstrap:
@@ -100,4 +101,4 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default generate test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin
+.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin

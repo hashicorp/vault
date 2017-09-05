@@ -117,7 +117,7 @@ func TestSystem_replicationState(t *testing.T) {
 	defer client.Close()
 
 	sys := logical.TestSystemView()
-	sys.ReplicationStateVal = consts.ReplicationPrimary
+	sys.ReplicationStateVal = consts.ReplicationPerformancePrimary
 
 	server.RegisterName("Plugin", &SystemViewServer{
 		impl: sys,

@@ -447,6 +447,12 @@
 			"revisionTime": "2017-07-11T19:02:43Z"
 		},
 		{
+			"checksumSHA1": "QZtBo/fc3zeQFxPFgPVMyDiw70M=",
+			"path": "github.com/chrismalek/oktasdk-go/okta",
+			"revision": "7d4ce0a254ec5f9eda3397523f6cf183e1d46c5e",
+			"revisionTime": "2017-02-07T05:01:14Z"
+		},
+		{
 			"checksumSHA1": "Ymghbn2vkOAdT9rNQxKR2qNuxtA=",
 			"path": "github.com/circonus-labs/circonus-gometrics",
 			"revision": "55add91cfb689b0fd6e9fa67c58c7a948310a80e",
@@ -915,10 +921,10 @@
 			"revisionTime": "2017-02-11T01:34:15Z"
 		},
 		{
-			"checksumSHA1": "miVF4/7JP0lRwZvFJGKwZWk7aAQ=",
+			"checksumSHA1": "0OUXdKhaE6TzpHevY0VFlAA5YJ8=",
 			"path": "github.com/hashicorp/go-hclog",
-			"revision": "b4e5765d1e5f00a0550911084f45f8214b5b83b9",
-			"revisionTime": "2017-07-16T17:45:23Z"
+			"revision": "8105cc0a3736cc153a2025f5d0d91b80045fc9ff",
+			"revisionTime": "2017-09-03T16:32:58Z"
 		},
 		{
 			"checksumSHA1": "g7uHECbzuaWwdxvwoyxBwgeERPk=",
@@ -1035,16 +1041,22 @@
 			"revisionTime": "2017-07-14T18:26:01Z"
 		},
 		{
+			"checksumSHA1": "0+GdkCbe9GplobPLWizCNqhntbU=",
+			"path": "github.com/hashicorp/vault-plugin-auth-gcp",
+			"revision": "6d78c24a995a2df3188ca891db068fbecbc69262",
+			"revisionTime": "2017-09-05T14:51:27Z"
+		},
+		{
 			"checksumSHA1": "UsbYUscv6YGOBS7qNcCr3mVwuX8=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "1b25f3546a463fbfac29a932ba144a62485f300c",
-			"revisionTime": "2017-08-16T04:25:34Z"
+			"revision": "6d78c24a995a2df3188ca891db068fbecbc69262",
+			"revisionTime": "2017-09-05T14:51:27Z"
 		},
 		{
 			"checksumSHA1": "2Fk5xIPOoKD4Of9cUIQPKXb2htg=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/util",
-			"revision": "1b25f3546a463fbfac29a932ba144a62485f300c",
-			"revisionTime": "2017-08-16T04:25:34Z"
+			"revision": "6d78c24a995a2df3188ca891db068fbecbc69262",
+			"revisionTime": "2017-09-05T14:51:27Z"
 		},
 		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",
@@ -1357,12 +1369,6 @@
 			"path": "github.com/sirupsen/logrus",
 			"revision": "e49c59d69b89746796d48156991108c80faf1d7d",
 			"revisionTime": "2017-07-18T14:06:42Z"
-		},
-		{
-			"checksumSHA1": "7b7psq20O8IOCr885W2Ld6a3KTc=",
-			"path": "github.com/sstarcher/go-okta",
-			"revision": "64b3cb9e3a7b6d0c4e4432576c873e492d152666",
-			"revisionTime": "2017-04-28T20:44:25Z"
 		},
 		{
 			"checksumSHA1": "9Zw986fuQM/hCoVd8vmHoSM+8sU=",

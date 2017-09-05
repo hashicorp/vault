@@ -7,7 +7,7 @@ services:
   - docker
 
 go:
-  - 1.8.3
+  - 1.9
 
 matrix:
   allow_failures:
@@ -20,5 +20,5 @@ branches:
 
 script:
   - make bootstrap
-  - travis_wait 45 make test
-  - travis_wait 45 make testrace
+  - travis_wait 75 make test
+  - travis_wait 75 make testrace

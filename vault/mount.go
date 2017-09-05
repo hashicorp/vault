@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -543,7 +544,7 @@ func (c *Core) loadMounts() error {
 			// ensure this comes over. If we upgrade first, we simply don't
 			// create the mount, so we won't conflict when we sync. If this is
 			// local (e.g. cubbyhole) we do still add it.
-			if !foundRequired && (c.replicationState != consts.ReplicationSecondary || requiredMount.Local) {
+			if !foundRequired && (c.replicationState.HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 				needPersist = true
 			}
@@ -663,11 +664,12 @@ func (c *Core) setupMounts() error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	var backend logical.Backend
 	var view *BarrierView
 	var err error
 
 	for _, entry := range c.mounts.Entries {
+		var backend logical.Backend
+
 		// Initialize the backend, special casing for system
 		barrierPath := backendBarrierPrefix + entry.UUID + "/"
 		if entry.Type == "system" {
@@ -686,6 +688,12 @@ func (c *Core) setupMounts() error {
 		backend, err = c.newLogicalBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
+			if errwrap.Contains(err, ErrPluginNotFound.Error()) && entry.Type == "plugin" {
+				// If we encounter an error instantiating the backend due to it being missing from the catalog,
+				// skip backend initialization but register the entry to the mount table to preserve storage
+				// and path.
+				goto ROUTER_MOUNT
+			}
 			return errLoadMountsFailed
 		}
 		if backend == nil {
@@ -693,9 +701,8 @@ func (c *Core) setupMounts() error {
 		}
 
 		// Check for the correct backend type
-		backendType := backend.Type()
-		if entry.Type == "plugin" && backendType != logical.TypeLogical {
-			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
+		if entry.Type == "plugin" && backend.Type() != logical.TypeLogical {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backend.Type())
 		}
 
 		if err := backend.Initialize(); err != nil {
@@ -710,7 +717,7 @@ func (c *Core) setupMounts() error {
 			ch.saltUUID = entry.UUID
 			ch.storageView = view
 		}
-
+	ROUTER_MOUNT:
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {

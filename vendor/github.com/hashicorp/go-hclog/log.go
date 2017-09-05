@@ -133,6 +133,6 @@ type LoggerOptions struct {
 	// Control if the output should be in JSON.
 	JSONFormat bool
 
-	// Intclude file and line information in each log line
+	// Include file and line information in each log line
 	IncludeLocation bool
 }

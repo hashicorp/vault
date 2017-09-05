@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"errors"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
@@ -8,11 +9,16 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
+var (
+	ErrClientInMetadataMode = errors.New("plugin client can not perform action while in metadata mode")
+)
+
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendPluginClient struct {
-	broker *plugin.MuxBroker
-	client *rpc.Client
+	broker       *plugin.MuxBroker
+	client       *rpc.Client
+	metadataMode bool
 
 	system logical.SystemView
 	logger log.Logger
@@ -83,6 +89,10 @@ type RegisterLicenseReply struct {
 }
 
 func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Response, error) {
+	if b.metadataMode {
+		return nil, ErrClientInMetadataMode
+	}
+
 	// Do not send the storage, since go-plugin cannot serialize
 	// interfaces. The server will pick up the storage from the shim.
 	req.Storage = nil
@@ -136,6 +146,10 @@ func (b *backendPluginClient) Logger() log.Logger {
 }
 
 func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+	if b.metadataMode {
+		return false, false, ErrClientInMetadataMode
+	}
+
 	// Do not send the storage, since go-plugin cannot serialize
 	// interfaces. The server will pick up the storage from the shim.
 	req.Storage = nil
@@ -172,31 +186,49 @@ func (b *backendPluginClient) Cleanup() {
 }
 
 func (b *backendPluginClient) Initialize() error {
+	if b.metadataMode {
+		return ErrClientInMetadataMode
+	}
 	err := b.client.Call("Plugin.Initialize", new(interface{}), &struct{}{})
 	return err
 }
 
 func (b *backendPluginClient) InvalidateKey(key string) {
+	if b.metadataMode {
+		return
+	}
 	b.client.Call("Plugin.InvalidateKey", key, &struct{}{})
 }
 
 func (b *backendPluginClient) Setup(config *logical.BackendConfig) error {
 	// Shim logical.Storage
+	storageImpl := config.StorageView
+	if b.metadataMode {
+		storageImpl = &NOOPStorage{}
+	}
 	storageID := b.broker.NextId()
 	go b.broker.AcceptAndServe(storageID, &StorageServer{
-		impl: config.StorageView,
+		impl: storageImpl,
 	})
 
 	// Shim log.Logger
+	loggerImpl := config.Logger
+	if b.metadataMode {
+		loggerImpl = log.NullLog
+	}
 	loggerID := b.broker.NextId()
 	go b.broker.AcceptAndServe(loggerID, &LoggerServer{
-		logger: config.Logger,
+		logger: loggerImpl,
 	})
 
 	// Shim logical.SystemView
+	sysViewImpl := config.System
+	if b.metadataMode {
+		sysViewImpl = &logical.StaticSystemView{}
+	}
 	sysViewID := b.broker.NextId()
 	go b.broker.AcceptAndServe(sysViewID, &SystemViewServer{
-		impl: config.System,
+		impl: sysViewImpl,
 	})
 
 	args := &SetupArgs{
@@ -233,6 +265,10 @@ func (b *backendPluginClient) Type() logical.BackendType {
 }
 
 func (b *backendPluginClient) RegisterLicense(license interface{}) error {
+	if b.metadataMode {
+		return ErrClientInMetadataMode
+	}
+
 	var reply RegisterLicenseReply
 	args := RegisterLicenseArgs{
 		License: license,
