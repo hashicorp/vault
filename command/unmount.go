@@ -4,64 +4,91 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
+
+// Ensure we are implementing the right interfaces.
+var _ cli.Command = (*UnmountCommand)(nil)
+var _ cli.CommandAutocomplete = (*UnmountCommand)(nil)
 
 // UnmountCommand is a Command that mounts a new mount.
 type UnmountCommand struct {
-	meta.Meta
-}
-
-func (c *UnmountCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("mount", meta.FlagSetDefault)
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	args = flags.Args()
-	if len(args) != 1 {
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\nunmount expects one argument: the path to unmount"))
-		return 1
-	}
-
-	path := args[0]
-
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 2
-	}
-
-	if err := client.Sys().Unmount(path); err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Unmount error: %s", err))
-		return 2
-	}
-
-	c.Ui.Output(fmt.Sprintf(
-		"Successfully unmounted '%s' if it was mounted", path))
-
-	return 0
+	*BaseCommand
 }
 
 func (c *UnmountCommand) Synopsis() string {
-	return "Unmount a secret backend"
+	return "Unmounts a secret backend"
 }
 
 func (c *UnmountCommand) Help() string {
 	helpText := `
-Usage: vault unmount [options] path
+Usage: vault unmount [options] PATH
 
-  Unmount a secret backend.
+  Unmounts a secret backend at the given PATH. The argument corresponds to
+  the PATH of the mount, not the TYPE! All secrets created by this backend
+  are revoked and its Vault data is removed.
 
-  This command unmounts a secret backend. All the secrets created
-  by this backend will be revoked and its Vault data will be deleted.
+  If no mount exists at the given path, the command will still return as
+  successful because unmounting is an idempotent operation.
 
-General Options:
-` + meta.GeneralOptionsUsage()
+  Unmount the secret backend mounted at aws/:
+
+      $ vault unmount aws/
+
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+
 	return strings.TrimSpace(helpText)
+}
+
+func (c *UnmountCommand) Flags() *FlagSets {
+	return c.flagSet(FlagSetHTTP)
+}
+
+func (c *UnmountCommand) AutocompleteArgs() complete.Predictor {
+	return c.PredictVaultMounts()
+}
+
+func (c *UnmountCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
+}
+
+func (c *UnmountCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = f.Args()
+	mountPath, remaining, err := extractPath(args)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	if len(remaining) > 0 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	// Append a trailing slash to indicate it's a path in output
+	mountPath = ensureTrailingSlash(mountPath)
+
+	if err := client.Sys().Unmount(mountPath); err != nil {
+		c.UI.Error(fmt.Sprintf("Error unmounting %s: %s", mountPath, err))
+		return 2
+	}
+
+	c.UI.Output(fmt.Sprintf("Success! Unmounted the secret backend (if it existed) at: %s", mountPath))
+	return 0
 }
