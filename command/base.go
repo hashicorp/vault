@@ -217,11 +217,10 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.BoolVar(&BoolVar{
-				Name:       "tls-skip-verify",
-				Target:     &c.flagTLSSkipVerify,
-				Default:    false,
-				EnvVar:     "VAULT_SKIP_VERIFY",
-				Completion: complete.PredictNothing,
+				Name:    "tls-skip-verify",
+				Target:  &c.flagTLSSkipVerify,
+				Default: false,
+				EnvVar:  "VAULT_SKIP_VERIFY",
 				Usage: "Disable verification of TLS certificates. Using this option " +
 					"is highly discouraged and decreases the security of data " +
 					"transmissions to and from the Vault server.",
@@ -236,7 +235,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Usage: "Wraps the response in a cubbyhole token with the requested " +
 					"TTL. The response is available via the \"vault unwrap\" command. " +
 					"The TTL is specified as a numeric string with suffix like \"30s\" " +
-					"or \"5m\"",
+					"or \"5m\".",
 			})
 		}
 
@@ -248,7 +247,6 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Name:       "field",
 					Target:     &c.flagField,
 					Default:    "",
-					EnvVar:     "",
 					Completion: complete.PredictAnything,
 					Usage: "Print only the field with the given name. Specifying " +
 						"this option will take precedence over other formatting " +
