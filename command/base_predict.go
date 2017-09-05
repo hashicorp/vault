@@ -21,7 +21,21 @@ func NewPredict() *Predict {
 func (p *Predict) Client() *api.Client {
 	p.clientOnce.Do(func() {
 		if p.client == nil { // For tests
-			p.client, _ = api.NewClient(nil)
+			client, _ := api.NewClient(nil)
+
+			if client.Token() == "" {
+				helper, err := DefaultTokenHelper()
+				if err != nil {
+					return
+				}
+				token, err := helper.Get()
+				if err != nil {
+					return
+				}
+				client.SetToken(token)
+			}
+
+			p.client = client
 		}
 	})
 	return p.client
