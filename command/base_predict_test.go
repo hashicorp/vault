@@ -202,31 +202,38 @@ func TestPredictVaultPaths(t *testing.T) {
 	})
 }
 
-func TestPredict_Mounts(t *testing.T) {
+func TestPredict_Audits(t *testing.T) {
 	t.Parallel()
 
 	client, closer := testVaultServer(t)
 	defer closer()
 
+	badClient, badCloser := testVaultServerBad(t)
+	defer badCloser()
+
+	if err := client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": "discard",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	cases := []struct {
-		name string
-		path string
-		exp  []string
+		name   string
+		client *api.Client
+		exp    []string
 	}{
 		{
-			"no_match",
-			"not-a-real-mount-seriously",
+			"not_connected_client",
+			badClient,
 			nil,
 		},
 		{
-			"s",
-			"s",
-			[]string{"secret/", "sys/"},
-		},
-		{
-			"se",
-			"se",
-			[]string{"secret/"},
+			"good_path",
+			client,
+			[]string{"file/"},
 		},
 	}
 
@@ -237,9 +244,97 @@ func TestPredict_Mounts(t *testing.T) {
 				t.Parallel()
 
 				p := NewPredict()
-				p.client = client
+				p.client = tc.client
 
-				act := p.mounts(tc.path)
+				act := p.audits()
+				if !reflect.DeepEqual(act, tc.exp) {
+					t.Errorf("expected %q to be %q", act, tc.exp)
+				}
+			})
+		}
+	})
+}
+
+func TestPredict_Mounts(t *testing.T) {
+	t.Parallel()
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	badClient, badCloser := testVaultServerBad(t)
+	defer badCloser()
+
+	cases := []struct {
+		name   string
+		client *api.Client
+		exp    []string
+	}{
+		{
+			"not_connected_client",
+			badClient,
+			defaultPredictVaultMounts,
+		},
+		{
+			"good_path",
+			client,
+			[]string{"cubbyhole/", "secret/", "sys/"},
+		},
+	}
+
+	t.Run("group", func(t *testing.T) {
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				p := NewPredict()
+				p.client = tc.client
+
+				act := p.mounts()
+				if !reflect.DeepEqual(act, tc.exp) {
+					t.Errorf("expected %q to be %q", act, tc.exp)
+				}
+			})
+		}
+	})
+}
+
+func TestPredict_Policies(t *testing.T) {
+	t.Parallel()
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	badClient, badCloser := testVaultServerBad(t)
+	defer badCloser()
+
+	cases := []struct {
+		name   string
+		client *api.Client
+		exp    []string
+	}{
+		{
+			"not_connected_client",
+			badClient,
+			nil,
+		},
+		{
+			"good_path",
+			client,
+			[]string{"default", "root"},
+		},
+	}
+
+	t.Run("group", func(t *testing.T) {
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				p := NewPredict()
+				p.client = tc.client
+
+				act := p.policies()
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}
@@ -321,56 +416,14 @@ func TestPredict_Paths(t *testing.T) {
 	})
 }
 
-func TestPredict_ListMounts(t *testing.T) {
-	t.Parallel()
-
-	client, closer := testVaultServer(t)
-	defer closer()
-
-	cases := []struct {
-		name   string
-		client *api.Client
-		exp    []string
-	}{
-		{
-			"not_connected_client",
-			func() *api.Client {
-				// Bad API client
-				client, _ := api.NewClient(nil)
-				return client
-			}(),
-			defaultPredictVaultMounts,
-		},
-		{
-			"good_path",
-			client,
-			[]string{"cubbyhole/", "secret/", "sys/"},
-		},
-	}
-
-	t.Run("group", func(t *testing.T) {
-		for _, tc := range cases {
-			tc := tc
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
-
-				p := NewPredict()
-				p.client = client
-
-				act := p.listMounts()
-				if !reflect.DeepEqual(act, tc.exp) {
-					t.Errorf("expected %q to be %q", act, tc.exp)
-				}
-			})
-		}
-	})
-}
-
 func TestPredict_ListPaths(t *testing.T) {
 	t.Parallel()
 
 	client, closer := testVaultServer(t)
 	defer closer()
+
+	badClient, badCloser := testVaultServerBad(t)
+	defer badCloser()
 
 	data := map[string]interface{}{"a": "b"}
 	if _, err := client.Logical().Write("secret/bar", data); err != nil {
@@ -398,6 +451,12 @@ func TestPredict_ListPaths(t *testing.T) {
 			"secret/",
 			[]string{"bar", "foo"},
 		},
+		{
+			"not_connected_client",
+			badClient,
+			"secret/",
+			nil,
+		},
 	}
 
 	t.Run("group", func(t *testing.T) {
@@ -407,7 +466,7 @@ func TestPredict_ListPaths(t *testing.T) {
 				t.Parallel()
 
 				p := NewPredict()
-				p.client = client
+				p.client = tc.client
 
 				act := p.listPaths(tc.path)
 				if !reflect.DeepEqual(act, tc.exp) {

@@ -66,6 +66,46 @@ func PredictClient() *api.Client {
 	return predictClient
 }
 
+// PredictVaultAvailableMounts returns a predictor for the available mounts in
+// Vault. For now, there is no way to programatically get this list. If, in the
+// future, such a list exists, we can adapt it here. Until then, it's
+// hard-coded.
+func (b *BaseCommand) PredictVaultAvailableMounts() complete.Predictor {
+	// This list does not contain deprecated backends. At present, there is no
+	// API that lists all available secret backends, so this is hard-coded :(.
+	return complete.PredictSet(
+		"aws",
+		"consul",
+		"database",
+		"pki",
+		"plugin",
+		"rabbitmq",
+		"ssh",
+		"totp",
+		"transit",
+	)
+}
+
+// PredictVaultAvailableAuths returns a predictor for the available auths in
+// Vault. For now, there is no way to programatically get this list. If, in the
+// future, such a list exists, we can adapt it here. Until then, it's
+// hard-coded.
+func (b *BaseCommand) PredictVaultAvailableAuths() complete.Predictor {
+	return complete.PredictSet(
+		"app-id",
+		"approle",
+		"aws",
+		"cert",
+		"gcp",
+		"github",
+		"ldap",
+		"okta",
+		"plugin",
+		"radius",
+		"userpass",
+	)
+}
+
 // PredictVaultFiles returns a predictor for Vault mounts and paths based on the
 // configured client for the base command. Unfortunately this happens pre-flag
 // parsing, so users must rely on environment variables for autocomplete if they
@@ -80,6 +120,30 @@ func (b *BaseCommand) PredictVaultFolders() complete.Predictor {
 	return NewPredict().VaultFolders()
 }
 
+// PredictVaultMounts returns a predictor for "folders". See PredictVaultFiles
+// for more information and restrictions.
+func (b *BaseCommand) PredictVaultMounts() complete.Predictor {
+	return NewPredict().VaultMounts()
+}
+
+// PredictVaultAudits returns a predictor for "folders". See PredictVaultFiles
+// for more information and restrictions.
+func (b *BaseCommand) PredictVaultAudits() complete.Predictor {
+	return NewPredict().VaultAudits()
+}
+
+// PredictVaultAuths returns a predictor for "folders". See PredictVaultFiles
+// for more information and restrictions.
+func (b *BaseCommand) PredictVaultAuths() complete.Predictor {
+	return NewPredict().VaultAuths()
+}
+
+// PredictVaultPolicies returns a predictor for "folders". See PredictVaultFiles
+// for more information and restrictions.
+func (b *BaseCommand) PredictVaultPolicies() complete.Predictor {
+	return NewPredict().VaultPolicies()
+}
+
 // VaultFiles returns a predictor for Vault "files". This is a public API for
 // consumers, but you probably want BaseCommand.PredictVaultFiles instead.
 func (p *Predict) VaultFiles() complete.Predictor {
@@ -91,6 +155,31 @@ func (p *Predict) VaultFiles() complete.Predictor {
 // instead.
 func (p *Predict) VaultFolders() complete.Predictor {
 	return p.vaultPaths(false)
+}
+
+// VaultMounts returns a predictor for Vault "folders". This is a public
+// API for consumers, but you probably want BaseCommand.PredictVaultMounts
+// instead.
+func (p *Predict) VaultMounts() complete.Predictor {
+	return p.filterFunc(p.mounts)
+}
+
+// VaultAudits returns a predictor for Vault "folders". This is a public API for
+// consumers, but you probably want BaseCommand.PredictVaultAudits instead.
+func (p *Predict) VaultAudits() complete.Predictor {
+	return p.filterFunc(p.audits)
+}
+
+// VaultAuths returns a predictor for Vault "folders". This is a public API for
+// consumers, but you probably want BaseCommand.PredictVaultAuths instead.
+func (p *Predict) VaultAuths() complete.Predictor {
+	return p.filterFunc(p.auths)
+}
+
+// VaultPolicies returns a predictor for Vault "folders". This is a public API for
+// consumers, but you probably want BaseCommand.PredictVaultPolicies instead.
+func (p *Predict) VaultPolicies() complete.Predictor {
+	return p.filterFunc(p.policies)
 }
 
 // vaultPaths parses the CLI options and returns the "best" list of possible
@@ -114,7 +203,7 @@ func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
 		if strings.Contains(path, "/") {
 			predictions = p.paths(path, includeFiles)
 		} else {
-			predictions = p.mounts(path)
+			predictions = p.filter(p.mounts(), path)
 		}
 
 		// Either no results or many results, so return.
@@ -137,26 +226,6 @@ func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
 		args.Last = predictions[0]
 		return p.vaultPaths(includeFiles).Predict(args)
 	}
-}
-
-// mounts predicts all mounts which start with the given prefix. These are
-// predicted on mount path, not "type".
-func (p *Predict) mounts(path string) []string {
-	client := p.Client()
-	if client == nil {
-		return nil
-	}
-
-	mounts := p.listMounts()
-
-	var predictions []string
-	for _, m := range mounts {
-		if strings.HasPrefix(m, path) {
-			predictions = append(predictions, m)
-		}
-	}
-
-	return predictions
 }
 
 // paths predicts all paths which start with the given path.
@@ -198,10 +267,68 @@ func (p *Predict) paths(path string, includeFiles bool) []string {
 	return predictions
 }
 
-// listMounts returns a sorted list of the mount paths for Vault server for
+// audits returns a sorted list of the audit backends for Vault server for
+// which the client is configured to communicate with.
+func (p *Predict) audits() []string {
+	client := p.Client()
+	if client == nil {
+		return nil
+	}
+
+	audits, err := client.Sys().ListAudit()
+	if err != nil {
+		return nil
+	}
+
+	list := make([]string, 0, len(audits))
+	for m := range audits {
+		list = append(list, m)
+	}
+	sort.Strings(list)
+	return list
+}
+
+// auths returns a sorted list of the enabled auth provides for Vault server for
+// which the client is configured to communicate with.
+func (p *Predict) auths() []string {
+	client := p.Client()
+	if client == nil {
+		return nil
+	}
+
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		return nil
+	}
+
+	list := make([]string, 0, len(auths))
+	for m := range auths {
+		list = append(list, m)
+	}
+	sort.Strings(list)
+	return list
+}
+
+// policies returns a sorted list of the policies stored in this Vault
+// server.
+func (p *Predict) policies() []string {
+	client := p.Client()
+	if client == nil {
+		return nil
+	}
+
+	policies, err := client.Sys().ListPolicies()
+	if err != nil {
+		return nil
+	}
+	sort.Strings(policies)
+	return policies
+}
+
+// mounts returns a sorted list of the mount paths for Vault server for
 // which the client is configured to communicate with. This function returns the
 // default list of mounts if an error occurs.
-func (p *Predict) listMounts() []string {
+func (p *Predict) mounts() []string {
 	client := p.Client()
 	if client == nil {
 		return nil
@@ -258,4 +385,32 @@ func (p *Predict) hasPathArg(args []string) bool {
 	}
 
 	return len(nonFlags) > 2
+}
+
+// filterFunc is used to compose a complete predictor that filters an array
+// of strings as per the filter function.
+func (p *Predict) filterFunc(f func() []string) complete.Predictor {
+	return complete.PredictFunc(func(args complete.Args) []string {
+		if p.hasPathArg(args.All) {
+			return nil
+		}
+
+		client := p.Client()
+		if client == nil {
+			return nil
+		}
+
+		return p.filter(f(), args.Last)
+	})
+}
+
+// filter filters the given list for items that start with the prefix.
+func (p *Predict) filter(list []string, prefix string) []string {
+	var predictions []string
+	for _, item := range list {
+		if strings.HasPrefix(item, prefix) {
+			predictions = append(predictions, item)
+		}
+	}
+	return predictions
 }
