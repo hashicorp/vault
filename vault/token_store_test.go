@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -401,6 +402,70 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 
 	if out != nil {
 		t.Fatalf("bad:\ngot %#v\nexpected: nil\n", out)
+	}
+}
+
+func TestTokenStore_HandleRequest_RevokeAccessors_Multiple(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+	tokenIds := []string{"tokenid1", "tokenid2", "tokenid3"}
+	accessors := make([]string, len(tokenIds))
+
+	for idx, token := range tokenIds {
+		testMakeToken(t, ts, root, token, "", []string{"foo"})
+		out, err := ts.Lookup(token)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if out == nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		accessors[idx] = out.Accessor
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor")
+	req.Data = map[string]interface{}{
+		"accessor": accessors,
+	}
+
+	_, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	for _, token := range tokenIds {
+		out, err := ts.Lookup(token)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if out != nil {
+			t.Fatalf("err: %s", err)
+		}
+	}
+
+	// revoke again
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !resp.IsError() {
+		t.Fatalf("response should have an error, but no error found")
+	}
+
+	errorLines := strings.Split(resp.Error().Error(), "\n")
+	if len(errorLines) < 2 {
+		t.Fatalf("expected list of failed revokes")
+	}
+
+	for _, line := range errorLines[1:] {
+		fields := strings.Split(line, ",")
+		for _, value := range fields {
+			pair := strings.Split(value, "=")
+			if pair[0] == "accessor" && !strutil.StrListContains(accessors, pair[1]) {
+				t.Fatalf("expected: accessor fail when revoking (%s)", pair[1])
+			}
+		}
 	}
 }
 
@@ -1278,6 +1343,54 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 	if out != nil {
 		t.Fatalf("bad: %v", out)
+	}
+}
+
+func TestTokenStore_HandleRequest_Revoke_Multiple(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+	tokens := []string{"token1", "token2"}
+	tokenChilds := []string{"token1-sub-child", "token2-sub-child"}
+
+	for idx, tokenStr := range tokens {
+		testMakeToken(t, ts, root, tokenStr, "", []string{"root", "foo"})
+		testMakeToken(t, ts, tokenStr, tokenChilds[idx], "", []string{"foo"})
+	}
+
+	tokensToRevoke := make([]string, 0, len(tokens)+1)
+	tokensToRevoke = append(tokens, tokenChilds[0])
+
+	tokenListStr := strings.Join(tokensToRevoke, ",")
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke")
+	req.Data = map[string]interface{}{
+		"token": tokenListStr,
+	}
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// exclude last token, because it doesn't have a child token
+	for idx, tokenStr := range tokensToRevoke[:len(tokens)] {
+		out, err := ts.Lookup(tokenStr)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out != nil {
+			t.Fatalf("bad: %v", out)
+		}
+
+		// Sub-child should not exist
+		out, err = ts.Lookup(tokenChilds[idx])
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out != nil {
+			t.Fatalf("bad: %v", out)
+		}
 	}
 }
 

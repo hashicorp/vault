@@ -2,6 +2,8 @@ package logical
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/wrapping"
 )
@@ -79,6 +81,36 @@ func (r *Response) Error() error {
 		return r.Data["error"].(error)
 	}
 	return nil
+}
+
+func (r *Response) SetError(err error, errorData interface{}) {
+	var additionalErrorText, errText string = "", ""
+	switch m := errorData.(type) {
+	case []map[string]string:
+		items := make([]string, len(m))
+		for idx, errItem := range m {
+			errItemFields := make([]string, 0, len(errItem))
+			for k, v := range errItem {
+				errItemFields = append(errItemFields, fmt.Sprintf("%s=%s", k, v))
+			}
+			items[idx] = strings.Join(errItemFields, ",")
+		}
+		additionalErrorText = strings.Join(items, "\n")
+	}
+
+	if len(additionalErrorText) != 0 {
+		errText = fmt.Sprintf("%s\n%s", err.Error(), additionalErrorText)
+	} else {
+		errText = err.Error()
+	}
+
+	if r.Data == nil {
+		r.Data = map[string]interface{}{
+			"error": errText,
+		}
+	} else {
+		r.Data["error"] = errText
+	}
 }
 
 // HelpResponse is used to format a help response

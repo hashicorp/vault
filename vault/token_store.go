@@ -344,8 +344,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 						Description: "Accessor of the token (URL parameter)",
 					},
 					"accessor": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Accessor of the token (request body)",
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Accessor(s) of the token (request body)",
 					},
 				},
 
@@ -377,8 +377,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 						Description: "Token to revoke (URL parameter)",
 					},
 					"token": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Token to revoke (request body)",
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Token(s) to revoke (request body)",
 					},
 				},
 
@@ -1120,6 +1120,20 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	return nil
 }
 
+// RevokeTrees is used to invalide multiple tokens and all
+// child tokens.
+func (ts *TokenStore) RevokeTrees(ids []string) []error {
+	defer metrics.MeasureSince([]string{"token", "revoke-trees"}, time.Now())
+
+	errs := make([]error, len(ids))
+
+	for idx, id := range ids {
+		errs[idx] = ts.RevokeTree(id)
+	}
+
+	return errs
+}
+
 // revokeTreeSalted is used to invalide a given token and all
 // child tokens using a saltedID.
 func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
@@ -1426,29 +1440,69 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 // the token associated with the accessor
 func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urlaccessor bool
-	accessor := data.Get("accessor").(string)
-	if accessor == "" {
-		accessor = data.Get("urlaccessor").(string)
-		if accessor == "" {
+	accessors := data.Get("accessor").([]string)
+
+	if len(accessors) == 0 {
+		accessors = []string{data.Get("urlaccessor").(string)}
+		if len(accessors) == 0 {
 			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 		}
 		urlaccessor = true
 	}
 
-	aEntry, err := ts.lookupByAccessor(accessor, true)
-	if err != nil {
-		return nil, err
+	errs := make([]error, len(accessors))
+	tokens := make([]string, len(accessors))
+
+	for idx, accessor := range accessors {
+		aEntry, err := ts.lookupByAccessor(accessor, true)
+		if err != nil {
+			if len(accessors) == 1 {
+				// backward compatibility with 0.7.3
+				return nil, err
+			}
+			errs[idx] = err
+			tokens[idx] = ""
+		}
+
+		tokens[idx] = aEntry.TokenID
 	}
 
-	// Revoke the token and its children
-	if err := ts.RevokeTree(aEntry.TokenID); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	revokeErrors := ts.RevokeTrees(tokens)
+
+	response := &logical.Response{}
+	failedRevokes := make([]map[string]string, 0, len(revokeErrors))
+
+	for idx, revokeError := range revokeErrors {
+		if errs[idx] == nil {
+			errs[idx] = revokeError
+		}
+
+		if errs[idx] != nil {
+			failedRevokes = append(failedRevokes, map[string]string{
+				"accessor": accessors[idx],
+				"error":    errs[idx].Error(),
+			})
+		}
 	}
 
 	if urlaccessor {
-		resp := &logical.Response{}
-		resp.AddWarning(`Using an accessor in the path is unsafe as the accessor can be logged in many places. Please use POST or PUT with the accessor passed in via the "accessor" parameter.`)
-		return resp, nil
+		response.AddWarning(`Using an accessor in the path is unsafe as the accessor can be logged in many places. Please use POST or PUT with the accessor passed in via the "accessor" parameter.`)
+	}
+
+	if len(accessors) == 1 {
+		// backward compatibility with 0.7.3
+		if len(failedRevokes) == 1 {
+			return logical.ErrorResponse(errs[0].Error()), logical.ErrInvalidRequest
+		} else if urlaccessor {
+			return response, nil
+		} else {
+			return nil, nil
+		}
+	}
+
+	if len(failedRevokes) > 0 {
+		response.SetError(fmt.Errorf("contains failed revokes"), failedRevokes)
+		return response, nil
 	}
 
 	return nil, nil
@@ -1894,24 +1948,48 @@ func (ts *TokenStore) handleRevokeSelf(
 func (ts *TokenStore) handleRevokeTree(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urltoken bool
-	id := data.Get("token").(string)
-	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
+	tokens := data.Get("token").([]string)
+
+	if len(tokens) == 0 {
+		tokens = []string{data.Get("urltoken").(string)}
+		if len(tokens) == 0 {
 			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 		}
 		urltoken = true
 	}
 
-	// Revoke the token and its children
-	if err := ts.RevokeTree(id); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	revokeErrors := ts.RevokeTrees(tokens)
+
+	response := &logical.Response{}
+	failedRevokes := make([]map[string]string, 0, len(revokeErrors))
+
+	for idx, revokeError := range revokeErrors {
+		if revokeError != nil {
+			failedRevokes = append(failedRevokes, map[string]string{
+				"token": tokens[idx],
+				"error": revokeError.Error(),
+			})
+		}
 	}
 
 	if urltoken {
-		resp := &logical.Response{}
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-		return resp, nil
+		response.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
+	}
+
+	if len(tokens) == 1 {
+		// backward compatibility with 0.7.3
+		if len(failedRevokes) == 1 {
+			return logical.ErrorResponse(revokeErrors[0].Error()), logical.ErrInvalidRequest
+		} else if urltoken {
+			return response, nil
+		} else {
+			return nil, nil
+		}
+	}
+
+	if len(failedRevokes) > 0 {
+		response.SetError(fmt.Errorf("contains failed revokes"), failedRevokes)
+		return response, nil
 	}
 
 	return nil, nil
