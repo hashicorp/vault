@@ -1,143 +1,170 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
-func TestRenew(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testRenewCommand(tb testing.TB) (*cli.MockUi, *RenewCommand) {
+	tb.Helper()
 
-	ui := new(cli.MockUi)
-	c := &RenewCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	ui := cli.NewMockUi()
+	return ui, &RenewCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
 		},
-	}
-
-	// write a secret with a lease
-	client := testClient(t, addr, token)
-	_, err := client.Logical().Write("secret/foo", map[string]interface{}{
-		"key":   "value",
-		"lease": "1m",
-	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// read the secret to get its lease ID
-	secret, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	args := []string{
-		"-address", addr,
-		secret.LeaseID,
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 }
 
-func TestRenewBothWays(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+// testRenewCommandMountAndLease mounts a leased secret backend and returns
+// the leaseID of an item.
+func testRenewCommandMountAndLease(tb testing.TB, client *api.Client) string {
+	if err := client.Sys().Mount("testing", &api.MountInput{
+		Type: "generic-leased",
+	}); err != nil {
+		tb.Fatal(err)
+	}
 
-	// write a secret with a lease
-	client := testClient(t, addr, token)
-	_, err := client.Logical().Write("secret/foo", map[string]interface{}{
-		"key": "value",
-		"ttl": "1m",
+	if _, err := client.Logical().Write("testing/foo", map[string]interface{}{
+		"key":   "value",
+		"lease": "5m",
+	}); err != nil {
+		tb.Fatal(err)
+	}
+
+	// Read the secret back to get the leaseID
+	secret, err := client.Logical().Read("testing/foo")
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if secret == nil || secret.LeaseID == "" {
+		tb.Fatalf("missing secret or lease: %#v", secret)
+	}
+
+	return secret.LeaseID
+}
+
+func TestRenewCommand_Run(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"empty",
+			nil,
+			"Missing ID!",
+			1,
+		},
+		{
+			"increment",
+			[]string{"-increment", "60s"},
+			"foo",
+			0,
+		},
+		{
+			"increment_no_suffix",
+			[]string{"-increment", "60"},
+			"foo",
+			0,
+		},
+		{
+			"format",
+			[]string{"-format", "json"},
+			"{",
+			0,
+		},
+		{
+			"format_bad",
+			[]string{"-format", "nope-not-real"},
+			"Invalid output format",
+			1,
+		},
+	}
+
+	t.Run("group", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range cases {
+			tc := tc
+
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				leaseID := testRenewCommandMountAndLease(t, client)
+
+				ui, cmd := testRenewCommand(t)
+				cmd.client = client
+
+				if tc.args != nil {
+					tc.args = append(tc.args, leaseID)
+				}
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			})
+		}
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 
-	// read the secret to get its lease ID
-	secret, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	t.Run("integration", func(t *testing.T) {
+		t.Parallel()
 
-	// Test one renew path
-	r := client.NewRequest("PUT", "/v1/sys/renew")
-	body := map[string]interface{}{
-		"lease_id": secret.LeaseID,
-	}
-	if err := r.SetJSONBody(body); err != nil {
-		t.Fatal(err)
-	}
-	resp, err := client.RawRequest(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	secret, err = api.ParseSecret(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret.LeaseDuration != 60 {
-		t.Fatal("bad lease duration")
-	}
+		client, closer := testVaultServer(t)
+		defer closer()
 
-	// Test another
-	r = client.NewRequest("PUT", "/v1/sys/leases/renew")
-	body = map[string]interface{}{
-		"lease_id": secret.LeaseID,
-	}
-	if err := r.SetJSONBody(body); err != nil {
-		t.Fatal(err)
-	}
-	resp, err = client.RawRequest(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	secret, err = api.ParseSecret(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret.LeaseDuration != 60 {
-		t.Fatal("bad lease duration")
-	}
+		leaseID := testRenewCommandMountAndLease(t, client)
 
-	// Test the other
-	r = client.NewRequest("PUT", "/v1/sys/renew/"+secret.LeaseID)
-	resp, err = client.RawRequest(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	secret, err = api.ParseSecret(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret.LeaseDuration != 60 {
-		t.Fatalf("bad lease duration; secret is %#v\n", *secret)
-	}
+		_, cmd := testRenewCommand(t)
+		cmd.client = client
 
-	// Test another
-	r = client.NewRequest("PUT", "/v1/sys/leases/renew/"+secret.LeaseID)
-	resp, err = client.RawRequest(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	secret, err = api.ParseSecret(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret.LeaseDuration != 60 {
-		t.Fatalf("bad lease duration; secret is %#v\n", *secret)
-	}
+		code := cmd.Run([]string{leaseID})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+	})
+
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testRenewCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"foo/bar",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error renewing foo/bar: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testRenewCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }

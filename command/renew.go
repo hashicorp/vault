@@ -2,89 +2,128 @@ package command
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
+	"time"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
+
+// Ensure we are implementing the right interfaces.
+var _ cli.Command = (*RenewCommand)(nil)
+var _ cli.CommandAutocomplete = (*RenewCommand)(nil)
 
 // RenewCommand is a Command that mounts a new mount.
 type RenewCommand struct {
-	meta.Meta
-}
+	*BaseCommand
 
-func (c *RenewCommand) Run(args []string) int {
-	var format string
-	flags := c.Meta.FlagSet("renew", meta.FlagSetDefault)
-	flags.StringVar(&format, "format", "table", "")
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	args = flags.Args()
-	if len(args) < 1 || len(args) >= 3 {
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\nrenew expects at least one argument: the lease ID to renew"))
-		return 1
-	}
-
-	var increment int
-	leaseId := args[0]
-	if len(args) > 1 {
-		parsed, err := strconv.ParseInt(args[1], 10, 0)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Invalid increment, must be an int: %s", err))
-			return 1
-		}
-
-		increment = int(parsed)
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 2
-	}
-
-	secret, err := client.Sys().Renew(leaseId, increment)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Renew error: %s", err))
-		return 1
-	}
-
-	return OutputSecret(c.Ui, format, secret)
+	flagIncrement time.Duration
 }
 
 func (c *RenewCommand) Synopsis() string {
-	return "Renew the lease of a secret"
+	return "Renews the lease of a secret"
 }
 
 func (c *RenewCommand) Help() string {
 	helpText := `
-Usage: vault renew [options] id [increment]
+Usage: vault renew [options] ID
 
-  Renew the lease on a secret, extending the time that it can be used
-  before it is revoked by Vault.
+  Renews the lease on a secret, extending the time that it can be used before
+  it is revoked by Vault.
 
-  Every secret in Vault has a lease associated with it. If the user of
-  the secret wants to use it longer than the lease, then it must be
-  renewed. Renewing the lease will not change the contents of the secret.
+  Every secret in Vault has a lease associated with it. If the owner of the
+  secret wants to use it longer than the lease, then it must be renewed.
+  Renewing the lease does not change the contents of the secret. The ID is the
+  full path lease ID.
 
-  To renew a secret, run this command with the lease ID returned when it
-  was read. Optionally, request a specific increment in seconds. Vault
-  is not required to honor this request.
+  Renew a secret:
 
-General Options:
-` + meta.GeneralOptionsUsage() + `
-Renew Options:
+      $ vault renew database/creds/readonly/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
 
-  -format=table           The format for output. By default it is a whitespace-
-                          delimited table. This can also be json or yaml.
-`
+  Lease renewal will fail if the secret is not renewable, the secret has already
+  been revoked, or if the secret has already reached its maximum TTL.
+
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+
 	return strings.TrimSpace(helpText)
+}
+
+func (c *RenewCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	f := set.NewFlagSet("Command Options")
+
+	f.DurationVar(&DurationVar{
+		Name:       "increment",
+		Target:     &c.flagIncrement,
+		Default:    0,
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "Request a specific increment in seconds. Vault is not required " +
+			"to honor this request.",
+	})
+
+	return set
+}
+
+func (c *RenewCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictAnything
+}
+
+func (c *RenewCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
+}
+
+func (c *RenewCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	leaseID := ""
+	increment := c.flagIncrement
+
+	args = f.Args()
+	switch len(args) {
+	case 0:
+		c.UI.Error("Missing ID!")
+		return 1
+	case 1:
+		leaseID = strings.TrimSpace(args[0])
+	case 2:
+		// Deprecation
+		// TODO: remove in 0.9.0
+		c.UI.Warn(wrapAtLength(
+			"WARNING! Specifying INCREMENT as a second argument is deprecated. " +
+				"Please use -increment instead. This will be removed in the next " +
+				"major release of Vault."))
+
+		leaseID = strings.TrimSpace(args[0])
+		parsed, err := time.ParseDuration(appendDurationSuffix(args[1]))
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Invalid increment: %s", err))
+			return 1
+		}
+		increment = parsed
+	default:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1-2, got %d)", len(args)))
+		return 1
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	secret, err := client.Sys().Renew(leaseID, truncateToSeconds(increment))
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error renewing %s: %s", leaseID, err))
+		return 2
+	}
+
+	return OutputSecret(c.UI, c.flagFormat, secret)
 }
