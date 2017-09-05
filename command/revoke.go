@@ -4,92 +4,141 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
+
+// Ensure we are implementing the right interfaces.
+var _ cli.Command = (*ReadCommand)(nil)
+var _ cli.CommandAutocomplete = (*ReadCommand)(nil)
 
 // RevokeCommand is a Command that mounts a new mount.
 type RevokeCommand struct {
-	meta.Meta
-}
+	*BaseCommand
 
-func (c *RevokeCommand) Run(args []string) int {
-	var prefix, force bool
-	flags := c.Meta.FlagSet("revoke", meta.FlagSetDefault)
-	flags.BoolVar(&prefix, "prefix", false, "")
-	flags.BoolVar(&force, "force", false, "")
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	args = flags.Args()
-	if len(args) != 1 {
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\nrevoke expects one argument: the ID to revoke"))
-		return 1
-	}
-	leaseId := args[0]
-
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 2
-	}
-
-	switch {
-	case force && !prefix:
-		c.Ui.Error(fmt.Sprintf(
-			"-force requires -prefix"))
-		return 1
-	case force && prefix:
-		err = client.Sys().RevokeForce(leaseId)
-	case prefix:
-		err = client.Sys().RevokePrefix(leaseId)
-	default:
-		err = client.Sys().Revoke(leaseId)
-	}
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Revoke error: %s", err))
-		return 1
-	}
-
-	c.Ui.Output(fmt.Sprintf("Success! Revoked the secret with ID '%s', if it existed.", leaseId))
-	return 0
+	flagForce  bool
+	flagPrefix bool
 }
 
 func (c *RevokeCommand) Synopsis() string {
-	return "Revoke a secret."
+	return "Revokes leases and secrets"
 }
 
 func (c *RevokeCommand) Help() string {
 	helpText := `
-Usage: vault revoke [options] id
+Usage: vault revoke [options] ID
 
-  Revoke a secret by its lease ID.
+  Revokes secrets by their lease ID. This command can revoke a single secret
+  or multiple secrets based on a path-matched prefix.
 
-  This command revokes a secret by its lease ID that was returned with it. Once
-  the key is revoked, it is no longer valid.
+  Revoke a single lease:
 
-  With the -prefix flag, the revoke is done by prefix: any secret prefixed with
-  the given partial ID is revoked. Lease IDs are structured in such a way to
-  make revocation of prefixes useful.
+      $ vault revoke database/creds/readonly/2f6a614c...
 
-  With the -force flag, the lease is removed from Vault even if the revocation
-  fails. This is meant for certain recovery scenarios and should not be used
-  lightly. This option requires -prefix.
+  Revoke all leases for a role:
 
-General Options:
-` + meta.GeneralOptionsUsage() + `
-Revoke Options:
+      $ vault revoke -prefix aws/creds/deploy
 
-  -prefix=true            Revoke all secrets with the matching prefix. This
-                          defaults to false: an exact revocation.
+  Force delete leases from Vault even if backend revocation fails:
 
-  -force=true             Delete the lease even if the actual revocation
-                          operation fails.
-`
+      $ vault revoke -force -prefix consul/creds
+
+  For a full list of examples and paths, please see the documentation that
+  corresponds to the secret backend in use.
+
+` + c.Flags().Help()
+
 	return strings.TrimSpace(helpText)
+}
+
+func (c *RevokeCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP)
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:    "force",
+		Aliases: []string{"f"},
+		Target:  &c.flagForce,
+		Default: false,
+		Usage: "Delete the lease from Vault even if the backend revocation " +
+			"fails. This is meant for recovery situations where the secret " +
+			"in the backend was manually removed. If this flag is specified, " +
+			"-prefix is also required.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "prefix",
+		Target:  &c.flagPrefix,
+		Default: false,
+		Usage: "Treat the ID as a prefix instead of an exact lease ID. This can " +
+			"revoke multiple leases simultaneously.",
+	})
+
+	return set
+}
+
+func (c *RevokeCommand) AutocompleteArgs() complete.Predictor {
+	return c.PredictVaultFiles()
+}
+
+func (c *RevokeCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
+}
+
+func (c *RevokeCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = f.Args()
+	leaseID, remaining, err := extractID(args)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	if len(remaining) > 0 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	if c.flagForce && !c.flagPrefix {
+		c.UI.Error("Specifying -force requires also specifying -prefix")
+		return 1
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	switch {
+	case c.flagForce && c.flagPrefix:
+		c.UI.Warn(wrapAtLength("Warning! Force-removing leases can cause Vault " +
+			"to become out of sync with credential backends!"))
+		if err := client.Sys().RevokeForce(leaseID); err != nil {
+			c.UI.Error(fmt.Sprintf("Error force revoking leases with prefix %s: %s", leaseID, err))
+			return 2
+		}
+		c.UI.Output(fmt.Sprintf("Success! Force revoked any leases with prefix: %s", leaseID))
+		return 0
+	case c.flagPrefix:
+		if err := client.Sys().RevokePrefix(leaseID); err != nil {
+			c.UI.Error(fmt.Sprintf("Error revoking leases with prefix %s: %s", leaseID, err))
+			return 2
+		}
+		c.UI.Output(fmt.Sprintf("Success! Revoked any leases with prefix: %s", leaseID))
+		return 0
+	default:
+		if err := client.Sys().Revoke(leaseID); err != nil {
+			c.UI.Error(fmt.Sprintf("Error revoking lease %s: %s", leaseID, err))
+			return 2
+		}
+		c.UI.Output(fmt.Sprintf("Success! Revoked lease: %s", leaseID))
+		return 0
+	}
 }
