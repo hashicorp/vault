@@ -1,52 +1,135 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
-func TestRemount(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testRemountCommand(tb testing.TB) (*cli.MockUi, *RemountCommand) {
+	tb.Helper()
 
-	ui := new(cli.MockUi)
-	c := &RemountCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	ui := cli.NewMockUi()
+	return ui, &RemountCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func TestRemountCommand_Run(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"not_enough_args",
+			nil,
+			"Not enough arguments",
+			1,
+		},
+		{
+			"too_many_args",
+			[]string{"foo", "bar", "baz"},
+			"Too many arguments",
+			1,
+		},
+		{
+			"non_existent",
+			[]string{"not_real", "over_here"},
+			"Error remounting not_real/ to over_here/",
+			2,
 		},
 	}
 
-	args := []string{
-		"-address", addr,
-		"secret/", "kv",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
 
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		for _, tc := range cases {
+			tc := tc
 
-	mounts, err := client.Sys().ListMounts()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 
-	_, ok := mounts["secret/"]
-	if ok {
-		t.Fatal("should not have mount")
-	}
+				ui, cmd := testRemountCommand(t)
 
-	_, ok = mounts["kv/"]
-	if !ok {
-		t.Fatal("should have kv")
-	}
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			})
+		}
+	})
+
+	t.Run("integration", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testRemountCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"secret/", "generic/",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! Remounted secret/ to: generic/"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		mounts, err := client.Sys().ListMounts()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if _, ok := mounts["generic/"]; !ok {
+			t.Errorf("expected mount at generic/: %#v", mounts)
+		}
+	})
+
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testRemountCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"secret/", "generic/",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error remounting secret/ to generic/: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testRemountCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }
