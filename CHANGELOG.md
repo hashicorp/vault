@@ -1,4 +1,11 @@
-## 0.8.2 (Unreleased)
+## 0.8.2 (September 5th, 2017)
+
+SECURITY:
+
+* In prior versions of Vault, if authenticating via AWS IAM and requesting a
+  periodic token, the period was not properly respected. This could lead to
+  tokens expiring unexpectedly, or a token lifetime being longer than expected.
+  Upon token renewal with Vault 0.8.2 the period will be properly enforced.
 
 DEPRECATIONS/CHANGES:
 
@@ -12,6 +19,10 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+* **Lazy Lease Loading**: On startup, Vault will now load leases from storage
+  in a lazy fashion (token checks and revocation/renewal requests still force
+  an immediate load). For larger installations this can significantly reduce
+  downtime when switching active nodes or bringing Vault up from cold start.
 * **SSH CA Login with `vault ssh`**: `vault ssh` now supports the SSH CA
   backend for authenticating to machines. It also supports remote host key
   verification through the SSH CA backend, if enabled.
