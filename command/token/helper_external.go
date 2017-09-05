@@ -36,6 +36,8 @@ func ExternalTokenHelperPath(path string) (string, error) {
 	return path, nil
 }
 
+var _ TokenHelper = (*ExternalTokenHelper)(nil)
+
 // ExternalTokenHelper is the struct that has all the logic for storing and retrieving
 // tokens from the token helper. The API for the helpers is simple: the
 // BinaryPath is executed within a shell with environment Env. The last argument

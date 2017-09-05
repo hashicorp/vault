@@ -10,6 +10,8 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
+var _ TokenHelper = (*InternalTokenHelper)(nil)
+
 // InternalTokenHelper fulfills the TokenHelper interface when no external
 // token-helper is configured, and avoids shelling out
 type InternalTokenHelper struct {
