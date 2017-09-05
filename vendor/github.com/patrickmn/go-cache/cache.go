@@ -1074,7 +1074,6 @@ type janitor struct {
 }
 
 func (j *janitor) Run(c *cache) {
-	j.stop = make(chan bool)
 	ticker := time.NewTicker(j.Interval)
 	for {
 		select {
@@ -1094,6 +1093,7 @@ func stopJanitor(c *Cache) {
 func runJanitor(c *cache, ci time.Duration) {
 	j := &janitor{
 		Interval: ci,
+		stop:     make(chan bool),
 	}
 	c.janitor = j
 	go j.Run(c)

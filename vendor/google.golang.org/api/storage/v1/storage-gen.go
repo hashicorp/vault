@@ -1168,9 +1168,8 @@ type Object struct {
 	// ContentLanguage: Content-Language of the object data.
 	ContentLanguage string `json:"contentLanguage,omitempty"`
 
-	// ContentType: Content-Type of the object data. If contentType is not
-	// specified, object downloads will be served as
-	// application/octet-stream.
+	// ContentType: Content-Type of the object data. If an object is stored
+	// without a Content-Type, it is served as application/octet-stream.
 	ContentType string `json:"contentType,omitempty"`
 
 	// Crc32c: CRC32c checksum, as described in RFC 4960, Appendix B;
@@ -1556,10 +1555,11 @@ type Policy struct {
 	Kind string `json:"kind,omitempty"`
 
 	// ResourceId: The ID of the resource to which this policy belongs. Will
-	// be of the form buckets/bucket for buckets, and
-	// buckets/bucket/objects/object for objects. A specific generation may
-	// be specified by appending #generationNumber to the end of the object
-	// name, e.g. buckets/my-bucket/objects/data.txt#17. The current
+	// be of the form projects/_/buckets/bucket for buckets, and
+	// projects/_/buckets/bucket/objects/object for objects. A specific
+	// generation may be specified by appending #generationNumber to the end
+	// of the object name, e.g.
+	// projects/_/buckets/my-bucket/objects/data.txt#17. The current
 	// generation can be denoted with #0. This field is ignored on input.
 	ResourceId string `json:"resourceId,omitempty"`
 
@@ -6103,7 +6103,7 @@ func (c *NotificationsListCall) Do(opts ...googleapi.CallOption) (*Notifications
 	//   ],
 	//   "parameters": {
 	//     "bucket": {
-	//       "description": "Name of a GCS bucket.",
+	//       "description": "Name of a Google Cloud Storage bucket.",
 	//       "location": "path",
 	//       "required": true,
 	//       "type": "string"
@@ -7207,7 +7207,8 @@ func (c *ObjectsComposeCall) DestinationPredefinedAcl(destinationPredefinedAcl s
 
 // IfGenerationMatch sets the optional parameter "ifGenerationMatch":
 // Makes the operation conditional on whether the object's current
-// generation matches the given value.
+// generation matches the given value. Setting to 0 makes the operation
+// succeed only if there are no live versions of the object.
 func (c *ObjectsComposeCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsComposeCall {
 	c.urlParams_.Set("ifGenerationMatch", fmt.Sprint(ifGenerationMatch))
 	return c
@@ -7383,7 +7384,7 @@ func (c *ObjectsComposeCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "ifGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value. Setting to 0 makes the operation succeed only if there are no live versions of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -7472,7 +7473,8 @@ func (c *ObjectsCopyCall) DestinationPredefinedAcl(destinationPredefinedAcl stri
 
 // IfGenerationMatch sets the optional parameter "ifGenerationMatch":
 // Makes the operation conditional on whether the destination object's
-// current generation matches the given value.
+// current generation matches the given value. Setting to 0 makes the
+// operation succeed only if there are no live versions of the object.
 func (c *ObjectsCopyCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsCopyCall {
 	c.urlParams_.Set("ifGenerationMatch", fmt.Sprint(ifGenerationMatch))
 	return c
@@ -7481,7 +7483,9 @@ func (c *ObjectsCopyCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsCop
 // IfGenerationNotMatch sets the optional parameter
 // "ifGenerationNotMatch": Makes the operation conditional on whether
 // the destination object's current generation does not match the given
-// value.
+// value. If no live object exists, the precondition fails. Setting to 0
+// makes the operation succeed only if there is a live version of the
+// object.
 func (c *ObjectsCopyCall) IfGenerationNotMatch(ifGenerationNotMatch int64) *ObjectsCopyCall {
 	c.urlParams_.Set("ifGenerationNotMatch", fmt.Sprint(ifGenerationNotMatch))
 	return c
@@ -7507,7 +7511,7 @@ func (c *ObjectsCopyCall) IfMetagenerationNotMatch(ifMetagenerationNotMatch int6
 
 // IfSourceGenerationMatch sets the optional parameter
 // "ifSourceGenerationMatch": Makes the operation conditional on whether
-// the source object's generation matches the given value.
+// the source object's current generation matches the given value.
 func (c *ObjectsCopyCall) IfSourceGenerationMatch(ifSourceGenerationMatch int64) *ObjectsCopyCall {
 	c.urlParams_.Set("ifSourceGenerationMatch", fmt.Sprint(ifSourceGenerationMatch))
 	return c
@@ -7515,8 +7519,8 @@ func (c *ObjectsCopyCall) IfSourceGenerationMatch(ifSourceGenerationMatch int64)
 
 // IfSourceGenerationNotMatch sets the optional parameter
 // "ifSourceGenerationNotMatch": Makes the operation conditional on
-// whether the source object's generation does not match the given
-// value.
+// whether the source object's current generation does not match the
+// given value.
 func (c *ObjectsCopyCall) IfSourceGenerationNotMatch(ifSourceGenerationNotMatch int64) *ObjectsCopyCall {
 	c.urlParams_.Set("ifSourceGenerationNotMatch", fmt.Sprint(ifSourceGenerationNotMatch))
 	return c
@@ -7716,13 +7720,13 @@ func (c *ObjectsCopyCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "ifGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the destination object's current generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the destination object's current generation matches the given value. Setting to 0 makes the operation succeed only if there are no live versions of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "ifGenerationNotMatch": {
-	//       "description": "Makes the operation conditional on whether the destination object's current generation does not match the given value.",
+	//       "description": "Makes the operation conditional on whether the destination object's current generation does not match the given value. If no live object exists, the precondition fails. Setting to 0 makes the operation succeed only if there is a live version of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -7740,13 +7744,13 @@ func (c *ObjectsCopyCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "ifSourceGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the source object's generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the source object's current generation matches the given value.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "ifSourceGenerationNotMatch": {
-	//       "description": "Makes the operation conditional on whether the source object's generation does not match the given value.",
+	//       "description": "Makes the operation conditional on whether the source object's current generation does not match the given value.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -7849,7 +7853,8 @@ func (c *ObjectsDeleteCall) Generation(generation int64) *ObjectsDeleteCall {
 
 // IfGenerationMatch sets the optional parameter "ifGenerationMatch":
 // Makes the operation conditional on whether the object's current
-// generation matches the given value.
+// generation matches the given value. Setting to 0 makes the operation
+// succeed only if there are no live versions of the object.
 func (c *ObjectsDeleteCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsDeleteCall {
 	c.urlParams_.Set("ifGenerationMatch", fmt.Sprint(ifGenerationMatch))
 	return c
@@ -7857,7 +7862,9 @@ func (c *ObjectsDeleteCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsD
 
 // IfGenerationNotMatch sets the optional parameter
 // "ifGenerationNotMatch": Makes the operation conditional on whether
-// the object's current generation does not match the given value.
+// the object's current generation does not match the given value. If no
+// live object exists, the precondition fails. Setting to 0 makes the
+// operation succeed only if there is a live version of the object.
 func (c *ObjectsDeleteCall) IfGenerationNotMatch(ifGenerationNotMatch int64) *ObjectsDeleteCall {
 	c.urlParams_.Set("ifGenerationNotMatch", fmt.Sprint(ifGenerationNotMatch))
 	return c
@@ -7965,13 +7972,13 @@ func (c *ObjectsDeleteCall) Do(opts ...googleapi.CallOption) error {
 	//       "type": "string"
 	//     },
 	//     "ifGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value. Setting to 0 makes the operation succeed only if there are no live versions of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "ifGenerationNotMatch": {
-	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value. If no live object exists, the precondition fails. Setting to 0 makes the operation succeed only if there is a live version of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -8039,8 +8046,9 @@ func (c *ObjectsGetCall) Generation(generation int64) *ObjectsGetCall {
 }
 
 // IfGenerationMatch sets the optional parameter "ifGenerationMatch":
-// Makes the operation conditional on whether the object's generation
-// matches the given value.
+// Makes the operation conditional on whether the object's current
+// generation matches the given value. Setting to 0 makes the operation
+// succeed only if there are no live versions of the object.
 func (c *ObjectsGetCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsGetCall {
 	c.urlParams_.Set("ifGenerationMatch", fmt.Sprint(ifGenerationMatch))
 	return c
@@ -8048,7 +8056,9 @@ func (c *ObjectsGetCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsGetC
 
 // IfGenerationNotMatch sets the optional parameter
 // "ifGenerationNotMatch": Makes the operation conditional on whether
-// the object's generation does not match the given value.
+// the object's current generation does not match the given value. If no
+// live object exists, the precondition fails. Setting to 0 makes the
+// operation succeed only if there is a live version of the object.
 func (c *ObjectsGetCall) IfGenerationNotMatch(ifGenerationNotMatch int64) *ObjectsGetCall {
 	c.urlParams_.Set("ifGenerationNotMatch", fmt.Sprint(ifGenerationNotMatch))
 	return c
@@ -8221,13 +8231,13 @@ func (c *ObjectsGetCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "ifGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the object's generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value. Setting to 0 makes the operation succeed only if there are no live versions of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "ifGenerationNotMatch": {
-	//       "description": "Makes the operation conditional on whether the object's generation does not match the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value. If no live object exists, the precondition fails. Setting to 0 makes the operation succeed only if there is a live version of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -8500,7 +8510,8 @@ func (c *ObjectsInsertCall) ContentEncoding(contentEncoding string) *ObjectsInse
 
 // IfGenerationMatch sets the optional parameter "ifGenerationMatch":
 // Makes the operation conditional on whether the object's current
-// generation matches the given value.
+// generation matches the given value. Setting to 0 makes the operation
+// succeed only if there are no live versions of the object.
 func (c *ObjectsInsertCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsInsertCall {
 	c.urlParams_.Set("ifGenerationMatch", fmt.Sprint(ifGenerationMatch))
 	return c
@@ -8508,7 +8519,9 @@ func (c *ObjectsInsertCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsI
 
 // IfGenerationNotMatch sets the optional parameter
 // "ifGenerationNotMatch": Makes the operation conditional on whether
-// the object's current generation does not match the given value.
+// the object's current generation does not match the given value. If no
+// live object exists, the precondition fails. Setting to 0 makes the
+// operation succeed only if there is a live version of the object.
 func (c *ObjectsInsertCall) IfGenerationNotMatch(ifGenerationNotMatch int64) *ObjectsInsertCall {
 	c.urlParams_.Set("ifGenerationNotMatch", fmt.Sprint(ifGenerationNotMatch))
 	return c
@@ -8808,13 +8821,13 @@ func (c *ObjectsInsertCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "ifGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value. Setting to 0 makes the operation succeed only if there are no live versions of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "ifGenerationNotMatch": {
-	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value. If no live object exists, the precondition fails. Setting to 0 makes the operation succeed only if there is a live version of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -9203,7 +9216,8 @@ func (c *ObjectsPatchCall) Generation(generation int64) *ObjectsPatchCall {
 
 // IfGenerationMatch sets the optional parameter "ifGenerationMatch":
 // Makes the operation conditional on whether the object's current
-// generation matches the given value.
+// generation matches the given value. Setting to 0 makes the operation
+// succeed only if there are no live versions of the object.
 func (c *ObjectsPatchCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsPatchCall {
 	c.urlParams_.Set("ifGenerationMatch", fmt.Sprint(ifGenerationMatch))
 	return c
@@ -9211,7 +9225,9 @@ func (c *ObjectsPatchCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsPa
 
 // IfGenerationNotMatch sets the optional parameter
 // "ifGenerationNotMatch": Makes the operation conditional on whether
-// the object's current generation does not match the given value.
+// the object's current generation does not match the given value. If no
+// live object exists, the precondition fails. Setting to 0 makes the
+// operation succeed only if there is a live version of the object.
 func (c *ObjectsPatchCall) IfGenerationNotMatch(ifGenerationNotMatch int64) *ObjectsPatchCall {
 	c.urlParams_.Set("ifGenerationNotMatch", fmt.Sprint(ifGenerationNotMatch))
 	return c
@@ -9380,13 +9396,13 @@ func (c *ObjectsPatchCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "ifGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value. Setting to 0 makes the operation succeed only if there are no live versions of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "ifGenerationNotMatch": {
-	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value. If no live object exists, the precondition fails. Setting to 0 makes the operation succeed only if there is a live version of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -9523,8 +9539,9 @@ func (c *ObjectsRewriteCall) DestinationPredefinedAcl(destinationPredefinedAcl s
 }
 
 // IfGenerationMatch sets the optional parameter "ifGenerationMatch":
-// Makes the operation conditional on whether the destination object's
-// current generation matches the given value.
+// Makes the operation conditional on whether the object's current
+// generation matches the given value. Setting to 0 makes the operation
+// succeed only if there are no live versions of the object.
 func (c *ObjectsRewriteCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsRewriteCall {
 	c.urlParams_.Set("ifGenerationMatch", fmt.Sprint(ifGenerationMatch))
 	return c
@@ -9532,8 +9549,9 @@ func (c *ObjectsRewriteCall) IfGenerationMatch(ifGenerationMatch int64) *Objects
 
 // IfGenerationNotMatch sets the optional parameter
 // "ifGenerationNotMatch": Makes the operation conditional on whether
-// the destination object's current generation does not match the given
-// value.
+// the object's current generation does not match the given value. If no
+// live object exists, the precondition fails. Setting to 0 makes the
+// operation succeed only if there is a live version of the object.
 func (c *ObjectsRewriteCall) IfGenerationNotMatch(ifGenerationNotMatch int64) *ObjectsRewriteCall {
 	c.urlParams_.Set("ifGenerationNotMatch", fmt.Sprint(ifGenerationNotMatch))
 	return c
@@ -9559,7 +9577,7 @@ func (c *ObjectsRewriteCall) IfMetagenerationNotMatch(ifMetagenerationNotMatch i
 
 // IfSourceGenerationMatch sets the optional parameter
 // "ifSourceGenerationMatch": Makes the operation conditional on whether
-// the source object's generation matches the given value.
+// the source object's current generation matches the given value.
 func (c *ObjectsRewriteCall) IfSourceGenerationMatch(ifSourceGenerationMatch int64) *ObjectsRewriteCall {
 	c.urlParams_.Set("ifSourceGenerationMatch", fmt.Sprint(ifSourceGenerationMatch))
 	return c
@@ -9567,8 +9585,8 @@ func (c *ObjectsRewriteCall) IfSourceGenerationMatch(ifSourceGenerationMatch int
 
 // IfSourceGenerationNotMatch sets the optional parameter
 // "ifSourceGenerationNotMatch": Makes the operation conditional on
-// whether the source object's generation does not match the given
-// value.
+// whether the source object's current generation does not match the
+// given value.
 func (c *ObjectsRewriteCall) IfSourceGenerationNotMatch(ifSourceGenerationNotMatch int64) *ObjectsRewriteCall {
 	c.urlParams_.Set("ifSourceGenerationNotMatch", fmt.Sprint(ifSourceGenerationNotMatch))
 	return c
@@ -9782,13 +9800,13 @@ func (c *ObjectsRewriteCall) Do(opts ...googleapi.CallOption) (*RewriteResponse,
 	//       "type": "string"
 	//     },
 	//     "ifGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the destination object's current generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value. Setting to 0 makes the operation succeed only if there are no live versions of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "ifGenerationNotMatch": {
-	//       "description": "Makes the operation conditional on whether the destination object's current generation does not match the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value. If no live object exists, the precondition fails. Setting to 0 makes the operation succeed only if there is a live version of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -9806,13 +9824,13 @@ func (c *ObjectsRewriteCall) Do(opts ...googleapi.CallOption) (*RewriteResponse,
 	//       "type": "string"
 	//     },
 	//     "ifSourceGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the source object's generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the source object's current generation matches the given value.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "ifSourceGenerationNotMatch": {
-	//       "description": "Makes the operation conditional on whether the source object's generation does not match the given value.",
+	//       "description": "Makes the operation conditional on whether the source object's current generation does not match the given value.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -10282,7 +10300,8 @@ func (c *ObjectsUpdateCall) Generation(generation int64) *ObjectsUpdateCall {
 
 // IfGenerationMatch sets the optional parameter "ifGenerationMatch":
 // Makes the operation conditional on whether the object's current
-// generation matches the given value.
+// generation matches the given value. Setting to 0 makes the operation
+// succeed only if there are no live versions of the object.
 func (c *ObjectsUpdateCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsUpdateCall {
 	c.urlParams_.Set("ifGenerationMatch", fmt.Sprint(ifGenerationMatch))
 	return c
@@ -10290,7 +10309,9 @@ func (c *ObjectsUpdateCall) IfGenerationMatch(ifGenerationMatch int64) *ObjectsU
 
 // IfGenerationNotMatch sets the optional parameter
 // "ifGenerationNotMatch": Makes the operation conditional on whether
-// the object's current generation does not match the given value.
+// the object's current generation does not match the given value. If no
+// live object exists, the precondition fails. Setting to 0 makes the
+// operation succeed only if there is a live version of the object.
 func (c *ObjectsUpdateCall) IfGenerationNotMatch(ifGenerationNotMatch int64) *ObjectsUpdateCall {
 	c.urlParams_.Set("ifGenerationNotMatch", fmt.Sprint(ifGenerationNotMatch))
 	return c
@@ -10475,13 +10496,13 @@ func (c *ObjectsUpdateCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "ifGenerationMatch": {
-	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation matches the given value. Setting to 0 makes the operation succeed only if there are no live versions of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "ifGenerationNotMatch": {
-	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value.",
+	//       "description": "Makes the operation conditional on whether the object's current generation does not match the given value. If no live object exists, the precondition fails. Setting to 0 makes the operation succeed only if there is a live version of the object.",
 	//       "format": "int64",
 	//       "location": "query",
 	//       "type": "string"
@@ -10819,7 +10840,8 @@ type ProjectsServiceAccountGetCall struct {
 	header_      http.Header
 }
 
-// Get: Get the email address of this project's GCS service account.
+// Get: Get the email address of this project's Google Cloud Storage
+// service account.
 func (r *ProjectsServiceAccountService) Get(projectId string) *ProjectsServiceAccountGetCall {
 	c := &ProjectsServiceAccountGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.projectId = projectId
@@ -10920,7 +10942,7 @@ func (c *ProjectsServiceAccountGetCall) Do(opts ...googleapi.CallOption) (*Servi
 	}
 	return ret, nil
 	// {
-	//   "description": "Get the email address of this project's GCS service account.",
+	//   "description": "Get the email address of this project's Google Cloud Storage service account.",
 	//   "httpMethod": "GET",
 	//   "id": "storage.projects.serviceAccount.get",
 	//   "parameterOrder": [

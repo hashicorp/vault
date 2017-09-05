@@ -39,6 +39,10 @@ type AutopilotConfiguration struct {
 	// cluster before promoting them to voters.
 	DisableUpgradeMigration bool
 
+	// (Enterprise-only) UpgradeVersionTag is the node tag to use for version info when
+	// performing upgrade migrations. If left blank, the Consul version will be used.
+	UpgradeVersionTag string
+
 	// CreateIndex holds the index corresponding the creation of this configuration.
 	// This is a read-only field.
 	CreateIndex uint64

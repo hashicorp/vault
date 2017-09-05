@@ -123,8 +123,14 @@ type HostInfo struct {
 func (h *HostInfo) Equal(host *HostInfo) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	host.mu.RLock()
-	defer host.mu.RUnlock()
+	//If both hosts pointers are same then lock is required only once because of below reasons:
+	//Reason 1: There is no point taking lock twice on same mutex variable.
+	//Reason 2: It may lead to deadlock e.g. if WLock is requested by other routine in between 1st & 2nd RLock
+	//So WLock will be blocked on 1st RLock and 2nd RLock will be blocked on requested WLock.
+	if h != host {
+		host.mu.RLock()
+		defer host.mu.RUnlock()
+	}
 
 	return h.ConnectAddress().Equal(host.ConnectAddress())
 }
@@ -143,8 +149,30 @@ func (h *HostInfo) setPeer(peer net.IP) *HostInfo {
 }
 
 func (h *HostInfo) invalidConnectAddr() bool {
-	addr := h.ConnectAddress()
-	return addr == nil || addr.IsUnspecified()
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	addr, _ := h.connectAddressLocked()
+	return !validIpAddr(addr)
+}
+
+func validIpAddr(addr net.IP) bool {
+	return addr != nil && !addr.IsUnspecified()
+}
+
+func (h *HostInfo) connectAddressLocked() (net.IP, string) {
+	if validIpAddr(h.connectAddress) {
+		return h.connectAddress, "connect_address"
+	} else if validIpAddr(h.rpcAddress) {
+		return h.rpcAddress, "rpc_adress"
+	} else if validIpAddr(h.preferredIP) {
+		// where does perferred_ip get set?
+		return h.preferredIP, "preferred_ip"
+	} else if validIpAddr(h.broadcastAddress) {
+		return h.broadcastAddress, "broadcast_address"
+	} else if validIpAddr(h.peer) {
+		return h.peer, "peer"
+	}
+	return net.IPv4zero, "invalid"
 }
 
 // Returns the address that should be used to connect to the host.
@@ -154,18 +182,10 @@ func (h *HostInfo) ConnectAddress() net.IP {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	if h.connectAddress == nil {
-		// Use 'rpc_address' if provided and it's not 0.0.0.0
-		if h.rpcAddress != nil && !h.rpcAddress.IsUnspecified() {
-			return h.rpcAddress
-		} else if h.broadcastAddress != nil && !h.broadcastAddress.IsUnspecified() {
-			return h.broadcastAddress
-		} else if h.peer != nil {
-			// Peer should always be set if this from 'system.peer'
-			return h.peer
-		}
+	if addr, _ := h.connectAddressLocked(); validIpAddr(addr) {
+		return addr
 	}
-	return h.connectAddress
+	panic(fmt.Sprintf("no valid connect address for host: %v. Is your cluster configured correctly?", h))
 }
 
 func (h *HostInfo) SetConnectAddress(address net.IP) *HostInfo {
@@ -337,9 +357,13 @@ func (h *HostInfo) IsUp() bool {
 func (h *HostInfo) String() string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+
+	connectAddr, source := h.connectAddressLocked()
 	return fmt.Sprintf("[HostInfo connectAddress=%q peer=%q rpc_address=%q broadcast_address=%q "+
+		"preferred_ip=%q connect_addr=%q connect_addr_source=%q "+
 		"port=%d data_centre=%q rack=%q host_id=%q version=%q state=%s num_tokens=%d]",
-		h.connectAddress, h.peer, h.rpcAddress, h.broadcastAddress,
+		h.connectAddress, h.peer, h.rpcAddress, h.broadcastAddress, h.preferredIP,
+		connectAddr, source,
 		h.port, h.dataCenter, h.rack, h.hostId, h.version, h.state, len(h.tokens))
 }
 
@@ -653,8 +677,9 @@ func (r *ringDescriber) refreshRing() error {
 		return err
 	}
 
+	prevHosts := r.session.ring.currentHosts()
+
 	// TODO: move this to session
-	// TODO: handle removing hosts here
 	for _, h := range hosts {
 		if host, ok := r.session.ring.addHostIfMissing(h); !ok {
 			r.session.pool.addHost(h)
@@ -662,6 +687,14 @@ func (r *ringDescriber) refreshRing() error {
 		} else {
 			host.update(h)
 		}
+		delete(prevHosts, h.ConnectAddress().String())
+	}
+
+	// TODO(zariel): it may be worth having a mutex covering the overall ring state
+	// in a session so that everything sees a consistent state. Becuase as is today
+	// events can come in and due to ordering an UP host could be removed from the cluster
+	for _, host := range prevHosts {
+		r.session.removeHost(host)
 	}
 
 	r.session.metadata.setPartitioner(partitioner)

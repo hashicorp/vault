@@ -63,7 +63,7 @@ type Authorization struct {
 	App            *AuthorizationApp `json:"app,omitempty"`
 	Note           *string           `json:"note,omitempty"`
 	NoteURL        *string           `json:"note_url,omitempty"`
-	UpdateAt       *Timestamp        `json:"updated_at,omitempty"`
+	UpdatedAt      *Timestamp        `json:"updated_at,omitempty"`
 	CreatedAt      *Timestamp        `json:"created_at,omitempty"`
 	Fingerprint    *string           `json:"fingerprint,omitempty"`
 

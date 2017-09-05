@@ -100,12 +100,12 @@ func (a *Authorization) GetTokenLastEight() string {
 	return *a.TokenLastEight
 }
 
-// GetUpdateAt returns the UpdateAt field if it's non-nil, zero value otherwise.
-func (a *Authorization) GetUpdateAt() Timestamp {
-	if a == nil || a.UpdateAt == nil {
+// GetUpdatedAt returns the UpdatedAt field if it's non-nil, zero value otherwise.
+func (a *Authorization) GetUpdatedAt() Timestamp {
+	if a == nil || a.UpdatedAt == nil {
 		return Timestamp{}
 	}
-	return *a.UpdateAt
+	return *a.UpdatedAt
 }
 
 // GetURL returns the URL field if it's non-nil, zero value otherwise.
@@ -4162,6 +4162,14 @@ func (p *PullRequestReviewRequest) GetBody() string {
 		return ""
 	}
 	return *p.Body
+}
+
+// GetCommitID returns the CommitID field if it's non-nil, zero value otherwise.
+func (p *PullRequestReviewRequest) GetCommitID() string {
+	if p == nil || p.CommitID == nil {
+		return ""
+	}
+	return *p.CommitID
 }
 
 // GetEvent returns the Event field if it's non-nil, zero value otherwise.

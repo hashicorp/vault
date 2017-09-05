@@ -58,6 +58,38 @@ type MssqlConn struct {
 	transactionCtx context.Context
 
 	processQueryText bool
+
+	connectionGood bool
+}
+
+func (c *MssqlConn) checkBadConn(err error) error {
+	// this is a hack to address Issue #275
+	// we set connectionGood flag to false if
+	// error indicates that connection is not usable
+	// but we return actual error instead of ErrBadConn
+	// this will cause connection to stay in a pool
+	// but next request to this connection will return ErrBadConn
+
+	// it might be possible to revise this hack after
+	// https://github.com/golang/go/issues/20807
+	// is implemented
+	if err == nil {
+		return nil
+	}
+	if err == io.EOF {
+		return driver.ErrBadConn
+	}
+
+	switch err.(type) {
+	case net.Error:
+		c.connectionGood = false
+		return err
+	case StreamError:
+		c.connectionGood = false
+		return err
+	default:
+		return err
+	}
 }
 
 func (c *MssqlConn) simpleProcessResp(ctx context.Context) error {
@@ -67,18 +99,21 @@ func (c *MssqlConn) simpleProcessResp(ctx context.Context) error {
 		switch token := tok.(type) {
 		case doneStruct:
 			if token.isError() {
-				return token.getError()
+				return c.checkBadConn(token.getError())
 			}
 		case error:
-			return token
+			return c.checkBadConn(token)
 		}
 	}
 	return nil
 }
 
 func (c *MssqlConn) Commit() error {
+	if !c.connectionGood {
+		return driver.ErrBadConn
+	}
 	if err := c.sendCommitRequest(); err != nil {
-		return err
+		return c.checkBadConn(err)
 	}
 	return c.simpleProcessResp(c.transactionCtx)
 }
@@ -98,8 +133,11 @@ func (c *MssqlConn) sendCommitRequest() error {
 }
 
 func (c *MssqlConn) Rollback() error {
+	if !c.connectionGood {
+		return driver.ErrBadConn
+	}
 	if err := c.sendRollbackRequest(); err != nil {
-		return err
+		return c.checkBadConn(err)
 	}
 	return c.simpleProcessResp(c.transactionCtx)
 }
@@ -122,12 +160,19 @@ func (c *MssqlConn) Begin() (driver.Tx, error) {
 	return c.begin(context.Background(), isolationUseCurrent)
 }
 
-func (c *MssqlConn) begin(ctx context.Context, tdsIsolation isoLevel) (driver.Tx, error) {
-	err := c.sendBeginRequest(ctx, tdsIsolation)
-	if err != nil {
-		return nil, err
+func (c *MssqlConn) begin(ctx context.Context, tdsIsolation isoLevel) (tx driver.Tx, err error) {
+	if !c.connectionGood {
+		return nil, driver.ErrBadConn
 	}
-	return c.processBeginResponse(ctx)
+	err = c.sendBeginRequest(ctx, tdsIsolation)
+	if err != nil {
+		return nil, c.checkBadConn(err)
+	}
+	tx, err = c.processBeginResponse(ctx)
+	if err != nil {
+		return nil, c.checkBadConn(err)
+	}
+	return
 }
 
 func (c *MssqlConn) sendBeginRequest(ctx context.Context, tdsIsolation isoLevel) error {
@@ -183,7 +228,7 @@ func (d *MssqlDriver) open(dsn string) (*MssqlConn, error) {
 		}
 	}
 
-	conn := &MssqlConn{sess, context.Background(), d.processQueryText}
+	conn := &MssqlConn{sess: sess, transactionCtx: context.Background(), processQueryText: d.processQueryText, connectionGood: true}
 	conn.sess.log = d.log
 	return conn, nil
 }
@@ -206,6 +251,9 @@ type queryNotifSub struct {
 }
 
 func (c *MssqlConn) Prepare(query string) (driver.Stmt, error) {
+	if !c.connectionGood {
+		return nil, driver.ErrBadConn
+	}
 	if len(query) > 10 && strings.EqualFold(query[:10], "INSERTBULK") {
 		return c.prepareCopyIn(query)
 	}
@@ -315,9 +363,12 @@ func (s *MssqlStmt) Query(args []driver.Value) (driver.Rows, error) {
 	return s.queryContext(context.Background(), convertOldArgs(args))
 }
 
-func (s *MssqlStmt) queryContext(ctx context.Context, args []namedValue) (driver.Rows, error) {
-	if err := s.sendQuery(args); err != nil {
-		return nil, err
+func (s *MssqlStmt) queryContext(ctx context.Context, args []namedValue) (rows driver.Rows, err error) {
+	if !s.c.connectionGood {
+		return nil, driver.ErrBadConn
+	}
+	if err = s.sendQuery(args); err != nil {
+		return nil, s.c.checkBadConn(err)
 	}
 	return s.processQueryResponse(ctx)
 }
@@ -343,13 +394,13 @@ loop:
 			break loop
 		case doneStruct:
 			if token.isError() {
-				return nil, token.getError()
+				return nil, s.c.checkBadConn(token.getError())
 			}
 		case error:
-			return nil, token
+			return nil, s.c.checkBadConn(token)
 		}
 	}
-	res = &MssqlRows{sess: s.c.sess, tokchan: tokchan, cols: cols, cancel: cancel}
+	res = &MssqlRows{stmt: s, tokchan: tokchan, cols: cols, cancel: cancel}
 	return
 }
 
@@ -357,11 +408,17 @@ func (s *MssqlStmt) Exec(args []driver.Value) (driver.Result, error) {
 	return s.exec(context.Background(), convertOldArgs(args))
 }
 
-func (s *MssqlStmt) exec(ctx context.Context, args []namedValue) (driver.Result, error) {
-	if err := s.sendQuery(args); err != nil {
-		return nil, err
+func (s *MssqlStmt) exec(ctx context.Context, args []namedValue) (res driver.Result, err error) {
+	if !s.c.connectionGood {
+		return nil, driver.ErrBadConn
 	}
-	return s.processExec(ctx)
+	if err = s.sendQuery(args); err != nil {
+		return nil, s.c.checkBadConn(err)
+	}
+	if res, err = s.processExec(ctx); err != nil {
+		return nil, s.c.checkBadConn(err)
+	}
+	return
 }
 
 func (s *MssqlStmt) processExec(ctx context.Context) (res driver.Result, err error) {
@@ -389,7 +446,7 @@ func (s *MssqlStmt) processExec(ctx context.Context) (res driver.Result, err err
 }
 
 type MssqlRows struct {
-	sess    *tdsSession
+	stmt    *MssqlStmt
 	cols    []columnStruct
 	tokchan chan tokenStruct
 
@@ -415,6 +472,9 @@ func (rc *MssqlRows) Columns() (res []string) {
 }
 
 func (rc *MssqlRows) Next(dest []driver.Value) error {
+	if !rc.stmt.c.connectionGood {
+		return driver.ErrBadConn
+	}
 	if rc.nextCols != nil {
 		return io.EOF
 	}
@@ -430,10 +490,10 @@ func (rc *MssqlRows) Next(dest []driver.Value) error {
 			return nil
 		case doneStruct:
 			if tokdata.isError() {
-				return tokdata.getError()
+				return rc.stmt.c.checkBadConn(tokdata.getError())
 			}
 		case error:
-			return tokdata
+			return rc.stmt.c.checkBadConn(tokdata)
 		}
 	}
 	return io.EOF

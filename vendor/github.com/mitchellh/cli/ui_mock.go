@@ -100,8 +100,12 @@ func (b *syncBuffer) Reset() {
 }
 
 func (b *syncBuffer) String() string {
+	return string(b.Bytes())
+}
+
+func (b *syncBuffer) Bytes() []byte {
 	b.RLock()
 	data := b.b.Bytes()
 	b.RUnlock()
-	return string(data)
+	return data
 }

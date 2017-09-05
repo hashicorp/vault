@@ -40,6 +40,7 @@ func (c DraftReviewComment) String() string {
 
 // PullRequestReviewRequest represents a request to create a review.
 type PullRequestReviewRequest struct {
+	CommitID *string               `json:"commit_id,omitempty"`
 	Body     *string               `json:"body,omitempty"`
 	Event    *string               `json:"event,omitempty"`
 	Comments []*DraftReviewComment `json:"comments,omitempty"`

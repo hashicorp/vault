@@ -33,6 +33,18 @@ err = c.Count("request.count_total", 2, nil, 1)
 
 DogStatsD accepts packets with multiple statsd payloads in them.  Using the BufferingClient via `NewBufferingClient` will buffer up commands and send them when the buffer is reached or after 100msec.
 
+## Unix Domain Sockets Client
+
+DogStatsD version 6 accepts packets through a Unix Socket datagram connection. You can use this protocol by giving a
+`unix:///path/to/dsd.socket` addr argument to the `New` or `NewBufferingClient`.
+
+With this protocol, writes can become blocking if the server's receiving buffer is full. Our default behaviour is to
+timeout and drop the packet after 1 ms. You can set a custom timeout duration via the `SetWriteTimeout` method.
+
+The default mode is to pass write errors from the socket to the caller. This includes write errors the library will
+automatically recover from (DogStatsD server not ready yet or is restarting). You can drop these errors and emulate
+the UDP behaviour by setting the `SkipErrors` property to `true`. Please note that packets will be dropped in both modes.
+
 ## Development
 
 Run the tests with:

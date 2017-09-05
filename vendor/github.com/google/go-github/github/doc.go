@@ -85,9 +85,11 @@ Rate Limiting
 
 GitHub imposes a rate limit on all API clients. Unauthenticated clients are
 limited to 60 requests per hour, while authenticated clients can make up to
-5,000 requests per hour. To receive the higher rate limit when making calls
-that are not issued on behalf of a user, use the
-UnauthenticatedRateLimitedTransport.
+5,000 requests per hour. The Search API has a custom rate limit. Unauthenticated
+clients are limited to 10 requests per minute, while authenticated clients
+can make up to 30 requests per minute. To receive the higher rate limit when
+making calls that are not issued on behalf of a user,
+use UnauthenticatedRateLimitedTransport.
 
 The returned Response.Rate value contains the rate limit information
 from the most recent API call. If a recent enough response isn't
@@ -181,7 +183,7 @@ the "context" import and still relies on "golang.org/x/net/context".
 As a result, if you wish to continue to use "go-github" on App Engine Classic,
 you will need to rewrite all the "context" imports using the following command:
 
-    gofmt -w -r '"context" -> "golang.org/x/net/context"' *.go
+	gofmt -w -r '"context" -> "golang.org/x/net/context"' *.go
 
 See "with_appengine.go" for more details.
 

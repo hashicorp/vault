@@ -54,6 +54,7 @@ const (
 	ErrorDebugging          = 203
 	ErrorUnexpectedMessage  = 204
 	ErrorUnexpectedResponse = 205
+	ErrorEmptyPassword      = 206
 )
 
 // LDAPResultCodeMap contains string descriptions for LDAP error codes
@@ -104,6 +105,7 @@ var LDAPResultCodeMap = map[uint8]string{
 	ErrorDebugging:          "Debugging Error",
 	ErrorUnexpectedMessage:  "Unexpected Message",
 	ErrorUnexpectedResponse: "Unexpected Response",
+	ErrorEmptyPassword:      "Empty password not allowed by the client",
 }
 
 func getLDAPResultCode(packet *ber.Packet) (code uint8, description string) {

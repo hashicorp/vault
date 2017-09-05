@@ -57,14 +57,16 @@ type Key struct {
 //   https://github.com/google/google-authenticator/wiki/Key-Uri-Format
 //
 func NewKeyFromURL(orig string) (*Key, error) {
-	u, err := url.Parse(orig)
+	s := strings.TrimSpace(orig)
+
+	u, err := url.Parse(s)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return &Key{
-		orig: orig,
+		orig: s,
 		url:  u,
 	}, nil
 }
@@ -134,6 +136,11 @@ func (k *Key) Secret() string {
 	q := k.url.Query()
 
 	return q.Get("secret")
+}
+
+// URL returns the OTP URL as a string
+func (k *Key) URL() string {
+	return k.url.String()
 }
 
 // Algorithm represents the hashing function to use in the HMAC

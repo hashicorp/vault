@@ -21,7 +21,8 @@ import (
 )
 
 var (
-	bigOne = big.NewInt(1)
+	bigOne     = big.NewInt(1)
+	emptyValue reflect.Value
 )
 
 var (
@@ -80,7 +81,7 @@ func Marshal(info TypeInfo, value interface{}) ([]byte, error) {
 		return marshalDouble(info, value)
 	case TypeDecimal:
 		return marshalDecimal(info, value)
-	case TypeTimestamp:
+	case TypeTimestamp, TypeTime:
 		return marshalTimestamp(info, value)
 	case TypeList, TypeSet:
 		return marshalList(info, value)
@@ -116,6 +117,7 @@ func Unmarshal(info TypeInfo, data []byte, value interface{}) error {
 	if v, ok := value.(Unmarshaler); ok {
 		return v.UnmarshalCQL(info, data)
 	}
+
 	if isNullableValue(value) {
 		return unmarshalNullable(info, data, value)
 	}
@@ -141,7 +143,7 @@ func Unmarshal(info TypeInfo, data []byte, value interface{}) error {
 		return unmarshalDouble(info, data, value)
 	case TypeDecimal:
 		return unmarshalDecimal(info, data, value)
-	case TypeTimestamp:
+	case TypeTimestamp, TypeTime:
 		return unmarshalTimestamp(info, data, value)
 	case TypeList, TypeSet:
 		return unmarshalList(info, data, value)
@@ -176,7 +178,7 @@ func isNullableValue(value interface{}) bool {
 }
 
 func isNullData(info TypeInfo, data []byte) bool {
-	return len(data) == 0
+	return data == nil
 }
 
 func unmarshalNullable(info TypeInfo, data []byte, value interface{}) error {
@@ -229,12 +231,11 @@ func unmarshalVarchar(info TypeInfo, data []byte, value interface{}) error {
 		*v = string(data)
 		return nil
 	case *[]byte:
-		var dataCopy []byte
 		if data != nil {
-			dataCopy = make([]byte, len(data))
-			copy(dataCopy, data)
+			*v = copyBytes(data)
+		} else {
+			*v = nil
 		}
-		*v = dataCopy
 		return nil
 	}
 	rv := reflect.ValueOf(value)
@@ -1097,6 +1098,8 @@ func marshalTimestamp(info TypeInfo, value interface{}) ([]byte, error) {
 		}
 		x := int64(v.UTC().Unix()*1e3) + int64(v.UTC().Nanosecond()/1e6)
 		return encBigInt(x), nil
+	case time.Duration:
+		return encBigInt(v.Nanoseconds()), nil
 	}
 
 	if value == nil {
@@ -1128,7 +1131,10 @@ func unmarshalTimestamp(info TypeInfo, data []byte, value interface{}) error {
 		nsec := (x - sec*1000) * 1000000
 		*v = time.Unix(sec, nsec).In(time.UTC)
 		return nil
+	case *time.Duration:
+		*v = time.Duration(decBigInt(data))
 	}
+
 	rv := reflect.ValueOf(value)
 	if rv.Kind() != reflect.Ptr {
 		return unmarshalErrorf("can not unmarshal into non-pointer %T", value)
@@ -1927,22 +1933,22 @@ func unmarshalUDT(info TypeInfo, data []byte, value interface{}) error {
 		return unmarshalErrorf("cannot unmarshal %s into %T", info, value)
 	}
 
-	fields := make(map[string]reflect.Value)
-	t := k.Type()
-	for i := 0; i < t.NumField(); i++ {
-		sf := t.Field(i)
-
-		if tag := sf.Tag.Get("cql"); tag != "" {
-			fields[tag] = k.Field(i)
-		}
-	}
-
 	if len(data) == 0 {
 		if k.CanSet() {
 			k.Set(reflect.Zero(k.Type()))
 		}
 
 		return nil
+	}
+
+	t := k.Type()
+	fields := make(map[string]reflect.Value, t.NumField())
+	for i := 0; i < t.NumField(); i++ {
+		sf := t.Field(i)
+
+		if tag := sf.Tag.Get("cql"); tag != "" {
+			fields[tag] = k.Field(i)
+		}
 	}
 
 	udt := info.(UDTTypeInfo)
@@ -1955,11 +1961,15 @@ func unmarshalUDT(info TypeInfo, data []byte, value interface{}) error {
 		size := readInt(data[:4])
 		data = data[4:]
 
-		var err error
 		if size >= 0 {
 			f, ok := fields[e.Name]
 			if !ok {
 				f = k.FieldByName(e.Name)
+				if f == emptyValue {
+					// skip fields which exist in the UDT but not in
+					// the struct passed in
+					continue
+				}
 			}
 
 			if !f.IsValid() || !f.CanAddr() {
@@ -1971,10 +1981,6 @@ func unmarshalUDT(info TypeInfo, data []byte, value interface{}) error {
 				return err
 			}
 			data = data[size:]
-		}
-
-		if err != nil {
-			return err
 		}
 	}
 

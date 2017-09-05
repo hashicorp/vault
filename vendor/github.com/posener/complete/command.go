@@ -49,6 +49,14 @@ type Flags map[string]Predictor
 // Predict completion of flags names according to command line arguments
 func (f Flags) Predict(a Args) (prediction []string) {
 	for flag := range f {
+		// If the flag starts with a hyphen, we avoid emitting the prediction
+		// unless the last typed arg contains a hyphen as well.
+		flagHyphenStart := len(flag) != 0 && flag[0] == '-'
+		lastHyphenStart := len(a.Last) != 0 && a.Last[0] == '-'
+		if flagHyphenStart && !lastHyphenStart {
+			continue
+		}
+
 		if match.Prefix(flag, a.Last) {
 			prediction = append(prediction, flag)
 		}
@@ -73,6 +81,10 @@ func (c *Command) predict(a Args) (options []string, only bool) {
 			if only {
 				return
 			}
+
+			// We matched so stop searching. Continuing to search can accidentally
+			// match a subcommand with current set of commands, see issue #46.
+			break
 		}
 	}
 

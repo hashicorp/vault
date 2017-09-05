@@ -55,7 +55,6 @@
 package v4
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -503,6 +502,8 @@ func (ctx *signingCtx) build(disableHeaderHoisting bool) {
 	ctx.buildTime()             // no depends
 	ctx.buildCredentialString() // no depends
 
+	ctx.buildBodyDigest()
+
 	unsignedHeaders := ctx.Request.Header
 	if ctx.isPresign {
 		if !disableHeaderHoisting {
@@ -514,7 +515,6 @@ func (ctx *signingCtx) build(disableHeaderHoisting bool) {
 		}
 	}
 
-	ctx.buildBodyDigest()
 	ctx.buildCanonicalHeaders(ignoredHeaders, unsignedHeaders)
 	ctx.buildCanonicalString() // depends on canon headers / signed headers
 	ctx.buildStringToSign()    // depends on canon string
@@ -614,8 +614,8 @@ func (ctx *signingCtx) buildCanonicalHeaders(r rule, header http.Header) {
 				strings.Join(ctx.SignedHeaderVals[k], ",")
 		}
 	}
-
-	ctx.canonicalHeaders = strings.Join(stripExcessSpaces(headerValues), "\n")
+	stripExcessSpaces(headerValues)
+	ctx.canonicalHeaders = strings.Join(headerValues, "\n")
 }
 
 func (ctx *signingCtx) buildCanonicalString() {
@@ -717,45 +717,46 @@ func makeSha256Reader(reader io.ReadSeeker) []byte {
 	return hash.Sum(nil)
 }
 
-const doubleSpaces = "  "
+const doubleSpace = "  "
 
-var doubleSpaceBytes = []byte(doubleSpaces)
+// stripExcessSpaces will rewrite the passed in slice's string values to not
+// contain muliple side-by-side spaces.
+func stripExcessSpaces(vals []string) {
+	var j, k, l, m, spaces int
+	for i, str := range vals {
+		// Trim trailing spaces
+		for j = len(str) - 1; j >= 0 && str[j] == ' '; j-- {
+		}
 
-func stripExcessSpaces(headerVals []string) []string {
-	vals := make([]string, len(headerVals))
-	for i, str := range headerVals {
-		// Trim leading and trailing spaces
-		trimmed := strings.TrimSpace(str)
+		// Trim leading spaces
+		for k = 0; k < j && str[k] == ' '; k++ {
+		}
+		str = str[k : j+1]
 
-		idx := strings.Index(trimmed, doubleSpaces)
-		if idx < 0 {
-			vals[i] = trimmed
+		// Strip multiple spaces.
+		j = strings.Index(str, doubleSpace)
+		if j < 0 {
+			vals[i] = str
 			continue
 		}
 
-		buf := []byte(trimmed)
-		for idx > -1 {
-			stripToIdx := -1
-			for j := idx + 1; j < len(buf); j++ {
-				if buf[j] != ' ' {
-					buf = append(buf[:idx+1], buf[j:]...)
-					stripToIdx = j - idx - 1
-					break
+		buf := []byte(str)
+		for k, m, l = j, j, len(buf); k < l; k++ {
+			if buf[k] == ' ' {
+				if spaces == 0 {
+					// First space.
+					buf[m] = buf[k]
+					m++
 				}
-			}
-
-			if stripToIdx >= 0 {
-				// Find next double space
-				idx = bytes.Index(buf[stripToIdx:], doubleSpaceBytes)
-				if idx >= 0 {
-					idx += stripToIdx
-				}
+				spaces++
 			} else {
-				idx = -1
+				// End of multiple spaces.
+				spaces = 0
+				buf[m] = buf[k]
+				m++
 			}
 		}
 
-		vals[i] = string(buf)
+		vals[i] = string(buf[:m])
 	}
-	return vals
 }

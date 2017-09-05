@@ -138,8 +138,20 @@ func (cm *CheckManager) selectBroker() (*api.Broker, error) {
 // Verify broker supports the check type to be used
 func (cm *CheckManager) brokerSupportsCheckType(checkType CheckTypeType, details *api.BrokerDetail) bool {
 
+	baseType := string(checkType)
+
 	for _, module := range details.Modules {
-		if CheckTypeType(module) == checkType {
+		if module == baseType {
+			return true
+		}
+	}
+
+	if idx := strings.Index(baseType, ":"); idx > 0 {
+		baseType = baseType[0:idx]
+	}
+
+	for _, module := range details.Modules {
+		if module == baseType {
 			return true
 		}
 	}
