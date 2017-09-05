@@ -28,6 +28,13 @@ func OutputList(ui cli.Ui, format string, secret *api.Secret) int {
 }
 
 func outputWithFormat(ui cli.Ui, format string, secret *api.Secret, data interface{}) int {
+	// If we had a colored UI, pull out the nested ui so we don't add escape
+	// sequences for outputting json, etc.
+	colorUI, ok := ui.(*cli.ColoredUi)
+	if ok {
+		ui = colorUI.Ui
+	}
+
 	formatter, ok := Formatters[strings.ToLower(format)]
 	if !ok {
 		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
