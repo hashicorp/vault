@@ -61,7 +61,7 @@ vet:
 # source files.
 prep:
 	go generate $(go list ./... | grep -v /vendor/)
-	cp -u .hooks/* .git/hooks/
+	cp .hooks/* .git/hooks/
 
 # bootstrap the build by downloading additional tools
 bootstrap:
