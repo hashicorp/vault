@@ -1,45 +1,170 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
 
-func TestCapabilities_Basic(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
-	ui := new(cli.MockUi)
-	c := &CapabilitiesCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+func testCapabilitiesCommand(tb testing.TB) (*cli.MockUi, *CapabilitiesCommand) {
+	tb.Helper()
+
+	ui := cli.NewMockUi()
+	return ui, &CapabilitiesCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func TestCapabilitiesCommand_Run(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"too_many_args",
+			[]string{"foo", "bar", "zip"},
+			"Too many arguments",
+			1,
 		},
 	}
 
-	var args []string
+	for _, tc := range cases {
+		tc := tc
 
-	args = []string{"-address", addr}
-	if code := c.Run(args); code == 0 {
-		t.Fatalf("expected failure due to no args")
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ui, cmd := testCapabilitiesCommand(t)
+
+			code := cmd.Run(tc.args)
+			if code != tc.code {
+				t.Errorf("expected %d to be %d", code, tc.code)
+			}
+
+			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+			if !strings.Contains(combined, tc.out) {
+				t.Errorf("expected %q to contain %q", combined, tc.out)
+			}
+		})
 	}
 
-	args = []string{"-address", addr, "testpath"}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+	t.Run("token", func(t *testing.T) {
+		t.Parallel()
 
-	args = []string{"-address", addr, token, "test"}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+		client, closer := testVaultServer(t)
+		defer closer()
 
-	args = []string{"-address", addr, "invalidtoken", "test"}
-	if code := c.Run(args); code == 0 {
-		t.Fatalf("expected failure due to invalid token")
-	}
+		policy := `path "secret/foo" { capabilities = ["read"] }`
+		if err := client.Sys().PutPolicy("policy", policy); err != nil {
+			t.Error(err)
+		}
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies: []string{"policy"},
+			TTL:      "30m",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+			t.Fatalf("missing auth data: %#v", secret)
+		}
+		token := secret.Auth.ClientToken
+
+		ui, cmd := testCapabilitiesCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			token, "secret/foo",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "read"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("local", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		policy := `path "secret/foo" { capabilities = ["read"] }`
+		if err := client.Sys().PutPolicy("policy", policy); err != nil {
+			t.Error(err)
+		}
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies: []string{"policy"},
+			TTL:      "30m",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+			t.Fatalf("missing auth data: %#v", secret)
+		}
+		token := secret.Auth.ClientToken
+
+		client.SetToken(token)
+
+		ui, cmd := testCapabilitiesCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"secret/foo",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "read"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testCapabilitiesCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"foo", "bar",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error listing capabilities: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testCapabilitiesCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }

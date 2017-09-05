@@ -2,49 +2,86 @@ package command
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
+
+// Ensure we are implementing the right interfaces.
+var _ cli.Command = (*CapabilitiesCommand)(nil)
+var _ cli.CommandAutocomplete = (*CapabilitiesCommand)(nil)
 
 // CapabilitiesCommand is a Command that enables a new endpoint.
 type CapabilitiesCommand struct {
-	meta.Meta
+	*BaseCommand
+}
+
+func (c *CapabilitiesCommand) Synopsis() string {
+	return "Fetchs the capabilities of a token"
+}
+
+func (c *CapabilitiesCommand) Help() string {
+	helpText := `
+Usage: vault capabilities [options] [TOKEN] PATH
+
+  Fetches the capabilities of a token for a given path. If a TOKEN is provided
+  as an argument, the "/sys/capabilities" endpoint and permission is used. If
+  no TOKEN is  provided, the "/sys/capabilities-self" endpoint and permission
+  is used with the locally authenticated token.
+
+  List capabilities for the local token on the "secret/foo" path:
+
+      $ vault capabilities secret/foo
+
+  List capabilities for a token on the "cubbyhole/foo" path:
+
+      $ vault capabilities 96ddf4bc-d217-f3ba-f9bd-017055595017 cubbyhole/foo
+
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+
+	return strings.TrimSpace(helpText)
+}
+
+func (c *CapabilitiesCommand) Flags() *FlagSets {
+	return c.flagSet(FlagSetHTTP)
+}
+
+func (c *CapabilitiesCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (c *CapabilitiesCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
 }
 
 func (c *CapabilitiesCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("capabilities", meta.FlagSetDefault)
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
 		return 1
 	}
 
-	args = flags.Args()
-	if len(args) > 2 {
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\ncapabilities expects at most two arguments"))
-		return 1
-	}
-
-	var token string
-	var path string
+	token := ""
+	path := ""
+	args = f.Args()
 	switch {
 	case len(args) == 1:
 		path = args[0]
 	case len(args) == 2:
-		token = args[0]
-		path = args[1]
+		token, path = args[0], args[1]
 	default:
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf("\ncapabilities expects at least one argument"))
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1-2, got %d)", len(args)))
 		return 1
 	}
 
 	client, err := c.Client()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
+		c.UI.Error(err.Error())
 		return 2
 	}
 
@@ -55,33 +92,11 @@ func (c *CapabilitiesCommand) Run(args []string) int {
 		capabilities, err = client.Sys().Capabilities(token, path)
 	}
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error retrieving capabilities: %s", err))
-		return 1
+		c.UI.Error(fmt.Sprintf("Error listing capabilities: %s", err))
+		return 2
 	}
 
-	c.Ui.Output(fmt.Sprintf("Capabilities: %s", capabilities))
+	sort.Strings(capabilities)
+	c.UI.Output(strings.Join(capabilities, ", "))
 	return 0
-}
-
-func (c *CapabilitiesCommand) Synopsis() string {
-	return "Fetch the capabilities of a token on a given path"
-}
-
-func (c *CapabilitiesCommand) Help() string {
-	helpText := `
-Usage: vault capabilities [options] [token] path
-
-  Fetch the capabilities of a token on a given path.
-  If a token is provided as an argument, the '/sys/capabilities' endpoint will be invoked
-  with the given token; otherwise the '/sys/capabilities-self' endpoint will be invoked
-  with the client token.
-
-  If a token does not have any capability on a given path, or if any of the policies
-  belonging to the token explicitly have ["deny"] capability, or if the argument path
-  is invalid, this command will respond with a ["deny"].
-
-General Options:
-` + meta.GeneralOptionsUsage()
-	return strings.TrimSpace(helpText)
 }
