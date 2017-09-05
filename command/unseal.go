@@ -2,98 +2,27 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
+
+// Ensure we are implementing the right interfaces.
+var _ cli.Command = (*UnsealCommand)(nil)
+var _ cli.CommandAutocomplete = (*UnsealCommand)(nil)
 
 // UnsealCommand is a Command that unseals the vault.
 type UnsealCommand struct {
-	meta.Meta
+	*BaseCommand
 
-	// Key can be used to pre-seed the key. If it is set, it will not
-	// be asked with the `password` helper.
-	Key string
-}
+	flagReset bool
 
-func (c *UnsealCommand) Run(args []string) int {
-	var reset bool
-	flags := c.Meta.FlagSet("unseal", meta.FlagSetDefault)
-	flags.BoolVar(&reset, "reset", false, "")
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 2
-	}
-
-	sealStatus, err := client.Sys().SealStatus()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error checking seal status: %s", err))
-		return 2
-	}
-
-	if !sealStatus.Sealed {
-		c.Ui.Output("Vault is already unsealed.")
-		return 0
-	}
-
-	args = flags.Args()
-	if reset {
-		sealStatus, err = client.Sys().ResetUnsealProcess()
-	} else {
-		value := c.Key
-		if len(args) > 0 {
-			value = args[0]
-		}
-		if value == "" {
-			fmt.Printf("Key (will be hidden): ")
-			value, err = password.Read(os.Stdin)
-			fmt.Printf("\n")
-			if err != nil {
-				c.Ui.Error(fmt.Sprintf(
-					"Error attempting to ask for password. The raw error message\n"+
-						"is shown below, but the most common reason for this error is\n"+
-						"that you attempted to pipe a value into unseal or you're\n"+
-						"executing `vault unseal` from outside of a terminal.\n\n"+
-						"You should use `vault unseal` from a terminal for maximum\n"+
-						"security. If this isn't an option, the unseal key can be passed\n"+
-						"in using the first parameter.\n\n"+
-						"Raw error: %s", err))
-				return 1
-			}
-		}
-		sealStatus, err = client.Sys().Unseal(strings.TrimSpace(value))
-	}
-
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error: %s", err))
-		return 1
-	}
-
-	c.Ui.Output(fmt.Sprintf(
-		"Sealed: %v\n"+
-			"Key Shares: %d\n"+
-			"Key Threshold: %d\n"+
-			"Unseal Progress: %d\n"+
-			"Unseal Nonce: %v",
-		sealStatus.Sealed,
-		sealStatus.N,
-		sealStatus.T,
-		sealStatus.Progress,
-		sealStatus.Nonce,
-	))
-
-	return 0
+	testOutput io.Writer // for tests
 }
 
 func (c *UnsealCommand) Synopsis() string {
@@ -102,27 +31,132 @@ func (c *UnsealCommand) Synopsis() string {
 
 func (c *UnsealCommand) Help() string {
 	helpText := `
-Usage: vault unseal [options] [key]
+Usage: vault unseal [options] [KEY]
 
-  Unseal the vault by entering a portion of the master key. Once all
-  portions are entered, the vault will be unsealed.
+  Provide a portion of the master key to unseal a Vault server. Vault starts
+  in a sealed state. It cannot perform operations until it is unsealed. This
+  command accepts a portion of the master key (an "unseal key").
 
-  Every Vault server initially starts as sealed. It cannot perform any
-  operation except unsealing until it is sealed. Secrets cannot be accessed
-  in any way until the vault is unsealed. This command allows you to enter
-  a portion of the master key to unseal the vault.
+  The unseal key can be supplied as an argument to the command, but this is
+  not recommended as the unseal key will be available in your history:
 
-  The unseal key can be specified via the command line, but this is
-  not recommended. The key may then live in your terminal history. This
-  only exists to assist in scripting.
+      $ vault unseal IXyR0OJnSFobekZMMCKCoVEpT7wI6l+USMzE3IcyDyo=
 
-General Options:
-` + meta.GeneralOptionsUsage() + `
-Unseal Options:
+  Instead, run the command with no arguments and it will prompt for the key:
 
-  -reset                  Reset the unsealing process by throwing away
-                          prior keys in process to unseal the vault.
+      $ vault unseal
+      Key (will be hidden): IXyR0OJnSFobekZMMCKCoVEpT7wI6l+USMzE3IcyDyo=
 
-`
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+
 	return strings.TrimSpace(helpText)
+}
+
+func (c *UnsealCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:       "reset",
+		Aliases:    []string{},
+		Target:     &c.flagReset,
+		Default:    false,
+		EnvVar:     "",
+		Completion: complete.PredictNothing,
+		Usage:      "Discard any previously entered keys to the unseal process.",
+	})
+
+	return set
+}
+
+func (c *UnsealCommand) AutocompleteArgs() complete.Predictor {
+	return c.PredictVaultFiles()
+}
+
+func (c *UnsealCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
+}
+
+func (c *UnsealCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	unsealKey := ""
+
+	args = f.Args()
+	switch len(args) {
+	case 0:
+		// We will prompt for the unsealKey later
+	case 1:
+		unsealKey = strings.TrimSpace(args[0])
+	default:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	if c.flagReset {
+		status, err := client.Sys().ResetUnsealProcess()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error resetting unseal process: %s", err))
+			return 2
+		}
+		c.prettySealStatus(status)
+		return 0
+	}
+
+	if unsealKey == "" {
+		// Override the output
+		writer := (io.Writer)(os.Stdout)
+		if c.testOutput != nil {
+			writer = c.testOutput
+		}
+
+		fmt.Fprintf(writer, "Key (will be hidden): ")
+		value, err := password.Read(os.Stdin)
+		fmt.Fprintf(writer, "\n")
+		if err != nil {
+			c.UI.Error(wrapAtLength(fmt.Sprintf("An error occurred attempting to "+
+				"ask for an unseal key. The raw error message is shown below, but "+
+				"usually this is because you attempted to pipe a value into the "+
+				"unseal command or you are executing outside of a terminal (tty). "+
+				"You should run the unseal command from a terminal for maximum "+
+				"security. If this is not an option, the unseal can be provided as "+
+				"the first argument to the unseal command. The raw error "+
+				"was:\n\n%s", err)))
+			return 1
+		}
+		unsealKey = strings.TrimSpace(value)
+	}
+
+	status, err := client.Sys().Unseal(unsealKey)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error unsealing: %s", err))
+		return 2
+	}
+
+	c.prettySealStatus(status)
+	return 0
+}
+
+func (c *UnsealCommand) prettySealStatus(status *api.SealStatusResponse) {
+	c.UI.Output(fmt.Sprintf("Sealed: %t", status.Sealed))
+	c.UI.Output(fmt.Sprintf("Key Shares: %d", status.N))
+	c.UI.Output(fmt.Sprintf("Key Threshold: %d", status.T))
+	c.UI.Output(fmt.Sprintf("Unseal Progress: %d", status.Progress))
+	if status.Nonce != "" {
+		c.UI.Output(fmt.Sprintf("Unseal Nonce: %s", status.Nonce))
+	}
 }
