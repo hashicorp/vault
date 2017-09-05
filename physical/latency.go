@@ -1,7 +1,6 @@
 package physical
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -57,7 +56,6 @@ func (l *LatencyInjector) addLatency() {
 	max := 100 + l.jitterPercent
 	percent := float64(l.random.Intn(max-min)+min) / 100
 	latencyDuration := time.Duration(int64(float64(l.latency/time.Millisecond)*percent)) * time.Millisecond
-	fmt.Printf("%v\n", latencyDuration)
 	time.Sleep(latencyDuration)
 }
 
