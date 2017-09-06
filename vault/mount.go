@@ -208,6 +208,11 @@ func (c *Core) mount(entry *MountEntry) error {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
 
+	// Upgrade to new name
+	if entry.Type == "generic" {
+		entry.Type = "kv"
+	}
+
 	// Generate a new UUID and view
 	if entry.UUID == "" {
 		entryUUID, err := uuid.GenerateUUID()
@@ -568,6 +573,10 @@ func (c *Core) loadMounts() error {
 				entry.Accessor = accessor
 				needPersist = true
 			}
+			if entry.Type == "generic" {
+				entry.Type = "kv"
+				needPersist = true
+			}
 		}
 
 		// Done if we have restored the mount table and we don't need
@@ -801,19 +810,19 @@ func (c *Core) defaultMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
 	}
-	mountAccessor, err := c.generateMountAccessor("generic")
+	mountAccessor, err := c.generateMountAccessor("kv")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
 	}
-	genericMount := &MountEntry{
+	kvMount := &MountEntry{
 		Table:       mountTableType,
 		Path:        "secret/",
-		Type:        "generic",
-		Description: "generic secret storage",
+		Type:        "kv",
+		Description: "key/value secret storage",
 		UUID:        mountUUID,
 		Accessor:    mountAccessor,
 	}
-	table.Entries = append(table.Entries, genericMount)
+	table.Entries = append(table.Entries, kvMount)
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
 	return table
 }

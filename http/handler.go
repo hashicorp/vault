@@ -70,17 +70,17 @@ func Handler(core *vault.Core) http.Handler {
 	helpWrappedHandler := wrapHelpHandler(mux, core)
 	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
 
-	// Wrap the help wrapped handler with another layer with a generic
+	// Wrap the help wrapped handler with another layer with a kv
 	// handler
-	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler)
+	kvWrappedHandler := wrapKVHandler(corsWrappedHandler)
 
-	return genericWrappedHandler
+	return kvWrappedHandler
 }
 
-// wrapGenericHandler wraps the handler with an extra layer of handler where
+// wrapKVHandler wraps the handler with an extra layer of handler where
 // tasks that should be commonly handled for all the requests and/or responses
 // are performed.
-func wrapGenericHandler(h http.Handler) http.Handler {
+func wrapKVHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault

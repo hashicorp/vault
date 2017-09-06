@@ -53,7 +53,7 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (
 
 	b.Backend.Secrets = []*framework.Secret{
 		&framework.Secret{
-			Type: "generic",
+			Type: "kv",
 
 			Renew:  b.handleRead,
 			Revoke: b.handleRevoke,
@@ -116,7 +116,7 @@ func (b *PassthroughBackend) handleRead(
 	var resp *logical.Response
 	if b.generateLeases {
 		// Generate the response
-		resp = b.Secret("generic").Response(rawData, nil)
+		resp = b.Secret("kv").Response(rawData, nil)
 		resp.Secret.Renewable = false
 	} else {
 		resp = &logical.Response{
@@ -207,7 +207,7 @@ func (b *PassthroughBackend) handleList(
 }
 
 const passthroughHelp = `
-The generic backend reads and writes arbitrary secrets to the backend.
+The kv backend reads and writes arbitrary secrets to the backend.
 The secrets are encrypted/decrypted by Vault: they are never stored
 unencrypted in the backend and the backend never has an opportunity to
 see the unencrypted value.
