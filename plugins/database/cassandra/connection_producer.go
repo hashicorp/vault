@@ -3,6 +3,7 @@ package cassandra
 import (
 	"crypto/tls"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -149,10 +150,24 @@ func (c *cassandraConnectionProducer) Close() error {
 }
 
 func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
-	clusterConfig := gocql.NewCluster(strings.Split(c.Hosts, ",")...)
+	hosts := strings.Split(c.Hosts, ",")
+	clusterConfig := gocql.NewCluster(hosts...)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
 		Username: c.Username,
 		Password: c.Password,
+	}
+
+	// Explicitly set the cluster port if that's set
+	// as part of the first host entry
+	if len(hosts) > 0 {
+		parts := strings.Split(hosts[0], ":")
+		if len(parts) > 1 {
+			// Only set port if it's a valid value
+			port, err := strconv.Atoi(parts[len(parts)-1])
+			if err == nil {
+				clusterConfig.Port = port
+			}
+		}
 	}
 
 	clusterConfig.ProtoVersion = c.ProtocolVersion

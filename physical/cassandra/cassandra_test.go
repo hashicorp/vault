@@ -64,7 +64,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 		t.Fatalf("cassandra: failed to connect to docker: %s", err)
 	}
 
-	resource, err := pool.Run("cassandra", "3.11", nil)
+	resource, err := pool.Run("cassandra", "3.11", []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"})
 	if err != nil {
 		t.Fatalf("cassandra: could not start container: %s", err)
 	}

@@ -29,6 +29,7 @@ func prepareCassandraTestContainer(t *testing.T) (cleanup func(), retURL string)
 	ro := &dockertest.RunOptions{
 		Repository: "cassandra",
 		Tag:        "latest",
+		Env:        []string{"CASSANDRA_BROADCAST_ADDRESS=localhost"},
 		Mounts:     []string{cassandraMountPath},
 	}
 	resource, err := pool.RunWithOptions(ro)
