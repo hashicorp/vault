@@ -128,12 +128,12 @@ These metrics relate to supported authentication backends.
 | `vault.rollback.attempt.auth-token-` | This measures the number of rollback operations attempted for authentication tokens backend | Number of operations | Summary |
 | `vault.rollback.attempt.auth-ldap-` | This measures the number of rollback operations attempted for the LDAP authentication backend | Number of operations | Summary |
 | `vault.rollback.attempt.cubbyhole-` | This measures the number of rollback operations attempted for the cubbyhole authentication backend | Number of operations | Summary |
-| `vault.rollback.attempt.secret-` | This measures the number of rollback operations attempted for the generic secret backend | Number of operations | Summary |
+| `vault.rollback.attempt.secret-` | This measures the number of rollback operations attempted for the kv secret backend | Number of operations | Summary |
 | `vault.rollback.attempt.sys-` | This measures the number of rollback operations attempted for the sys backend | Number of operations | Summary |
 | `vault.route.rollback.auth-ldap-` | This measures the number of rollback operations for the LDAP authentication backend | Number of operations | Summary |
 | `vault.route.rollback.auth-token-` | This measures the number of rollback operations for the authentication tokens backend | Number of operations | Summary |
 | `vault.route.rollback.cubbyhole-` | This measures the number of rollback operations for the cubbyhole authentication backend | Number of operations | Summary |
-| `vault.route.rollback.secret-` | This measures the number of rollback operations for the generic secret backend | Number of operations | Summary | 
+| `vault.route.rollback.secret-` | This measures the number of rollback operations for the kv secret backend | Number of operations | Summary | 
 | `vault.route.rollback.sys-` | This measures the number of rollback operations for the sys backend | Number of operations | Summary |
 
 ### Storage Backend Metrics

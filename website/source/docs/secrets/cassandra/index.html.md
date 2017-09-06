@@ -31,7 +31,7 @@ on every path, use `vault path-help` after mounting the backend.
 ## Quick Start
 
 The first step to using the Cassandra backend is to mount it.
-Unlike the `generic` backend, the `cassandra` backend is not mounted by default.
+Unlike the `kv` backend, the `cassandra` backend is not mounted by default.
 
 ```text
 $ vault mount cassandra

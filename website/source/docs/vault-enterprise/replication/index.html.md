@@ -50,7 +50,7 @@ encryption keys for `transit`, etc).
 
 If a user action would modify underlying shared state, the secondary forwards the request 
 to the primary to be handled; this is transparent to the client. In practice, most 
-high-volume workloads (reads in the `generic` backend, encryption/decryption operations
+high-volume workloads (reads in the `kv` backend, encryption/decryption operations
 in `transit`, etc.) can be satisfied by the local secondary, allowing Vault to scale
 relatively horizontally with the number of secondaries rather than vertically as 
 in the past.
