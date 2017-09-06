@@ -108,9 +108,9 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 func (h *CLIHandler) Help() string {
 	help := `
-Usage: vault auth -method=aws [CONFIG K=V...]
+Usage: vault login -method=aws [CONFIG K=V...]
 
-  The AWS authentication provider allows users to authenticate with AWS IAM
+  The AWS authentication method allows users to authenticate with AWS IAM
   credentials. The AWS IAM credentials may be specified in a number of ways,
   listed in order of precedence below:
 
@@ -124,11 +124,11 @@ Usage: vault auth -method=aws [CONFIG K=V...]
 
   Authenticate using locally stored credentials:
 
-      $ vault auth -method=aws
+      $ vault login -method=aws
 
   Authenticate by passing keys:
 
-      $ vault auth -method=aws aws_access_key_id=... aws_secret_access_key=...
+      $ vault login -method=aws aws_access_key_id=... aws_secret_access_key=...
 
 Configuration:
 
@@ -145,14 +145,13 @@ Configuration:
       Value for the x-vault-aws-iam-server-id header in requests
 
   mount=<string>
-      Path where the AWS credential provider is mounted. This is usually
-      provided via the -path flag in the "vault auth" command, but it can be
-      specified here as well. If specified here, it takes precedence over
-      the value for -path. The default value is "aws".
+      Path where the AWS credential method is mounted. This is usually provided
+      via the -path flag in the "vault login" command, but it can be specified
+      here as well. If specified here, it takes precedence over the value for
+      -path. The default value is "aws".
 
   role=<string>
       Name of the role to request a token against
-
 `
 
 	return strings.TrimSpace(help)

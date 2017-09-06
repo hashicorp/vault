@@ -40,22 +40,21 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 func (h *CLIHandler) Help() string {
 	help := `
-Usage: vault auth -method=cert [CONFIG K=V...]
+Usage: vault login -method=cert [CONFIG K=V...]
 
-  The certificate authentication provider allows uers to authenticate with a
+  The certificate authentication method allows uers to authenticate with a
   client certificate passed with the request. The -client-cert and -client-key
-  flags are included with the "vault auth" command, NOT as configuration to
-  the authentication provider.
+  flags are included with the "vault login" command, NOT as configuration to the
+  authentication method.
 
   Authenticate using a local client certificate:
 
-      $ vault auth -method=cert -client-cert=cert.pem -client-key=key.pem
+      $ vault login -method=cert -client-cert=cert.pem -client-key=key.pem
 
 Configuration:
 
   name=<string>
       Certificate role to authenticate against.
-
 `
 
 	return strings.TrimSpace(help)

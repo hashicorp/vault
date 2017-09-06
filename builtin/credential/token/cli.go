@@ -63,15 +63,15 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 func (h *CLIHandler) Help() string {
 	help := `
-Usage: vault auth TOKEN [CONFIG K=V...]
+Usage: vault login TOKEN [CONFIG K=V...]
 
-  The token authentication provider allows logging in directly with a token.
-  This can be a token from the "token-create" command or API. There are no
-  configuration options for this authentication provider.
+  The token authentication method allows logging in directly with a token. This
+  can be a token from the "token-create" command or API. There are no
+  configuration options for this authentication method.
 
   Authenticate using a token:
 
-      $ vault auth 96ddf4bc-d217-f3ba-f9bd-017055595017
+      $ vault login 96ddf4bc-d217-f3ba-f9bd-017055595017
 
   This token usually comes from a different source such as the API or via the
   built-in "vault token-create" command.
@@ -80,8 +80,7 @@ Configuration:
 
   token=<string>
       The token to use for authentication. This is usually provided directly
-      via the "vault auth" command.
-
+      via the "vault login" command.
 `
 
 	return strings.TrimSpace(help)

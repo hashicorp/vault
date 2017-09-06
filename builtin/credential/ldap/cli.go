@@ -62,24 +62,24 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 func (h *CLIHandler) Help() string {
 	help := `
-Usage: vault auth -method=ldap [CONFIG K=V...]
+Usage: vault login -method=ldap [CONFIG K=V...]
 
-  The LDAP authentication provider allows users to authenticate using LDAP or
+  The LDAP authentication method allows users to authenticate using LDAP or
   Active Directory.
 
   If MFA is enabled, a "method" and/or "passcode" may be required depending on
-  the MFA provider. To check which MFA is in use, run:
+  the MFA method. To check which MFA is in use, run:
 
       $ vault read auth/<mount>/mfa_config
 
   Authenticate as "sally":
 
-      $ vault auth -method=ldap username=sally
+      $ vault login -method=ldap username=sally
       Password (will be hidden):
 
   Authenticate as "bob":
 
-      $ vault auth -method=ldap username=bob password=password
+      $ vault login -method=ldap username=bob password=password
 
 Configuration:
 
@@ -95,7 +95,6 @@ Configuration:
 
   username=<string>
       LDAP username to use for authentication.
-
 `
 
 	return strings.TrimSpace(help)
