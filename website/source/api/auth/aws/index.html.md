@@ -842,9 +842,11 @@ given instance can be allowed to gain in a worst-case scenario.
   the metadata document, so essentially, this disables the client nonce check
   whenever the instance is migrated to a new host and pendingTime is newer than
   the previously-remembered time. Use with caution. Defaults to 'false'.
+  Mutually exclusive with `disallow_reauthentication`.
 - `disallow_reauthentication` `(bool: false)` - If set, only allows a single
   token to be granted per instance ID. This can be cleared with the
-  auth/aws/identity-whitelist endpoint. Defaults to 'false'.
+  auth/aws/identity-whitelist endpoint. Defaults to 'false'. Mutually exclusive
+  with `allow_instance_migration`.
 
 ### Sample Payload
 
