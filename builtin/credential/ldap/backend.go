@@ -123,7 +123,12 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	// Try to bind as the login user. This is where the actual authentication takes place.
-	if err = c.Bind(userBindDN, password); err != nil {
+	if len(password) > 0 {
+		err = c.Bind(userBindDN, password)
+	} else {
+		err = c.UnauthenticatedBind(userBindDN)
+	}
+	if err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
 	}
 
@@ -237,7 +242,13 @@ func (b *backend) getCN(dn string) string {
 func (b *backend) getUserBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (string, error) {
 	bindDN := ""
 	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
-		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
+		var err error
+		if cfg.BindPassword != "" {
+			err = c.Bind(cfg.BindDN, cfg.BindPassword)
+		} else {
+			err = c.UnauthenticatedBind(cfg.BindDN)
+		}
+		if err != nil {
 			return bindDN, fmt.Errorf("LDAP bind (service) failed: %v", err)
 		}
 
