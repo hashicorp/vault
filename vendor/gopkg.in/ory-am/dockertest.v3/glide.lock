@@ -58,7 +58,7 @@ imports:
   - libcontainer/user
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
-- name: github.com/sirupsen/logrus
+- name: github.com/Sirupsen/logrus
   version: 7dd06bf38e1e13df288d471a57d5adbac106be9e
   repo: https://github.com/sirupsen/logrus.git
   vcs: git

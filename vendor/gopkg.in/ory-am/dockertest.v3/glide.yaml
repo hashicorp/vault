@@ -5,7 +5,7 @@ import:
 - package: github.com/fsouza/go-dockerclient
 - package: github.com/sirupsen/logrus
   version: master
-- package: github.com/sirupsen/logrus
+- package: github.com/Sirupsen/logrus
   repo: https://github.com/sirupsen/logrus.git
   vcs: git
   version: master
