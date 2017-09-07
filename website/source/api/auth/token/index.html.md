@@ -301,7 +301,7 @@ if there is a lease associated with it.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/auth/token/renew`          | `200 application/json` |
-| `POST`   | `/auth/token/renew/:token`   | `200 application/json` |
+| `GET`    | `/auth/token/renew/:token`   | `200 application/json` |
 
 ### Parameters
 
@@ -490,7 +490,7 @@ endpoint.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/auth/token/revoke-orphan`          | `204 (empty body)` |
-| `POST`   | `/auth/token/revoke-orphan/:token`   | `204 (empty body)` |
+| `GET`    | `/auth/token/revoke-orphan/:token`   | `204 (empty body)` |
 
 ### Parameters
 
