@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	clusterTestPausePeriod = 2 * time.Second
+	clusterTestPausePeriod = 4 * time.Second
 )
 
 func TestClusterFetching(t *testing.T) {
