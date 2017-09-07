@@ -78,6 +78,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 		if err != nil {
 			return err
 		}
+		defer sess.Close()
 
 		// Create keyspace
 		q := sess.Query(`CREATE KEYSPACE "vault" WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };`)

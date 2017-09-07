@@ -21,6 +21,7 @@ import (
 // interface for cassandra databases to make connections.
 type cassandraConnectionProducer struct {
 	Hosts             string      `json:"hosts" structs:"hosts" mapstructure:"hosts"`
+	Port              int         `json:"port" structs:"port" mapstructure:"port"`
 	Username          string      `json:"username" structs:"username" mapstructure:"username"`
 	Password          string      `json:"password" structs:"password" mapstructure:"password"`
 	TLS               bool        `json:"tls" structs:"tls" mapstructure:"tls"`
@@ -158,7 +159,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	}
 
 	// Explicitly set the cluster port if that's set
-	// as part of the first host entry
+	// as part of the first host entry.
 	if len(hosts) > 0 {
 		parts := strings.Split(hosts[0], ":")
 		if len(parts) > 1 {
@@ -168,6 +169,12 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 				clusterConfig.Port = port
 			}
 		}
+	}
+
+	// Setitng c.Port takes precedence, so override the
+	// above if that's set
+	if c.Port != 0 {
+		clusterConfig.Port = c.Port
 	}
 
 	clusterConfig.ProtoVersion = c.ProtocolVersion
