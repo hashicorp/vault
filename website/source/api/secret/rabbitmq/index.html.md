@@ -167,7 +167,7 @@ This endpoint deletes the role definition.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/rabbitmq/roles/:namer`     | `204 (empty body)`     |
+| `DELETE` | `/rabbitmq/roles/:name`     | `204 (empty body)`     |
 
 ### Parameters
 
