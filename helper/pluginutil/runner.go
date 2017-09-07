@@ -136,7 +136,7 @@ type APIClientMeta struct {
 }
 
 func (f *APIClientMeta) FlagSet() *flag.FlagSet {
-	fs := flag.NewFlagSet("vault plugin settings", flag.ExitOnError)
+	fs := flag.NewFlagSet("vault plugin settings", flag.ContinueOnError)
 
 	fs.StringVar(&f.flagCACert, "ca-cert", "", "")
 	fs.StringVar(&f.flagCAPath, "ca-path", "", "")
