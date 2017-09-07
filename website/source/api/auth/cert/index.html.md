@@ -228,9 +228,9 @@ $ curl \
 }
 ```
 
-## Delete Certificate Role
+## Delete CRL
 
-Deletes the named role and CA cert from the backend mount.
+Deletes the named CRL from the backend mount.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
