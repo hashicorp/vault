@@ -69,6 +69,10 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 		t.Fatalf("cassandra: could not start container: %s", err)
 	}
 
+	cleanup := func() {
+		pool.Purge(resource)
+	}
+
 	setup := func() error {
 		cluster := gocql.NewCluster("127.0.0.1")
 		p, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
@@ -100,11 +104,9 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 		return nil
 	}
 	if pool.Retry(setup); err != nil {
+		cleanup()
 		t.Fatalf("cassandra: could not setup container: %s", err)
 	}
 
-	cleanup := func() {
-		pool.Purge(resource)
-	}
 	return cleanup, fmt.Sprintf("127.0.0.1:%s", resource.GetPort("9042/tcp"))
 }

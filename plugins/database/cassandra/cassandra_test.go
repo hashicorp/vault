@@ -29,7 +29,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 	ro := &dockertest.RunOptions{
 		Repository: "cassandra",
 		Tag:        "latest",
-		Env:        []string{"CASSANDRA_BROADCAST_ADDRESS=localhost"},
+		Env:        []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
 		Mounts:     []string{cassandraMountPath},
 	}
 	resource, err := pool.RunWithOptions(ro)
@@ -44,8 +44,8 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 		}
 	}
 
-	address := "localhost"
 	port, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
+	address := fmt.Sprintf("127.0.0.1:%d", port)
 
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
@@ -64,6 +64,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 		defer session.Close()
 		return nil
 	}); err != nil {
+		cleanup()
 		t.Fatalf("Could not connect to cassandra docker container: %s", err)
 	}
 	return cleanup, address, port
