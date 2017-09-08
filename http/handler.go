@@ -70,7 +70,7 @@ func Handler(core *vault.Core) http.Handler {
 	helpWrappedHandler := wrapHelpHandler(mux, core)
 	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
 
-	// Wrap the help wrapped handler with another layer with a kv
+	// Wrap the help wrapped handler with another layer with a generic
 	// handler
 	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler)
 
