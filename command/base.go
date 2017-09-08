@@ -13,7 +13,6 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
-	"github.com/kr/text"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
@@ -272,22 +271,6 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 	})
 
 	return c.flags
-}
-
-// wrapAtLengthWithPadding wraps the given text at the maxLineLength, taking
-// into account any provided left padding.
-func wrapAtLengthWithPadding(s string, pad int) string {
-	wrapped := text.Wrap(s, maxLineLength-pad)
-	lines := strings.Split(wrapped, "\n")
-	for i, line := range lines {
-		lines[i] = strings.Repeat(" ", pad) + line
-	}
-	return strings.Join(lines, "\n")
-}
-
-// wrapAtLength wraps the given text to maxLineLength.
-func wrapAtLength(s string) string {
-	return wrapAtLengthWithPadding(s, 0)
 }
 
 // FlagSets is a group of flag sets.

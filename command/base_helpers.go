@@ -8,15 +8,12 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	kvbuilder "github.com/hashicorp/vault/helper/kv-builder"
+	"github.com/kr/text"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/ryanuber/columnize"
 )
-
-var ErrMissingID = fmt.Errorf("Missing ID!")
-var ErrMissingPath = fmt.Errorf("Missing PATH!")
-var ErrMissingThing = fmt.Errorf("Missing THING!")
 
 // extractListData reads the secret and returns a typed list of data and a
 // boolean indicating whether the extraction was successful.
@@ -34,54 +31,9 @@ func extractListData(secret *api.Secret) ([]interface{}, bool) {
 	return i, ok
 }
 
-// extractPath extracts the path and list of arguments from the args. If there
-// are no extra arguments, the remaining args will be nil.
-func extractPath(args []string) (string, []string, error) {
-	str, remaining, err := extractThings(args)
-	if err == ErrMissingThing {
-		err = ErrMissingPath
-	}
-	return str, remaining, err
-}
-
-// extractID extracts the path and list of arguments from the args. If there
-// are no extra arguments, the remaining args will be nil.
-func extractID(args []string) (string, []string, error) {
-	str, remaining, err := extractThings(args)
-	if err == ErrMissingThing {
-		err = ErrMissingID
-	}
-	return str, remaining, err
-}
-
-func extractThings(args []string) (string, []string, error) {
-	if len(args) < 1 {
-		return "", nil, ErrMissingThing
-	}
-
-	// Path is always the first argument after all flags
-	thing := args[0]
-
-	// Strip leading and trailing slashes
-	thing = sanitizePath(thing)
-
-	// Verify we have a thing
-	if thing == "" {
-		return "", nil, ErrMissingThing
-	}
-
-	// Splice remaining args
-	var remaining []string
-	if len(args) > 1 {
-		remaining = args[1:]
-	}
-
-	return thing, remaining, nil
-}
-
 // sanitizePath removes any leading or trailing things from a "path".
 func sanitizePath(s string) string {
-	return ensureNoTrailingSlash(ensureNoLeadingSlash(s))
+	return ensureNoTrailingSlash(ensureNoLeadingSlash(strings.TrimSpace(s)))
 }
 
 // ensureTrailingSlash ensures the given string has a trailing slash.
@@ -124,33 +76,45 @@ func ensureNoLeadingSlash(s string) string {
 }
 
 // columnOuput prints the list of items as a table with no headers.
-func columnOutput(list []string) string {
+func columnOutput(list []string, c *columnize.Config) string {
 	if len(list) == 0 {
 		return ""
 	}
 
-	return columnize.Format(list, &columnize.Config{
-		Glue:  "    ",
-		Empty: "n/a",
-	})
+	if c == nil {
+		c = &columnize.Config{}
+	}
+	if c.Glue == "" {
+		c.Glue = "    "
+	}
+	if c.Empty == "" {
+		c.Empty = "n/a"
+	}
+
+	return columnize.Format(list, c)
 }
 
 // tableOutput prints the list of items as columns, where the first row is
 // the list of headers.
-func tableOutput(list []string) string {
+func tableOutput(list []string, c *columnize.Config) string {
 	if len(list) == 0 {
 		return ""
 	}
 
+	delim := "|"
+	if c != nil && c.Delim != "" {
+		delim = c.Delim
+	}
+
 	underline := ""
-	headers := strings.Split(list[0], "|")
+	headers := strings.Split(list[0], delim)
 	for i, h := range headers {
 		h = strings.TrimSpace(h)
 		u := strings.Repeat("-", len(h))
 
 		underline = underline + u
 		if i != len(headers)-1 {
-			underline = underline + " | "
+			underline = underline + delim
 		}
 	}
 
@@ -158,7 +122,7 @@ func tableOutput(list []string) string {
 	copy(list[2:], list[1:])
 	list[1] = underline
 
-	return columnOutput(list)
+	return columnOutput(list, c)
 }
 
 // parseArgsData parses the given args in the format key=value into a map of
@@ -207,7 +171,7 @@ func printKeyStatus(ks *api.KeyStatus) string {
 	return columnOutput([]string{
 		fmt.Sprintf("Key Term | %d", ks.Term),
 		fmt.Sprintf("Install Time | %s", ks.InstallTime.UTC().Format(time.RFC822)),
-	})
+	}, nil)
 }
 
 // expandPath takes a filepath and returns the full expanded path, accounting
@@ -222,4 +186,58 @@ func expandPath(s string) string {
 		return s
 	}
 	return e
+}
+
+// wrapAtLengthWithPadding wraps the given text at the maxLineLength, taking
+// into account any provided left padding.
+func wrapAtLengthWithPadding(s string, pad int) string {
+	wrapped := text.Wrap(s, maxLineLength-pad)
+	lines := strings.Split(wrapped, "\n")
+	for i, line := range lines {
+		lines[i] = strings.Repeat(" ", pad) + line
+	}
+	return strings.Join(lines, "\n")
+}
+
+// wrapAtLength wraps the given text to maxLineLength.
+func wrapAtLength(s string) string {
+	return wrapAtLengthWithPadding(s, 0)
+}
+
+// ttlToAPI converts a user-supplied ttl into an API-compatible string. If
+// the TTL is 0, this returns the empty string. If the TTL is negative, this
+// returns "system" to indicate to use the system values. Otherwise, the
+// time.Duration ttl is used.
+func ttlToAPI(d time.Duration) string {
+	if d == 0 {
+		return ""
+	}
+
+	if d < 0 {
+		return "system"
+	}
+
+	return d.String()
+}
+
+// humanDuration prints the time duration without those pesky zeros.
+func humanDuration(d time.Duration) string {
+	if d == 0 {
+		return "0s"
+	}
+
+	s := d.String()
+	if strings.HasSuffix(s, "m0s") {
+		s = s[:len(s)-2]
+	}
+	if idx := strings.Index(s, "h0m"); idx > 0 {
+		s = s[:idx+1] + s[idx+3:]
+	}
+	return s
+}
+
+// humanDurationInt prints the given int as if it were a time.Duration  number
+// of seconds.
+func humanDurationInt(i int) string {
+	return humanDuration(time.Duration(i) * time.Second)
 }
