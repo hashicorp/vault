@@ -8,7 +8,6 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*UnwrapCommand)(nil)
 var _ cli.CommandAutocomplete = (*UnwrapCommand)(nil)
 
@@ -19,7 +18,7 @@ type UnwrapCommand struct {
 }
 
 func (c *UnwrapCommand) Synopsis() string {
-	return "Unwraps a wrapped secret"
+	return "Unwrap a wrapped secret"
 }
 
 func (c *UnwrapCommand) Help() string {
@@ -30,7 +29,7 @@ Usage: vault unwrap [options] [TOKEN]
   same as the "vault read" operation on the non-wrapped secret. If no token
   is given, the data in the currently authenticated token is unwrapped.
 
-  Unwrap the data in the cubbyhole backend for a token:
+  Unwrap the data in the cubbyhole secrets engine for a token:
 
       $ vault unwrap 3de9ece1-b347-e143-29b0-dc2dc31caafd
 
