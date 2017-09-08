@@ -3,9 +3,12 @@ package command
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"sort"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/mitchellh/cli"
 )
@@ -27,7 +30,14 @@ func Run(args []string) int {
 		Name:     "vault",
 		Args:     args,
 		Commands: Commands,
-		HelpFunc: helpFunc,
+
+		HelpFunc: FilterDeprecatedFunc(
+			FilterCommandFunc("version",
+				groupedHelpFunc(
+					cli.BasicHelpFunc("vault"),
+				),
+			),
+		),
 
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,
@@ -42,77 +52,94 @@ func Run(args []string) int {
 	return exitCode
 }
 
-// helpFunc is a cli.HelpFunc that can is used to output the help for Vault.
-func helpFunc(commands map[string]cli.CommandFactory) string {
-	commonNames := map[string]struct{}{
-		"delete": struct{}{},
-		"read":   struct{}{},
-		"renew":  struct{}{},
-		"revoke": struct{}{},
-		"server": struct{}{},
-		"status": struct{}{},
-		"unwrap": struct{}{},
-		"write":  struct{}{},
-	}
-
-	// Determine the maximum key length, and classify based on type
-	commonCommands := make(map[string]cli.CommandFactory)
-	otherCommands := make(map[string]cli.CommandFactory)
-
-	commonKeyLen, otherKeyLen := 0, 0
-	for key, f := range commands {
-		if _, ok := commonNames[key]; ok {
-			if len(key) > commonKeyLen {
-				commonKeyLen = len(key)
+func FilterCommandFunc(name string, f cli.HelpFunc) cli.HelpFunc {
+	return func(commands map[string]cli.CommandFactory) string {
+		newCommands := make(map[string]cli.CommandFactory, len(commands))
+		for k, v := range commands {
+			if k != name {
+				newCommands[k] = v
 			}
-			commonCommands[key] = f
-		} else {
-			if len(key) > otherKeyLen {
-				otherKeyLen = len(key)
-			}
-			otherCommands[key] = f
 		}
+		return f(newCommands)
 	}
-
-	var buf bytes.Buffer
-	buf.WriteString("Usage: vault <command> [args]\n\n")
-	buf.WriteString("Common commands:\n\n")
-	buf.WriteString(listCommands(commonCommands, commonKeyLen))
-	buf.WriteString("\n")
-	buf.WriteString("Other commands:\n\n")
-	buf.WriteString(listCommands(otherCommands, otherKeyLen))
-	return strings.TrimSpace(buf.String())
 }
 
-// listCommands just lists the commands in the map with the
-// given maximum key length.
-func listCommands(commands map[string]cli.CommandFactory, maxKeyLen int) string {
-	var buf bytes.Buffer
+// FilterDeprecatedFunc filters deprecated
+func FilterDeprecatedFunc(f cli.HelpFunc) cli.HelpFunc {
+	return func(commands map[string]cli.CommandFactory) string {
+		newCommands := make(map[string]cli.CommandFactory)
 
-	// Get the list of keys so we can sort them, and also get the maximum
-	// key length so they can be aligned properly.
-	keys := make([]string, 0, len(commands))
-	for key, _ := range commands {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+		for k, cmdFn := range commands {
+			command, err := cmdFn()
+			if err != nil {
+				log.Printf("[ERR] cli: Command %q failed to load: %s", k, err)
+			}
 
-	for _, key := range keys {
-		commandFunc, ok := commands[key]
-		if !ok {
-			// This should never happen since we JUST built the list of
-			// keys.
-			panic("command not found: " + key)
+			if _, ok := command.(*DeprecatedCommand); ok {
+				continue
+			}
+
+			newCommands[k] = cmdFn
 		}
 
-		command, err := commandFunc()
-		if err != nil {
-			panic(fmt.Sprintf("command '%s' failed to load: %s", key, err))
+		return f(newCommands)
+	}
+}
+
+var commonCommands = []string{
+	"read",
+	"write",
+	"delete",
+	"list",
+	"login",
+	"server",
+	"status",
+	"unwrap",
+}
+
+func groupedHelpFunc(f cli.HelpFunc) cli.HelpFunc {
+	return func(commands map[string]cli.CommandFactory) string {
+		var b bytes.Buffer
+		tw := tabwriter.NewWriter(&b, 0, 2, 6, ' ', 0)
+
+		fmt.Fprintf(tw, "Usage: vault <command> [args]\n\n")
+		fmt.Fprintf(tw, "Common commands:\n")
+		for _, v := range commonCommands {
+			printCommand(tw, v, commands[v])
 		}
 
-		key = fmt.Sprintf("%s%s", key, strings.Repeat(" ", maxKeyLen-len(key)))
-		buf.WriteString(fmt.Sprintf("    %s    %s\n", key, command.Synopsis()))
-	}
+		otherCommands := make([]string, 0, len(commands))
+		for k := range commands {
+			found := false
+			for _, v := range commonCommands {
+				if k == v {
+					found = true
+					break
+				}
+			}
 
-	return buf.String()
+			if !found {
+				otherCommands = append(otherCommands, k)
+			}
+		}
+		sort.Strings(otherCommands)
+
+		fmt.Fprintf(tw, "\n")
+		fmt.Fprintf(tw, "Other commands:\n")
+		for _, v := range otherCommands {
+			printCommand(tw, v, commands[v])
+		}
+
+		tw.Flush()
+
+		return strings.TrimSpace(b.String())
+	}
+}
+
+func printCommand(w io.Writer, name string, cmdFn cli.CommandFactory) {
+	cmd, err := cmdFn()
+	if err != nil {
+		panic(fmt.Sprintf("failed to load %q command: %s", name, err))
+	}
+	fmt.Fprintf(w, "    %s\t%s\n", name, cmd.Synopsis())
 }
