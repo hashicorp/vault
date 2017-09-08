@@ -3287,17 +3287,22 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 	cubbyFuncLock.Unlock()
 
+	errCh := make(chan error)
+	readyCh := make(chan struct{})
 	go func() {
 		cubbyFuncLock.RLock()
+		readyCh <- struct{}{}
 		err := ts.revokeSalted(saltTut)
 		cubbyFuncLock.RUnlock()
 		if err == nil {
-			t.Fatalf("expected error")
+			errCh <- fmt.Errorf("expected an error from revokeSalted, got nil")
 		}
+		close(readyCh)
+		close(errCh)
 	}()
 
-	// Give time for the function to start and grab locks
-	time.Sleep(200 * time.Millisecond)
+	// Wait for goroutine to start and grab locks
+	_ = <-readyCh
 	te, err = ts.lookupSalted(saltTut, true)
 	if err != nil {
 		t.Fatal(err)
@@ -3309,8 +3314,11 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatalf("bad: %d", te.NumUses)
 	}
 
-	// Let things catch up
-	time.Sleep(2 * time.Second)
+	// Check the error channel from the revokeSalted in goroutine
+	err = <-errCh
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Put back to normal
 	cubbyFuncLock.Lock()

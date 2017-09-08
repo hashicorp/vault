@@ -2,7 +2,7 @@ package vault
 
 import (
 	"reflect"
-	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -420,29 +420,34 @@ func TestACL_ValuePermissions(t *testing.T) {
 func TestACL_CreationRace(t *testing.T) {
 	policy, err := Parse(valuePermissionsPolicy)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("Error parsing policy: %v", err)
 	}
 
-	var wg sync.WaitGroup
-	stopTime := time.Now().Add(20 * time.Second)
+	errCh := make(chan error)
+	var count uint64 = 0
+	ticker := time.NewTicker(20 * time.Second)
 
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
+	var i int
+	for i = 0; i < 50; i++ {
 		go func() {
-			defer wg.Done()
 			for {
-				if time.Now().After(stopTime) {
-					return
-				}
 				_, err := NewACL([]*Policy{policy})
 				if err != nil {
-					t.Fatalf("err: %v", err)
+					errCh <- err
 				}
+				atomic.AddUint64(&count, 1)
 			}
 		}()
 	}
 
-	wg.Wait()
+	select {
+	case <-ticker.C:
+		t.Logf("%d successful ACL creations, %d concurrent loops",
+			atomic.LoadUint64(&count), i)
+	case err := <-errCh:
+		ticker.Stop()
+		t.Fatalf("Error creating new ACL:%v", err)
+	}
 }
 
 var tokenCreationPolicy = `

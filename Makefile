@@ -24,7 +24,7 @@ dev-dynamic: prep
 
 # test runs the unit tests and vets the code
 test: fmtcheck prep
-	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=20m -parallel=4
+	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=40m -parallel=4
 
 testcompile: fmtcheck prep
 	@for pkg in $(TEST) ; do \

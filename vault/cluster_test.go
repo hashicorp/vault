@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	clusterTestPausePeriod = 2 * time.Second
+	clusterTestPausePeriod = 4 * time.Second
 )
 
 func TestClusterFetching(t *testing.T) {
@@ -92,7 +92,7 @@ func TestClusterHAFetching(t *testing.T) {
 
 func TestCluster_ListenForRequests(t *testing.T) {
 	// Make this nicer for tests
-	manualStepDownSleepPeriod = 5 * time.Second
+	manualStepDownSleepPeriod = 10 * time.Second
 
 	cluster := NewTestCluster(t, nil, &TestClusterOptions{
 		KeepStandbysSealed: true,
@@ -130,7 +130,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
 					continue
 				}
-				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, cores[0].Listeners[0], cores[0].Listeners[1])
+				t.Fatalf("error: %v\nlisteners are\n%#v\n", err, cores[0].Listeners)
 			}
 			if expectFail {
 				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
