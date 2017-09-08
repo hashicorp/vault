@@ -11,11 +11,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*PolicyWriteCommand)(nil)
 var _ cli.CommandAutocomplete = (*PolicyWriteCommand)(nil)
 
-// PolicyWriteCommand is a Command uploads a policy
 type PolicyWriteCommand struct {
 	*BaseCommand
 
@@ -23,26 +21,24 @@ type PolicyWriteCommand struct {
 }
 
 func (c *PolicyWriteCommand) Synopsis() string {
-	return "Uploads a policy file"
+	return "Uploads a named policy from a file"
 }
 
 func (c *PolicyWriteCommand) Help() string {
 	helpText := `
-Usage: vault policy-write [options] NAME PATH
+Usage: vault policy write [options] NAME PATH
 
-  Uploads a policy with the given name from the contents of a local file or
-  stdin. If the path is "-", the policy is read from stdin. Otherwise, it is
-  loaded from the file at the given path.
+  Uploads a policy with name NAME from the contents of a local file PATH or
+  stdin. If PATH is "-", the policy is read from stdin. Otherwise, it is
+  loaded from the file at the given path on the local disk.
 
-  Upload a policy named "my-policy" from /tmp/policy.hcl on the local disk:
+  Upload a policy named "my-policy" from "/tmp/policy.hcl" on the local disk:
 
-      $ vault policy-write my-policy /tmp/policy.hcl
+      $ vault policy write my-policy /tmp/policy.hcl
 
   Upload a policy from stdin:
 
-      $ cat my-policy.hcl | vault policy-write my-policy -
-
-  For a full list of examples, please see the documentation.
+      $ cat my-policy.hcl | vault policy write my-policy -
 
 ` + c.Flags().Help()
 

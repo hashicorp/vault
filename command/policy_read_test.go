@@ -7,18 +7,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testPolicyListCommand(tb testing.TB) (*cli.MockUi, *PolicyListCommand) {
+func testPolicyReadCommand(tb testing.TB) (*cli.MockUi, *PolicyReadCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &PolicyListCommand{
+	return ui, &PolicyReadCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestPolicyListCommand_Run(t *testing.T) {
+func TestPolicyReadCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -29,9 +29,15 @@ func TestPolicyListCommand_Run(t *testing.T) {
 	}{
 		{
 			"too_many_args",
-			[]string{"foo"},
+			[]string{"foo", "bar"},
 			"Too many arguments",
 			1,
+		},
+		{
+			"no_policy_exists",
+			[]string{"not-a-real-policy"},
+			"No policy named",
+			2,
 		},
 	}
 
@@ -47,7 +53,7 @@ func TestPolicyListCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				ui, cmd := testPolicyListCommand(t)
+				ui, cmd := testPolicyReadCommand(t)
 				cmd.client = client
 
 				code := cmd.Run(tc.args)
@@ -69,18 +75,24 @@ func TestPolicyListCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testPolicyListCommand(t)
+		policy := `path "secret/" {}`
+		if err := client.Sys().PutPolicy("my-policy", policy); err != nil {
+			t.Fatal(err)
+		}
+
+		ui, cmd := testPolicyReadCommand(t)
 		cmd.client = client
 
-		code := cmd.Run([]string{})
+		code := cmd.Run([]string{
+			"my-policy",
+		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "default\nroot"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if !strings.Contains(combined, expected) {
-			t.Errorf("expected %q to contain %q", combined, expected)
+		if !strings.Contains(combined, policy) {
+			t.Errorf("expected %q to contain %q", combined, policy)
 		}
 	})
 
@@ -90,15 +102,17 @@ func TestPolicyListCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testPolicyListCommand(t)
+		ui, cmd := testPolicyReadCommand(t)
 		cmd.client = client
 
-		code := cmd.Run([]string{})
+		code := cmd.Run([]string{
+			"my-policy",
+		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error listing policies: "
+		expected := "Error reading policy named my-policy: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -108,7 +122,7 @@ func TestPolicyListCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testPolicyListCommand(t)
+		_, cmd := testPolicyReadCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

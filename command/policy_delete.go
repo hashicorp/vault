@@ -8,11 +8,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*PolicyDeleteCommand)(nil)
 var _ cli.CommandAutocomplete = (*PolicyDeleteCommand)(nil)
 
-// PolicyDeleteCommand is a Command that enables a new endpoint.
 type PolicyDeleteCommand struct {
 	*BaseCommand
 }
@@ -23,17 +21,17 @@ func (c *PolicyDeleteCommand) Synopsis() string {
 
 func (c *PolicyDeleteCommand) Help() string {
 	helpText := `
-Usage: vault policy-delete [options] NAME
+Usage: vault policy delete [options] NAME
 
-  Deletes a policy in the Vault server with the given name. Once the policy
-  is deleted, all tokens associated with the policy will be affected
-  immediately.
+  Deletes the policy named NAME in the Vault server. Once the policy is deleted,
+  all tokens associated with the policy are affected immediately.
 
   Delete the policy named "my-policy":
 
-      $ vault policy-delete my-policy
+      $ vault policy delete my-policy
 
-  For a full list of examples, please see the documentation.
+  Note that it is not possible to delete the "default" or "root" policies.
+  These are built-in policies.
 
 ` + c.Flags().Help()
 
