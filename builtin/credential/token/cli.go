@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -17,6 +18,20 @@ type CLIHandler struct {
 }
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
+	// Parse "lookup" first - we want to return an early error if the user
+	// supplied an invalid value here before we prompt them for a token. It would
+	// be annoying to type your token and then be told you supplied an invalid
+	// value that we could have known in advance.
+	lookup := true
+	if x, ok := m["lookup"]; ok {
+		parsed, err := strconv.ParseBool(x)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse \"lookup\" as boolean: %s", err)
+		}
+		lookup = parsed
+	}
+
+	// Parse the token.
 	token, ok := m["token"]
 	if !ok {
 		// Override the output
@@ -54,11 +69,44 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 				"information.")
 	}
 
+	// If the user declined verification, return now. Note that we will not have
+	// a lot of information about the token.
+	if !lookup {
+		return &api.Secret{
+			Auth: &api.SecretAuth{
+				ClientToken: token,
+			},
+		}, nil
+	}
+
+	// If we got this far, we want to lookup and lookup the token and pull it's
+	// list of policies an metadata.
+	c.SetToken(token)
+	c.SetWrappingLookupFunc(func(string, string) string { return "" })
+
+	secret, err := c.Auth().Token().LookupSelf()
+	if err != nil {
+		return nil, fmt.Errorf("Error looking up token: %s", err)
+	}
+	if secret == nil {
+		return nil, fmt.Errorf("Empty response from lookup-self")
+	}
+
+	// Return an auth struct that "looks" like the response from an auth backend.
+	// lookup and lookup-self return their data in data, not auth. We try to
+	// mirror that data here.
 	return &api.Secret{
 		Auth: &api.SecretAuth{
-			ClientToken: token,
+			ClientToken: secret.TokenID(),
+			Accessor:    secret.TokenAccessor(),
+			Policies:    secret.TokenPolicies(),
+			Metadata:    secret.TokenMetadata(),
+
+			LeaseDuration: secret.TokenTTLInt(),
+			Renewable:     secret.TokenIsRenewable(),
 		},
 	}, nil
+
 }
 
 func (h *CLIHandler) Help() string {
@@ -73,6 +121,10 @@ Usage: vault login TOKEN [CONFIG K=V...]
 
       $ vault login 96ddf4bc-d217-f3ba-f9bd-017055595017
 
+  Authenticate but do not lookup information about the token:
+
+      $ vault login token=96ddf4bc-d217-f3ba-f9bd-017055595017 lookup=false
+
   This token usually comes from a different source such as the API or via the
   built-in "vault token-create" command.
 
@@ -81,6 +133,9 @@ Configuration:
   token=<string>
       The token to use for authentication. This is usually provided directly
       via the "vault login" command.
+
+  lookup=<bool>
+      Perform a lookup of the token's metadata and policies.
 `
 
 	return strings.TrimSpace(help)
