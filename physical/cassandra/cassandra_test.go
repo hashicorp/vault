@@ -64,9 +64,13 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 		t.Fatalf("cassandra: failed to connect to docker: %s", err)
 	}
 
-	resource, err := pool.Run("cassandra", "3.11", nil)
+	resource, err := pool.Run("cassandra", "3.11", []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"})
 	if err != nil {
 		t.Fatalf("cassandra: could not start container: %s", err)
+	}
+
+	cleanup := func() {
+		pool.Purge(resource)
 	}
 
 	setup := func() error {
@@ -78,6 +82,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 		if err != nil {
 			return err
 		}
+		defer sess.Close()
 
 		// Create keyspace
 		q := sess.Query(`CREATE KEYSPACE "vault" WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };`)
@@ -99,11 +104,9 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 		return nil
 	}
 	if pool.Retry(setup); err != nil {
+		cleanup()
 		t.Fatalf("cassandra: could not setup container: %s", err)
 	}
 
-	cleanup := func() {
-		pool.Purge(resource)
-	}
 	return cleanup, fmt.Sprintf("127.0.0.1:%s", resource.GetPort("9042/tcp"))
 }
