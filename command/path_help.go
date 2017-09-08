@@ -8,7 +8,6 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*PathHelpCommand)(nil)
 var _ cli.CommandAutocomplete = (*PathHelpCommand)(nil)
 
@@ -16,37 +15,34 @@ var pathHelpVaultSealedMessage = strings.TrimSpace(`
 Error: Vault is sealed.
 
 The "path-help" command requires the Vault to be unsealed so that the mount
-points of the secret backends are known.
+points of the secret engines are known.
 `)
 
-// PathHelpCommand is a Command that lists the mounts.
 type PathHelpCommand struct {
 	*BaseCommand
 }
 
 func (c *PathHelpCommand) Synopsis() string {
-	return "Retrieves API help for paths"
+	return "Retrieve API help for paths"
 }
 
 func (c *PathHelpCommand) Help() string {
 	helpText := `
-Usage: vault path-help [options] path
+Usage: vault path-help [options] PATH
 
   Retrieves API help for paths. All endpoints in Vault provide built-in help
-  in markdown format. This includes system paths, secret paths, and credential
-  providers.
+  in markdown format. This includes system paths, secret engines, and auth
+  methods.
 
-  A backend must be mounted before help is available:
+  Get help for the thing mounted at database/:
 
-      $ vault mount database
       $ vault path-help database/
 
   The response object will return additional paths to retrieve help:
 
       $ vault path-help database/roles/
 
-  Each backend produces different help output. For additional information,
-  please view the online documentation.
+  Each secret engine produces different help output.
 
 ` + c.Flags().Help()
 
@@ -74,13 +70,11 @@ func (c *PathHelpCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	path, kvs, err := extractPath(args)
-	if err != nil {
-		c.UI.Error(err.Error())
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
-	}
-
-	if len(kvs) > 0 {
+	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
 	}
@@ -90,6 +84,8 @@ func (c *PathHelpCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 2
 	}
+
+	path := sanitizePath(args[0])
 
 	help, err := client.Help(path)
 	if err != nil {
