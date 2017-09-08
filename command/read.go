@@ -8,17 +8,15 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*ReadCommand)(nil)
 var _ cli.CommandAutocomplete = (*ReadCommand)(nil)
 
-// ReadCommand is a command that reads data from the Vault.
 type ReadCommand struct {
 	*BaseCommand
 }
 
 func (c *ReadCommand) Synopsis() string {
-	return "Reads data and retrieves secrets"
+	return "Read data and retrieves secrets"
 }
 
 func (c *ReadCommand) Help() string {
@@ -28,12 +26,12 @@ Usage: vault read [options] PATH
   Reads data from Vault at the given path. This can be used to read secrets,
   generate dynamic credentials, get configuration details, and more.
 
-  Read a secret from the static secret backend:
+  Read a secret from the static secrets engine:
 
       $ vault read secret/my-secret
 
   For a full list of examples and paths, please see the documentation that
-  corresponds to the secret backend in use.
+  corresponds to the secrets engine in use.
 
 ` + c.Flags().Help()
 
@@ -61,13 +59,11 @@ func (c *ReadCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	path, kvs, err := extractPath(args)
-	if err != nil {
-		c.UI.Error(err.Error())
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
-	}
-
-	if len(kvs) > 0 {
+	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
 	}
@@ -77,6 +73,8 @@ func (c *ReadCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 2
 	}
+
+	path := sanitizePath(args[0])
 
 	secret, err := client.Logical().Read(path)
 	if err != nil {

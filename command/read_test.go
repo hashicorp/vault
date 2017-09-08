@@ -28,15 +28,15 @@ func TestReadCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"empty",
-			nil,
-			"Missing PATH!",
+			"not_enough_args",
+			[]string{},
+			"Not enough arguments",
 			1,
 		},
 		{
-			"slash",
-			[]string{"/"},
-			"Missing PATH!",
+			"too_many_args",
+			[]string{"foo", "bar"},
+			"Too many arguments",
 			1,
 		},
 		{
