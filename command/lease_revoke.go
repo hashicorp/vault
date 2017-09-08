@@ -8,50 +8,48 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*ReadCommand)(nil)
-var _ cli.CommandAutocomplete = (*ReadCommand)(nil)
+var _ cli.Command = (*LeaseRevokeCommand)(nil)
+var _ cli.CommandAutocomplete = (*LeaseRevokeCommand)(nil)
 
-// RevokeCommand is a Command that mounts a new mount.
-type RevokeCommand struct {
+type LeaseRevokeCommand struct {
 	*BaseCommand
 
 	flagForce  bool
 	flagPrefix bool
 }
 
-func (c *RevokeCommand) Synopsis() string {
+func (c *LeaseRevokeCommand) Synopsis() string {
 	return "Revokes leases and secrets"
 }
 
-func (c *RevokeCommand) Help() string {
+func (c *LeaseRevokeCommand) Help() string {
 	helpText := `
-Usage: vault revoke [options] ID
+Usage: vault lease revoke [options] ID
 
   Revokes secrets by their lease ID. This command can revoke a single secret
   or multiple secrets based on a path-matched prefix.
 
   Revoke a single lease:
 
-      $ vault revoke database/creds/readonly/2f6a614c...
+      $ vault lease revoke database/creds/readonly/2f6a614c...
 
   Revoke all leases for a role:
 
-      $ vault revoke -prefix aws/creds/deploy
+      $ vault lease revoke -prefix aws/creds/deploy
 
-  Force delete leases from Vault even if backend revocation fails:
+  Force delete leases from Vault even if secret engine revocation fails:
 
-      $ vault revoke -force -prefix consul/creds
+      $ vault lease revoke -force -prefix consul/creds
 
   For a full list of examples and paths, please see the documentation that
-  corresponds to the secret backend in use.
+  corresponds to the secret engine in use.
 
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
-func (c *RevokeCommand) Flags() *FlagSets {
+func (c *LeaseRevokeCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 	f := set.NewFlagSet("Command Options")
 
@@ -60,10 +58,10 @@ func (c *RevokeCommand) Flags() *FlagSets {
 		Aliases: []string{"f"},
 		Target:  &c.flagForce,
 		Default: false,
-		Usage: "Delete the lease from Vault even if the backend revocation " +
+		Usage: "Delete the lease from Vault even if the secret engine revocation " +
 			"fails. This is meant for recovery situations where the secret " +
-			"in the backend was manually removed. If this flag is specified, " +
-			"-prefix is also required.",
+			"in the target secret engine was manually removed. If this flag is " +
+			"specified, -prefix is also required.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -77,15 +75,15 @@ func (c *RevokeCommand) Flags() *FlagSets {
 	return set
 }
 
-func (c *RevokeCommand) AutocompleteArgs() complete.Predictor {
+func (c *LeaseRevokeCommand) AutocompleteArgs() complete.Predictor {
 	return c.PredictVaultFiles()
 }
 
-func (c *RevokeCommand) AutocompleteFlags() complete.Flags {
+func (c *LeaseRevokeCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *RevokeCommand) Run(args []string) int {
+func (c *LeaseRevokeCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -94,13 +92,11 @@ func (c *RevokeCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	leaseID, remaining, err := extractID(args)
-	if err != nil {
-		c.UI.Error(err.Error())
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
-	}
-
-	if len(remaining) > 0 {
+	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
 	}
@@ -116,10 +112,12 @@ func (c *RevokeCommand) Run(args []string) int {
 		return 2
 	}
 
+	leaseID := strings.TrimSpace(args[0])
+
 	switch {
 	case c.flagForce && c.flagPrefix:
 		c.UI.Warn(wrapAtLength("Warning! Force-removing leases can cause Vault " +
-			"to become out of sync with credential backends!"))
+			"to become out of sync with secret engines!"))
 		if err := client.Sys().RevokeForce(leaseID); err != nil {
 			c.UI.Error(fmt.Sprintf("Error force revoking leases with prefix %s: %s", leaseID, err))
 			return 2

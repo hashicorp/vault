@@ -8,20 +8,20 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testRenewCommand(tb testing.TB) (*cli.MockUi, *RenewCommand) {
+func testLeaseRenewCommand(tb testing.TB) (*cli.MockUi, *LeaseRenewCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &RenewCommand{
+	return ui, &LeaseRenewCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-// testRenewCommandMountAndLease mounts a leased secret backend and returns
+// testLeaseRenewCommandMountAndLease mounts a leased secret backend and returns
 // the leaseID of an item.
-func testRenewCommandMountAndLease(tb testing.TB, client *api.Client) string {
+func testLeaseRenewCommandMountAndLease(tb testing.TB, client *api.Client) string {
 	if err := client.Sys().Mount("testing", &api.MountInput{
 		Type: "generic-leased",
 	}); err != nil {
@@ -47,7 +47,7 @@ func testRenewCommandMountAndLease(tb testing.TB, client *api.Client) string {
 	return secret.LeaseID
 }
 
-func TestRenewCommand_Run(t *testing.T) {
+func TestLeaseRenewCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -100,9 +100,9 @@ func TestRenewCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				leaseID := testRenewCommandMountAndLease(t, client)
+				leaseID := testLeaseRenewCommandMountAndLease(t, client)
 
-				ui, cmd := testRenewCommand(t)
+				ui, cmd := testLeaseRenewCommand(t)
 				cmd.client = client
 
 				if tc.args != nil {
@@ -127,9 +127,9 @@ func TestRenewCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		leaseID := testRenewCommandMountAndLease(t, client)
+		leaseID := testLeaseRenewCommandMountAndLease(t, client)
 
-		_, cmd := testRenewCommand(t)
+		_, cmd := testLeaseRenewCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{leaseID})
@@ -144,7 +144,7 @@ func TestRenewCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testRenewCommand(t)
+		ui, cmd := testLeaseRenewCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -164,7 +164,7 @@ func TestRenewCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testRenewCommand(t)
+		_, cmd := testLeaseRenewCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

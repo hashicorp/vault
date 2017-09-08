@@ -8,18 +8,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testRevokeCommand(tb testing.TB) (*cli.MockUi, *RevokeCommand) {
+func testLeaseRevokeCommand(tb testing.TB) (*cli.MockUi, *LeaseRevokeCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &RevokeCommand{
+	return ui, &LeaseRevokeCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestRevokeCommand_Run(t *testing.T) {
+func TestLeaseRevokeCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -85,7 +85,7 @@ func TestRevokeCommand_Run(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				ui, cmd := testRevokeCommand(t)
+				ui, cmd := testLeaseRevokeCommand(t)
 				cmd.client = client
 
 				tc.args = append(tc.args, secret.LeaseID)
@@ -108,7 +108,7 @@ func TestRevokeCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testRevokeCommand(t)
+		ui, cmd := testLeaseRevokeCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -128,7 +128,7 @@ func TestRevokeCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testRevokeCommand(t)
+		_, cmd := testLeaseRevokeCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

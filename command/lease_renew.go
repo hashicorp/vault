@@ -9,24 +9,22 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*RenewCommand)(nil)
-var _ cli.CommandAutocomplete = (*RenewCommand)(nil)
+var _ cli.Command = (*LeaseRenewCommand)(nil)
+var _ cli.CommandAutocomplete = (*LeaseRenewCommand)(nil)
 
-// RenewCommand is a Command that mounts a new mount.
-type RenewCommand struct {
+type LeaseRenewCommand struct {
 	*BaseCommand
 
 	flagIncrement time.Duration
 }
 
-func (c *RenewCommand) Synopsis() string {
+func (c *LeaseRenewCommand) Synopsis() string {
 	return "Renews the lease of a secret"
 }
 
-func (c *RenewCommand) Help() string {
+func (c *LeaseRenewCommand) Help() string {
 	helpText := `
-Usage: vault renew [options] ID
+Usage: vault lease renew [options] ID
 
   Renews the lease on a secret, extending the time that it can be used before
   it is revoked by Vault.
@@ -38,7 +36,7 @@ Usage: vault renew [options] ID
 
   Renew a secret:
 
-      $ vault renew database/creds/readonly/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
+      $ vault lease renew database/creds/readonly/2f6a614c...
 
   Lease renewal will fail if the secret is not renewable, the secret has already
   been revoked, or if the secret has already reached its maximum TTL.
@@ -50,7 +48,7 @@ Usage: vault renew [options] ID
 	return strings.TrimSpace(helpText)
 }
 
-func (c *RenewCommand) Flags() *FlagSets {
+func (c *LeaseRenewCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
@@ -67,15 +65,15 @@ func (c *RenewCommand) Flags() *FlagSets {
 	return set
 }
 
-func (c *RenewCommand) AutocompleteArgs() complete.Predictor {
+func (c *LeaseRenewCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictAnything
 }
 
-func (c *RenewCommand) AutocompleteFlags() complete.Flags {
+func (c *LeaseRenewCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *RenewCommand) Run(args []string) int {
+func (c *LeaseRenewCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
