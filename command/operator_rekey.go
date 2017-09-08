@@ -15,23 +15,11 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*RekeyCommand)(nil)
-var _ cli.CommandAutocomplete = (*RekeyCommand)(nil)
+var _ cli.Command = (*OperatorRekeyCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorRekeyCommand)(nil)
 
-// RekeyCommand is a Command that rekeys the vault.
-type RekeyCommand struct {
+type OperatorRekeyCommand struct {
 	*BaseCommand
-
-	// Key can be used to pre-seed the key. If it is set, it will not
-	// be asked with the `password` helper.
-	Key string
-
-	// The nonce for the rekey request to send along
-	Nonce string
-
-	// Whether to use the recovery key instead of barrier key, if available
-	RecoveryKey bool
 
 	flagCancel       bool
 	flagInit         bool
@@ -56,11 +44,11 @@ type RekeyCommand struct {
 	testStdin io.Reader // for tests
 }
 
-func (c *RekeyCommand) Synopsis() string {
+func (c *OperatorRekeyCommand) Synopsis() string {
 	return "Generates new unseal keys"
 }
 
-func (c *RekeyCommand) Help() string {
+func (c *OperatorRekeyCommand) Help() string {
 	helpText := `
 Usage: vault rekey [options] [KEY]
 
@@ -75,14 +63,14 @@ Usage: vault rekey [options] [KEY]
 
   Initialize a rekey:
 
-      $ vault rekey \
+      $ vault operator rekey \
           -init \
           -key-shares=15 \
           -key-threshold=9
 
   Rekey and encrypt the resulting unseal keys with PGP:
 
-      $ vault rekey \
+      $ vault operator rekey \
           -init \
           -key-shares=3 \
           -key-threshold=2 \
@@ -90,29 +78,27 @@ Usage: vault rekey [options] [KEY]
 
   Store encrypted PGP keys in Vault's core:
 
-      $ vault rekey \
+      $ vault operator rekey \
           -init \
           -pgp-keys="..." \
           -backup
 
   Retrieve backed-up unseal keys:
 
-      $ vault rekey -backup-retrieve
+      $ vault operator rekey -backup-retrieve
 
   Delete backed-up unseal keys:
 
-      $ vault rekey -backup-delete
-
-  For a full list of examples, please see the documentation.
+      $ vault operator rekey -backup-delete
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
-func (c *RekeyCommand) Flags() *FlagSets {
+func (c *OperatorRekeyCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 
-	f := set.NewFlagSet("Command Options")
+	f := set.NewFlagSet("Common Options")
 
 	f.BoolVar(&BoolVar{
 		Name:    "init",
@@ -136,7 +122,7 @@ func (c *RekeyCommand) Flags() *FlagSets {
 		Name:    "status",
 		Target:  &c.flagStatus,
 		Default: false,
-		Usage: "Print the status of the current attempt without provding an " +
+		Usage: "Print the status of the current attempt without providing an " +
 			"unseal key.",
 	})
 
@@ -188,8 +174,7 @@ func (c *RekeyCommand) Flags() *FlagSets {
 			"public GPG keys OR a comma-separated list of Keybase usernames using " +
 			"the format \"keybase:<username>\". When supplied, the generated " +
 			"unseal keys will be encrypted and base64-encoded in the order " +
-			"specified in this list. The number of entires must match -key-shares, " +
-			"unless -store-shares are used.",
+			"specified in this list.",
 	})
 
 	f = set.NewFlagSet("Backup Options")
@@ -216,7 +201,7 @@ func (c *RekeyCommand) Flags() *FlagSets {
 		Name:    "backup-retrieve",
 		Target:  &c.flagBackupRetrieve,
 		Default: false,
-		Usage: "Retrieve the backed-up unseal keys. This option is only avaiable " +
+		Usage: "Retrieve the backed-up unseal keys. This option is only available " +
 			"if the PGP keys were provided and the backup has not been deleted.",
 	})
 
@@ -249,15 +234,15 @@ func (c *RekeyCommand) Flags() *FlagSets {
 	return set
 }
 
-func (c *RekeyCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorRekeyCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictAnything
 }
 
-func (c *RekeyCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorRekeyCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *RekeyCommand) Run(args []string) int {
+func (c *OperatorRekeyCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -324,7 +309,7 @@ func (c *RekeyCommand) Run(args []string) int {
 }
 
 // init starts the rekey process.
-func (c *RekeyCommand) init(client *api.Client) int {
+func (c *OperatorRekeyCommand) init(client *api.Client) int {
 	// Handle the different API requests
 	var fn func(*api.RekeyInitRequest) (*api.RekeyStatusResponse, error)
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
@@ -377,7 +362,7 @@ func (c *RekeyCommand) init(client *api.Client) int {
 }
 
 // cancel is used to abort the rekey process.
-func (c *RekeyCommand) cancel(client *api.Client) int {
+func (c *OperatorRekeyCommand) cancel(client *api.Client) int {
 	// Handle the different API requests
 	var fn func() error
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
@@ -402,7 +387,7 @@ func (c *RekeyCommand) cancel(client *api.Client) int {
 
 // provide prompts the user for the seal key and posts it to the update root
 // endpoint. If this is the last unseal, this function outputs it.
-func (c *RekeyCommand) provide(client *api.Client, key string) int {
+func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 	var statusFn func() (*api.RekeyStatusResponse, error)
 	var updateFn func(string, string) (*api.RekeyUpdateResponse, error)
 
@@ -504,7 +489,7 @@ func (c *RekeyCommand) provide(client *api.Client, key string) int {
 }
 
 // status is used just to fetch and dump the status.
-func (c *RekeyCommand) status(client *api.Client) int {
+func (c *OperatorRekeyCommand) status(client *api.Client) int {
 	// Handle the different API requests
 	var fn func() (*api.RekeyStatusResponse, error)
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
@@ -528,7 +513,7 @@ func (c *RekeyCommand) status(client *api.Client) int {
 }
 
 // backupRetrieve retrieves the stored backup keys.
-func (c *RekeyCommand) backupRetrieve(client *api.Client) int {
+func (c *OperatorRekeyCommand) backupRetrieve(client *api.Client) int {
 	// Handle the different API requests
 	var fn func() (*api.RekeyRetrieveResponse, error)
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
@@ -556,7 +541,7 @@ func (c *RekeyCommand) backupRetrieve(client *api.Client) int {
 }
 
 // backupDelete deletes the stored backup keys.
-func (c *RekeyCommand) backupDelete(client *api.Client) int {
+func (c *OperatorRekeyCommand) backupDelete(client *api.Client) int {
 	// Handle the different API requests
 	var fn func() error
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
@@ -580,7 +565,7 @@ func (c *RekeyCommand) backupDelete(client *api.Client) int {
 }
 
 // printStatus dumps the status to output
-func (c *RekeyCommand) printStatus(status *api.RekeyStatusResponse) int {
+func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int {
 	out := []string{}
 	out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
 	out = append(out, fmt.Sprintf("Started | %t", status.Started))
@@ -596,12 +581,12 @@ func (c *RekeyCommand) printStatus(status *api.RekeyStatusResponse) int {
 		out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
 	}
 
-	output := columnOutput(out)
+	output := columnOutput(out, nil)
 	c.UI.Output(output)
 	return 0
 }
 
-func (c *RekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
+func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
 	// Space between the key prompt, if any, and the output
 	c.UI.Output("")
 
@@ -633,7 +618,7 @@ func (c *RekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, resp *ap
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"The encrypted unseal keys are backed up to \"core/unseal-keys-backup\"" +
-				"in the physical backend. Remove these keys at any time using " +
+				"in the storage backend. Remove these keys at any time using " +
 				"\"vault rekey -delete-backup\". Vault does not automatically remove " +
 				"these keys.",
 		)))

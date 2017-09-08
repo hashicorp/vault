@@ -18,12 +18,10 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*GenerateRootCommand)(nil)
-var _ cli.CommandAutocomplete = (*GenerateRootCommand)(nil)
+var _ cli.Command = (*OperatorGenerateRootCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorGenerateRootCommand)(nil)
 
-// GenerateRootCommand is a Command that generates a new root token.
-type GenerateRootCommand struct {
+type OperatorGenerateRootCommand struct {
 	*BaseCommand
 
 	flagInit        bool
@@ -36,26 +34,26 @@ type GenerateRootCommand struct {
 	flagGenerateOTP bool
 
 	// Deprecation
-	// TODO: remove in 0.9.9
+	// TODO: remove in 0.9.0
 	flagGenOTP bool
 
 	testStdin io.Reader // for tests
 }
 
-func (c *GenerateRootCommand) Synopsis() string {
+func (c *OperatorGenerateRootCommand) Synopsis() string {
 	return "Generates a new root token"
 }
 
-func (c *GenerateRootCommand) Help() string {
+func (c *OperatorGenerateRootCommand) Help() string {
 	helpText := `
-Usage: vault generate-root [options] [KEY]
+Usage: vault operator generate-root [options] [KEY]
 
   Generates a new root token by combining a quorum of share holders. One of
   the following must be provided to start the root token generation:
 
     - A base64-encoded one-time-password (OTP) provided via the "-otp" flag.
       Use the "-generate-otp" flag to generate a usable value. The resulting
-      token is XORed with this value when it is returend. Use the "-decode"
+      token is XORed with this value when it is returned. Use the "-decode"
       flag to output the final value.
 
     - A file containing a PGP key or a keybase username in the "-pgp-key"
@@ -67,24 +65,22 @@ Usage: vault generate-root [options] [KEY]
 
   Generate an OTP code for the final token:
 
-      $ vault generate-root -generate-otp
+      $ vault operator generate-root -generate-otp
 
   Start a root token generation:
 
-      $ vault generate-root -init -otp="..."
-      $ vault generate-root -init -pgp-key="..."
+      $ vault operator generate-root -init -otp="..."
+      $ vault operator generate-root -init -pgp-key="..."
 
   Enter an unseal key to progress root token generation:
 
-      $ vault generate-root -otp="..."
-
-  For a full list of examples, please see the documentation.
+      $ vault operator generate-root -otp="..."
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
-func (c *GenerateRootCommand) Flags() *FlagSets {
+func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
@@ -115,7 +111,7 @@ func (c *GenerateRootCommand) Flags() *FlagSets {
 		Default:    false,
 		EnvVar:     "",
 		Completion: complete.PredictNothing,
-		Usage: "Print the status of the current attempt without provding an " +
+		Usage: "Print the status of the current attempt without providing an " +
 			"unseal key.",
 	})
 
@@ -183,15 +179,15 @@ func (c *GenerateRootCommand) Flags() *FlagSets {
 	return set
 }
 
-func (c *GenerateRootCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorGenerateRootCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *GenerateRootCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorGenerateRootCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *GenerateRootCommand) Run(args []string) int {
+func (c *OperatorGenerateRootCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -243,7 +239,7 @@ func (c *GenerateRootCommand) Run(args []string) int {
 }
 
 // verifyOTP verifies the given OTP code is exactly 16 bytes.
-func (c *GenerateRootCommand) verifyOTP(otp string) error {
+func (c *OperatorGenerateRootCommand) verifyOTP(otp string) error {
 	if len(otp) == 0 {
 		return fmt.Errorf("No OTP passed in")
 	}
@@ -259,7 +255,7 @@ func (c *GenerateRootCommand) verifyOTP(otp string) error {
 }
 
 // generateOTP generates a suitable OTP code for generating a root token.
-func (c *GenerateRootCommand) generateOTP() int {
+func (c *OperatorGenerateRootCommand) generateOTP() int {
 	buf := make([]byte, 16)
 	readLen, err := rand.Read(buf)
 	if err != nil {
@@ -276,7 +272,7 @@ func (c *GenerateRootCommand) generateOTP() int {
 }
 
 // decode decodes the given value using the otp.
-func (c *GenerateRootCommand) decode(encoded, otp string) int {
+func (c *OperatorGenerateRootCommand) decode(encoded, otp string) int {
 	if encoded == "" {
 		c.UI.Error("Missing encoded value: use -decode=<string> to supply it")
 		return 1
@@ -302,7 +298,7 @@ func (c *GenerateRootCommand) decode(encoded, otp string) int {
 }
 
 // init is used to start the generation process
-func (c *GenerateRootCommand) init(client *api.Client, otp string, pgpKey string) int {
+func (c *OperatorGenerateRootCommand) init(client *api.Client, otp string, pgpKey string) int {
 	// Validate incoming fields. Either OTP OR PGP keys must be supplied.
 	switch {
 	case otp == "" && pgpKey == "":
@@ -331,7 +327,7 @@ func (c *GenerateRootCommand) init(client *api.Client, otp string, pgpKey string
 
 // provide prompts the user for the seal key and posts it to the update root
 // endpoint. If this is the last unseal, this function outputs it.
-func (c *GenerateRootCommand) provide(client *api.Client, key string) int {
+func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string) int {
 	status, err := client.Sys().GenerateRootStatus()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting root generation status: %s", err))
@@ -413,7 +409,7 @@ func (c *GenerateRootCommand) provide(client *api.Client, key string) int {
 }
 
 // cancel cancels the root token generation
-func (c *GenerateRootCommand) cancel(client *api.Client) int {
+func (c *OperatorGenerateRootCommand) cancel(client *api.Client) int {
 	if err := client.Sys().GenerateRootCancel(); err != nil {
 		c.UI.Error(fmt.Sprintf("Error canceling root token generation: %s", err))
 		return 2
@@ -423,7 +419,7 @@ func (c *GenerateRootCommand) cancel(client *api.Client) int {
 }
 
 // status is used just to fetch and dump the status
-func (c *GenerateRootCommand) status(client *api.Client) int {
+func (c *OperatorGenerateRootCommand) status(client *api.Client) int {
 	status, err := client.Sys().GenerateRootStatus()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting root generation status: %s", err))
@@ -433,7 +429,7 @@ func (c *GenerateRootCommand) status(client *api.Client) int {
 }
 
 // printStatus dumps the status to output
-func (c *GenerateRootCommand) printStatus(status *api.GenerateRootStatusResponse) int {
+func (c *OperatorGenerateRootCommand) printStatus(status *api.GenerateRootStatusResponse) int {
 	out := []string{}
 	out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
 	out = append(out, fmt.Sprintf("Started | %t", status.Started))
@@ -446,7 +442,7 @@ func (c *GenerateRootCommand) printStatus(status *api.GenerateRootStatusResponse
 		out = append(out, fmt.Sprintf("Root Token | %s", status.EncodedRootToken))
 	}
 
-	output := columnOutput(out)
+	output := columnOutput(out, nil)
 	c.UI.Output(output)
 	return 0
 }

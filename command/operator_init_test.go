@@ -13,18 +13,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testInitCommand(tb testing.TB) (*cli.MockUi, *InitCommand) {
+func testOperatorInitCommand(tb testing.TB) (*cli.MockUi, *OperatorInitCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &InitCommand{
+	return ui, &OperatorInitCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestInitCommand_Run(t *testing.T) {
+func TestOperatorInitCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -100,7 +100,7 @@ func TestInitCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				ui, cmd := testInitCommand(t)
+				ui, cmd := testOperatorInitCommand(t)
 				cmd.client = client
 
 				code := cmd.Run(tc.args)
@@ -122,7 +122,7 @@ func TestInitCommand_Run(t *testing.T) {
 		client, closer := testVaultServerUninit(t)
 		defer closer()
 
-		ui, cmd := testInitCommand(t)
+		ui, cmd := testOperatorInitCommand(t)
 		cmd.client = client
 
 		// Verify the non-init response code
@@ -142,7 +142,7 @@ func TestInitCommand_Run(t *testing.T) {
 		}
 
 		// Verify the init response code
-		ui, cmd = testInitCommand(t)
+		ui, cmd = testOperatorInitCommand(t)
 		cmd.client = client
 		code = cmd.Run([]string{
 			"-status",
@@ -158,7 +158,7 @@ func TestInitCommand_Run(t *testing.T) {
 		client, closer := testVaultServerUninit(t)
 		defer closer()
 
-		ui, cmd := testInitCommand(t)
+		ui, cmd := testOperatorInitCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{})
@@ -217,7 +217,7 @@ func TestInitCommand_Run(t *testing.T) {
 		client, closer := testVaultServerUninit(t)
 		defer closer()
 
-		ui, cmd := testInitCommand(t)
+		ui, cmd := testOperatorInitCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -283,7 +283,7 @@ func TestInitCommand_Run(t *testing.T) {
 		client, closer := testVaultServerUninit(t)
 		defer closer()
 
-		ui, cmd := testInitCommand(t)
+		ui, cmd := testOperatorInitCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -335,7 +335,7 @@ func TestInitCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testInitCommand(t)
+		ui, cmd := testOperatorInitCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -355,7 +355,7 @@ func TestInitCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testInitCommand(t)
+		_, cmd := testOperatorInitCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

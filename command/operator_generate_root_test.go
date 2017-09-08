@@ -11,18 +11,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testGenerateRootCommand(tb testing.TB) (*cli.MockUi, *GenerateRootCommand) {
+func testOperatorGenerateRootCommand(tb testing.TB) (*cli.MockUi, *OperatorGenerateRootCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &GenerateRootCommand{
+	return ui, &OperatorGenerateRootCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestGenerateRootCommand_Run(t *testing.T) {
+func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -88,7 +88,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				ui, cmd := testGenerateRootCommand(t)
+				ui, cmd := testOperatorGenerateRootCommand(t)
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -106,7 +106,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 	t.Run("generate_otp", func(t *testing.T) {
 		t.Parallel()
 
-		ui, cmd := testGenerateRootCommand(t)
+		ui, cmd := testOperatorGenerateRootCommand(t)
 
 		code := cmd.Run([]string{
 			"-generate-otp",
@@ -127,7 +127,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 		encoded := "L9MaZ/4mQanpOV6QeWd84g=="
 		otp := "dIeeezkjpDUv3fy7MYPOLQ=="
 
-		ui, cmd := testGenerateRootCommand(t)
+		ui, cmd := testOperatorGenerateRootCommand(t)
 
 		code := cmd.Run([]string{
 			"-decode", encoded,
@@ -157,7 +157,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		ui, cmd := testGenerateRootCommand(t)
+		ui, cmd := testOperatorGenerateRootCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -191,7 +191,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testGenerateRootCommand(t)
+		ui, cmd := testOperatorGenerateRootCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -227,7 +227,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testGenerateRootCommand(t)
+		ui, cmd := testOperatorGenerateRootCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -263,7 +263,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testGenerateRootCommand(t)
+		ui, cmd := testOperatorGenerateRootCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -297,7 +297,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 
 		// Supply the first n-1 unseal keys
 		for _, key := range keys[:len(keys)-1] {
-			_, cmd := testGenerateRootCommand(t)
+			_, cmd := testOperatorGenerateRootCommand(t)
 			cmd.client = client
 
 			code := cmd.Run([]string{
@@ -309,7 +309,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 			}
 		}
 
-		ui, cmd := testGenerateRootCommand(t)
+		ui, cmd := testOperatorGenerateRootCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -364,7 +364,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 				stdinW.Close()
 			}()
 
-			_, cmd := testGenerateRootCommand(t)
+			_, cmd := testOperatorGenerateRootCommand(t)
 			cmd.client = client
 			cmd.testStdin = stdinR
 
@@ -383,7 +383,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 			stdinW.Close()
 		}()
 
-		ui, cmd := testGenerateRootCommand(t)
+		ui, cmd := testOperatorGenerateRootCommand(t)
 		cmd.client = client
 		cmd.testStdin = stdinR
 
@@ -422,7 +422,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testGenerateRootCommand(t)
+		ui, cmd := testOperatorGenerateRootCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -442,7 +442,7 @@ func TestGenerateRootCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testGenerateRootCommand(t)
+		_, cmd := testOperatorGenerateRootCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

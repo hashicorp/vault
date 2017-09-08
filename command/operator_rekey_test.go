@@ -11,18 +11,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testRekeyCommand(tb testing.TB) (*cli.MockUi, *RekeyCommand) {
+func testOperatorRekeyCommand(tb testing.TB) (*cli.MockUi, *OperatorRekeyCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &RekeyCommand{
+	return ui, &OperatorRekeyCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestRekeyCommand_Run(t *testing.T) {
+func TestOperatorRekeyCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -75,7 +75,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				ui, cmd := testRekeyCommand(t)
+				ui, cmd := testOperatorRekeyCommand(t)
 				cmd.client = client
 
 				code := cmd.Run(tc.args)
@@ -97,7 +97,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testRekeyCommand(t)
+		ui, cmd := testOperatorRekeyCommand(t)
 		cmd.client = client
 
 		// Verify the non-init response
@@ -123,7 +123,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 		}
 
 		// Verify the init response
-		ui, cmd = testRekeyCommand(t)
+		ui, cmd = testOperatorRekeyCommand(t)
 		cmd.client = client
 		code = cmd.Run([]string{
 			"-status",
@@ -153,7 +153,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		ui, cmd := testRekeyCommand(t)
+		ui, cmd := testOperatorRekeyCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -185,7 +185,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testRekeyCommand(t)
+		ui, cmd := testOperatorRekeyCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -221,7 +221,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testRekeyCommand(t)
+		ui, cmd := testOperatorRekeyCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -270,7 +270,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 
 		// Supply the first n-1 unseal keys
 		for _, key := range keys[:len(keys)-1] {
-			ui, cmd := testRekeyCommand(t)
+			ui, cmd := testOperatorRekeyCommand(t)
 			cmd.client = client
 
 			code := cmd.Run([]string{
@@ -282,7 +282,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 			}
 		}
 
-		ui, cmd := testRekeyCommand(t)
+		ui, cmd := testOperatorRekeyCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -338,7 +338,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 				stdinW.Close()
 			}()
 
-			ui, cmd := testRekeyCommand(t)
+			ui, cmd := testOperatorRekeyCommand(t)
 			cmd.client = client
 			cmd.testStdin = stdinR
 
@@ -357,7 +357,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 			stdinW.Close()
 		}()
 
-		ui, cmd := testRekeyCommand(t)
+		ui, cmd := testOperatorRekeyCommand(t)
 		cmd.client = client
 		cmd.testStdin = stdinR
 
@@ -399,7 +399,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 		client, keys, closer := testVaultServerUnseal(t)
 		defer closer()
 
-		ui, cmd := testRekeyCommand(t)
+		ui, cmd := testOperatorRekeyCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -423,7 +423,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 		var combined string
 		// Supply the unseal keys
 		for _, key := range keys {
-			ui, cmd := testRekeyCommand(t)
+			ui, cmd := testOperatorRekeyCommand(t)
 			cmd.client = client
 
 			code := cmd.Run([]string{
@@ -448,7 +448,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 		fingerprint, encryptedKey := match[0][1], match[0][2]
 
 		// Get the backup
-		ui, cmd = testRekeyCommand(t)
+		ui, cmd = testOperatorRekeyCommand(t)
 		cmd.client = client
 
 		code = cmd.Run([]string{
@@ -467,7 +467,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 		}
 
 		// Delete the backup
-		ui, cmd = testRekeyCommand(t)
+		ui, cmd = testOperatorRekeyCommand(t)
 		cmd.client = client
 
 		code = cmd.Run([]string{
@@ -489,7 +489,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testRekeyCommand(t)
+		ui, cmd := testOperatorRekeyCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -509,7 +509,7 @@ func TestRekeyCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testRekeyCommand(t)
+		_, cmd := testOperatorRekeyCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

@@ -7,18 +7,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testKeyStatusCommand(tb testing.TB) (*cli.MockUi, *KeyStatusCommand) {
+func testOperatorSealCommand(tb testing.TB) (*cli.MockUi, *OperatorSealCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &KeyStatusCommand{
+	return ui, &OperatorSealCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestKeyStatusCommand_Run(t *testing.T) {
+func TestOperatorSealCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -28,8 +28,8 @@ func TestKeyStatusCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"too_many_args",
-			[]string{"foo", "bar"},
+			"args",
+			[]string{"foo"},
 			"Too many arguments",
 			1,
 		},
@@ -44,7 +44,11 @@ func TestKeyStatusCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				ui, cmd := testKeyStatusCommand(t)
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				ui, cmd := testOperatorSealCommand(t)
+				cmd.client = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -65,7 +69,7 @@ func TestKeyStatusCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testKeyStatusCommand(t)
+		ui, cmd := testOperatorSealCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{})
@@ -73,10 +77,18 @@ func TestKeyStatusCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Key Term"
+		expected := "Success! Vault is sealed."
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		sealStatus, err := client.Sys().SealStatus()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !sealStatus.Sealed {
+			t.Errorf("expected to be sealed")
 		}
 	})
 
@@ -86,7 +98,7 @@ func TestKeyStatusCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testKeyStatusCommand(t)
+		ui, cmd := testOperatorSealCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{})
@@ -94,7 +106,7 @@ func TestKeyStatusCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error reading key status: "
+		expected := "Error sealing: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -104,7 +116,7 @@ func TestKeyStatusCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testKeyStatusCommand(t)
+		_, cmd := testOperatorSealCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

@@ -16,12 +16,10 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*InitCommand)(nil)
-var _ cli.CommandAutocomplete = (*InitCommand)(nil)
+var _ cli.Command = (*OperatorInitCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
 
-// InitCommand is a Command that initializes a new Vault server.
-type InitCommand struct {
+type OperatorInitCommand struct {
 	*BaseCommand
 
 	flagStatus          bool
@@ -46,13 +44,13 @@ type InitCommand struct {
 	flagCheck bool
 }
 
-func (c *InitCommand) Synopsis() string {
+func (c *OperatorInitCommand) Synopsis() string {
 	return "Initializes a server"
 }
 
-func (c *InitCommand) Help() string {
+func (c *OperatorInitCommand) Help() string {
 	helpText := `
-Usage: vault init [options]
+Usage: vault operator init [options]
 
   Initializes a Vault server. Initialization is the process by which Vault's
   storage backend is prepared to receive data. Since Vault server's share the
@@ -69,26 +67,24 @@ Usage: vault init [options]
 
   Start initialization with the default options:
 
-      $ vault init
+      $ vault operator init
 
   Initialize, but encrypt the unseal keys with pgp keys:
 
-      $ vault init \
+      $ vault operator init \
           -key-shares=3 \
           -key-threshold=2 \
           -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
 
   Encrypt the initial root token using a pgp key:
 
-      $ vault init -root-token-pgp-key="keybase:hashicorp"
-
-  For a complete list of examples, please see the documentation.
+      $ vault operator init -root-token-pgp-key="keybase:hashicorp"
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
-func (c *InitCommand) Flags() *FlagSets {
+func (c *OperatorInitCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	// Common Options
@@ -231,15 +227,15 @@ func (c *InitCommand) Flags() *FlagSets {
 	return set
 }
 
-func (c *InitCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorInitCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *InitCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorInitCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *InitCommand) Run(args []string) int {
+func (c *OperatorInitCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -293,7 +289,7 @@ func (c *InitCommand) Run(args []string) int {
 }
 
 // consulAuto enables auto-joining via Consul.
-func (c *InitCommand) consulAuto(client *api.Client, req *api.InitRequest) int {
+func (c *OperatorInitCommand) consulAuto(client *api.Client, req *api.InitRequest) int {
 	// Capture the client original address and reset it
 	originalAddr := client.Address()
 	defer client.SetAddress(originalAddr)
@@ -432,7 +428,7 @@ func (c *InitCommand) consulAuto(client *api.Client, req *api.InitRequest) int {
 	}
 }
 
-func (c *InitCommand) init(client *api.Client, req *api.InitRequest) int {
+func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int {
 	resp, err := client.Sys().Init(req)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing: %s", err))
@@ -509,7 +505,7 @@ func (c *InitCommand) init(client *api.Client, req *api.InitRequest) int {
 }
 
 // initOutputYAML outputs the init output as YAML.
-func (c *InitCommand) initOutputYAML(req *api.InitRequest, resp *api.InitResponse) int {
+func (c *OperatorInitCommand) initOutputYAML(req *api.InitRequest, resp *api.InitResponse) int {
 	b, err := yaml.Marshal(newMachineInit(req, resp))
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error marshaling YAML: %s", err))
@@ -519,7 +515,7 @@ func (c *InitCommand) initOutputYAML(req *api.InitRequest, resp *api.InitRespons
 }
 
 // initOutputJSON outputs the init output as JSON.
-func (c *InitCommand) initOutputJSON(req *api.InitRequest, resp *api.InitResponse) int {
+func (c *OperatorInitCommand) initOutputJSON(req *api.InitRequest, resp *api.InitResponse) int {
 	b, err := json.Marshal(newMachineInit(req, resp))
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error marshaling JSON: %s", err))
@@ -530,7 +526,7 @@ func (c *InitCommand) initOutputJSON(req *api.InitRequest, resp *api.InitRespons
 
 // status inspects the init status of vault and returns an appropriate error
 // code and message.
-func (c *InitCommand) status(client *api.Client) int {
+func (c *OperatorInitCommand) status(client *api.Client) int {
 	inited, err := client.Sys().InitStatus()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error checking init status: %s", err))

@@ -8,20 +8,18 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*RotateCommand)(nil)
-var _ cli.CommandAutocomplete = (*RotateCommand)(nil)
+var _ cli.Command = (*OperatorRotateCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorRotateCommand)(nil)
 
-// RotateCommand is a Command that rotates the encryption key being used
-type RotateCommand struct {
+type OperatorRotateCommand struct {
 	*BaseCommand
 }
 
-func (c *RotateCommand) Synopsis() string {
+func (c *OperatorRotateCommand) Synopsis() string {
 	return "Rotates the underlying encryption key"
 }
 
-func (c *RotateCommand) Help() string {
+func (c *OperatorRotateCommand) Help() string {
 	helpText := `
 Usage: vault rotate [options]
 
@@ -31,8 +29,8 @@ Usage: vault rotate [options]
   decrypt older data.
 
   This is an online operation and does not cause downtime. This command is run
-  per-cluser (not per-server), since Vault servers in HA mode share the same
-  storeage backend.
+  per-cluster (not per-server), since Vault servers in HA mode share the same
+  storage backend.
 
   Rotate Vault's encryption key:
 
@@ -45,19 +43,19 @@ Usage: vault rotate [options]
 	return strings.TrimSpace(helpText)
 }
 
-func (c *RotateCommand) Flags() *FlagSets {
+func (c *OperatorRotateCommand) Flags() *FlagSets {
 	return c.flagSet(FlagSetHTTP)
 }
 
-func (c *RotateCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorRotateCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *RotateCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorRotateCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *RotateCommand) Run(args []string) int {
+func (c *OperatorRotateCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {

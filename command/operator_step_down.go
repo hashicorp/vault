@@ -8,23 +8,20 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*StepDownCommand)(nil)
-var _ cli.CommandAutocomplete = (*StepDownCommand)(nil)
+var _ cli.Command = (*OperatorStepDownCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorStepDownCommand)(nil)
 
-// StepDownCommand is a Command that tells the Vault server to give up its
-// leadership
-type StepDownCommand struct {
+type OperatorStepDownCommand struct {
 	*BaseCommand
 }
 
-func (c *StepDownCommand) Synopsis() string {
+func (c *OperatorStepDownCommand) Synopsis() string {
 	return "Forces Vault to resign active duty"
 }
 
-func (c *StepDownCommand) Help() string {
+func (c *OperatorStepDownCommand) Help() string {
 	helpText := `
-Usage: vault step-down [options]
+Usage: vault operator step-down [options]
 
   Forces the Vault server at the given address to step down from active duty.
   While the affected node will have a delay before attempting to acquire the
@@ -34,28 +31,26 @@ Usage: vault step-down [options]
 
   Force Vault to step down as the leader:
 
-      $ vault step-down
-
-  For a full list of examples, please see the documentation.
+      $ vault operator step-down
 
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
-func (c *StepDownCommand) Flags() *FlagSets {
+func (c *OperatorStepDownCommand) Flags() *FlagSets {
 	return c.flagSet(FlagSetHTTP)
 }
 
-func (c *StepDownCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorStepDownCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *StepDownCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorStepDownCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *StepDownCommand) Run(args []string) int {
+func (c *OperatorStepDownCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {

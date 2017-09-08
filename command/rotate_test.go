@@ -7,18 +7,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testRotateCommand(tb testing.TB) (*cli.MockUi, *RotateCommand) {
+func testOperatorRotateCommand(tb testing.TB) (*cli.MockUi, *OperatorRotateCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &RotateCommand{
+	return ui, &OperatorRotateCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestRotateCommand_Run(t *testing.T) {
+func TestOperatorRotateCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -44,7 +44,7 @@ func TestRotateCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				ui, cmd := testRotateCommand(t)
+				ui, cmd := testOperatorRotateCommand(t)
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -65,7 +65,7 @@ func TestRotateCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testRotateCommand(t)
+		ui, cmd := testOperatorRotateCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{})
@@ -94,7 +94,7 @@ func TestRotateCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testRotateCommand(t)
+		ui, cmd := testOperatorRotateCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{})
@@ -112,7 +112,7 @@ func TestRotateCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testRotateCommand(t)
+		_, cmd := testOperatorRotateCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

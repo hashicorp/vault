@@ -9,24 +9,24 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testUnsealCommand(tb testing.TB) (*cli.MockUi, *UnsealCommand) {
+func testOperatorUnsealCommand(tb testing.TB) (*cli.MockUi, *OperatorUnsealCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &UnsealCommand{
+	return ui, &OperatorUnsealCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestUnsealCommand_Run(t *testing.T) {
+func TestOperatorUnsealCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	t.Run("error_non_terminal", func(t *testing.T) {
 		t.Parallel()
 
-		ui, cmd := testUnsealCommand(t)
+		ui, cmd := testOperatorUnsealCommand(t)
 		cmd.testOutput = ioutil.Discard
 
 		code := cmd.Run(nil)
@@ -57,7 +57,7 @@ func TestUnsealCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		ui, cmd := testUnsealCommand(t)
+		ui, cmd := testOperatorUnsealCommand(t)
 		cmd.client = client
 		cmd.testOutput = ioutil.Discard
 
@@ -87,7 +87,7 @@ func TestUnsealCommand_Run(t *testing.T) {
 		}
 
 		for i, key := range keys {
-			ui, cmd := testUnsealCommand(t)
+			ui, cmd := testOperatorUnsealCommand(t)
 			cmd.client = client
 			cmd.testOutput = ioutil.Discard
 
@@ -112,7 +112,7 @@ func TestUnsealCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testUnsealCommand(t)
+		ui, cmd := testOperatorUnsealCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -132,7 +132,7 @@ func TestUnsealCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testUnsealCommand(t)
+		_, cmd := testOperatorUnsealCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

@@ -12,12 +12,10 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*UnsealCommand)(nil)
-var _ cli.CommandAutocomplete = (*UnsealCommand)(nil)
+var _ cli.Command = (*OperatorUnsealCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorUnsealCommand)(nil)
 
-// UnsealCommand is a Command that unseals the vault.
-type UnsealCommand struct {
+type OperatorUnsealCommand struct {
 	*BaseCommand
 
 	flagReset bool
@@ -25,13 +23,13 @@ type UnsealCommand struct {
 	testOutput io.Writer // for tests
 }
 
-func (c *UnsealCommand) Synopsis() string {
+func (c *OperatorUnsealCommand) Synopsis() string {
 	return "Unseals the Vault server"
 }
 
-func (c *UnsealCommand) Help() string {
+func (c *OperatorUnsealCommand) Help() string {
 	helpText := `
-Usage: vault unseal [options] [KEY]
+Usage: vault operator unseal [options] [KEY]
 
   Provide a portion of the master key to unseal a Vault server. Vault starts
   in a sealed state. It cannot perform operations until it is unsealed. This
@@ -40,21 +38,19 @@ Usage: vault unseal [options] [KEY]
   The unseal key can be supplied as an argument to the command, but this is
   not recommended as the unseal key will be available in your history:
 
-      $ vault unseal IXyR0OJnSFobekZMMCKCoVEpT7wI6l+USMzE3IcyDyo=
+      $ vault operator unseal IXyR0OJnSFobekZMMCKCoVEpT7wI6l+USMzE3IcyDyo=
 
   Instead, run the command with no arguments and it will prompt for the key:
 
-      $ vault unseal
+      $ vault operator unseal
       Key (will be hidden): IXyR0OJnSFobekZMMCKCoVEpT7wI6l+USMzE3IcyDyo=
-
-  For a full list of examples, please see the documentation.
 
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
-func (c *UnsealCommand) Flags() *FlagSets {
+func (c *OperatorUnsealCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
@@ -72,15 +68,15 @@ func (c *UnsealCommand) Flags() *FlagSets {
 	return set
 }
 
-func (c *UnsealCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorUnsealCommand) AutocompleteArgs() complete.Predictor {
 	return c.PredictVaultFiles()
 }
 
-func (c *UnsealCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorUnsealCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *UnsealCommand) Run(args []string) int {
+func (c *OperatorUnsealCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -151,7 +147,7 @@ func (c *UnsealCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *UnsealCommand) prettySealStatus(status *api.SealStatusResponse) {
+func (c *OperatorUnsealCommand) prettySealStatus(status *api.SealStatusResponse) {
 	c.UI.Output(fmt.Sprintf("Sealed: %t", status.Sealed))
 	c.UI.Output(fmt.Sprintf("Key Shares: %d", status.N))
 	c.UI.Output(fmt.Sprintf("Key Threshold: %d", status.T))

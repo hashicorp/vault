@@ -8,22 +8,20 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*KeyStatusCommand)(nil)
-var _ cli.CommandAutocomplete = (*KeyStatusCommand)(nil)
+var _ cli.Command = (*OperatorKeyStatusCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorKeyStatusCommand)(nil)
 
-// KeyStatusCommand is a Command that provides information about the key status
-type KeyStatusCommand struct {
+type OperatorKeyStatusCommand struct {
 	*BaseCommand
 }
 
-func (c *KeyStatusCommand) Synopsis() string {
+func (c *OperatorKeyStatusCommand) Synopsis() string {
 	return "Provides information about the active encryption key"
 }
 
-func (c *KeyStatusCommand) Help() string {
+func (c *OperatorKeyStatusCommand) Help() string {
 	helpText := `
-Usage: vault key-status [options]
+Usage: vault operator key-status [options]
 
   Provides information about the active encryption key. Specifically,
   the current key term and the key installation time.
@@ -33,19 +31,19 @@ Usage: vault key-status [options]
 	return strings.TrimSpace(helpText)
 }
 
-func (c *KeyStatusCommand) Flags() *FlagSets {
+func (c *OperatorKeyStatusCommand) Flags() *FlagSets {
 	return c.flagSet(FlagSetHTTP)
 }
 
-func (c *KeyStatusCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorKeyStatusCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *KeyStatusCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorKeyStatusCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *KeyStatusCommand) Run(args []string) int {
+func (c *OperatorKeyStatusCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {

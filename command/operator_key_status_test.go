@@ -7,18 +7,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testStepDownCommand(tb testing.TB) (*cli.MockUi, *StepDownCommand) {
+func testOperatorKeyStatusCommand(tb testing.TB) (*cli.MockUi, *OperatorKeyStatusCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &StepDownCommand{
+	return ui, &OperatorKeyStatusCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestStepDownCommand_Run(t *testing.T) {
+func TestOperatorKeyStatusCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -29,15 +29,9 @@ func TestStepDownCommand_Run(t *testing.T) {
 	}{
 		{
 			"too_many_args",
-			[]string{"foo"},
+			[]string{"foo", "bar"},
 			"Too many arguments",
 			1,
-		},
-		{
-			"default",
-			nil,
-			"Success! Stepped down: ",
-			0,
 		},
 	}
 
@@ -50,11 +44,7 @@ func TestStepDownCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				client, closer := testVaultServer(t)
-				defer closer()
-
-				ui, cmd := testStepDownCommand(t)
-				cmd.client = client
+				ui, cmd := testOperatorKeyStatusCommand(t)
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -69,13 +59,34 @@ func TestStepDownCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("integration", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testOperatorKeyStatusCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Key Term"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
 	t.Run("communication_failure", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testStepDownCommand(t)
+		ui, cmd := testOperatorKeyStatusCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{})
@@ -83,7 +94,7 @@ func TestStepDownCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error stepping down: "
+		expected := "Error reading key status: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -93,7 +104,7 @@ func TestStepDownCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testStepDownCommand(t)
+		_, cmd := testOperatorKeyStatusCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

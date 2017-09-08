@@ -8,20 +8,18 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*SealCommand)(nil)
-var _ cli.CommandAutocomplete = (*SealCommand)(nil)
+var _ cli.Command = (*OperatorSealCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorSealCommand)(nil)
 
-// SealCommand is a Command that seals the vault.
-type SealCommand struct {
+type OperatorSealCommand struct {
 	*BaseCommand
 }
 
-func (c *SealCommand) Synopsis() string {
+func (c *OperatorSealCommand) Synopsis() string {
 	return "Seals the Vault server"
 }
 
-func (c *SealCommand) Help() string {
+func (c *OperatorSealCommand) Help() string {
 	helpText := `
 Usage: vault seal [options]
 
@@ -37,29 +35,26 @@ Usage: vault seal [options]
 
   Seal the Vault server:
 
-      $ vault seal
-
-  For a full list of examples and why you might want to seal the Vault, please
-  see the documentation.
+      $ vault operator seal
 
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
-func (c *SealCommand) Flags() *FlagSets {
+func (c *OperatorSealCommand) Flags() *FlagSets {
 	return c.flagSet(FlagSetHTTP)
 }
 
-func (c *SealCommand) AutocompleteArgs() complete.Predictor {
+func (c *OperatorSealCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *SealCommand) AutocompleteFlags() complete.Flags {
+func (c *OperatorSealCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *SealCommand) Run(args []string) int {
+func (c *OperatorSealCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {

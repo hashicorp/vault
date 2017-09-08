@@ -7,18 +7,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testSealCommand(tb testing.TB) (*cli.MockUi, *SealCommand) {
+func testOperatorStepDownCommand(tb testing.TB) (*cli.MockUi, *OperatorStepDownCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &SealCommand{
+	return ui, &OperatorStepDownCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestSealCommand_Run(t *testing.T) {
+func TestOperatorStepDownCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -28,10 +28,16 @@ func TestSealCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"args",
+			"too_many_args",
 			[]string{"foo"},
 			"Too many arguments",
 			1,
+		},
+		{
+			"default",
+			nil,
+			"Success! Stepped down: ",
+			0,
 		},
 	}
 
@@ -47,7 +53,7 @@ func TestSealCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				ui, cmd := testSealCommand(t)
+				ui, cmd := testOperatorStepDownCommand(t)
 				cmd.client = client
 
 				code := cmd.Run(tc.args)
@@ -63,42 +69,13 @@ func TestSealCommand_Run(t *testing.T) {
 		}
 	})
 
-	t.Run("integration", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ui, cmd := testSealCommand(t)
-		cmd.client = client
-
-		code := cmd.Run([]string{})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		expected := "Success! Vault is sealed."
-		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if !strings.Contains(combined, expected) {
-			t.Errorf("expected %q to contain %q", combined, expected)
-		}
-
-		sealStatus, err := client.Sys().SealStatus()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !sealStatus.Sealed {
-			t.Errorf("expected to be sealed")
-		}
-	})
-
 	t.Run("communication_failure", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testSealCommand(t)
+		ui, cmd := testOperatorStepDownCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{})
@@ -106,7 +83,7 @@ func TestSealCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error sealing: "
+		expected := "Error stepping down: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -116,7 +93,7 @@ func TestSealCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testSealCommand(t)
+		_, cmd := testOperatorStepDownCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }
