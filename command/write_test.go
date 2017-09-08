@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
 
@@ -29,15 +30,15 @@ func TestWriteCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"empty_path",
-			nil,
-			"Missing PATH!",
+			"not_enough_args",
+			[]string{},
+			"Not enough arguments",
 			1,
 		},
 		{
 			"empty_kvs",
 			[]string{"secret/write/foo"},
-			"Missing DATA!",
+			"Must supply data or use -force",
 			1,
 		},
 		{
@@ -113,6 +114,38 @@ func TestWriteCommand_Run(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("force", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		if err := client.Sys().Mount("transit/", &api.MountInput{
+			Type: "transit",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		ui, cmd := testWriteCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-force",
+			"transit/keys/my-key",
+		})
+		if exp := 0; code != exp {
+			t.Fatalf("expected %d to be %d: %q", code, exp, ui.ErrorWriter.String())
+		}
+
+		secret, err := client.Logical().Read("transit/keys/my-key")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil || secret.Data == nil {
+			t.Fatal("expected secret to have data")
+		}
+	})
 
 	t.Run("stdin_full", func(t *testing.T) {
 		t.Parallel()

@@ -10,7 +10,6 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*WriteCommand)(nil)
 var _ cli.CommandAutocomplete = (*WriteCommand)(nil)
 
@@ -24,7 +23,7 @@ type WriteCommand struct {
 }
 
 func (c *WriteCommand) Synopsis() string {
-	return "Writes data, configuration, and secrets"
+	return "Write data, configuration, and secrets"
 }
 
 func (c *WriteCommand) Help() string {
@@ -33,17 +32,17 @@ Usage: vault write [options] PATH [DATA K=V...]
 
   Writes data to Vault at the given path. The data can be credentials, secrets,
   configuration, or arbitrary data. The specific behavior of this command is
-  determined at the backend mounted at the path.
+  determined at the thing mounted at the path.
 
   Data is specified as "key=value" pairs. If the value begins with an "@", then
   it is loaded from a file. If the value is "-", Vault will read the value from
   stdin.
 
-  Persist data in the static secret backend:
+  Persist data in the generic secrets engine:
 
       $ vault write secret/my-secret foo=bar
 
-  Create a new encryption key in the transit backend:
+  Create a new encryption key in the transit secrets engine:
 
       $ vault write -f transit/keys/my-key
 
@@ -56,7 +55,7 @@ Usage: vault write [options] PATH [DATA K=V...]
       $ echo $MY_TOKEN | vault write consul/config/access token=-
 
   For a full list of examples and paths, please see the documentation that
-  corresponds to the secret backend in use.
+  corresponds to the secret engines in use.
 
 ` + c.Flags().Help()
 
@@ -99,14 +98,13 @@ func (c *WriteCommand) Run(args []string) int {
 		return 1
 	}
 
-	path, kvs, err := extractPath(f.Args())
-	if err != nil {
-		c.UI.Error(err.Error())
+	args = f.Args()
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
-	}
-
-	if len(kvs) == 0 && !c.flagForce {
-		c.UI.Error("Missing DATA! Specify at least one K=V pair or use -force.")
+	case len(args) == 1 && !c.flagForce:
+		c.UI.Error("Must supply data or use -force")
 		return 1
 	}
 
@@ -116,7 +114,9 @@ func (c *WriteCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
-	data, err := parseArgsData(stdin, kvs)
+	path := sanitizePath(args[0])
+
+	data, err := parseArgsData(stdin, args[1:])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
 		return 1
