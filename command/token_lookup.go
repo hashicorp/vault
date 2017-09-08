@@ -9,11 +9,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*TokenLookupCommand)(nil)
 var _ cli.CommandAutocomplete = (*TokenLookupCommand)(nil)
 
-// TokenLookupCommand is a Command that outputs details about the provided.
 type TokenLookupCommand struct {
 	*BaseCommand
 
@@ -21,12 +19,12 @@ type TokenLookupCommand struct {
 }
 
 func (c *TokenLookupCommand) Synopsis() string {
-	return "Displays information about a token"
+	return "Display information about a token"
 }
 
 func (c *TokenLookupCommand) Help() string {
 	helpText := `
-Usage: vault token-lookup [options] [TOKEN | ACCESSOR]
+Usage: vault token lookup [options] [TOKEN | ACCESSOR]
 
   Displays information about a token or accessor. If a TOKEN is not provided,
   the locally authenticated token is used.
@@ -34,16 +32,16 @@ Usage: vault token-lookup [options] [TOKEN | ACCESSOR]
   Get information about the locally authenticated token (this uses the
   /auth/token/lookup-self endpoint and permission):
 
-      $ vault token-lookup
+      $ vault token lookup
 
   Get information about a particular token (this uses the /auth/token/lookup
   endpoint and permission):
 
-      $ vault token-lookup 96ddf4bc-d217-f3ba-f9bd-017055595017
+      $ vault token lookup 96ddf4bc-d217-f3ba-f9bd-017055595017
 
   Get information about a token via its accessor:
 
-      $ vault token-lookup -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da
+      $ vault token lookup -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da
 
   For a full list of examples, please see the documentation.
 
@@ -63,7 +61,7 @@ func (c *TokenLookupCommand) Flags() *FlagSets {
 		Default:    false,
 		EnvVar:     "",
 		Completion: complete.PredictNothing,
-		Usage: "Treat the argument as an accessor intead of a token. When " +
+		Usage: "Treat the argument as an accessor instead of a token. When " +
 			"this option is selected, the output will NOT include the token.",
 	})
 

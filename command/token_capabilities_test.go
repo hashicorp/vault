@@ -8,18 +8,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testCapabilitiesCommand(tb testing.TB) (*cli.MockUi, *CapabilitiesCommand) {
+func testTokenCapabilitiesCommand(tb testing.TB) (*cli.MockUi, *TokenCapabilitiesCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &CapabilitiesCommand{
+	return ui, &TokenCapabilitiesCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestCapabilitiesCommand_Run(t *testing.T) {
+func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -42,7 +42,7 @@ func TestCapabilitiesCommand_Run(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			ui, cmd := testCapabilitiesCommand(t)
+			ui, cmd := testTokenCapabilitiesCommand(t)
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -79,7 +79,7 @@ func TestCapabilitiesCommand_Run(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		ui, cmd := testCapabilitiesCommand(t)
+		ui, cmd := testTokenCapabilitiesCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -121,7 +121,7 @@ func TestCapabilitiesCommand_Run(t *testing.T) {
 
 		client.SetToken(token)
 
-		ui, cmd := testCapabilitiesCommand(t)
+		ui, cmd := testTokenCapabilitiesCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -144,7 +144,7 @@ func TestCapabilitiesCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testCapabilitiesCommand(t)
+		ui, cmd := testTokenCapabilitiesCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -164,7 +164,7 @@ func TestCapabilitiesCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testCapabilitiesCommand(t)
+		_, cmd := testTokenCapabilitiesCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

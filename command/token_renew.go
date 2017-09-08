@@ -10,11 +10,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*TokenRenewCommand)(nil)
 var _ cli.CommandAutocomplete = (*TokenRenewCommand)(nil)
 
-// TokenRenewCommand is a Command that mounts a new mount.
 type TokenRenewCommand struct {
 	*BaseCommand
 
@@ -22,12 +20,12 @@ type TokenRenewCommand struct {
 }
 
 func (c *TokenRenewCommand) Synopsis() string {
-	return "Renews token leases"
+	return "Renew a token lease"
 }
 
 func (c *TokenRenewCommand) Help() string {
 	helpText := `
-Usage: vault token-renew [options] [TOKEN]
+Usage: vault token renew [options] [TOKEN]
 
   Renews a token's lease, extending the amount of time it can be used. If a
   TOKEN is not provided, the locally authenticated token is used. Lease renewal
@@ -36,16 +34,16 @@ Usage: vault token-renew [options] [TOKEN]
 
   Renew a token (this uses the /auth/token/renew endpoint and permission):
 
-      $ vault token-renew 96ddf4bc-d217-f3ba-f9bd-017055595017
+      $ vault token renew 96ddf4bc-d217-f3ba-f9bd-017055595017
 
   Renew the currently authenticated token (this uses the /auth/token/renew-self
   endpoint and permission):
 
-      $ vault token-renew
+      $ vault token renew
 
   Renew a token requesting a specific increment value:
 
-      $ vault token-renew -increment 30m 96ddf4bc-d217-f3ba-f9bd-017055595017
+      $ vault token renew -increment=30m 96ddf4bc-d217-f3ba-f9bd-017055595017
 
   For a full list of examples, please see the documentation.
 

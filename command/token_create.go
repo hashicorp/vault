@@ -10,11 +10,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*TokenCreateCommand)(nil)
 var _ cli.CommandAutocomplete = (*TokenCreateCommand)(nil)
 
-// TokenCreateCommand is a Command that mounts a new mount.
 type TokenCreateCommand struct {
 	*BaseCommand
 
@@ -36,12 +34,12 @@ type TokenCreateCommand struct {
 }
 
 func (c *TokenCreateCommand) Synopsis() string {
-	return "Creates a new token"
+	return "Create a new token"
 }
 
 func (c *TokenCreateCommand) Help() string {
 	helpText := `
-Usage: vault token-create [options]
+Usage: vault token create [options]
 
   Creates a new token that can be used for authentication. This token will be
   created as a child of the currently authenticated token. The generated token
@@ -159,7 +157,7 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 		Name:       "metadata",
 		Target:     &c.flagMetadata,
 		Completion: complete.PredictAnything,
-		Usage: "Arbitary key=value metadata to associate with the token. " +
+		Usage: "Arbitrary key=value metadata to associate with the token. " +
 			"This metadata will show in the audit log when the token is used. " +
 			"This can be specified multiple times to add multiple pieces of " +
 			"metadata.",
