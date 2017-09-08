@@ -9,18 +9,15 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*StatusCommand)(nil)
 var _ cli.CommandAutocomplete = (*StatusCommand)(nil)
 
-// StatusCommand is a Command that outputs the status of whether Vault is sealed
-// or not as well as HA information.
 type StatusCommand struct {
 	*BaseCommand
 }
 
 func (c *StatusCommand) Synopsis() string {
-	return "Prints seal and HA status"
+	return "Print seal and HA status"
 }
 
 func (c *StatusCommand) Help() string {
