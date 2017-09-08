@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -11,6 +12,8 @@ import (
 )
 
 func TestParseSecret(t *testing.T) {
+	t.Parallel()
+
 	raw := strings.TrimSpace(`
 {
 	"lease_id": "foo",
@@ -1263,6 +1266,271 @@ func TestSecret_TokenPolicies(t *testing.T) {
 	})
 }
 
+func TestSecret_TokenMetadata(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		secret *api.Secret
+		exp    map[string]string
+	}{
+		{
+			"nil",
+			nil,
+			nil,
+		},
+		{
+			"nil_auth",
+			&api.Secret{
+				Auth: nil,
+			},
+			nil,
+		},
+		{
+			"nil_auth_metadata",
+			&api.Secret{
+				Auth: &api.SecretAuth{
+					Metadata: nil,
+				},
+			},
+			nil,
+		},
+		{
+			"empty_auth_metadata",
+			&api.Secret{
+				Auth: &api.SecretAuth{
+					Metadata: map[string]string{},
+				},
+			},
+			nil,
+		},
+		{
+			"real_auth_metdata",
+			&api.Secret{
+				Auth: &api.SecretAuth{
+					Metadata: map[string]string{"foo": "bar"},
+				},
+			},
+			map[string]string{"foo": "bar"},
+		},
+		{
+			"nil_data",
+			&api.Secret{
+				Data: nil,
+			},
+			nil,
+		},
+		{
+			"empty_data",
+			&api.Secret{
+				Data: map[string]interface{}{},
+			},
+			nil,
+		},
+		{
+			"data_not_map",
+			&api.Secret{
+				Data: map[string]interface{}{
+					"metadata": 123,
+				},
+			},
+			nil,
+		},
+		{
+			"data_map",
+			&api.Secret{
+				Data: map[string]interface{}{
+					"metadata": map[string]interface{}{"foo": "bar"},
+				},
+			},
+			map[string]string{"foo": "bar"},
+		},
+		{
+			"data_map_bad_type",
+			&api.Secret{
+				Data: map[string]interface{}{
+					"metadata": map[string]interface{}{"foo": 123},
+				},
+			},
+			nil,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			act := tc.secret.TokenMetadata()
+			if !reflect.DeepEqual(act, tc.exp) {
+				t.Errorf("expected %#v to be %#v", act, tc.exp)
+			}
+		})
+	}
+
+	t.Run("auth", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		metadata := map[string]string{"username": "test"}
+
+		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+			"password": "test",
+			"policies": "default",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
+			"password": "test",
+		})
+		if err != nil || secret == nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
+			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		}
+	})
+
+	t.Run("token-create", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		metadata := map[string]string{"username": "test"}
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Metadata: metadata,
+			Policies: []string{"default"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
+			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		}
+	})
+
+	t.Run("token-lookup", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		metadata := map[string]string{"username": "test"}
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Metadata: metadata,
+			Policies: []string{"default"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		secret, err = client.Auth().Token().Lookup(token)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
+			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		}
+	})
+
+	t.Run("token-lookup-self", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		metadata := map[string]string{"username": "test"}
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Metadata: metadata,
+			Policies: []string{"default"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		client.SetToken(token)
+		secret, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
+			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		}
+	})
+
+	t.Run("token-renew", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		metadata := map[string]string{"username": "test"}
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Metadata: metadata,
+			Policies: []string{"default"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		secret, err = client.Auth().Token().Renew(token, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
+			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		}
+	})
+
+	t.Run("token-renew-self", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		metadata := map[string]string{"username": "test"}
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Metadata: metadata,
+			Policies: []string{"default"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		client.SetToken(token)
+		secret, err = client.Auth().Token().RenewSelf(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
+			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		}
+	})
+}
+
 func TestSecret_TokenIsRenewable(t *testing.T) {
 	t.Parallel()
 
@@ -1515,6 +1783,260 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 
 		if secret.TokenIsRenewable() != renewable {
 			t.Errorf("expected %t to be %t", secret.TokenIsRenewable(), renewable)
+		}
+	})
+}
+
+func TestSecret_TokenTTLInt(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		secret *api.Secret
+		exp    int
+	}{
+		{
+			"nil",
+			nil,
+			0,
+		},
+		{
+			"nil_auth",
+			&api.Secret{
+				Auth: nil,
+			},
+			0,
+		},
+		{
+			"nil_auth_lease_duration",
+			&api.Secret{
+				Auth: &api.SecretAuth{
+					LeaseDuration: 0,
+				},
+			},
+			0,
+		},
+		{
+			"real_auth_lease_duration",
+			&api.Secret{
+				Auth: &api.SecretAuth{
+					LeaseDuration: 3600,
+				},
+			},
+			3600,
+		},
+		{
+			"nil_data",
+			&api.Secret{
+				Data: nil,
+			},
+			0,
+		},
+		{
+			"empty_data",
+			&api.Secret{
+				Data: map[string]interface{}{},
+			},
+			0,
+		},
+		{
+			"data_not_json_number",
+			&api.Secret{
+				Data: map[string]interface{}{
+					"ttl": 123,
+				},
+			},
+			0,
+		},
+		{
+			"data_json_number",
+			&api.Secret{
+				Data: map[string]interface{}{
+					"ttl": json.Number("3600"),
+				},
+			},
+			3600,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			act := tc.secret.TokenTTLInt()
+			if act != tc.exp {
+				t.Errorf("expected %d to be %d", act, tc.exp)
+			}
+		})
+	}
+
+	t.Run("auth", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ttl := 3600
+
+		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+			"password":         "test",
+			"policies":         "default",
+			"ttl":              fmt.Sprintf("%ds", ttl),
+			"explicit_max_ttl": fmt.Sprintf("%ds", ttl),
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
+			"password": "test",
+		})
+		if err != nil || secret == nil {
+			t.Fatal(err)
+		}
+
+		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTL(), ttl)
+		}
+	})
+
+	t.Run("token-create", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ttl := 3600
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies:       []string{"default"},
+			TTL:            fmt.Sprintf("%ds", ttl),
+			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
+		}
+	})
+
+	t.Run("token-lookup", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ttl := 3600
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies:       []string{"default"},
+			TTL:            fmt.Sprintf("%ds", ttl),
+			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		secret, err = client.Auth().Token().Lookup(token)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
+		}
+	})
+
+	t.Run("token-lookup-self", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ttl := 3600
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies:       []string{"default"},
+			TTL:            fmt.Sprintf("%ds", ttl),
+			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		client.SetToken(token)
+		secret, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
+		}
+	})
+
+	t.Run("token-renew", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ttl := 3600
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies:       []string{"default"},
+			TTL:            fmt.Sprintf("%ds", ttl),
+			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		secret, err = client.Auth().Token().Renew(token, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
+		}
+	})
+
+	t.Run("token-renew-self", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ttl := 3600
+
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+			Policies:       []string{"default"},
+			TTL:            fmt.Sprintf("%ds", ttl),
+			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		token := secret.Auth.ClientToken
+
+		client.SetToken(token)
+		secret, err = client.Auth().Token().RenewSelf(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
 		}
 	})
 }

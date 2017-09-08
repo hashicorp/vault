@@ -86,7 +86,7 @@ func (s *Secret) TokenAccessor() string {
 // TokenMeta returns the standardized token metadata for the given secret.
 // If the secret is nil or does not contain an accessor, this returns the empty
 // string. Metadata is usually modeled as an map[string]interface{}, but token
-// metdata is always a map[string]string. This function handles the coercion.
+// metadata is always a map[string]string. This function handles the coercion.
 func (s *Secret) TokenMeta() map[string]string {
 	if s == nil {
 		return nil
@@ -176,6 +176,42 @@ func (s *Secret) TokenPolicies() []string {
 	return policies
 }
 
+// TokenMetadata returns the map of metadata associated with this token, if any
+// exists. If the secret is nil or does not contain the "metadata" key, this
+// returns nil.
+func (s *Secret) TokenMetadata() map[string]string {
+	if s == nil {
+		return nil
+	}
+
+	if s.Auth != nil && len(s.Auth.Metadata) > 0 {
+		return s.Auth.Metadata
+	}
+
+	if s.Data == nil || (s.Data["metadata"] == nil && s.Data["meta"] == nil) {
+		return nil
+	}
+
+	data, ok := s.Data["metadata"].(map[string]interface{})
+	if !ok {
+		data, ok = s.Data["meta"].(map[string]interface{})
+		if !ok {
+			return nil
+		}
+	}
+
+	metadata := make(map[string]string, len(data))
+	for k, v := range data {
+		typed, ok := v.(string)
+		if !ok {
+			return nil
+		}
+		metadata[k] = typed
+	}
+
+	return metadata
+}
+
 // TokenIsRenewable returns the standardized token renewability for the given
 // secret. If the secret is nil or does not contain the "renewable" key, this
 // returns false.
@@ -198,6 +234,37 @@ func (s *Secret) TokenIsRenewable() bool {
 	}
 
 	return renewable
+}
+
+// TokenTTLInt returns the token's TTL as an integer number of seconds.
+func (s *Secret) TokenTTLInt() int {
+	if s == nil {
+		return 0
+	}
+
+	if s.Auth != nil && s.Auth.LeaseDuration > 0 {
+		return s.Auth.LeaseDuration
+	}
+
+	if s.Data == nil || s.Data["ttl"] == nil {
+		return 0
+	}
+
+	ttlStr, ok := s.Data["ttl"].(json.Number)
+	if !ok {
+		return 0
+	}
+
+	if string(ttlStr) == "" {
+		return 0
+	}
+
+	i, err := strconv.ParseInt(string(ttlStr), 0, 64)
+	if err != nil {
+		return 0
+	}
+
+	return int(i)
 }
 
 // TokenTTL returns the standardized remaining token TTL for the given secret.
