@@ -56,11 +56,25 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 }
 
 func clientIAM(s logical.Storage) (*iam.IAM, error) {
-	awsConfig, _ := getRootConfig(s)
-	return iam.New(session.New(awsConfig)), nil
+	awsConfig, err := getRootConfig(s)
+	if err != nil {
+		return nil, err
+	}
+	client := iam.New(session.New(awsConfig))
+	if client == nil {
+		return nil, fmt.Errorf("could not obtain iam client")
+	}
+	return client, nil
 }
 
 func clientSTS(s logical.Storage) (*sts.STS, error) {
-	awsConfig, _ := getRootConfig(s)
-	return sts.New(session.New(awsConfig)), nil
+	awsConfig, err := getRootConfig(s)
+	if err != nil {
+		return nil, err
+	}
+	client := sts.New(session.New(awsConfig))
+	if client == nil {
+		return nil, fmt.Errorf("could not obtain sts client")
+	}
+	return client, nil
 }
