@@ -11,11 +11,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*AuditEnableCommand)(nil)
 var _ cli.CommandAutocomplete = (*AuditEnableCommand)(nil)
 
-// AuditEnableCommand is a Command that mounts a new mount.
 type AuditEnableCommand struct {
 	*BaseCommand
 
@@ -27,26 +25,23 @@ type AuditEnableCommand struct {
 }
 
 func (c *AuditEnableCommand) Synopsis() string {
-	return "Enables an audit backend"
+	return "Enables an audit device"
 }
 
 func (c *AuditEnableCommand) Help() string {
 	helpText := `
-Usage: vault audit-enable [options] TYPE [CONFIG K=V...]
+Usage: vault audit enable [options] TYPE [CONFIG K=V...]
 
-  Enables an audit backend at a given path.
+  Enables an audit device at a given path.
 
-  This command enables an audit backend of type "type". Additional
-  options for configuring the audit backend can be specified after the
-  type in the same format as the "vault write" command in key/value pairs.
+  This command enables an audit device of TYPE. Additional options for
+  configuring the audit device can be specified after the type in the same
+  format as the "vault write" command in key/value pairs.
 
-  For example, to configure the file audit backend to write audit logs at
-  the path /var/log/audit.log:
+  For example, to configure the file audit device to write audit logs at the
+  path "/var/log/audit.log":
 
-      $ vault audit-enable file file_path=/var/log/audit.log
-
-  For information on available configuration options, please see the
-  documentation.
+      $ vault audit enable file file_path=/var/log/audit.log
 
 ` + c.Flags().Help()
 
@@ -65,7 +60,7 @@ func (c *AuditEnableCommand) Flags() *FlagSets {
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
 		Usage: "Human-friendly description for the purpose of this audit " +
-			"backend.",
+			"device.",
 	})
 
 	f.StringVar(&StringVar{
@@ -74,9 +69,9 @@ func (c *AuditEnableCommand) Flags() *FlagSets {
 		Default:    "", // The default is complex, so we have to manually document
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
-		Usage: "Place where the audit backend will be accessible. This must be " +
-			"unique across all audit backends. This defaults to the \"type\" of the " +
-			"audit backend.",
+		Usage: "Place where the audit device will be accessible. This must be " +
+			"unique across all audit devices. This defaults to the \"type\" of the " +
+			"audit device.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -84,8 +79,8 @@ func (c *AuditEnableCommand) Flags() *FlagSets {
 		Target:  &c.flagLocal,
 		Default: false,
 		EnvVar:  "",
-		Usage: "Mark the audit backend as a local-only backned. Local backends " +
-			"are not replicated nor removed by replication.",
+		Usage: "Mark the audit device as a local-only device. Local devices " +
+			"are not replicated or removed by replication.",
 	})
 
 	return set
@@ -150,10 +145,10 @@ func (c *AuditEnableCommand) Run(args []string) int {
 		Options:     options,
 		Local:       c.flagLocal,
 	}); err != nil {
-		c.UI.Error(fmt.Sprintf("Error enabling audit backend: %s", err))
+		c.UI.Error(fmt.Sprintf("Error enabling audit device: %s", err))
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Enabled the %s audit backend at: %s", auditType, auditPath))
+	c.UI.Output(fmt.Sprintf("Success! Enabled the %s audit device at: %s", auditType, auditPath))
 	return 0
 }

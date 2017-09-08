@@ -8,32 +8,30 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*AuditDisableCommand)(nil)
 var _ cli.CommandAutocomplete = (*AuditDisableCommand)(nil)
 
-// AuditDisableCommand is a Command that mounts a new mount.
 type AuditDisableCommand struct {
 	*BaseCommand
 }
 
 func (c *AuditDisableCommand) Synopsis() string {
-	return "Disables an audit backend"
+	return "Disables an audit device"
 }
 
 func (c *AuditDisableCommand) Help() string {
 	helpText := `
-Usage: vault audit-disable [options] PATH
+Usage: vault audit disable [options] PATH
 
-  Disables an audit backend. Once an audit backend is disabled, no future
-  audit logs are dispatched to it. The data associated with the audit backend
-  is not affected.
+  Disables an audit device. Once an audit device is disabled, no future audit
+  logs are dispatched to it. The data associated with the audit device is not
+  affected.
 
-  The argument corresponds to the PATH of the mount, not the TYPE!
+  The argument corresponds to the PATH of audit device, not the TYPE!
 
-  Disable the audit backend at file/:
+  Disable the audit device enabled at "file/":
 
-      $ vault audit-disable file/
+      $ vault audit disable file/
 
 ` + c.Flags().Help()
 
@@ -61,17 +59,16 @@ func (c *AuditDisableCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	path, kvs, err := extractPath(args)
-	if err != nil {
-		c.UI.Error(err.Error())
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
-	}
-	path = ensureTrailingSlash(path)
-
-	if len(kvs) > 0 {
+	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
 	}
+
+	path := ensureTrailingSlash(sanitizePath(args[0]))
 
 	client, err := c.Client()
 	if err != nil {
@@ -80,11 +77,11 @@ func (c *AuditDisableCommand) Run(args []string) int {
 	}
 
 	if err := client.Sys().DisableAudit(path); err != nil {
-		c.UI.Error(fmt.Sprintf("Error disabling audit backend: %s", err))
+		c.UI.Error(fmt.Sprintf("Error disabling audit device: %s", err))
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Disabled audit backend (if it was enabled) at: %s", path))
+	c.UI.Output(fmt.Sprintf("Success! Disabled audit device (if it was enabled) at: %s", path))
 
 	return 0
 }

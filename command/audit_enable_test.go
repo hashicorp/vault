@@ -42,7 +42,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 		{
 			"enable",
 			[]string{"file", "file_path=discard"},
-			"Success! Enabled the file audit backend at: file/",
+			"Success! Enabled the file audit device at: file/",
 			0,
 		},
 		{
@@ -52,7 +52,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 				"file",
 				"file_path=discard",
 			},
-			"Success! Enabled the file audit backend at: audit_path/",
+			"Success! Enabled the file audit device at: audit_path/",
 			0,
 		},
 	}
@@ -100,7 +100,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Enabled the file audit backend at: audit_enable_integration/"
+		expected := "Success! Enabled the file audit device at: audit_enable_integration/"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -144,7 +144,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error enabling audit backend: "
+		expected := "Error enabling audit device: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)

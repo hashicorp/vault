@@ -10,11 +10,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*AuditListCommand)(nil)
 var _ cli.CommandAutocomplete = (*AuditListCommand)(nil)
 
-// AuditListCommand is a Command that lists the enabled audits.
 type AuditListCommand struct {
 	*BaseCommand
 
@@ -22,25 +20,23 @@ type AuditListCommand struct {
 }
 
 func (c *AuditListCommand) Synopsis() string {
-	return "Lists enabled audit backends"
+	return "Lists enabled audit devices"
 }
 
 func (c *AuditListCommand) Help() string {
 	helpText := `
-Usage: vault audit-list [options]
+Usage: vault audit list [options]
 
-  Lists the enabled audit backends in the Vault server. The output lists
-  the enabled audit backends and the options for those backends.
+  Lists the enabled audit devices in the Vault server. The output lists the
+  enabled audit devices and the options for those devices.
 
-  List all audit backends:
+  List all audit devices:
 
-      $ vault audit-list
+      $ vault audit list
 
-  List detailed output about the audit backends:
+  List detailed output about the audit devices:
 
-      $ vault audit-list -detailed
-
-  For a full list of examples, please see the documentation.
+      $ vault audit list -detailed
 
 ` + c.Flags().Help()
 
@@ -58,7 +54,7 @@ func (c *AuditListCommand) Flags() *FlagSets {
 		Default: false,
 		EnvVar:  "",
 		Usage: "Print detailed information such as options and replication " +
-			"status about each mount.",
+			"status about each auth device.",
 	})
 
 	return set
@@ -99,16 +95,16 @@ func (c *AuditListCommand) Run(args []string) int {
 	}
 
 	if len(audits) == 0 {
-		c.UI.Error(fmt.Sprintf("No audit backends are enabled."))
+		c.UI.Output(fmt.Sprintf("No audit devices are enabled."))
 		return 0
 	}
 
 	if c.flagDetailed {
-		c.UI.Output(tableOutput(c.detailedAudits(audits)))
+		c.UI.Output(tableOutput(c.detailedAudits(audits), nil))
 		return 0
 	}
 
-	c.UI.Output(tableOutput(c.simpleAudits(audits)))
+	c.UI.Output(tableOutput(c.simpleAudits(audits), nil))
 	return 0
 }
 

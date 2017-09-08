@@ -29,27 +29,27 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"empty",
+			"not_enough_args",
 			nil,
-			"Missing PATH!",
+			"Not enough arguments",
 			1,
 		},
 		{
-			"slash",
-			[]string{"/"},
-			"Missing PATH!",
+			"too_many_args",
+			[]string{"foo", "bar", "baz"},
+			"Too many arguments",
 			1,
 		},
 		{
 			"not_real",
 			[]string{"not_real"},
-			"Success! Disabled audit backend (if it was enabled) at: not_real/",
+			"Success! Disabled audit device (if it was enabled) at: not_real/",
 			0,
 		},
 		{
 			"default",
 			[]string{"file"},
-			"Success! Disabled audit backend (if it was enabled) at: file/",
+			"Success! Disabled audit device (if it was enabled) at: file/",
 			0,
 		},
 	}
@@ -112,7 +112,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Disabled audit backend (if it was enabled) at: integration_audit_disable/"
+		expected := "Success! Disabled audit device (if it was enabled) at: integration_audit_disable/"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -144,7 +144,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error disabling audit backend: "
+		expected := "Error disabling audit device: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
