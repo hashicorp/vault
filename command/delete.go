@@ -8,17 +8,15 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*DeleteCommand)(nil)
 var _ cli.CommandAutocomplete = (*DeleteCommand)(nil)
 
-// DeleteCommand is a Command that puts data into the Vault.
 type DeleteCommand struct {
 	*BaseCommand
 }
 
 func (c *DeleteCommand) Synopsis() string {
-	return "Deletes secrets and configuration"
+	return "Delete secrets and configuration"
 }
 
 func (c *DeleteCommand) Help() string {
@@ -69,13 +67,11 @@ func (c *DeleteCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	path, kvs, err := extractPath(args)
-	if err != nil {
-		c.UI.Error(err.Error())
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
-	}
-
-	if len(kvs) > 0 {
+	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
 	}
@@ -85,6 +81,8 @@ func (c *DeleteCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 2
 	}
+
+	path := sanitizePath(args[0])
 
 	if _, err := client.Logical().Delete(path); err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
