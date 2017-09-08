@@ -8,7 +8,6 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*VersionCommand)(nil)
 var _ cli.CommandAutocomplete = (*VersionCommand)(nil)
 
