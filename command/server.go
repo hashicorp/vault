@@ -22,6 +22,7 @@ import (
 
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
+	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
 
@@ -48,7 +49,9 @@ import (
 	"github.com/hashicorp/vault/version"
 )
 
-// ServerCommand is a Command that starts the Vault server.
+var _ cli.Command = (*ServerCommand)(nil)
+var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
+
 type ServerCommand struct {
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
@@ -69,6 +72,171 @@ type ServerCommand struct {
 
 	reloadFuncsLock *sync.RWMutex
 	reloadFuncs     *map[string][]reload.ReloadFunc
+	startedCh       chan (struct{}) // for tests
+	reloadedCh      chan (struct{}) // for tests
+
+	// new stuff
+	flagConfigs        []string
+	flagLogLevel       string
+	flagDev            bool
+	flagDevRootTokenID string
+	flagDevListenAddr  string
+
+	flagDevPluginDir     string
+	flagDevHA            bool
+	flagDevTransactional bool
+	flagDevLeasedKV      bool
+	flagDevThreeNode     bool
+	flagTestVerifyOnly   bool
+}
+
+func (c *ServerCommand) Synopsis() string {
+	return "Start a Vault server"
+}
+
+func (c *ServerCommand) Help() string {
+	helpText := `
+Usage: vault server [options]
+
+  This command starts a Vault server that responds to API requests. By default,
+  Vault will start in a "sealed" state. The Vault cluster must be initialized
+  before use, usually by the "vault init" command. Each Vault server must also
+  be unsealed using the "vault unseal" command or the API before the server can
+  respond to requests.
+
+  Start a server with a configuration file:
+
+      $ vault server -config=/etc/vault/config.hcl
+
+  Run in "dev" mode:
+
+      $ vault server -dev -dev-root-token-id="root"
+
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+	return strings.TrimSpace(helpText)
+}
+
+func (c *ServerCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   "config",
+		Target: &c.flagConfigs,
+		Completion: complete.PredictOr(
+			complete.PredictFiles("*.hcl"),
+			complete.PredictFiles("*.json"),
+			complete.PredictDirs("*"),
+		),
+		Usage: "Path to a configuration file or directory of configuration " +
+			"files. This flag can be specified multiple times to load multiple " +
+			"configurations. If the path is a directory, all files which end in " +
+			".hcl or .json are loaded.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "log-level",
+		Target:     &c.flagLogLevel,
+		Default:    "info",
+		EnvVar:     "VAULT_LOG",
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
+		Usage: "Log verbosity level. Supported values (in order of detail) are " +
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
+	})
+
+	f = set.NewFlagSet("Dev Options")
+
+	f.BoolVar(&BoolVar{
+		Name:   "dev",
+		Target: &c.flagDev,
+		Usage: "Enable development mode. In this mode, Vault runs in-memory and " +
+			"starts unsealed. As the name implies, do not run \"dev\" mode in " +
+			"production.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-root-token-id",
+		Target:  &c.flagDevRootTokenID,
+		Default: "",
+		EnvVar:  "VAULT_DEV_ROOT_TOKEN_ID",
+		Usage: "Initial root token. This only applies when running in \"dev\" " +
+			"mode.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-listen-address",
+		Target:  &c.flagDevListenAddr,
+		Default: "127.0.0.1:8200",
+		EnvVar:  "VAULT_DEV_LISTEN_ADDRESS",
+		Usage:   "Address to bind to in \"dev\" mode.",
+	})
+
+	// Internal-only flags to follow.
+	//
+	// Why hello there little source code reader! Welcome to the Vault source
+	// code. The remaining options are intentionally undocumented and come with
+	// no warranty or backwards-compatability promise. Do not use these flags
+	// in production. Do not build automation using these flags. Unless you are
+	// developing against Vault, you should not need any of these flags.
+
+	f.StringVar(&StringVar{
+		Name:       "dev-plugin-dir",
+		Target:     &c.flagDevPluginDir,
+		Default:    "",
+		Completion: complete.PredictDirs("*"),
+		Hidden:     true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-ha",
+		Target:  &c.flagDevHA,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-transactional",
+		Target:  &c.flagDevTransactional,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-leased-generic",
+		Target:  &c.flagDevLeasedKV,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-three-node",
+		Target:  &c.flagDevThreeNode,
+		Default: false,
+		Hidden:  true,
+	})
+
+	// TODO: should this be a public flag?
+	f.BoolVar(&BoolVar{
+		Name:    "test-verify-only",
+		Target:  &c.flagTestVerifyOnly,
+		Default: false,
+		Hidden:  true,
+	})
+
+	// End internal-only flags.
+
+	return set
+}
+
+func (c *ServerCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *ServerCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -154,10 +322,11 @@ func (c *ServerCommand) Run(args []string) int {
 			c.Ui.Output("At least one config path must be specified with -config")
 			flags.Usage()
 			return 1
-		case devRootTokenID != "":
-			c.Ui.Output("Root token ID can only be specified with -dev")
-			flags.Usage()
-			return 1
+		case c.flagDevRootTokenID != "":
+			c.UI.Warn(wrapAtLength(
+				"You cannot specify a custom root token ID outside of \"dev\" mode. " +
+					"Your request has been ignored."))
+			c.flagDevRootTokenID = ""
 		}
 	}
 
@@ -1217,7 +1386,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading file audit backend at path %s: %v", strings.TrimPrefix(k, "audit_file|"), err))
+						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading file audit device at path %s: %v", strings.TrimPrefix(k, "audit_file|"), err))
 					}
 				}
 			}
