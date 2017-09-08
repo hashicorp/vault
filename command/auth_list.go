@@ -11,12 +11,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*AuthListCommand)(nil)
 var _ cli.CommandAutocomplete = (*AuthListCommand)(nil)
 
-// AuthListCommand is a Command that lists the enabled authentication methods
-// and data about them.
 type AuthListCommand struct {
 	*BaseCommand
 
@@ -24,25 +21,24 @@ type AuthListCommand struct {
 }
 
 func (c *AuthListCommand) Synopsis() string {
-	return "Lists enabled auth providers"
+	return "Lists enabled auth methods"
 }
 
 func (c *AuthListCommand) Help() string {
 	helpText := `
-Usage: vault auth-methods [options]
+Usage: vault auth list [options]
 
-  Lists the enabled authentication providers on the Vault server. This command
-  also outputs information about the provider including configuration and
-  human-friendly descriptions. A TTL of "system" indicates that the system
-  default is in use.
+  Lists the enabled auth methods on the Vault server. This command also outputs
+  information about the method including configuration and human-friendly
+  descriptions. A TTL of "system" indicates that the system default is in use.
 
-  List all enabled authentication providers:
+  List all enabled auth methods:
 
-      $ vault auth-list
+      $ vault auth list
 
-  List all enabled authentication providers with detailed output:
+  List all enabled auth methods with detailed output:
 
-      $ vault auth-list -detailed
+      $ vault auth list -detailed
 
 ` + c.Flags().Help()
 
@@ -59,7 +55,7 @@ func (c *AuthListCommand) Flags() *FlagSets {
 		Target:  &c.flagDetailed,
 		Default: false,
 		Usage: "Print detailed information such as configuration and replication " +
-			"status about each authentication provider.",
+			"status about each auth method.",
 	})
 
 	return set
@@ -100,11 +96,11 @@ func (c *AuthListCommand) Run(args []string) int {
 	}
 
 	if c.flagDetailed {
-		c.UI.Output(tableOutput(c.detailedMounts(auths)))
+		c.UI.Output(tableOutput(c.detailedMounts(auths), nil))
 		return 0
 	}
 
-	c.UI.Output(tableOutput(c.simpleMounts(auths)))
+	c.UI.Output(tableOutput(c.simpleMounts(auths), nil))
 	return 0
 }
 

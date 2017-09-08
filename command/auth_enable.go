@@ -9,11 +9,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*AuthEnableCommand)(nil)
 var _ cli.CommandAutocomplete = (*AuthEnableCommand)(nil)
 
-// AuthEnableCommand is a Command that enables a new endpoint.
 type AuthEnableCommand struct {
 	*BaseCommand
 
@@ -24,30 +22,28 @@ type AuthEnableCommand struct {
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
-	return "Enables a new auth provider"
+	return "Enables a new auth method"
 }
 
 func (c *AuthEnableCommand) Help() string {
 	helpText := `
-Usage: vault auth-enable [options] TYPE
+Usage: vault auth enable [options] TYPE
 
-  Enables a new authentication provider. An authentication provider is
-  responsible for authenticating users or machiens and assigning them
-  policies with which they can access Vault.
+  Enables a new auth method. An auth method is responsible for authenticating
+  users or machines and assigning them policies with which they can access
+  Vault.
 
-  Enable the userpass auth provider at userpass/:
+  Enable the userpass auth method at userpass/:
 
-      $ vault auth-enable userpass
+      $ vault auth enable userpass
 
-  Enable the LDAP auth provider at auth-prod/:
+  Enable the LDAP auth method at auth-prod/:
 
-      $ vault auth-enable -path=auth-prod ldap
+      $ vault auth enable -path=auth-prod ldap
 
-  Enable a custom auth plugin (after it is registered in the plugin registry):
+  Enable a custom auth plugin (after it's registered in the plugin registry):
 
-      $ vault auth-enable -path=my-auth -plugin-name=my-auth-plugin plugin
-
-  For a full list of examples, please see the documentation.
+      $ vault auth enable -path=my-auth -plugin-name=my-auth-plugin plugin
 
 ` + c.Flags().Help()
 
@@ -64,7 +60,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Target:     &c.flagDescription,
 		Completion: complete.PredictAnything,
 		Usage: "Human-friendly description for the purpose of this " +
-			"authentication provider.",
+			"auth method.",
 	})
 
 	f.StringVar(&StringVar{
@@ -72,16 +68,17 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Target:     &c.flagPath,
 		Default:    "", // The default is complex, so we have to manually document
 		Completion: complete.PredictAnything,
-		Usage: "Place where the auth provider will be accessible. This must be " +
-			"unique across all auth providers. This defaults to the \"type\" of " +
-			"the mount. The auth provider will be accessible at \"/auth/<path>\".",
+		Usage: "Place where the auth method will be accessible. This must be " +
+			"unique across all auth methods. This defaults to the \"type\" of " +
+			"the auth method. The auth method will be accessible at " +
+			"\"/auth/<path>\".",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
 		Completion: complete.PredictAnything,
-		Usage: "Name of the auth provider plugin. This plugin name must already " +
+		Usage: "Name of the auth method plugin. This plugin name must already " +
 			"exist in the Vault server's plugin catalog.",
 	})
 
@@ -89,7 +86,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Name:    "local",
 		Target:  &c.flagLocal,
 		Default: false,
-		Usage: "Mark the auth provider as local-only. Local auth providers are " +
+		Usage: "Mark the auth method as local-only. Local auth methods are " +
 			"not replicated nor removed by replication.",
 	})
 
@@ -156,7 +153,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		return 2
 	}
 
-	authThing := authType + " auth provider"
+	authThing := authType + " auth method"
 	if authType == "plugin" {
 		authThing = c.flagPluginName + " plugin"
 	}

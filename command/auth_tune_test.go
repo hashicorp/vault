@@ -4,21 +4,22 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
 
-func testAuthDisableCommand(tb testing.TB) (*cli.MockUi, *AuthDisableCommand) {
+func testAuthTuneCommand(tb testing.TB) (*cli.MockUi, *AuthTuneCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &AuthDisableCommand{
+	return ui, &AuthTuneCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestAuthDisableCommand_Run(t *testing.T) {
+func TestAuthTuneCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -29,7 +30,7 @@ func TestAuthDisableCommand_Run(t *testing.T) {
 	}{
 		{
 			"not_enough_args",
-			nil,
+			[]string{},
 			"Not enough arguments",
 			1,
 		},
@@ -50,7 +51,7 @@ func TestAuthDisableCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				ui, cmd := testAuthDisableCommand(t)
+				ui, cmd := testAuthTuneCommand(t)
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -71,21 +72,26 @@ func TestAuthDisableCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		if err := client.Sys().EnableAuth("my-auth", "userpass", ""); err != nil {
+		ui, cmd := testAuthTuneCommand(t)
+		cmd.client = client
+
+		// Mount
+		if err := client.Sys().EnableAuthWithOptions("my-auth", &api.EnableAuthOptions{
+			Type: "userpass",
+		}); err != nil {
 			t.Fatal(err)
 		}
 
-		ui, cmd := testAuthDisableCommand(t)
-		cmd.client = client
-
 		code := cmd.Run([]string{
-			"my-auth",
+			"-default-lease-ttl", "30m",
+			"-max-lease-ttl", "1h",
+			"my-auth/",
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Disabled the auth method"
+		expected := "Success! Tuned the auth method at: my-auth/"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -96,8 +102,18 @@ func TestAuthDisableCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if auth, ok := auths["my-auth/"]; ok {
-			t.Errorf("expected auth to be disabled: %#v", auth)
+		mountInfo, ok := auths["my-auth/"]
+		if !ok {
+			t.Fatalf("expected auth to exist")
+		}
+		if exp := "userpass"; mountInfo.Type != exp {
+			t.Errorf("expected %q to be %q", mountInfo.Type, exp)
+		}
+		if exp := 1800; mountInfo.Config.DefaultLeaseTTL != exp {
+			t.Errorf("expected %d to be %d", mountInfo.Config.DefaultLeaseTTL, exp)
+		}
+		if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
+			t.Errorf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
 		}
 	})
 
@@ -107,17 +123,17 @@ func TestAuthDisableCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testAuthDisableCommand(t)
+		ui, cmd := testAuthTuneCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"my-auth",
+			"userpass/",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error disabling auth method at my-auth/: "
+		expected := "Error tuning auth method userpass/: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -127,7 +143,7 @@ func TestAuthDisableCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testAuthDisableCommand(t)
+		_, cmd := testAuthTuneCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

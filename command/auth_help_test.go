@@ -17,7 +17,7 @@ func testAuthHelpCommand(tb testing.TB) (*cli.MockUi, *AuthHelpCommand) {
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
-		Handlers: map[string]AuthHandler{
+		Handlers: map[string]LoginHandler{
 			"userpass": &credUserpass.CLIHandler{
 				DefaultMount: "userpass",
 			},
@@ -88,7 +88,7 @@ func TestAuthHelpCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Usage: vault auth -method=userpass"
+		expected := "Usage: vault login -method=userpass"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -101,7 +101,7 @@ func TestAuthHelpCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		// No mounted auth backends
+		// No mounted auth methods
 
 		ui, cmd := testAuthHelpCommand(t)
 		cmd.client = client
@@ -113,7 +113,7 @@ func TestAuthHelpCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Usage: vault auth -method=userpass"
+		expected := "Usage: vault login -method=userpass"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -136,7 +136,7 @@ func TestAuthHelpCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error listing authentication providers: "
+		expected := "Error listing auth methods: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)

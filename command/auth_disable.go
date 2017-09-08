@@ -8,35 +8,31 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*AuthDisableCommand)(nil)
 var _ cli.CommandAutocomplete = (*AuthDisableCommand)(nil)
 
-// AuthDisableCommand is a Command that enables a new endpoint.
 type AuthDisableCommand struct {
 	*BaseCommand
 }
 
 func (c *AuthDisableCommand) Synopsis() string {
-	return "Disables an auth provider"
+	return "Disables an auth method"
 }
 
 func (c *AuthDisableCommand) Help() string {
 	helpText := `
-Usage: vault auth-disable [options] PATH
+Usage: vault auth disable [options] PATH
 
-  Disables an existing authentication provider at the given PATH. The argument
-  corresponds to the PATH of the mount, not the TYPE!. Once the auth provider
-  is disabled its path can no longer be used to authenticate. All access tokens
-  generated via the disabled auth provider are revoked.
+  Disables an existing auth method at the given PATH. The argument corresponds
+  to the PATH of the mount, not the TYPE!. Once the auth method is disabled its
+  path can no longer be used to authenticate.
 
-  This command will block until all tokens are revoked.
+  All access tokens generated via the disabled auth method are immediately
+  revoked. This command will block until all tokens are revoked.
 
-  Disable the authentication provider at userpass/:
+  Disable the auth method at userpass/:
 
-      $ vault auth-disable userpass
-
-  For a full list of examples, please see the documentation.
+      $ vault auth disable userpass/
 
 ` + c.Flags().Help()
 
@@ -82,10 +78,10 @@ func (c *AuthDisableCommand) Run(args []string) int {
 	}
 
 	if err := client.Sys().DisableAuth(path); err != nil {
-		c.UI.Error(fmt.Sprintf("Error disabling auth at %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error disabling auth method at %s: %s", path, err))
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Disabled the auth provider (if it existed) at: %s", path))
+	c.UI.Output(fmt.Sprintf("Success! Disabled the auth method (if it existed) at: %s", path))
 	return 0
 }

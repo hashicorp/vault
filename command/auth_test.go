@@ -6,7 +6,6 @@ import (
 
 	"github.com/mitchellh/cli"
 
-	"github.com/hashicorp/vault/api"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/command/token"
@@ -23,7 +22,7 @@ func testAuthCommand(tb testing.TB) (*cli.MockUi, *AuthCommand) {
 			// Override to our own token helper
 			tokenHelper: token.NewTestingTokenHelper(),
 		},
-		Handlers: map[string]AuthHandler{
+		Handlers: map[string]LoginHandler{
 			"token":    &credToken.CLIHandler{},
 			"userpass": &credUserpass.CLIHandler{},
 		},
@@ -33,55 +32,61 @@ func testAuthCommand(tb testing.TB) (*cli.MockUi, *AuthCommand) {
 func TestAuthCommand_Run(t *testing.T) {
 	t.Parallel()
 
-	deprecations := []struct {
-		name string
-		args []string
-		out  string
-		code int
-	}{
-		{
-			"methods",
-			[]string{"-methods"},
-			"token/",
-			0,
-		},
-		{
-			"method_help",
-			[]string{"-method", "userpass", "-method-help"},
-			"Usage: vault auth -method=userpass",
-			0,
-		},
-	}
-
-	t.Run("deprecations", func(t *testing.T) {
+	// TODO: remove in 0.9.0
+	t.Run("deprecated_methods", func(t *testing.T) {
 		t.Parallel()
 
-		for _, tc := range deprecations {
-			tc := tc
+		client, closer := testVaultServer(t)
+		defer closer()
 
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+		ui, cmd := testAuthCommand(t)
+		cmd.client = client
 
-				client, closer := testVaultServer(t)
-				defer closer()
+		// vault auth -methods -> vault auth list
+		code := cmd.Run([]string{"-methods"})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
+		}
+		stdout, stderr := ui.OutputWriter.String(), ui.ErrorWriter.String()
 
-				ui, cmd := testAuthCommand(t)
-				cmd.client = client
+		if expected := "WARNING!"; !strings.Contains(stderr, expected) {
+			t.Errorf("expected %q to contain %q", stderr, expected)
+		}
 
-				code := cmd.Run(tc.args)
-				if code != tc.code {
-					t.Errorf("expected %d to be %d", code, tc.code)
-				}
-
-				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-				if !strings.Contains(combined, tc.out) {
-					t.Errorf("expected %q to contain %q", combined, tc.out)
-				}
-			})
+		if expected := "token/"; !strings.Contains(stdout, expected) {
+			t.Errorf("expected %q to contain %q", stdout, expected)
 		}
 	})
 
-	t.Run("custom_path", func(t *testing.T) {
+	t.Run("deprecated_method_help", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testAuthCommand(t)
+		cmd.client = client
+
+		// vault auth -method=foo -method-help -> vault auth help foo
+		code := cmd.Run([]string{
+			"-method=userpass",
+			"-method-help",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
+		}
+		stdout, stderr := ui.OutputWriter.String(), ui.ErrorWriter.String()
+
+		if expected := "WARNING!"; !strings.Contains(stderr, expected) {
+			t.Errorf("expected %q to contain %q", stderr, expected)
+		}
+
+		if expected := "vault login"; !strings.Contains(stdout, expected) {
+			t.Errorf("expected %q to contain %q", stdout, expected)
+		}
+	})
+
+	t.Run("deprecated_login", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -100,11 +105,7 @@ func TestAuthCommand_Run(t *testing.T) {
 		ui, cmd := testAuthCommand(t)
 		cmd.client = client
 
-		tokenHelper, err := cmd.TokenHelper()
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		// vault auth ARGS -> vault login ARGS
 		code := cmd.Run([]string{
 			"-method", "userpass",
 			"-path", "my-auth",
@@ -112,420 +113,16 @@ func TestAuthCommand_Run(t *testing.T) {
 			"password=test",
 		})
 		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
+			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
+		}
+		stdout, stderr := ui.OutputWriter.String(), ui.ErrorWriter.String()
+
+		if expected := "WARNING!"; !strings.Contains(stderr, expected) {
+			t.Errorf("expected %q to contain %q", stderr, expected)
 		}
 
-		expected := "Success! You are now authenticated."
-		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if !strings.Contains(combined, expected) {
-			t.Errorf("expected %q to be %q", combined, expected)
-		}
-
-		storedToken, err := tokenHelper.Get()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if l, exp := len(storedToken), 36; l != exp {
-			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, storedToken)
-		}
-	})
-
-	t.Run("no_verify", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies: []string{"default"},
-			TTL:      "30m",
-			NumUses:  1,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		token := secret.Auth.ClientToken
-
-		_, cmd := testAuthCommand(t)
-		cmd.client = client
-
-		code := cmd.Run([]string{
-			"-no-verify",
-			token,
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		lookup, err := client.Auth().Token().Lookup(token)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// There was 1 use to start, make sure we didn't use it (verifying would
-		// use it).
-		uses := lookup.TokenRemainingUses()
-		if uses != 1 {
-			t.Errorf("expected %d to be %d", uses, 1)
-		}
-	})
-
-	t.Run("no_store", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies: []string{"default"},
-			TTL:      "30m",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		token := secret.Auth.ClientToken
-
-		_, cmd := testAuthCommand(t)
-		cmd.client = client
-
-		tokenHelper, err := cmd.TokenHelper()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Ensure we have no token to start
-		if storedToken, err := tokenHelper.Get(); err != nil || storedToken != "" {
-			t.Errorf("expected token helper to be empty: %s: %q", err, storedToken)
-		}
-
-		code := cmd.Run([]string{
-			"-no-store",
-			token,
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		storedToken, err := tokenHelper.Get()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if exp := ""; storedToken != exp {
-			t.Errorf("expected %q to be %q", storedToken, exp)
-		}
-	})
-
-	t.Run("stores", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies: []string{"default"},
-			TTL:      "30m",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		token := secret.Auth.ClientToken
-
-		_, cmd := testAuthCommand(t)
-		cmd.client = client
-
-		tokenHelper, err := cmd.TokenHelper()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		code := cmd.Run([]string{
-			token,
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		storedToken, err := tokenHelper.Get()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if storedToken != token {
-			t.Errorf("expected %q to be %q", storedToken, token)
-		}
-	})
-
-	t.Run("only_token", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
-			"password": "test",
-			"policies": "default",
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		ui, cmd := testAuthCommand(t)
-		cmd.client = client
-
-		tokenHelper, err := cmd.TokenHelper()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		code := cmd.Run([]string{
-			"-only-token",
-			"-method", "userpass",
-			"username=test",
-			"password=test",
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		// Verify only the token was printed
-		token := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if l, exp := len(token), 36; l != exp {
-			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, token)
-		}
-
-		// Verify the token was not stored
-		if storedToken, err := tokenHelper.Get(); err != nil || storedToken != "" {
-			t.Fatalf("expted token to not be stored: %s: %q", err, storedToken)
-		}
-	})
-
-	t.Run("failure_no_store", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ui, cmd := testAuthCommand(t)
-		cmd.client = client
-
-		tokenHelper, err := cmd.TokenHelper()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		code := cmd.Run([]string{
-			"not-a-real-token",
-		})
-		if exp := 2; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		expected := "Error verifying token: "
-		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if !strings.Contains(combined, expected) {
-			t.Errorf("expected %q to contain %q", combined, expected)
-		}
-
-		if storedToken, err := tokenHelper.Get(); err != nil || storedToken != "" {
-			t.Fatalf("expected token to not be stored: %s: %q", err, storedToken)
-		}
-	})
-
-	t.Run("wrap_auto_unwrap", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
-			"password": "test",
-			"policies": "default",
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		_, cmd := testAuthCommand(t)
-		cmd.client = client
-
-		// Set the wrapping ttl to 5s. We can't set this via the flag because we
-		// override the client object before that particular flag is parsed.
-		client.SetWrappingLookupFunc(func(string, string) string { return "5m" })
-
-		code := cmd.Run([]string{
-			"-method", "userpass",
-			"username=test",
-			"password=test",
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		// Unset the wrapping
-		client.SetWrappingLookupFunc(func(string, string) string { return "" })
-
-		tokenHelper, err := cmd.TokenHelper()
-		if err != nil {
-			t.Fatal(err)
-		}
-		token, err := tokenHelper.Get()
-		if err != nil || token == "" {
-			t.Fatalf("expected token from helper: %s: %q", err, token)
-		}
-
-		// Ensure the resulting token is unwrapped
-		secret, err := client.Auth().Token().LookupSelf()
-		if err != nil {
-			t.Error(err)
-		}
-
-		if secret.WrapInfo != nil {
-			t.Errorf("expected to be unwrapped: %#v", secret)
-		}
-	})
-
-	t.Run("wrap_only_token", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
-			"password": "test",
-			"policies": "default",
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		ui, cmd := testAuthCommand(t)
-		cmd.client = client
-
-		// Set the wrapping ttl to 5s. We can't set this via the flag because we
-		// override the client object before that particular flag is parsed.
-		client.SetWrappingLookupFunc(func(string, string) string { return "5m" })
-
-		code := cmd.Run([]string{
-			"-only-token",
-			"-method", "userpass",
-			"username=test",
-			"password=test",
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		// Unset the wrapping
-		client.SetWrappingLookupFunc(func(string, string) string { return "" })
-
-		tokenHelper, err := cmd.TokenHelper()
-		if err != nil {
-			t.Fatal(err)
-		}
-		storedToken, err := tokenHelper.Get()
-		if err != nil || storedToken != "" {
-			t.Fatalf("expected token to not be stored: %s: %q", err, storedToken)
-		}
-
-		token := ui.OutputWriter.String()
-		if token == "" {
-			t.Errorf("expected %q to not be %q", token, "")
-		}
-		if strings.Contains(token, "\n") {
-			t.Errorf("expected %q to not contain %q", token, "\n")
-		}
-
-		// Ensure the resulting token is, in fact, still wrapped.
-		client.SetToken(token)
-		secret, err := client.Logical().Unwrap("")
-		if err != nil {
-			t.Error(err)
-		}
-		if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
-			t.Fatalf("expected secret to have auth: %#v", secret)
-		}
-	})
-
-	t.Run("wrap_no_store", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
-			"password": "test",
-			"policies": "default",
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		ui, cmd := testAuthCommand(t)
-		cmd.client = client
-
-		// Set the wrapping ttl to 5s. We can't set this via the flag because we
-		// override the client object before that particular flag is parsed.
-		client.SetWrappingLookupFunc(func(string, string) string { return "5m" })
-
-		code := cmd.Run([]string{
-			"-no-store",
-			"-method", "userpass",
-			"username=test",
-			"password=test",
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		// Unset the wrapping
-		client.SetWrappingLookupFunc(func(string, string) string { return "" })
-
-		tokenHelper, err := cmd.TokenHelper()
-		if err != nil {
-			t.Fatal(err)
-		}
-		storedToken, err := tokenHelper.Get()
-		if err != nil || storedToken != "" {
-			t.Fatalf("expected token to not be stored: %s: %q", err, storedToken)
-		}
-
-		expected := "wrapping_token"
-		output := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if !strings.Contains(output, expected) {
-			t.Errorf("expected %q to contain %q", output, expected)
-		}
-	})
-
-	t.Run("communication_failure", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServerBad(t)
-		defer closer()
-
-		ui, cmd := testAuthCommand(t)
-		cmd.client = client
-
-		code := cmd.Run([]string{
-			"token",
-		})
-		if exp := 2; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		expected := "Error verifying token: "
-		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if !strings.Contains(combined, expected) {
-			t.Errorf("expected %q to contain %q", combined, expected)
+		if expected := "Success! You are now authenticated."; !strings.Contains(stdout, expected) {
+			t.Errorf("expected %q to contain %q", stdout, expected)
 		}
 	})
 

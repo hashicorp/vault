@@ -8,42 +8,41 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*AuthHelpCommand)(nil)
 var _ cli.CommandAutocomplete = (*AuthHelpCommand)(nil)
 
-// AuthHelpCommand is a Command that prints help output for a given auth
-// provider
 type AuthHelpCommand struct {
 	*BaseCommand
 
-	Handlers map[string]AuthHandler
+	Handlers map[string]LoginHandler
 }
 
 func (c *AuthHelpCommand) Synopsis() string {
-	return "Prints usage for an auth provider"
+	return "Prints usage for an auth method"
 }
 
 func (c *AuthHelpCommand) Help() string {
 	helpText := `
-Usage: vault path-help [options] TYPE | PATH
+Usage: vault auth help [options] TYPE | PATH
 
-  Prints usage and help for an authentication provider. If provided a TYPE,
-  this command retrieves the default help for the given authentication
-  provider of that type. If given a PATH, this command returns the help
-  output for the authentication provider mounted at that path. If given a
-  PATH argument, the path must exist and be mounted.
+  Prints usage and help for an auth method.
 
-  Get usage instructions for the userpass authentication provider:
+    - If given a TYPE, this command prints the default help for the
+      auth method of that type.
 
-      $ vault auth-help userpass
+    - If given a PATH, this command prints the help output for the
+      auth method enabled at that path. This path must already
+      exist.
 
-  Print usage for the authentication provider mounted at my-provider/
+  Get usage instructions for the userpass auth method:
 
-      $ vault auth-help my-provider/:
+      $ vault auth help userpass
 
-  Each authentication provider produces its own help output. For additional
-  information, please view the online documentation.
+  Print usage for the auth method enabled at my-method/:
+
+      $ vault auth help my-method/
+
+  Each auth method produces its own help output.
 
 ` + c.Flags().Help()
 
@@ -98,7 +97,7 @@ func (c *AuthHelpCommand) Run(args []string) int {
 		// There was no auth type by that name, see if it's a mount
 		auths, err := client.Sys().ListAuth()
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error listing authentication providers: %s", err))
+			c.UI.Error(fmt.Sprintf("Error listing auth methods: %s", err))
 			return 2
 		}
 
@@ -106,14 +105,14 @@ func (c *AuthHelpCommand) Run(args []string) int {
 		auth, ok := auths[authPath]
 		if !ok {
 			c.UI.Error(fmt.Sprintf(
-				"Error retrieving help: unknown authentication provider: %s", args[0]))
+				"Error retrieving help: unknown auth method: %s", authType))
 			return 1
 		}
 
 		authHandler, ok = c.Handlers[auth.Type]
 		if !ok {
 			c.UI.Error(wrapAtLength(fmt.Sprintf(
-				"INTERNAL ERROR! Found an authentication provider mounted at %s, but "+
+				"INTERNAL ERROR! Found an auth method enabled at %s, but "+
 					"its type %q is not registered in Vault. This is a bug and should "+
 					"be reported. Please open an issue at github.com/hashicorp/vault.",
 				authPath, authType)))
