@@ -19,12 +19,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*SSHCommand)(nil)
 var _ cli.CommandAutocomplete = (*SSHCommand)(nil)
 
-// SSHCommand is a Command that establishes a SSH connection with target by
-// generating a dynamic key
 type SSHCommand struct {
 	*BaseCommand
 
@@ -53,9 +50,9 @@ Usage: vault ssh [options] username@ip [ssh options]
 
   Establishes an SSH connection with the target machine.
 
-  This command uses one of the SSH authentication backends to authenticate and
+  This command uses one of the SSH secrets engines to authenticate and
   automatically establish an SSH connection to a host. This operation requires
-  that the SSH backend is mounted and configured.
+  that the SSH secrets engine is mounted and configured.
 
   SSH using the OTP mode (requires sshpass for full automation):
 
@@ -123,7 +120,7 @@ func (c *SSHCommand) Flags() *FlagSets {
 		Default:    "ssh/",
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
-		Usage:      "Mount point to the SSH backend.",
+		Usage:      "Mount point to the SSH secrets engine.",
 	})
 
 	f.StringVar(&StringVar{
@@ -153,7 +150,7 @@ func (c *SSHCommand) Flags() *FlagSets {
 		Name:       "public-key-path",
 		Target:     &c.flagPublicKeyPath,
 		Default:    "~/.ssh/id_rsa.pub",
-		EnvVar:     "g",
+		EnvVar:     "",
 		Completion: complete.PredictFiles("*"),
 		Usage:      "Path to the SSH public key to send to Vault for signing.",
 	})
@@ -171,10 +168,10 @@ func (c *SSHCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "host-key-mount-point",
 		Target:     &c.flagHostKeyMountPoint,
-		Default:    "~/.ssh/id_rsa",
+		Default:    "",
 		EnvVar:     "VAULT_SSH_HOST_KEY_MOUNT_POINT",
 		Completion: complete.PredictAnything,
-		Usage: "Mount point to the SSH backend where host keys are signed. " +
+		Usage: "Mount point to the SSH secrets engine where host keys are signed. " +
 			"When given a value, Vault will generate a custom \"known_hosts\" file " +
 			"with delegation to the CA at the provided mount point to verify the " +
 			"SSH connection's host keys against the provided CA. By default, host " +
@@ -205,7 +202,8 @@ func (c *SSHCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-// Structure to hold the fields returned when asked for a credential from SSHh backend.
+// Structure to hold the fields returned when asked for a credential from SSH
+// secrets engine.
 type SSHCredentialResp struct {
 	KeyType  string `mapstructure:"key_type"`
 	Key      string `mapstructure:"key"`
