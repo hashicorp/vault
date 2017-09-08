@@ -3297,6 +3297,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		if err == nil {
 			errCh <- fmt.Errorf("expected an error from revokeSalted, got nil")
 		}
+		close(readyCh)
 		close(errCh)
 	}()
 
