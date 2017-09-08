@@ -8,17 +8,15 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
 var _ cli.Command = (*ListCommand)(nil)
 var _ cli.CommandAutocomplete = (*ListCommand)(nil)
 
-// ListCommand is a Command that lists data from the Vault.
 type ListCommand struct {
 	*BaseCommand
 }
 
 func (c *ListCommand) Synopsis() string {
-	return "Lists data or secrets"
+	return "List data or secrets"
 }
 
 func (c *ListCommand) Help() string {
@@ -27,14 +25,14 @@ func (c *ListCommand) Help() string {
 Usage: vault list [options] PATH
 
   Lists data from Vault at the given path. This can be used to list keys in a,
-  given backend.
+  given secret engine.
 
-  List values under the "my-app" folder:
+  List values under the "my-app" folder of the generic secret engine:
 
       $ vault list secret/my-app/
 
   For a full list of examples and paths, please see the documentation that
-  corresponds to the secret backend in use. Not all backends support listing.
+  corresponds to the secret engine in use. Not all engines support listing.
 
 ` + c.Flags().Help()
 
@@ -62,13 +60,11 @@ func (c *ListCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	path, kvs, err := extractPath(args)
-	if err != nil {
-		c.UI.Error(err.Error())
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
-	}
-
-	if len(kvs) > 0 {
+	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
 	}
@@ -78,6 +74,8 @@ func (c *ListCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 2
 	}
+
+	path := ensureTrailingSlash(sanitizePath(args[0]))
 
 	secret, err := client.Logical().List(path)
 	if err != nil {

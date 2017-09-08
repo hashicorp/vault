@@ -28,15 +28,15 @@ func TestListCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"empty",
-			nil,
-			"Missing PATH!",
+			"not_enough_args",
+			[]string{},
+			"Not enough arguments",
 			1,
 		},
 		{
-			"slash",
-			[]string{"/"},
-			"Missing PATH!",
+			"too_many_args",
+			[]string{"foo", "bar"},
+			"Too many arguments",
 			1,
 		},
 		{
@@ -134,7 +134,7 @@ func TestListCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error listing secret/list: "
+		expected := "Error listing secret/list/: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
