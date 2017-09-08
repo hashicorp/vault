@@ -24,6 +24,11 @@ type FlagVisibility interface {
 	Hidden() bool
 }
 
+// FlagBool is an interface which boolean flags implement.
+type FlagBool interface {
+	IsBoolFlag() bool
+}
+
 // -- BoolVar  and boolValue
 type BoolVar struct {
 	Name       string
@@ -512,6 +517,11 @@ func newDurationValue(def time.Duration, target *time.Duration, hidden bool) *du
 }
 
 func (d *durationValue) Set(s string) error {
+	// Maintain bc for people specifying "system" as the value.
+	if s == "system" {
+		s = "-1"
+	}
+
 	v, err := time.ParseDuration(appendDurationSuffix(s))
 	if err != nil {
 		return err
