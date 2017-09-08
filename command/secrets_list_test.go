@@ -7,18 +7,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testMountsCommand(tb testing.TB) (*cli.MockUi, *MountsCommand) {
+func testSecretsListCommand(tb testing.TB) (*cli.MockUi, *SecretsListCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &MountsCommand{
+	return ui, &SecretsListCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestMountsCommand_Run(t *testing.T) {
+func TestSecretsListCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -59,7 +59,7 @@ func TestMountsCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
-				ui, cmd := testMountsCommand(t)
+				ui, cmd := testSecretsListCommand(t)
 				cmd.client = client
 
 				code := cmd.Run(tc.args)
@@ -81,7 +81,7 @@ func TestMountsCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testMountsCommand(t)
+		ui, cmd := testSecretsListCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{})
@@ -89,7 +89,7 @@ func TestMountsCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error listing mounts: "
+		expected := "Error listing secrets engines: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -99,7 +99,7 @@ func TestMountsCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testMountsCommand(t)
+		_, cmd := testSecretsListCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

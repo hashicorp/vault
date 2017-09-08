@@ -4,21 +4,22 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
 
-func testRemountCommand(tb testing.TB) (*cli.MockUi, *RemountCommand) {
+func testSecretsTuneCommand(tb testing.TB) (*cli.MockUi, *SecretsTuneCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &RemountCommand{
+	return ui, &SecretsTuneCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestRemountCommand_Run(t *testing.T) {
+func TestSecretsTuneCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -29,21 +30,15 @@ func TestRemountCommand_Run(t *testing.T) {
 	}{
 		{
 			"not_enough_args",
-			nil,
+			[]string{},
 			"Not enough arguments",
 			1,
 		},
 		{
 			"too_many_args",
-			[]string{"foo", "bar", "baz"},
+			[]string{"foo", "bar"},
 			"Too many arguments",
 			1,
-		},
-		{
-			"non_existent",
-			[]string{"not_real", "over_here"},
-			"Error remounting not_real/ to over_here/",
-			2,
 		},
 	}
 
@@ -56,7 +51,7 @@ func TestRemountCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				ui, cmd := testRemountCommand(t)
+				ui, cmd := testSecretsTuneCommand(t)
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -77,17 +72,26 @@ func TestRemountCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testRemountCommand(t)
+		ui, cmd := testSecretsTuneCommand(t)
 		cmd.client = client
 
+		// Mount
+		if err := client.Sys().Mount("mount_tune_integration", &api.MountInput{
+			Type: "pki",
+		}); err != nil {
+			t.Fatal(err)
+		}
+
 		code := cmd.Run([]string{
-			"secret/", "generic/",
+			"-default-lease-ttl", "30m",
+			"-max-lease-ttl", "1h",
+			"mount_tune_integration/",
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Remounted secret/ to: generic/"
+		expected := "Success! Tuned the secrets engine at: mount_tune_integration/"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -98,8 +102,18 @@ func TestRemountCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if _, ok := mounts["generic/"]; !ok {
-			t.Errorf("expected mount at generic/: %#v", mounts)
+		mountInfo, ok := mounts["mount_tune_integration/"]
+		if !ok {
+			t.Fatalf("expected mount to exist")
+		}
+		if exp := "pki"; mountInfo.Type != exp {
+			t.Errorf("expected %q to be %q", mountInfo.Type, exp)
+		}
+		if exp := 1800; mountInfo.Config.DefaultLeaseTTL != exp {
+			t.Errorf("expected %d to be %d", mountInfo.Config.DefaultLeaseTTL, exp)
+		}
+		if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
+			t.Errorf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
 		}
 	})
 
@@ -109,17 +123,17 @@ func TestRemountCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testRemountCommand(t)
+		ui, cmd := testSecretsTuneCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"secret/", "generic/",
+			"pki/",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error remounting secret/ to generic/: "
+		expected := "Error tuning secrets engine pki/: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -129,7 +143,7 @@ func TestRemountCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testRemountCommand(t)
+		_, cmd := testSecretsTuneCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

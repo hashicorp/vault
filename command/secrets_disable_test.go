@@ -8,18 +8,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testMountTuneCommand(tb testing.TB) (*cli.MockUi, *MountTuneCommand) {
+func testSecretsDisableCommand(tb testing.TB) (*cli.MockUi, *SecretsDisableCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &MountTuneCommand{
+	return ui, &SecretsDisableCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestMountTuneCommand_Run(t *testing.T) {
+func TestSecretsDisableCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -29,15 +29,9 @@ func TestMountTuneCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"empty",
-			nil,
-			"Missing PATH!",
-			1,
-		},
-		{
-			"slash",
-			[]string{"/"},
-			"Missing PATH!",
+			"not_enough_args",
+			[]string{},
+			"Not enough arguments",
 			1,
 		},
 		{
@@ -45,6 +39,18 @@ func TestMountTuneCommand_Run(t *testing.T) {
 			[]string{"foo", "bar"},
 			"Too many arguments",
 			1,
+		},
+		{
+			"not_real",
+			[]string{"not_real"},
+			"Success! Disabled the secrets engine (if it existed) at: not_real/",
+			0,
+		},
+		{
+			"default",
+			[]string{"secret"},
+			"Success! Disabled the secrets engine (if it existed) at: secret/",
+			0,
 		},
 	}
 
@@ -57,7 +63,11 @@ func TestMountTuneCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				ui, cmd := testMountTuneCommand(t)
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				ui, cmd := testSecretsDisableCommand(t)
+				cmd.client = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -78,26 +88,23 @@ func TestMountTuneCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testMountTuneCommand(t)
-		cmd.client = client
-
-		// Mount
-		if err := client.Sys().Mount("mount_tune_integration", &api.MountInput{
-			Type: "pki",
+		if err := client.Sys().Mount("my-secret/", &api.MountInput{
+			Type: "generic",
 		}); err != nil {
 			t.Fatal(err)
 		}
 
+		ui, cmd := testSecretsDisableCommand(t)
+		cmd.client = client
+
 		code := cmd.Run([]string{
-			"-default-lease-ttl", "30m",
-			"-max-lease-ttl", "1h",
-			"mount_tune_integration/",
+			"my-secret/",
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Tuned the mount at: mount_tune_integration/"
+		expected := "Success! Disabled the secrets engine (if it existed) at: my-secret/"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -108,18 +115,8 @@ func TestMountTuneCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		mountInfo, ok := mounts["mount_tune_integration/"]
-		if !ok {
-			t.Fatalf("expected mount to exist")
-		}
-		if exp := "pki"; mountInfo.Type != exp {
-			t.Errorf("expected %q to be %q", mountInfo.Type, exp)
-		}
-		if exp := 1800; mountInfo.Config.DefaultLeaseTTL != exp {
-			t.Errorf("expected %d to be %d", mountInfo.Config.DefaultLeaseTTL, exp)
-		}
-		if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
-			t.Errorf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
+		if _, ok := mounts["integration_unmount"]; ok {
+			t.Errorf("expected mount to not exist: %#v", mounts)
 		}
 	})
 
@@ -129,7 +126,7 @@ func TestMountTuneCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testMountTuneCommand(t)
+		ui, cmd := testSecretsDisableCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -139,7 +136,7 @@ func TestMountTuneCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error tuning mount pki/: "
+		expected := "Error disabling secrets engine at pki/: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -149,7 +146,7 @@ func TestMountTuneCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testMountTuneCommand(t)
+		_, cmd := testSecretsDisableCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

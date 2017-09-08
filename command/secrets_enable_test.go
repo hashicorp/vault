@@ -7,17 +7,18 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testMountCommand(tb testing.TB) (*cli.MockUi, *MountCommand) {
+func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &MountCommand{
+	return ui, &SecretsEnableCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
-func TestMountCommand_Run(t *testing.T) {
+
+func TestSecretsEnableCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -27,9 +28,9 @@ func TestMountCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"empty",
-			nil,
-			"Missing TYPE!",
+			"not_enough_args",
+			[]string{},
+			"Not enough arguments",
 			1,
 		},
 		{
@@ -47,7 +48,7 @@ func TestMountCommand_Run(t *testing.T) {
 		{
 			"mount",
 			[]string{"transit"},
-			"Success! Mounted the transit secret backend at: transit/",
+			"Success! Enabled the transit secrets engine at: transit/",
 			0,
 		},
 		{
@@ -56,7 +57,7 @@ func TestMountCommand_Run(t *testing.T) {
 				"-path", "transit_mount_point",
 				"transit",
 			},
-			"Success! Mounted the transit secret backend at: transit_mount_point/",
+			"Success! Enabled the transit secrets engine at: transit_mount_point/",
 			0,
 		},
 	}
@@ -70,7 +71,7 @@ func TestMountCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			ui, cmd := testMountCommand(t)
+			ui, cmd := testSecretsEnableCommand(t)
 			cmd.client = client
 
 			code := cmd.Run(tc.args)
@@ -91,7 +92,7 @@ func TestMountCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		ui, cmd := testMountCommand(t)
+		ui, cmd := testSecretsEnableCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -106,7 +107,7 @@ func TestMountCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Mounted the pki secret backend at: mount_integration/"
+		expected := "Success! Enabled the pki secrets engine at: mount_integration/"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -144,7 +145,7 @@ func TestMountCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testMountCommand(t)
+		ui, cmd := testSecretsEnableCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
@@ -154,7 +155,7 @@ func TestMountCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error mounting: "
+		expected := "Error enabling: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -164,7 +165,7 @@ func TestMountCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testMountCommand(t)
+		_, cmd := testSecretsEnableCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

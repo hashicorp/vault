@@ -4,22 +4,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
 
-func testUnmountCommand(tb testing.TB) (*cli.MockUi, *UnmountCommand) {
+func testSecretsMoveCommand(tb testing.TB) (*cli.MockUi, *SecretsMoveCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &UnmountCommand{
+	return ui, &SecretsMoveCommand{
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func TestUnmountCommand_Run(t *testing.T) {
+func TestSecretsMoveCommand_Run(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -29,28 +28,22 @@ func TestUnmountCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
-			"empty",
-			nil,
-			"Missing PATH!",
+			"not_enough_args",
+			[]string{},
+			"Not enough arguments",
 			1,
 		},
 		{
-			"slash",
-			[]string{"/"},
-			"Missing PATH!",
+			"too_many_args",
+			[]string{"foo", "bar", "baz"},
+			"Too many arguments",
 			1,
 		},
 		{
-			"not_real",
-			[]string{"not_real"},
-			"Success! Unmounted the secret backend (if it existed) at: not_real/",
-			0,
-		},
-		{
-			"default",
-			[]string{"secret"},
-			"Success! Unmounted the secret backend (if it existed) at: secret/",
-			0,
+			"non_existent",
+			[]string{"not_real", "over_here"},
+			"Error moving secrets engine not_real/ to over_here/",
+			2,
 		},
 	}
 
@@ -63,11 +56,7 @@ func TestUnmountCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				client, closer := testVaultServer(t)
-				defer closer()
-
-				ui, cmd := testUnmountCommand(t)
-				cmd.client = client
+				ui, cmd := testSecretsMoveCommand(t)
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -88,23 +77,17 @@ func TestUnmountCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		if err := client.Sys().Mount("integration_unmount/", &api.MountInput{
-			Type: "generic",
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		ui, cmd := testUnmountCommand(t)
+		ui, cmd := testSecretsMoveCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"integration_unmount/",
+			"secret/", "generic/",
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Unmounted the secret backend (if it existed) at: integration_unmount/"
+		expected := "Success! Moved secrets engine secret/ to: generic/"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -115,8 +98,8 @@ func TestUnmountCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if _, ok := mounts["integration_unmount"]; ok {
-			t.Errorf("expected mount to not exist: %#v", mounts)
+		if _, ok := mounts["generic/"]; !ok {
+			t.Errorf("expected mount at generic/: %#v", mounts)
 		}
 	})
 
@@ -126,17 +109,17 @@ func TestUnmountCommand_Run(t *testing.T) {
 		client, closer := testVaultServerBad(t)
 		defer closer()
 
-		ui, cmd := testUnmountCommand(t)
+		ui, cmd := testSecretsMoveCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"pki/",
+			"secret/", "generic/",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error unmounting pki/: "
+		expected := "Error moving secrets engine secret/ to generic/:"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -146,7 +129,7 @@ func TestUnmountCommand_Run(t *testing.T) {
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
-		_, cmd := testUnmountCommand(t)
+		_, cmd := testSecretsMoveCommand(t)
 		assertNoTabs(t, cmd)
 	})
 }

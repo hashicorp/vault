@@ -11,44 +11,42 @@ import (
 	"github.com/posener/complete"
 )
 
-// Ensure we are implementing the right interfaces.
-var _ cli.Command = (*MountsCommand)(nil)
-var _ cli.CommandAutocomplete = (*MountsCommand)(nil)
+var _ cli.Command = (*SecretsListCommand)(nil)
+var _ cli.CommandAutocomplete = (*SecretsListCommand)(nil)
 
-// MountsCommand is a Command that lists the mounts.
-type MountsCommand struct {
+type SecretsListCommand struct {
 	*BaseCommand
 
 	flagDetailed bool
 }
 
-func (c *MountsCommand) Synopsis() string {
-	return "Lists mounted secret backends"
+func (c *SecretsListCommand) Synopsis() string {
+	return "List enabled secrets engines"
 }
 
-func (c *MountsCommand) Help() string {
+func (c *SecretsListCommand) Help() string {
 	helpText := `
-Usage: vault mounts [options]
+Usage: vault secrets list [options]
 
-  Lists the mounted secret backends on the Vault server. This command also
-  outputs information about the mount point including configured TTLs and
+  Lists the enabled secret engines on the Vault server. This command also
+  outputs information about the enabled path including configured TTLs and
   human-friendly descriptions. A TTL of "system" indicates that the system
   default is in use.
 
-  List all mounts:
+  List all enabled secrets engines:
 
-      $ vault mounts
+      $ vault secrets list
 
-  List all mounts with detailed output:
+  List all enabled secrets engines with detailed output:
 
-      $ vault mounts -detailed
+      $ vault secrets list -detailed
 
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
-func (c *MountsCommand) Flags() *FlagSets {
+func (c *SecretsListCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
@@ -58,21 +56,21 @@ func (c *MountsCommand) Flags() *FlagSets {
 		Target:  &c.flagDetailed,
 		Default: false,
 		Usage: "Print detailed information such as TTLs and replication status " +
-			"about each mount.",
+			"about each secrets engine.",
 	})
 
 	return set
 }
 
-func (c *MountsCommand) AutocompleteArgs() complete.Predictor {
+func (c *SecretsListCommand) AutocompleteArgs() complete.Predictor {
 	return c.PredictVaultFiles()
 }
 
-func (c *MountsCommand) AutocompleteFlags() complete.Flags {
+func (c *SecretsListCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *MountsCommand) Run(args []string) int {
+func (c *SecretsListCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -94,20 +92,20 @@ func (c *MountsCommand) Run(args []string) int {
 
 	mounts, err := client.Sys().ListMounts()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error listing mounts: %s", err))
+		c.UI.Error(fmt.Sprintf("Error listing secrets engines: %s", err))
 		return 2
 	}
 
 	if c.flagDetailed {
-		c.UI.Output(tableOutput(c.detailedMounts(mounts)))
+		c.UI.Output(tableOutput(c.detailedMounts(mounts), nil))
 		return 0
 	}
 
-	c.UI.Output(tableOutput(c.simpleMounts(mounts)))
+	c.UI.Output(tableOutput(c.simpleMounts(mounts), nil))
 	return 0
 }
 
-func (c *MountsCommand) simpleMounts(mounts map[string]*api.MountOutput) []string {
+func (c *SecretsListCommand) simpleMounts(mounts map[string]*api.MountOutput) []string {
 	paths := make([]string, 0, len(mounts))
 	for path := range mounts {
 		paths = append(paths, path)
@@ -123,7 +121,7 @@ func (c *MountsCommand) simpleMounts(mounts map[string]*api.MountOutput) []strin
 	return out
 }
 
-func (c *MountsCommand) detailedMounts(mounts map[string]*api.MountOutput) []string {
+func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) []string {
 	paths := make([]string, 0, len(mounts))
 	for path := range mounts {
 		paths = append(paths, path)
