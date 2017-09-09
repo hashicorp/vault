@@ -6,6 +6,12 @@ EXTERNAL_TOOLS=\
 BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
+# NOTE: This does NOT support specifying versions more granular than x.y
+# E.g., if you specify 1.9, it'll properly check that the build environment
+# is at least 1.9, but if you specify 1.9.1, it will still happily accept
+# a 1.9 build environment.
+GO_VERSION_MIN=1.9
+
 default: dev
 
 # bin generates the releaseable binaries for Vault
@@ -60,6 +66,7 @@ vet:
 # prep runs `go generate` to build the dynamically generated
 # source files.
 prep:
+	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	go generate $(go list ./... | grep -v /vendor/)
 	cp .hooks/* .git/hooks/
 
