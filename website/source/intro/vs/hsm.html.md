@@ -14,8 +14,8 @@ device that is meant to secure various secrets using protections against access
 and tampering at both the software and hardware layers.
 
 The primary issue with HSMs is that they are expensive and not very cloud
-friendly. Amazon provides CloudHSM, but the minimum price point to even begin
-using CloudHSM is in the thousands of US dollars.
+friendly. Amazon released an update to its CloudHSM product recently that
+lowers the price of an HSM somewhat, but running one is still not cheap.
 
 Once an HSM is up and running, configuring it is generally very tedious, and
 the API to request secrets is also difficult to use. Example: CloudHSM requires
