@@ -15,7 +15,8 @@ and tampering at both the software and hardware layers.
 
 The primary issue with HSMs is that they are expensive and not very cloud
 friendly. An exception to the latter is Amazon's CloudHSM service, which is
-friendly for AWS users but still costs more than $14k per year per instance.
+friendly for AWS users but still costs more than $14k per year per instance,
+and not as useful for heterogenous cloud architectures.
 
 Once an HSM is up and running, configuring it is generally very tedious, and
 the API to request secrets is also difficult to use. Example: CloudHSM requires
