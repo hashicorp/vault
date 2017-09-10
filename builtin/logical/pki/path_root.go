@@ -397,7 +397,7 @@ func (b *backend) pathCASignSelfIssued(
 	cert.CRLDistributionPoints = urls.CRLDistributionPoints
 	cert.OCSPServer = urls.OCSPServers
 
-	newCert, err := x509.CreateCertificate(rand.Reader, cert, cert, signingBundle.PrivateKey.Public(), signingBundle.PrivateKey)
+	newCert, err := x509.CreateCertificate(rand.Reader, cert, cert, cert.PublicKey, signingBundle.PrivateKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("error signing self-issued certificate: {{err}}", err)
 	}
