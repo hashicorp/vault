@@ -60,10 +60,9 @@ type ExpirationManager struct {
 	pending     map[string]*time.Timer
 	pendingLock sync.RWMutex
 
-	tidyLock int64
+	tidyLock int32
 
-	// A set of locks to handle restoration
-	restoreMode        int64
+	restoreMode        int32
 	restoreModeLock    sync.RWMutex
 	restoreRequestLock sync.RWMutex
 	restoreLocks       []*locksutil.LockEntry
@@ -76,7 +75,6 @@ type ExpirationManager struct {
 func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, logger log.Logger) *ExpirationManager {
 	if logger == nil {
 		logger = log.New("expiration_manager")
-
 	}
 
 	exp := &ExpirationManager{
@@ -119,7 +117,7 @@ func (c *Core) setupExpiration() error {
 			c.logger.Error("expiration: error shutting down core: %v", err)
 		}
 	}
-	go c.expiration.Restore(errorFunc, 0)
+	go c.expiration.Restore(errorFunc)
 
 	return nil
 }
@@ -150,7 +148,7 @@ func (m *ExpirationManager) unlockLease(leaseID string) {
 
 // inRestoreMode returns if we are currently in restore mode
 func (m *ExpirationManager) inRestoreMode() bool {
-	return atomic.LoadInt64(&m.restoreMode) == 1
+	return atomic.LoadInt32(&m.restoreMode) == 1
 }
 
 // Tidy cleans up the dangling storage entries for leases. It scans the storage
@@ -166,12 +164,12 @@ func (m *ExpirationManager) Tidy() error {
 
 	var tidyErrors *multierror.Error
 
-	if !atomic.CompareAndSwapInt64(&m.tidyLock, 0, 1) {
+	if !atomic.CompareAndSwapInt32(&m.tidyLock, 0, 1) {
 		m.logger.Warn("expiration: tidy operation on leases is already in progress")
 		return fmt.Errorf("tidy operation on leases is already in progress")
 	}
 
-	defer atomic.CompareAndSwapInt64(&m.tidyLock, 1, 0)
+	defer atomic.CompareAndSwapInt32(&m.tidyLock, 1, 0)
 
 	m.logger.Info("expiration: beginning tidy operation on leases")
 	defer m.logger.Info("expiration: finished tidy operation on leases")
@@ -270,13 +268,13 @@ func (m *ExpirationManager) Tidy() error {
 
 // Restore is used to recover the lease states when starting.
 // This is used after starting the vault.
-func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (retErr error) {
+func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	defer func() {
 		// Turn off restore mode. We can do this safely without the lock because
 		// if restore mode finished successfully, restore mode was already
 		// disabled with the lock. In an error state, this will allow the
 		// Stop() function to shut everything down.
-		atomic.StoreInt64(&m.restoreMode, 0)
+		atomic.StoreInt32(&m.restoreMode, 0)
 
 		switch {
 		case retErr == nil:
@@ -324,7 +322,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 						return
 					}
 
-					err := m.processRestore(leaseID, loadDelay)
+					err := m.processRestore(leaseID)
 					if err != nil {
 						errs <- err
 						continue
@@ -391,7 +389,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	m.restoreModeLock.Lock()
 	m.restoreLoaded = sync.Map{}
 	m.restoreLocks = nil
-	atomic.StoreInt64(&m.restoreMode, 0)
+	atomic.StoreInt32(&m.restoreMode, 0)
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("expiration: lease restore complete")
@@ -400,7 +398,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 
 // processRestore takes a lease and restores it in the expiration manager if it has
 // not already been seen
-func (m *ExpirationManager) processRestore(leaseID string, loadDelay time.Duration) error {
+func (m *ExpirationManager) processRestore(leaseID string) error {
 	m.restoreRequestLock.RLock()
 	defer m.restoreRequestLock.RUnlock()
 
@@ -415,11 +413,6 @@ func (m *ExpirationManager) processRestore(leaseID string, loadDelay time.Durati
 	// Check again with the lease locked
 	if _, ok := m.restoreLoaded.Load(leaseID); ok {
 		return nil
-	}
-
-	// Useful for testing to add latency to all load requests
-	if loadDelay > 0 {
-		time.Sleep(loadDelay)
 	}
 
 	// Load lease and restore expiration timer
