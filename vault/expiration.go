@@ -51,12 +51,6 @@ const (
 // If a secret is not renewed in timely manner, it may be expired, and
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
-	// A Go bug requires 64-bit atomic variables to be placed at the beginning
-	// of the struct. The first word is guaranteed to be 64-bit aligned by the
-	// compiler which is required for certain CPU architectures.
-	// https://godoc.org/sync/atomic#pkg-note-bug
-	restoreMode int64
-
 	router     *Router
 	idView     *BarrierView
 	tokenView  *BarrierView
@@ -66,9 +60,9 @@ type ExpirationManager struct {
 	pending     map[string]*time.Timer
 	pendingLock sync.RWMutex
 
-	tidyLock sync.Mutex
-	tidyMode int
+	tidyLock int32
 
+	restoreMode        int32
 	restoreModeLock    sync.RWMutex
 	restoreRequestLock sync.RWMutex
 	restoreLocks       []*locksutil.LockEntry
@@ -154,7 +148,7 @@ func (m *ExpirationManager) unlockLease(leaseID string) {
 
 // inRestoreMode returns if we are currently in restore mode
 func (m *ExpirationManager) inRestoreMode() bool {
-	return atomic.LoadInt64(&m.restoreMode) == 1
+	return atomic.LoadInt32(&m.restoreMode) == 1
 }
 
 // Tidy cleans up the dangling storage entries for leases. It scans the storage
@@ -170,21 +164,12 @@ func (m *ExpirationManager) Tidy() error {
 
 	var tidyErrors *multierror.Error
 
-	// Allow only one tidy operatioon at a time
-	m.tidyLock.Lock()
-	if m.tidyMode == 1 {
-		m.tidyLock.Unlock()
+	if !atomic.CompareAndSwapInt32(&m.tidyLock, 0, 1) {
 		m.logger.Warn("expiration: tidy operation on leases is already in progress")
 		return fmt.Errorf("tidy operation on leases is already in progress")
 	}
-	m.tidyMode = 1
-	m.tidyLock.Unlock()
 
-	defer func() {
-		m.tidyLock.Lock()
-		m.tidyMode = 0
-		m.tidyLock.Unlock()
-	}()
+	defer atomic.CompareAndSwapInt32(&m.tidyLock, 1, 0)
 
 	m.logger.Info("expiration: beginning tidy operation on leases")
 	defer m.logger.Info("expiration: finished tidy operation on leases")
@@ -289,7 +274,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 		// if restore mode finished successfully, restore mode was already
 		// disabled with the lock. In an error state, this will allow the
 		// Stop() function to shut everything down.
-		atomic.StoreInt64(&m.restoreMode, 0)
+		atomic.StoreInt32(&m.restoreMode, 0)
 
 		switch {
 		case retErr == nil:
@@ -404,7 +389,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 	m.restoreModeLock.Lock()
 	m.restoreLoaded = sync.Map{}
 	m.restoreLocks = nil
-	atomic.StoreInt64(&m.restoreMode, 0)
+	atomic.StoreInt32(&m.restoreMode, 0)
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("expiration: lease restore complete")
