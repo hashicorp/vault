@@ -3,7 +3,6 @@ package okta
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
 	"time"
 
@@ -13,13 +12,18 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	defaultBaseURL = "okta.com"
+	previewBaseURL = "oktapreview.com"
+)
+
 func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `config`,
 		Fields: map[string]*framework.FieldSchema{
 			"organization": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Okta organization to authenticate against (DEPRECATED)",
+				Description: "(DEPRECATED) Okta organization to authenticate against",
 			},
 			"org_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -27,21 +31,20 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"token": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Okta admin API token (DEPRECATED)",
+				Description: "(DEPRECATED) Okta admin API token",
 			},
 			"api_token": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Okta API key.",
 			},
 			"base_url": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `The API endpoint to use. Useful if you
-are using Okta development accounts. (DEPRECATED)`,
+				Type:        framework.TypeString,
+				Default:     defaultBaseURL,
+				Description: `The base domain to use for the Okta API. Default is "okta.com".`,
 			},
 			"production": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Default:     true,
-				Description: `If set, production API URL prefix will be used to communicate with Okta and if not set, a preview production API URL prefix will be used. Defaults to true.`,
+				Description: `(DEPRECATED) Use base_url.`,
 			},
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
@@ -100,13 +103,15 @@ func (b *backend) pathConfigRead(
 		Data: map[string]interface{}{
 			"organization": cfg.Org,
 			"org_name":     cfg.Org,
-			"production":   *cfg.Production,
 			"ttl":          cfg.TTL,
 			"max_ttl":      cfg.MaxTTL,
 		},
 	}
 	if cfg.BaseURL != "" {
 		resp.Data["base_url"] = cfg.BaseURL
+	}
+	if cfg.Production != nil {
+		resp.Data["production"] = *cfg.Production
 	}
 
 	return resp, nil
@@ -153,22 +158,18 @@ func (b *backend) pathConfigWrite(
 		return logical.ErrorResponse("api_token is missing"), nil
 	}
 
-	baseURL, ok := d.GetOk("base_url")
-	if ok {
-		baseURLString := baseURL.(string)
-		if len(baseURLString) != 0 {
-			_, err = url.Parse(baseURLString)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
-			}
-			cfg.BaseURL = baseURLString
-		}
-	} else if req.Operation == logical.CreateOperation {
-		cfg.BaseURL = d.Get("base_url").(string)
+	baseURL := d.Get("base_url").(string)
+	_, err = url.Parse(fmt.Sprintf("https://%s,%s", cfg.Org, baseURL))
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
 	}
+	cfg.BaseURL = baseURL
 
-	productionRaw := d.Get("production").(bool)
-	cfg.Production = &productionRaw
+	productionRaw, ok := d.GetOk("production")
+	if ok {
+		production := productionRaw.(bool)
+		cfg.Production = &production
+	}
 
 	ttl, ok := d.GetOk("ttl")
 	if ok {
@@ -207,16 +208,18 @@ func (b *backend) pathConfigExistenceCheck(
 
 // OktaClient creates a basic okta client connection
 func (c *ConfigEntry) OktaClient() *okta.Client {
-	production := true
-	if c.Production != nil {
-		production = *c.Production
-	}
+	baseURL := defaultBaseURL
 	if c.BaseURL != "" {
-		if strings.Contains(c.BaseURL, "oktapreview.com") {
-			production = false
+		baseURL = c.BaseURL
+	}
+	if c.Production != nil {
+		if !*c.Production {
+			baseURL = previewBaseURL
 		}
 	}
-	return okta.NewClient(cleanhttp.DefaultClient(), c.Org, c.Token, production)
+	// We validate config on input and errors are only returned when parsing URLs
+	client, _ := okta.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, c.Token)
+	return client
 }
 
 // ConfigEntry for Okta

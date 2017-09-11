@@ -439,10 +439,10 @@
 			"revisionTime": "2017-07-11T19:02:43Z"
 		},
 		{
-			"checksumSHA1": "QZtBo/fc3zeQFxPFgPVMyDiw70M=",
+			"checksumSHA1": "sFjc2R+KS9AeXIPMV4KCw+GwX5I=",
 			"path": "github.com/chrismalek/oktasdk-go/okta",
-			"revision": "7d4ce0a254ec5f9eda3397523f6cf183e1d46c5e",
-			"revisionTime": "2017-02-07T05:01:14Z"
+			"revision": "ae553c909ca06a4c34eb41ee435e83871a7c2496",
+			"revisionTime": "2017-09-11T15:31:29Z"
 		},
 		{
 			"checksumSHA1": "WsB6y1Yd+kDbHGz1Rm7xZ44hyAE=",
