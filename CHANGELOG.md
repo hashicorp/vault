@@ -1,3 +1,9 @@
+## 0.8.2.1 (September 11th, 2017) (Enterprise Only)
+
+BUG FIXES:
+
+ * Fix an issue upgrading to 0.8.2 for Enterprise customers.
+
 ## 0.8.2 (September 5th, 2017)
 
 SECURITY:
