@@ -50,6 +50,8 @@ import (
 
 // ServerCommand is a Command that starts the Vault server.
 type ServerCommand struct {
+	Config *server.Config
+
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
@@ -184,6 +186,9 @@ func (c *ServerCommand) Run(args []string) int {
 		c.Ui.Output("No configuration files found.")
 		return 1
 	}
+
+	// Store the configuration in the command
+	c.Config = config
 
 	// Ensure that a backend is provided
 	if config.Storage == nil {
@@ -648,6 +653,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Release the log gate.
 	c.logGate.Flush()
+
+	// Write out the PID to the file now that server has successfully started
+	if err := c.storePid(); err != nil {
+		c.Ui.Output(fmt.Sprintf("Error storing PID: %v", err))
+		return 1
+	}
 
 	// Wait for shutdown
 	shutdownTriggered := false
@@ -1213,6 +1224,30 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 		"-dev-listen-address": complete.PredictNothing,
 		"-log-level":          complete.PredictSet("trace", "debug", "info", "warn", "err"),
 	}
+}
+
+// storePid is used to write out our PID to a file if necessary
+func (c *ServerCommand) storePid() error {
+	// Quit fast if no pidfile
+	pidPath := c.Config.PidFile
+	if pidPath == "" {
+		return nil
+	}
+
+	// Open the PID file
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+	if err != nil {
+		return fmt.Errorf("could not open pid file: %v", err)
+	}
+	defer pidFile.Close()
+
+	// Write out the PID
+	pid := os.Getpid()
+	_, err = pidFile.WriteString(fmt.Sprintf("%d", pid))
+	if err != nil {
+		return fmt.Errorf("could not write to pid file: %v", err)
+	}
+	return nil
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

@@ -105,6 +105,9 @@ to specify where the configuration is.
   the standard Vault API address will automatically redirect there. This can also
   be provided via the environment variable `VAULT_UI`.
 
+- `pid_file` `(string: "")` - Path to the file in which Vault server PID should
+  be stored.
+
 [storage-backend]: /docs/configuration/storage/index.html
 [listener]: /docs/configuration/listener/index.html
 [telemetry]: /docs/configuration/telemetry.html

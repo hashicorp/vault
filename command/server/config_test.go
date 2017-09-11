@@ -67,6 +67,8 @@ func TestLoadConfigFile(t *testing.T) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 		ClusterName:        "testcluster",
+
+		PidFile: "./pidfile",
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
@@ -129,6 +131,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 		DisableMlockRaw:    interface{}(nil),
 		EnableUI:           true,
 		EnableUIRaw:        true,
+		PidFile:            "./pidfile",
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
