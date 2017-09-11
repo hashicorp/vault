@@ -32,7 +32,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 - `api_token` `(string: "")` - Okta API token. This is required to query Okta 
   for user group membership. If this is not supplied only locally configured 
   groups will be enabled. 
-- `base_url` `(string: "okta.com")` -  If set, will be used as the base domain
+- `base_url` `(string: "")` -  If set, will be used as the base domain
   for API requests.  Examples are okta.com, oktapreview.com, and okta-emea.com.
 - `ttl` `(string: "")` - Duration after which authentication will be expired.
 - `max_ttl` `(string: "")` - Maximum duration after which authentication will 
