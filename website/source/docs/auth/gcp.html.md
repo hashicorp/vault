@@ -33,10 +33,10 @@ v0.8.0+ to use plugins.
 
 The Vault authentication workflow for IAM service accounts is as follows:
 
-  1. A client with IAM service account credentials generates a signed JWT using the IAM [projects.serviceAccounts.signJwt](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt) method. See [usage](#iam-authentication-token) for the expected format and example code.
+  1. A client with IAM service account credentials generates a signed JWT using the IAM [projects.serviceAccounts.signJwt](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt) method. See [usage](#the-iam-authentication-token) for the expected format and example code.
   2. The client sends this JWT to Vault in a login request with a role name. This role should have type `iam`
   3. Vault grabs the `kid` header value, which contains the ID of the key-pair used to generate the JWT, and the `sub` ID/email to find the service account key. If the service account does not exist or the key is not linked to the service account, Vault will deny authentication.
-  4. Vault authorizes the confirmed service account against the given role. See [authorization section](#authorization) to see how each type of role handles authorization.
+  4. Vault authorizes the confirmed service account against the given role. See [authorization section](#authorization-workflow) to see how each type of role handles authorization.
 
 [![IAM Login Workflow](/assets/images/vault-gcp-iam-auth-workflow.svg)](/assets/images/vault-gcp-iam-auth-workflow.svg)
 
@@ -241,7 +241,7 @@ to learn more about parameters.
 ```
 $ vault write auth/gcp/role/dev-role \
     type="iam" \
-    project="project-123456" \
+    project_id="project-123456" \
     policies="prod,dev" \
     service_accounts="serviceaccount1@project1234.iam.gserviceaccount.com,uuid123,..."
     ...
@@ -300,12 +300,12 @@ $ curl $VAULT_ADDR/v1/auth/gcp/config \
 
 ```
 $ curl $VAULT_ADDR/v1/auth/gcp/role/dev-role \
--d '{ "type": "iam", "project": "project-123456", ...}'
+-d '{ "type": "iam", "project_id": "project-123456", ...}'
 ```
 
 #### Login to get a Vault Token
 
-The endpoint for the GitHub login is `auth/gcp/login`. 
+The endpoint for the GCP login is `auth/gcp/login`.
 
 The `gcp` mountpoint value in the url is the default mountpoint value.
 If you have mounted the `gcp` backend with a different mountpoint, use that value.
