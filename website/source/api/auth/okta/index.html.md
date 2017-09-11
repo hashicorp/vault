@@ -29,7 +29,9 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 - `org_name` `(string: <required>)` - Name of the organization to be used in the
   Okta API.
-- `api_token` `(string: <required>)` - Okta API key.
+- `api_token` `(string: "")` - Okta API token. This is required to query Okta 
+  for user group membership. If this is not supplied only locally configured 
+  groups will be enabled. 
 - `base_url` `(string: "okta.com")` -  If set, will be used as the base domain
   for API requests.  Examples are okta.com, oktapreview.com, and okta-emea.com.
 - `ttl` `(string: "")` - Duration after which authentication will be expired.

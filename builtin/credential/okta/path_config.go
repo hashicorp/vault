@@ -23,7 +23,7 @@ func pathConfig(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"organization": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "(DEPRECATED) Okta organization to authenticate against",
+				Description: "(DEPRECATED) Okta organization to authenticate against. Use org_name instead.",
 			},
 			"org_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -31,7 +31,7 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"token": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "(DEPRECATED) Okta admin API token",
+				Description: "(DEPRECATED) Okta admin API token.  Use api_token instead.",
 			},
 			"api_token": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -39,8 +39,7 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"base_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Default:     defaultBaseURL,
-				Description: `The base domain to use for the Okta API. Default is "okta.com".`,
+				Description: `The base domain to use for the Okta API. When not specified in the configuraiton, "okta.com" is used.`,
 			},
 			"production": &framework.FieldSchema{
 				Type:        framework.TypeBool,
@@ -154,21 +153,25 @@ func (b *backend) pathConfigWrite(
 			cfg.Token = token.(string)
 		}
 	}
-	if cfg.Token == "" && req.Operation == logical.CreateOperation {
-		return logical.ErrorResponse("api_token is missing"), nil
-	}
 
-	baseURL := d.Get("base_url").(string)
-	_, err = url.Parse(fmt.Sprintf("https://%s,%s", cfg.Org, baseURL))
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
-	}
-	cfg.BaseURL = baseURL
-
-	productionRaw, ok := d.GetOk("production")
+	baseURLRaw, ok := d.GetOk("base_url")
 	if ok {
-		production := productionRaw.(bool)
-		cfg.Production = &production
+		baseURL := baseURLRaw.(string)
+		_, err = url.Parse(fmt.Sprintf("https://%s,%s", cfg.Org, baseURL))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
+		}
+		cfg.BaseURL = baseURL
+	}
+
+	// We only care about the production flag when baseURL is not set. It is
+	// for compatibility reasons.
+	if cfg.BaseURL == "" {
+		productionRaw, ok := d.GetOk("production")
+		if ok {
+			production := productionRaw.(bool)
+			cfg.Production = &production
+		}
 	}
 
 	ttl, ok := d.GetOk("ttl")
@@ -209,14 +212,15 @@ func (b *backend) pathConfigExistenceCheck(
 // OktaClient creates a basic okta client connection
 func (c *ConfigEntry) OktaClient() *okta.Client {
 	baseURL := defaultBaseURL
-	if c.BaseURL != "" {
-		baseURL = c.BaseURL
-	}
 	if c.Production != nil {
 		if !*c.Production {
 			baseURL = previewBaseURL
 		}
 	}
+	if c.BaseURL != "" {
+		baseURL = c.BaseURL
+	}
+
 	// We validate config on input and errors are only returned when parsing URLs
 	client, _ := okta.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, c.Token)
 	return client
