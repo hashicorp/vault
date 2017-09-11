@@ -53,7 +53,7 @@ const (
 type ExpirationManager struct {
 	// A Go bug requires 64-bit atomic variables to be placed at the beginning
 	// of the struct. The first word is guaranteed to be 64-bit aligned by the
-	// compiler
+	// compiler which is required for certain CPU architectures.
 	// https://godoc.org/sync/atomic#pkg-note-bug
 	restoreMode int64
 
