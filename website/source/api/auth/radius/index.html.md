@@ -209,8 +209,8 @@ Login with the username and password.
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
+    --data @payload.json \
     https://vault.rocks/v1/auth/radius/login/test-user
 ```
 

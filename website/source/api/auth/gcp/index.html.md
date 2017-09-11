@@ -358,7 +358,6 @@ entity and then authorizes the entity for the given role.
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
     https://vault.rocks/v1/auth/gcp/login

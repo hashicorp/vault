@@ -583,7 +583,6 @@ AppRole (such as client IP CIDR) are also evaluated.
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
     https://vault.rocks/v1/auth/approle/login
