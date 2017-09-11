@@ -51,6 +51,12 @@ const (
 // If a secret is not renewed in timely manner, it may be expired, and
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
+	// A Go bug requires 64-bit atomic variables to be placed at the beginning
+	// of the struct. The first word is guaranteed to be 64-bit aligned by the
+	// compiler
+	// https://godoc.org/sync/atomic#pkg-note-bug
+	restoreMode int64
+
 	router     *Router
 	idView     *BarrierView
 	tokenView  *BarrierView
@@ -60,10 +66,9 @@ type ExpirationManager struct {
 	pending     map[string]*time.Timer
 	pendingLock sync.RWMutex
 
-	tidyLock int64
+	tidyLock sync.Mutex
+	tidyMode int
 
-	// A set of locks to handle restoration
-	restoreMode        int64
 	restoreModeLock    sync.RWMutex
 	restoreRequestLock sync.RWMutex
 	restoreLocks       []*locksutil.LockEntry
@@ -166,12 +171,21 @@ func (m *ExpirationManager) Tidy() error {
 
 	var tidyErrors *multierror.Error
 
-	if !atomic.CompareAndSwapInt64(&m.tidyLock, 0, 1) {
+	// Allow only one tidy operatioon at a time
+	m.tidyLock.Lock()
+	if m.tidyMode == 1 {
+		m.tidyLock.Unlock()
 		m.logger.Warn("expiration: tidy operation on leases is already in progress")
 		return fmt.Errorf("tidy operation on leases is already in progress")
 	}
+	m.tidyMode = 1
+	m.tidyLock.Unlock()
 
-	defer atomic.CompareAndSwapInt64(&m.tidyLock, 1, 0)
+	defer func() {
+		m.tidyLock.Lock()
+		m.tidyMode = 0
+		m.tidyLock.Unlock()
+	}()
 
 	m.logger.Info("expiration: beginning tidy operation on leases")
 	defer m.logger.Info("expiration: finished tidy operation on leases")
