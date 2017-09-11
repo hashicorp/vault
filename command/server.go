@@ -75,12 +75,15 @@ func (c *ServerCommand) Run(args []string) int {
 	var dev, verifyOnly, devHA, devTransactional, devLeasedGeneric, devThreeNode bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress, devPluginDir string
+	var devLatency, devLatencyJitter int
 	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
 	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
 	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
 	flags.StringVar(&devPluginDir, "dev-plugin-dir", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
+	flags.IntVar(&devLatency, "dev-latency", 0, "")
+	flags.IntVar(&devLatencyJitter, "dev-latency-jitter", 20, "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.BoolVar(&devHA, "dev-ha", false, "")
 	flags.BoolVar(&devTransactional, "dev-transactional", false, "")
@@ -266,7 +269,14 @@ func (c *ServerCommand) Run(args []string) int {
 		if devPluginDir != "" {
 			coreConfig.PluginDirectory = devPluginDir
 		}
-
+		if devLatency > 0 {
+			injectLatency := time.Duration(devLatency) * time.Millisecond
+			if _, txnOK := backend.(physical.Transactional); txnOK {
+				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, devLatencyJitter, c.logger)
+			} else {
+				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, devLatencyJitter, c.logger)
+			}
+		}
 	}
 
 	if devThreeNode {

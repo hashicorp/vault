@@ -117,7 +117,7 @@ func (c *Core) setupExpiration() error {
 			c.logger.Error("expiration: error shutting down core: %v", err)
 		}
 	}
-	go c.expiration.Restore(errorFunc, 0)
+	go c.expiration.Restore(errorFunc)
 
 	return nil
 }
@@ -268,7 +268,7 @@ func (m *ExpirationManager) Tidy() error {
 
 // Restore is used to recover the lease states when starting.
 // This is used after starting the vault.
-func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (retErr error) {
+func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	defer func() {
 		// Turn off restore mode. We can do this safely without the lock because
 		// if restore mode finished successfully, restore mode was already
@@ -322,7 +322,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 						return
 					}
 
-					err := m.processRestore(leaseID, loadDelay)
+					err := m.processRestore(leaseID)
 					if err != nil {
 						errs <- err
 						continue
@@ -398,7 +398,7 @@ func (m *ExpirationManager) Restore(errorFunc func(), loadDelay time.Duration) (
 
 // processRestore takes a lease and restores it in the expiration manager if it has
 // not already been seen
-func (m *ExpirationManager) processRestore(leaseID string, loadDelay time.Duration) error {
+func (m *ExpirationManager) processRestore(leaseID string) error {
 	m.restoreRequestLock.RLock()
 	defer m.restoreRequestLock.RUnlock()
 
@@ -413,11 +413,6 @@ func (m *ExpirationManager) processRestore(leaseID string, loadDelay time.Durati
 	// Check again with the lease locked
 	if _, ok := m.restoreLoaded.Load(leaseID); ok {
 		return nil
-	}
-
-	// Useful for testing to add latency to all load requests
-	if loadDelay > 0 {
-		time.Sleep(loadDelay)
 	}
 
 	// Load lease and restore expiration timer
