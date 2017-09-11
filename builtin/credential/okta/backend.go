@@ -87,12 +87,21 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		Data: map[string]interface{}{},
 	}
 
-	oktaGroups, err := b.getOktaGroups(cfg, client, &result.Embedded.User, oktaResponse)
-	if err != nil {
-		return nil, logical.ErrorResponse(fmt.Sprintf("okta failure retrieving groups: %v", err)), nil
+	var allGroups []string
+	// Only query the Okta API for group membership if we have a token
+	if cfg.Token != "" {
+		oktaGroups, err := b.getOktaGroups(client, &result.Embedded.User)
+		if err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("okta failure retrieving groups: %v", err)), nil
+		}
+		if len(oktaGroups) == 0 {
+			errString := fmt.Sprintf(
+				"no Okta groups found; only policies from locally-defined groups available")
+			oktaResponse.AddWarning(errString)
+		}
+		allGroups = append(allGroups, oktaGroups...)
 	}
 
-	var allGroups []string
 	// Import the custom added groups from okta backend
 	user, err := b.User(req.Storage, username)
 	if err != nil {
@@ -106,8 +115,6 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		}
 		allGroups = append(allGroups, user.Groups...)
 	}
-	// Merge local and Okta groups
-	allGroups = append(allGroups, oktaGroups...)
 
 	// Retrieve policies
 	var policies []string
@@ -141,12 +148,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	return policies, oktaResponse, nil
 }
 
-func (b *backend) getOktaGroups(cfg *ConfigEntry, client *okta.Client, user *okta.User, oktaResponse *logical.Response) ([]string, error) {
-	// Only lookup groups if you have a token
-	if cfg.Token == "" {
-		return nil, nil
-	}
-
+func (b *backend) getOktaGroups(client *okta.Client, user *okta.User) ([]string, error) {
 	rsp, err := client.Users.PopulateGroups(user)
 	if err != nil {
 		return nil, err
@@ -160,12 +162,6 @@ func (b *backend) getOktaGroups(cfg *ConfigEntry, client *okta.Client, user *okt
 	}
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("auth/okta: Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", oktaGroups)
-	}
-
-	if len(oktaGroups) == 0 {
-		errString := fmt.Sprintf(
-			"no Okta groups found; only policies from locally-defined groups available")
-		oktaResponse.AddWarning(errString)
 	}
 	return oktaGroups, nil
 }
