@@ -81,7 +81,6 @@ type ExpirationManager struct {
 func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, logger log.Logger) *ExpirationManager {
 	if logger == nil {
 		logger = log.New("expiration_manager")
-
 	}
 
 	exp := &ExpirationManager{
