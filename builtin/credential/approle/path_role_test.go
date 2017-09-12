@@ -608,7 +608,7 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 
 	expected := map[string]interface{}{
 		"bind_secret_id":     true,
-		"policies":           []string{"default", "p", "q", "r", "s"},
+		"policies":           []string{"p", "q", "r", "s"},
 		"secret_id_num_uses": 10,
 		"secret_id_ttl":      300,
 		"token_ttl":          400,
