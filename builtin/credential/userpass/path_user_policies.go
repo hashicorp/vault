@@ -17,7 +17,7 @@ func pathUserPolicies(b *backend) *framework.Path {
 				Description: "Username for this user.",
 			},
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
 			},
 		},
@@ -44,7 +44,7 @@ func (b *backend) pathUserPoliciesUpdate(
 		return nil, fmt.Errorf("username does not exist")
 	}
 
-	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies").(string))
+	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies"))
 
 	return nil, b.setUser(req.Storage, username, userEntry)
 }

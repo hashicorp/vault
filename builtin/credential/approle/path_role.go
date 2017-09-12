@@ -1359,7 +1359,7 @@ func (b *backend) pathRolePoliciesDelete(req *logical.Request, data *framework.F
 	lock.Lock()
 	defer lock.Unlock()
 
-	role.Policies = policyutil.ParsePolicies(data.GetDefaultOrZero("policies"))
+	role.Policies = []string{}
 
 	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
 }
