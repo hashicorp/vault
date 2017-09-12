@@ -532,6 +532,9 @@ type roleEntry struct {
 	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
 	GenerateLease         *bool  `json:"generate_lease,omitempty" structs:"generate_lease,omitempty"`
 	NoStore               bool   `json:"no_store" structs:"no_store" mapstructure:"no_store"`
+
+	// Used internally for signing intermediates
+	AllowExpirationPastCA bool
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
