@@ -164,7 +164,7 @@ func (b *backend) pathConfigWrite(
 		cfg.BaseURL = baseURL
 	}
 
-	// We only care about the production flag when baseURL is not set. It is
+	// We only care about the production flag when base_url is not set. It is
 	// for compatibility reasons.
 	if cfg.BaseURL == "" {
 		productionRaw, ok := d.GetOk("production")
@@ -172,6 +172,9 @@ func (b *backend) pathConfigWrite(
 			production := productionRaw.(bool)
 			cfg.Production = &production
 		}
+	} else {
+		// clear out old production flag if base_url is set
+		cfg.Production = nil
 	}
 
 	ttl, ok := d.GetOk("ttl")
