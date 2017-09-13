@@ -1,20 +1,20 @@
 ---
 layout: "api"
-page_title: "Google Cloud Platform Auth Plugin Backend - HTTP API"
+page_title: "Google Cloud Platform - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-gcp"
 description: |-
   This is the API documentation for the Vault GCP authentication
-  backend plugin.
+  method plugin.
 ---
 
-# GCP Auth Plugin HTTP API
+# GCP Auth Method (API)
 
-This is the API documentation for the Vault GCP authentication backend
+This is the API documentation for the Vault GCP auth method
 plugin. To learn more about the usage and operation, see the
-[Vault GCP backend documentation](/docs/auth/gcp.html).
+[Vault GCP method documentation](/docs/auth/gcp.html).
 
-This documentation assumes the plugin backend is mounted at the
-`/auth/gcp` path in Vault. Since it is possible to mount auth backends
+This documentation assumes the plugin method is mounted at the
+`/auth/gcp` path in Vault. Since it is possible to mount auth methods
 at any location, please update your API calls accordingly.
 
 ## Configure
@@ -115,7 +115,7 @@ $ curl \
 
 ## Create Role
 
-Registers a role in the backend. Role types have specific entities
+Registers a role in the method. Role types have specific entities
 that can perform login operations against this endpoint. Constraints specific
 to the role type must be set on the role. These are applied to the authenticated
 entities attempting to login.
@@ -228,7 +228,7 @@ $ curl \
 
 ## Edit Service Accounts For IAM Role
 
-Edit service accounts for an existing IAM role in the backend.
+Edit service accounts for an existing IAM role in the method.
 This allows you to add or remove service accounts from the list of
 service accounts on the role.
 
@@ -362,7 +362,6 @@ Lists all the roles that are registered with the plugin.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/gcp/roles`            | `200 application/json` |
-| `GET`   | `/auth/gcp/roles?list=true`   | `200 application/json` |
 
 ### Sample Request
 

@@ -68,7 +68,7 @@ func (h *CLIHandler) Help() string {
 	help := `
 Usage: vault login -method=userpass [CONFIG K=V...]
 
-  The userpass authentication method allows users to authenticate using Vault's
+  The userpass auth method allows users to authenticate using Vault's
   internal user database.
 
   If MFA is enabled, a "method" and/or "passcode" may be required depending on

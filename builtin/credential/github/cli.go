@@ -41,7 +41,7 @@ func (h *CLIHandler) Help() string {
 	help := `
 Usage: vault login -method=github [CONFIG K=V...]
 
-  The GitHub authentication method allows users to authenticate using a GitHub
+  The GitHub auth method allows users to authenticate using a GitHub
   personal access token. Users can generate a personal access token from the
   settings page on their GitHub account.
 

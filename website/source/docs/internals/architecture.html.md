@@ -45,7 +45,7 @@ clarify what is being discussed:
   and response from Vault goes through the configured audit backends. This provides a simple
   way to integrate Vault with multiple audit logging destinations of different types.
 
-* **Auth Backend** - An auth backend is used to authenticate users or applications which
+* **auth method** - An auth method is used to authenticate users or applications which
   are connecting to Vault. Once authenticated, the backend returns the list of applicable policies
   which should be applied. Vault takes an authenticated user and returns a client token that can
   be used for future requests. As an example, the `userpass` backend uses a username and password
@@ -101,7 +101,7 @@ The number of shares and the minimum threshold required can both be specified. S
 technique can be disabled, and the master key used directly for unsealing. Once Vault
 retrieves the encryption key, it is able to decrypt the data in the storage backend,
 and enters the _unsealed_ state. Once unsealed, Vault loads all of the configured
-audit, credential and secret backends.
+audit devices, auth methods, and secrets engines.
 
 The configuration of those backends must be stored in Vault since they are security
 sensitive. Only users with the correct permissions should be able to modify them,
@@ -113,10 +113,10 @@ The core is used to manage the flow of requests through the system, enforce ACLs
 and ensure audit logging is done.
 
 When a client first connects to Vault, it needs to authenticate. Vault provides
-configurable credential backends providing flexibility in the authentication mechanism
+configurable auth methods providing flexibility in the authentication mechanism
 used. Human friendly mechanisms such as username/password or GitHub might be
 used for operators, while applications may use public/private keys or tokens to authenticate.
-An authentication request flows through core and into a credential backend, which determines
+An authentication request flows through core and into an auth method, which determines
 if the request is valid and returns a list of associated policies.
 
 Policies are just a named ACL rule. For example, the "root" policy is built-in and
@@ -127,11 +127,11 @@ Since a user may have multiple policies associated, an action is allowed if any 
 permits it. Policies are stored and managed by an internal policy store. This internal store
 is manipulated through the system backend, which is always mounted at `sys/`.
 
-Once authentication takes place and a credential backend provides a set of applicable
+Once authentication takes place and an auth method provides a set of applicable
 policies, a new client token is generated and managed by the token store. This client token
 is sent back to the client, and is used to make future requests. This is similar to
 a cookie sent by a website after a user logs in. The client token may have a lease associated
-with it depending on the credential backend configuration. This means the client token
+with it depending on the auth method configuration. This means the client token
 may need to be periodically renewed to avoid invalidation.
 
 Once authenticated, requests are made providing the client token. The token is used

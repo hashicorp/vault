@@ -55,7 +55,7 @@ func (h *CLIHandler) Help() string {
 	help := `
 Usage: vault login -method=okta [CONFIG K=V...]
 
-  The OKTA authentication method allows users to authenticate using OKTA.
+  The OKTA auth method allows users to authenticate using OKTA.
 
   Authenticate as "sally":
 

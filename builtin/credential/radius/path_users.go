@@ -114,7 +114,7 @@ func (b *backend) pathUserWrite(
 	var policies = policyutil.ParsePolicies(d.Get("policies"))
 	for _, policy := range policies {
 		if policy == "root" {
-			return logical.ErrorResponse("root policy cannot be granted by an authentication backend"), nil
+			return logical.ErrorResponse("root policy cannot be granted by an auth method"), nil
 		}
 	}
 

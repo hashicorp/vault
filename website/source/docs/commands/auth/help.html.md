@@ -26,7 +26,7 @@ Get usage instructions for the userpass auth method:
 $ vault auth help userpass
 Usage: vault login -method=userpass [CONFIG K=V...]
 
-  The userpass authentication method allows users to authenticate using Vault's
+  The userpass auth method allows users to authenticate using Vault's
   internal user database.
 
 # ...

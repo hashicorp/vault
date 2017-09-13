@@ -41,7 +41,7 @@ list of additional parameters.
 
 - `allowed_roles` `(slice: [])` - Array or comma separated string of the roles
   allowed to use this connection. Defaults to empty (no roles), if contains a
-  "*" any role can use this connection. 
+  "*" any role can use this connection.
 
 ### Sample Payload
 
@@ -160,7 +160,7 @@ This endpoint creates or updates a role definition.
   is specified as part of the URL.
 
 - `db_name` `(string: <required>)` - The name of the database connection to use
-  for this role. 
+  for this role.
 
 - `default_ttl` `(string/int: 0)` - Specifies the TTL for the leases
   associated with this role. Accepts time suffixed strings ("1h") or an integer
@@ -172,21 +172,21 @@ This endpoint creates or updates a role definition.
 
 - `creation_statements` `(string: <required>)` – Specifies the database
   statements executed to create and configure a user. See the plugin's API page
-  for more information on support and formatting for this parameter. 
+  for more information on support and formatting for this parameter.
 
 - `revocation_statements` `(string: "")` – Specifies the database statements to
   be executed to revoke a user. See the plugin's API page for more information
-  on support and formatting for this parameter. 
+  on support and formatting for this parameter.
 
 - `rollback_statements` `(string: "")` – Specifies the database statements to be
   executed rollback a create operation in the event of an error. Not every
   plugin type will support this functionality. See the plugin's API page for
-  more information on support and formatting for this parameter. 
+  more information on support and formatting for this parameter.
 
 - `renew_statements` `(string: "")` – Specifies the database statements to be
   executed to renew a user. Not every plugin type will support this
   functionality. See the plugin's API page for more information on support and
-  formatting for this parameter. 
+  formatting for this parameter.
 
 
 
@@ -256,7 +256,6 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/database/roles`          | `200 application/json` |
-| `GET`   | `/database/roles?list=true` | `200 application/json` |
 
 ### Sample Request
 

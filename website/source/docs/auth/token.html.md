@@ -1,23 +1,21 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: Token"
+page_title: "Token - Auth Methods"
 sidebar_current: "docs-auth-token"
 description: |-
-  The token store auth backend is used to authenticate using tokens.
+  The token store auth method is used to authenticate using tokens.
 ---
 
-# Auth Backend: Token
+# Token Auth Method
 
-The token backend is the only auth backend that is built-in and
-automatically available at `/auth/token` as well as with first-class
-built-in CLI methods such as `vault token-create`. It allows users to
-authenticate using a token, as well to create new tokens, revoke
+The `token` method is built-in and automatically available at `/auth/token`. It
+allows users to authenticate using a token, as well to create new tokens, revoke
 secrets by token, and more.
 
-When any other auth backend returns an identity, Vault core invokes the
-token backend to create a new unique token for that identity.
+When any other auth method returns an identity, Vault core invokes the
+token method to create a new unique token for that identity.
 
-The token store can also be used to bypass any other auth backend:
+The token store can also be used to bypass any other auth method:
 you can create tokens directly, as well as perform a variety of other
 operations on tokens such as renewal and revocation.
 
@@ -28,9 +26,8 @@ to tokens.
 
 ### Via the CLI
 
-```
-$ vault auth <token>
-...
+```text
+$ vault login token=<token>
 ```
 
 ### Via the API
@@ -40,6 +37,6 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
 ## API
 
-The Token authentication backend has a full HTTP API. Please see the
-[Token auth backend API](/api/auth/token/index.html) for more
+The Token auth method has a full HTTP API. Please see the
+[Token auth method API](/api/auth/token/index.html) for more
 details.

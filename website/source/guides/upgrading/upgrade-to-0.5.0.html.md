@@ -35,7 +35,7 @@ manually re-type it.
 ## `TTL` Field in Token Lookup
 
 Previously, the `ttl` field returned when calling `lookup` or `lookup-self` on
-the token authentication backend displayed the TTL set at token creation. It
+the token auth method displayed the TTL set at token creation. It
 now displays the time remaining (in seconds) for the token's validity period.
 The original behavior has been moved to a field named `creation_ttl`.
 

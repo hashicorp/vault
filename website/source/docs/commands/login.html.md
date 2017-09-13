@@ -15,13 +15,13 @@ arguments. A successful authentication results in a Vault token - conceptually
 similar to a session token on a website. By default, this token is cached on the
 local machine for future requests.
 
-The `-method` flag allows using other authentication methods, such as userpass,
+The `-method` flag allows using other auth methods, such as userpass,
 github, or cert. For these, additional "K=V" pairs may be required.  For more
 information about the list of configuration parameters available for a given
-authentication method, use the "vault auth help TYPE". You can also use "vault
-auth list" to see the list of enabled authentication methods.
+auth method, use the "vault auth help TYPE". You can also use "vault
+auth list" to see the list of enabled auth methods.
 
-If an authentication method is enabled at a non-standard path, the `-method`
+If an auth method is enabled at a non-standard path, the `-method`
 flag still refers to the canonical type, but the `-path` flag refers to the
 enabled path.
 
@@ -66,7 +66,7 @@ renewable: true
 policies: [default]
 ```
 
-If a github authentication method was enabled at the path "github-ent":
+If a github auth method was enabled at the path "github-ent":
 
 ```text
 $ vault login -method=github -path=github-prod
@@ -105,7 +105,7 @@ flags](/docs/commands/index.html) included on all commands.
   (usually the local filesystem) after authentication for use in future
   requests. The token will only be displayed in the command output.
 
-- `-path` `(string: "")` - Remote path in Vault where the authentication method
+- `-path` `(string: "")` - Remote path in Vault where the auth method
   is enabled. This defaults to the TYPE of method (e.g. userpass -> userpass/).
 
 - `-token-only` `(bool: false)` - Output only the token with no verification.

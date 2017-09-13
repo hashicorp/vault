@@ -14,7 +14,7 @@ for Vault 0.6.3. Please read it carefully.
 
 ## LDAP Null Binds Disabled By Default
 
-When using the LDAP Auth Backend, `deny_null_bind` has a default value of
+When using the LDAP auth method, `deny_null_bind` has a default value of
 `true`, preventing a successful user authentication when an empty password
 is provided. If you utilize passwordless LDAP binds, `deny_null_bind` must
 be set to `false`. Upgrades will keep previous behavior until the LDAP

@@ -1,16 +1,15 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: LDAP"
+page_title: "LDAP - Auth Methods"
 sidebar_current: "docs-auth-ldap"
 description: |-
-  The "ldap" auth backend allows users to authenticate with Vault using LDAP credentials.
+  The "ldap" auth method allows users to authenticate with Vault using LDAP
+  credentials.
 ---
 
-# Auth Backend: LDAP
+# LDAP Auth Method
 
-Name: `ldap`
-
-The "ldap" auth backend allows authentication using an existing LDAP
+The `ldap` auth method allows authentication using an existing LDAP
 server and user/password credentials. This allows Vault to be integrated
 into environments using LDAP without duplicating the user/pass configuration
 in multiple places.
@@ -23,7 +22,7 @@ the `users/` and `groups/` paths.
 **It is up to the administrator** to provide properly escaped DNs. This
 includes the user DN, bind DN for search, and so on.
 
-The only DN escaping performed by this backend is on usernames given at login
+The only DN escaping performed by this method is on usernames given at login
 time when they are inserted into the final bind DN, and uses escaping rules
 defined in RFC 4514.
 
@@ -41,10 +40,10 @@ Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.activ
 
 ## Authentication
 
-#### Via the CLI
+### Via the CLI
 
-```
-$ vault auth -method=ldap username=mitchellh
+```text
+$ vault login -method=ldap username=mitchellh
 Password (will be hidden):
 Successfully authenticated! The policies that are associated
 with this token are listed below:
@@ -52,15 +51,14 @@ with this token are listed below:
 admins
 ```
 
-#### Via the API
-
-The endpoint for the login is `auth/ldap/login/<username>`.
-
-The password should be sent in the POST body encoded as JSON.
+### Via the API
 
 ```shell
-$ curl $VAULT_ADDR/v1/auth/ldap/login/mitchellh \
-    -d '{ "password": "foo" }'
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data '{"password": "foo"}' \
+    https://vault.rocks/v1/auth/ldap/login/mitchellh=
 ```
 
 The response will be in JSON. For example:
@@ -87,27 +85,19 @@ The response will be in JSON. For example:
 
 ## Configuration
 
-First, you must enable the ldap auth backend:
+Auth methods must be configured in advance before users or machines can
+authenticate. These steps are usually completed by an operator or configuration
+management tool.
 
-```
-$ vault auth-enable ldap
-Successfully enabled 'ldap' at 'ldap'!
-```
+1. Enable the ldap auth method:
 
-Now when you run `vault auth -methods`, the ldap backend is available:
+    ```text
+    $ vault auth enable ldap
+    ```
 
-```
-Path       Type      Description
-ldap/      ldap
-token/     token     token based credentials
-```
-
-To use the ldap auth backend, it must first be configured with connection
-details for your LDAP server, information on how to authenticate users, and
-instructions on how to query for group membership.
-The configuration options are categorized and detailed below.
-
-Configuration is written to `auth/ldap/config`.
+1. Configure connection details for your LDAP server, information on how to
+authenticate users, and instructions on how to query for group membership. The
+configuration options are categorized and detailed below.
 
 ### Connection parameters
 
@@ -140,7 +130,7 @@ There are two alternate methods of resolving the user object used to authenticat
 
 ### Group Membership Resolution
 
-Once a user has been authenticated, the LDAP auth backend must know how to resolve which groups the user is a member of. The configuration for this can vary depending on your LDAP server and your directory schema. There are two main strategies when resolving group membership - the first is searching for the authenticated user object and following an attribute to groups it is a member of. The second is to search for group objects of which the authenticated user is a member of. Both methods are supported.
+Once a user has been authenticated, the LDAP auth method must know how to resolve which groups the user is a member of. The configuration for this can vary depending on your LDAP server and your directory schema. There are two main strategies when resolving group membership - the first is searching for the authenticated user object and following an attribute to groups it is a member of. The second is to search for group objects of which the authenticated user is a member of. Both methods are supported.
 
 * `groupfilter` (string, optional) - Go template used when constructing the group membership query. The template can access the following context variables: \[`UserDN`, `Username`\]. The default is `(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`, which is compatible with several common directory schemas. To support nested group resolution for Active Directory, instead use the following query: `(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))`.
 * `groupdn` (string, required) - LDAP search base to use for group membership search. This can be the root containing either groups or users. Example: `ou=Groups,dc=example,dc=com`
@@ -250,7 +240,7 @@ policy.
 Finally, we can test this by authenticating:
 
 ```
-$ vault auth -method=ldap username=tesla
+$ vault login -method=ldap username=tesla
 Password (will be hidden):
 Successfully authenticated! The policies that are associated
 with this token are listed below:
@@ -264,6 +254,6 @@ It should be noted that user -> policy mapping happens at token creation time. A
 
 ## API
 
-The LDAP authentication backend has a full HTTP API. Please see the
-[LDAP auth backend API](/api/auth/ldap/index.html) for more
+The LDAP auth method has a full HTTP API. Please see the
+[LDAP auth method API](/api/auth/ldap/index.html) for more
 details.

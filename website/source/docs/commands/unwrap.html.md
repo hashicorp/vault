@@ -26,7 +26,7 @@ $ vault unwrap 3de9ece1-b347-e143-29b0-dc2dc31caafd
 Unwrap the data in the active token:
 
 ```text
-$ vault auth 848f9ccf-7176-098c-5e2b-75a0689d41cd
+$ vault login 848f9ccf-7176-098c-5e2b-75a0689d41cd
 $ vault unwrap # unwraps 848f9ccf...
 ```
 

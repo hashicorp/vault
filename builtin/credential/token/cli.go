@@ -92,7 +92,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, fmt.Errorf("Empty response from lookup-self")
 	}
 
-	// Return an auth struct that "looks" like the response from an auth backend.
+	// Return an auth struct that "looks" like the response from an auth method.
 	// lookup and lookup-self return their data in data, not auth. We try to
 	// mirror that data here.
 	return &api.Secret{
@@ -113,9 +113,9 @@ func (h *CLIHandler) Help() string {
 	help := `
 Usage: vault login TOKEN [CONFIG K=V...]
 
-  The token authentication method allows logging in directly with a token. This
+  The token auth method allows logging in directly with a token. This
   can be a token from the "token-create" command or API. There are no
-  configuration options for this authentication method.
+  configuration options for this auth method.
 
   Authenticate using a token:
 

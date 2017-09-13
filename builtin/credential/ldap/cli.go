@@ -64,7 +64,7 @@ func (h *CLIHandler) Help() string {
 	help := `
 Usage: vault login -method=ldap [CONFIG K=V...]
 
-  The LDAP authentication method allows users to authenticate using LDAP or
+  The LDAP auth method allows users to authenticate using LDAP or
   Active Directory.
 
   If MFA is enabled, a "method" and/or "passcode" may be required depending on

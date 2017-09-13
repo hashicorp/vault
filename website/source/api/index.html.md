@@ -40,12 +40,12 @@ user may have a client token sent to her.  The client token must be sent as the
 Otherwise, a client token can be retrieved via [authentication
 backends](/docs/auth/index.html).
 
-Each authentication backend will have one or more unauthenticated login
+Each auth method will have one or more unauthenticated login
 endpoints. These endpoints can be reached without any authentication, and are
 used for authentication itself. These endpoints are specific to each
-authentication backend.
+auth method.
 
-Login endpoints for authentication backends that generate an identity will be
+Login endpoints for auth methods that generate an identity will be
 sent down via JSON. The resulting token should be saved on the client or passed
 via the `X-Vault-Token` header for future requests.
 
@@ -122,7 +122,7 @@ For more examples, please look at the Vault API client.
 ## Help
 
 To retrieve the help for any API within Vault, including mounted
-backends, credential providers, etc. then append `?help=1` to any
+backends, auth methods, etc. then append `?help=1` to any
 URL. If you have valid permission to access the path, then the help text
 will be returned with the following structure:
 

@@ -115,7 +115,7 @@ output. This will return a JSON response:
 }
 ```
 
-Now any of the available authentication backends can be enabled and configured.
+Now any of the available auth methods can be enabled and configured.
 For the purposes of this guide lets enable [AppRole](/docs/auth/approle.html)
 authentication.
 

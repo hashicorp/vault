@@ -45,7 +45,7 @@ $ vault ssh \
 ```
 
 For step-by-step guides and instructions for each of the available SSH
-authentication methods, please see the corresponding [SSH secrets
+auth methods, please see the corresponding [SSH secrets
 engine](/docs/secrets/ssh/index.html).
 
 ## Usage

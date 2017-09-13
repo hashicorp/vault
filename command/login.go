@@ -47,24 +47,23 @@ Usage: vault login [options] [AUTH K=V...]
   a session token on a website. By default, this token is cached on the local
   machine for future requests.
 
-  The default authentication method is "token". If not supplied via the CLI,
+  The default auth method is "token". If not supplied via the CLI,
   Vault will prompt for input. If the argument is "-", the values are read
   from stdin.
 
-  The -method flag allows using other authentication methods, such as userpass,
-  github, or cert. For these, additional "K=V" pairs may be required. For
-  example, to authenticate to the userpass auth method:
+  The -method flag allows using other auth methods, such as userpass, github, or
+  cert. For these, additional "K=V" pairs may be required. For example, to
+  authenticate to the userpass auth method:
 
       $ vault login -method=userpass username=my-username
 
-  For more information about the list of configuration parameters available
-  for a given authentication method, use the "vault auth help TYPE". You can
-  also use "vault auth list" to see the list of enabled authentication methods.
+  For more information about the list of configuration parameters available for
+  a given auth method, use the "vault auth help TYPE". You can also use "vault
+  auth list" to see the list of enabled auth methods.
 
-  If an authentication method is enabled at a non-standard path, the -method
-  flag still refers to the canonical type, but the -path flag refers to the
-  enabled path. If a github authentication method was enabled at "github-ent",
-  authenticate like this:
+  If an auth method is enabled at a non-standard path, the -method flag still
+  refers to the canonical type, but the -path flag refers to the enabled path.
+  If a github auth method was enabled at "github-ent", authenticate like this:
 
       $ vault login -method=github -path=github-prod
 
@@ -102,7 +101,7 @@ func (c *LoginCommand) Flags() *FlagSets {
 		Target:     &c.flagPath,
 		Default:    "",
 		Completion: c.PredictVaultAuths(),
-		Usage: "Remote path in Vault where the authentication method is enabled. " +
+		Usage: "Remote path in Vault where the auth method is enabled. " +
 			"This defaults to the TYPE of method (e.g. userpass -> userpass/).",
 	})
 
@@ -210,9 +209,9 @@ func (c *LoginCommand) Run(args []string) int {
 	authHandler, ok := c.Handlers[authMethod]
 	if !ok {
 		c.UI.Error(wrapAtLength(fmt.Sprintf(
-			"Unknown authentication method: %s. Use \"vault auth list\" to see the "+
-				"complete list of authentication methods. Additionally, some "+
-				"authentication methods are only available via the HTTP API.",
+			"Unknown auth method: %s. Use \"vault auth list\" to see the "+
+				"complete list of auth methods. Additionally, some "+
+				"auth methods are only available via the HTTP API.",
 			authMethod)))
 		return 1
 	}

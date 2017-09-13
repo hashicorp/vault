@@ -82,7 +82,7 @@ These metrics represent operational aspects of the running Vault instance.
 |`vault.core.seal-internal`| This measures the number of internal seal operations | Number of operations | Gauge |
 |`vault.core.step_down`| This measures the number of cluster leadership step downs | Number of stepdowns | Summary |
 |`vault.core.unseal`| This measures the number of unseal operations | Number of operations | Summary |
-|`vault.runtime.alloc_bytes` | This measures the number of bytes allocated by the Vault process. This may burst from time to time but should return to a steady state value.| Number of bytes | Gauge | 
+|`vault.runtime.alloc_bytes` | This measures the number of bytes allocated by the Vault process. This may burst from time to time but should return to a steady state value.| Number of bytes | Gauge |
 |`vault.runtime.free_count`| This measures the number of `free` operations | Number of operations | Gauge |
 |`vault.runtime.heap_objects`| This measures the number of objects on the heap and is a good general memory pressure indicator | Number of heap objects | Gauge |
 |`vault.runtime.malloc_count`| This measures the number of `malloc` operations | Number of operations | Gauge |
@@ -119,21 +119,21 @@ These metrics relate to policies and tokens.
 `vault.token.revoke-tree`| This measures the number of revoke tree operations | Number of operations | Gauge |
 `vault.token.store`| This measures the number of operations to store an updated token entry without writing to the secondary index | Number of operations | Gauge |
 
-### Authentication Backend Metrics
+### Auth Method Metrics
 
-These metrics relate to supported authentication backends.
+These metrics relate to supported auth methods.
 
 | Metric           | Description                       | Unit | Type |
 | ---------------- | ----------------------------------| ---- | ---- |
 | `vault.rollback.attempt.auth-token-` | This measures the number of rollback operations attempted for authentication tokens backend | Number of operations | Summary |
-| `vault.rollback.attempt.auth-ldap-` | This measures the number of rollback operations attempted for the LDAP authentication backend | Number of operations | Summary |
-| `vault.rollback.attempt.cubbyhole-` | This measures the number of rollback operations attempted for the cubbyhole authentication backend | Number of operations | Summary |
+| `vault.rollback.attempt.auth-ldap-` | This measures the number of rollback operations attempted for the LDAP auth method | Number of operations | Summary |
+| `vault.rollback.attempt.cubbyhole-` | This measures the number of rollback operations attempted for the cubbyhole auth method | Number of operations | Summary |
 | `vault.rollback.attempt.secret-` | This measures the number of rollback operations attempted for the kv secret backend | Number of operations | Summary |
 | `vault.rollback.attempt.sys-` | This measures the number of rollback operations attempted for the sys backend | Number of operations | Summary |
-| `vault.route.rollback.auth-ldap-` | This measures the number of rollback operations for the LDAP authentication backend | Number of operations | Summary |
+| `vault.route.rollback.auth-ldap-` | This measures the number of rollback operations for the LDAP auth method | Number of operations | Summary |
 | `vault.route.rollback.auth-token-` | This measures the number of rollback operations for the authentication tokens backend | Number of operations | Summary |
-| `vault.route.rollback.cubbyhole-` | This measures the number of rollback operations for the cubbyhole authentication backend | Number of operations | Summary |
-| `vault.route.rollback.secret-` | This measures the number of rollback operations for the kv secret backend | Number of operations | Summary | 
+| `vault.route.rollback.cubbyhole-` | This measures the number of rollback operations for the cubbyhole auth method | Number of operations | Summary |
+| `vault.route.rollback.secret-` | This measures the number of rollback operations for the kv secret backend | Number of operations | Summary |
 | `vault.route.rollback.sys-` | This measures the number of rollback operations for the sys backend | Number of operations | Summary |
 
 ### Storage Backend Metrics

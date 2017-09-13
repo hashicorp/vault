@@ -110,7 +110,7 @@ func (h *CLIHandler) Help() string {
 	help := `
 Usage: vault login -method=aws [CONFIG K=V...]
 
-  The AWS authentication method allows users to authenticate with AWS IAM
+  The AWS auth method allows users to authenticate with AWS IAM
   credentials. The AWS IAM credentials may be specified in a number of ways,
   listed in order of precedence below:
 

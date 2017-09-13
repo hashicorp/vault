@@ -36,7 +36,7 @@ certificate storage, or both. In addition, you can specify a safety buffer
 (defaulting to 72 hours) to ensure that any time discrepancies between your
 hosts is accounted for.
 
-## Cert Authentication Backend Performs Client Checking During Renewals
+## Cert auth method Performs Client Checking During Renewals
 
 The `cert` backend now performs a variant of channel binding at renewal time
 for increased security. In order to not overly burden clients, a notion of

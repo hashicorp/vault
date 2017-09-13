@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise MFA Support"
+page_title: "MFA Support - Vault Enterprise"
 sidebar_current: "docs-vault-enterprise-mfa"
 description: |-
   Vault Enterprise has support for Multi-factor Authentication (MFA), using different authentication types.
@@ -50,10 +50,10 @@ parameters.
 
 ### Sample Policy
 
-```
+```hcl
 path "secret/foo" {
-    capabilities = ["read"]
-    mfa_methods = ["dev_team_duo", "sales_team_totp"]
+  capabilities = ["read"]
+  mfa_methods  = ["dev_team_duo", "sales_team_totp"]
 }
 ```
 

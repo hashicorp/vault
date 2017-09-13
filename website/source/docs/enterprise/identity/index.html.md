@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise Identity"
+page_title: "Identity - Vault Enterprise"
 sidebar_current: "docs-vault-enterprise-identity"
 description: |-
   Vault Enterprise has the foundations of the identity management system.
@@ -52,12 +52,12 @@ identifier, the policies on the token should be taken into account.
 
 ### Mount Bound Personas
 
-Vault supports multiple authentication backends and also allows enabling same
-authentication backend on different mounts. The persona name of the user with
+Vault supports multiple auth methods and also allows enabling same
+auth method on different mounts. The persona name of the user with
 each identity provider will be unique within the provider. But Vault also needs
 to uniquely distinguish between conflicting persona names across different
 mounts of these identity providers. Hence the persona name, in combination with
-the authentication backend mount's accessor serve as the unique identifier of a
+the auth method mount's accessor serve as the unique identifier of a
 persona.
 
 ### Implicit Entities
@@ -65,19 +65,19 @@ persona.
 Operators can create entities for all the users of an auth mount
 beforehand and assign policies to them, so that when users login, the desired
 capabilities to the tokens via entities are already assigned. But if that's not
-done, upon a successful user login from any of the authentication backends,
+done, upon a successful user login from any of the auth methods,
 Vault will create a new entity and assign a persona against the login that was
 successful.
 
-Note that, tokens created using the token authentication backend will not have
+Note that, tokens created using the token auth method will not have
 an associated identity information. Logging in using the authentication
 backends is the only way to create tokens that have a valid entity identifiers.
 
 ### Identity Auditing
 
-If the token used to make API calls have an associated entity identifier, it will
-be audit logged as well. This leaves a trail of actions performed by specific
-users.
+If the token used to make API calls have an associated entity identifier, it
+will be audit logged as well. This leaves a trail of actions performed by
+specific users.
 
 ### API
 
