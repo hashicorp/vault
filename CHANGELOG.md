@@ -1,3 +1,16 @@
+## 0.8.3 (Unreleased)
+
+CHANGES:
+
+ * Policy input/output standardization: For all built-in authentication
+   backends, policies can now be specified as a comma-delimited string or an
+   array if using JSON as API input; on read, policies will be returned as an
+   array; and the `default` policy will not be forcefully added to policies
+   saved in configurations. Please note that the `default` policy will continue
+   to be added to generated tokens, however, rather than backends adding
+   `default` to the given set of input policies (in some cases, adn not in
+   others), the stored set will reflect the user-specified set.
+
 ## 0.8.2.1 (September 11th, 2017) (Enterprise Only)
 
 BUG FIXES:
