@@ -1,5 +1,6 @@
 {
   "ui":true,
+  "raw":true,
   "listener":[
     {
       "tcp":{

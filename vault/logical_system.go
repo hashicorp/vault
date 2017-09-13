@@ -22,7 +22,7 @@ var (
 	// protectedPaths cannot be accessed via the raw APIs.
 	// This is both for security and to prevent disrupting Vault.
 	protectedPaths = []string{
-		"core",
+		keyringPath,
 	}
 
 	replicationPaths = func(b *SystemBackend) []*framework.Path {
@@ -653,25 +653,6 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			&framework.Path{
-				Pattern: "raw/(?P<path>.+)",
-
-				Fields: map[string]*framework.FieldSchema{
-					"path": &framework.FieldSchema{
-						Type: framework.TypeString,
-					},
-					"value": &framework.FieldSchema{
-						Type: framework.TypeString,
-					},
-				},
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleRawRead,
-					logical.UpdateOperation: b.handleRawWrite,
-					logical.DeleteOperation: b.handleRawDelete,
-				},
-			},
-
-			&framework.Path{
 				Pattern: "key-status$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -870,6 +851,27 @@ func NewSystemBackend(core *Core) *SystemBackend {
 	}
 
 	b.Backend.Paths = append(b.Backend.Paths, replicationPaths(b)...)
+
+	if core.rawEnabled {
+		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
+			Pattern: "raw/(?P<path>.+)",
+
+			Fields: map[string]*framework.FieldSchema{
+				"path": &framework.FieldSchema{
+					Type: framework.TypeString,
+				},
+				"value": &framework.FieldSchema{
+					Type: framework.TypeString,
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   b.handleRawRead,
+				logical.UpdateOperation: b.handleRawWrite,
+				logical.DeleteOperation: b.handleRawDelete,
+			},
+		})
+	}
 
 	b.Backend.Invalidate = b.invalidate
 
