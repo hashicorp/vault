@@ -27,7 +27,7 @@ This endpoint defines a MFA method of type Okta.
 
 - `api_token` `(string)` - Okta API key.
 
-- `production` `(string)` - If set, production API URL prefix will be used to communicate with Okta and if not set, a preview production API URL prefix will be used. Defaults to true.
+- `base_url` `(string)` -  If set, will be used as the base domain for API requests.  Examples are okta.com, oktapreview.com, and okta-emea.com.
 
 ### Sample Payload
 
