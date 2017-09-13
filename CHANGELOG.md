@@ -10,6 +10,21 @@ CHANGES:
    to be added to generated tokens, however, rather than backends adding
    `default` to the given set of input policies (in some cases, adn not in
    others), the stored set will reflect the user-specified set.
+ * `sign-self-issued` modifies Issuer in generated certificates: In 0.8.2 the
+   endpoint would not modify the Issuer in the generated certificate, leaving
+   the output self-issued. Although theoretically valid, in practice crypto
+   stacks were unhappy validating paths containing such certs. As a result,
+   `sign-self-issued` now encodes the signing CA's Subject DN into the Issuer
+   DN of the generated certificate.
+
+IMPROVEMENTS:
+
+ * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value longer than the signing CA certificate's NotAfter value. [GH-3325]
+
+BUG FIXES:
+
+ * secret/pki: Fix `sign-self-issued` encoding the wrong subject public key
+   [GH-3325]
 
 ## 0.8.2.1 (September 11th, 2017) (Enterprise Only)
 
