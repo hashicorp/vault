@@ -80,6 +80,41 @@ $ curl \
     https://vault.rocks/v1/sys/raw/secret/foo
 ```
 
+## List Raw
+
+This endpoint returns a list keys for a given path prefix.
+
+**This endpoint requires 'sudo' capability.**
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/raw/:prefix` | `200 application/json` |
+| `GET`   | `/sys/raw/:prefix?list=true` | `200 application/json` |
+
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    https://vault.rocks/v1/sys/raw/logical
+```
+
+### Sample Response
+
+```json
+{
+  "data":{
+    "keys":[
+      "abcd-1234...",
+      "efgh-1234...",
+      "ijkl-1234..."
+    ]
+  }
+}
+```
+
 ## Delete Raw
 
 This endpoint deletes the key with given path. This is the raw path in the

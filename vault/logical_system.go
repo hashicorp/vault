@@ -854,7 +854,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
-			Pattern: "raw/(?P<path>.+)",
+			Pattern: "(raw/?$|raw/(?P<path>.+))",
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": &framework.FieldSchema{
@@ -869,6 +869,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				logical.ReadOperation:   b.handleRawRead,
 				logical.UpdateOperation: b.handleRawWrite,
 				logical.DeleteOperation: b.handleRawDelete,
+				logical.ListOperation:   b.handleRawList,
 			},
 		})
 	}
@@ -2143,6 +2144,29 @@ func (b *SystemBackend) handleRawDelete(
 		return handleError(err)
 	}
 	return nil, nil
+}
+
+// handleRawList is used to list directly from the barrier
+func (b *SystemBackend) handleRawList(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot list '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+	}
+
+	keys, err := b.Core.barrier.List(path)
+	if err != nil {
+		return handleError(err)
+	}
+	return logical.ListResponse(keys), nil
 }
 
 // handleKeyStatus returns status information about the backend key
