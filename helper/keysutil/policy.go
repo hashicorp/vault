@@ -467,7 +467,7 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 
 	// Ensure a context is provided
 	if len(context) == 0 {
-		return nil, errutil.UserError{Err: "Missing 'context' for key deriviation. The key was created using a derived key, which means additional, per-request information must be included in order to perform operations with the key."}
+		return nil, errutil.UserError{Err: "missing 'context' for key derivation; the key was created using a derived key, which means additional, per-request information must be included in order to perform operations with the key"}
 	}
 
 	switch p.KDF {
