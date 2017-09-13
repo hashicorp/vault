@@ -61,7 +61,6 @@ not return a value. The values themselves are not accessible via this command.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/cubbyhole/:path`           | `200 application/json` |
-| `GET`    | `/cubbyhole/:path?list=true` | `200 application/json` |
 
 ### Parameters
 

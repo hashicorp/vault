@@ -236,7 +236,6 @@ This endpoint lists all existing roles in the backend.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/aws/roles`                 | `200 application/json` |
-| `GET`    | `/aws/roles?list=true`       | `200 application/json` |
 
 ### Sample Request
 

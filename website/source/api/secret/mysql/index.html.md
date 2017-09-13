@@ -190,7 +190,6 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/mysql/roles`               | `200 application/json` |
-| `GET`    | `/mysql/roles?list=true`     | `200 application/json` |
 
 ### Sample Request
 

@@ -293,7 +293,6 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/ssh/roles`                 | `200 application/json` |
-| `GET`   | `/ssh/roles?list=true`        | `200 application/json` |
 
 ### Sample Request
 

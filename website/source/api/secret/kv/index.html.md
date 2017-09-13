@@ -68,7 +68,6 @@ this command.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/secret/:path`              | `200 application/json` |
-| `GET`    | `/secret/:path?list=true`    | `200 application/json` |
 
 ### Parameters
 

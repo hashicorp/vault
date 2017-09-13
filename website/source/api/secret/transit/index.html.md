@@ -128,7 +128,6 @@ actual keys themselves).
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/transit/keys`              | `200 application/json` |
-| `GET`    | `/transit/keys?list=true`    | `200 application/json` |
 
 ### Sample Request
 
