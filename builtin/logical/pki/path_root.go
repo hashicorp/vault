@@ -242,12 +242,13 @@ func (b *backend) pathCASignIntermediate(
 	}
 
 	role := &roleEntry{
-		TTL:              (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
-		AllowLocalhost:   true,
-		AllowAnyName:     true,
-		AllowIPSANs:      true,
-		EnforceHostnames: false,
-		KeyType:          "any",
+		TTL:                   (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
+		AllowLocalhost:        true,
+		AllowAnyName:          true,
+		AllowIPSANs:           true,
+		EnforceHostnames:      false,
+		KeyType:               "any",
+		AllowExpirationPastCA: true,
 	}
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {
@@ -302,6 +303,10 @@ func (b *backend) pathCASignIntermediate(
 			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 			"serial_number": cb.SerialNumber,
 		},
+	}
+
+	if signingBundle.Certificate.NotAfter.Before(parsedBundle.Certificate.NotAfter) {
+		resp.AddWarning("The expiration time for the signed certificate is after the CA's expiration time. If the new certificate is not treated as a root, validation paths with the certificate past the issuing CA's expiration time will fail.")
 	}
 
 	switch format {
@@ -388,7 +393,6 @@ func (b *backend) pathCASignSelfIssued(
 		return nil, fmt.Errorf("Error converting raw signing bundle to cert bundle: %s", err)
 	}
 
-	cert.AuthorityKeyId = signingBundle.Certificate.SubjectKeyId
 	urls := &urlEntries{}
 	if signingBundle.URLs != nil {
 		urls = signingBundle.URLs
@@ -397,7 +401,7 @@ func (b *backend) pathCASignSelfIssued(
 	cert.CRLDistributionPoints = urls.CRLDistributionPoints
 	cert.OCSPServer = urls.OCSPServers
 
-	newCert, err := x509.CreateCertificate(rand.Reader, cert, cert, signingBundle.PrivateKey.Public(), signingBundle.PrivateKey)
+	newCert, err := x509.CreateCertificate(rand.Reader, cert, signingBundle.Certificate, cert.PublicKey, signingBundle.PrivateKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("error signing self-issued certificate: {{err}}", err)
 	}
@@ -448,5 +452,7 @@ Signs another CA's self-issued certificate.
 const pathSignSelfIssuedHelpDesc = `
 Signs another CA's self-issued certificate. This is most often used for rolling roots; unless you know you need this you probably want to use sign-intermediate instead.
 
-Note that this is a very privileged operation and should be extremely restricted in terms of who is allowed to use it. All values will be taken directly from the incoming certificate and no verification of host names, path lengths, or any other values will be performed.
+Note that this is a very privileged operation and should be extremely restricted in terms of who is allowed to use it. All values will be taken directly from the incoming certificate and only verification that it is self-issued will be performed.
+
+Configured URLs for CRLs/OCSP/etc. will be copied over and the issuer will be this mount's CA cert. Other than that, all other values will be used verbatim.
 `
