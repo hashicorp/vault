@@ -48,7 +48,7 @@ type Config struct {
 	PluginDirectory string `hcl:"plugin_directory"`
 
 	EnableRawEndpoint    bool        `hcl:"-"`
-	EnableRawEndpointRaw interface{} `hcl:"raw"`
+	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -399,7 +399,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"cluster_name",
 		"cluster_cipher_suites",
 		"plugin_directory",
-		"raw",
+		"raw_storage_endpoint",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
 		return nil, err

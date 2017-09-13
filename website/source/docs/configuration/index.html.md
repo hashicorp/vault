@@ -100,9 +100,9 @@ to specify where the configuration is.
   duration for tokens and secrets. This is specified using a label
   suffix like `"30s"` or `"1h"`.
 
-- `raw` `(bool: false)` – Enables the `sys/raw` endpoint which allows the
-  decryption/encryption of raw data into and out of the security barrier. This 
-  is a highly priveleged endpoint. 
+- `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which 
+  allows the decryption/encryption of raw data into and out of the security 
+  barrier. This is a highly priveleged endpoint. 
 
 - `ui` `(bool: false, Enterprise-only)` – Enables the built-in web UI, which is
   available on all listeners (address + port) at the `/ui` path. Browsers accessing

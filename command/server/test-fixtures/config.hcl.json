@@ -18,5 +18,5 @@
 	"default_lease_ttl": "10h",
 	"cluster_name":"testcluster",
 	"ui":true,
-	"raw":true
+	"raw_storage_endpoint":true
 }
