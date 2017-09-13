@@ -10,6 +10,10 @@ description: |-
 
 The `/sys/raw` endpoint is access the raw underlying store in Vault.
 
+This endpont is off by default.  See the 
+[Vault configuration documentation](/docs/configuration/index.html) to
+enable.
+
 ## Read Raw
 
 This endpoint reads the value of the key at the given path. This is the raw path
