@@ -19,10 +19,15 @@ CHANGES:
 
 IMPROVEMENTS:
 
- * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value longer than the signing CA certificate's NotAfter value. [GH-3325]
+ * mfa (Enterprise): Add the ability to use identity metadata in username format
+ * mfa/okta (Enterprise): Add support for configuring base_url for API calls
+ * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value 
+   longer than the signing CA certificate's NotAfter value. [GH-3325]
 
 BUG FIXES:
 
+ * core: Fix panic while loading leases at startup on ARM processors 
+   [GH-3314]
  * secret/pki: Fix `sign-self-issued` encoding the wrong subject public key
    [GH-3325]
 
