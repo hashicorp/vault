@@ -22,7 +22,8 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(backendHelp),
+		PeriodicFunc: b.periodicFunc,
+		Help:         strings.TrimSpace(backendHelp),
 
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
@@ -89,6 +90,19 @@ type backend struct {
 
 	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex
+	tidyRunning       int32
+}
+
+// This periodicFunc will be invoked once per minute by the RollbackManager
+// This removes stale CRL entries and expired certificates
+func (b *backend) periodicFunc(req *logical.Request) error {
+	bufferDuration := defaultSafetyBufferDuration * time.Second
+	err := b.tidyPKI(req, bufferDuration, true, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 const backendHelp = `
