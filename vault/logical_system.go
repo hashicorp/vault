@@ -59,6 +59,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				"remount",
 				"audit",
 				"audit/*",
+				"raw",
 				"raw/*",
 				"replication/primary/secondary-token",
 				"replication/reindex",

@@ -27,6 +27,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"remount",
 		"audit",
 		"audit/*",
+		"raw",
 		"raw/*",
 		"replication/primary/secondary-token",
 		"replication/reindex",
