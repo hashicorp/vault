@@ -52,7 +52,7 @@ certificate.`,
 			},
 
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-seperated list of policies.",
 			},
 
@@ -133,7 +133,7 @@ func (b *backend) pathCertRead(
 		Data: map[string]interface{}{
 			"certificate":  cert.Certificate,
 			"display_name": cert.DisplayName,
-			"policies":     strings.Join(cert.Policies, ","),
+			"policies":     cert.Policies,
 			"ttl":          duration / time.Second,
 		},
 	}, nil
@@ -144,7 +144,7 @@ func (b *backend) pathCertWrite(
 	name := strings.ToLower(d.Get("name").(string))
 	certificate := d.Get("certificate").(string)
 	displayName := d.Get("display_name").(string)
-	policies := policyutil.ParsePolicies(d.Get("policies").(string))
+	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
 
 	// Default the display name to the certificate name if not given

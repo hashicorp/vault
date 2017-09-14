@@ -566,7 +566,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"allow_instance_migration":       true,
 		"ttl":                       time.Duration(600),
 		"max_ttl":                   time.Duration(1200),
-		"policies":                  []string{"default", "testpolicy1", "testpolicy2"},
+		"policies":                  []string{"testpolicy1", "testpolicy2"},
 		"disallow_reauthentication": true,
 		"period":                    time.Duration(60),
 	}

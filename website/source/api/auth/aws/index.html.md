@@ -955,7 +955,6 @@ along with its RSA digest can be supplied to this endpoint.
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
     https://vault.rocks/v1/auth/aws/login
