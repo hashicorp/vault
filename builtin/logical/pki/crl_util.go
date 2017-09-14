@@ -152,6 +152,14 @@ func buildCRL(b *backend, req *logical.Request) error {
 			return errutil.InternalError{Err: fmt.Sprintf("Unable to parse stored revoked certificate with serial %s: %s", serial, err)}
 		}
 
+		// If the cert is expired, don't add to CRL, and delete
+		if revokedCert.NotAfter.Before(time.Now()) {
+			if err := req.Storage.Delete("revoked/" + serial); err != nil {
+				return errutil.InternalError{Err: fmt.Sprintf("error deleting serial %s from revoked list: %s", serial, err)}
+			}
+			continue
+		}
+
 		// NOTE: We have to change this to UTC time because the CRL standard
 		// mandates it but Go will happily encode the CRL without this.
 		newRevCert := pkix.RevokedCertificate{
