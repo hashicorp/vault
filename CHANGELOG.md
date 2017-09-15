@@ -16,6 +16,12 @@ CHANGES:
    stacks were unhappy validating paths containing such certs. As a result,
    `sign-self-issued` now encodes the signing CA's Subject DN into the Issuer
    DN of the generated certificate.
+ * `sys/raw` requires enabling: While the `sys/raw` endpoint can be extremely
+   useful in break-glass or support scenarios, it is also extremely dangerous.
+   As of now, a configuration file option `raw_storage_endpoint` must be set in
+   order to enable this API endpoint. Once set, the available functionality has
+   been enhanced slightly; it now supports listing and decrypting most of
+   Vault's core data structures, except for the encryption keyring itself.
 
 IMPROVEMENTS:
 
