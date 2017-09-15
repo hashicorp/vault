@@ -1,22 +1,22 @@
 ---
 layout: "docs"
-page_title: "Generic Secret Backend"
-sidebar_current: "docs-secrets-generic"
+page_title: "Key/Value Secret Backend"
+sidebar_current: "docs-secrets-kv"
 description: |-
-  The generic secret backend can store arbitrary secrets.
+  The key/value secret backend can store arbitrary secrets.
 ---
 
-# Generic Secret Backend
+# Key/Value Secret Backend
 
-Name: `generic`
+Name: `kv`
 
-The generic secret backend is used to store arbitrary secrets within
+The key/value secret backend is used to store arbitrary secrets within
 the configured physical storage for Vault. If you followed along with
-the getting started guide, you interacted with a generic secret backend
+the getting started guide, you interacted with a key/value secret backend
 via the `secret/` prefix that Vault mounts by default. You can mount as many
 of these backends at different mount points as you like.
 
-Writing to a key in the `generic` backend will replace the old value;
+Writing to a key in the `kv` backend will replace the old value;
 sub-fields are not merged together.
 
 This backend honors the distinction between the `create` and `update`
@@ -28,7 +28,7 @@ secret's path.
 
 ## Quick Start
 
-The generic backend allows for writing keys with arbitrary values. When data is
+The kv backend allows for writing keys with arbitrary values. When data is
 returned, the `lease_duration` field (in the API JSON) or `refresh_interval`
 field (on the CLI) gives a hint as to how often a reader should look for a new
 value. This comes from the value of the `default_lease_ttl` set on the mount,
@@ -44,7 +44,7 @@ if it fits your input data.
 
 The backend _never_ removes data on its own; the `ttl` key is merely advisory.
 
-As an example, we can write a new key "foo" to the generic backend mounted at
+As an example, we can write a new key "foo" to the kv backend mounted at
 "secret/" by default:
 
 ```
@@ -72,6 +72,6 @@ seconds (one hour) as specified.
 
 ## API
 
-The Generic secret backend has a full HTTP API. Please see the
-[Generic secret backend API](/api/secret/generic/index.html) for more
+The Key/Value secret backend has a full HTTP API. Please see the
+[Key/Value secret backend API](/api/secret/kv/index.html) for more
 details.

@@ -157,8 +157,8 @@ func TestSysMounts_headerAuth(t *testing.T) {
 		"auth":           nil,
 		"data": map[string]interface{}{
 			"secret/": map[string]interface{}{
-				"description": "generic secret storage",
-				"type":        "generic",
+				"description": "key/value secret storage",
+				"type":        "kv",
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -188,8 +188,8 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			},
 		},
 		"secret/": map[string]interface{}{
-			"description": "generic secret storage",
-			"type":        "generic",
+			"description": "key/value secret storage",
+			"type":        "kv",
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),

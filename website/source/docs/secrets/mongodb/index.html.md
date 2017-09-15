@@ -35,7 +35,7 @@ on every path, use `vault path-help` after mounting the backend.
 ## Quick Start
 
 The first step to using the mongodb backend is to mount it.
-Unlike the `generic` backend, the `mongodb` backend is not mounted by default.
+Unlike the `kv` backend, the `mongodb` backend is not mounted by default.
 
 ```
 $ vault mount mongodb

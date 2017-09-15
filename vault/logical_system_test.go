@@ -117,8 +117,8 @@ func TestSystemBackend_mounts(t *testing.T) {
 	// copy what's given
 	exp := map[string]interface{}{
 		"secret/": map[string]interface{}{
-			"type":        "generic",
-			"description": "generic secret storage",
+			"type":        "kv",
+			"description": "key/value secret storage",
 			"accessor":    resp.Data["secret/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
@@ -159,7 +159,7 @@ func TestSystemBackend_mount(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
-	req.Data["type"] = "generic"
+	req.Data["type"] = "kv"
 
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -174,7 +174,7 @@ func TestSystemBackend_mount_force_no_cache(t *testing.T) {
 	core, b, _ := testCoreSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
-	req.Data["type"] = "generic"
+	req.Data["type"] = "kv"
 	req.Data["config"] = map[string]interface{}{
 		"force_no_cache": true,
 	}
@@ -423,7 +423,7 @@ func TestSystemBackend_leases(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["renewable"] == nil || resp.Data["renewable"].(bool) {
-		t.Fatal("generic leases are not renewable")
+		t.Fatal("kv leases are not renewable")
 	}
 
 	// Invalid lease

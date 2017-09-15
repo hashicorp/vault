@@ -9,7 +9,7 @@ description: |-
 # Built-in Help
 
 You've now worked with `vault write` and `vault read` for multiple
-paths: the generic secret backend with `secret/` and dynamic AWS
+paths: the kv secret backend with `secret/` and dynamic AWS
 credentials with the AWS backend provider at `aws/`. In both cases, the
 structure and usage of each backend differed, for example the AWS
 backend has special paths like `aws/config`.
@@ -109,7 +109,7 @@ There is also a description of what that path does.
 
 Go ahead and explore more paths! Mount other backends, traverse their
 help systems and learn about what they do. For example, learn about the
-generic `secret/` path.
+kv `secret/` path.
 
 ## Next
 

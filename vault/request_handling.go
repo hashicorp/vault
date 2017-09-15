@@ -27,7 +27,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	}
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
-	// understand user intent for the filesystem-like backends (generic,
+	// understand user intent for the filesystem-like backends (kv,
 	// cubbyhole) -- did they want a key named foo/ or did they want to write
 	// to a directory foo/ with no (or forgotten) key, or...? It also affects
 	// lookup, because paths ending in / are considered prefixes by some
@@ -252,12 +252,12 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			resp.Secret.TTL = maxTTL
 		}
 
-		// Generic mounts should return the TTL but not register
+		// KV mounts should return the TTL but not register
 		// for a lease as this provides a massive slowdown
 		registerLease := true
 		matchingBackend := c.router.MatchingBackend(req.Path)
 		if matchingBackend == nil {
-			c.logger.Error("core: unable to retrieve generic backend from router")
+			c.logger.Error("core: unable to retrieve kv backend from router")
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}

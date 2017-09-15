@@ -158,7 +158,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 	for backendName, backendFactory := range noopBackends {
 		logicalBackends[backendName] = backendFactory
 	}
-	logicalBackends["generic"] = LeasedPassthroughBackendFactory
+	logicalBackends["kv"] = LeasedPassthroughBackendFactory
 	for backendName, backendFactory := range testLogicalBackends {
 		logicalBackends[backendName] = backendFactory
 	}
