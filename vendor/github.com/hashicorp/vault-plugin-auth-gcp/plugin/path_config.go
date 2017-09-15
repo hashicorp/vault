@@ -21,6 +21,12 @@ func pathConfig(b *GcpAuthBackend) *framework.Path {
 Google credentials JSON that Vault will use to verify users against GCP APIs.
 If not specified, will use application default credentials`,
 			},
+			"google_certs_endpoint": {
+				Type: framework.TypeString,
+				Description: `
+Base endpoint url that Vault will use to get Google certificates.
+If not specified, will use the OAuth2 library default. Useful for testing.`,
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathConfigRead,
@@ -68,11 +74,12 @@ func (b *GcpAuthBackend) pathConfigRead(req *logical.Request, data *framework.Fi
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"client_email":   config.Credentials.ClientEmail,
-			"client_id":      config.Credentials.ClientId,
-			"private_key_id": config.Credentials.PrivateKeyId,
-			"private_key":    config.Credentials.PrivateKey,
-			"project_id":     config.Credentials.ProjectId,
+			"client_email":          config.Credentials.ClientEmail,
+			"client_id":             config.Credentials.ClientId,
+			"private_key_id":        config.Credentials.PrivateKeyId,
+			"private_key":           config.Credentials.PrivateKey,
+			"project_id":            config.Credentials.ProjectId,
+			"google_certs_endpoint": config.GoogleCertsEndpoint,
 		},
 	}
 
@@ -91,10 +98,9 @@ iam AUTH:
 `
 
 // gcpConfig contains all config required for the GCP backend.
-// Currently it only holds credentials, but we are leaving it as a seperate
-// struct in case we add more fields in the future.
 type gcpConfig struct {
-	Credentials *util.GcpCredentials `json:"credentials" structs:"credentials" mapstructure:"credentials"`
+	Credentials         *util.GcpCredentials `json:"credentials" structs:"credentials" mapstructure:"credentials"`
+	GoogleCertsEndpoint string               `json:"google_certs_endpoint" structs:"google_certs_endpoint" mapstructure:"google_certs_endpoint"`
 }
 
 // Update sets gcpConfig values parsed from the FieldData.
@@ -109,6 +115,11 @@ func (config *gcpConfig) Update(data *framework.FieldData) error {
 			return errors.New("google credentials not found from given JSON")
 		}
 		config.Credentials = creds
+	}
+
+	certsEndpoint := data.Get("google_certs_endpoint").(string)
+	if len(certsEndpoint) > 0 {
+		config.GoogleCertsEndpoint = certsEndpoint
 	}
 
 	return nil
