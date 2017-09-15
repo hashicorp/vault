@@ -32,6 +32,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * auth/okta: Fix regression that removed the ability to set base_url [GH-3313]
  * core: Fix panic while loading leases at startup on ARM processors 
    [GH-3314]
  * secret/pki: Fix `sign-self-issued` encoding the wrong subject public key
