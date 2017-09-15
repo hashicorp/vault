@@ -8,7 +8,7 @@ CHANGES:
    array; and the `default` policy will not be forcefully added to policies
    saved in configurations. Please note that the `default` policy will continue
    to be added to generated tokens, however, rather than backends adding
-   `default` to the given set of input policies (in some cases, adn not in
+   `default` to the given set of input policies (in some cases, and not in
    others), the stored set will reflect the user-specified set.
  * `sign-self-issued` modifies Issuer in generated certificates: In 0.8.2 the
    endpoint would not modify the Issuer in the generated certificate, leaving
@@ -22,6 +22,9 @@ CHANGES:
    order to enable this API endpoint. Once set, the available functionality has
    been enhanced slightly; it now supports listing and decrypting most of
    Vault's core data structures, except for the encryption keyring itself.
+ * `generic` is now `kv`: To better reflect its actual use, the `generic`
+   backend is now `kv`. Using `generic` will still work for backwards
+   compatibility.
 
 IMPROVEMENTS:
 
