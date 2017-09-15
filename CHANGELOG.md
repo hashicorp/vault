@@ -29,6 +29,7 @@ IMPROVEMENTS:
  * mfa/okta (Enterprise): Add support for configuring base_url for API calls
  * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value 
    longer than the signing CA certificate's NotAfter value. [GH-3325]
+ * sys/raw: Raw storage access is now diabled by default [GH-3329]
 
 BUG FIXES:
 
