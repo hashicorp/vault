@@ -46,13 +46,17 @@ type Config struct {
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
+
+	EnableRawEndpoint    bool        `hcl:"-"`
+	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
 func DevConfig(ha, transactional bool) *Config {
 	ret := &Config{
-		DisableCache: false,
-		DisableMlock: true,
+		DisableCache:      false,
+		DisableMlock:      true,
+		EnableRawEndpoint: true,
 
 		Storage: &Storage{
 			Type: "inmem",
@@ -288,6 +292,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableUI = c2.EnableUI
 	}
 
+	result.EnableRawEndpoint = c.EnableRawEndpoint
+	if c2.EnableRawEndpoint {
+		result.EnableRawEndpoint = c2.EnableRawEndpoint
+	}
+
 	result.PluginDirectory = c.PluginDirectory
 	if c2.PluginDirectory != "" {
 		result.PluginDirectory = c2.PluginDirectory
@@ -306,9 +315,8 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 
 	if fi.IsDir() {
 		return LoadConfigDir(path, logger)
-	} else {
-		return LoadConfigFile(path, logger)
 	}
+	return LoadConfigFile(path, logger)
 }
 
 // LoadConfigFile loads the configuration from the given file.
@@ -363,6 +371,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.EnableRawEndpointRaw != nil {
+		if result.EnableRawEndpoint, err = parseutil.ParseBool(result.EnableRawEndpointRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -385,6 +399,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"cluster_name",
 		"cluster_cipher_suites",
 		"plugin_directory",
+		"raw_storage_endpoint",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
 		return nil, err

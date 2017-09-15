@@ -260,6 +260,7 @@ func (c *ServerCommand) Run(args []string) int {
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
 		PluginDirectory:    config.PluginDirectory,
+		EnableRaw:          config.EnableRawEndpoint,
 	}
 	if dev {
 		coreConfig.DevToken = devRootTokenID

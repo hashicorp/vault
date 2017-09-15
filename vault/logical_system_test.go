@@ -27,6 +27,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"remount",
 		"audit",
 		"audit/*",
+		"raw",
 		"raw/*",
 		"replication/primary/secondary-token",
 		"replication/reindex",
@@ -1447,7 +1448,7 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 }
 
 func TestSystemBackend_rawRead_Protected(t *testing.T) {
-	b := testSystemBackend(t)
+	b := testSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.ReadOperation, "raw/"+keyringPath)
 	_, err := b.HandleRequest(req)
@@ -1457,7 +1458,7 @@ func TestSystemBackend_rawRead_Protected(t *testing.T) {
 }
 
 func TestSystemBackend_rawWrite_Protected(t *testing.T) {
-	b := testSystemBackend(t)
+	b := testSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "raw/"+keyringPath)
 	_, err := b.HandleRequest(req)
@@ -1467,7 +1468,7 @@ func TestSystemBackend_rawWrite_Protected(t *testing.T) {
 }
 
 func TestSystemBackend_rawReadWrite(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
+	c, b, _ := testCoreSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
 	req.Data["value"] = `path "secret/" { policy = "read" }`
@@ -1503,7 +1504,7 @@ func TestSystemBackend_rawReadWrite(t *testing.T) {
 }
 
 func TestSystemBackend_rawDelete_Protected(t *testing.T) {
-	b := testSystemBackend(t)
+	b := testSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.DeleteOperation, "raw/"+keyringPath)
 	_, err := b.HandleRequest(req)
@@ -1513,7 +1514,7 @@ func TestSystemBackend_rawDelete_Protected(t *testing.T) {
 }
 
 func TestSystemBackend_rawDelete(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
+	c, b, _ := testCoreSystemBackendRaw(t)
 
 	// set the policy!
 	p := &Policy{Name: "test"}
@@ -1589,6 +1590,25 @@ func TestSystemBackend_rotate(t *testing.T) {
 
 func testSystemBackend(t *testing.T) logical.Backend {
 	c, _, _ := TestCoreUnsealed(t)
+	return testSystemBackendInternal(t, c)
+}
+
+func testSystemBackendRaw(t *testing.T) logical.Backend {
+	c, _, _ := TestCoreUnsealedRaw(t)
+	return testSystemBackendInternal(t, c)
+}
+
+func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
+	c, _, root := TestCoreUnsealed(t)
+	return c, testSystemBackendInternal(t, c), root
+}
+
+func testCoreSystemBackendRaw(t *testing.T) (*Core, logical.Backend, string) {
+	c, _, root := TestCoreUnsealedRaw(t)
+	return c, testSystemBackendInternal(t, c), root
+}
+
+func testSystemBackendInternal(t *testing.T, c *Core) logical.Backend {
 	bc := &logical.BackendConfig{
 		Logger: c.logger,
 		System: logical.StaticSystemView{
@@ -1604,24 +1624,6 @@ func testSystemBackend(t *testing.T) logical.Backend {
 	}
 
 	return b
-}
-
-func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
-	c, _, root := TestCoreUnsealed(t)
-	bc := &logical.BackendConfig{
-		Logger: c.logger,
-		System: logical.StaticSystemView{
-			DefaultLeaseTTLVal: time.Hour * 24,
-			MaxLeaseTTLVal:     time.Hour * 24 * 32,
-		},
-	}
-
-	b := NewSystemBackend(c)
-	err := b.Backend.Setup(bc)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return c, b, root
 }
 
 func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
