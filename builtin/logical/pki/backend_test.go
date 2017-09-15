@@ -2479,7 +2479,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
+			MaxLeaseTTL:     "60h",
 		},
 	})
 	if err != nil {
@@ -2552,7 +2552,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal("got nil response")
 	}
 	if len(resp.Warnings) == 0 {
-		t.Fatal("expected warnings")
+		t.Fatalf("expected warnings, got %#v", *resp)
 	}
 }
 

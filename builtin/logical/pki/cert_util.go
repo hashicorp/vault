@@ -727,7 +727,7 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
-	// Get the TTL and very it against the max allowed
+	// Get the TTL and verify it against the max allowed
 	var ttl time.Duration
 	var maxTTL time.Duration
 	var notAfter time.Time
