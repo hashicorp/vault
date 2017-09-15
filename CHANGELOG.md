@@ -26,6 +26,11 @@ CHANGES:
    backend is now `kv`. Using `generic` will still work for backwards
    compatibility.
 
+FEATURES:
+
+ * **GCE Support for GCP Auth**: GCE instances can now authenticate to Vault
+   using machine credentials.
+
 IMPROVEMENTS:
 
  * mfa (Enterprise): Add the ability to use identity metadata in username format
