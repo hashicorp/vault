@@ -40,7 +40,8 @@ func pathLogin(b *GcpAuthBackend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLogin,
+			logical.UpdateOperation:           b.pathLogin,
+			logical.PersonaLookaheadOperation: b.pathLogin,
 		},
 
 		HelpSynopsis:    pathLoginHelpSyn,
@@ -223,6 +224,16 @@ func (b *GcpAuthBackend) pathIamLogin(req *logical.Request, loginInfo *gcpLoginI
 	}
 	if serviceAccount == nil {
 		return nil, errors.New("service account is empty")
+	}
+
+	if req.Operation == logical.PersonaLookaheadOperation {
+		return &logical.Response{
+			Auth: &logical.Auth{
+				Persona: &logical.Persona{
+					Name: serviceAccount.UniqueId,
+				},
+			},
+		}, nil
 	}
 
 	// Validate service account can login against role.

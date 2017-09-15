@@ -3,27 +3,27 @@
 // license that can be found in the LICENSE file.
 
 // Functions to access/create device major and minor numbers matching the
-// encoding used in NetBSD's sys/types.h header.
+// encoding used in OpenBSD's sys/types.h header.
 
 package unix
 
-// Major returns the major component of a NetBSD device number.
+// Major returns the major component of an OpenBSD device number.
 func Major(dev uint64) uint32 {
-	return uint32((dev & 0x000fff00) >> 8)
+	return uint32((dev & 0x0000ff00) >> 8)
 }
 
-// Minor returns the minor component of a NetBSD device number.
+// Minor returns the minor component of an OpenBSD device number.
 func Minor(dev uint64) uint32 {
 	minor := uint32((dev & 0x000000ff) >> 0)
-	minor |= uint32((dev & 0xfff00000) >> 12)
+	minor |= uint32((dev & 0xffff0000) >> 8)
 	return minor
 }
 
-// Mkdev returns a NetBSD device number generated from the given major and minor
+// Mkdev returns an OpenBSD device number generated from the given major and minor
 // components.
 func Mkdev(major, minor uint32) uint64 {
-	dev := (uint64(major) << 8) & 0x000fff00
-	dev |= (uint64(minor) << 12) & 0xfff00000
+	dev := (uint64(major) << 8) & 0x0000ff00
+	dev |= (uint64(minor) << 8) & 0xffff0000
 	dev |= (uint64(minor) << 0) & 0x000000ff
 	return dev
 }

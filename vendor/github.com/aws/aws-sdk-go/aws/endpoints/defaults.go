@@ -973,9 +973,12 @@ var awsPartition = partition{
 		"firehose": service{
 
 			Endpoints: endpoints{
-				"eu-west-1": endpoint{},
-				"us-east-1": endpoint{},
-				"us-west-2": endpoint{},
+				"ap-northeast-1": endpoint{},
+				"eu-central-1":   endpoint{},
+				"eu-west-1":      endpoint{},
+				"us-east-1":      endpoint{},
+				"us-east-2":      endpoint{},
+				"us-west-2":      endpoint{},
 			},
 		},
 		"gamelift": service{
@@ -2065,6 +2068,12 @@ var awscnPartition = partition{
 				Protocols:         []string{"http", "https"},
 				SignatureVersions: []string{"s3v4"},
 			},
+			Endpoints: endpoints{
+				"cn-north-1": endpoint{},
+			},
+		},
+		"snowball": service{
+
 			Endpoints: endpoints{
 				"cn-north-1": endpoint{},
 			},

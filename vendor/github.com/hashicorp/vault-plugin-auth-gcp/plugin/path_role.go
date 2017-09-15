@@ -3,12 +3,13 @@ package gcpauth
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"strings"
-	"time"
 )
 
 const (
@@ -36,7 +37,6 @@ func pathsRole(b *GcpAuthBackend) []*framework.Path {
 				},
 				"policies": {
 					Type:        framework.TypeString,
-					Default:     "default",
 					Description: "Policies to be set on tokens issued using this role.",
 				},
 				"project_id": {
