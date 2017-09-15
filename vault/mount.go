@@ -65,6 +65,10 @@ var (
 		"system",
 		"token",
 	}
+
+	// mountAliases maps old backend names to new backend names, allowing us
+	// to move/rename backends but maintain backwards compatibility
+	mountAliases = map[string]string{"generic": "kv"}
 )
 
 func (c *Core) generateMountAccessor(entryType string) (string, error) {
@@ -206,11 +210,6 @@ func (c *Core) mount(entry *MountEntry) error {
 	// Verify there is no conflicting mount
 	if match := c.router.MatchingMount(entry.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
-	}
-
-	// Upgrade to new name
-	if entry.Type == "generic" {
-		entry.Type = "kv"
 	}
 
 	// Generate a new UUID and view
@@ -573,10 +572,6 @@ func (c *Core) loadMounts() error {
 				entry.Accessor = accessor
 				needPersist = true
 			}
-			if entry.Type == "generic" {
-				entry.Type = "kv"
-				needPersist = true
-			}
 		}
 
 		// Done if we have restored the mount table and we don't need
@@ -769,6 +764,9 @@ func (c *Core) unloadMounts() error {
 
 // newLogicalBackend is used to create and configure a new logical backend by name
 func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+	if alias, ok := mountAliases[t]; ok {
+		t = alias
+	}
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
