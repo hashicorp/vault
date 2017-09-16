@@ -11,7 +11,7 @@ description: |-
 Secret backends are the components in Vault which store and generate
 secrets.
 
-Some secret backends, such as "generic", simply store and read
+Some secret backends, such as "kv", simply store and read
 secrets verbatim. Other secret backends, such as "aws", create _dynamic
 secrets_: secrets that are made on demand.
 
@@ -21,7 +21,7 @@ in Vault. They behave very similarly to a virtual filesystem:
 any read/write/delete is sent to the secret backend, and the secret
 backend can choose to react to that operation however it sees fit.
 
-For example, the "generic" backend passes through any operation back
+For example, the "kv" backend passes through any operation back
 to the configured storage backend for Vault. A "read" turns into a
 "read" of the storage backend at the same path, a "write" turns into
 a write, etc. This is a lot like a normal filesystem.

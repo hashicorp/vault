@@ -24,6 +24,7 @@ THE SOFTWARE.
 package gabs
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -417,6 +418,44 @@ func (g *Container) String() string {
 // StringIndent - Converts the contained object back to a JSON formatted string with prefix, indent.
 func (g *Container) StringIndent(prefix string, indent string) string {
 	return string(g.BytesIndent(prefix, indent))
+}
+
+// EncodeOpt is a functional option for the EncodeJSON method.
+type EncodeOpt func(e *json.Encoder)
+
+// EncodeOptHTMLEscape sets the encoder to escape the JSON for html.
+func EncodeOptHTMLEscape(doEscape bool) EncodeOpt {
+	return func(e *json.Encoder) {
+		e.SetEscapeHTML(doEscape)
+	}
+}
+
+// EncodeOptIndent sets the encoder to indent the JSON output.
+func EncodeOptIndent(prefix string, indent string) EncodeOpt {
+	return func(e *json.Encoder) {
+		e.SetIndent(prefix, indent)
+	}
+}
+
+// EncodeJSON - Encodes the contained object back to a JSON formatted []byte
+// using a variant list of modifier functions for the encoder being used.
+// Functions for modifying the output are prefixed with EncodeOpt, e.g.
+// EncodeOptHTMLEscape.
+func (g *Container) EncodeJSON(encodeOpts ...EncodeOpt) []byte {
+	var b bytes.Buffer
+	encoder := json.NewEncoder(&b)
+	encoder.SetEscapeHTML(false) // Do not escape by default.
+	for _, opt := range encodeOpts {
+		opt(encoder)
+	}
+	if err := encoder.Encode(g.object); err != nil {
+		return []byte("{}")
+	}
+	result := b.Bytes()
+	if len(result) > 0 {
+		result = result[:len(result)-1]
+	}
+	return result
 }
 
 // New - Create a new gabs JSON object.

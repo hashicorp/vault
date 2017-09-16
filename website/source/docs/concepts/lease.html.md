@@ -34,7 +34,7 @@ Revocation can happen manually via the API, via the `vault revoke` cli command,
 or automatically by Vault. When a lease is expired, Vault will automatically
 revoke that lease.
 
-**Note**: The [Generic Backend](/docs/secrets/generic/index.html) which stores
+**Note**: The [Key/Value Backend](/docs/secrets/kv/index.html) which stores
 arbitrary secrets does not issue leases.
 
 ## Lease IDs

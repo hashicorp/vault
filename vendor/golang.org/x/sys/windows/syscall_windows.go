@@ -71,12 +71,17 @@ func UTF16PtrFromString(s string) (*uint16, error) {
 
 func Getpagesize() int { return 4096 }
 
-// Converts a Go function to a function pointer conforming
-// to the stdcall or cdecl calling convention.  This is useful when
-// interoperating with Windows code requiring callbacks.
-// Implemented in runtime/syscall_windows.goc
-func NewCallback(fn interface{}) uintptr
-func NewCallbackCDecl(fn interface{}) uintptr
+// NewCallback converts a Go function to a function pointer conforming to the stdcall calling convention.
+// This is useful when interoperating with Windows code requiring callbacks.
+func NewCallback(fn interface{}) uintptr {
+	return syscall.NewCallback(fn)
+}
+
+// NewCallbackCDecl converts a Go function to a function pointer conforming to the cdecl calling convention.
+// This is useful when interoperating with Windows code requiring callbacks.
+func NewCallbackCDecl(fn interface{}) uintptr {
+	return syscall.NewCallbackCDecl(fn)
+}
 
 // windows api calls
 

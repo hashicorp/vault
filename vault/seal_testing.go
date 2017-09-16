@@ -107,7 +107,7 @@ func (d *TestSeal) SetRecoveryKey(key []byte) error {
 
 func testCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
 	seal := &TestSeal{}
-	core := TestCoreWithSeal(t, seal)
+	core := TestCoreWithSeal(t, seal, false)
 	result, err := core.Initialize(&InitParams{
 		BarrierConfig:  barrierConf,
 		RecoveryConfig: recoveryConf,

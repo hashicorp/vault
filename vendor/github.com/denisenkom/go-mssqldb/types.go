@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"reflect"
 	"strconv"
 	"time"
-	"reflect"
 )
 
 // fixed-length data types
@@ -252,7 +252,7 @@ func decodeDateTime(buf []byte) time.Time {
 		0, 0, secs, ns, time.UTC)
 }
 
-func readFixedType(ti *typeInfo, r *tdsBuffer) (interface{}) {
+func readFixedType(ti *typeInfo, r *tdsBuffer) interface{} {
 	r.ReadFull(ti.Buffer)
 	buf := ti.Buffer
 	switch ti.TypeId {
@@ -286,7 +286,7 @@ func readFixedType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 	panic("shoulnd't get here")
 }
 
-func readByteLenType(ti *typeInfo, r *tdsBuffer) (interface{}) {
+func readByteLenType(ti *typeInfo, r *tdsBuffer) interface{} {
 	size := r.byte()
 	if size == 0 {
 		return nil
@@ -381,7 +381,7 @@ func writeByteLenType(w io.Writer, ti typeInfo, buf []byte) (err error) {
 	return
 }
 
-func readShortLenType(ti *typeInfo, r *tdsBuffer) (interface{}) {
+func readShortLenType(ti *typeInfo, r *tdsBuffer) interface{} {
 	size := r.uint16()
 	if size == 0xffff {
 		return nil
@@ -424,7 +424,7 @@ func writeShortLenType(w io.Writer, ti typeInfo, buf []byte) (err error) {
 	return
 }
 
-func readLongLenType(ti *typeInfo, r *tdsBuffer) (interface{}) {
+func readLongLenType(ti *typeInfo, r *tdsBuffer) interface{} {
 	// information about this format can be found here:
 	// http://msdn.microsoft.com/en-us/library/dd304783.aspx
 	// and here:
@@ -485,7 +485,7 @@ func writeLongLenType(w io.Writer, ti typeInfo, buf []byte) (err error) {
 
 // reads variant value
 // http://msdn.microsoft.com/en-us/library/dd303302.aspx
-func readVariantType(ti *typeInfo, r *tdsBuffer) (interface{}) {
+func readVariantType(ti *typeInfo, r *tdsBuffer) interface{} {
 	size := r.int32()
 	if size == 0 {
 		return nil
@@ -577,7 +577,7 @@ func readVariantType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 
 // partially length prefixed stream
 // http://msdn.microsoft.com/en-us/library/dd340469.aspx
-func readPLPType(ti *typeInfo, r *tdsBuffer) (interface{}) {
+func readPLPType(ti *typeInfo, r *tdsBuffer) interface{} {
 	size := r.uint64()
 	var buf *bytes.Buffer
 	switch size {
@@ -969,6 +969,10 @@ func makeGoLangScanType(ti typeInfo) reflect.Type {
 
 func makeDecl(ti typeInfo) string {
 	switch ti.TypeId {
+	case typeNull:
+		// maybe we should use something else here
+		// this is tested in TestNull
+		return "nvarchar(1)"
 	case typeInt1:
 		return "tinyint"
 	case typeInt2:
@@ -1005,6 +1009,8 @@ func makeDecl(ti typeInfo) string {
 		}
 	case typeDecimal, typeDecimalN:
 		return fmt.Sprintf("decimal(%d, %d)", ti.Prec, ti.Scale)
+	case typeNumeric, typeNumericN:
+		return fmt.Sprintf("numeric(%d, %d)", ti.Prec, ti.Scale)
 	case typeMoney4:
 		return "smallmoney"
 	case typeMoney:

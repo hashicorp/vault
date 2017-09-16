@@ -2,14 +2,16 @@ package mssql
 
 import (
 	"bytes"
-	_ "database/sql/driver"
 	"encoding/binary"
 	"fmt"
-	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 	"math"
 	"reflect"
 	"strings"
 	"time"
+
+	"strconv"
+
+	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 )
 
 type MssqlBulk struct {
@@ -140,7 +142,7 @@ func (b *MssqlBulk) sendBulkCommand() (err error) {
 // AddRow immediately writes the row to the destination table.
 // The arguments are the row values in the order they were specified.
 func (b *MssqlBulk) AddRow(row []interface{}) (err error) {
-	if b.headerSent == false {
+	if !b.headerSent {
 		err = b.sendBulkCommand()
 		if err != nil {
 			return
@@ -372,7 +374,7 @@ func (b *MssqlBulk) makeParam(val DataValue, col columnStruct) (res Param, err e
 		case int64:
 			floatvalue = float64(val)
 		default:
-			err = fmt.Errorf("mssql: invalid type for float column", val)
+			err = fmt.Errorf("mssql: invalid type for float column: %s", val)
 			return
 		}
 
@@ -391,7 +393,7 @@ func (b *MssqlBulk) makeParam(val DataValue, col columnStruct) (res Param, err e
 		case []byte:
 			res.buffer = val
 		default:
-			err = fmt.Errorf("mssql: invalid type for nvarchar column", val)
+			err = fmt.Errorf("mssql: invalid type for nvarchar column: %s", val)
 			return
 		}
 		res.ti.Size = len(res.buffer)
@@ -403,14 +405,14 @@ func (b *MssqlBulk) makeParam(val DataValue, col columnStruct) (res Param, err e
 		case []byte:
 			res.buffer = val
 		default:
-			err = fmt.Errorf("mssql: invalid type for varchar column", val)
+			err = fmt.Errorf("mssql: invalid type for varchar column: %s", val)
 			return
 		}
 		res.ti.Size = len(res.buffer)
 
 	case typeBit, typeBitN:
 		if reflect.TypeOf(val).Kind() != reflect.Bool {
-			err = fmt.Errorf("mssql: invalid type for bit column", val)
+			err = fmt.Errorf("mssql: invalid type for bit column: %s", val)
 			return
 		}
 		res.ti.TypeId = typeBitN
@@ -460,7 +462,7 @@ func (b *MssqlBulk) makeParam(val DataValue, col columnStruct) (res Param, err e
 			res.buffer = buf
 
 		default:
-			err = fmt.Errorf("mssql: invalid type for datetime2 column", val)
+			err = fmt.Errorf("mssql: invalid type for datetime2 column: %s", val)
 			return
 		}
 	case typeDateN:
@@ -474,7 +476,7 @@ func (b *MssqlBulk) makeParam(val DataValue, col columnStruct) (res Param, err e
 			res.buffer[1] = byte(days >> 8)
 			res.buffer[2] = byte(days >> 16)
 		default:
-			err = fmt.Errorf("mssql: invalid type for date column", val)
+			err = fmt.Errorf("mssql: invalid type for date column: %s", val)
 			return
 		}
 	case typeDateTime, typeDateTimeN, typeDateTim4:
@@ -511,50 +513,89 @@ func (b *MssqlBulk) makeParam(val DataValue, col columnStruct) (res Param, err e
 			}
 
 		default:
-			err = fmt.Errorf("mssql: invalid type for datetime column", val)
+			err = fmt.Errorf("mssql: invalid type for datetime column: %s", val)
 		}
 
-	/*
-		case typeDecimal, typeDecimalN:
-			switch val := val.(type) {
-			case float64:
-				dec, err := Float64ToDecimal(val)
-				if err != nil {
-					return res, err
-				}
-				dec.scale = col.ti.Scale
-				dec.prec = col.ti.Prec
-				//res.buffer = make([]byte, 3)
-				res.buffer = dec.Bytes()
-				res.ti.Size = len(res.buffer)
-			default:
-				err = fmt.Errorf("mssql: invalid type for decimal column", val)
-				return
+	// case typeMoney, typeMoney4, typeMoneyN:
+	case typeDecimal, typeDecimalN, typeNumeric, typeNumericN:
+		var value float64
+		switch v := val.(type) {
+		case int:
+			value = float64(v)
+		case int8:
+			value = float64(v)
+		case int16:
+			value = float64(v)
+		case int32:
+			value = float64(v)
+		case int64:
+			value = float64(v)
+		case float32:
+			value = float64(v)
+		case float64:
+			value = v
+		case string:
+			if value, err = strconv.ParseFloat(v, 64); err != nil {
+				return res, fmt.Errorf("bulk: unable to convert string to float: %v", err)
 			}
-		case typeMoney, typeMoney4, typeMoneyN:
-			if col.ti.Size == 4 {
-				res.ti.Size = 4
-				res.buffer = make([]byte, 4)
-			} else if col.ti.Size == 8 {
-				res.ti.Size = 8
-				res.buffer = make([]byte, 8)
+		default:
+			return res, fmt.Errorf("unknown value for decimal: %#v", v)
+		}
 
-			} else {
-				err = fmt.Errorf("mssql: invalid size of money column")
-			}
-	*/
+		perc := col.ti.Prec
+		scale := col.ti.Scale
+		var dec Decimal
+		dec, err = Float64ToDecimalScale(value, scale)
+		if err != nil {
+			return res, err
+		}
+		dec.prec = perc
+
+		var length byte
+		switch {
+		case perc <= 9:
+			length = 4
+		case perc <= 19:
+			length = 8
+		case perc <= 28:
+			length = 12
+		default:
+			length = 16
+		}
+
+		buf := make([]byte, length+1)
+		// first byte length written by typeInfo.writer
+		res.ti.Size = int(length) + 1
+		// second byte sign
+		if value < 0 {
+			buf[0] = 0
+		} else {
+			buf[0] = 1
+		}
+
+		ub := dec.UnscaledBytes()
+		l := len(ub)
+		if l > int(length) {
+			err = fmt.Errorf("decimal out of range: %s", dec)
+			return res, err
+		}
+		// reverse the bytes
+		for i, j := 1, l-1; j >= 0; i, j = i+1, j-1 {
+			buf[i] = ub[j]
+		}
+		res.buffer = buf
 	case typeBigVarBin:
 		switch val := val.(type) {
 		case []byte:
 			res.ti.Size = len(val)
 			res.buffer = val
 		default:
-			err = fmt.Errorf("mssql: invalid type for Binary column", val)
+			err = fmt.Errorf("mssql: invalid type for Binary column: %s", val)
 			return
 		}
 
 	default:
-		err = fmt.Errorf("mssql: type %x not implemented!", col.ti.TypeId)
+		err = fmt.Errorf("mssql: type %x not implemented", col.ti.TypeId)
 	}
 	return
 

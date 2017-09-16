@@ -27,14 +27,14 @@ func ParsePolicies(policiesRaw interface{}) []string {
 	switch policiesRaw.(type) {
 	case string:
 		if policiesRaw.(string) == "" {
-			return []string{"default"}
+			return []string{}
 		}
 		policies = strings.Split(policiesRaw.(string), ",")
 	case []string:
 		policies = policiesRaw.([]string)
 	}
 
-	return SanitizePolicies(policies, true)
+	return SanitizePolicies(policies, false)
 }
 
 // SanitizePolicies performs the common input validation tasks

@@ -36,6 +36,7 @@
 # - Items are case-sensitive (please use all lowercase)
 #
 
+/api/secret/generic/index.html         /api/secret/kv/index.html
 /api/system/renew.html                 /api/system/leases.html
 /api/system/revoke.html                /api/system/leases.html
 /api/system/revoke-force.html          /api/system/leases.html
@@ -81,4 +82,19 @@
 /docs/guides/upgrading/upgrade-to-0.6.4.html /guides/upgrading/upgrade-to-0.6.4.html
 /docs/guides/upgrading/upgrade-to-0.7.0.html /guides/upgrading/upgrade-to-0.7.0.html
 /docs/secrets/custom.html              /docs/plugin/index.html
+/docs/secrets/generic/index.html       /docs/secrets/kv/index.html
 /intro/getting-started/acl.html        /intro/getting-started/policies.html
+
+/docs/vault-enterprise/index.html               /docs/enterprise/index.html
+/docs/vault-enterprise/replication/index.html   /docs/enterprise/replication/index.html
+/docs/vault-enterprise/hsm/index.html           /docs/enterprise/hsm/index.html
+/docs/vault-enterprise/hsm/behavior.html        /docs/enterprise/hsm/behavior.html
+/docs/vault-enterprise/hsm/configuration.html   /docs/enterprise/hsm/configuration.html
+/docs/vault-enterprise/hsm/security.html        /docs/enterprise/hsm/security.html
+/docs/vault-enterprise/ui/index.html            /docs/enterprise/ui/index.html
+/docs/vault-enterprise/identity/index.html      /docs/enterprise/identity/index.html
+/docs/vault-enterprise/mfa/index.html           /docs/enterprise/mfa/index.html
+/docs/vault-enterprise/mfa/mfa-duo.html         /docs/enterprise/mfa/mfa-duo.html
+/docs/vault-enterprise/mfa/mfa-okta.html        /docs/enterprise/mfa/mfa-okta.html
+/docs/vault-enterprise/mfa/mfa-pingid.html      /docs/enterprise/mfa/mfa-pingid.html
+/docs/vault-enterprise/mfa/mfa-totp.html        /docs/enterprise/mfa/mfa-totp.html

@@ -47,7 +47,7 @@ func TestCore_Mount(t *testing.T) {
 	me := &MountEntry{
 		Table: mountTableType,
 		Path:  "foo",
-		Type:  "generic",
+		Type:  "kv",
 	}
 	err := c.mount(me)
 	if err != nil {
@@ -95,16 +95,16 @@ func TestCore_Mount_Local(t *testing.T) {
 			&MountEntry{
 				Table:    mountTableType,
 				Path:     "noop/",
-				Type:     "generic",
+				Type:     "kv",
 				UUID:     "abcd",
-				Accessor: "generic-abcd",
+				Accessor: "kv-abcd",
 			},
 			&MountEntry{
 				Table:    mountTableType,
 				Path:     "noop2/",
-				Type:     "generic",
+				Type:     "kv",
 				UUID:     "bcde",
-				Accessor: "generic-bcde",
+				Accessor: "kv-bcde",
 			},
 		},
 	}
@@ -164,7 +164,7 @@ func TestCore_Mount_Local(t *testing.T) {
 	compEntries := c.mounts.Entries[:0]
 	// Filter out required mounts
 	for _, v := range c.mounts.Entries {
-		if v.Type == "generic" {
+		if v.Type == "kv" {
 			compEntries = append(compEntries, v)
 		}
 	}
@@ -609,7 +609,7 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 			if entry.Path != "secret/" {
 				t.Fatalf("bad: %v", entry)
 			}
-			if entry.Type != "generic" {
+			if entry.Type != "kv" {
 				t.Fatalf("bad: %v", entry)
 			}
 		case 2:

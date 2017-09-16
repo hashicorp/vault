@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -94,7 +95,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
-	expected := []string{"default", "grouppolicy", "userpolicy"}
+	expected := []string{"grouppolicy", "userpolicy"}
 	if !reflect.DeepEqual(expected, resp.Auth.Policies) {
 		t.Fatalf("bad: policies: expected: %q, actual: %q", expected, resp.Auth.Policies)
 	}
@@ -211,7 +212,7 @@ func TestBackend_groupCrud(t *testing.T) {
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepGroup(t, "g1", "foo"),
-			testAccStepReadGroup(t, "g1", "default,foo"),
+			testAccStepReadGroup(t, "g1", "foo"),
 			testAccStepDeleteGroup(t, "g1"),
 			testAccStepReadGroup(t, "g1", ""),
 		},
@@ -357,13 +358,13 @@ func testAccStepReadGroup(t *testing.T, group string, policies string) logicalte
 			}
 
 			var d struct {
-				Policies string `mapstructure:"policies"`
+				Policies []string `mapstructure:"policies"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
 
-			if d.Policies != policies {
+			if !reflect.DeepEqual(d.Policies, policyutil.ParsePolicies(policies)) {
 				return fmt.Errorf("bad: %#v", resp)
 			}
 

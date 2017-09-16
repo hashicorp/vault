@@ -572,9 +572,9 @@ func makeStrParam(val string) (res Param) {
 
 func (s *MssqlStmt) makeParam(val driver.Value) (res Param, err error) {
 	if val == nil {
-		res.ti.TypeId = typeNVarChar
+		res.ti.TypeId = typeNull
 		res.buffer = nil
-		res.ti.Size = 2
+		res.ti.Size = 0
 		return
 	}
 	switch val := val.(type) {

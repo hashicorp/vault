@@ -260,12 +260,9 @@ func (b *grpclbBalancer) sendLoadReport(s *balanceLoadClientStream, interval tim
 }
 
 func (b *grpclbBalancer) callRemoteBalancer(lbc *loadBalancerClient, seq int) (retry bool) {
-	// This RPC should be a failfast RPC. It should only fail if the server is down.
-	// We cannot make it failfast because the first few RPCs on a clientConn always fail.
-	// TODO(bar) make this failfast when the failfast bahavior in clientConn is fixed.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	stream, err := lbc.BalanceLoad(ctx, FailFast(false))
+	stream, err := lbc.BalanceLoad(ctx)
 	if err != nil {
 		grpclog.Errorf("grpclb: failed to perform RPC to the remote balancer %v", err)
 		return
@@ -465,7 +462,9 @@ func (b *grpclbBalancer) Start(target string, config BalancerConfig) error {
 				dopts = append(dopts, func(o *dialOptions) { o.copts.Dialer = dialer })
 			}
 			ccError = make(chan struct{})
-			cc, err = Dial(rb.addr, dopts...)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			cc, err = DialContext(ctx, rb.addr, dopts...)
+			cancel()
 			if err != nil {
 				grpclog.Warningf("grpclb: failed to setup a connection to the remote balancer %v: %v", rb.addr, err)
 				close(ccError)

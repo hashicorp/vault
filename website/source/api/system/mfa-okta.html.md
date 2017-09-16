@@ -22,12 +22,15 @@ This endpoint defines a MFA method of type Okta.
 
 - `username_format` `(string)` - A format string for mapping Identity names to MFA method names. Values to substitute should be placed in `{{}}`. For example, `"{{persona.name}}@example.com"`. If blank, the Persona's Name field will be used as-is. Currently-supported mappings:
   - persona.name: The name returned by the mount configured via the `mount_accessor` parameter
+  - entity.name: The name configured for the Entity
+  - persona.metadata.`<key>`: The value of the Persona's metadata parameter
+  - entity.metadata.`<key>`: The value of the Entity's metadata paramater
 
 - `org_name` `(string)` - Name of the organization to be used in the Okta API.
 
 - `api_token` `(string)` - Okta API key.
 
-- `production` `(string)` - If set, production API URL prefix will be used to communicate with Okta and if not set, a preview production API URL prefix will be used. Defaults to true.
+- `base_url` `(string)` -  If set, will be used as the base domain for API requests.  Examples are okta.com, oktapreview.com, and okta-emea.com.
 
 ### Sample Payload
 

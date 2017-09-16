@@ -85,18 +85,24 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
 func TestCore(t testing.T) *Core {
-	return TestCoreWithSeal(t, nil)
+	return TestCoreWithSeal(t, nil, false)
+}
+
+// TestCoreRaw returns a pure in-memory, uninitialized core for testing. The raw
+// storage endpoints are enabled with this core.
+func TestCoreRaw(t testing.T) *Core {
+	return TestCoreWithSeal(t, nil, true)
 }
 
 // TestCoreNewSeal returns a pure in-memory, uninitialized core with
 // the new seal configuration.
 func TestCoreNewSeal(t testing.T) *Core {
-	return TestCoreWithSeal(t, &TestSeal{})
+	return TestCoreWithSeal(t, &TestSeal{}, false)
 }
 
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
-func TestCoreWithSeal(t testing.T, testSeal Seal) *Core {
+func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
@@ -104,6 +110,10 @@ func TestCoreWithSeal(t testing.T, testSeal Seal) *Core {
 	}
 
 	conf := testCoreConfig(t, physicalBackend, logger)
+
+	if enableRaw {
+		conf.EnableRaw = true
+	}
 
 	if testSeal != nil {
 		conf.Seal = testSeal
@@ -148,7 +158,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 	for backendName, backendFactory := range noopBackends {
 		logicalBackends[backendName] = backendFactory
 	}
-	logicalBackends["generic"] = LeasedPassthroughBackendFactory
+	logicalBackends["kv"] = LeasedPassthroughBackendFactory
 	for backendName, backendFactory := range testLogicalBackends {
 		logicalBackends[backendName] = backendFactory
 	}
@@ -198,6 +208,17 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 // initialized and unsealed.
 func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 	core := TestCore(t)
+	return testCoreUnsealed(t, core)
+}
+
+// TestCoreUnsealedRaw returns a pure in-memory core that is already
+// initialized, unsealed, and with raw endpoints enabled.
+func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
+	core := TestCoreRaw(t)
+	return testCoreUnsealed(t, core)
+}
+
+func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	keys, token := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {

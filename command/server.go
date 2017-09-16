@@ -72,7 +72,7 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) Run(args []string) int {
-	var dev, verifyOnly, devHA, devTransactional, devLeasedGeneric, devThreeNode bool
+	var dev, verifyOnly, devHA, devTransactional, devLeasedKV, devThreeNode bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress, devPluginDir string
 	var devLatency, devLatencyJitter int
@@ -87,7 +87,7 @@ func (c *ServerCommand) Run(args []string) int {
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.BoolVar(&devHA, "dev-ha", false, "")
 	flags.BoolVar(&devTransactional, "dev-transactional", false, "")
-	flags.BoolVar(&devLeasedGeneric, "dev-leased-generic", false, "")
+	flags.BoolVar(&devLeasedKV, "dev-leased-kv", false, "")
 	flags.BoolVar(&devThreeNode, "dev-three-node", false, "")
 	flags.Usage = func() { c.Ui.Output(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
@@ -141,7 +141,7 @@ func (c *ServerCommand) Run(args []string) int {
 		devListenAddress = os.Getenv("VAULT_DEV_LISTEN_ADDRESS")
 	}
 
-	if devHA || devTransactional || devLeasedGeneric || devThreeNode {
+	if devHA || devTransactional || devLeasedKV || devThreeNode {
 		dev = true
 	}
 
@@ -260,11 +260,12 @@ func (c *ServerCommand) Run(args []string) int {
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
 		PluginDirectory:    config.PluginDirectory,
+		EnableRaw:          config.EnableRawEndpoint,
 	}
 	if dev {
 		coreConfig.DevToken = devRootTokenID
-		if devLeasedGeneric {
-			coreConfig.LogicalBackends["generic"] = vault.LeasedPassthroughBackendFactory
+		if devLeasedKV {
+			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory
 		}
 		if devPluginDir != "" {
 			coreConfig.PluginDirectory = devPluginDir
