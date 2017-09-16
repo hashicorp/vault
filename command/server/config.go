@@ -47,6 +47,7 @@ type Config struct {
 
 	PluginDirectory string `hcl:"plugin_directory"`
 
+	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
 }
@@ -302,6 +303,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PluginDirectory = c2.PluginDirectory
 	}
 
+	result.PidFile = c.PidFile
+	if c2.PidFile != "" {
+		result.PidFile = c2.PidFile
+	}
+
 	return result
 }
 
@@ -399,6 +405,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"cluster_name",
 		"cluster_cipher_suites",
 		"plugin_directory",
+		"pid_file",
 		"raw_storage_endpoint",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
