@@ -660,6 +660,18 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Release the log gate.
 	c.logGate.Flush()
 
+	// Write out the PID to the file now that server has successfully started
+	if err := c.storePidFile(config.PidFile); err != nil {
+		c.Ui.Output(fmt.Sprintf("Error storing PID: %v", err))
+		return 1
+	}
+
+	defer func() {
+		if err := c.removePidFile(config.PidFile); err != nil {
+			c.Ui.Output(fmt.Sprintf("Error deleting the PID file: %v", err))
+		}
+	}()
+
 	// Wait for shutdown
 	shutdownTriggered := false
 
@@ -1224,6 +1236,37 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 		"-dev-listen-address": complete.PredictNothing,
 		"-log-level":          complete.PredictSet("trace", "debug", "info", "warn", "err"),
 	}
+}
+
+// storePidFile is used to write out our PID to a file if necessary
+func (c *ServerCommand) storePidFile(pidPath string) error {
+	// Quit fast if no pidfile
+	if pidPath == "" {
+		return nil
+	}
+
+	// Open the PID file
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("could not open pid file: %v", err)
+	}
+	defer pidFile.Close()
+
+	// Write out the PID
+	pid := os.Getpid()
+	_, err = pidFile.WriteString(fmt.Sprintf("%d", pid))
+	if err != nil {
+		return fmt.Errorf("could not write to pid file: %v", err)
+	}
+	return nil
+}
+
+// removePidFile is used to cleanup the PID file if necessary
+func (c *ServerCommand) removePidFile(pidPath string) error {
+	if pidPath == "" {
+		return nil
+	}
+	return os.Remove(pidPath)
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown
