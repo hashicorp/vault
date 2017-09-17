@@ -19,7 +19,6 @@ type Router struct {
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
 	tokenStoreSaltFunc func() (*salt.Salt, error)
-
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
@@ -61,13 +60,6 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	// Check if this is a nested mount
 	if existing, _, ok := r.root.LongestPrefix(prefix); ok && existing != "" {
 		return fmt.Errorf("cannot mount under existing mount '%s'", existing)
-	}
-	// If this is a secret backend, check to see if the prefix conflicts
-	// with an existing mountpoint
-	if prefix != "" {
-		if match := r.matchingPrefixInternal(prefix); match != "" {
-			return fmt.Errorf("cannot mount over existing mount '%s'", match)
-		}
 	}
 
 	// Build the paths

@@ -123,23 +123,6 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	subMountEntry := &MountEntry{
-		Path: "prod/",
-		UUID: meUUID,
-	}
-
-	if r.MountConflict("prod/aws/") == "" {
-		t.Fatalf("bad: prod/aws/")
-	}
-	if r.MountConflict("prod/") == "" {
-		t.Fatalf("bad: prod/")
-	}
-
-	err = r.Mount(n, "prod/", subMountEntry, view)
-	if !strings.Contains(err.Error(), "cannot mount over existing mount") {
-		t.Fatalf("err: %v", err)
-	}
-
 	if path := r.MatchingMount("prod/aws/foo"); path != "prod/aws/" {
 		t.Fatalf("bad: %s", path)
 	}
@@ -183,6 +166,24 @@ func TestRouter_Mount(t *testing.T) {
 	// Verify the path
 	if len(n.Paths) != 1 || n.Paths[0] != "foo" {
 		t.Fatalf("bad: %v", n.Paths)
+	}
+
+	subMountEntry := &MountEntry{
+		Path:     "prod/",
+		UUID:     meUUID,
+		Accessor: "prodaccessor",
+	}
+
+	if r.MountConflict("prod/aws/") == "" {
+		t.Fatalf("bad: prod/aws/")
+	}
+
+	err = r.Mount(n, "prod/", subMountEntry, view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if r.MountConflict("prod/test") == "" {
+		t.Fatalf("bad: prod/test/")
 	}
 }
 
