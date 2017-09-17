@@ -100,11 +100,11 @@ entities attempting to login.
 ### Parameters
 - `name` `(string: <required>)` - Name of the role.
 - `bound_service_account_names` `(array: <required>)` - List of service account
-  names able to access this role. If set to "*" all names are allowed, both this
-  and bound_service_account_namespaces can not be "*".
+  names able to access this role. If set to "\*" all names are allowed, both this
+  and bound_service_account_namespaces can not be "\*".
 - `bound_service_account_namespaces` `(array: <required>)` - List of namespaces
-  allowed to access this role. If set to "*" all namespaces are allowed, both
-  this and bound_service_account_names can not be set to "*".
+  allowed to access this role. If set to "\*" all namespaces are allowed, both
+  this and bound_service_account_names can not be set to "\*".
 - `ttl` `(string: "")` - The TTL period of tokens issued using this role in
   seconds.
 - `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens
