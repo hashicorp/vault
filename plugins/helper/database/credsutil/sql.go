@@ -2,10 +2,13 @@ package credsutil
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+)
+
+const (
+	NoneLength int = -1
 )
 
 // SQLCredentialsProducer implements CredentialsProducer and provides a generic credentials producer for most sql database types.
@@ -17,21 +20,37 @@ type SQLCredentialsProducer struct {
 }
 
 func (scp *SQLCredentialsProducer) GenerateUsername(config dbplugin.UsernameConfig) (string, error) {
+	username := "v"
+
 	displayName := config.DisplayName
 	if scp.DisplayNameLen > 0 && len(displayName) > scp.DisplayNameLen {
 		displayName = displayName[:scp.DisplayNameLen]
+	} else if scp.DisplayNameLen == NoneLength {
+		displayName = ""
 	}
+
+	if len(displayName) > 0 {
+		username = fmt.Sprintf("%s%s%s", username, scp.Separator, displayName)
+	}
+
 	roleName := config.RoleName
 	if scp.RoleNameLen > 0 && len(roleName) > scp.RoleNameLen {
 		roleName = roleName[:scp.RoleNameLen]
+	} else if scp.RoleNameLen == NoneLength {
+		roleName = ""
 	}
 
-	userUUID, err := RandomAlphaNumeric(20)
+	if len(roleName) > 0 {
+		username = fmt.Sprintf("%s%s%s", username, scp.Separator, roleName)
+	}
+
+	userUUID, err := RandomAlphaNumeric(20, false)
 	if err != nil {
 		return "", err
 	}
 
-	username := strings.Join([]string{"v", displayName, roleName, userUUID, fmt.Sprint(time.Now().UTC().Unix())}, scp.Separator)
+	username = fmt.Sprintf("%s%s%s", username, scp.Separator, userUUID)
+	username = fmt.Sprintf("%s%s%s", username, scp.Separator, fmt.Sprint(time.Now().UTC().Unix()))
 	if scp.UsernameLen > 0 && len(username) > scp.UsernameLen {
 		username = username[:scp.UsernameLen]
 	}
@@ -40,7 +59,7 @@ func (scp *SQLCredentialsProducer) GenerateUsername(config dbplugin.UsernameConf
 }
 
 func (scp *SQLCredentialsProducer) GeneratePassword() (string, error) {
-	password, err := RandomAlphaNumeric(20)
+	password, err := RandomAlphaNumeric(20, true)
 	if err != nil {
 		return "", err
 	}

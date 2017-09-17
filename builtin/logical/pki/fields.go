@@ -59,7 +59,7 @@ email addresses.`,
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
-		Type: framework.TypeString,
+		Type: framework.TypeDurationSecond,
 		Description: `The requested Time To Live for the certificate;
 sets the expiration date. If not specified
 the role default, backend default, or system
@@ -92,7 +92,7 @@ must still be specified in alt_names or ip_sans.`,
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
-		Type: framework.TypeString,
+		Type: framework.TypeDurationSecond,
 		Description: `The requested Time To Live for the certificate;
 sets the expiration date. If not specified
 the role default, backend default, or system
@@ -142,6 +142,11 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 		Type:        framework.TypeInt,
 		Default:     -1,
 		Description: "The maximum allowable path length",
+	}
+
+	fields["permitted_dns_domains"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `Domains for which this certificate is allowed to sign or issue child certificates. If set, all DNS names (subject and alt) on child certs must be exact matches or subsets of the given domains (see https://tools.ietf.org/html/rfc5280#section-4.2.1.10).`,
 	}
 
 	return fields

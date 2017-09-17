@@ -32,7 +32,7 @@ func pathUsers(b *backend) *framework.Path {
 			},
 
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the user.",
 			},
 		},
@@ -111,7 +111,7 @@ func (b *backend) pathUserRead(
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
-	var policies = policyutil.ParsePolicies(d.Get("policies").(string))
+	var policies = policyutil.ParsePolicies(d.Get("policies"))
 	for _, policy := range policies {
 		if policy == "root" {
 			return logical.ErrorResponse("root policy cannot be granted by an authentication backend"), nil

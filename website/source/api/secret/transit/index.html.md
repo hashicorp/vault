@@ -128,6 +128,7 @@ actual keys themselves).
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/transit/keys`              | `200 application/json` |
+| `GET`    | `/transit/keys?list=true`    | `200 application/json` |
 
 ### Sample Request
 
@@ -726,9 +727,6 @@ be used.
 
 - `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
 
-- `format` `(string: "hex")` – Specifies the output encoding. This can be either
-  `hex` or `base64`.
-
 ### Sample Payload
 
 ```json
@@ -839,9 +837,6 @@ data.
     - `sha2-512`
 
 - `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
-
-- `format` `(string: "hex")` – Specifies the output encoding. This can be either
-  `hex` or `base64`.
 
 - `signature` `(string: "")` – Specifies the signature output from the
   `/transit/sign` function. Either this must be supplied or `hmac` must be

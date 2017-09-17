@@ -15,13 +15,14 @@ import (
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
+	"github.com/posener/complete"
 	"github.com/ryanuber/columnize"
 )
 
 // AuthHandler is the interface that any auth handlers must implement
 // to enable auth via the CLI.
 type AuthHandler interface {
-	Auth(*api.Client, map[string]string) (string, error)
+	Auth(*api.Client, map[string]string) (*api.Secret, error)
 	Help() string
 }
 
@@ -166,9 +167,50 @@ func (c *AuthCommand) Run(args []string) int {
 	}
 
 	// Authenticate
-	token, err := handler.Auth(client, vars)
+	secret, err := handler.Auth(client, vars)
 	if err != nil {
 		c.Ui.Error(err.Error())
+		return 1
+	}
+	if secret == nil {
+		c.Ui.Error("Empty response from auth helper")
+		return 1
+	}
+
+	// If we had requested a wrapped token, we want to unset that request
+	// before performing further functions
+	client.SetWrappingLookupFunc(func(string, string) string {
+		return ""
+	})
+
+CHECK_TOKEN:
+	var token string
+	switch {
+	case secret == nil:
+		c.Ui.Error("Empty response from auth helper")
+		return 1
+
+	case secret.Auth != nil:
+		token = secret.Auth.ClientToken
+
+	case secret.WrapInfo != nil:
+		if secret.WrapInfo.WrappedAccessor == "" {
+			c.Ui.Error("Got a wrapped response from Vault but wrapped reply does not seem to contain a token")
+			return 1
+		}
+		if tokenOnly {
+			c.Ui.Output(secret.WrapInfo.Token)
+			return 0
+		}
+		if noStore {
+			return OutputSecret(c.Ui, "table", secret)
+		}
+		client.SetToken(secret.WrapInfo.Token)
+		secret, err = client.Logical().Unwrap("")
+		goto CHECK_TOKEN
+
+	default:
+		c.Ui.Error("No auth or wrapping info in auth helper response")
 		return 1
 	}
 
@@ -229,6 +271,9 @@ func (c *AuthCommand) Run(args []string) int {
 		}
 		return 1
 	}
+	client.SetWrappingLookupFunc(func(string, string) string {
+		return ""
+	})
 
 	// If in no-store mode it won't have read the token from a token-helper (or
 	// will read an old one) so set it explicitly
@@ -237,7 +282,7 @@ func (c *AuthCommand) Run(args []string) int {
 	}
 
 	// Verify the token
-	secret, err := client.Auth().Token().LookupSelf()
+	secret, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error validating token: %s", err))
@@ -273,8 +318,8 @@ func (c *AuthCommand) Run(args []string) int {
 
 	// Get the policies we have
 	policiesRaw, ok := secret.Data["policies"]
-	if !ok {
-		policiesRaw = []string{"unknown"}
+	if !ok || policiesRaw == nil {
+		policiesRaw = []interface{}{"unknown"}
 	}
 	var policies []string
 	for _, v := range policiesRaw.([]interface{}) {
@@ -301,15 +346,25 @@ func (c *AuthCommand) Run(args []string) int {
 
 }
 
-func (c *AuthCommand) listMethods() int {
+func (c *AuthCommand) getMethods() (map[string]*api.AuthMount, error) {
 	client, err := c.Client()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 1
+		return nil, err
 	}
+	client.SetWrappingLookupFunc(func(string, string) string {
+		return ""
+	})
 
 	auth, err := client.Sys().ListAuth()
+	if err != nil {
+		return nil, err
+	}
+
+	return auth, nil
+}
+
+func (c *AuthCommand) listMethods() int {
+	auth, err := c.getMethods()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error reading auth table: %s", err))
@@ -379,15 +434,21 @@ Usage: vault auth [options] [auth-information]
   The value of the "-path" flag is supplied to auth providers as the "mount"
   option in the payload to specify the mount point.
 
+  If response wrapping is used (via -wrap-ttl), the returned token will be
+  automatically unwrapped unless:
+    * -token-only is used, in which case the wrapping token will be output
+    * -no-store is used, in which case the details of the wrapping token
+      will be printed
+
 General Options:
 
   ` + meta.GeneralOptionsUsage() + `
 
 Auth Options:
 
-  -method=name      Outputs help for the authentication method with the given
-                    name for the remote server. If this authentication method
-                    is not available, exit with code 1.
+  -method=name      Use the method given here, which is a type of backend, not
+                    the path. If this authentication method is not available,
+                    exit with code 1.
 
   -method-help      If set, the help for the selected method will be shown.
 
@@ -414,7 +475,7 @@ type tokenAuthHandler struct {
 	Token string
 }
 
-func (h *tokenAuthHandler) Auth(*api.Client, map[string]string) (string, error) {
+func (h *tokenAuthHandler) Auth(*api.Client, map[string]string) (*api.Secret, error) {
 	token := h.Token
 	if token == "" {
 		var err error
@@ -424,7 +485,7 @@ func (h *tokenAuthHandler) Auth(*api.Client, map[string]string) (string, error) 
 		token, err = password.Read(os.Stdin)
 		fmt.Printf("\n")
 		if err != nil {
-			return "", fmt.Errorf(
+			return nil, fmt.Errorf(
 				"Error attempting to ask for token. The raw error message\n"+
 					"is shown below, but the most common reason for this error is\n"+
 					"that you attempted to pipe a value into auth. If you want to\n"+
@@ -434,12 +495,16 @@ func (h *tokenAuthHandler) Auth(*api.Client, map[string]string) (string, error) 
 	}
 
 	if token == "" {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"A token must be passed to auth. Please view the help\n" +
 				"for more information.")
 	}
 
-	return token, nil
+	return &api.Secret{
+		Auth: &api.SecretAuth{
+			ClientToken: token,
+		},
+	}, nil
 }
 
 func (h *tokenAuthHandler) Help() string {
@@ -457,4 +522,36 @@ tokens are created via the API or command line interface (with the
 `
 
 	return strings.TrimSpace(help)
+}
+
+func (c *AuthCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *AuthCommand) AutocompleteFlags() complete.Flags {
+	var predictFunc complete.PredictFunc = func(a complete.Args) []string {
+		auths, err := c.getMethods()
+		if err != nil {
+			return []string{}
+		}
+
+		methods := make([]string, 0, len(auths))
+		for _, auth := range auths {
+			if strings.HasPrefix(auth.Type, a.Last) {
+				methods = append(methods, auth.Type)
+			}
+		}
+
+		return methods
+	}
+
+	return complete.Flags{
+		"-method":      predictFunc,
+		"-methods":     complete.PredictNothing,
+		"-method-help": complete.PredictNothing,
+		"-no-verify":   complete.PredictNothing,
+		"-no-store":    complete.PredictNothing,
+		"-token-only":  complete.PredictNothing,
+		"-path":        complete.PredictNothing,
+	}
 }

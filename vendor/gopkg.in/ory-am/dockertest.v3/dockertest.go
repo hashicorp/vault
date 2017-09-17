@@ -42,6 +42,23 @@ func (r *Resource) GetPort(id string) string {
 	return m[0].HostPort
 }
 
+func (r *Resource) GetBoundIP(id string) string {
+	if r.Container == nil {
+		return ""
+	} else if r.Container.NetworkSettings == nil {
+		return ""
+	}
+
+	m, ok := r.Container.NetworkSettings.Ports[dc.Port(id)]
+	if !ok {
+		return ""
+	} else if len(m) == 0 {
+		return ""
+	}
+
+	return m[0].HostIP
+}
+
 // NewTLSPool creates a new pool given an endpoint and the certificate path. This is required for endpoints that
 // require TLS communication.
 func NewTLSPool(endpoint, certpath string) (*Pool, error) {
@@ -100,6 +117,7 @@ type RunOptions struct {
 	Mounts       []string
 	Links        []string
 	ExposedPorts []string
+	Auth         dc.AuthConfiguration
 }
 
 // RunWithOptions starts a docker container.
@@ -144,7 +162,7 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 		if err := d.Client.PullImage(dc.PullImageOptions{
 			Repository: repository,
 			Tag:        tag,
-		}, dc.AuthConfiguration{}); err != nil {
+		}, opts.Auth); err != nil {
 			return nil, errors.Wrap(err, "")
 		}
 	}

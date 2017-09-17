@@ -20,6 +20,7 @@ import (
 // interface for cassandra databases to make connections.
 type cassandraConnectionProducer struct {
 	Hosts             string      `json:"hosts" structs:"hosts" mapstructure:"hosts"`
+	Port              int         `json:"port" structs:"port" mapstructure:"port"`
 	Username          string      `json:"username" structs:"username" mapstructure:"username"`
 	Password          string      `json:"password" structs:"password" mapstructure:"password"`
 	TLS               bool        `json:"tls" structs:"tls" mapstructure:"tls"`
@@ -149,10 +150,15 @@ func (c *cassandraConnectionProducer) Close() error {
 }
 
 func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
-	clusterConfig := gocql.NewCluster(strings.Split(c.Hosts, ",")...)
+	hosts := strings.Split(c.Hosts, ",")
+	clusterConfig := gocql.NewCluster(hosts...)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
 		Username: c.Username,
 		Password: c.Password,
+	}
+
+	if c.Port != 0 {
+		clusterConfig.Port = c.Port
 	}
 
 	clusterConfig.ProtoVersion = c.ProtocolVersion

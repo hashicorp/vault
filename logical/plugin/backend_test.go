@@ -21,14 +21,16 @@ func TestBackendPlugin_HandleRequest(t *testing.T) {
 	defer cleanup()
 
 	resp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "test/ing",
-		Data:      map[string]interface{}{"value": "foo"},
+		Operation: logical.CreateOperation,
+		Path:      "kv/foo",
+		Data: map[string]interface{}{
+			"value": "bar",
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.Data["value"] != "foo" {
+	if resp.Data["value"] != "bar" {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -76,17 +78,17 @@ func TestBackendPlugin_HandleExistenceCheck(t *testing.T) {
 
 	checkFound, exists, err := b.HandleExistenceCheck(&logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "test/ing",
-		Data:      map[string]interface{}{"value": "foo"},
+		Path:      "kv/foo",
+		Data:      map[string]interface{}{"value": "bar"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !checkFound {
-		t.Fatal("existence check not found for path 'test/ing'")
+		t.Fatal("existence check not found for path 'kv/foo")
 	}
 	if exists {
-		t.Fatal("existence check should have returned 'false' for 'testing/read'")
+		t.Fatal("existence check should have returned 'false' for 'kv/foo'")
 	}
 }
 

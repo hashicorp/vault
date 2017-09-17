@@ -1,16 +1,23 @@
 package plugin
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin"
 	"github.com/hashicorp/vault/logical/plugin/mock"
 	"github.com/hashicorp/vault/vault"
+	log "github.com/mgutz/logxi/v1"
 )
+
+func TestBackend_impl(t *testing.T) {
+	var _ logical.Backend = &backend{}
+}
 
 func TestBackend(t *testing.T) {
 	config, cleanup := testConfig(t)
@@ -33,7 +40,8 @@ func TestBackend_Factory(t *testing.T) {
 }
 
 func TestBackend_PluginMain(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+	args := []string{}
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" && os.Getenv(pluginutil.PluginMetadaModeEnv) != "true" {
 		return
 	}
 
@@ -42,7 +50,7 @@ func TestBackend_PluginMain(t *testing.T) {
 		t.Fatal("CA cert not passed in")
 	}
 
-	args := []string{"--ca-cert=" + caPEM}
+	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
@@ -71,7 +79,7 @@ func testConfig(t *testing.T) (*logical.BackendConfig, func()) {
 	sys := vault.TestDynamicSystemView(core.Core)
 
 	config := &logical.BackendConfig{
-		Logger: nil,
+		Logger: logformat.NewVaultLogger(log.LevelTrace),
 		System: sys,
 		Config: map[string]string{
 			"plugin_name": "mock-plugin",

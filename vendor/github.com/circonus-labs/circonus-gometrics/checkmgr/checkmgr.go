@@ -85,6 +85,10 @@ type CheckConfig struct {
 	// overrides the behavior and will re-activate the metric when it is
 	// encountered. "(true|false)", default "false"
 	ForceMetricActivation string
+	// Type of check to use (default: httptrap)
+	Type string
+	// Custom check config fields (default: none)
+	CustomConfigFields map[string]string
 }
 
 // BrokerConfig options for broker
@@ -151,6 +155,7 @@ type CheckManager struct {
 	checkSearchTag        api.TagType
 	checkSecret           CheckSecretType
 	checkTags             api.TagType
+	customConfigFields    map[string]string
 	checkSubmissionURL    api.URLType
 	checkDisplayName      CheckDisplayNameType
 	forceMetricActivation bool
@@ -233,7 +238,11 @@ func New(cfg *Config) (*CheckManager, error) {
 	}
 
 	// initialize check related data
-	cm.checkType = defaultCheckType
+	if cfg.Check.Type != "" {
+		cm.checkType = CheckTypeType(cfg.Check.Type)
+	} else {
+		cm.checkType = defaultCheckType
+	}
 
 	idSetting := "0"
 	if cfg.Check.ID != "" {
@@ -283,6 +292,13 @@ func New(cfg *Config) (*CheckManager, error) {
 
 	if cfg.Check.Tags != "" {
 		cm.checkTags = strings.Split(strings.Replace(cfg.Check.Tags, " ", "", -1), ",")
+	}
+
+	cm.customConfigFields = make(map[string]string)
+	if len(cfg.Check.CustomConfigFields) > 0 {
+		for fld, val := range cfg.Check.CustomConfigFields {
+			cm.customConfigFields[fld] = val
+		}
 	}
 
 	dur := cfg.Check.MaxURLAge

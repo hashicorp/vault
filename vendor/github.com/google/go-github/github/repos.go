@@ -55,6 +55,7 @@ type Repository struct {
 	AllowRebaseMerge *bool            `json:"allow_rebase_merge,omitempty"`
 	AllowSquashMerge *bool            `json:"allow_squash_merge,omitempty"`
 	AllowMergeCommit *bool            `json:"allow_merge_commit,omitempty"`
+	Topics           []string         `json:"topics,omitempty"`
 
 	// Only provided when using RepositoriesService.Get while in preview
 	License *License `json:"license,omitempty"`
@@ -175,8 +176,9 @@ func (s *RepositoriesService) List(ctx context.Context, user string, opt *Reposi
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when license support fully launches
-	req.Header.Set("Accept", mediaTypeLicensesPreview)
+	// TODO: remove custom Accept headers when APIs fully launch.
+	acceptHeaders := []string{mediaTypeLicensesPreview, mediaTypeCodesOfConductPreview, mediaTypeTopicsPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var repos []*Repository
 	resp, err := s.client.Do(ctx, req, &repos)
@@ -212,8 +214,9 @@ func (s *RepositoriesService) ListByOrg(ctx context.Context, org string, opt *Re
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when license support fully launches
-	req.Header.Set("Accept", mediaTypeLicensesPreview)
+	// TODO: remove custom Accept headers when APIs fully launch.
+	acceptHeaders := []string{mediaTypeLicensesPreview, mediaTypeCodesOfConductPreview, mediaTypeTopicsPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var repos []*Repository
 	resp, err := s.client.Do(ctx, req, &repos)
@@ -295,7 +298,7 @@ func (s *RepositoriesService) Get(ctx context.Context, owner, repo string) (*Rep
 
 	// TODO: remove custom Accept header when the license support fully launches
 	// https://developer.github.com/v3/licenses/#get-a-repositorys-license
-	acceptHeaders := []string{mediaTypeLicensesPreview, mediaTypeSquashPreview, mediaTypeCodesOfConductPreview}
+	acceptHeaders := []string{mediaTypeLicensesPreview, mediaTypeCodesOfConductPreview, mediaTypeTopicsPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	repository := new(Repository)
@@ -361,9 +364,6 @@ func (s *RepositoriesService) Edit(ctx context.Context, owner, repo string, repo
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: Remove this preview header after API is fully vetted.
-	req.Header.Set("Accept", mediaTypeSquashPreview)
 
 	r := new(Repository)
 	resp, err := s.client.Do(ctx, req, r)
@@ -971,4 +971,53 @@ func (s *RepositoriesService) RemoveAdminEnforcement(ctx context.Context, owner,
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
 	return s.client.Do(ctx, req, nil)
+}
+
+// Topics represents a collection of repository topics.
+type Topics struct {
+	Names []string `json:"names,omitempty"`
+}
+
+// ListAllTopics lists topics for a repository.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/#list-all-topics-for-a-repository
+func (s *RepositoriesService) ListAllTopics(ctx context.Context, owner, repo string) (*Topics, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/topics", owner, repo)
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeTopicsPreview)
+
+	topics := new(Topics)
+	resp, err := s.client.Do(ctx, req, topics)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return topics, resp, nil
+}
+
+// ReplaceAllTopics replaces topics for a repository.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/#replace-all-topics-for-a-repository
+func (s *RepositoriesService) ReplaceAllTopics(ctx context.Context, owner, repo string, topics *Topics) (*Topics, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/topics", owner, repo)
+	req, err := s.client.NewRequest("PUT", u, topics)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeTopicsPreview)
+
+	t := new(Topics)
+	resp, err := s.client.Do(ctx, req, t)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return t, resp, nil
 }

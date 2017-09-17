@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -21,7 +22,7 @@ func TestHandler_cors(t *testing.T) {
 
 	// Enable CORS and allow from any origin for testing.
 	corsConfig := core.CORSConfig()
-	err := corsConfig.Enable([]string{addr})
+	err := corsConfig.Enable([]string{addr}, nil)
 	if err != nil {
 		t.Fatalf("Error enabling CORS: %s", err)
 	}
@@ -78,7 +79,7 @@ func TestHandler_cors(t *testing.T) {
 	//
 	expHeaders := map[string]string{
 		"Access-Control-Allow-Origin":  addr,
-		"Access-Control-Allow-Headers": "*",
+		"Access-Control-Allow-Headers": strings.Join(vault.StdAllowedHeaders, ","),
 		"Access-Control-Max-Age":       "300",
 		"Vary": "Origin",
 	}
@@ -156,8 +157,8 @@ func TestSysMounts_headerAuth(t *testing.T) {
 		"auth":           nil,
 		"data": map[string]interface{}{
 			"secret/": map[string]interface{}{
-				"description": "generic secret storage",
-				"type":        "generic",
+				"description": "key/value secret storage",
+				"type":        "kv",
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -187,8 +188,8 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			},
 		},
 		"secret/": map[string]interface{}{
-			"description": "generic secret storage",
-			"type":        "generic",
+			"description": "key/value secret storage",
+			"type":        "kv",
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),

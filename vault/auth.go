@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
@@ -397,7 +398,6 @@ func (c *Core) persistAuth(table *MountTable, localOnly bool) error {
 // setupCredentials is invoked after we've loaded the auth table to
 // initialize the credential backends and setup the router
 func (c *Core) setupCredentials() error {
-	var backend logical.Backend
 	var view *BarrierView
 	var err error
 	var persistNeeded bool
@@ -406,6 +406,7 @@ func (c *Core) setupCredentials() error {
 	defer c.authLock.Unlock()
 
 	for _, entry := range c.auth.Entries {
+		var backend logical.Backend
 		// Work around some problematic code that existed in master for a while
 		if strings.HasPrefix(entry.Path, credentialRoutePrefix) {
 			entry.Path = strings.TrimPrefix(entry.Path, credentialRoutePrefix)
@@ -425,6 +426,12 @@ func (c *Core) setupCredentials() error {
 		backend, err = c.newCredentialBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
+			if errwrap.Contains(err, ErrPluginNotFound.Error()) && entry.Type == "plugin" {
+				// If we encounter an error instantiating the backend due to it being missing from the catalog,
+				// skip backend initialization but register the entry to the mount table to preserve storage
+				// and path.
+				goto ROUTER_MOUNT
+			}
 			return errLoadAuthFailed
 		}
 		if backend == nil {
@@ -432,15 +439,14 @@ func (c *Core) setupCredentials() error {
 		}
 
 		// Check for the correct backend type
-		backendType := backend.Type()
-		if entry.Type == "plugin" && backendType != logical.TypeCredential {
-			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
+		if entry.Type == "plugin" && backend.Type() != logical.TypeCredential {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backend.Type())
 		}
 
 		if err := backend.Initialize(); err != nil {
 			return err
 		}
-
+	ROUTER_MOUNT:
 		// Mount the backend
 		path := credentialRoutePrefix + entry.Path
 		err = c.router.Mount(backend, path, entry, view)

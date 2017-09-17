@@ -384,6 +384,12 @@ func (s *Session) executeQuery(qry *Query) *Iter {
 	return iter
 }
 
+func (s *Session) removeHost(h *HostInfo) {
+	s.policy.RemoveHost(h)
+	s.pool.removeHost(h.ConnectAddress())
+	s.ring.removeHost(h.ConnectAddress())
+}
+
 // KeyspaceMetadata returns the schema metadata for the keyspace specified. Returns an error if the keyspace does not exist.
 func (s *Session) KeyspaceMetadata(keyspace string) (*KeyspaceMetadata, error) {
 	// fail fast

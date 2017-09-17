@@ -13,10 +13,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/pools"
 	"github.com/docker/docker/pkg/system"
+	"github.com/sirupsen/logrus"
 )
 
 // ChangeType represents the change type.
@@ -394,7 +394,7 @@ func ChangesSize(newDir string, changes []Change) int64 {
 func ExportChanges(dir string, changes []Change, uidMaps, gidMaps []idtools.IDMap) (io.ReadCloser, error) {
 	reader, writer := io.Pipe()
 	go func() {
-		ta := newTarAppender(idtools.NewIDMappingsFromMaps(uidMaps, gidMaps), writer)
+		ta := newTarAppender(idtools.NewIDMappingsFromMaps(uidMaps, gidMaps), writer, nil)
 
 		// this buffer is needed for the duration of this piped stream
 		defer pools.BufioWriter32KPool.Put(ta.Buffer)

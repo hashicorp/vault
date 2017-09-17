@@ -10,10 +10,26 @@ import (
 	"fmt"
 )
 
+// ListCollaboratorsOptions specifies the optional parameters to the
+// RepositoriesService.ListCollaborators method.
+type ListCollaboratorsOptions struct {
+	// Affiliation specifies how collaborators should be filtered by their affiliation.
+	// Possible values are:
+	//     outside - All outside collaborators of an organization-owned repository
+	//     direct - All collaborators with permissions to an organization-owned repository,
+	//              regardless of organization membership status
+	//     all - All collaborators the authenticated user can see
+	//
+	// Default value is "all".
+	Affiliation string `url:"affiliation,omitempty"`
+
+	ListOptions
+}
+
 // ListCollaborators lists the GitHub users that have access to the repository.
 //
-// GitHub API docs: https://developer.github.com/v3/repos/collaborators/#list
-func (s *RepositoriesService) ListCollaborators(ctx context.Context, owner, repo string, opt *ListOptions) ([]*User, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/collaborators/#list-collaborators
+func (s *RepositoriesService) ListCollaborators(ctx context.Context, owner, repo string, opt *ListCollaboratorsOptions) ([]*User, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/collaborators", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {

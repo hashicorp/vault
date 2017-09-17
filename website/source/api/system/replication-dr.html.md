@@ -142,7 +142,7 @@ identifier can later be used to revoke a DR secondary's access.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/replication/dr/primary/secondary-token` | `200 application/json` |
+| `POST`    | `/sys/replication/dr/primary/secondary-token` | `200 application/json` |
 
 ### Parameters
 
@@ -277,7 +277,7 @@ result in data loss!
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/dr/secondary/promote` | `204 (empty body)` |
+| `POST`   | `/sys/replication/dr/secondary/promote` | `200 application/json` |
 
 ### Parameters
 
@@ -292,7 +292,7 @@ result in data loss!
 
 ```json
 {
-    "key": "ijH8tphEHaBtgx+IvPfxDsSi2LV4j9k+Lad6eqT5cJw="
+  "key": "ijH8tphEHaBtgx+IvPfxDsSi2LV4j9k+Lad6eqT5cJw="
 }
 ```
 
@@ -304,4 +304,26 @@ $ curl \
     --request POST \
     --data @payload.json \
     https://vault.rocks/v1/sys/replication/dr/secondary/promote
+```
+
+### Sample Response
+
+```json
+{
+  "progress": 0,
+  "required": 1,
+  "complete": false,
+  "request_id": "ad8f9074-0e24-d30e-83cd-595c9652ff89",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "complete": false,
+    "progress": 0,
+    "required": 1
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
 ```

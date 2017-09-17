@@ -15,8 +15,10 @@
 package clientv3
 
 import (
+	"context"
+
 	pb "github.com/coreos/etcd/etcdserver/etcdserverpb"
-	"golang.org/x/net/context"
+
 	"google.golang.org/grpc"
 )
 
@@ -73,6 +75,19 @@ func (op OpResponse) Put() *PutResponse    { return op.put }
 func (op OpResponse) Get() *GetResponse    { return op.get }
 func (op OpResponse) Del() *DeleteResponse { return op.del }
 func (op OpResponse) Txn() *TxnResponse    { return op.txn }
+
+func (resp *PutResponse) OpResponse() OpResponse {
+	return OpResponse{put: resp}
+}
+func (resp *GetResponse) OpResponse() OpResponse {
+	return OpResponse{get: resp}
+}
+func (resp *DeleteResponse) OpResponse() OpResponse {
+	return OpResponse{del: resp}
+}
+func (resp *TxnResponse) OpResponse() OpResponse {
+	return OpResponse{txn: resp}
+}
 
 type kv struct {
 	remote pb.KVClient

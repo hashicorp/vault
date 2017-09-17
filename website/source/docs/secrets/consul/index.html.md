@@ -20,7 +20,7 @@ on every path, use `vault path-help` after mounting the backend.
 ## Quick Start
 
 The first step to using the consul backend is to mount it.
-Unlike the `generic` backend, the `consul` backend is not mounted by default.
+Unlike the `kv` backend, the `consul` backend is not mounted by default.
 
 ```
 $ vault mount consul
@@ -89,7 +89,7 @@ Here we can see that Vault has generated a new Consul ACL token for us.
 We can test this token out, and verify that it is read-only:
 
 ```
-$ curl 127.0.0.1:8500/v1/kv/foo?token=973a31ea-1ec4-c2de-0f63-623f477c25100
+$ curl 127.0.0.1:8500/v1/kv/foo?token=973a31ea-1ec4-c2de-0f63-623f477c2510
 [{"CreateIndex":12,"ModifyIndex":53,"LockIndex":4,"Key":"foo","Flags":3304740253564472344,"Value":"YmF6"}]
 
 $ curl -X PUT -d 'test' 127.0.0.1:8500/v1/kv/foo?token=973a31ea-1ec4-c2de-0f63-623f477c2510

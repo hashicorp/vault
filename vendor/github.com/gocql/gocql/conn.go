@@ -756,6 +756,26 @@ func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer)
 	return flight.preparedStatment, flight.err
 }
 
+func marshalQueryValue(typ TypeInfo, value interface{}, dst *queryValues) error {
+	if named, ok := value.(*namedValue); ok {
+		dst.name = named.name
+		value = named.value
+	}
+
+	if _, ok := value.(unsetColumn); !ok {
+		val, err := Marshal(typ, value)
+		if err != nil {
+			return err
+		}
+
+		dst.value = val
+	} else {
+		dst.isUnset = true
+	}
+
+	return nil
+}
+
 func (c *Conn) executeQuery(qry *Query) *Iter {
 	params := queryParams{
 		consistency: qry.cons,
@@ -809,17 +829,12 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 
 		params.values = make([]queryValues, len(values))
 		for i := 0; i < len(values); i++ {
-			val, err := Marshal(info.request.columns[i].TypeInfo, values[i])
-			if err != nil {
+			v := &params.values[i]
+			value := values[i]
+			typ := info.request.columns[i].TypeInfo
+			if err := marshalQueryValue(typ, value, v); err != nil {
 				return &Iter{err: err}
 			}
-
-			v := &params.values[i]
-			v.value = val
-			if _, ok := values[i].(unsetColumn); ok {
-				v.isUnset = true
-			}
-			// TODO: handle query binding names
 		}
 
 		params.skipMeta = !(c.session.cfg.DisableSkipMetadata || qry.disableSkipMetadata)
@@ -1009,16 +1024,12 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 			b.values = make([]queryValues, info.request.actualColCount)
 
 			for j := 0; j < info.request.actualColCount; j++ {
-				val, err := Marshal(info.request.columns[j].TypeInfo, values[j])
-				if err != nil {
+				v := &b.values[j]
+				value := values[j]
+				typ := info.request.columns[j].TypeInfo
+				if err := marshalQueryValue(typ, value, v); err != nil {
 					return &Iter{err: err}
 				}
-
-				b.values[j].value = val
-				if _, ok := values[j].(unsetColumn); ok {
-					b.values[j].isUnset = true
-				}
-				// TODO: add names
 			}
 		} else {
 			b.statement = entry.Stmt

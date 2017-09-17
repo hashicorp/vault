@@ -462,6 +462,10 @@ func NewClient(config *Config) (*Client, error) {
 		config.Address = parts[1]
 	}
 
+	if config.Token == "" {
+		config.Token = defConfig.Token
+	}
+
 	client := &Client{
 		config: *config,
 	}

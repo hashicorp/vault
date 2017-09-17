@@ -894,9 +894,9 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 // lookupSalted is used to find a token given its salted ID. If tainted is
 // true, entries that are in some revocation state (currently, indicated by num
 // uses < 0), the entry will be returned anyways
-func (ts *TokenStore) lookupSalted(saltedId string, tainted bool) (*TokenEntry, error) {
+func (ts *TokenStore) lookupSalted(saltedID string, tainted bool) (*TokenEntry, error) {
 	// Lookup token
-	path := lookupPrefix + saltedId
+	path := lookupPrefix + saltedID
 	raw, err := ts.view.Get(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read entry: %v", err)
@@ -915,6 +915,19 @@ func (ts *TokenStore) lookupSalted(saltedId string, tainted bool) (*TokenEntry, 
 
 	// This is a token that is awaiting deferred revocation or tainted
 	if entry.NumUses < 0 && !tainted {
+		return nil, nil
+	}
+
+	// If we are still restoring the expiration manager, we want to ensure the
+	// token is not expired
+	if ts.expiration == nil {
+		return nil, nil
+	}
+	check, err := ts.expiration.RestoreSaltedTokenCheck(entry.Path, saltedID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check token in restore mode: %v", err)
+	}
+	if !check {
 		return nil, nil
 	}
 

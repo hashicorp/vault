@@ -20,6 +20,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 // If this is 1, then we've called CleanupClients. This can be used
@@ -76,6 +78,7 @@ type Client struct {
 	process     *os.Process
 	client      ClientProtocol
 	protocol    Protocol
+	logger      hclog.Logger
 }
 
 // ClientConfig is the configuration used to initialize a new
@@ -149,6 +152,10 @@ type ClientConfig struct {
 	// This is done for legacy reasons. You must explicitly opt-in to
 	// new protocols.
 	AllowedProtocols []Protocol
+
+	// Logger is the logger that the client will used. If none is provided,
+	// it will default to hclog's default logger.
+	Logger hclog.Logger
 }
 
 // ReattachConfig is used to configure a client to reattach to an
@@ -261,7 +268,18 @@ func NewClient(config *ClientConfig) (c *Client) {
 		config.AllowedProtocols = []Protocol{ProtocolNetRPC}
 	}
 
-	c = &Client{config: config}
+	if config.Logger == nil {
+		config.Logger = hclog.New(&hclog.LoggerOptions{
+			Output: hclog.DefaultOutput,
+			Level:  hclog.Trace,
+			Name:   "plugin",
+		})
+	}
+
+	c = &Client{
+		config: config,
+		logger: config.Logger,
+	}
 	if config.Managed {
 		managedClientsLock.Lock()
 		managedClients = append(managedClients, c)
@@ -350,8 +368,7 @@ func (c *Client) Kill() {
 			if err != nil {
 				// If there was an error just log it. We're going to force
 				// kill in a moment anyways.
-				log.Printf(
-					"[WARN] plugin: error closing client during Kill: %s", err)
+				c.logger.Warn("error closing client during Kill", "err", err)
 			}
 		}
 	}
@@ -431,7 +448,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 			pidWait(pid)
 
 			// Log so we can see it
-			log.Printf("[DEBUG] plugin: reattached plugin process exited\n")
+			c.logger.Debug("reattached plugin process exited")
 
 			// Mark it
 			c.l.Lock()
@@ -478,7 +495,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		}
 	}
 
-	log.Printf("[DEBUG] plugin: starting plugin: %s %#v", cmd.Path, cmd.Args)
+	c.logger.Debug("starting plugin", "path", cmd.Path, "args", cmd.Args)
 	err = cmd.Start()
 	if err != nil {
 		return
@@ -512,7 +529,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		cmd.Wait()
 
 		// Log and make sure to flush the logs write away
-		log.Printf("[DEBUG] plugin: %s: plugin process exited\n", cmd.Path)
+		c.logger.Debug("plugin process exited", "path", cmd.Path)
 		os.Stderr.Sync()
 
 		// Mark that we exited
@@ -559,7 +576,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	timeout := time.After(c.config.StartTimeout)
 
 	// Start looking for the address
-	log.Printf("[DEBUG] plugin: waiting for RPC address for: %s", cmd.Path)
+	c.logger.Debug("waiting for RPC address", "path", cmd.Path)
 	select {
 	case <-timeout:
 		err = errors.New("timeout while waiting for plugin to start")
@@ -718,9 +735,31 @@ func (c *Client) logStderr(r io.Reader) {
 		line, err := bufR.ReadString('\n')
 		if line != "" {
 			c.config.Stderr.Write([]byte(line))
-
 			line = strings.TrimRightFunc(line, unicode.IsSpace)
-			log.Printf("[DEBUG] plugin: %s: %s", filepath.Base(c.config.Cmd.Path), line)
+
+			l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
+
+			entry, err := parseJSON(line)
+			// If output is not JSON format, print directly to Debug
+			if err != nil {
+				l.Debug(line)
+			} else {
+				out := flattenKVPairs(entry.KVPairs)
+
+				l = l.With("timestamp", entry.Timestamp.Format(hclog.TimeFormat))
+				switch hclog.LevelFromString(entry.Level) {
+				case hclog.Trace:
+					l.Trace(entry.Message, out...)
+				case hclog.Debug:
+					l.Debug(entry.Message, out...)
+				case hclog.Info:
+					l.Info(entry.Message, out...)
+				case hclog.Warn:
+					l.Warn(entry.Message, out...)
+				case hclog.Error:
+					l.Error(entry.Message, out...)
+				}
+			}
 		}
 
 		if err == io.EOF {

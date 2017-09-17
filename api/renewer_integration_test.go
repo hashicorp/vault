@@ -25,7 +25,7 @@ func TestRenewer_Renew(t *testing.T) {
 	defer pgDone()
 
 	t.Run("group", func(t *testing.T) {
-		t.Run("generic", func(t *testing.T) {
+		t.Run("kv", func(t *testing.T) {
 			t.Parallel()
 
 			if _, err := client.Logical().Write("secret/value", map[string]interface{}{

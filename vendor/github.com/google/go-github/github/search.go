@@ -15,6 +15,14 @@ import (
 // SearchService provides access to the search related functions
 // in the GitHub API.
 //
+// Each method takes a query string defining the search keywords and any search qualifiers.
+// For example, when searching issues, the query "gopher is:issue language:go" will search
+// for issues containing the word "gopher" in Go repositories. The method call
+//   opts :=  &github.SearchOptions{Sort: "created", Order: "asc"}
+//   cl.Search.Issues(ctx, "gopher is:issue language:go", opts)
+// will search for such issues, sorting by creation date in ascending order
+// (i.e., oldest first).
+//
 // GitHub API docs: https://developer.github.com/v3/search/
 type SearchService service
 
@@ -188,6 +196,10 @@ func (s *SearchService) search(ctx context.Context, searchType string, query str
 		// Accept header for search commits preview endpoint
 		// TODO: remove custom Accept header when this API fully launches.
 		req.Header.Set("Accept", mediaTypeCommitSearchPreview)
+	case searchType == "repositories":
+		// Accept header for search repositories based on topics preview endpoint
+		// TODO: remove custom Accept header when this API fully launches.
+		req.Header.Set("Accept", mediaTypeTopicsPreview)
 	case opt != nil && opt.TextMatch:
 		// Accept header defaults to "application/vnd.github.v3+json"
 		// We change it here to fetch back text-match metadata

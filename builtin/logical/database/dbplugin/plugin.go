@@ -62,7 +62,7 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 
 	} else {
 		// create a DatabasePluginClient instance
-		db, err = newPluginClient(sys, pluginRunner)
+		db, err = newPluginClient(sys, pluginRunner, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +96,7 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  2,
+	ProtocolVersion:  3,
 	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }

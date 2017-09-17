@@ -155,8 +155,8 @@ _codegenerators() {
             # remove (M|Unm)arshalJSON implementations, so they don't conflict with encoding/json bench \
             if [[ $zexternal == "1" ]]
             then
-                sed -i 's+ MarshalJSON(+ _MarshalJSON(+g' values_ffjson${zsfx} && \
-                    sed -i 's+ UnmarshalJSON(+ _UnmarshalJSON(+g' values_ffjson${zsfx}
+                sed -i '' -e 's+ MarshalJSON(+ _MarshalJSON(+g' values_ffjson${zsfx} && \
+                    sed -i '' -e 's+ UnmarshalJSON(+ _UnmarshalJSON(+g' values_ffjson${zsfx}
             fi && \
             echo "generators done!" && \
             true

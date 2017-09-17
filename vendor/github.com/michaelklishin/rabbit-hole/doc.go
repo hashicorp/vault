@@ -173,5 +173,14 @@ Managing Permissions
         // revokes permissions in vhost
         resp, err := rmqc.ClearPermissionsIn("/", "my.user")
         // => *http.Response, err
+
+Operations on cluster name
+        // Get cluster name
+        cn, err := rmqc.GetClusterName()
+        // => ClusterName, err
+
+        // Rename cluster
+        resp, err := rmqc.SetClusterName(ClusterName{Name: "rabbitmq@rabbit-hole"})
+        // => *http.Response, err
 */
 package rabbithole

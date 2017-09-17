@@ -1,6 +1,7 @@
 package radius
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"strconv"
@@ -51,12 +52,12 @@ func (b *backend) pathLogin(
 	if username == "" {
 		username = d.Get("urlusername").(string)
 		if username == "" {
-			return logical.ErrorResponse("username cannot be emtpy"), nil
+			return logical.ErrorResponse("username cannot be empty"), nil
 		}
 	}
 
 	if password == "" {
-		return logical.ErrorResponse("password cannot be emtpy"), nil
+		return logical.ErrorResponse("password cannot be empty"), nil
 	}
 
 	policies, resp, err := b.RadiusLogin(req, username, password)
@@ -123,15 +124,24 @@ func (b *backend) RadiusLogin(req *logical.Request, username string, password st
 	hostport := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 
 	packet := radius.New(radius.CodeAccessRequest, []byte(cfg.Secret))
-	packet.Add("User-Name", username)
-	packet.Add("User-Password", password)
-	packet.Add("NAS-Port", uint32(cfg.NasPort))
+	usernameAttr, err := radius.NewString(username)
+	if err != nil {
+		return nil, nil, err
+	}
+	passwordAttr, err := radius.NewString(password)
+	if err != nil {
+		return nil, nil, err
+	}
+	packet.Add(1, usernameAttr)
+	packet.Add(2, passwordAttr)
+	packet.Add(5, radius.NewInteger(uint32(cfg.NasPort)))
 
 	client := radius.Client{
-		DialTimeout: time.Duration(cfg.DialTimeout) * time.Second,
-		ReadTimeout: time.Duration(cfg.ReadTimeout) * time.Second,
+		Dialer: net.Dialer{
+			Timeout: time.Duration(cfg.DialTimeout) * time.Second,
+		},
 	}
-	received, err := client.Exchange(packet, hostport)
+	received, err := client.Exchange(context.Background(), packet, hostport)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}

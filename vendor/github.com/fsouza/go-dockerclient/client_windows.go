@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Microsoft/go-winio"
-	"github.com/hashicorp/go-cleanhttp"
 )
 
 const namedPipeConnectTimeout = 2 * time.Second
@@ -36,7 +35,7 @@ func (c *Client) initializeNativeClient() {
 		timeout := namedPipeConnectTimeout
 		return winio.DialPipe(namedPipePath, &timeout)
 	}
-	tr := cleanhttp.DefaultTransport()
+	tr := defaultTransport()
 	tr.Dial = dialFunc
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		return dialFunc(network, addr)

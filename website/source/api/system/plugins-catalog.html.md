@@ -18,7 +18,8 @@ This endpoint lists the plugins in the catalog.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/plugins/catalog/`      | `200 application/json` |
+| `LIST`   | `/sys/plugins/catalog`      | `200 application/json` |
+| `GET`   | `/sys/plugins/catalog?list=true`      | `200 application/json` |
 
 ### Sample Request
 
@@ -62,7 +63,7 @@ supplied name.
   is what is used to look up plugins in the catalog. This is part of the request
   URL.
 
-- `sha_256` `(string: <required>)` – This is the SHA256 sum of the plugin's
+- `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
   binary. Before a plugin is run it's SHA will be checked against this value, if
   they do not match the plugin can not be run.
 
@@ -119,13 +120,11 @@ $ curl \
 ```javascript
 {
 	"data": {
-		"plugin": {
-			"args": [],
-			"builtin": false,
-			"command": "/tmp/vault-plugins/mysql-database-plugin",
-			"name": "example-plugin",
-			"sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek="
-		}
+		"args": [],
+		"builtin": false,
+		"command": "/tmp/vault-plugins/mysql-database-plugin",
+		"name": "example-plugin",
+		"sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek="
 	}
 }
 ```

@@ -28,3 +28,4 @@ telemetry {
 max_lease_ttl = "10h"
 default_lease_ttl = "10h"
 cluster_name = "testcluster"
+raw_storage_endpoint = true

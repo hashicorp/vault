@@ -61,7 +61,7 @@ func TestPolicyStore_CRUD(t *testing.T) {
 
 func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	// Get should return nothing
-	p, err := ps.GetPolicy("dev")
+	p, err := ps.GetPolicy("Dev")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -70,7 +70,7 @@ func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	}
 
 	// Delete should be no-op
-	err = ps.DeletePolicy("dev")
+	err = ps.DeletePolicy("deV")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -92,7 +92,7 @@ func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	}
 
 	// Get should work
-	p, err = ps.GetPolicy("dev")
+	p, err = ps.GetPolicy("dEv")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -110,13 +110,13 @@ func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	}
 
 	// Delete should be clear the entry
-	err = ps.DeletePolicy("dev")
+	err = ps.DeletePolicy("Dev")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Get should fail
-	p, err = ps.GetPolicy("dev")
+	p, err = ps.GetPolicy("deV")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

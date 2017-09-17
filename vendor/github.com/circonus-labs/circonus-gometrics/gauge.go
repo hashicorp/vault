@@ -32,6 +32,18 @@ func (m *CirconusMetrics) RemoveGauge(metric string) {
 	delete(m.gauges, metric)
 }
 
+// GetGaugeTest returns the current value for a gauge. (note: it is a function specifically for "testing", disable automatic submission during testing.)
+func (m *CirconusMetrics) GetGaugeTest(metric string) (string, error) {
+	m.gm.Lock()
+	defer m.gm.Unlock()
+
+	if val, ok := m.gauges[metric]; ok {
+		return val, nil
+	}
+
+	return "", fmt.Errorf("Gauge metric '%s' not found", metric)
+}
+
 // SetGaugeFunc sets a gauge to a function [called at flush interval]
 func (m *CirconusMetrics) SetGaugeFunc(metric string, fn func() int64) {
 	m.gfm.Lock()

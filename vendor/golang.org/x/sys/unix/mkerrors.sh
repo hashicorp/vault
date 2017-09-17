@@ -17,8 +17,8 @@ if test -z "$GOARCH" -o -z "$GOOS"; then
 fi
 
 # Check that we are using the new build system if we should
-if [[ "$GOOS" -eq "linux" ]] && [[ "$GOARCH" != "sparc64" ]]; then
-	if [[ "$GOLANG_SYS_BUILD" -ne "docker" ]]; then
+if [[ "$GOOS" = "linux" ]] && [[ "$GOARCH" != "sparc64" ]]; then
+	if [[ "$GOLANG_SYS_BUILD" != "docker" ]]; then
 		echo 1>&2 "In the new build system, mkerrors should not be called directly."
 		echo 1>&2 "See README.md"
 		exit 1
@@ -27,7 +27,7 @@ fi
 
 CC=${CC:-cc}
 
-if [[ "$GOOS" -eq "solaris" ]]; then
+if [[ "$GOOS" = "solaris" ]]; then
 	# Assumes GNU versions of utilities in PATH.
 	export PATH=/usr/gnu/bin:$PATH
 fi
@@ -45,6 +45,7 @@ includes_Darwin='
 #include <sys/sockio.h>
 #include <sys/sysctl.h>
 #include <sys/mman.h>
+#include <sys/mount.h>
 #include <sys/wait.h>
 #include <net/bpf.h>
 #include <net/if.h>
@@ -75,6 +76,7 @@ includes_DragonFly='
 '
 
 includes_FreeBSD='
+#include <sys/capability.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/event.h>
@@ -179,6 +181,8 @@ struct ltchars {
 #include <linux/serial.h>
 #include <linux/can.h>
 #include <linux/vm_sockets.h>
+#include <linux/taskstats.h>
+#include <linux/genetlink.h>
 #include <net/route.h>
 #include <asm/termbits.h>
 
@@ -401,6 +405,7 @@ ccflags="$@"
 		$2 ~ /^(BPF|DLT)_/ ||
 		$2 ~ /^CLOCK_/ ||
 		$2 ~ /^CAN_/ ||
+		$2 ~ /^CAP_/ ||
 		$2 ~ /^ALG_/ ||
 		$2 ~ /^FS_(POLICY_FLAGS|KEY_DESC|ENCRYPTION_MODE|[A-Z0-9_]+_KEY_SIZE|IOC_(GET|SET)_ENCRYPTION)/ ||
 		$2 ~ /^GRND_/ ||
@@ -410,6 +415,8 @@ ccflags="$@"
 		$2 ~ /^SECCOMP_MODE_/ ||
 		$2 ~ /^SPLICE_/ ||
 		$2 ~ /^(VM|VMADDR)_/ ||
+		$2 ~ /^(TASKSTATS|TS)_/ ||
+		$2 ~ /^GENL_/ ||
 		$2 ~ /^XATTR_(CREATE|REPLACE)/ ||
 		$2 !~ "WMESGLEN" &&
 		$2 ~ /^W[A-Z0-9]+$/ ||

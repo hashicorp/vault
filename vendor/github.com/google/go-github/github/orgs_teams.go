@@ -223,6 +223,9 @@ func (s *OrganizationsService) ListTeamRepos(ctx context.Context, team int, opt 
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when topics API fully launches.
+	req.Header.Set("Accept", mediaTypeTopicsPreview)
+
 	var repos []*Repository
 	resp, err := s.client.Do(ctx, req, &repos)
 	if err != nil {

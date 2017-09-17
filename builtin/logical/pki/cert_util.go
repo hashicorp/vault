@@ -45,12 +45,13 @@ type creationBundle struct {
 	KeyType        string
 	KeyBits        int
 	SigningBundle  *caInfoBundle
-	TTL            time.Duration
+	NotAfter       time.Time
 	KeyUsage       x509.KeyUsage
 	ExtKeyUsage    certExtKeyUsage
 
 	// Only used when signing a CA cert
-	UseCSRValues bool
+	UseCSRValues        bool
+	PermittedDNSDomains []string
 
 	// URLs to encode into the certificate
 	URLs *urlEntries
@@ -434,6 +435,8 @@ func generateCert(b *backend,
 	if isCA {
 		creationBundle.IsCA = isCA
 
+		creationBundle.PermittedDNSDomains = data.Get("permitted_dns_domains").([]string)
+
 		if signingBundle == nil {
 			// Generating a self-signed root certificate
 			entries, err := getURLs(req)
@@ -581,6 +584,10 @@ func signCert(b *backend,
 	creationBundle.IsCA = isCA
 	creationBundle.UseCSRValues = useCSRValues
 
+	if isCA {
+		creationBundle.PermittedDNSDomains = data.Get("permitted_dns_domains").([]string)
+	}
+
 	parsedBundle, err := signCertificate(creationBundle, csr)
 	if err != nil {
 		return nil, err
@@ -720,54 +727,48 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
-	// Get the TTL and very it against the max allowed
-	var ttlField string
+	// Get the TTL and verify it against the max allowed
 	var ttl time.Duration
 	var maxTTL time.Duration
-	var ttlFieldInt interface{}
+	var notAfter time.Time
 	{
-		ttlFieldInt, ok = data.GetOk("ttl")
-		if !ok {
-			ttlField = role.TTL
-		} else {
-			ttlField = ttlFieldInt.(string)
-		}
+		ttl = time.Duration(data.Get("ttl").(int)) * time.Second
 
-		if len(ttlField) == 0 {
-			ttl = b.System().DefaultLeaseTTL()
-		} else {
-			ttl, err = parseutil.ParseDurationSecond(ttlField)
-			if err != nil {
-				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"invalid requested ttl: %s", err)}
+		if ttl == 0 {
+			if role.TTL != "" {
+				ttl, err = parseutil.ParseDurationSecond(role.TTL)
+				if err != nil {
+					return nil, errutil.UserError{Err: fmt.Sprintf(
+						"invalid role ttl: %s", err)}
+				}
 			}
 		}
 
-		if len(role.MaxTTL) == 0 {
-			maxTTL = b.System().MaxLeaseTTL()
-		} else {
+		if role.MaxTTL != "" {
 			maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"invalid ttl: %s", err)}
+					"invalid role max_ttl: %s", err)}
 			}
 		}
 
-		if ttl > maxTTL {
-			// Don't error if they were using system defaults, only error if
-			// they specifically chose a bad TTL
-			if len(ttlField) == 0 {
-				ttl = maxTTL
-			} else {
-				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"ttl is larger than maximum allowed (%d)", maxTTL/time.Second)}
-			}
+		if ttl == 0 {
+			ttl = b.System().DefaultLeaseTTL()
 		}
+		if maxTTL == 0 {
+			maxTTL = b.System().MaxLeaseTTL()
+		}
+		if ttl > maxTTL {
+			ttl = maxTTL
+		}
+
+		notAfter = time.Now().Add(ttl)
 
 		// If it's not self-signed, verify that the issued certificate won't be
 		// valid past the lifetime of the CA certificate
 		if signingBundle != nil &&
-			time.Now().Add(ttl).After(signingBundle.Certificate.NotAfter) {
+			notAfter.After(signingBundle.Certificate.NotAfter) && !role.AllowExpirationPastCA {
+
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"cannot satisfy request, as TTL is beyond the expiration of the CA certificate")}
 		}
@@ -800,7 +801,7 @@ func generateCreationBundle(b *backend,
 		KeyType:        role.KeyType,
 		KeyBits:        role.KeyBits,
 		SigningBundle:  signingBundle,
-		TTL:            ttl,
+		NotAfter:       notAfter,
 		KeyUsage:       x509.KeyUsage(parseKeyUsages(role.KeyUsage)),
 		ExtKeyUsage:    extUsage,
 	}
@@ -893,7 +894,7 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		SerialNumber:   serialNumber,
 		Subject:        subject,
 		NotBefore:      time.Now().Add(-30 * time.Second),
-		NotAfter:       time.Now().Add(creationInfo.TTL),
+		NotAfter:       creationInfo.NotAfter,
 		IsCA:           false,
 		SubjectKeyId:   subjKeyID,
 		DNSNames:       creationInfo.DNSNames,
@@ -904,6 +905,12 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 	// Add this before calling addKeyUsages
 	if creationInfo.SigningBundle == nil {
 		certTemplate.IsCA = true
+	}
+
+	// This will only be filled in from the generation paths
+	if len(creationInfo.PermittedDNSDomains) > 0 {
+		certTemplate.PermittedDNSDomains = creationInfo.PermittedDNSDomains
+		certTemplate.PermittedDNSDomainsCritical = true
 	}
 
 	addKeyUsages(creationInfo, certTemplate)
@@ -922,6 +929,12 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		}
 
 		caCert := creationInfo.SigningBundle.Certificate
+		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
+
+		err = checkPermittedDNSDomains(certTemplate, caCert)
+		if err != nil {
+			return nil, errutil.UserError{Err: err.Error()}
+		}
 
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), creationInfo.SigningBundle.PrivateKey)
 	} else {
@@ -940,6 +953,7 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 		}
 
+		certTemplate.AuthorityKeyId = subjKeyID
 		certTemplate.BasicConstraintsValid = true
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
 	}
@@ -1047,6 +1061,8 @@ func signCertificate(creationInfo *creationBundle,
 	}
 	subjKeyID := sha1.Sum(marshaledKey)
 
+	caCert := creationInfo.SigningBundle.Certificate
+
 	subject := pkix.Name{
 		CommonName:         creationInfo.CommonName,
 		OrganizationalUnit: creationInfo.OU,
@@ -1054,11 +1070,12 @@ func signCertificate(creationInfo *creationBundle,
 	}
 
 	certTemplate := &x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject:      subject,
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     time.Now().Add(creationInfo.TTL),
-		SubjectKeyId: subjKeyID[:],
+		SerialNumber:   serialNumber,
+		Subject:        subject,
+		NotBefore:      time.Now().Add(-30 * time.Second),
+		NotAfter:       creationInfo.NotAfter,
+		SubjectKeyId:   subjKeyID[:],
+		AuthorityKeyId: caCert.SubjectKeyId,
 	}
 
 	switch creationInfo.SigningBundle.PrivateKeyType {
@@ -1085,7 +1102,6 @@ func signCertificate(creationInfo *creationBundle,
 	addKeyUsages(creationInfo, certTemplate)
 
 	var certBytes []byte
-	caCert := creationInfo.SigningBundle.Certificate
 
 	certTemplate.IssuingCertificateURL = creationInfo.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = creationInfo.URLs.CRLDistributionPoints
@@ -1106,6 +1122,15 @@ func signCertificate(creationInfo *creationBundle,
 		}
 	}
 
+	if len(creationInfo.PermittedDNSDomains) > 0 {
+		certTemplate.PermittedDNSDomains = creationInfo.PermittedDNSDomains
+		certTemplate.PermittedDNSDomainsCritical = true
+	}
+	err = checkPermittedDNSDomains(certTemplate, caCert)
+	if err != nil {
+		return nil, errutil.UserError{Err: err.Error()}
+	}
+
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, csr.PublicKey, creationInfo.SigningBundle.PrivateKey)
 
 	if err != nil {
@@ -1121,4 +1146,40 @@ func signCertificate(creationInfo *creationBundle,
 	result.CAChain = creationInfo.SigningBundle.GetCAChain()
 
 	return result, nil
+}
+
+func checkPermittedDNSDomains(template, ca *x509.Certificate) error {
+	if len(ca.PermittedDNSDomains) == 0 {
+		return nil
+	}
+
+	namesToCheck := map[string]struct{}{
+		template.Subject.CommonName: struct{}{},
+	}
+	for _, name := range template.DNSNames {
+		namesToCheck[name] = struct{}{}
+	}
+
+	var badName string
+NameCheck:
+	for name := range namesToCheck {
+		for _, perm := range ca.PermittedDNSDomains {
+			switch {
+			case strings.HasPrefix(perm, ".") && strings.HasSuffix(name, perm):
+				// .example.com matches my.host.example.com and
+				// host.example.com but does not match example.com
+				break NameCheck
+			case perm == name:
+				break NameCheck
+			}
+		}
+		badName = name
+		break
+	}
+
+	if badName == "" {
+		return nil
+	}
+
+	return fmt.Errorf("name %q disallowed by CA's permitted DNS domains", badName)
 }

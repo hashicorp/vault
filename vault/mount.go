@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -64,6 +65,10 @@ var (
 		"system",
 		"token",
 	}
+
+	// mountAliases maps old backend names to new backend names, allowing us
+	// to move/rename backends but maintain backwards compatibility
+	mountAliases = map[string]string{"generic": "kv"}
 )
 
 func (c *Core) generateMountAccessor(entryType string) (string, error) {
@@ -230,7 +235,6 @@ func (c *Core) mount(entry *MountEntry) error {
 		conf["plugin_name"] = entry.Config.PluginName
 	}
 
-	// Consider having plugin name under entry.Options
 	backend, err := c.newLogicalBackend(entry.Type, sysView, view, conf)
 	if err != nil {
 		return err
@@ -544,7 +548,7 @@ func (c *Core) loadMounts() error {
 			// ensure this comes over. If we upgrade first, we simply don't
 			// create the mount, so we won't conflict when we sync. If this is
 			// local (e.g. cubbyhole) we do still add it.
-			if !foundRequired && (c.replicationState != consts.ReplicationSecondary || requiredMount.Local) {
+			if !foundRequired && (c.replicationState.HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 				needPersist = true
 			}
@@ -664,11 +668,12 @@ func (c *Core) setupMounts() error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	var backend logical.Backend
 	var view *BarrierView
 	var err error
 
 	for _, entry := range c.mounts.Entries {
+		var backend logical.Backend
+
 		// Initialize the backend, special casing for system
 		barrierPath := backendBarrierPrefix + entry.UUID + "/"
 		if entry.Type == "system" {
@@ -687,6 +692,12 @@ func (c *Core) setupMounts() error {
 		backend, err = c.newLogicalBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
+			if errwrap.Contains(err, ErrPluginNotFound.Error()) && entry.Type == "plugin" {
+				// If we encounter an error instantiating the backend due to it being missing from the catalog,
+				// skip backend initialization but register the entry to the mount table to preserve storage
+				// and path.
+				goto ROUTER_MOUNT
+			}
 			return errLoadMountsFailed
 		}
 		if backend == nil {
@@ -694,9 +705,8 @@ func (c *Core) setupMounts() error {
 		}
 
 		// Check for the correct backend type
-		backendType := backend.Type()
-		if entry.Type == "plugin" && backendType != logical.TypeLogical {
-			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
+		if entry.Type == "plugin" && backend.Type() != logical.TypeLogical {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backend.Type())
 		}
 
 		if err := backend.Initialize(); err != nil {
@@ -711,7 +721,7 @@ func (c *Core) setupMounts() error {
 			ch.saltUUID = entry.UUID
 			ch.storageView = view
 		}
-
+	ROUTER_MOUNT:
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {
@@ -754,6 +764,9 @@ func (c *Core) unloadMounts() error {
 
 // newLogicalBackend is used to create and configure a new logical backend by name
 func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+	if alias, ok := mountAliases[t]; ok {
+		t = alias
+	}
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
@@ -795,19 +808,19 @@ func (c *Core) defaultMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
 	}
-	mountAccessor, err := c.generateMountAccessor("generic")
+	mountAccessor, err := c.generateMountAccessor("kv")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
 	}
-	genericMount := &MountEntry{
+	kvMount := &MountEntry{
 		Table:       mountTableType,
 		Path:        "secret/",
-		Type:        "generic",
-		Description: "generic secret storage",
+		Type:        "kv",
+		Description: "key/value secret storage",
 		UUID:        mountUUID,
 		Accessor:    mountAccessor,
 	}
-	table.Entries = append(table.Entries, genericMount)
+	table.Entries = append(table.Entries, kvMount)
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
 	return table
 }

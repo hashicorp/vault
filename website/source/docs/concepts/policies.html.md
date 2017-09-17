@@ -42,7 +42,7 @@ preference and saved to disk.
 1. The policy's contents are uploaded and store in Vault and referenced by name.
 You can think of the policy's name as a pointer or symlink to its set of rules.
 
-1. Most importantly, the security team maps data in the authentication back to a
+1. Most importantly, the security team maps data in the authentication backend to a
 policy. For example, the security team might create mappings like:
 
     > Members of the OU group "dev" map to the Vault policy named "readonly-dev".

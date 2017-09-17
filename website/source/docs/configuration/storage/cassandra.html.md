@@ -10,7 +10,7 @@ description: |-
 # Cassandra Storage Backend
 
 The Cassandra storage backend is used to persist Vault's data in an [Apache
-Cassandra](cassandra) cluster.
+Cassandra][cassandra] cluster.
 
 - **No High Availability** – the Cassandra storage backend does not support high
   availability.
@@ -30,7 +30,7 @@ storage "cassandra" {
 
 The Cassandra storage backend does not automatically create the keyspace and
 table. This sample configuration can be used as a guide, but you will want to
-ensure the keyspace [replication options](replication-options)
+ensure the keyspace [replication options][replication-options]
 are appropriate for your cluster:
 
 ```cql
@@ -90,5 +90,5 @@ CREATE TABLE "vault"."entries" (
 * `tls_min_version` `(string: "tls12")` - Minimum TLS version to use. Accepted
   values are `tls10`, `tls11` or `tls12`. Defaults to `tls12`.
 
-[cassandra]: https://azure.microsoft.com/en-us/services/storage/
+[cassandra]: http://cassandra.apache.org/
 [replication-options]: https://docs.datastax.com/en/cassandra/2.1/cassandra/architecture/architectureDataDistributeReplication_c.html

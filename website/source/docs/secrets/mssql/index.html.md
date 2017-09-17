@@ -34,7 +34,7 @@ on every path, use `vault path-help` after mounting the backend.
 ## Quick Start
 
 The first step to using the mssql backend is to mount it.
-Unlike the `generic` backend, the `mssql` backend is not mounted by default.
+Unlike the `kv` backend, the `mssql` backend is not mounted by default.
 
 ```
 $ vault mount mssql

@@ -22,7 +22,7 @@ type Router struct {
 
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
-	// For example, logical/uuid1/foobar -> secrets/ (generic backend) + foobar
+	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
 	storagePrefix *radix.Tree
 }
 
@@ -71,9 +71,12 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 
 	// Build the paths
-	paths := backend.SpecialPaths()
-	if paths == nil {
-		paths = new(logical.Paths)
+	paths := new(logical.Paths)
+	if backend != nil {
+		specialPaths := backend.SpecialPaths()
+		if specialPaths != nil {
+			paths = specialPaths
+		}
 	}
 
 	// Create a mount entry
@@ -185,6 +188,7 @@ func (r *Router) MatchingMountByUUID(mountID string) *MountEntry {
 	return raw.(*MountEntry)
 }
 
+// MatchingMountByAccessor returns the MountEntry by accessor lookup
 func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 	if mountAccessor == "" {
 		return nil
@@ -244,7 +248,7 @@ func (r *Router) MountConflict(path string) string {
 	return ""
 }
 
-// MatchingView returns the view used for a path
+// MatchingStorageView returns the storageView used for a path
 func (r *Router) MatchingStorageView(path string) *BarrierView {
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
@@ -266,7 +270,7 @@ func (r *Router) MatchingMountEntry(path string) *MountEntry {
 	return raw.(*routeEntry).mountEntry
 }
 
-// MatchingMountEntry returns the MountEntry used for a path
+// MatchingBackend returns the backend used for a path
 func (r *Router) MatchingBackend(path string) logical.Backend {
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
@@ -326,17 +330,19 @@ func (r *Router) RouteExistenceCheck(req *logical.Request) (bool, bool, error) {
 func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
 	// Find the mount point
 	r.l.RLock()
-	mount, raw, ok := r.root.LongestPrefix(req.Path)
-	if !ok {
+	adjustedPath := req.Path
+	mount, raw, ok := r.root.LongestPrefix(adjustedPath)
+	if !ok && !strings.HasSuffix(adjustedPath, "/") {
 		// Re-check for a backend by appending a slash. This lets "foo" mean
 		// "foo/" at the root level which is almost always what we want.
-		req.Path += "/"
-		mount, raw, ok = r.root.LongestPrefix(req.Path)
+		adjustedPath += "/"
+		mount, raw, ok = r.root.LongestPrefix(adjustedPath)
 	}
 	r.l.RUnlock()
 	if !ok {
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
+	req.Path = adjustedPath
 	defer metrics.MeasureSince([]string{"route", string(req.Operation),
 		strings.Replace(mount, "/", "-", -1)}, time.Now())
 	re := raw.(*routeEntry)

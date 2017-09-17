@@ -15,6 +15,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -98,6 +99,7 @@ type Connection struct {
 	Domain         string            // User's domain name
 	DomainId       string            // User's domain Id
 	UserName       string            // UserName for api
+	UserId         string            // User Id
 	ApiKey         string            // Key for api access
 	AuthUrl        string            // Auth URL
 	Retries        int               // Retries on error (default is 3)
@@ -122,6 +124,137 @@ type Connection struct {
 	authLock   sync.Mutex    // lock when R/W StorageUrl, AuthToken, Auth
 	// swiftInfo is filled after QueryInfo is called
 	swiftInfo SwiftInfo
+}
+
+// setFromEnv reads the value that param points to (it must be a
+// pointer), if it isn't the zero value then it reads the environment
+// variable name passed in, parses it according to the type and writes
+// it to the pointer.
+func setFromEnv(param interface{}, name string) (err error) {
+	val := os.Getenv(name)
+	if val == "" {
+		return
+	}
+	switch result := param.(type) {
+	case *string:
+		if *result == "" {
+			*result = val
+		}
+	case *int:
+		if *result == 0 {
+			*result, err = strconv.Atoi(val)
+		}
+	case *bool:
+		if *result == false {
+			*result, err = strconv.ParseBool(val)
+		}
+	case *time.Duration:
+		if *result == 0 {
+			*result, err = time.ParseDuration(val)
+		}
+	case *EndpointType:
+		if *result == EndpointType("") {
+			*result = EndpointType(val)
+		}
+	default:
+		return newErrorf(0, "can't set var of type %T", param)
+	}
+	return err
+}
+
+// ApplyEnvironment reads environment variables and applies them to
+// the Connection structure.  It won't overwrite any parameters which
+// are already set in the Connection struct.
+//
+// To make a new Connection object entirely from the environment you
+// would do:
+//
+//    c := new(Connection)
+//    err := c.ApplyEnvironment()
+//    if err != nil { log.Fatal(err) }
+//
+// The naming of these variables follows the official Openstack naming
+// scheme so it should be compatible with OpenStack rc files.
+//
+// For v1 authentication (obsolete)
+//     ST_AUTH - Auth URL
+//     ST_USER - UserName for api
+//     ST_KEY - Key for api access
+//
+// For v2 authentication
+//     OS_AUTH_URL - Auth URL
+//     OS_USERNAME - UserName for api
+//     OS_PASSWORD - Key for api access
+//     OS_TENANT_NAME - Name of the tenant
+//     OS_TENANT_ID   - Id of the tenant
+//     OS_REGION_NAME - Region to use - default is use first region
+//
+// For v3 authentication
+//     OS_AUTH_URL - Auth URL
+//     OS_USERNAME - UserName for api
+//     OS_USER_ID - User Id
+//     OS_PASSWORD - Key for api access
+//     OS_USER_DOMAIN_NAME - User's domain name
+//     OS_USER_DOMAIN_ID - User's domain Id
+//     OS_PROJECT_NAME - Name of the project
+//     OS_PROJECT_DOMAIN_NAME - Name of the tenant's domain, only needed if it differs from the user domain
+//     OS_PROJECT_DOMAIN_ID - Id of the tenant's domain, only needed if it differs the from user domain
+//     OS_TRUST_ID - If of the trust
+//     OS_REGION_NAME - Region to use - default is use first region
+//
+// Other
+//     OS_ENDPOINT_TYPE - Endpoint type public, internal or admin
+//     ST_AUTH_VERSION - Choose auth version - 1, 2 or 3 or leave at 0 for autodetect
+//
+// For manual authentication
+//     OS_STORAGE_URL - storage URL from alternate authentication
+//     OS_AUTH_TOKEN - Auth Token from alternate authentication
+//
+// Library specific
+//     GOSWIFT_RETRIES - Retries on error (default is 3)
+//     GOSWIFT_USER_AGENT - HTTP User agent (default goswift/1.0)
+//     GOSWIFT_CONNECT_TIMEOUT - Connect channel timeout with unit, eg "10s", "100ms" (default "10s")
+//     GOSWIFT_TIMEOUT - Data channel timeout with unit, eg "10s", "100ms" (default "60s")
+//     GOSWIFT_INTERNAL - Set this to "true" to use the the internal network (obsolete - use OS_ENDPOINT_TYPE)
+func (c *Connection) ApplyEnvironment() (err error) {
+	for _, item := range []struct {
+		result interface{}
+		name   string
+	}{
+		// Environment variables - keep in same order as Connection
+		{&c.Domain, "OS_USER_DOMAIN_NAME"},
+		{&c.DomainId, "OS_USER_DOMAIN_ID"},
+		{&c.UserName, "OS_USERNAME"},
+		{&c.UserId, "OS_USER_ID"},
+		{&c.ApiKey, "OS_PASSWORD"},
+		{&c.AuthUrl, "OS_AUTH_URL"},
+		{&c.Retries, "GOSWIFT_RETRIES"},
+		{&c.UserAgent, "GOSWIFT_USER_AGENT"},
+		{&c.ConnectTimeout, "GOSWIFT_CONNECT_TIMEOUT"},
+		{&c.Timeout, "GOSWIFT_TIMEOUT"},
+		{&c.Region, "OS_REGION_NAME"},
+		{&c.AuthVersion, "ST_AUTH_VERSION"},
+		{&c.Internal, "GOSWIFT_INTERNAL"},
+		{&c.Tenant, "OS_TENANT_NAME"},  //v2
+		{&c.Tenant, "OS_PROJECT_NAME"}, // v3
+		{&c.TenantId, "OS_TENANT_ID"},
+		{&c.EndpointType, "OS_ENDPOINT_TYPE"},
+		{&c.TenantDomain, "OS_PROJECT_DOMAIN_NAME"},
+		{&c.TenantDomainId, "OS_PROJECT_DOMAIN_ID"},
+		{&c.TrustId, "OS_TRUST_ID"},
+		{&c.StorageUrl, "OS_STORAGE_URL"},
+		{&c.AuthToken, "OS_AUTH_TOKEN"},
+		// v1 auth alternatives
+		{&c.ApiKey, "ST_KEY"},
+		{&c.UserName, "ST_USER"},
+		{&c.AuthUrl, "ST_AUTH"},
+	} {
+		err = setFromEnv(item.result, item.name)
+		if err != nil {
+			return newErrorf(0, "failed to read env var %q: %v", item.name, err)
+		}
+	}
+	return nil
 }
 
 // Error - all errors generated by this package are of this type.  Other error
@@ -154,6 +287,7 @@ type errorMap map[int]error
 
 var (
 	// Specific Errors you might want to check for equality
+	NotModified         = newError(304, "Not Modified")
 	BadRequest          = newError(400, "Bad Request")
 	AuthorizationFailed = newError(401, "Authorization Failed")
 	ContainerNotFound   = newError(404, "Container Not Found")
@@ -181,6 +315,7 @@ var (
 
 	// Mappings for object errors
 	objectErrorMap = errorMap{
+		304: NotModified,
 		400: BadRequest,
 		403: Forbidden,
 		404: ObjectNotFound,

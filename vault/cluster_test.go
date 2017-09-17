@@ -383,3 +383,37 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 		}
 	}
 }
+
+func TestCluster_CustomCipherSuites(t *testing.T) {
+	cluster := NewTestCluster(t, &CoreConfig{
+		ClusterCipherSuites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+	}, nil)
+	cluster.Start()
+	defer cluster.Cleanup()
+	core := cluster.Cores[0]
+
+	// Wait for core to become active
+	TestWaitActive(t, core.Core)
+
+	tlsConf, err := core.Core.ClusterTLSConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", core.Listeners[0].Address.IP.String(), core.Listeners[0].Address.Port+105), tlsConf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	err = conn.Handshake()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if conn.ConnectionState().CipherSuite != tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 {
+		var availCiphers string
+		for _, cipher := range core.clusterCipherSuites {
+			availCiphers += fmt.Sprintf("%x ", cipher)
+		}
+		t.Fatalf("got bad negotiated cipher %x, core-set suites are %s", conn.ConnectionState().CipherSuite, availCiphers)
+	}
+}

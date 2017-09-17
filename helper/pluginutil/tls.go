@@ -29,6 +29,10 @@ var (
 	// PluginCACertPEMEnv is an ENV name used for holding a CA PEM-encoded
 	// string. Used for testing.
 	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
+
+	// PluginMetadaModeEnv is an ENV name used to disable TLS communication
+	// to bootstrap mounting plugins.
+	PluginMetadaModeEnv = "VAULT_PLUGIN_METADATA_MODE"
 )
 
 // generateCert is used internally to create certificates for the plugin
@@ -124,6 +128,10 @@ func wrapServerConfig(sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (
 // VaultPluginTLSProvider is run inside a plugin and retrives the response
 // wrapped TLS certificate from vault. It returns a configured TLS Config.
 func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, error) {
+	if os.Getenv(PluginMetadaModeEnv) == "true" {
+		return nil
+	}
+
 	return func() (*tls.Config, error) {
 		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
 
@@ -157,7 +165,10 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 		clientConf := api.DefaultConfig()
 		clientConf.Address = vaultAddr
 		if apiTLSConfig != nil {
-			clientConf.ConfigureTLS(apiTLSConfig)
+			err := clientConf.ConfigureTLS(apiTLSConfig)
+			if err != nil {
+				return nil, errwrap.Wrapf("error configuring api client {{err}}", err)
+			}
 		}
 		client, err := api.NewClient(clientConf)
 		if err != nil {
