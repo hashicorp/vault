@@ -74,9 +74,9 @@ and starting a new rekey, which will also provide a new nonce.
   array must be the same as `secret_shares`.
 
 - `backup` `(bool: false)` – Specifies if using PGP-encrypted keys, whether
-  Vault should also back them up to `core/unseal-keys-backup` in the physical
-  storage backend. These can then be retrieved and removed via the
-  `sys/rekey/backup` endpoint.
+  Vault should also store a plaintext backup of the PGP-encrypted keys at
+  `core/unseal-keys-backup` in the physical storage backend. These can then
+  be retrieved and removed via the `sys/rekey/backup` endpoint.
 
 ### Sample Payload
 
