@@ -146,7 +146,7 @@ entities attempting to login.
 
 - `service_accounts` `(array: [])` - Required for `iam` roles.
   A comma-separated list of service account emails or ids.
-  Defines the service accounts that login is restricted to. If set to `\*`, all
+  Defines the service accounts that login is restricted to. If set to `*`, all
   service accounts are allowed (role will still be bound by project).
 
 ### Sample Payload

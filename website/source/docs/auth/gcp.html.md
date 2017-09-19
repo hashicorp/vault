@@ -75,7 +75,7 @@ curl -H "Authorization: Bearer $OAUTH_TOKEN" \
 
 **Golang Example**
 
-We use the Go OAuth2 libraries, GCP IAM API, and Vault API.
+We use the Go OAuth2 libraries, GCP IAM API, and Vault API. The example generates a token valid for the `dev-role` role (as indicated by the `aud` field of `jwtPayload`).
 
 ```go
 // Abbreviated imports to show libraries.
@@ -117,7 +117,7 @@ func main() {
 	// 1. Generate signed JWT using IAM.
 	resourceName := fmt.Sprintf("projects/%s/serviceAccounts/%s", project, serviceAccount)
 	jwtPayload := map[string]interface{}{
-		"aud": "auth/gcp/login",
+		"aud": "vault/dev-role",
 		"sub": serviceAccount,
 		"exp": time.Now().Add(time.Minute * 10).Unix(),
 	}
