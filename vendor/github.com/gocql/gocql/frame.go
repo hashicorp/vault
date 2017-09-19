@@ -20,6 +20,19 @@ type unsetColumn struct{}
 
 var UnsetValue = unsetColumn{}
 
+type namedValue struct {
+	name  string
+	value interface{}
+}
+
+// NamedValue produce a value which will bind to the named parameter in a query
+func NamedValue(name string, value interface{}) interface{} {
+	return &namedValue{
+		name:  name,
+		value: value,
+	}
+}
+
 const (
 	protoDirectionMask = 0x80
 	protoVersionMask   = 0x7F

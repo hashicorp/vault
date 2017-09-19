@@ -5,6 +5,7 @@
 package circonusgometrics
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/circonus-labs/circonusllhist"
@@ -36,6 +37,18 @@ func (m *CirconusMetrics) SetHistogramValue(metric string, val float64) {
 	hist.hist.RecordValue(val)
 	hist.rw.Unlock()
 	m.hm.Unlock()
+}
+
+// GetHistogramTest returns the current value for a gauge. (note: it is a function specifically for "testing", disable automatic submission during testing.)
+func (m *CirconusMetrics) GetHistogramTest(metric string) ([]string, error) {
+	m.hm.Lock()
+	defer m.hm.Unlock()
+
+	if hist, ok := m.histograms[metric]; ok {
+		return hist.hist.DecStrings(), nil
+	}
+
+	return []string{""}, fmt.Errorf("Histogram metric '%s' not found", metric)
 }
 
 // RemoveHistogram removes a histogram

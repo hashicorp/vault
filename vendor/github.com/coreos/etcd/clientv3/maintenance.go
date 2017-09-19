@@ -15,11 +15,11 @@
 package clientv3
 
 import (
+	"context"
 	"io"
 
 	pb "github.com/coreos/etcd/etcdserver/etcdserverpb"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -28,6 +28,7 @@ type (
 	AlarmResponse      pb.AlarmResponse
 	AlarmMember        pb.AlarmMember
 	StatusResponse     pb.StatusResponse
+	HashKVResponse     pb.HashKVResponse
 	MoveLeaderResponse pb.MoveLeaderResponse
 )
 
@@ -38,7 +39,7 @@ type Maintenance interface {
 	// AlarmDisarm disarms a given alarm.
 	AlarmDisarm(ctx context.Context, m *AlarmMember) (*AlarmResponse, error)
 
-	// Defragment defragments storage backend of the etcd member with given endpoint.
+	// Defragment releases wasted space from internal fragmentation on a given etcd member.
 	// Defragment is only needed when deleting a large number of keys and want to reclaim
 	// the resources.
 	// Defragment is an expensive operation. User should avoid defragmenting multiple members
@@ -50,7 +51,12 @@ type Maintenance interface {
 	// Status gets the status of the endpoint.
 	Status(ctx context.Context, endpoint string) (*StatusResponse, error)
 
-	// Snapshot provides a reader for a snapshot of a backend.
+	// HashKV returns a hash of the KV state at the time of the RPC.
+	// If revision is zero, the hash is computed on all keys. If the revision
+	// is non-zero, the hash is computed on all keys at or below the given revision.
+	HashKV(ctx context.Context, endpoint string, rev int64) (*HashKVResponse, error)
+
+	// Snapshot provides a reader for a point-in-time snapshot of etcd.
 	Snapshot(ctx context.Context) (io.ReadCloser, error)
 
 	// MoveLeader requests current leader to transfer its leadership to the transferee.
@@ -157,6 +163,19 @@ func (m *maintenance) Status(ctx context.Context, endpoint string) (*StatusRespo
 		return nil, toErr(ctx, err)
 	}
 	return (*StatusResponse)(resp), nil
+}
+
+func (m *maintenance) HashKV(ctx context.Context, endpoint string, rev int64) (*HashKVResponse, error) {
+	remote, cancel, err := m.dial(endpoint)
+	if err != nil {
+		return nil, toErr(ctx, err)
+	}
+	defer cancel()
+	resp, err := remote.HashKV(ctx, &pb.HashKVRequest{Revision: rev}, grpc.FailFast(false))
+	if err != nil {
+		return nil, toErr(ctx, err)
+	}
+	return (*HashKVResponse)(resp), nil
 }
 
 func (m *maintenance) Snapshot(ctx context.Context) (io.ReadCloser, error) {

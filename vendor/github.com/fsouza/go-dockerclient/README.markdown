@@ -110,3 +110,16 @@ Commited code must pass:
 Running `make test` will check all of these. If your editor does not
 automatically call ``gofmt -s``, `make fmt` will format all go files in this
 repository.
+
+## Using with Docker 1.9 and Go 1.4
+
+There's a tag for using go-dockerclient with Docker 1.9 (which requires
+compiling go-dockerclient with Go 1.4), the tag name is ``docker-1.9/go-1.4``.
+
+The instructions below can be used to get a version of go-dockerclient that compiles with Go 1.4:
+
+```
+% git clone -b docker-1.9/go-1.4 https://github.com/fsouza/go-dockerclient.git $GOPATH/src/github.com/fsouza/go-dockerclient
+% git clone -b v1.9.1 https://github.com/docker/docker.git $GOPATH/src/github.com/docker/docker
+% go get github.com/fsouza/go-dockerclient
+```

@@ -254,7 +254,7 @@ func (m *CirconusMetrics) Flush() {
 		}
 		if send {
 			output[name] = map[string]interface{}{
-				"_type":  "n",
+				"_type":  "L",
 				"_value": value,
 			}
 		}

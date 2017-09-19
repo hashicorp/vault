@@ -129,7 +129,7 @@ to 0, in which case the value will fallback to the system/mount defaults.`,
 				Description: "The maximum allowed lifetime of tokens issued using this role.",
 			},
 			"policies": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Default:     "default",
 				Description: "Policies to be set on tokens issued using this role.",
 			},
@@ -626,11 +626,11 @@ func (b *backend) pathRoleCreateUpdate(
 		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
 	}
 
-	policiesStr, ok := data.GetOk("policies")
+	policiesRaw, ok := data.GetOk("policies")
 	if ok {
-		roleEntry.Policies = policyutil.ParsePolicies(policiesStr.(string))
+		roleEntry.Policies = policyutil.ParsePolicies(policiesRaw)
 	} else if req.Operation == logical.CreateOperation {
-		roleEntry.Policies = []string{"default"}
+		roleEntry.Policies = []string{}
 	}
 
 	disallowReauthenticationBool, ok := data.GetOk("disallow_reauthentication")

@@ -52,7 +52,7 @@ via the `X-Vault-Token` header for future requests.
 ## Reading, Writing, and Listing Secrets
 
 Different backends implement different APIs according to their functionality.
-The examples below are created with the `generic` backend, which acts like a
+The examples below are created with the `kv` backend, which acts like a
 Key/Value store. Read the documentation for a particular backend for detailed
 information on its API; this simply provides a general overview.
 
@@ -64,7 +64,7 @@ following URL:
 ```
 
 This maps to `secret/foo` where `foo` is the key in the `secret/` mount, which
-is mounted by default on a fresh Vault install and is of type `generic`.
+is mounted by default on a fresh Vault install and is of type `kv`.
 
 Here is an example of reading a secret using cURL:
 
@@ -76,7 +76,7 @@ $ curl \
 ```
 
 You can list secrets as well. To do this, either issue a GET with the query
-parameter `list=true`, or you can use the LIST HTTP verb. For the `generic`
+parameter `list=true`, or you can use the LIST HTTP verb. For the `kv`
 backend, listing is allowed on directories only, and returns the keys in the
 given directory:
 

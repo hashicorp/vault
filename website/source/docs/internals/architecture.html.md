@@ -34,7 +34,7 @@ clarify what is being discussed:
   in. Much like a bank vault, the barrier must be "unsealed" before anything inside can be accessed.
 
 * **Secret Backend** - A secret backend is responsible for managing secrets. Simple secret backends
-  like the "generic" backend simply return the same secret when queried. Some backends support
+  like the "kv" backend simply return the same secret when queried. Some backends support
   using policies to dynamically generate a secret each time they are queried. This allows for
   unique secrets to be used which allows Vault to do fine-grained revocation and policy updates.
   As an example, a MySQL backend could be configured with a "web" policy. When the "web" secret

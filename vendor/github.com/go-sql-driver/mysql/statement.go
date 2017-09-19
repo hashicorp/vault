@@ -52,7 +52,7 @@ func (stmt *mysqlStmt) Exec(args []driver.Value) (driver.Result, error) {
 	// Send command
 	err := stmt.writeExecutePacket(args)
 	if err != nil {
-		return nil, err
+		return nil, stmt.mc.markBadConn(err)
 	}
 
 	mc := stmt.mc
@@ -100,7 +100,7 @@ func (stmt *mysqlStmt) query(args []driver.Value) (*binaryRows, error) {
 	// Send command
 	err := stmt.writeExecutePacket(args)
 	if err != nil {
-		return nil, err
+		return nil, stmt.mc.markBadConn(err)
 	}
 
 	mc := stmt.mc

@@ -52,6 +52,9 @@ type TokenKeyType string
 // TokenAppType - Circonus API Token app name
 type TokenAppType string
 
+// TokenAccountIDType - Circonus API Token account id
+type TokenAccountIDType string
+
 // CIDType Circonus object cid
 type CIDType *string
 
@@ -72,12 +75,13 @@ type TagType []string
 
 // Config options for Circonus API
 type Config struct {
-	URL      string
-	TokenKey string
-	TokenApp string
-	CACert   *x509.CertPool
-	Log      *log.Logger
-	Debug    bool
+	URL            string
+	TokenKey       string
+	TokenApp       string
+	TokenAccountID string
+	CACert         *x509.CertPool
+	Log            *log.Logger
+	Debug          bool
 }
 
 // API Circonus API
@@ -85,6 +89,7 @@ type API struct {
 	apiURL                  *url.URL
 	key                     TokenKeyType
 	app                     TokenAppType
+	accountID               TokenAccountIDType
 	caCert                  *x509.CertPool
 	Debug                   bool
 	Log                     *log.Logger
@@ -119,6 +124,8 @@ func New(ac *Config) (*API, error) {
 		app = defaultAPIApp
 	}
 
+	acctID := TokenAccountIDType(ac.TokenAccountID)
+
 	au := string(ac.URL)
 	if au == "" {
 		au = defaultAPIURL
@@ -137,12 +144,13 @@ func New(ac *Config) (*API, error) {
 	}
 
 	a := &API{
-		apiURL: apiURL,
-		key:    key,
-		app:    app,
-		caCert: ac.CACert,
-		Debug:  ac.Debug,
-		Log:    ac.Log,
+		apiURL:    apiURL,
+		key:       key,
+		app:       app,
+		accountID: acctID,
+		caCert:    ac.CACert,
+		Debug:     ac.Debug,
+		Log:       ac.Log,
 		useExponentialBackoff: false,
 	}
 
@@ -291,6 +299,9 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("X-Circonus-Auth-Token", string(a.key))
 	req.Header.Add("X-Circonus-App-Name", string(a.app))
+	if string(a.accountID) != "" {
+		req.Header.Add("X-Circonus-Account-ID", string(a.accountID))
+	}
 
 	client := retryablehttp.NewClient()
 	if a.apiURL.Scheme == "https" && a.caCert != nil {

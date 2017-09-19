@@ -72,19 +72,22 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) Run(args []string) int {
-	var dev, verifyOnly, devHA, devTransactional, devLeasedGeneric, devThreeNode bool
+	var dev, verifyOnly, devHA, devTransactional, devLeasedKV, devThreeNode bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress, devPluginDir string
+	var devLatency, devLatencyJitter int
 	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
 	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
 	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
 	flags.StringVar(&devPluginDir, "dev-plugin-dir", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
+	flags.IntVar(&devLatency, "dev-latency", 0, "")
+	flags.IntVar(&devLatencyJitter, "dev-latency-jitter", 20, "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.BoolVar(&devHA, "dev-ha", false, "")
 	flags.BoolVar(&devTransactional, "dev-transactional", false, "")
-	flags.BoolVar(&devLeasedGeneric, "dev-leased-generic", false, "")
+	flags.BoolVar(&devLeasedKV, "dev-leased-kv", false, "")
 	flags.BoolVar(&devThreeNode, "dev-three-node", false, "")
 	flags.Usage = func() { c.Ui.Output(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
@@ -138,7 +141,7 @@ func (c *ServerCommand) Run(args []string) int {
 		devListenAddress = os.Getenv("VAULT_DEV_LISTEN_ADDRESS")
 	}
 
-	if devHA || devTransactional || devLeasedGeneric || devThreeNode {
+	if devHA || devTransactional || devLeasedKV || devThreeNode {
 		dev = true
 	}
 
@@ -257,16 +260,24 @@ func (c *ServerCommand) Run(args []string) int {
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
 		PluginDirectory:    config.PluginDirectory,
+		EnableRaw:          config.EnableRawEndpoint,
 	}
 	if dev {
 		coreConfig.DevToken = devRootTokenID
-		if devLeasedGeneric {
-			coreConfig.LogicalBackends["generic"] = vault.LeasedPassthroughBackendFactory
+		if devLeasedKV {
+			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory
 		}
 		if devPluginDir != "" {
 			coreConfig.PluginDirectory = devPluginDir
 		}
-
+		if devLatency > 0 {
+			injectLatency := time.Duration(devLatency) * time.Millisecond
+			if _, txnOK := backend.(physical.Transactional); txnOK {
+				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, devLatencyJitter, c.logger)
+			} else {
+				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, devLatencyJitter, c.logger)
+			}
+		}
 	}
 
 	if devThreeNode {
@@ -648,6 +659,18 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Release the log gate.
 	c.logGate.Flush()
+
+	// Write out the PID to the file now that server has successfully started
+	if err := c.storePidFile(config.PidFile); err != nil {
+		c.Ui.Output(fmt.Sprintf("Error storing PID: %v", err))
+		return 1
+	}
+
+	defer func() {
+		if err := c.removePidFile(config.PidFile); err != nil {
+			c.Ui.Output(fmt.Sprintf("Error deleting the PID file: %v", err))
+		}
+	}()
 
 	// Wait for shutdown
 	shutdownTriggered := false
@@ -1213,6 +1236,37 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 		"-dev-listen-address": complete.PredictNothing,
 		"-log-level":          complete.PredictSet("trace", "debug", "info", "warn", "err"),
 	}
+}
+
+// storePidFile is used to write out our PID to a file if necessary
+func (c *ServerCommand) storePidFile(pidPath string) error {
+	// Quit fast if no pidfile
+	if pidPath == "" {
+		return nil
+	}
+
+	// Open the PID file
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("could not open pid file: %v", err)
+	}
+	defer pidFile.Close()
+
+	// Write out the PID
+	pid := os.Getpid()
+	_, err = pidFile.WriteString(fmt.Sprintf("%d", pid))
+	if err != nil {
+		return fmt.Errorf("could not write to pid file: %v", err)
+	}
+	return nil
+}
+
+// removePidFile is used to cleanup the PID file if necessary
+func (c *ServerCommand) removePidFile(pidPath string) error {
+	if pidPath == "" {
+		return nil
+	}
+	return os.Remove(pidPath)
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

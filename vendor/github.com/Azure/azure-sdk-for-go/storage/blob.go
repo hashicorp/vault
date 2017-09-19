@@ -182,6 +182,9 @@ func (br BlobRange) String() string {
 
 // Get returns a stream to read the blob. Caller must call both Read and Close()
 // to correctly close the underlying connection.
+//
+// See the GetRange method for use with a Range header.
+//
 // See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/Get-Blob
 func (b *Blob) Get(options *GetBlobOptions) (io.ReadCloser, error) {
 	rangeOptions := GetBlobRangeOptions{

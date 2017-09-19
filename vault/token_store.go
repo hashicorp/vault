@@ -920,6 +920,9 @@ func (ts *TokenStore) lookupSalted(saltedID string, tainted bool) (*TokenEntry, 
 
 	// If we are still restoring the expiration manager, we want to ensure the
 	// token is not expired
+	if ts.expiration == nil {
+		return nil, nil
+	}
 	check, err := ts.expiration.RestoreSaltedTokenCheck(entry.Path, saltedID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check token in restore mode: %v", err)

@@ -727,7 +727,7 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
-	// Get the TTL and very it against the max allowed
+	// Get the TTL and verify it against the max allowed
 	var ttl time.Duration
 	var maxTTL time.Duration
 	var notAfter time.Time
@@ -767,7 +767,7 @@ func generateCreationBundle(b *backend,
 		// If it's not self-signed, verify that the issued certificate won't be
 		// valid past the lifetime of the CA certificate
 		if signingBundle != nil &&
-			notAfter.After(signingBundle.Certificate.NotAfter) {
+			notAfter.After(signingBundle.Certificate.NotAfter) && !role.AllowExpirationPastCA {
 
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"cannot satisfy request, as TTL is beyond the expiration of the CA certificate")}

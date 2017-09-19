@@ -36,6 +36,7 @@
 # - Items are case-sensitive (please use all lowercase)
 #
 
+/api/secret/generic/index.html         /api/secret/kv/index.html
 /api/system/renew.html                 /api/system/leases.html
 /api/system/revoke.html                /api/system/leases.html
 /api/system/revoke-force.html          /api/system/leases.html
@@ -81,6 +82,7 @@
 /docs/guides/upgrading/upgrade-to-0.6.4.html /guides/upgrading/upgrade-to-0.6.4.html
 /docs/guides/upgrading/upgrade-to-0.7.0.html /guides/upgrading/upgrade-to-0.7.0.html
 /docs/secrets/custom.html              /docs/plugin/index.html
+/docs/secrets/generic/index.html       /docs/secrets/kv/index.html
 /intro/getting-started/acl.html        /intro/getting-started/policies.html
 
 /docs/vault-enterprise/index.html               /docs/enterprise/index.html

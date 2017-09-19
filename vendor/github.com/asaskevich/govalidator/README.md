@@ -134,6 +134,8 @@ func IsISBN10(str string) bool
 func IsISBN13(str string) bool
 func IsISO3166Alpha2(str string) bool
 func IsISO3166Alpha3(str string) bool
+func IsISO693Alpha2(str string) bool
+func IsISO693Alpha3b(str string) bool
 func IsISO4217(str string) bool
 func IsIn(str string, params ...string) bool
 func IsInt(str string) bool

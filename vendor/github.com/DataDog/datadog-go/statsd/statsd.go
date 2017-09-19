@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -56,6 +55,12 @@ any number greater than that will see frames being cut out.
 const MaxUDPPayloadSize = 65467
 
 /*
+UnixAddressPrefix holds the prefix to use to enable Unix Domain Socket
+traffic instead of UDP.
+*/
+const UnixAddressPrefix = "unix://"
+
+/*
 Stat suffixes
 */
 var (
@@ -68,34 +73,50 @@ var (
 	timingSuffix    = []byte("|ms")
 )
 
-// A Client is a handle for sending udp messages to dogstatsd.  It is safe to
+// A statsdWriter offers a standard interface regardless of the underlying
+// protocol. For now UDS and UPD writers are available.
+type statsdWriter interface {
+	Write(data []byte) error
+	SetWriteTimeout(time.Duration) error
+	Close() error
+}
+
+// A Client is a handle for sending messages to dogstatsd.  It is safe to
 // use one Client from multiple goroutines simultaneously.
 type Client struct {
-	conn net.Conn
+	// Writer handles the underlying networking protocol
+	writer statsdWriter
 	// Namespace to prepend to all statsd calls
 	Namespace string
 	// Tags are global tags to be added to every statsd call
 	Tags []string
+	// skipErrors turns off error passing and allows UDS to emulate UDP behaviour
+	SkipErrors bool
 	// BufferLength is the length of the buffer in commands.
 	bufferLength int
 	flushTime    time.Duration
 	commands     []string
 	buffer       bytes.Buffer
-	stop         bool
+	stop         chan struct{}
 	sync.Mutex
 }
 
-// New returns a pointer to a new Client given an addr in the format "hostname:port".
+// New returns a pointer to a new Client given an addr in the format "hostname:port" or
+// "unix:///path/to/socket".
 func New(addr string) (*Client, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	if strings.HasPrefix(addr, UnixAddressPrefix) {
+		w, err := newUdsWriter(addr[len(UnixAddressPrefix)-1:])
+		if err != nil {
+			return nil, err
+		}
+		client := &Client{writer: w}
+		return client, nil
+	}
+	w, err := newUdpWriter(addr)
 	if err != nil {
 		return nil, err
 	}
-	conn, err := net.DialUDP("udp", nil, udpAddr)
-	if err != nil {
-		return nil, err
-	}
-	client := &Client{conn: conn}
+	client := &Client{writer: w, SkipErrors: false}
 	return client, nil
 }
 
@@ -109,6 +130,7 @@ func NewBuffered(addr string, buflen int) (*Client, error) {
 	client.bufferLength = buflen
 	client.commands = make([]string, 0, buflen)
 	client.flushTime = time.Millisecond * 100
+	client.stop = make(chan struct{}, 1)
 	go client.watch()
 	return client, nil
 }
@@ -148,17 +170,27 @@ func (c *Client) format(name string, value interface{}, suffix []byte, tags []st
 	return buf.String()
 }
 
+// SetWriteTimeout allows the user to set a custom UDS write timeout. Not supported for UDP.
+func (c *Client) SetWriteTimeout(d time.Duration) error {
+	return c.writer.SetWriteTimeout(d)
+}
+
 func (c *Client) watch() {
-	for _ = range time.Tick(c.flushTime) {
-		if c.stop {
+	ticker := time.NewTicker(c.flushTime)
+
+	for {
+		select {
+		case <-ticker.C:
+			c.Lock()
+			if len(c.commands) > 0 {
+				// FIXME: eating error here
+				c.flush()
+			}
+			c.Unlock()
+		case <-c.stop:
+			ticker.Stop()
 			return
 		}
-		c.Lock()
-		if len(c.commands) > 0 {
-			// FIXME: eating error here
-			c.flush()
-		}
-		c.Unlock()
 	}
 }
 
@@ -228,7 +260,7 @@ func (c *Client) flush() error {
 	var err error
 	cmdsFlushed := 0
 	for i, data := range frames {
-		_, e := c.conn.Write(data)
+		e := c.writer.Write(data)
 		if e != nil {
 			err = e
 			break
@@ -258,7 +290,11 @@ func (c *Client) sendMsg(msg string) error {
 		return c.append(msg)
 	}
 
-	_, err := c.conn.Write([]byte(msg))
+	err := c.writer.Write([]byte(msg))
+
+	if c.SkipErrors {
+		return nil
+	}
 	return err
 }
 
@@ -353,8 +389,11 @@ func (c *Client) Close() error {
 	if c == nil {
 		return nil
 	}
-	c.stop = true
-	return c.conn.Close()
+	select {
+	case c.stop <- struct{}{}:
+	default:
+	}
+	return c.writer.Close()
 }
 
 // Events support
@@ -482,7 +521,6 @@ func (e Event) Encode(tags ...string) (string, error) {
 }
 
 // ServiceCheck support
-
 type ServiceCheckStatus byte
 
 const (

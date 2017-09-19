@@ -35,7 +35,7 @@ on every path, use `vault path-help` after mounting the backend.
 ## Quick Start
 
 The first step to using the PostgreSQL backend is to mount it.
-Unlike the `generic` backend, the `postgresql` backend is not mounted by default.
+Unlike the `kv` backend, the `postgresql` backend is not mounted by default.
 
 ```text
 $ vault mount postgresql
