@@ -90,11 +90,11 @@ type TLSConfig struct {
 // DefaultConfig returns a default configuration for the client. It is
 // safe to modify the return value of this function.
 //
-// The default Address is https://127.0.0.1:8200, but this can be overridden by
+// The default Address is http://127.0.0.1:8200, but this can be overridden by
 // setting the `VAULT_ADDR` environment variable.
 func DefaultConfig() *Config {
 	config := &Config{
-		Address:    "https://127.0.0.1:8200",
+		Address:    "http://127.0.0.1:8200",
 		HttpClient: cleanhttp.DefaultClient(),
 	}
 	config.HttpClient.Timeout = time.Second * 60
