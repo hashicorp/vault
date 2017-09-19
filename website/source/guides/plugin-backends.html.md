@@ -59,7 +59,7 @@ and use that to register the plugin into Vault's plugin catalog.
 $ shasum -a 256 /etc/vault/vault_plugins/mock-plugin
 2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615  /etc/vault/vault_plugins/mock-plugin
 
-$ vault sys/plugins/catalog/mock-plugin sha_256=2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615 command=mock-plugin
+$ vault write sys/plugins/catalog/mock-plugin sha_256=2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615 command=mock-plugin
 Success! Data written to: sys/plugins/catalog/mock-plugin
 ```
 
