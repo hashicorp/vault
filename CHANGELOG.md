@@ -31,7 +31,7 @@ FEATURES:
  * **GCE Support for GCP Auth**: GCE instances can now authenticate to Vault
    using machine credentials.
  * **Support for Kubernetes Service Account Auth**: Kubernetes Service Accounts
-   can not authenticate to vault using JWT tokens.
+   can now authenticate to vault using JWT tokens.
 
 IMPROVEMENTS:
 
