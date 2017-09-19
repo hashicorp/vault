@@ -26,8 +26,15 @@ CHANGES:
    backend is now `kv`. Using `generic` will still work for backwards
    compatibility.
 
+FEATURES:
+
+ * **GCE Support for GCP Auth**: GCE instances can now authenticate to Vault
+   using machine credentials.
+
 IMPROVEMENTS:
 
+ * configuration: Provide a config option to store Vault server's process ID
+   (PID) in a file [GH-3321]
  * mfa (Enterprise): Add the ability to use identity metadata in username format
  * mfa/okta (Enterprise): Add support for configuring base_url for API calls
  * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value 

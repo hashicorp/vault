@@ -142,7 +142,7 @@ identifier can later be used to revoke a DR secondary's access.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/replication/dr/primary/secondary-token` | `200 application/json` |
+| `POST`    | `/sys/replication/dr/primary/secondary-token` | `200 application/json` |
 
 ### Parameters
 
