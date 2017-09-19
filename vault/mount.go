@@ -65,6 +65,10 @@ var (
 		"system",
 		"token",
 	}
+
+	// mountAliases maps old backend names to new backend names, allowing us
+	// to move/rename backends but maintain backwards compatibility
+	mountAliases = map[string]string{"generic": "kv"}
 )
 
 func (c *Core) generateMountAccessor(entryType string) (string, error) {
@@ -760,6 +764,9 @@ func (c *Core) unloadMounts() error {
 
 // newLogicalBackend is used to create and configure a new logical backend by name
 func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+	if alias, ok := mountAliases[t]; ok {
+		t = alias
+	}
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
@@ -801,19 +808,19 @@ func (c *Core) defaultMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
 	}
-	mountAccessor, err := c.generateMountAccessor("generic")
+	mountAccessor, err := c.generateMountAccessor("kv")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
 	}
-	genericMount := &MountEntry{
+	kvMount := &MountEntry{
 		Table:       mountTableType,
 		Path:        "secret/",
-		Type:        "generic",
-		Description: "generic secret storage",
+		Type:        "kv",
+		Description: "key/value secret storage",
 		UUID:        mountUUID,
 		Accessor:    mountAccessor,
 	}
-	table.Entries = append(table.Entries, genericMount)
+	table.Entries = append(table.Entries, kvMount)
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
 	return table
 }

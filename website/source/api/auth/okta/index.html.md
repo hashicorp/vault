@@ -29,10 +29,11 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 - `org_name` `(string: <required>)` - Name of the organization to be used in the
   Okta API.
-- `api_token` `(string: <required>)` - Okta API key.
-- `production` `(bool: true)` -  If set, production API URL prefix will be used 
-  to communicate with Okta and if not set, a preview production API URL prefix 
-  will be used. Defaults to true.
+- `api_token` `(string: "")` - Okta API token. This is required to query Okta 
+  for user group membership. If this is not supplied only locally configured 
+  groups will be enabled. 
+- `base_url` `(string: "")` -  If set, will be used as the base domain
+  for API requests.  Examples are okta.com, oktapreview.com, and okta-emea.com.
 - `ttl` `(string: "")` - Duration after which authentication will be expired.
 - `max_ttl` `(string: "")` - Maximum duration after which authentication will 
   be expired.
@@ -83,7 +84,7 @@ $ curl \
   "data": {
     "org_name": "example",
     "api_token": "abc123",
-    "production": true,
+    "base_url": "okta.com",
     "ttl": "",
     "max_ttl": ""
   },
@@ -365,8 +366,8 @@ Login with the username and password.
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
+    --data @payload.json \
     https://vault.rocks/v1/auth/okta/login/fred
 ```
 

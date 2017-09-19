@@ -1968,6 +1968,7 @@ func unmarshalUDT(info TypeInfo, data []byte, value interface{}) error {
 				if f == emptyValue {
 					// skip fields which exist in the UDT but not in
 					// the struct passed in
+					data = data[size:] // Skip over this data to go to next
 					continue
 				}
 			}

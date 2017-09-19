@@ -2461,6 +2461,101 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 	checkIssue(true, "common_name", "host.xyz.com")
 }
 
+func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("root", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = client.Sys().Mount("int", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "4h",
+			MaxLeaseTTL:     "20h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Direct issuing from root
+	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("int/intermediate/generate/internal", map[string]interface{}{
+		"common_name": "myint.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	csr := resp.Data["csr"]
+
+	_, err = client.Logical().Write("root/sign/test", map[string]interface{}{
+		"common_name": "myint.com",
+		"csr":         csr,
+		"ttl":         "60h",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	_, err = client.Logical().Write("root/sign-verbatim/test", map[string]interface{}{
+		"common_name": "myint.com",
+		"csr":         csr,
+		"ttl":         "60h",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	resp, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
+		"common_name": "myint.com",
+		"csr":         csr,
+		"ttl":         "60h",
+	})
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if len(resp.Warnings) == 0 {
+		t.Fatalf("expected warnings, got %#v", *resp)
+	}
+}
+
 func TestBackend_SignSelfIssued(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -2601,8 +2696,11 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(newCert.Subject, newCert.Issuer) {
-		t.Fatal("expected same subject/issuer")
+	if reflect.DeepEqual(newCert.Subject, newCert.Issuer) {
+		t.Fatal("expected different subject/issuer")
+	}
+	if !reflect.DeepEqual(newCert.Issuer, signingBundle.Certificate.Subject) {
+		t.Fatalf("expected matching issuer/CA subject\n\nIssuer:\n%#v\nSubject:\n%#v\n", newCert.Issuer, signingBundle.Certificate.Subject)
 	}
 	if bytes.Equal(newCert.AuthorityKeyId, newCert.SubjectKeyId) {
 		t.Fatal("expected different authority/subject")

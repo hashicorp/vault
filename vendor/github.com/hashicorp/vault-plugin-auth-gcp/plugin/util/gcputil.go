@@ -7,10 +7,19 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/jwt"
+	googleoauth2 "google.golang.org/api/oauth2/v2"
+	"gopkg.in/square/go-jose.v2"
 	"net/http"
+	"regexp"
+	"strings"
+)
+
+const (
+	labelRegex string = "^(?P<key>[a-z]([\\w-]+)?):(?P<value>[\\w-]*)$"
 )
 
 // GcpCredentials represents a simplified version of the Google Cloud Platform credentials file format.
@@ -63,4 +72,73 @@ func PublicKey(pemString string) (interface{}, error) {
 	}
 
 	return cert.PublicKey, nil
+}
+
+// OAuth2RSAPublicKey returns the PEM key file string for Google Oauth2 public cert for the given 'kid' id.
+func OAuth2RSAPublicKey(kid, oauth2BasePath string) (interface{}, error) {
+	oauth2Client, err := googleoauth2.New(cleanhttp.DefaultClient())
+	if err != nil {
+		return "", err
+	}
+
+	if len(oauth2BasePath) > 0 {
+		oauth2Client.BasePath = oauth2BasePath
+	}
+
+	jwks, err := oauth2Client.GetCertForOpenIdConnect().Do()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, key := range jwks.Keys {
+		if key.Kid == kid && jose.SignatureAlgorithm(key.Alg) == jose.RS256 {
+			// Trim extra '=' from key so it can be parsed.
+			key.N = strings.TrimRight(key.N, "=")
+			js, err := key.MarshalJSON()
+			if err != nil {
+				return nil, fmt.Errorf("unable to marshal json %v", err)
+			}
+			key := &jose.JSONWebKey{}
+			if err := key.UnmarshalJSON(js); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal json %v", err)
+			}
+
+			return key.Key, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find public key with kid '%s'", kid)
+}
+
+func ParseGcpLabels(labels []string) (parsed map[string]string, invalid []string) {
+	parsed = map[string]string{}
+	invalid = []string{}
+
+	re := regexp.MustCompile(labelRegex)
+	for _, labelStr := range labels {
+		matches := re.FindStringSubmatch(labelStr)
+		if len(matches) == 0 {
+			invalid = append(invalid, labelStr)
+			continue
+		}
+
+		captureNames := re.SubexpNames()
+		var keyPtr, valPtr *string
+		for i, name := range captureNames {
+			if name == "key" {
+				keyPtr = &matches[i]
+			} else if name == "value" {
+				valPtr = &matches[i]
+			}
+		}
+
+		if keyPtr == nil || valPtr == nil || len(*keyPtr) < 1 {
+			invalid = append(invalid, labelStr)
+			continue
+		} else {
+			parsed[*keyPtr] = *valPtr
+		}
+	}
+
+	return parsed, invalid
 }

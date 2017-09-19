@@ -22,7 +22,7 @@ type Router struct {
 
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
-	// For example, logical/uuid1/foobar -> secrets/ (generic backend) + foobar
+	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
 	storagePrefix *radix.Tree
 }
 

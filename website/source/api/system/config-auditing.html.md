@@ -50,7 +50,7 @@ This endpoint lists the information for the given request header.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/config/auditing/request-headers/:name` | `200 application/json` |
+| `GET`    | `/sys/config/auditing/request-headers/:name` | `200 application/json` |
 
 ### Parameters
 

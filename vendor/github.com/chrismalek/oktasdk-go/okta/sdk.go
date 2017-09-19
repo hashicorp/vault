@@ -19,18 +19,19 @@ import (
 )
 
 const (
-	libraryVersion             = "1"
-	userAgent                  = "oktasdk-go/" + libraryVersion
-	productionURLFormat        = "https://%s.okta.com/api/v1/"
-	previewProductionURLFormat = "https://%s.oktapreview.com/api/v1/"
-	headerRateLimit            = "X-Rate-Limit-Limit"
-	headerRateRemaining        = "X-Rate-Limit-Remaining"
-	headerRateReset            = "X-Rate-Limit-Reset"
-	headerOKTARequestID        = "X-Okta-Request-Id"
-	headerAuthorization        = "Authorization"
-	headerAuthorizationFormat  = "SSWS %v"
-	mediaTypeJSON              = "application/json"
-	defaultLimit               = 50
+	libraryVersion            = "1"
+	userAgent                 = "oktasdk-go/" + libraryVersion
+	productionDomain          = "okta.com"
+	previewDomain             = "oktapreview.com"
+	urlFormat                 = "https://%s.%s/api/v1/"
+	headerRateLimit           = "X-Rate-Limit-Limit"
+	headerRateRemaining       = "X-Rate-Limit-Remaining"
+	headerRateReset           = "X-Rate-Limit-Reset"
+	headerOKTARequestID       = "X-Okta-Request-Id"
+	headerAuthorization       = "Authorization"
+	headerAuthorizationFormat = "SSWS %v"
+	mediaTypeJSON             = "application/json"
+	defaultLimit              = 50
 	// FilterEqualOperator Filter Operatorid for "equal"
 	FilterEqualOperator = "eq"
 	// FilterStartsWithOperator - filter operator for "starts with"
@@ -94,19 +95,38 @@ type service struct {
 // NewClient returns a new OKTA API client.  If a nil httpClient is
 // provided, http.DefaultClient will be used.
 func NewClient(httpClient *http.Client, orgName string, apiToken string, isProduction bool) *Client {
+	var baseDomain string
+	if isProduction {
+		baseDomain = productionDomain
+	} else {
+		baseDomain = previewDomain
+	}
+	client, _ := NewClientWithDomain(httpClient, orgName, baseDomain, apiToken)
+	return client
+}
+
+// NewClientWithDomain creates a client based on the organziation name and
+// base domain for requests (okta.com, okta-emea.com, oktapreview.com, etc).
+func NewClientWithDomain(httpClient *http.Client, orgName string, domain string, apiToken string) (*Client, error) {
+	baseURL, err := url.Parse(fmt.Sprintf(urlFormat, orgName, domain))
+	if err != nil {
+		return nil, err
+	}
+	return NewClientWithBaseURL(httpClient, baseURL, apiToken), nil
+}
+
+// NewClientWithBaseURL creates a client based on the full base URL and api
+// token
+func NewClientWithBaseURL(httpClient *http.Client, baseURL *url.URL, apiToken string) *Client {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
 
-	var baseURL *url.URL
-	if isProduction {
-		baseURL, _ = url.Parse(fmt.Sprintf(productionURLFormat, orgName))
-	} else {
-		baseURL, _ = url.Parse(fmt.Sprintf(previewProductionURLFormat, orgName))
-
+	c := &Client{
+		client:    httpClient,
+		BaseURL:   baseURL,
+		UserAgent: userAgent,
 	}
-
-	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
 	c.PauseOnRateLimit = true // If rate limit found it will block until that time. If false then Error will be returned
 	c.authorizationHeaderValue = fmt.Sprintf(headerAuthorizationFormat, apiToken)
 	c.apiKey = apiToken

@@ -1,18 +1,18 @@
 ---
 layout: "api"
-page_title: "Generic Secret Backend - HTTP API"
-sidebar_current: "docs-http-secret-generic"
+page_title: "Key/Value Secret Backend - HTTP API"
+sidebar_current: "docs-http-secret-kv"
 description: |-
-  This is the API documentation for the Vault Generic secret backend.
+  This is the API documentation for the Vault Key/Value secret backend.
 ---
 
-# Generic Secret Backend HTTP API
+# Key/Value Secret Backend HTTP API
 
-This is the API documentation for the Vault Generic secret backend. For general
-information about the usage and operation of the Generic backend, please see
-the [Vault Generic backend documentation](/docs/secrets/generic/index.html).
+This is the API documentation for the Vault Key/Value secret backend. For general
+information about the usage and operation of the Key/Value backend, please see
+the [Vault Key/Value backend documentation](/docs/secrets/kv/index.html).
 
-This documentation assumes the Generic backend is mounted at the `/secret`
+This documentation assumes the Key/Value backend is mounted at the `/secret`
 path in Vault. Since it is possible to mount secret backends at any location,
 please update your API calls accordingly.
 
@@ -54,7 +54,7 @@ $ curl \
 _Note_: the `lease_duration` field (which on the CLI shows as
 `refresh_interval`) is advisory. No lease is created. This is a way for writers
 to indicate how often a given value shold be re-read by the client. See the
-[Vault Generic backend documentation](/docs/secrets/generic/index.html) for
+[Vault Key/Value backend documentation](/docs/secrets/kv/index.html) for
 more details.
 
 ## List Secrets
@@ -122,8 +122,8 @@ policy granting the `update` capability.
 - `:key` `(string: "")` – Specifies a key, paired with an associated value, to
   be held at the given location. Multiple key/value pairs can be specified, and
   all will be returned on a read operation. A key called `ttl` will trigger
-  some special behavior; see the [Vault Generic backend
-  documentation](/docs/secrets/generic/index.html) for details.
+  some special behavior; see the [Vault Key/Value backend
+  documentation](/docs/secrets/kv/index.html) for details.
 
 ### Sample Payload
 

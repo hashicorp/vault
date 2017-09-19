@@ -1035,7 +1035,8 @@ verbatim.
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
   certificate will be expired). This cannot be larger than the mount max (or, if
-  not set, the system max).
+  not set, the system max). However, this can be after the expiration of the
+  signing CA.
 
 - `format` `(string: "pem")` – Specifies the format for returned data. Can be
   `pem`, `der`, or `pem_bundle`. If `der`, the output is base64 encoded. If
@@ -1111,11 +1112,13 @@ certificate (which will usually be a self-signed certificate as well).
 **_This is an extremely privileged endpoint_**. The given certificate will be
 signed as-is with only minimal validation performed (is it a CA cert, and is it
 actually self-issued). The only values that will be changed will be the
-authority key ID and, if set, any distribution points.
+authority key ID, the issuer DN, and, if set, any distribution points.
 
-This is generally only needed for root certificate rolling. If you don't know
-whether you need this endpoint, you most likely should be using a different
-endpoint (such as `sign-intermediate`).
+This is generally only needed for root certificate rolling in cases where you
+don't want/can't get access to a CSR (such as if it's a root stored in Vault
+where the key is not exposed). If you don't know whether you need this
+endpoint, you most likely should be using a different endpoint (such as
+`sign-intermediate`).
 
 This endpoint requires `sudo` capability.
 

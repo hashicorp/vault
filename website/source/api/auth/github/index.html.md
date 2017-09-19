@@ -111,7 +111,6 @@ Login using GitHub access token.
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     https://vault.rocks/v1/auth/github/login
 ```

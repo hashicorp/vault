@@ -1,11 +1,11 @@
 {
  "kind": "discovery#restDescription",
- "etag": "\"YWOzh2SDasdU84ArJnpYek-OMdg/tlgWHRfLf7fwkqtOCpLemeoORxg\"",
+ "etag": "\"YWOzh2SDasdU84ArJnpYek-OMdg/dkoYxqfGO2jaG60VA5h0K8BOG4k\"",
  "discoveryVersion": "v1",
  "id": "storage:v1",
  "name": "storage",
  "version": "v1",
- "revision": "20170810",
+ "revision": "20170824",
  "title": "Cloud Storage JSON API",
  "description": "Stores and retrieves potentially large, immutable data objects.",
  "ownerDomain": "google.com",
@@ -946,6 +946,9 @@
      "items": {
       "type": "object",
       "properties": {
+       "condition": {
+        "type": "any"
+       },
        "members": {
         "type": "array",
         "description": "A collection of identifiers for members who may assume the provided role. Recognized identifiers are as follows:  \n- allUsers — A special identifier that represents anyone on the internet; with or without a Google account.  \n- allAuthenticatedUsers — A special identifier that represents anyone who is authenticated with a Google account or a service account.  \n- user:emailid — An email address that represents a specific account. For example, user:alice@gmail.com or user:joe@example.com.  \n- serviceAccount:emailid — An email address that represents a service account. For example,  serviceAccount:my-other-app@appspot.gserviceaccount.com .  \n- group:emailid — An email address that represents a Google group. For example, group:admins@example.com.  \n- domain:domain — A Google Apps domain name that represents all the users of that domain. For example, domain:google.com or domain:example.com.  \n- projectOwner:projectid — Owners of the given project. For example, projectOwner:my-example-project  \n- projectEditor:projectid — Editors of the given project. For example, projectEditor:my-example-project  \n- projectViewer:projectid — Viewers of the given project. For example, projectViewer:my-example-project",
@@ -3113,7 +3116,7 @@
      "id": "storage.objects.patch",
      "path": "b/{bucket}/o/{object}",
      "httpMethod": "PATCH",
-     "description": "Updates an object's metadata. This method supports patch semantics.",
+     "description": "Patches an object's metadata.",
      "parameters": {
       "bucket": {
        "type": "string",
@@ -3210,7 +3213,9 @@
      "scopes": [
       "https://www.googleapis.com/auth/cloud-platform",
       "https://www.googleapis.com/auth/devstorage.full_control"
-     ]
+     ],
+     "supportsMediaDownload": true,
+     "useMediaDownloadService": true
     },
     "rewrite": {
      "id": "storage.objects.rewrite",

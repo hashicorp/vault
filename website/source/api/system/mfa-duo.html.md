@@ -22,6 +22,9 @@ This endpoint defines a MFA method of type Duo.
 
 - `username_format` `(string)` - A format string for mapping Identity names to MFA method names. Values to substitute should be placed in `{{}}`. For example, `"{{persona.name}}@example.com"`. If blank, the Persona's Name field will be used as-is. Currently-supported mappings:
   - persona.name: The name returned by the mount configured via the `mount_accessor` parameter
+  - entity.name: The name configured for the Entity
+  - persona.metadata.`<key>`: The value of the Persona's metadata parameter
+  - entity.metadata.`<key>`: The value of the Entity's metadata paramater
 
 - `secret_key` `(string)` - Secret key for Duo.
 

@@ -31,7 +31,7 @@ func pathGroups(b *backend) *framework.Path {
 			},
 
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the group.",
 			},
 		},
@@ -146,7 +146,7 @@ func (b *backend) pathGroupWrite(
 	}
 
 	entry, err := logical.StorageEntryJSON("group/"+name, &GroupEntry{
-		Policies: policyutil.ParsePolicies(d.Get("policies").(string)),
+		Policies: policyutil.ParsePolicies(d.Get("policies")),
 	})
 	if err != nil {
 		return nil, err

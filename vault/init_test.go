@@ -33,7 +33,7 @@ func testCore_NewTestCore(t *testing.T, seal Seal) (*Core, *CoreConfig) {
 		Physical:     inm,
 		DisableMlock: true,
 		LogicalBackends: map[string]logical.Factory{
-			"generic": LeasedPassthroughBackendFactory,
+			"kv": LeasedPassthroughBackendFactory,
 		},
 		Seal: seal,
 	}
