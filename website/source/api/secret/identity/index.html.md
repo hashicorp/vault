@@ -13,7 +13,7 @@ general information about the usage and operation of the Identity backend,
 please see the
 [Vault Identity backend documentation](/docs/secrets/identity/index.html).
 
-## Register Entity
+## Create/Update Entity
 
 This endpoint creates or updates an Entity.
 
@@ -24,6 +24,9 @@ This endpoint creates or updates an Entity.
 ### Parameters
 
 - `name` `(string: entity-<UUID>)` – Name of the entity.
+
+- `id` `(string: "")` - ID of the entity. If this is set, this endpoint will
+  update the corresponding entity.
 
 - `metadata` `(list of strings: [])` – Metadata to be associated with the entity. Format should be a list of `key=value` pairs.
 
@@ -209,10 +212,10 @@ $ curl \
 }
 ```
 
-## Register Persona
+## Create/Update Persona
 
-This endpoint creates a new persona and attaches it to the entity with the
-given identifier.
+This endpoint creates a new persona and attaches it to the given entity, or
+updates an existing persona.
 
 | Method   | Path                | Produces               |
 | :------- | :------------------ | :----------------------|
@@ -225,6 +228,9 @@ given identifier.
   persona belongs to userpass backend, the name should be a valid username
   within userpass backend. If persona belongs to GitHub, it should be the
   GitHub username.
+
+- `id` `(string: "")` - ID of the persona. If this is set, this endpoint will
+  update the corresponding persona.
 
 - `entity_id` (string: required) - Entity ID to which this persona belongs to.
 

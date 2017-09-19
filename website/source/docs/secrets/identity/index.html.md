@@ -25,7 +25,7 @@ specific users.
 Identity store allows operators to **manage** the entities in Vault. Entities
 can be created and personas can be tied to entities, via the ACL'd API. There
 can be policies set on the entities which adds capabilities to the tokens that
-are tied to entity identiers. The capabilities granted to tokens via the
+are tied to entity identifiers. The capabilities granted to tokens via the
 entities are **an addition** to the existing capabilities of the token and
 **not** a replacement. Note that the additional capabilities of the token that
 get inherited from entities are computed at request time. This provides
