@@ -1,1 +1,0 @@
-# vault-plugin-auth-kubernetes

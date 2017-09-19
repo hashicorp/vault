@@ -121,20 +121,6 @@
 			"revisionTime": "2012-06-04T00:48:16Z"
 		},
 		{
-			"checksumSHA1": "NX4v3cbkXAJxFlrncqT9yEUBuoA=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/PuerkitoBio/purell",
-			"path": "github.com/PuerkitoBio/purell",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "/jQPcsccvsC9GVM9pV6fESxWOUk=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/PuerkitoBio/urlesc",
-			"path": "github.com/PuerkitoBio/urlesc",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
 			"checksumSHA1": "g8C6yI8XhyDLnCFwvfYe8CT96ZU=",
 			"path": "github.com/SAP/go-hdb/driver",
 			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
@@ -193,13 +179,6 @@
 			"path": "github.com/SermoDigital/jose/jwt",
 			"revision": "2bd9b81ac51d6d6134fcd4fd846bd2e7347a15f9",
 			"revisionTime": "2016-12-05T22:51:55Z"
-		},
-		{
-			"checksumSHA1": "CujWu7+PWlZSX5+zAPJH91O5AVQ=",
-			"origin": "github.com/docker/docker/vendor/github.com/Sirupsen/logrus",
-			"path": "github.com/Sirupsen/logrus",
-			"revision": "8bb8ac7f788b258ee17473d9f2779341506aed0a",
-			"revisionTime": "2017-01-23T16:49:28Z"
 		},
 		{
 			"checksumSHA1": "0et4hA6AYqZCgYiY+c6Z17t3k3k=",
@@ -784,20 +763,6 @@
 			"revisionTime": "2016-06-27T13:04:34Z"
 		},
 		{
-			"checksumSHA1": "g3z4plpw9F/ho3hdJb+X/bN/OgE=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/emicklei/go-restful",
-			"path": "github.com/emicklei/go-restful",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "rmsBHtFpV3osid71XnTZBo/b3bU=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/emicklei/go-restful/log",
-			"path": "github.com/emicklei/go-restful/log",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
 			"checksumSHA1": "40Ns85VYa4smQPcewZ7SOdfLnKU=",
 			"path": "github.com/fatih/structs",
 			"revision": "7e5a8eef611ee84dd359503f3969f80df4c50723",
@@ -840,34 +805,6 @@
 			"revisionTime": "2017-08-24T17:36:02Z"
 		},
 		{
-			"checksumSHA1": "6dTGC5A1Y1xnv+JSi9z8S6JfnH0=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/go-openapi/jsonpointer",
-			"path": "github.com/go-openapi/jsonpointer",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "YMNc0I/ifBw9TsnF13NTpIN9yu4=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/go-openapi/jsonreference",
-			"path": "github.com/go-openapi/jsonreference",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "x1yvWanIW3DJS8I5HMuN6CdZXDg=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/go-openapi/spec",
-			"path": "github.com/go-openapi/spec",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "Wz6dE9E9ZwCK4oWRr5lNazhgMY0=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/go-openapi/swag",
-			"path": "github.com/go-openapi/swag",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
 			"checksumSHA1": "TYcDSEYn/Fj7Bx6TD7j+bx6zNfc=",
 			"path": "github.com/go-sql-driver/mysql",
 			"revision": "1548d61ac1b48a30add201183a992009bc02af20",
@@ -902,20 +839,6 @@
 			"path": "github.com/gogo/protobuf/proto",
 			"revision": "2adc21fd136931e0388e278825291678e1d98309",
 			"revisionTime": "2017-08-31T18:35:40Z"
-		},
-		{
-			"checksumSHA1": "HPVQZu059/Rfw2bAWM538bVTcUc=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/gogo/protobuf/sortkeys",
-			"path": "github.com/gogo/protobuf/sortkeys",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "HmbftipkadrLlCfzzVQ+iFHbl6g=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/golang/glog",
-			"path": "github.com/golang/glog",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
 		},
 		{
 			"checksumSHA1": "yqF125xVSkmfLpIVGrLlfE05IUk=",
@@ -970,13 +893,6 @@
 			"path": "github.com/google/go-querystring/query",
 			"revision": "53e6ce116135b80d037921a7fdd5138cf32d7a8a",
 			"revisionTime": "2017-01-11T10:11:55Z"
-		},
-		{
-			"checksumSHA1": "PFtXkXPO7pwRtykVUUXtc07wc7U=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/google/gofuzz",
-			"path": "github.com/google/gofuzz",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
 		},
 		{
 			"checksumSHA1": "y1/eOdw+BOXCuT83J7mP3ReXaf8=",
@@ -1153,12 +1069,6 @@
 			"revisionTime": "2017-09-15T04:14:02Z"
 		},
 		{
-			"checksumSHA1": "cxrf4zCSMCkmtSkXb8nZ6hpV+SU=",
-			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",
 			"path": "github.com/hashicorp/yamux",
 			"revision": "d1caa6c97c9fc1cc9e83bbe34d0603f9ff0ce8bd",
@@ -1265,27 +1175,6 @@
 			"path": "github.com/lib/pq/oid",
 			"revision": "e42267488fe361b9dc034be7a6bffef5b195bceb",
 			"revisionTime": "2017-08-10T06:12:20Z"
-		},
-		{
-			"checksumSHA1": "T8soMJArSZrYnhmdpAnq1bVxQ6Q=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/mailru/easyjson/buffer",
-			"path": "github.com/mailru/easyjson/buffer",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "Xw5HIdQ2vlr5wkKl+8ANM9xp5Zs=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/mailru/easyjson/jlexer",
-			"path": "github.com/mailru/easyjson/jlexer",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "tMeVsfYgDW9K0spDZkOBlvZYssw=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/mailru/easyjson/jwriter",
-			"path": "github.com/mailru/easyjson/jwriter",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
 		},
 		{
 			"checksumSHA1": "cTDA66oZUy18cIzJsU1diKq+9CE=",
@@ -1492,13 +1381,6 @@
 			"revisionTime": "2017-08-22T13:27:46Z"
 		},
 		{
-			"checksumSHA1": "STxYqRb4gnlSr3mRpT+Igfdz/kM=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/github.com/spf13/pflag",
-			"path": "github.com/spf13/pflag",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
 			"checksumSHA1": "0FCBLTqGOxgifAKfS0360iLTZR4=",
 			"path": "github.com/ugorji/go/codec",
 			"revision": "8c0409fcbb70099c748d71f714529204975f6c3f",
@@ -1677,13 +1559,6 @@
 			"path": "golang.org/x/text/unicode/norm",
 			"revision": "1cbadb444a806fd9430d14ad08967ed91da4fa0a",
 			"revisionTime": "2017-09-13T19:45:57Z"
-		},
-		{
-			"checksumSHA1": "U1OTBlgTRUe9ZdMsbISL1E+eMm8=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/golang.org/x/text/width",
-			"path": "golang.org/x/text/width",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
 		},
 		{
 			"checksumSHA1": "/y0saWnM+kTnSvZrNlvoNOgj0Uo=",
@@ -1996,174 +1871,6 @@
 			"path": "gopkg.in/yaml.v2",
 			"revision": "eb3733d160e74a9c7e442f435eb3bea458e1d19f",
 			"revisionTime": "2017-08-12T16:00:11Z"
-		},
-		{
-			"checksumSHA1": "9Zj/HZTQTW8j2n2mcVKGA875rpo=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/api/errors",
-			"path": "k8s.io/apimachinery/pkg/api/errors",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "QqnlOlmLEchB3EtUc3c46eGngUA=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/api/resource",
-			"path": "k8s.io/apimachinery/pkg/api/resource",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "RrwPUbyprtkpsQODF1/BwbVtS8c=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/apis/meta/v1",
-			"path": "k8s.io/apimachinery/pkg/apis/meta/v1",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "FO6DXFv4jjIqq98S4v0ke9fQSRk=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/conversion",
-			"path": "k8s.io/apimachinery/pkg/conversion",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "Cn/QaiTl+Yioenr4/XvdacapSwg=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/conversion/queryparams",
-			"path": "k8s.io/apimachinery/pkg/conversion/queryparams",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "ntWCLzy4srxUZ2YRTLcDU1TJd2I=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/fields",
-			"path": "k8s.io/apimachinery/pkg/fields",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "7QvUwGY3z4qW5rpDszLmxL/Xj9g=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/labels",
-			"path": "k8s.io/apimachinery/pkg/labels",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "Miw1lcQ2E+AGd7AYOFIHO3+fYww=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/openapi",
-			"path": "k8s.io/apimachinery/pkg/openapi",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "l2K44V84AJTWq4X/fVFPFTbTSF0=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/runtime",
-			"path": "k8s.io/apimachinery/pkg/runtime",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "r/9XGSppO8GWoOdsiaivB0A6PYM=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/runtime/schema",
-			"path": "k8s.io/apimachinery/pkg/runtime/schema",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "f7yWRd6DjlxINbFru0y2INrjmKE=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/selection",
-			"path": "k8s.io/apimachinery/pkg/selection",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "fJG2oyXJMDa3Ocizs3zI8B9Skiw=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/types",
-			"path": "k8s.io/apimachinery/pkg/types",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "QJBvzXcMRCebScbasdgkuCeX45U=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/util/errors",
-			"path": "k8s.io/apimachinery/pkg/util/errors",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "jfOySk/zLRaEERws6wMQftj+G1A=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/util/intstr",
-			"path": "k8s.io/apimachinery/pkg/util/intstr",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "JrNYZWRvwT5Mbo+jKfYQ8bXmb9M=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/util/net",
-			"path": "k8s.io/apimachinery/pkg/util/net",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "O4AeWEwGL4K0gffhQdsb1DUIF7I=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/util/runtime",
-			"path": "k8s.io/apimachinery/pkg/util/runtime",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "lcIoSJOwJL5VezuuAaEZ3/wvgO4=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/util/sets",
-			"path": "k8s.io/apimachinery/pkg/util/sets",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "/xfWcJuMbCdT6YPsVwHHJwtK1Gc=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/util/validation",
-			"path": "k8s.io/apimachinery/pkg/util/validation",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "yqQVeb2wcQUVa0H5L5wF9T9UhAY=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/util/validation/field",
-			"path": "k8s.io/apimachinery/pkg/util/validation/field",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "nKCYXkp430RHeMqmnUSxdyyLCRs=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/util/wait",
-			"path": "k8s.io/apimachinery/pkg/util/wait",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "mE8V0g3OteuJ5DsapDfUTiHIYMI=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/pkg/watch",
-			"path": "k8s.io/apimachinery/pkg/watch",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "uQunvnsICiowJl3Rs46eT2OtFqg=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/apimachinery/third_party/forked/golang/reflect",
-			"path": "k8s.io/apimachinery/third_party/forked/golang/reflect",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "r2FYS8ugdf6QWV8tVI5l5K3I8t4=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/client-go/pkg/apis/authentication",
-			"path": "k8s.io/client-go/pkg/apis/authentication",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
-		},
-		{
-			"checksumSHA1": "/8H0XjCdePGQ5IYpl4lA7b1MLvo=",
-			"origin": "github.com/hashicorp/vault-plugin-auth-kubernetes/vendor/k8s.io/client-go/pkg/apis/authentication/v1",
-			"path": "k8s.io/client-go/pkg/apis/authentication/v1",
-			"revision": "6ce680d089a32e6cfe6a40fc5a6338ab91169630",
-			"revisionTime": "2017-09-16T22:05:01Z"
 		},
 		{
 			"checksumSHA1": "XQ5CfhpL7XdMmELFnc2Yds45cbk=",
