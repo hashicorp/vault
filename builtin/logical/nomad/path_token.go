@@ -62,7 +62,7 @@ func (b *backend) pathTokenRead(
 	token, _, err := c.ACLTokens().Create(&api.ACLToken{
 		Name:     tokenName,
 		Type:     result.TokenType,
-		Policies: []string{result.Policy},
+		Policies: result.Policy,
 	}, nil)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -70,9 +70,11 @@ func (b *backend) pathTokenRead(
 
 	// Use the helper to create the secret
 	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
-		"token": token,
+		"secret_id":   token.SecretID,
+		"accessor_id": token.AccessorID,
 	}, map[string]interface{}{
-		"token": token,
+		"secret_id":   token.SecretID,
+		"accessor_id": token.AccessorID,
 	})
 	s.Secret.TTL = result.Lease
 

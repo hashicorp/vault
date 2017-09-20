@@ -41,7 +41,7 @@ func secretTokenRevoke(
 		return nil, userErr
 	}
 
-	tokenRaw, ok := req.Secret.InternalData["token"]
+	tokenRaw, ok := req.Secret.InternalData["accessor_id"]
 	if !ok {
 		// We return nil here because this is a pre-0.5.3 problem and there is
 		// nothing we can do about it. We already can't revoke the lease

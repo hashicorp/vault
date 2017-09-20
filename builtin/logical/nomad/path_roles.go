@@ -28,7 +28,7 @@ func pathRoles() *framework.Path {
 			},
 
 			"policy": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Policy name as previously created in Nomad. Required",
 			},
 
@@ -93,7 +93,7 @@ func pathRolesRead(
 			"token_type": result.TokenType,
 		},
 	}
-	if result.Policy != "" {
+	if len(result.Policy) != 0 {
 		resp.Data["policy"] = result.Policy
 	}
 	return resp, nil
@@ -112,10 +112,10 @@ func pathRolesWrite(
 	}
 
 	name := d.Get("name").(string)
-	policy := d.Get("policy").(string)
+	policy := d.Get("policy").([]string)
 	var err error
 	if tokenType != "management" {
-		if policy == "" {
+		if len(policy) == 0 {
 			return logical.ErrorResponse(
 				"policy cannot be empty when not using management tokens"), nil
 		}
@@ -157,7 +157,7 @@ func pathRolesDelete(
 }
 
 type roleConfig struct {
-	Policy    string        `json:"policy"`
+	Policy    []string      `json:"policy"`
 	Lease     time.Duration `json:"lease"`
 	TokenType string        `json:"token_type"`
 }
