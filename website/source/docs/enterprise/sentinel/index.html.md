@@ -106,5 +106,7 @@ effect on all requests.
 
 ## Properties and Examples
 
-See the [Properties](/docs/enterprise/sentinel/properties.html) page for
-examples and detailed property documentation.
+See the [Examples](/docs/enterprise/sentinel/examples.html) page for examples
+of Sentinel in action, and the
+[Properties](/docs/enterprise/sentinel/properties.html) page for detailed
+property documentation.
