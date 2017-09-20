@@ -33,7 +33,7 @@ clarify what is being discussed:
   that only encrypted data is written out, and that data is verified and decrypted on the way
   in. Much like a bank vault, the barrier must be "unsealed" before anything inside can be accessed.
 
-* **Secret Backend** - A secret backend is responsible for managing secrets. Simple secret backends
+* **Secrets Engine** - A secrets engine is responsible for managing secrets. Simple secrets engines
   like the "kv" backend simply return the same secret when queried. Some backends support
   using policies to dynamically generate a secret each time they are queried. This allows for
   unique secrets to be used which allows Vault to do fine-grained revocation and policy updates.
@@ -136,7 +136,7 @@ may need to be periodically renewed to avoid invalidation.
 
 Once authenticated, requests are made providing the client token. The token is used
 to verify the client is authorized and to load the relevant policies. The policies
-are used to authorize the client request. The request is then routed to the secret backend,
+are used to authorize the client request. The request is then routed to the secrets engine,
 which is processed depending on the type of backend. If the backend returns a secret,
 the core registers it with the expiration manager and attaches a lease ID.
 The lease ID is used by clients to renew or revoke their secret. If a client allows the

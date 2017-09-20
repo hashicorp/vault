@@ -1,16 +1,16 @@
 ---
 layout: "docs"
-page_title: "One-Time SSH Passwords (OTP) - SSH Secret Backend"
+page_title: "One-Time SSH Passwords (OTP) - SSH - Secrets Engines"
 sidebar_current: "docs-secrets-ssh-one-time-ssh-passwords"
 description: |-
-  The One-Time SSH Password (OTP) SSH secret backend type allows a Vault server
+  The One-Time SSH Password (OTP) SSH secrets engine type allows a Vault server
   to issue a One-Time Password every time a client wants to SSH into a remote
   host using a helper command on the remote host to perform verification.
 ---
 
 # One-Time SSH Passwords
 
-The One-Time SSH Password (OTP) SSH secret backend type allows a Vault server to
+The One-Time SSH Password (OTP) SSH secrets engine type allows a Vault server to
 issue a One-Time Password every time a client wants to SSH into a remote host
 using a helper command on the remote host to perform verification.
 
@@ -22,23 +22,24 @@ server then deletes this OTP, ensuring that it is only used once.
 
 Since the Vault server is contacted during SSH connection establishment, every
 login attempt and the correlating Vault lease information is logged to the audit
-backend.
+secrets engine.
 
 See [Vault-SSH-Helper](https://github.com/hashicorp/vault-ssh-helper) for
 details on the helper.
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+This page will show a quick start for this secrets engine. For detailed
+documentation on every path, use `vault path-help` after mounting the secrets
+engine.
 
 ### Drawbacks
 
-The main concern with the OTP backend type is the remote host's connection to
-Vault; if compromised, an attacker could spoof the Vault server returning a
-successful request. This risk can be mitigated by using TLS for the connection
-to Vault and checking certificate validity; future enhancements to this backend
-may allow for extra security on top of what TLS provides.
+The main concern with the OTP secrets engine type is the remote host's
+connection to Vault; if compromised, an attacker could spoof the Vault server
+returning a successful request. This risk can be mitigated by using TLS for the
+connection to Vault and checking certificate validity; future enhancements to
+this secrets engine may allow for extra security on top of what TLS provides.
 
-### Mount the backend
+### Mount the secrets engine
 
 ```text
 $ vault mount ssh
@@ -109,6 +110,6 @@ disabled by setting `-strict-host-key-checking=no`.
 
 ## API
 
-The SSH secret backend has a full HTTP API. Please see the
-[SSH secret backend API](/api/secret/ssh/index.html) for more
+The SSH secrets engine has a full HTTP API. Please see the
+[SSH secrets engine API](/api/secret/ssh/index.html) for more
 details.

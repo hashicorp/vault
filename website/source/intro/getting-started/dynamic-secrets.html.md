@@ -15,7 +15,7 @@ Vault: _dynamic secrets_.
 Dynamic secrets are secrets that are generated when they're accessed,
 and aren't statically written like we did in
 [Your First Secret](/intro/getting-started/first-secret.html).
-On this page, we'll use the built-in AWS secret backend to dynamically
+On this page, we'll use the built-in AWS secrets engine to dynamically
 generate AWS access keys.
 
 The power of dynamic secrets is that they simply don't exist before
@@ -40,7 +40,7 @@ Successfully mounted 'aws' at 'aws'!
 ```
 
 The AWS backend is now mounted at `aws/`. As we covered in a previous
-section: different secret backends allow for different behavior, and in this
+section: different secrets engines allow for different behavior, and in this
 case the AWS backend is a dynamic backend for generating AWS access credentials.
 
 ## Configuring the AWS Backend
@@ -59,7 +59,7 @@ $ vault write aws/config/root \
 Success! Data written to: aws/config/root
 ```
 
-Remember that secret backends can behave anyway they want when
+Remember that secrets engines can behave anyway they want when
 reading/writing a path, so this path stores this configuration for
 later. Notice you can't read it back:
 

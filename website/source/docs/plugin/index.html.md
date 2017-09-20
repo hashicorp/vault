@@ -9,7 +9,7 @@ description: |-
 # Custom Plugin Backends
 
 Plugin backends are the components in Vault that can be implemented separately from Vault's
-builtin backends. These backends can be either authentication or secret backends.
+builtin backends. These backends can be either authentication or secrets engines.
 
 Detailed information regarding the plugin system can be found in the
 [internals documentation](https://www.vaultproject.io/docs/internals/plugins.html).

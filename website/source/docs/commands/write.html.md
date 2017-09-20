@@ -19,11 +19,11 @@ is loaded from a file. If the value is "-", Vault will read the value from
 stdin.
 
 For a full list of examples and paths, please see the documentation that
-corresponds to the secret engines in use.
+corresponds to the secrets engines in use.
 
 ## Examples
 
-Persist data in the generic secrets engine:
+Persist data in the KV secrets engine:
 
 ```text
 $ vault write secret/my-secret foo=bar

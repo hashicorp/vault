@@ -11,11 +11,11 @@ description: |-
 Plugin backends utilize the [plugin system][plugin-system] to enable
 third-party secret and auth methods to be mounted.
 
-It is worth noting that even though [database backends][database-backend]
+It is worth noting that even though [database secrets engines][database-backend]
 operate under the same underlying plugin mechanism, they are slightly different
-in design than plugin backends demonstrated in this guide. The database backend
-manages multiple plugins under the same backend mount point, whereas plugin
-backends are generic backends that function as either secret or auth methods.
+in design than plugin backends demonstrated in this guide. The database secrets
+engine manages multiple plugins under the same backend mount point, whereas
+plugin backends are kv backends that function as either secret or auth methods.
 
 This guide provides steps to build, register, and mount non-database external
 plugin backends.

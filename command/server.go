@@ -8,14 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"golang.org/x/net/http2"
@@ -84,6 +82,8 @@ type ServerCommand struct {
 
 	flagDevPluginDir     string
 	flagDevHA            bool
+	flagDevLatency       int
+	flagDevLatencyJitter int
 	flagDevTransactional bool
 	flagDevLeasedKV      bool
 	flagDevThreeNode     bool
@@ -204,8 +204,20 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
+	f.IntVar(&IntVar{
+		Name:   "dev-latency",
+		Target: &c.flagDevLatency,
+		Hidden: true,
+	})
+
+	f.IntVar(&IntVar{
+		Name:   "dev-latency-jitter",
+		Target: &c.flagDevLatencyJitter,
+		Hidden: true,
+	})
+
 	f.BoolVar(&BoolVar{
-		Name:    "dev-leased-generic",
+		Name:    "dev-leased-kv",
 		Target:  &c.flagDevLeasedKV,
 		Default: false,
 		Hidden:  true,
@@ -442,12 +454,12 @@ func (c *ServerCommand) Run(args []string) int {
 		if devPluginDir != "" {
 			coreConfig.PluginDirectory = devPluginDir
 		}
-		if devLatency > 0 {
-			injectLatency := time.Duration(devLatency) * time.Millisecond
+		if c.flagDevLatency > 0 {
+			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
 			if _, txnOK := backend.(physical.Transactional); txnOK {
-				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, devLatencyJitter, c.logger)
+				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
 			} else {
-				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, devLatencyJitter, c.logger)
+				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
 			}
 		}
 	}
@@ -859,13 +871,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Write out the PID to the file now that server has successfully started
 	if err := c.storePidFile(config.PidFile); err != nil {
-		c.Ui.Output(fmt.Sprintf("Error storing PID: %v", err))
+		c.UI.Error(fmt.Sprintf("Error storing PID: %s", err))
 		return 1
 	}
 
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
-			c.Ui.Output(fmt.Sprintf("Error deleting the PID file: %v", err))
+			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
 		}
 	}()
 
@@ -1456,6 +1468,8 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 		"-dev-listen-address": complete.PredictNothing,
 		"-log-level":          complete.PredictSet("trace", "debug", "info", "warn", "err"),
 	}
+
+	return reloadErrors.ErrorOrNil()
 }
 
 // storePidFile is used to write out our PID to a file if necessary
@@ -1487,38 +1501,6 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
-}
-
-// MakeShutdownCh returns a channel that can be used for shutdown
-// notifications for commands. This channel will send a message for every
-// SIGINT or SIGTERM received.
-func MakeShutdownCh() chan struct{} {
-	resultCh := make(chan struct{})
-
-	shutdownCh := make(chan os.Signal, 4)
-	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-shutdownCh
-		close(resultCh)
-	}()
-	return resultCh
-}
-
-// MakeSighupCh returns a channel that can be used for SIGHUP
-// reloading. This channel will send a message for every
-// SIGHUP received.
-func MakeSighupCh() chan struct{} {
-	resultCh := make(chan struct{})
-
-	signalCh := make(chan os.Signal, 4)
-	signal.Notify(signalCh, syscall.SIGHUP)
-	go func() {
-		for {
-			<-signalCh
-			resultCh <- struct{}{}
-		}
-	}()
-	return resultCh
 }
 
 type grpclogFaker struct {

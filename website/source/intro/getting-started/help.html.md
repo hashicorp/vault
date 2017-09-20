@@ -9,7 +9,7 @@ description: |-
 # Built-in Help
 
 You've now worked with `vault write` and `vault read` for multiple
-paths: the kv secret backend with `secret/` and dynamic AWS
+paths: the kv secrets engine with `secret/` and dynamic AWS
 credentials with the AWS backend provider at `aws/`. In both cases, the
 structure and usage of each backend differed, for example the AWS
 backend has special paths like `aws/config`.

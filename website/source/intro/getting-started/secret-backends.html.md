@@ -1,12 +1,12 @@
 ---
 layout: "intro"
-page_title: "Secret Backends - Getting Started"
+page_title: "Secrets Engines - Getting Started"
 sidebar_current: "gettingstarted-secretbackends"
 description: |-
-  Secret backends are what create, read, update, and delete secrets.
+  secrets engines are what create, read, update, and delete secrets.
 ---
 
-# Secret Backends
+# Secrets Engines
 
 Previously, we saw how to read and write arbitrary secrets to Vault.  To
 do this, we used the `secret/` prefix. This prefix specifies which
@@ -87,10 +87,10 @@ backend changes its mount point. This is still a disruptive command: the
 stored data is retained, but all secrets are revoked since secrets are
 closely tied to their mount paths.
 
-## What is a Secret Backend?
+## What is a Secrets Engine?
 
 Now that you've mounted and unmounted a backend, you might wonder:
-"what is a secret backend? what is the point of this mounting system?"
+"what is a secrets engine? what is the point of this mounting system?"
 
 Vault behaves a lot like a [virtual filesystem](https://en.wikipedia.org/wiki/Virtual_file_system).
 The read/write/delete operations are forwarded to the backend, and the
@@ -111,7 +111,7 @@ etc. all using the same read/write interface.
 
 ## Next
 
-You now know about secret backends and how to operate on the mount table.
+You now know about secrets engines and how to operate on the mount table.
 This is important knowledge to move forward and learn about other secret
 backends.
 

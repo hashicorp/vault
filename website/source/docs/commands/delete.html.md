@@ -16,7 +16,7 @@ given path.
 
 ## Examples
 
-Remove data in the status secret backend:
+Remove data in the status secrets engine:
 
 ```text
 $ vault delete secret/my-secret

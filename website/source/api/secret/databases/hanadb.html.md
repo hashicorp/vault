@@ -1,21 +1,21 @@
 ---
 layout: "api"
-page_title: "HANA Database Plugin - HTTP API"
+page_title: "HANA - Database - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-databases-hana"
 description: |-
-  The HANA plugin for Vault's Database backend generates database credentials to access HANA servers.
+  The HANA plugin for Vault's database secrets engine generates database credentials to access HANA servers.
 ---
 
 # HANA Database Plugin HTTP API
 
-The HANA Database Plugin is one of the supported plugins for the Database
-backend. This plugin generates database credentials dynamically based on
+The HANA database plugin is one of the supported plugins for the database
+secrets engine. This plugin generates database credentials dynamically based on
 configured roles for the HANA database.
 
 ## Configure Connection
 
-In addition to the parameters defined by the [Database
-Backend](/api/secret/databases/index.html#configure-connection), this plugin
+In addition to the parameters defined by the [database
+secrets engine](/api/secret/databases/index.html#configure-connection), this plugin
 has a number of parameters to further configure a connection.
 
 | Method   | Path                         | Produces               |
@@ -63,7 +63,7 @@ $ curl \
 Statements are configured during role creation and are used by the plugin to
 determine what is sent to the datatabse on user creation, renewing, and
 revocation. For more information on configuring roles see the [Role
-API](/api/secret/databases/index.html#create-role) in the Database Backend docs.
+API](/api/secret/databases/index.html#create-role) in the database secrets engine docs.
 
 ### Parameters
 

@@ -1,23 +1,27 @@
 ---
 layout: "docs"
-page_title: "Oracle Database Plugin"
+page_title: "Oracle - Database - Secrets Engines"
 sidebar_current: "docs-secrets-databases-oracle"
 description: |-
-  The Oracle Database plugin for Vault's Database backend generates database credentials to access Oracle Database severs.
+  Oracle is one of the supported plugins for the database secrets engine. This
+  plugin generates database credentials dynamically based on configured roles
+  for the Oracle database.
 ---
 
-# Oracle Database Plugin
+# Oracle Database Secrets Engine
 
-Name: `vault-plugin-database-oracle`
+Oracle is one of the supported plugins for the database secrets engine. This
+plugin generates database credentials dynamically based on configured roles for
+the Oracle database.
 
-The Oracle Database Plugin is an external plugin for the Database
-backend. This plugin generates database credentials dynamically based on
-configured roles for the Oracle database.
+The Oracle database plugin is not bundled in the core Vault code tree and can be
+found at its own git repository here:
+[hashicorp/vault-plugin-database-oracle](https://github.com/hashicorp/vault-plugin-database-oracle)
 
 See the [Database Backend](/docs/secrets/databases/index.html) docs for more
 information about setting up the Database Backend.
 
-## Installation
+## Setup
 
 The Oracle Database Plugin does not live in the core Vault code tree and can be found
 at its own git repository here: [hashicorp/vault-plugin-database-oracle](https://github.com/hashicorp/vault-plugin-database-oracle)
@@ -27,54 +31,68 @@ library installed. These can be downloaded from Oracle. The libraries will need 
 be placed in the default library search path or somewhere defined in the
 `LD_LIBRARY_PATH` environment variable.
 
-## Quick Start
+1. Enable the database secrets engine if it is not already enabled:
 
-After the Database Backend is mounted you can run the plugin and configure a
-connection to the Oracle Database.
+    ```text
+    $ vault secrets enable database
+    Success! Enabled the database secrets engine at: database/
+    ```
 
-First the plugin must be built and registered to Vault's plugin catalog. To
-build the plugin see the plugin's code repository. Once the plugin is built and
-the binary is placed in Vault's plugin directory the catalog should be updated:
+    By default, the secrets engine will enable at the name of the engine. To
+    enable the secrets engine at a different path, use the `-path` argument.
 
-```
-$ vault write sys/plugins/catalog/vault-plugin-database-oracle \
-    sha_256=<expected SHA256 value> \
-    command=vault-plugin-database-oracle
-```
+1. Download and register the plugin:
 
-Once the plugin exists in the plugin catalog the Database backend can configure
-a connection for the Oracle Database:
+    ```text
+    $ vault write sys/plugins/catalog/oracle-database-plugin \
+        sha_256="..." \
+        command=oracle-database-plugin
+    ```
 
-```
-$ vault write database/config/oracle \
-    plugin_name=vault-plugin-database-oracle \
-    connection_url="system/Oracle@localhost:1521/OraDoc.localhost" \
-    allowed_roles="readonly"
+1. Configure Vault with the proper plugin and connection information:
 
-The following warnings were returned from the Vault server:
-* Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
-```
+    ```text
+    $ vault write database/config/my-oracle-database \
+        plugin_name=oracle-database-plugin \
+        connection_url="system/Oracle@localhost:1521/OraDoc.localhost" \
+        allowed_roles="my-role"
+    ```
 
-Once the Oracle connection is configured we can add a role:
+1. Configure a role that maps a name in Vault to an SQL statement to execute to
+create the database credential:
 
-```
-$ vault write database/roles/readonly \
-    db_name=oracle \
-    creation_statements="CREATE USER {{name}} IDENTIFIED BY {{password}}; GRANT CONNECT TO {{name}}; GRANT CREATE SESSION TO {{name}};" \
-    default_ttl="1h" \
-    max_ttl="24h"
+    ```text
+    $ vault write database/roles/my-role \
+        db_name=my-oracle-database \
+        creation_statements="CREATE USER {{name}} IDENTIFIED BY {{password}}; GRANT CONNECT TO {{name}}; GRANT CREATE SESSION TO {{name}};" \
+        default_ttl="1h" \
+        max_ttl="24h"
+    Success! Data written to: database/roles/my-role
+    ```
 
-Success! Data written to: database/roles/readonly
-```
+## Usage
 
-This role can now be used to retrieve a new set of credentials by querying the
-"database/creds/readonly" endpoint.
+After the secrets engine is configured and a user/machine has a Vault token with
+the proper permission, it can generate credentials.
+
+1. Generate a new credential by reading from the `/creds` endpoint with the name
+of the role:
+
+    ```text
+    $ vault read database/creds/my-role
+    Key                Value
+    ---                -----
+    lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
+    lease_duration     1h
+    lease_renewable    true
+    password           8cab931c-d62e-a73d-60d3-5ee85139cd66
+    username           v-root-e2978cd0-
+    ```
 
 ## API
 
-The full list of configurable options can be seen in the [Oracle database
-plugin API](/api/secret/databases/oracle.html) page.
+The full list of configurable options can be seen in the [Oracle database plugin
+API](/api/secret/databases/oracle.html) page.
 
-For more information on the Database secret backend's HTTP API please see the [Database secret
-backend API](/api/secret/databases/index.html) page.
-
+For more information on the database secrets engine's HTTP API please see the
+[Database secrets engine API](/api/secret/databases/index.html) page.

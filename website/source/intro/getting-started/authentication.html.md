@@ -99,7 +99,7 @@ $ vault auth enable github
 Success! Enabled github auth method at: github/
 ```
 
-Auth methods are mounted, just like secret backends, except auth
+Auth methods are mounted, just like secrets engines, except auth
 backends are always prefixed with `auth/`. So the GitHub backend we just
 mounted can be accessed at `auth/github`. You can use `vault path-help` to
 learn more about it.

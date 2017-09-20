@@ -1,21 +1,20 @@
 ---
 layout: "api"
-page_title: "TOTP Secret Backend - HTTP API"
+page_title: "TOTP - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-totp"
 description: |-
-  This is the API documentation for the Vault TOTP secret backend.
+  This is the API documentation for the Vault TOTP secrets engine.
 ---
 
-# TOTP Secret Backend HTTP API
+# TOTP Secrets Engine (API)
 
-This is the API documentation for the Vault TOTP secret backend. For
-general information about the usage and operation of the TOTP backend,
-please see the
-[Vault TOTP backend documentation](/docs/secrets/totp/index.html).
+This is the API documentation for the Vault TOTP secrets engine. For general
+information about the usage and operation of the TOTP secrets engine, please see
+the [TOTP documentation](/docs/secrets/totp/index.html).
 
-This documentation assumes the TOTP backend is mounted at the
-`/totp` path in Vault. Since it is possible to mount secret backends at
-any location, please update your API calls accordingly.
+This documentation assumes the TOTP secrets engine is enabled at the `/totp`
+path in Vault. Since it is possible to enable secrets engines at any location,
+please update your API calls accordingly.
 
 ## Create Key
 

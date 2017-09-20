@@ -3,16 +3,16 @@ layout: "api"
 page_title: "/sys/mounts - HTTP API"
 sidebar_current: "docs-http-system-mounts"
 description: |-
-  The `/sys/mounts` endpoint is used manage secret backends in Vault.
+  The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 ---
 
 # `/sys/mounts`
 
-The `/sys/mounts` endpoint is used manage secret backends in Vault.
+The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 
-## List Mounted Secret Backends
+## List Mounted Secrets Engines
 
-This endpoints lists all the mounted secret backends.
+This endpoints lists all the mounted secrets engines.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -54,9 +54,9 @@ $ curl \
 `default_lease_ttl` or `max_lease_ttl` values of 0 mean that the system defaults
 are used by this backend.
 
-## Mount Secret Backend
+## Mount Secrets Engine
 
-This endpoint mounts a new secret backend at the given path.
+This endpoint mounts a new secrets engine at the given path.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -64,7 +64,7 @@ This endpoint mounts a new secret backend at the given path.
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path where the secret backend
+- `path` `(string: <required>)` – Specifies the path where the secrets engine
   will be mounted. This is specified as part of the URL.
 
 - `type` `(string: <required>)` – Specifies the type of the backend, such as
@@ -100,7 +100,7 @@ This endpoint mounts a new secret backend at the given path.
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
-- `local` `(bool: false)` – Specifies if the secret backend is a local mount  
+- `local` `(bool: false)` – Specifies if the secrets engine is a local mount
   only. Local mounts are not replicated nor (if a secondary) removed by
   replication.
 
@@ -125,7 +125,7 @@ $ curl \
     https://vault.rocks/v1/sys/mounts/my-mount
 ```
 
-## Unmount Secret Backend
+## Unmount Secrets Engine
 
 This endpoint un-mounts the mount point specified in the URL.
 

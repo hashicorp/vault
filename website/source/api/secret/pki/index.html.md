@@ -1,19 +1,19 @@
 ---
 layout: "api"
-page_title: "PKI Secret Backend - HTTP API"
+page_title: "PKI - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-pki"
 description: |-
-  This is the API documentation for the Vault PKI secret backend.
+  This is the API documentation for the Vault PKI secrets engine.
 ---
 
-# PKI Secret Backend HTTP API
+# PKI Secrets Engine (API)
 
-This is the API documentation for the Vault PKI secret backend. For general
-information about the usage and operation of the PKI backend, please see the
-[Vault PKI backend documentation](/docs/secrets/pki/index.html).
+This is the API documentation for the Vault PKI secrets engine. For general
+information about the usage and operation of the PKI secrets engine, please see
+the [PKI documentation](/docs/secrets/pki/index.html).
 
-This documentation assumes the PKI backend is mounted at the `/pki` path in
-Vault. Since it is possible to mount secret backends at any location, please
+This documentation assumes the PKI secrets engine is enabled at the `/pki` path
+in Vault. Since it is possible to enable secrets engines at any location, please
 update your API calls accordingly.
 
 ## Table of Contents
@@ -172,10 +172,10 @@ $ curl \
 
 ## Submit CA Information
 
-This endpoint allows submitting the CA information for the backend via a PEM
-file containing the CA certificate and its private key, concatenated. Not needed
-if you are generating a self-signed root certificate, and not used if you have a
-signed intermediate CA certificate with a generated key (use the
+This endpoint allows submitting the CA information for the secrets engine via a
+PEM file containing the CA certificate and its private key, concatenated. Not
+needed if you are generating a self-signed root certificate, and not used if you
+have a signed intermediate CA certificate with a generated key (use the
 `/pki/intermediate/set-signed` endpoint for that). _If you have already set a
 certificate and key, they will be overridden._
 
@@ -893,9 +893,9 @@ As with other issued certificates, Vault will automatically revoke the
 generated root at the end of its lease period; the CA certificate will sign its
 own CRL.
 
-As of Vault 0.8.1, if a CA cert/key already exists within the backend, this
-function will return a 204 and will not overwrite it. Previous versions of
-Vault would overwrite the existing cert/key with new values.
+As of Vault 0.8.1, if a CA cert/key already exists, this function will return a
+204 and will not overwrite it. Previous versions of Vault would overwrite the
+existing cert/key with new values.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -920,8 +920,8 @@ Vault would overwrite the existing cert/key with new values.
   Names, in a comma-delimited list.
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
-  certificate will be expired). This cannot be larger than the mount max (or, if
-  not set, the system max).
+  certificate will be expired). This cannot be larger than the engine's max (or,
+  if not set, the system max).
 
 - `format` `(string: "pem")` – Specifies the format for returned data. Can be
   `pem`, `der`, or `pem_bundle`. If `der`, the output is base64 encoded. If
@@ -1033,8 +1033,8 @@ verbatim.
   Names, in a comma-delimited list.
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
-  certificate will be expired). This cannot be larger than the mount max (or, if
-  not set, the system max). However, this can be after the expiration of the
+  certificate will be expired). This cannot be larger than the engine's max (or,
+  if not set, the system max). However, this can be after the expiration of the
   signing CA.
 
 - `format` `(string: "pem")` – Specifies the format for returned data. Can be
@@ -1255,7 +1255,7 @@ have access.**
 - `csr` `(string: <required>)` – Specifies the PEM-encoded CSR.
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
-  than the mount's `max_ttl` value. If not provided, the mount's `ttl` value
+  than the engine's `max_ttl` value. If not provided, the engine's `ttl` value
   will be used, which defaults to system values if not explicitly set.
 
 - `format` `(string: "pem")` – Specifies the format for returned data. Can be
@@ -1301,7 +1301,7 @@ $ curl \
 
 ## Tidy
 
-This endpoint allows tidying up the backend storage and/or CRL by removing
+This endpoint allows tidying up the storage backend and/or CRL by removing
 certificates that have expired and are past a certain buffer period beyond their
 expiration time.
 

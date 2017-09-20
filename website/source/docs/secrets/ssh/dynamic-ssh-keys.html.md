@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Dynamic SSH Keys - SSH Secret Backend"
+page_title: "Dynamic SSH Keys - SSH - Secrets Engines"
 sidebar_current: "docs-secrets-ssh-dynamic-ssh-keys"
 description: |-
   When using this type, the administrator registers a secret key with
@@ -23,7 +23,7 @@ request, Vault creates a new SSH key pair and appends the newly-generated public
 key to the `authorized_keys` file for the configured username on the remote
 host. Vault uses a configurable install script to achieve this.
 
-The backend does not prompt for `sudo` passwords; the `NOPASSWD` option for
+The secrets engine does not prompt for `sudo` passwords; the `NOPASSWD` option for
 sudoers should be enabled at all remote hosts for the Vault administrative
 user.
 
@@ -35,8 +35,8 @@ audit the SSH session establishments.
 When the credential lease expires, Vault removes the secret key from the remote
 machine.
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+This page will show a quick start for this secrets engine. For detailed documentation
+on every path, use `vault path-help` after mounting the secrets engine.
 
 ### Drawbacks
 
@@ -75,7 +75,7 @@ vaultadmin   ALL=(ALL)NOPASSWD: ALL
 Next, infrastructure configuration must be registered with Vault via roles.
 First, however, the shared secret key must be specified.
 
-### Mount the backend
+### Mount the secrets engine
 
 ```text
 $ vault mount ssh
@@ -189,6 +189,6 @@ username@<IP of remote host>:~$
 
 ## API
 
-The SSH secret backend has a full HTTP API. Please see the
-[SSH secret backend API](/api/secret/ssh/index.html) for more
+The SSH secret secrets engine has a full HTTP API. Please see the
+[SSH secret secrets engine API](/api/secret/ssh/index.html) for more
 details.

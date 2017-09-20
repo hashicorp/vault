@@ -31,13 +31,13 @@ exact.
 
 ## Examples
 
-Get help output for the generic secrets engine:
+Get help output for the KV secrets engine:
 
 ```text
 $ vault path-help secret
 ## DESCRIPTION
 
-The generic backend reads and writes arbitrary secrets to the backend.
+The KV backend reads and writes arbitrary secrets to the backend.
 The secrets are encrypted/decrypted by Vault: they are never stored
 unencrypted in the backend and the backend never has an opportunity to
 see the unencrypted value.

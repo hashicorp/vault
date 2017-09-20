@@ -231,7 +231,7 @@ comparison of the two auth methods.
     to handle EC2 instances, such as restricting access to EC2 instances from
     a particular AMI, EC2 instances in a particular instance profile, or EC2
     instances with a specialized tag value (via the role_tag feature).
-  * The iam auth method authenticates generic AWS IAM principals. This can
+  * The iam auth method authenticates AWS IAM principals. This can
     include IAM users, IAM roles assumed from other accounts, AWS Lambdas that
     are launched in an IAM role, or even EC2 instances that are launched in an
     IAM instance profile. However, because it authenticates more generalized IAM

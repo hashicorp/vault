@@ -1,21 +1,21 @@
 ---
 layout: "api"
-page_title: "Databases - HTTP API"
+page_title: "Database - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-databases"
 description: |-
-  Top page for database secret backend information
+  Top page for database secrets engine information
 ---
 
-# Database Secret Backend HTTP API
+# Database Secrets Engine (API)
 
-This is the API documentation for the Vault Database secret backend. For
-general information about the usage and operation of the Database backend,
+This is the API documentation for the Vault Database secrets engine. For
+general information about the usage and operation of the database secrets engine,
 please see the
-[Vault Database backend documentation](/docs/secrets/databases/index.html).
+[Vault database secrets engine documentation](/docs/secrets/databases/index.html).
 
-This documentation assumes the Database backend is mounted at the
-`/database` path in Vault. Since it is possible to mount secret backends at
-any location, please update your API calls accordingly.
+This documentation assumes the database secrets engine is enabled at the
+`/database` path in Vault. Since it is possible to enable secrets engines at any
+location, please update your API calls accordingly.
 
 ## Configure Connection
 
@@ -164,11 +164,11 @@ This endpoint creates or updates a role definition.
 
 - `default_ttl` `(string/int: 0)` - Specifies the TTL for the leases
   associated with this role. Accepts time suffixed strings ("1h") or an integer
-  number of seconds. Defaults to system/backend default TTL time.
+  number of seconds. Defaults to system/engine default TTL time.
 
 - `max_ttl` `(string/int: 0)` - Specifies the maximum TTL for the leases
   associated with this role. Accepts time suffixed strings ("1h") or an integer
-  number of seconds. Defaults to system/backend default TTL time.
+  number of seconds. Defaults to system/engine default TTL time.
 
 - `creation_statements` `(string: <required>)` – Specifies the database
   statements executed to create and configure a user. See the plugin's API page

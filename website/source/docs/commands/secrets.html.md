@@ -10,7 +10,7 @@ description: |-
 # secrets
 
 The `secrets` command groups subcommands for interacting with Vault's secrets
-engines. Each secret engine behaves differently. Please see the documentation
+engines. Each secrets engine behaves differently. Please see the documentation
 for more information.
 
 Some secrets engines persist data, some act as data pass-through, and some
@@ -36,7 +36,7 @@ Path          Type         Description
 ----          ----         -----------
 cubbyhole/    cubbyhole    per-token private secret storage
 database/     database     n/a
-secret/       generic      generic secret storage
+secret/       kv           key/value secret storage
 sys/          system       system endpoints used for control, policy and debugging
 ```
 
@@ -69,7 +69,7 @@ Usage: vault secrets <subcommand> [options] [args]
   # ...
 
 Subcommands:
-    disable    Disable a secret engine
+    disable    Disable a secrets engine
     enable     Enable a secrets engine
     list       List enabled secrets engines
     move       Move a secrets engine to a new path

@@ -19,10 +19,10 @@ engine.**
 
 ## Examples
 
-Move the existing secrets engine at secret/ to generic/:
+Move the existing secrets engine at secret/ to kv/:
 
 ```text
-$ vault secrets move secret/ generic/
+$ vault secrets move secret/ kv/
 ```
 
 ## Usage

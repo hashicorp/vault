@@ -35,7 +35,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 - `-force` `(bool: false)` - Delete the lease from Vault even if the secret
   engine revocation fails. This is meant for recovery situations where the
-  secret in the target secret engine was manually removed. If this flag is
+  secret in the target secrets engine was manually removed. If this flag is
   specified, -prefix is also required. This is aliased as "-f". The default is
   false.
 

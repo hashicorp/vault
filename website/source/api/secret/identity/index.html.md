@@ -1,17 +1,16 @@
 ---
 layout: "api"
-page_title: "Identity Secret Backend - HTTP API"
+page_title: "Identity - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-identity"
 description: |-
-  This is the API documentation for the Vault Identity secret backend.
+  This is the API documentation for the Vault Identity secrets engine.
 ---
 
-# Identity Secret Backend HTTP API
+# Identity Secrets Engine (API)
 
-This is the API documentation for the Vault Identity secret backend. For
-general information about the usage and operation of the Identity backend,
-please see the
-[Vault Identity backend documentation](/docs/secrets/identity/index.html).
+This is the API documentation for the Vault Identity secrets engine. For general
+information about the usage and operation of the Identity secrets engine, please
+see the [Vault Identity documentation](/docs/secrets/identity/index.html).
 
 ## Register Entity
 
@@ -219,11 +218,11 @@ given identifier.
 
 ### Parameters
 
-- `name` (string: Required) - Name of the persona. Name should be the
-  identifier of the client in the authentication source. For example, if the
-  persona belongs to userpass backend, the name should be a valid username
-  within userpass backend. If persona belongs to GitHub, it should be the
-  GitHub username.
+- `name` (string: Required) - Name of the persona. Name should be the identifier
+  of the client in the authentication source. For example, if the persona
+  belongs to userpass auth method, the name should be a valid username within
+  userpass auth method. If persona belongs to GitHub, it should be the GitHub
+  username.
 
 - `entity_id` (string: required) - Entity ID to which this persona belongs to.
 
@@ -319,8 +318,8 @@ This endpoint is used to update an existing persona.
 
 - `name` (string: Required) - Name of the persona. Name should be the
   identifier of the client in the authentication source. For example, if the
-  persona belongs to userpass backend, the name should be a valid username
-  within userpass backend. If persona belongs to GitHub, it should be the
+  persona belongs to userpass auth method, the name should be a valid username
+  within userpass auth method. If persona belongs to GitHub, it should be the
   GitHub username.
 
 - `entity_id` (string: required) - Entity ID to which this persona belongs to.

@@ -50,7 +50,7 @@ encryption keys for `transit`, etc).
 
 If a user action would modify underlying shared state, the secondary forwards the request
 to the primary to be handled; this is transparent to the client. In practice, most
-high-volume workloads (reads in the `generic` backend, encryption/decryption operations
+high-volume workloads (reads in the `kv` backend, encryption/decryption operations
 in `transit`, etc.) can be satisfied by the local secondary, allowing Vault to scale
 relatively horizontally with the number of secondaries rather than vertically as
 in the past.
@@ -68,7 +68,7 @@ They do not forward service read or write requests until they are elected and be
 | Capability                                                                                                               	| Disaster Recovery 	| Performance                                                              	|
 |--------------------------------------------------------------------------------------------------------------------------	|-------------------	|--------------------------------------------------------------------------	|
 | Mirrors the secrets infrastructure of a primary cluster                                                                  	| Yes               	| Yes                                                                      	|
-| Mirrors the configuration of a primary cluster’s backends (i.e.: auth methods, storage backends, secret backends, etc.) 	| Yes               	| Yes                                                                      	|
+| Mirrors the configuration of a primary cluster’s backends (i.e.: auth methods, storage backends, secrets engines, etc.) 	| Yes               	| Yes                                                                      	|
 | Contains a local replica of secrets on the secondary and allows the secondary to forward writes                          	| No                	| Yes                                                                      	|
 | Mirrors the token auth infrastructure for applications or users interacting with the primary cluster                     	| Yes               	| No. Upon promotion, applications must re-auth tokens with a new primary. 	|
 

@@ -122,7 +122,7 @@ cannot be less restrictive than the mount's maximum TTL.)
 - `userpass` – The renew function now uses the backend's configured maximum TTL,
   if set; otherwise the mount maximum TTL is used.
 
-#### Secret Backends
+#### Secrets Engines
 
 - `aws` – New IAM roles no longer always have a default TTL of one hour, instead
   honoring the configured default if available and the mount default TTL if not
