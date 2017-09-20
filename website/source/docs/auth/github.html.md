@@ -40,7 +40,6 @@ at a different path, use that value instead of `github`.
 
 ```shell
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data '{"token": "MY_TOKEN"}' \
     https://vault.rocks/v1/auth/github/login
