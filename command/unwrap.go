@@ -35,7 +35,7 @@ Usage: vault unwrap [options] [TOKEN]
 
   Unwrap the data in the active token:
 
-      $ vault auth 848f9ccf-7176-098c-5e2b-75a0689d41cd
+      $ vault login 848f9ccf-7176-098c-5e2b-75a0689d41cd
       $ vault unwrap # unwraps 848f9ccf...
 
   For a full list of examples and paths, please see the online documentation.
