@@ -420,7 +420,7 @@ If a GCE token is provided for login under an `iam` role, the service account as
 $ vault auth-enable gcp
 ```
 
-#### Configure the GCP authentication backend
+#### Configure the GCP Auth Method
 
 ```
 $ vault write auth/gcp/config credentials=@path/to/creds.json
@@ -493,7 +493,7 @@ authenticating entity.
 $ curl $VAULT_ADDR/v1/sys/auth/gcp -d '{ "type": "gcp" }'
 ```
 
-#### Configure the GCP authentication backend
+#### Configure the GCP Auth Method
 
 ```
 $ curl $VAULT_ADDR/v1/auth/gcp/config \
