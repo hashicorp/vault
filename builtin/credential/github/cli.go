@@ -2,13 +2,18 @@ package github
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/password"
 )
 
-type CLIHandler struct{}
+type CLIHandler struct {
+	// for tests
+	testStdout io.Writer
+}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	mount, ok := m["mount"]
@@ -16,16 +21,39 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		mount = "github"
 	}
 
-	token, ok := m["token"]
-	if !ok {
-		if token = os.Getenv("VAULT_AUTH_GITHUB_TOKEN"); token == "" {
-			return nil, fmt.Errorf("GitHub token should be provided either as 'value' for 'token' key,\nor via an env var VAULT_AUTH_GITHUB_TOKEN")
+	// Extract or prompt for token
+	token := m["token"]
+	if token == "" {
+		token = os.Getenv("VAULT_AUTH_GITHUB_TOKEN")
+	}
+	if token == "" {
+		// Override the output
+		stdout := h.testStdout
+		if stdout == nil {
+			stdout = os.Stdout
+		}
+
+		var err error
+		fmt.Fprintf(stdout, "GitHub Personal Access Token (will be hidden): ")
+		token, err = password.Read(os.Stdin)
+		fmt.Fprintf(stdout, "\n")
+		if err != nil {
+			if err == password.ErrInterrupted {
+				return nil, fmt.Errorf("user interrupted")
+			}
+
+			return nil, fmt.Errorf("An error occurred attempting to "+
+				"ask for a token. The raw error message is shown below, but usually "+
+				"this is because you attempted to pipe a value into the command or "+
+				"you are executing outside of a terminal (tty). If you want to pipe "+
+				"the value, pass \"-\" as the argument to read from stdin. The raw "+
+				"error was: %s", err)
 		}
 	}
 
 	path := fmt.Sprintf("auth/%s/login", mount)
 	secret, err := c.Logical().Write(path, map[string]interface{}{
-		"token": token,
+		"token": strings.TrimSpace(token),
 	})
 	if err != nil {
 		return nil, err
@@ -58,7 +86,8 @@ Configuration:
       value for -path. The default value is "github".
 
   token=<string>
-      GitHub personal access token to use for authentication.
+      GitHub personal access token to use for authentication. If not provided,
+      Vault will prompt for the value.
 `
 
 	return strings.TrimSpace(help)
