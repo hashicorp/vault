@@ -18,7 +18,7 @@ demonstrates regenerating a root token.
   and a quorum of unseal keys must be available.
 
     ```shell
-    $ vault unseal
+    $ vault operator unseal
     # ...
     ```
 
@@ -29,7 +29,7 @@ In this method, an OTP is XORed with the generated token on final output.
 1. Generate a one-time password (OTP) to use for XORing the resulting token:
 
     ```text
-    $ vault generate-root -generate-otp
+    $ vault operator generate-root -generate-otp
     mOXx7iVimjE6LXQ2Zna6NA==
     ```
 
@@ -39,7 +39,7 @@ In this method, an OTP is XORed with the generated token on final output.
    above:
 
     ```text
-    $ vault generate-root -init -otp=mOXx7iVimjE6LXQ2Zna6NA==
+    $ vault operator generate-root -init -otp=mOXx7iVimjE6LXQ2Zna6NA==
     Nonce              f67f4da3-4ae4-68fb-4716-91da6b609c3e
     Started            true
     Progress           0/5
@@ -51,7 +51,7 @@ In this method, an OTP is XORed with the generated token on final output.
 1. Each unseal key holder providers their unseal key:
 
     ```text
-    $ vault generate-root
+    $ vault operator generate-root
     Root generation operation nonce: f67f4da3-4ae4-68fb-4716-91da6b609c3e
     Unseal Key (will be hidden): ...
     ```
@@ -62,14 +62,14 @@ In this method, an OTP is XORed with the generated token on final output.
     operation.
 
     ```text
-    $ echo $UNSEAL_KEY | vault generate-root -nonce=f67f4da3... -
+    $ echo $UNSEAL_KEY | vault operator generate-root -nonce=f67f4da3... -
     ```
 
 1. When the quorum of unseal keys are supplied, the final user will also get
    the encoded root token.
 
     ```text
-    $ vault generate-root
+    $ vault operator generate-root
     Root generation operation nonce: f67f4da3-4ae4-68fb-4716-91da6b609c3e
     Unseal Key (will be hidden):
 
@@ -83,7 +83,7 @@ In this method, an OTP is XORed with the generated token on final output.
 1. Decode the encoded token using the OTP:
 
     ```text
-    $ vault generate-root \
+    $ vault operator generate-root \
         -decode=IxJpyqxn3YafOGhqhvP6cQ== \
         -otp=mOXx7iVimjE6LXQ2Zna6NA==
 
@@ -96,7 +96,7 @@ In this method, an OTP is XORed with the generated token on final output.
    or keybase username of a user to encrypted the resulting token.
 
     ```text
-    $ vault generate-root -init -pgp-key=keybase:sethvargo
+    $ vault operator generate-root -init -pgp-key=keybase:sethvargo
     Nonce              e24dec5e-f1ea-2dfe-ecce-604022006976
     Started            true
     Progress           0/5
@@ -109,7 +109,7 @@ In this method, an OTP is XORed with the generated token on final output.
 1. Each unseal key holder providers their unseal key:
 
     ```text
-    $ vault generate-root
+    $ vault operator generate-root
     Root generation operation nonce: e24dec5e-f1ea-2dfe-ecce-604022006976
     Unseal Key (will be hidden): ...
     ```
@@ -127,7 +127,7 @@ In this method, an OTP is XORed with the generated token on final output.
    the encoded root token.
 
     ```text
-    $ vault generate-root
+    $ vault operator generate-root
     Root generation operation nonce: e24dec5e-f1ea-2dfe-ecce-604022006976
     Unseal Key (will be hidden):
 
