@@ -12,8 +12,8 @@ This is the API documentation for the Vault Github auth method. For
 general information about the usage and operation of the Github method, please
 see the [Vault Github method documentation](/docs/auth/github.html).
 
-This documentation assumes the Github method is mounted at the `/auth/github`
-path in Vault. Since it is possible to mount auth methods at any location,
+This documentation assumes the Github method is enabled at the `/auth/github`
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Configure Method
@@ -55,7 +55,7 @@ $ curl \
 
 ## Read Configuration
 
-Reads the Github configuration.
+Reads the GitHub configuration.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
