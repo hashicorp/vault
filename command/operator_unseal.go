@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -69,7 +68,7 @@ func (c *OperatorUnsealCommand) Flags() *FlagSets {
 }
 
 func (c *OperatorUnsealCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFiles()
+	return complete.PredictAnything
 }
 
 func (c *OperatorUnsealCommand) AutocompleteFlags() complete.Flags {
@@ -109,8 +108,7 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 			c.UI.Error(fmt.Sprintf("Error resetting unseal process: %s", err))
 			return 2
 		}
-		c.prettySealStatus(status)
-		return 0
+		return OutputSealStatus(c.UI, client, status)
 	}
 
 	if unsealKey == "" {
@@ -120,7 +118,7 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 			writer = c.testOutput
 		}
 
-		fmt.Fprintf(writer, "Key (will be hidden): ")
+		fmt.Fprintf(writer, "Unseal Key (will be hidden): ")
 		value, err := password.Read(os.Stdin)
 		fmt.Fprintf(writer, "\n")
 		if err != nil {
@@ -143,16 +141,5 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.prettySealStatus(status)
-	return 0
-}
-
-func (c *OperatorUnsealCommand) prettySealStatus(status *api.SealStatusResponse) {
-	c.UI.Output(fmt.Sprintf("Sealed: %t", status.Sealed))
-	c.UI.Output(fmt.Sprintf("Key Shares: %d", status.N))
-	c.UI.Output(fmt.Sprintf("Key Threshold: %d", status.T))
-	c.UI.Output(fmt.Sprintf("Unseal Progress: %d", status.Progress))
-	if status.Nonce != "" {
-		c.UI.Output(fmt.Sprintf("Unseal Nonce: %s", status.Nonce))
-	}
+	return OutputSealStatus(c.UI, client, status)
 }

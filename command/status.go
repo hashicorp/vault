@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -72,68 +71,17 @@ func (c *StatusCommand) Run(args []string) int {
 		return 1
 	}
 
-	sealStatus, err := client.Sys().SealStatus()
+	status, err := client.Sys().SealStatus()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error checking seal status: %s", err))
 		return 1
 	}
 
-	outStr := fmt.Sprintf(
-		"Sealed: %v\n"+
-			"Key Shares: %d\n"+
-			"Key Threshold: %d\n"+
-			"Unseal Progress: %d\n"+
-			"Unseal Nonce: %v\n"+
-			"Version: %s",
-		sealStatus.Sealed,
-		sealStatus.N,
-		sealStatus.T,
-		sealStatus.Progress,
-		sealStatus.Nonce,
-		sealStatus.Version)
+	// Do not return the int here, since we want to return a custom error code
+	// depending on the seal status.
+	OutputSealStatus(c.UI, client, status)
 
-	if sealStatus.ClusterName != "" && sealStatus.ClusterID != "" {
-		outStr = fmt.Sprintf("%s\nCluster Name: %s\nCluster ID: %s", outStr, sealStatus.ClusterName, sealStatus.ClusterID)
-	}
-
-	c.UI.Output(outStr)
-
-	// Mask the 'Vault is sealed' error, since this means HA is enabled, but that
-	// we cannot query for the leader since we are sealed.
-	leaderStatus, err := client.Sys().Leader()
-	if err != nil && strings.Contains(err.Error(), "Vault is sealed") {
-		leaderStatus = &api.LeaderResponse{HAEnabled: true}
-		err = nil
-	}
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error checking leader status: %s", err))
-		return 1
-	}
-
-	// Output if HA is enabled
-	c.UI.Output("")
-	c.UI.Output(fmt.Sprintf("High-Availability Enabled: %v", leaderStatus.HAEnabled))
-	if leaderStatus.HAEnabled {
-		if sealStatus.Sealed {
-			c.UI.Output("\tMode: sealed")
-		} else {
-			mode := "standby"
-			if leaderStatus.IsSelf {
-				mode = "active"
-			}
-			c.UI.Output(fmt.Sprintf("\tMode: %s", mode))
-
-			if leaderStatus.LeaderAddress == "" {
-				leaderStatus.LeaderAddress = "<none>"
-			}
-			if leaderStatus.LeaderClusterAddress == "" {
-				leaderStatus.LeaderClusterAddress = "<none>"
-			}
-			c.UI.Output(fmt.Sprintf("\tLeader Cluster Address: %s", leaderStatus.LeaderClusterAddress))
-		}
-	}
-
-	if sealStatus.Sealed {
+	if status.Sealed {
 		return 2
 	}
 

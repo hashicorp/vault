@@ -206,3 +206,50 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	}))
 	return nil
 }
+
+func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
+	out := []string{}
+	out = append(out, "Key | Value")
+	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
+	out = append(out, fmt.Sprintf("Total Shares | %d", status.N))
+
+	if status.Sealed {
+		out = append(out, fmt.Sprintf("Unseal Progress | %d/%d", status.Progress, status.T))
+		out = append(out, fmt.Sprintf("Unseal Nonce | %s", status.Nonce))
+	}
+
+	out = append(out, fmt.Sprintf("Version | %s", status.Version))
+
+	if status.ClusterName != "" && status.ClusterID != "" {
+		out = append(out, fmt.Sprintf("Cluster Name | %s", status.ClusterName))
+		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
+	}
+
+	// Mask the 'Vault is sealed' error, since this means HA is enabled, but that
+	// we cannot query for the leader since we are sealed.
+	leaderStatus, err := client.Sys().Leader()
+	if err != nil && strings.Contains(err.Error(), "Vault is sealed") {
+		leaderStatus = &api.LeaderResponse{HAEnabled: true}
+	}
+
+	// Output if HA is enabled
+	out = append(out, fmt.Sprintf("HA Enabled | %t", leaderStatus.HAEnabled))
+	if leaderStatus.HAEnabled {
+		mode := "sealed"
+		if !status.Sealed {
+			mode = "standby"
+			if leaderStatus.IsSelf {
+				mode = "active"
+			}
+		}
+
+		out = append(out, fmt.Sprintf("HA Mode | %s", mode))
+
+		if !status.Sealed {
+			out = append(out, fmt.Sprintf("HA Cluster | %s", leaderStatus.LeaderClusterAddress))
+		}
+	}
+
+	ui.Output(tableOutput(out, nil))
+	return 0
+}
