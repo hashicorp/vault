@@ -36,7 +36,7 @@ After installing Vault, verify the installation worked by opening a new
 terminal session and checking that the `vault` binary is available. By executing
 `vault`, you should see help output similar to the following:
 
-```
+```text
 $ vault
 Usage: vault <command> [args]
 
@@ -67,6 +67,28 @@ environment variable was not setup properly. Please go back and ensure that your
 `PATH` variable contains the directory where Vault was installed.
 
 Otherwise, Vault is installed and ready to go!
+
+## Command Completion
+
+Vault also includes command-line completion for subcommands, flags, and path
+arguments where supported. To install command-line completion, you must be using
+Bash or ZSH. Unfortunately other shells are not supported at this time.
+
+To install completions, run:
+
+```sh
+$ vault -autocomplete-install
+```
+
+This will install the helpers in your `~/.bashrc` or `~/.zshrc` automatically.
+Then restart your terminal or reload your shell:
+
+```sh
+$ exec $SHELL
+```
+
+Now when you type `vault <tab>`, Vault will suggest options. This is very
+helpful for beginners and advanced Vault users.
 
 ## Next
 

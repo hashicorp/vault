@@ -84,6 +84,7 @@
 /docs/secrets/custom.html              /docs/plugin/index.html
 /docs/secrets/generic/index.html       /docs/secrets/kv/index.html
 /intro/getting-started/acl.html        /intro/getting-started/policies.html
+/intro/getting-started/secret-backends.html   /intro/getting-started/secrets-engines.html
 
 /docs/vault-enterprise/index.html               /docs/enterprise/index.html
 /docs/vault-enterprise/replication/index.html   /docs/enterprise/replication/index.html

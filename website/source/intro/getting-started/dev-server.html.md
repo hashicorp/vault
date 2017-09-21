@@ -26,18 +26,19 @@ locally. Later in this guide we'll configure and start a real server.
 
 To start the Vault dev server, run:
 
-```
+```text
 $ vault server -dev
 ==> Vault server configuration:
 
-                     Cgo: enabled
+                     Cgo: disabled
          Cluster Address: https://127.0.0.1:8201
               Listener 1: tcp (addr: "127.0.0.1:8200", cluster address: "127.0.0.1:8201", tls: "disabled")
                Log Level: info
                    Mlock: supported: false, enabled: false
         Redirect Address: http://127.0.0.1:8200
                  Storage: inmem
-                 Version: Vault x.y.z
+                 Version: Vault v1.2.3
+             Version Sha: ...
 
 WARNING! dev mode is enabled! In this mode, Vault runs entirely in-memory
 and starts unsealed with a single unseal key. The root token is already
@@ -50,8 +51,8 @@ You may need to set the following environment variable:
 The unseal key and initial root token are displayed below in case you want to
 seal/unseal the Vault or re-authenticate.
 
-Unseal Key: PUxYl07Io6Kt63tqcMddImB2s1RPYaK+L0UVZNhD+Yo=
-Root Token: 2b9a7a8f-ed9b-669e-3827-36c05504cec2
+Unseal Key: 1aKM7rNnyW+7Jx1XDAXFswgkRVe+78JB28k/bel90jY=
+Root Token: root
 
 Development mode should NOT be used in production installations!
 
@@ -89,20 +90,22 @@ command from above properly.
 
 If it ran successfully, the output should look like the below:
 
-```
+```text
 $ vault status
-Sealed: false
-Key Shares: 1
-Key Threshold: 1
-Unseal Progress: 0
-
-High-Availability Enabled: false
+Key             Value
+---             -----
+Sealed          false
+Total Shares    1
+Version         (version unknown)
+Cluster Name    vault-cluster-81109a1a
+Cluster ID      f6e0aa8a-700e-38b8-5dc5-4265c880b2a1
+HA Enabled      false
 ```
 
-If the output looks different, especially if the numbers are different
-or the Vault is sealed, then restart the dev server and try again. The
-only reason these would ever be different is if you're running a dev
-server from going through this guide previously.
+If the output looks different, especially if the numbers are different or the
+Vault is sealed, then restart the dev server and try again. The only reason
+these would ever be different is if you're running a dev server from going
+through this guide previously.
 
 We'll cover what this output means later in the guide.
 
