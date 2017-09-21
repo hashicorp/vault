@@ -13,7 +13,7 @@ general information about the usage and operation of the LDAP method, please
 see the [Vault LDAP method documentation](/docs/auth/ldap.html).
 
 This documentation assumes the LDAP method is mounted at the `/auth/ldap`
-path in Vault. Since it is possible to mount auth methods at any location,
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Configure LDAP

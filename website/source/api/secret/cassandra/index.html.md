@@ -19,7 +19,7 @@ please see the
 [Vault Cassandra backend documentation](/docs/secrets/cassandra/index.html).
 
 This documentation assumes the Cassandra backend is mounted at the `/cassandra`
-path in Vault. Since it is possible to mount secrets engines at any location,
+path in Vault. Since it is possible to enable secrets engines at any location,
 please update your API calls accordingly.
 
 ## Configure Connection

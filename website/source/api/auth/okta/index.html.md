@@ -13,7 +13,7 @@ general information about the usage and operation of the Okta method, please
 see the [Vault Okta method documentation](/docs/auth/okta.html).
 
 This documentation assumes the Okta method is mounted at the `/auth/okta`
-path in Vault. Since it is possible to mount auth methods at any location,
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Create Configuration

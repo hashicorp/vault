@@ -13,7 +13,7 @@ general information about the usage and operation of the AWS method, please
 see the [Vault AWS method documentation](/docs/auth/aws.html).
 
 This documentation assumes the AWS method is mounted at the `/auth/aws`
-path in Vault. Since it is possible to mount auth methods at any location,
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Configure Client

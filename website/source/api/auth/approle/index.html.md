@@ -13,7 +13,7 @@ general information about the usage and operation of the AppRole method, please
 see the [Vault AppRole method documentation](/docs/auth/approle.html).
 
 This documentation assumes the AppRole method is mounted at the `/auth/approle`
-path in Vault. Since it is possible to mount auth methods at any location,
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## List Roles

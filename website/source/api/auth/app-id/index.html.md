@@ -16,5 +16,5 @@ general information about the usage and operation of the App ID method, please
 see the [Vault App ID method documentation](/docs/auth/app-id.html).
 
 This documentation assumes the App ID method is mounted at the `/auth/app-id`
-path in Vault. Since it is possible to mount auth methods at any location,
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.

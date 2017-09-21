@@ -47,13 +47,13 @@ $ curl \
 }
 ```
 
-## Mount Auth Method
+## Enable Auth Method
 
-This endpoint enables a new auth method. After mounting, the auth method can
+This endpoint enables a new auth method. After enabling, the auth method can
 be accessed and configured via the auth path specified as part of the URL. This
 auth path will be nested under the `auth` prefix.
 
-For example, mounting the "foo" auth method will make it accessible at
+For example, enable the "foo" auth method will make it accessible at
 `/auth/foo`.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
@@ -65,7 +65,7 @@ For example, mounting the "foo" auth method will make it accessible at
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path in which to mount the auth
+- `path` `(string: <required>)` – Specifies the path in which to enable the auth
   method. This is part of the request URL.
 
 - `description` `(string: "")` – Specifies a human-friendly description of the
@@ -75,7 +75,7 @@ For example, mounting the "foo" auth method will make it accessible at
   method type, such as "github" or "token".
 
 - `config` `(map<string|string>: nil)` – Specifies configuration options for
-  this mount. These are the possible values:
+  this auth method. These are the possible values:
 
     - `plugin_name`
 
@@ -89,9 +89,8 @@ For example, mounting the "foo" auth method will make it accessible at
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
-- `local` `(bool: false)` – Specifies if the auth method is a local mount
-  only. Local mounts are not replicated nor (if a secondary) removed by
-  replication.
+- `local` `(bool: false)` – Specifies if the auth method is a local only. Local
+  auth methods are not replicated nor (if a secondary) removed by replication.
 
 ### Sample Payload
 
@@ -112,9 +111,9 @@ $ curl \
     https://vault.rocks/v1/sys/auth/my-auth
 ```
 
-## Unmount Auth Method
+## Disable Auth Method
 
-This endpoint un-mounts the auth method at the given auth path.
+This endpoint disables the auth method at the given auth path.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
@@ -125,7 +124,7 @@ This endpoint un-mounts the auth method at the given auth path.
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path to unmount. This is part of
+- `path` `(string: <required>)` – Specifies the path to disable. This is part of
   the request URL.
 
 ### Sample Request

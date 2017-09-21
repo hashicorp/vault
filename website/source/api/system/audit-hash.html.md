@@ -3,19 +3,19 @@ layout: "api"
 page_title: /sys/audit-hash - HTTP API"
 sidebar_current: "docs-http-system-audit-hash"
 description: |-
-  The `/sys/audit-hash` endpoint is used to hash data using an audit backend's
+  The `/sys/audit-hash` endpoint is used to hash data using an audit device's
   hash function and salt.
 ---
 
 # `/sys/audit-hash`
 
 The `/sys/audit-hash` endpoint is used to calculate the hash of the data used by
-an audit backend's hash function and salt. This can be used to search audit logs
+an audit device's hash function and salt. This can be used to search audit logs
 for a hashed value when the original value is known.
 
 ## Calculate Hash
 
-This endpoint hashes the given input data with the specified audit backend's
+This endpoint hashes the given input data with the specified audit device's
 hash function and salt. This endpoint can be used to discover whether a given
 plaintext string (the `input` parameter) appears in the audit log in obfuscated
 form.
@@ -31,7 +31,7 @@ should also be base64-encoded to supply into the `input` parameter.
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path of the audit backend to
+- `path` `(string: <required>)` – Specifies the path of the audit device to
   generate hashes for. This is part of the request URL.
 
 - `input` `(string: <required>)` – Specifies the input string to hash.

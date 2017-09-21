@@ -111,10 +111,10 @@ correlated with a particular job ID. When the job is complete, the accessor can
 be used to instantly revoke the token given to the job and all of its leased
 credentials, limiting the chance that a bad actor will discover and use them.
 
-Audit backends can optionally be set to not obfuscate token accessors in audit
+Audit devices can optionally be set to not obfuscate token accessors in audit
 logs. This provides a way to quickly revoke tokens in case of an emergency.
-However, it also means that the audit logs can be used to perform a
-larger-scale denial of service attack.
+However, it also means that the audit logs can be used to perform a larger-scale
+denial of service attack.
 
 Finally, the only way to "list tokens" is via the `auth/token/accessors`
 command, which actually gives a list of token accessors. While this is still a

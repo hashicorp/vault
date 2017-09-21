@@ -29,7 +29,7 @@ backends must be enabled before use. To enable an auth method:
 $ vault write sys/auth/my-auth type=userpass
 ```
 
-This mounts the "userpass" auth method at the path "my-auth". This
+This enables the "userpass" auth method at the path "my-auth". This
 authentication will be accessible at the path "my-auth". Often you will see
 authentications at the same path as their name, but this is not a requirement.
 

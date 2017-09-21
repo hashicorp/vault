@@ -43,10 +43,10 @@ must be mounted before use.
     Successfully mounted 'ssh' at 'ssh-client-signer'!
     ```
 
-    This mounts the SSH secrets engine at the path "ssh-client-signer". It is possible
-    to mount the same secrets engine multiple times using different `-path`
-    arguments. The name "ssh-client-signer" is not special - it can be any name,
-    but this documentation will assume "ssh-client-signer".
+    This enables the SSH secrets engine at the path "ssh-client-signer". It is
+    possible to mount the same secrets engine multiple times using different
+    `-path` arguments. The name "ssh-client-signer" is not special - it can be
+    any name, but this documentation will assume "ssh-client-signer".
 
 1. Configure Vault with a CA for signing client keys using the `/config/ca`
 endpoint. If you do not have an internal CA, Vault can generate a keypair for

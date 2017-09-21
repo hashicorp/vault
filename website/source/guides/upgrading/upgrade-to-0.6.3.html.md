@@ -26,11 +26,11 @@ will be utilized.
 A maximum request size of 32MB is imposed to prevent a denial of service attack
 with arbitrarily large requests.
 
-## Any Audit Backend Successfully Activated Allows Active Duty
+## Any Audit Device Successfully Activated Allows Active Duty
 
 Previously, when a new Vault node was taking over service in an HA cluster, all
-audit backends were required to be active successfully to take over active
+audit devices were required to be active successfully to take over active
 duty. This behavior now matches the behavior of the audit logging system
-itself: at least one audit backend must successfully be activated. The server
+itself: at least one audit device must successfully be activated. The server
 log contains an error when this occurs. This helps keep a Vault HA cluster
 working when there is a misconfiguration on a standby node.

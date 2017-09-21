@@ -13,7 +13,7 @@ general information about the usage and operation of the RADIUS method, please
 see the [Vault RADIUS method documentation](/docs/auth/radius.html).
 
 This documentation assumes the RADIUS method is mounted at the `/auth/radius`
-path in Vault. Since it is possible to mount auth methods at any location,
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Configure RADIUS

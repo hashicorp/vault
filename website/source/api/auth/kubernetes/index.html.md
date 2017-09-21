@@ -13,7 +13,7 @@ learn more about the usage and operation, see the
 [Vault Kubernetes auth method](/docs/auth/kubernetes.html).
 
 This documentation assumes the Kubernetes method is mounted at the
-`/auth/kubernetes` path in Vault. Since it is possible to mount auth methods at
+`/auth/kubernetes` path in Vault. Since it is possible to enable auth methods at
 any location, please update your API calls accordingly.
 
 ## Configure Method

@@ -14,7 +14,7 @@ general information about the usage and operation of the Username and Password m
 see the [Vault Userpass method documentation](/docs/auth/userpass.html).
 
 This documentation assumes the Username & Password method is mounted at the `/auth/userpass`
-path in Vault. Since it is possible to mount auth methods at any location,
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Create/Update User

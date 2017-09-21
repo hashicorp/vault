@@ -10,9 +10,9 @@ description: |-
 # Auth Methods
 
 Each auth method publishes its own set of API paths and methods. These endpoints
-are documented in this section. Auth methods are mount at a path, but the
-documentation will assume the default mount points for simplicity. If you are
-mounting at a different path, you should adjust your API calls accordingly.
+are documented in this section. Auth methods are enabled at a path, but the
+documentation will assume the default paths for simplicity. If you are enabling
+at a different path, you should adjust your API calls accordingly.
 
 For the API documentation for a specific auth method, please choose a auth
 method from the navigation.

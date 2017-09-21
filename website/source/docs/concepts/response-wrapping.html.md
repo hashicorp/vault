@@ -160,7 +160,7 @@ Validation is best performed by the following steps:
    what you expect, it is possible that the data contained inside was read and
    then put into a new response-wrapping token. (This is especially likely if
    the path starts with `cubbyhole` or `sys/wrapping/wrap`.) Particular care
-   should be taken with `kv` mounts: exact matches on the path are best
+   should be taken with `kv` secrets engine: exact matches on the path are best
    there.  For example, if you expect a secret to come from `secret/foo` and
    the interceptor provides a token with `secret/bar` as the path, simply
    checking for a prefix of `secret/` is not enough.

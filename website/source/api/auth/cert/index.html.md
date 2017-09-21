@@ -14,7 +14,7 @@ method. For general information about the usage and operation of the TLS
 Certificate method, please see the [Vault TLS Certificate method documentation](/docs/auth/cert.html).
 
 This documentation assumes the TLS Certificate method is mounted at the
-`/auth/cert` path in Vault. Since it is possible to mount auth methods at any
+`/auth/cert` path in Vault. Since it is possible to enable auth methods at any
 location, please update your API calls accordingly.
 
 ## Create CA Certificate Role

@@ -31,7 +31,7 @@ get inherited from entities are computed at request time. This provides
 flexibility in controlling the access of tokens that are already issued.
 
 This secrets engine will be mounted by default. This secrets engine cannot be
-unmounted or remounted.
+disabled or moved.
 
 ## API
 

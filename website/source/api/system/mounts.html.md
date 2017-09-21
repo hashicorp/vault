@@ -54,9 +54,9 @@ $ curl \
 `default_lease_ttl` or `max_lease_ttl` values of 0 mean that the system defaults
 are used by this backend.
 
-## Mount Secrets Engine
+## Enable Secrets Engine
 
-This endpoint mounts a new secrets engine at the given path.
+This endpoint enables a new secrets engine at the given path.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -88,7 +88,7 @@ This endpoint mounts a new secrets engine at the given path.
       catalog to use.
 
     These control the default and maximum lease time-to-live, force
-    disabling backend caching, and option plugin name for plugin backends 
+    disabling backend caching, and option plugin name for plugin backends
     respectively. The first three options override the global defaults if
     set on a specific mount. The plugin_name can be provided in the config
     map or as a top-level option, with the former taking precedence.
@@ -125,9 +125,9 @@ $ curl \
     https://vault.rocks/v1/sys/mounts/my-mount
 ```
 
-## Unmount Secrets Engine
+## Disable Secrets Engine
 
-This endpoint un-mounts the mount point specified in the URL.
+This endpoint disables the mount point specified in the URL.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
