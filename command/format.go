@@ -250,6 +250,6 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 		}
 	}
 
-	ui.Output(tableOutput(out, nil))
+	ui.Output(columnOutput(out, nil))
 	return 0
 }

@@ -567,11 +567,12 @@ func (c *OperatorRekeyCommand) backupDelete(client *api.Client) int {
 // printStatus dumps the status to output
 func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int {
 	out := []string{}
+	out = append(out, "Key | Value")
 	out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
 	out = append(out, fmt.Sprintf("Started | %t", status.Started))
 
 	if status.Started {
-		out = append(out, fmt.Sprintf("Progress | %d/%d", status.Progress, status.Required))
+		out = append(out, fmt.Sprintf("Rekey Progress | %d/%d", status.Progress, status.Required))
 		out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 		out = append(out, fmt.Sprintf("New Threshold | %d", status.T))
 	}
@@ -581,8 +582,7 @@ func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int 
 		out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
 	}
 
-	output := columnOutput(out, nil)
-	c.UI.Output(output)
+	c.UI.Output(tableOutput(out, nil))
 	return 0
 }
 
