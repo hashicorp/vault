@@ -43,11 +43,15 @@ if [ "${VAULT_DEV_BUILD}x" != "x" ]; then
     XC_OSARCH=$(go env GOOS)/$(go env GOARCH)
 fi
 
+if [[ "${VAULT_STRIP_BINARIES}x" != "x" ]]; then
+    LD_FLAGS="-s -w "
+fi
+
 # Build!
 echo "==> Building..."
 gox \
     -osarch="${XC_OSARCH}" \
-    -ldflags "-X github.com/hashicorp/vault/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}'" \
+    -ldflags "${LD_FLAGS}-X github.com/hashicorp/vault/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}'" \
     -output "pkg/{{.OS}}_{{.Arch}}/vault" \
     -tags="${BUILD_TAGS}" \
     .
