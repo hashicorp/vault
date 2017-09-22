@@ -97,6 +97,7 @@ func (c *DeprecatedCommand) warn() {
 
 // Commands is the mapping of all the available commands.
 var Commands map[string]cli.CommandFactory
+var DeprecatedCommands map[string]cli.CommandFactory
 
 func init() {
 	ui := &cli.ColoredUi{
@@ -547,379 +548,382 @@ func init() {
 		},
 	}
 
-	initDeprecated(Commands, ui, loginHandlers)
-}
-
-// This function contains all the deprecated commands in one place. This
-// optimizes for backwards-compatability, but also provides a single function to
-// delete in the next major release of Vault instead of riddling all these
-// commands in separate files. As a result, it's a bit long. Sorry.
-//
-// Deprecations
-// TODO: remove in 0.9.0
-func initDeprecated(commands map[string]cli.CommandFactory, ui cli.Ui, loginHandlers map[string]LoginHandler) {
-	commands["audit-disable"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "audit-disable",
-			New: "audit disable",
-			UI:  ui,
-			Command: &AuditDisableCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
+	// Deprecated commands
+	//
+	// TODO: Remove in 0.9.0
+	DeprecatedCommands = map[string]cli.CommandFactory{
+		"audit-disable": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "audit-disable",
+				New: "audit disable",
+				UI:  ui,
+				Command: &AuditDisableCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
 				},
-			},
-		}, nil
+			}, nil
+		},
+
+		"audit-enable": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "audit-enable",
+				New: "audit enable",
+				UI:  ui,
+				Command: &AuditEnableCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"audit-list": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "audit-list",
+				New: "audit list",
+				UI:  ui,
+				Command: &AuditListCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"auth-disable": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "auth-disable",
+				New: "auth disable",
+				UI:  ui,
+				Command: &AuthDisableCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"auth-enable": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "auth-enable",
+				New: "auth enable",
+				UI:  ui,
+				Command: &AuthEnableCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"capabilities": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "capabilities",
+				New: "token capabilities",
+				UI:  ui,
+				Command: &TokenCapabilitiesCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"generate-root": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "generate-root",
+				New: "operator generate-root",
+				UI:  ui,
+				Command: &OperatorGenerateRootCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"init": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "init",
+				New: "operator init",
+				UI:  ui,
+				Command: &OperatorInitCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"key-status": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "key-status",
+				New: "operator key-status",
+				UI:  ui,
+				Command: &OperatorKeyStatusCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"renew": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "renew",
+				New: "lease renew",
+				UI:  ui,
+				Command: &LeaseRenewCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"revoke": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "revoke",
+				New: "lease revoke",
+				UI:  ui,
+				Command: &LeaseRevokeCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"mount": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "mount",
+				New: "secrets enable",
+				UI:  ui,
+				Command: &SecretsEnableCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"mount-tune": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "mount-tune",
+				New: "secrets tune",
+				UI:  ui,
+				Command: &SecretsTuneCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"mounts": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "mounts",
+				New: "secrets list",
+				UI:  ui,
+				Command: &SecretsListCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"policies": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "policies",
+				New: "policy read\" or \"vault policy list", // lol
+				UI:  ui,
+				Command: &PoliciesDeprecatedCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"policy-delete": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "policy-delete",
+				New: "policy delete",
+				UI:  ui,
+				Command: &PolicyDeleteCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"policy-write": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "policy-write",
+				New: "policy write",
+				UI:  ui,
+				Command: &PolicyWriteCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"rekey": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "rekey",
+				New: "operator rekey",
+				UI:  ui,
+				Command: &OperatorRekeyCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"remount": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "remount",
+				New: "secrets move",
+				UI:  ui,
+				Command: &SecretsMoveCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"rotate": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "rotate",
+				New: "operator rotate",
+				UI:  ui,
+				Command: &OperatorRotateCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"seal": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "seal",
+				New: "operator seal",
+				UI:  ui,
+				Command: &OperatorSealCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"step-down": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "step-down",
+				New: "operator step-down",
+				UI:  ui,
+				Command: &OperatorStepDownCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"token-create": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "token-create",
+				New: "token create",
+				UI:  ui,
+				Command: &TokenCreateCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"token-lookup": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "token-lookup",
+				New: "token lookup",
+				UI:  ui,
+				Command: &TokenLookupCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"token-renew": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "token-renew",
+				New: "token renew",
+				UI:  ui,
+				Command: &TokenRenewCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"token-revoke": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "token-revoke",
+				New: "token revoke",
+				UI:  ui,
+				Command: &TokenRevokeCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"unmount": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "unmount",
+				New: "secrets disable",
+				UI:  ui,
+				Command: &SecretsDisableCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
+
+		"unseal": func() (cli.Command, error) {
+			return &DeprecatedCommand{
+				Old: "unseal",
+				New: "operator unseal",
+				UI:  ui,
+				Command: &OperatorUnsealCommand{
+					BaseCommand: &BaseCommand{
+						UI: ui,
+					},
+				},
+			}, nil
+		},
 	}
 
-	commands["audit-enable"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "audit-enable",
-			New: "audit enable",
-			UI:  ui,
-			Command: &AuditEnableCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["audit-list"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "audit-list",
-			New: "audit list",
-			UI:  ui,
-			Command: &AuditListCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["auth-disable"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "auth-disable",
-			New: "auth disable",
-			UI:  ui,
-			Command: &AuthDisableCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["auth-enable"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "auth-enable",
-			New: "auth enable",
-			UI:  ui,
-			Command: &AuthEnableCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["capabilities"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "capabilities",
-			New: "token capabilities",
-			UI:  ui,
-			Command: &TokenCapabilitiesCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["generate-root"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "generate-root",
-			New: "operator generate-root",
-			UI:  ui,
-			Command: &OperatorGenerateRootCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["init"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "init",
-			New: "operator init",
-			UI:  ui,
-			Command: &OperatorInitCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["key-status"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "key-status",
-			New: "operator key-status",
-			UI:  ui,
-			Command: &OperatorKeyStatusCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["renew"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "renew",
-			New: "lease renew",
-			UI:  ui,
-			Command: &LeaseRenewCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["revoke"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "revoke",
-			New: "lease revoke",
-			UI:  ui,
-			Command: &LeaseRevokeCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["mount"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "mount",
-			New: "secrets enable",
-			UI:  ui,
-			Command: &SecretsEnableCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["mount-tune"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "mount-tune",
-			New: "secrets tune",
-			UI:  ui,
-			Command: &SecretsTuneCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["mounts"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "mounts",
-			New: "secrets list",
-			UI:  ui,
-			Command: &SecretsListCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["policies"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "policies",
-			New: "policy read\" or \"vault policy list", // lol
-			UI:  ui,
-			Command: &PoliciesDeprecatedCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["policy-delete"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "policy-delete",
-			New: "policy delete",
-			UI:  ui,
-			Command: &PolicyDeleteCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["policy-write"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "policy-write",
-			New: "policy write",
-			UI:  ui,
-			Command: &PolicyWriteCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["rekey"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "rekey",
-			New: "operator rekey",
-			UI:  ui,
-			Command: &OperatorRekeyCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["remount"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "remount",
-			New: "secrets move",
-			UI:  ui,
-			Command: &SecretsMoveCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["rotate"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "rotate",
-			New: "operator rotate",
-			UI:  ui,
-			Command: &OperatorRotateCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["seal"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "seal",
-			New: "operator seal",
-			UI:  ui,
-			Command: &OperatorSealCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["step-down"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "step-down",
-			New: "operator step-down",
-			UI:  ui,
-			Command: &OperatorStepDownCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["token-create"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "token-create",
-			New: "token create",
-			UI:  ui,
-			Command: &TokenCreateCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["token-lookup"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "token-lookup",
-			New: "token lookup",
-			UI:  ui,
-			Command: &TokenLookupCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["token-renew"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "token-renew",
-			New: "token renew",
-			UI:  ui,
-			Command: &TokenRenewCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["token-revoke"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "token-revoke",
-			New: "token revoke",
-			UI:  ui,
-			Command: &TokenRevokeCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["unmount"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "unmount",
-			New: "secrets disable",
-			UI:  ui,
-			Command: &SecretsDisableCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
-	}
-
-	commands["unseal"] = func() (cli.Command, error) {
-		return &DeprecatedCommand{
-			Old: "unseal",
-			New: "operator unseal",
-			UI:  ui,
-			Command: &OperatorUnsealCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			},
-		}, nil
+	// Add deprecated commands back to the main commands so they parse.
+	for k, v := range DeprecatedCommands {
+		if _, ok := Commands[k]; ok {
+			// Can't deprecate an existing command...
+			panic(fmt.Sprintf("command %q defined as deprecated and not at the same time!", k))
+		}
+		Commands[k] = v
 	}
 }
 

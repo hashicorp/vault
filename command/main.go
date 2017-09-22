@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"sort"
 	"strings"
@@ -26,19 +25,21 @@ func Run(args []string) int {
 		}
 	}
 
+	// Calculate hidden commands from the deprecated ones
+	hiddenCommands := make([]string, 0, len(DeprecatedCommands)+1)
+	for k := range DeprecatedCommands {
+		hiddenCommands = append(hiddenCommands, k)
+	}
+	hiddenCommands = append(hiddenCommands, "version")
+
 	cli := &cli.CLI{
 		Name:     "vault",
 		Args:     args,
 		Commands: Commands,
-
-		HelpFunc: FilterDeprecatedFunc(
-			FilterCommandFunc("version",
-				groupedHelpFunc(
-					cli.BasicHelpFunc("vault"),
-				),
-			),
+		HelpFunc: groupedHelpFunc(
+			cli.BasicHelpFunc("vault"),
 		),
-
+		HiddenCommands:             hiddenCommands,
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,
 	}
@@ -50,40 +51,6 @@ func Run(args []string) int {
 	}
 
 	return exitCode
-}
-
-func FilterCommandFunc(name string, f cli.HelpFunc) cli.HelpFunc {
-	return func(commands map[string]cli.CommandFactory) string {
-		newCommands := make(map[string]cli.CommandFactory, len(commands))
-		for k, v := range commands {
-			if k != name {
-				newCommands[k] = v
-			}
-		}
-		return f(newCommands)
-	}
-}
-
-// FilterDeprecatedFunc filters deprecated
-func FilterDeprecatedFunc(f cli.HelpFunc) cli.HelpFunc {
-	return func(commands map[string]cli.CommandFactory) string {
-		newCommands := make(map[string]cli.CommandFactory)
-
-		for k, cmdFn := range commands {
-			command, err := cmdFn()
-			if err != nil {
-				log.Printf("[ERR] cli: Command %q failed to load: %s", k, err)
-			}
-
-			if _, ok := command.(*DeprecatedCommand); ok {
-				continue
-			}
-
-			newCommands[k] = cmdFn
-		}
-
-		return f(newCommands)
-	}
 }
 
 var commonCommands = []string{
