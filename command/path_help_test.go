@@ -46,9 +46,9 @@ func TestPathHelpCommand_Run(t *testing.T) {
 			2,
 		},
 		{
-			"generic",
+			"kv",
 			[]string{"secret/"},
-			"The generic backend",
+			"The kv backend",
 			0,
 		},
 		{

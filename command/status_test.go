@@ -32,14 +32,14 @@ func TestStatusCommand_Run(t *testing.T) {
 			"unsealed",
 			nil,
 			false,
-			"Sealed: false",
+			"Sealed          false",
 			0,
 		},
 		{
 			"sealed",
 			nil,
 			true,
-			"Sealed: true",
+			"Sealed             true",
 			2,
 		},
 		{

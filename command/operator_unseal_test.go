@@ -1,7 +1,6 @@
 package command
 
 import (
-	"fmt"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -68,7 +67,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
-		expected := "Unseal Progress: 0"
+		expected := "0/3"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -86,7 +85,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		for i, key := range keys {
+		for _, key := range keys {
 			ui, cmd := testOperatorUnsealCommand(t)
 			cmd.client = client
 			cmd.testOutput = ioutil.Discard
@@ -96,13 +95,16 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 				key,
 			})
 			if exp := 0; code != exp {
-				t.Errorf("expected %d to be %d", code, exp)
+				t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
 			}
-			expected := fmt.Sprintf("Unseal Progress: %d", (i+1)%3) // 1, 2, 0
-			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-			if !strings.Contains(combined, expected) {
-				t.Errorf("expected %q to contain %q", combined, expected)
-			}
+		}
+
+		status, err := client.Sys().SealStatus()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if status.Sealed {
+			t.Error("expected unsealed")
 		}
 	})
 
