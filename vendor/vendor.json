@@ -1111,6 +1111,12 @@
 			"revisionTime": "2017-09-14T15:46:24Z"
 		},
 		{
+			"checksumSHA1": "WR1BjzDKgv6uE+3ShcDTYz0Gl6A=",
+			"path": "github.com/hashicorp/hcl/hcl/printer",
+			"revision": "392dba7d905ed5d04a5794ba89f558b27e2ba1ca",
+			"revisionTime": "2017-05-05T08:58:37Z"
+		},
+		{
 			"checksumSHA1": "z6wdP4mRw4GVjShkNHDaOWkbxS0=",
 			"path": "github.com/hashicorp/hcl/hcl/scanner",
 			"revision": "68e816d1c783414e79bc65b3994d9ab6b0a722ab",
