@@ -707,6 +707,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"tls_cipher_suites",
 			"tls_prefer_server_cipher_suites",
 			"tls_require_and_verify_client_cert",
+			"tls_disable_client_certs",
 			"tls_client_ca_file",
 			"token",
 		}
