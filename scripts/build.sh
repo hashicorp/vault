@@ -42,7 +42,7 @@ if [ "${VAULT_DEV_BUILD}x" != "x" ]; then
     XC_ARCH=$(go env GOARCH)
     XC_OSARCH=$(go env GOOS)/$(go env GOARCH)
 fi
-
+# If VAULT_STRIP_BINARIES env variable is set, then remove symbols from vault binary.
 if [[ "${VAULT_STRIP_BINARIES}x" != "x" ]]; then
     LD_FLAGS="-s -w "
 fi
