@@ -121,6 +121,7 @@ it gives it the default policy.
 
 ## Configuring Kubernetes
 
+### Token Review Lookup
 This backend accesses the [Kubernetes TokenReview
 API](https://kubernetes.io/docs/api-reference/v1.7/#tokenreview-v1-authentication)
 to validate the provided JWT is still valid. Kubernetes should be running with
@@ -129,6 +130,7 @@ versions prior should ensure the Kubernetes API server is started with with this
 setting. Otherwise deleted tokens in Kubernetes will not be properly revoked and
 will be able to authenticate to this backend. 
 
+### RBAC Configuration
 Service Accounts used in this backend will need to have access to the
 TokenReview API. If Kubernetes is configured to use RBAC roles the Service
 Account should be granted permissions to access this API. The following
@@ -149,6 +151,11 @@ subjects:
   name: vault-auth
   namespace: default
 ```
+
+### GKE 
+
+Currently the Token Review API endpoint is only availible in alpha clusters on
+Google Container Engine. This means on GKE this backend can only be used with an aplha cluster.
 
 ## API
 
