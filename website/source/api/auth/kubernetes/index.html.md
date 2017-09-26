@@ -42,8 +42,8 @@ access the Kubernetes API.
 ```json
 {
   "kubernetes_host": "https://192.168.99.100:8443",
-  "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----"
-  "pem_keys": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
+  "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
+  "pem_keys": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----"
 }
 ```
 
@@ -79,8 +79,8 @@ $ curl \
 {
   "data":{
       "kubernetes_host": "https://192.168.99.100:8443",
-      "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----"
-      "pem_keys": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
+      "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
+      "pem_keys": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----"
   },
   ...
 }
