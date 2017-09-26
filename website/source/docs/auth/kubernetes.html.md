@@ -154,7 +154,7 @@ subjects:
 
 ### GKE 
 
-Currently the Token Review API endpoint is only availible in alpha clusters on
+Currently the Token Review API endpoint is only available in alpha clusters on
 Google Container Engine. This means on GKE this backend can only be used with an aplha cluster.
 
 ## API
