@@ -99,7 +99,6 @@ configure it, use the `/config` endpoint.
 
 ```
 $ vault write auth/kubernetes/config \
-    pem_keys=@signingkey.crt \
     kubernetes_host=https://192.168.99.100:8443 \
     kubernetes_ca_cert=@ca.crt
 ```
