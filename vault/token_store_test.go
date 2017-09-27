@@ -566,7 +566,6 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	ts.expiration.restoreModeLock.Lock()
 	ts.expiration.restoreMode = 1
 	ts.expiration.restoreLocks = locksutil.CreateLocks()
-	ts.expiration.quitCh = make(chan struct{})
 	ts.expiration.restoreModeLock.Unlock()
 
 	// Test that the token lookup does not return the token entry due to the
