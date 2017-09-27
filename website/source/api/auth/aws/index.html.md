@@ -406,7 +406,7 @@ Returns the previously configured periodic whitelist tidying settings.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/tidy/identity-whitelist` | `200 applicaiton/json`     |
+| `GET`   | `/auth/aws/config/tidy/identity-whitelist` | `200 application/json`     |
 
 ### Sample Request
 
@@ -484,7 +484,7 @@ Returns the previously configured periodic blacklist tidying settings.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/tidy/roletag-blacklist` | `200 applicaiton/json`     |
+| `GET`   | `/auth/aws/config/tidy/roletag-blacklist` | `200 application/json`     |
 
 ### Sample Request
 
