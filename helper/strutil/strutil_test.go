@@ -65,22 +65,22 @@ func TestStrutil_ListContainsGlob(t *testing.T) {
 		"root/*",
 	}
 	if StrListContainsGlob(haystack, "tubez") {
-		t.Fatalf("Bad")
+		t.Fatalf("Value shouldn't exist")
 	}
 	if !StrListContainsGlob(haystack, "root/test") {
-		t.Fatalf("Bad")
+		t.Fatalf("Value should exist")
 	}
 	if !StrListContainsGlob(haystack, "ops_test") {
-		t.Fatalf("Bad")
+		t.Fatalf("Value should exist")
 	}
 	if !StrListContainsGlob(haystack, "ops") {
-		t.Fatalf("Bad")
+		t.Fatalf("Value should exist")
 	}
 	if !StrListContainsGlob(haystack, "dev") {
-		t.Fatalf("Bad")
+		t.Fatalf("Value should exist")
 	}
 	if StrListContainsGlob(haystack, "prod") {
-		t.Fatalf("Bad")
+		t.Fatalf("Value shouldn't exist")
 	}
 }
 
