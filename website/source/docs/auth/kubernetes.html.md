@@ -131,10 +131,11 @@ setting. Otherwise deleted tokens in Kubernetes will not be properly revoked and
 will be able to authenticate to this backend. 
 
 ### RBAC Configuration
+
 Service Accounts used in this backend will need to have access to the
-TokenReview API. If Kubernetes is configured to use RBAC roles the Service
-Account should be granted permissions to access this API. The following
-example ClusterRoleBinding could be used to grant these permissions:
+TokenReview API. If Kubernetes is configured to use Role Based Access Control
+the Service Account should be granted permissions to access this API. The
+following example ClusterRoleBinding could be used to grant these permissions:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -155,7 +156,8 @@ subjects:
 ### GKE 
 
 Currently the Token Review API endpoint is only available in alpha clusters on
-Google Container Engine. This means on GKE this backend can only be used with an aplha cluster.
+Google Container Engine. This means on GKE this backend can only be used with an
+alpha cluster.
 
 ## API
 
