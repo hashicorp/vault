@@ -2,6 +2,7 @@ package vault
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -1710,4 +1711,158 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
 	}
+}
+
+func TestSystemBackend_ToolsHash(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.UpdateOperation, "tools/hash")
+	req.Data = map[string]interface{}{
+		"input": "dGhlIHF1aWNrIGJyb3duIGZveA==",
+	}
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	doRequest := func(req *logical.Request, errExpected bool, expected string) {
+		t.Helper()
+		resp, err := b.HandleRequest(req)
+		if err != nil && !errExpected {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if errExpected {
+			if !resp.IsError() {
+				t.Fatalf("bad: got error response: %#v", *resp)
+			}
+			return
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: got error response: %#v", *resp)
+		}
+		sum, ok := resp.Data["sum"]
+		if !ok {
+			t.Fatal("no sum key found in returned data")
+		}
+		if sum.(string) != expected {
+			t.Fatal("mismatched hashes")
+		}
+	}
+
+	// Test defaults -- sha2-256
+	doRequest(req, false, "9ecb36561341d18eb65484e833efea61edc74b84cf5e6ae1b81c63533e25fc8f")
+
+	// Test algorithm selection in the path
+	req.Path = "tools/hash/sha2-224"
+	doRequest(req, false, "ea074a96cabc5a61f8298a2c470f019074642631a49e1c5e2f560865")
+
+	// Reset and test algorithm selection in the data
+	req.Path = "tools/hash"
+	req.Data["algorithm"] = "sha2-224"
+	doRequest(req, false, "ea074a96cabc5a61f8298a2c470f019074642631a49e1c5e2f560865")
+
+	req.Data["algorithm"] = "sha2-384"
+	doRequest(req, false, "15af9ec8be783f25c583626e9491dbf129dd6dd620466fdf05b3a1d0bb8381d30f4d3ec29f923ff1e09a0f6b337365a6")
+
+	req.Data["algorithm"] = "sha2-512"
+	doRequest(req, false, "d9d380f29b97ad6a1d92e987d83fa5a02653301e1006dd2bcd51afa59a9147e9caedaf89521abc0f0b682adcd47fb512b8343c834a32f326fe9bef00542ce887")
+
+	// Test returning as base64
+	req.Data["format"] = "base64"
+	doRequest(req, false, "2dOA8puXrWodkumH2D+loCZTMB4QBt0rzVGvpZqRR+nK7a+JUhq8DwtoKtzUf7USuDQ8g0oy8yb+m+8AVCzohw==")
+
+	// Test bad input/format/algorithm
+	req.Data["format"] = "base92"
+	doRequest(req, true, "")
+
+	req.Data["format"] = "hex"
+	req.Data["algorithm"] = "foobar"
+	doRequest(req, true, "")
+
+	req.Data["algorithm"] = "sha2-256"
+	req.Data["input"] = "foobar"
+	doRequest(req, true, "")
+}
+
+func TestSystemBackend_ToolsRandom(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.UpdateOperation, "tools/random")
+
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {
+		t.Helper()
+		getResponse := func() []byte {
+			resp, err := b.HandleRequest(req)
+			if err != nil && !errExpected {
+				t.Fatal(err)
+			}
+			if resp == nil {
+				t.Fatal("expected non-nil response")
+			}
+			if errExpected {
+				if !resp.IsError() {
+					t.Fatalf("bad: got error response: %#v", *resp)
+				}
+				return nil
+			}
+			if resp.IsError() {
+				t.Fatalf("bad: got error response: %#v", *resp)
+			}
+			if _, ok := resp.Data["random_bytes"]; !ok {
+				t.Fatal("no random_bytes found in response")
+			}
+
+			outputStr := resp.Data["random_bytes"].(string)
+			var outputBytes []byte
+			switch format {
+			case "base64":
+				outputBytes, err = base64.StdEncoding.DecodeString(outputStr)
+			case "hex":
+				outputBytes, err = hex.DecodeString(outputStr)
+			default:
+				t.Fatal("unknown format")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return outputBytes
+		}
+
+		rand1 := getResponse()
+		// Expected error
+		if rand1 == nil {
+			return
+		}
+		rand2 := getResponse()
+		if len(rand1) != numBytes || len(rand2) != numBytes {
+			t.Fatal("length of output random bytes not what is exepcted")
+		}
+		if reflect.DeepEqual(rand1, rand2) {
+			t.Fatal("found identical ouputs")
+		}
+	}
+
+	// Test defaults
+	doRequest(req, false, "base64", 32)
+
+	// Test size selection in the path
+	req.Path = "tools/random/24"
+	req.Data["format"] = "hex"
+	doRequest(req, false, "hex", 24)
+
+	// Test bad input/format
+	req.Path = "tools/random"
+	req.Data["format"] = "base92"
+	doRequest(req, true, "", 0)
+
+	req.Data["format"] = "hex"
+	req.Data["bytes"] = -1
+	doRequest(req, true, "", 0)
 }
