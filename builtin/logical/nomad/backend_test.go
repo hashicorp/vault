@@ -30,8 +30,9 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 
 	dockerOptions := &dockertest.RunOptions{
 		Repository: "djenriquez/nomad",
-		Tag:        "v0.7.0-beta1",
+		Tag:        "latest",
 		Cmd:        []string{"agent", "-dev"},
+		Env:        []string{`NOMAD_LOCAL_CONFIG=bind_addr = "0.0.0.0" acl { enabled = true }`},
 	}
 	resource, err := pool.RunWithOptions(dockerOptions)
 	if err != nil {
@@ -46,7 +47,9 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 	}
 
 	retAddress = fmt.Sprintf("http://localhost:%s/", resource.GetPort("4646/tcp"))
+	// Give Nomad time to initialize
 
+	time.Sleep(5000 * time.Millisecond)
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
 		var err error
@@ -57,7 +60,11 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 			return err
 		}
 		aclbootstrap, _, err := nomad.ACLTokens().Bootstrap(nil)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 		nomadToken = aclbootstrap.SecretID
+		log.Printf("[WARN] Generated Master token: %s", nomadToken)
 		policy := &nomadapi.ACLPolicy{
 			Name:        "test",
 			Description: "test",
@@ -66,7 +73,11 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
       }
       `,
 		}
-		_, err = nomad.ACLPolicies().Upsert(policy, nil)
+		nomadAuthConfig := nomadapi.DefaultConfig()
+		nomadAuthConfig.Address = retAddress
+		nomadAuthConfig.SecretID = nomadToken
+		nomadAuth, err := nomadapi.NewClient(nomadAuthConfig)
+		_, err = nomadAuth.ACLPolicies().Upsert(policy, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -179,7 +190,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	generatedSecret.TTL = 6 * time.Hour
 
 	var d struct {
-		Token string `mapstructure:"SecretID"`
+		Token string `mapstructure:"secret_id"`
 	}
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
@@ -196,7 +207,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	}
 
 	log.Printf("[WARN] Verifying that the generated token works...")
-	_, err = client.Status().Leader, nil
+	_, err = client.Jobs().List, nil
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +229,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	}
 
 	log.Printf("[WARN] Verifying that the generated token does not work...")
-	_, err = client.Status().Leader, nil
+	_, err = client.Jobs().List, nil
 	if err == nil {
 		t.Fatal("expected error")
 	}
