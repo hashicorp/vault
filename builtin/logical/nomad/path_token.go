@@ -63,6 +63,7 @@ func (b *backend) pathTokenRead(
 		Name:     tokenName,
 		Type:     result.TokenType,
 		Policies: result.Policy,
+		Global:   result.Global,
 	}, nil)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil

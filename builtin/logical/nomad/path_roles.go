@@ -32,6 +32,11 @@ func pathRoles() *framework.Path {
 				Description: "Policy name as previously created in Nomad. Required",
 			},
 
+			"global": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: "Policy name as previously created in Nomad. Required",
+			},
+
 			"token_type": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "client",
@@ -91,6 +96,7 @@ func pathRolesRead(
 		Data: map[string]interface{}{
 			"lease":      result.Lease.String(),
 			"token_type": result.TokenType,
+			"global":     result.Global,
 		},
 	}
 	if len(result.Policy) != 0 {
@@ -112,6 +118,7 @@ func pathRolesWrite(
 	}
 
 	name := d.Get("name").(string)
+	global := d.Get("global").(bool)
 	policy := d.Get("policy").([]string)
 	var err error
 	if tokenType != "management" {
@@ -135,6 +142,7 @@ func pathRolesWrite(
 		Policy:    policy,
 		Lease:     lease,
 		TokenType: tokenType,
+		Global:    global,
 	})
 	if err != nil {
 		return nil, err
@@ -160,4 +168,5 @@ type roleConfig struct {
 	Policy    []string      `json:"policy"`
 	Lease     time.Duration `json:"lease"`
 	TokenType string        `json:"token_type"`
+	Global    bool          `json:"global"`
 }
