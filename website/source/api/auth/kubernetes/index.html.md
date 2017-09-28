@@ -32,9 +32,9 @@ access the Kubernetes API.
  - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
  - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.
  - `pem_keys` `(array: [])` - Optional list of PEM-formated public keys or certificates
-    used to verify the signatures of kubernetes service account
+    used to verify the signatures of Kubernetes service account
     JWTs. If a certificate is given, its public key will be
-    extracted. Not every installation of Kuberentes exposes these
+    extracted. Not every installation of Kubernetes exposes these
     keys. 
 
 ### Sample Payload
