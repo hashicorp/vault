@@ -73,11 +73,29 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
       }
       `,
 		}
+		anonPolicy := &nomadapi.ACLPolicy{
+			Name:        "anonymous",
+			Description: "Deny all access for anonymous requests",
+			Rules: `namespace "default" {
+            policy = "deny"
+        }
+        agent {
+            policy = "deny"
+        }
+        node {
+            policy = "deny"
+        }
+        `,
+		}
 		nomadAuthConfig := nomadapi.DefaultConfig()
 		nomadAuthConfig.Address = retAddress
 		nomadAuthConfig.SecretID = nomadToken
 		nomadAuth, err := nomadapi.NewClient(nomadAuthConfig)
 		_, err = nomadAuth.ACLPolicies().Upsert(policy, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = nomadAuth.ACLPolicies().Upsert(anonPolicy, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -143,9 +161,10 @@ func TestBackend_renew_revoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := prepareTestContainer(t)
-	defer cleanup()
-
+	//cleanup, connURL, connToken := prepareTestContainer(t)
+	//defer cleanup()
+	//Ignore cleanup until I can find why the bloody test is not working
+	_, connURL, connToken := prepareTestContainer(t)
 	connData := map[string]interface{}{
 		"address": connURL,
 		"token":   connToken,
@@ -190,12 +209,13 @@ func TestBackend_renew_revoke(t *testing.T) {
 	generatedSecret.TTL = 6 * time.Hour
 
 	var d struct {
-		Token string `mapstructure:"secret_id"`
+		Token    string `mapstructure:"secret_id"`
+		Accessor string `mapstructure:"accessor_id"`
 	}
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	log.Printf("[WARN] Generated token: %s", d.Token)
+	log.Printf("[WARN] Generated token: %s with accesor %s", d.Token, d.Accessor)
 
 	// Build a client and verify that the credentials work
 	nomadapiConfig := nomadapi.DefaultConfig()
@@ -207,7 +227,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	}
 
 	log.Printf("[WARN] Verifying that the generated token works...")
-	_, err = client.Jobs().List, nil
+	_, err = client.Agent().Members, nil
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,9 +248,19 @@ func TestBackend_renew_revoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Printf("[WARN] Verifying that the generated token does not work...")
-	_, err = client.Jobs().List, nil
+	// Build a management client and verify that the token does not exist anymore
+	nomadmgmtConfig := nomadapi.DefaultConfig()
+	nomadmgmtConfig.Address = connData["address"].(string)
+	nomadmgmtConfig.SecretID = connData["token"].(string)
+	mgmtclient, err := nomadapi.NewClient(nomadmgmtConfig)
+
+	q := &nomadapi.QueryOptions{
+		Namespace: "default",
+	}
+
+	log.Printf("[WARN] Verifying that the generated token does not exist...")
+	_, _, err = mgmtclient.ACLTokens().Info(d.Accessor, q)
 	if err == nil {
-		t.Fatal("expected error")
+		t.Fatal("err: expected error")
 	}
 }
