@@ -294,7 +294,7 @@ role must be created before queried.
 ### Parameters
 
 - `name` `(string: <required>)` – Specifies the name of the role to generate
-  credentials againts. This is part of the request URL.
+  credentials against. This is part of the request URL.
 
 ### Sample Request
 
