@@ -161,10 +161,8 @@ func TestBackend_renew_revoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//cleanup, connURL, connToken := prepareTestContainer(t)
-	//defer cleanup()
-	//Ignore cleanup until I can find why the bloody test is not working
-	_, connURL, connToken := prepareTestContainer(t)
+	cleanup, connURL, connToken := prepareTestContainer(t)
+	defer cleanup()
 	connData := map[string]interface{}{
 		"address": connURL,
 		"token":   connToken,
