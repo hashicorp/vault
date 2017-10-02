@@ -1144,8 +1144,7 @@
 			"checksumSHA1": "4tY6k1MqB50R66TJJH/rsG69Yd4=",
 			"path": "github.com/hashicorp/nomad/api",
 			"revision": "a1e08240a1cff7d1bd10c89d722110a053f8dc6e",
-			"revisionTime": "2017-09-20T19:48:06Z",
-			"version": "v0.7.0-beta1"
+			"revisionTime": "2017-09-20T19:48:06Z"
 		},
 		{
 			"checksumSHA1": "/oss17GO4hXGM7QnUdI3VzcAHzA=",
