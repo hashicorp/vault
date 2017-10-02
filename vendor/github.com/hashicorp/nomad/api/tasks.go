@@ -83,7 +83,7 @@ func (r *RestartPolicy) Merge(rp *RestartPolicy) {
 // failing health checks.
 type CheckRestart struct {
 	Limit          int            `mapstructure:"limit"`
-	Grace          *time.Duration `mapstructure:"grace_period"`
+	Grace          *time.Duration `mapstructure:"grace"`
 	IgnoreWarnings bool           `mapstructure:"ignore_warnings"`
 }
 

@@ -22,7 +22,7 @@ func (n *Nodes) List(q *QueryOptions) ([]*NodeListStub, *QueryMeta, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	sort.Sort(NodeIndexSort(resp))
+	sort.Sort(resp)
 	return resp, qm, nil
 }
 

@@ -180,7 +180,7 @@ func CopyMapStringStruct(m map[string]struct{}) map[string]struct{} {
 	}
 
 	c := make(map[string]struct{}, l)
-	for k, _ := range m {
+	for k := range m {
 		c[k] = struct{}{}
 	}
 	return c

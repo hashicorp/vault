@@ -1147,28 +1147,28 @@
 			"revisionTime": "2017-09-14T15:46:24Z"
 		},
 		{
-			"checksumSHA1": "4tY6k1MqB50R66TJJH/rsG69Yd4=",
+			"checksumSHA1": "euodRTxiXS6udU7N9xRCQL6YDCg=",
 			"path": "github.com/hashicorp/nomad/api",
-			"revision": "a1e08240a1cff7d1bd10c89d722110a053f8dc6e",
-			"revisionTime": "2017-09-20T19:48:06Z"
+			"revision": "ebc79fba332501f71f272ade9382d67a47c5b4e1",
+			"revisionTime": "2017-09-29T21:44:31Z"
 		},
 		{
 			"checksumSHA1": "Is7OvHxCEEkKpdQnW8olCxL0444=",
 			"path": "github.com/hashicorp/nomad/api/contexts",
-			"revision": "a1e08240a1cff7d1bd10c89d722110a053f8dc6e",
-			"revisionTime": "2017-09-20T19:48:06Z"
+			"revision": "ebc79fba332501f71f272ade9382d67a47c5b4e1",
+			"revisionTime": "2017-09-29T21:44:31Z"
 		},
 		{
-			"checksumSHA1": "GpikwcF9oi5Rrs/58xDSfiMy/I8=",
+			"checksumSHA1": "DE+4s/X+r987Ia93s9633mGekzg=",
 			"path": "github.com/hashicorp/nomad/helper",
-			"revision": "a1e08240a1cff7d1bd10c89d722110a053f8dc6e",
-			"revisionTime": "2017-09-20T19:48:06Z"
+			"revision": "ebc79fba332501f71f272ade9382d67a47c5b4e1",
+			"revisionTime": "2017-09-29T21:44:31Z"
 		},
 		{
-			"checksumSHA1": "hrzGvgMsH9p6MKOu3zYS8fooL3g=",
-			"path": "github.com/hashicorp/nomad/nomad/structs",
-			"revision": "a1e08240a1cff7d1bd10c89d722110a053f8dc6e",
-			"revisionTime": "2017-09-20T19:48:06Z"
+			"checksumSHA1": "mSCo/iZUEOSpeX5NsGZZzFMJqto=",
+			"path": "github.com/hashicorp/nomad/helper/uuid",
+			"revision": "ebc79fba332501f71f272ade9382d67a47c5b4e1",
+			"revisionTime": "2017-09-29T21:44:31Z"
 		},
 		{
 			"checksumSHA1": "/oss17GO4hXGM7QnUdI3VzcAHzA=",

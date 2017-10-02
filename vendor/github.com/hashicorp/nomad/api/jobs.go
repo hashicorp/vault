@@ -9,7 +9,6 @@ import (
 
 	"github.com/gorhill/cronexpr"
 	"github.com/hashicorp/nomad/helper"
-	"github.com/hashicorp/nomad/nomad/structs"
 )
 
 const (
@@ -330,6 +329,20 @@ type UpdateStrategy struct {
 	Canary          *int           `mapstructure:"canary"`
 }
 
+// DefaultUpdateStrategy provides a baseline that can be used to upgrade
+// jobs with the old policy or for populating field defaults.
+func DefaultUpdateStrategy() *UpdateStrategy {
+	return &UpdateStrategy{
+		Stagger:         helper.TimeToPtr(30 * time.Second),
+		MaxParallel:     helper.IntToPtr(1),
+		HealthCheck:     helper.StringToPtr("checks"),
+		MinHealthyTime:  helper.TimeToPtr(10 * time.Second),
+		HealthyDeadline: helper.TimeToPtr(5 * time.Minute),
+		AutoRevert:      helper.BoolToPtr(false),
+		Canary:          helper.IntToPtr(0),
+	}
+}
+
 func (u *UpdateStrategy) Copy() *UpdateStrategy {
 	if u == nil {
 		return nil
@@ -403,34 +416,34 @@ func (u *UpdateStrategy) Merge(o *UpdateStrategy) {
 }
 
 func (u *UpdateStrategy) Canonicalize() {
-	d := structs.DefaultUpdateStrategy
+	d := DefaultUpdateStrategy()
 
 	if u.MaxParallel == nil {
-		u.MaxParallel = helper.IntToPtr(d.MaxParallel)
+		u.MaxParallel = d.MaxParallel
 	}
 
 	if u.Stagger == nil {
-		u.Stagger = helper.TimeToPtr(d.Stagger)
+		u.Stagger = d.Stagger
 	}
 
 	if u.HealthCheck == nil {
-		u.HealthCheck = helper.StringToPtr(d.HealthCheck)
+		u.HealthCheck = d.HealthCheck
 	}
 
 	if u.HealthyDeadline == nil {
-		u.HealthyDeadline = helper.TimeToPtr(d.HealthyDeadline)
+		u.HealthyDeadline = d.HealthyDeadline
 	}
 
 	if u.MinHealthyTime == nil {
-		u.MinHealthyTime = helper.TimeToPtr(d.MinHealthyTime)
+		u.MinHealthyTime = d.MinHealthyTime
 	}
 
 	if u.AutoRevert == nil {
-		u.AutoRevert = helper.BoolToPtr(d.AutoRevert)
+		u.AutoRevert = d.AutoRevert
 	}
 
 	if u.Canary == nil {
-		u.Canary = helper.IntToPtr(d.Canary)
+		u.Canary = d.Canary
 	}
 }
 
