@@ -95,7 +95,7 @@ IMPROVEMENTS:
  * auth/aws: Allow wildcards in `bound_iam_principal_id` [GH-3213]
  * auth/okta: Compare groups case-insensitively since Okta is only
    case-preserving [GH-3240]
- * auth/okta: Standarize Okta configuration APIs across backends [GH-3245]
+ * auth/okta: Standardize Okta configuration APIs across backends [GH-3245]
  * cli: Add subcommand autocompletion that can be enabled with 
    `vault -autocomplete-install` [GH-3223]
  * cli: Add ability to handle wrapped responses when using `vault auth`. What
