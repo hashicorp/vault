@@ -539,7 +539,7 @@ $ vault write auth/userpass/users/sethvargo \
 ```
 
 This creates an authentication mapping to the policy such that, when the user
-authenticates successful to Vault, they will be given a token which has the list
+authenticates successfully to Vault, they will be given a token which has the list
 of policies attached.
 
 The user wishing to authenticate would run
@@ -555,7 +555,7 @@ authenticated user.
 
 ### Tokens
 
-Tokens are associated their policies at creation time. For example:
+Tokens are associated with their policies at creation time. For example:
 
 ```sh
 $ vault token-create -policy=dev-readonly,logs
@@ -568,6 +568,6 @@ There is no way to modify the policies associated with a token once the token
 has been issued. The token must be revoked and a new one acquired to receive a
 new set of policies.
 
-However, the _contents_ of policies are parsed in real-time at every token use.
+However, the _contents_ of policies are parsed in real-time whenever the token is used.
 As a result, if a policy is modified, the modified rules will be in force the
-next time a token with that policy attached is used to make a call to Vault.
+next time a token, with that policy attached, is used to make a call to Vault.
