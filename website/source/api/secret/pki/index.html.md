@@ -317,13 +317,15 @@ parameter.
 ### Parameters
 
 - `issuing_certificates` `(array<string>: nil)` – Specifies the URL values for
-  the Issuing Certificate field.
+  the Issuing Certificate field. This can be an array or a comma-separated
+  string list.
 
 - `crl_distribution_points` `(array<string>: nil)` – Specifies the URL values
-  for the CRL Distribution Points field.
+  for the CRL Distribution Points field. This can be an array or a
+  comma-separated string list.
 
 - `ocsp_servers` `(array<string>: nil)` – Specifies the URL values for the OCSP
-  Servers field.
+  Servers field. This can be an array or a comma-separated string list.
 
 ### Sample Payload
 
