@@ -1,3 +1,10 @@
+## 0.8.4 (Unreleased)
+
+IMPROVEMENTS:
+
+ * Allow entering URLs for `pki` as both comma-separated strings and JSON
+   arrays [GH-3409]
+
 ## 0.8.3 (September 19th, 2017)
 
 CHANGES:
