@@ -47,6 +47,31 @@ type routeEntry struct {
 	loginPaths  *radix.Tree
 }
 
+type validateMountResponse struct {
+	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
+	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
+	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
+}
+
+// validateMountByAccessor returns the mount type and ID for a given mount
+// accessor
+func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse {
+	if accessor == "" {
+		return nil
+	}
+
+	mountEntry := r.MatchingMountByAccessor(accessor)
+	if mountEntry == nil {
+		return nil
+	}
+
+	return &validateMountResponse{
+		MountAccessor: mountEntry.Accessor,
+		MountType:     mountEntry.Type,
+		MountPath:     mountEntry.Path,
+	}
+}
+
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversible
 func (re *routeEntry) SaltID(id string) string {
 	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA1Hash)

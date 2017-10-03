@@ -240,6 +240,9 @@ type Core struct {
 	// can be output in the audit logs
 	auditedHeaders *AuditedHeadersConfig
 
+	// systemBackend is the backend which is used to manage internal operations
+	systemBackend *SystemBackend
+
 	// systemBarrierView is the barrier view for the system backend
 	systemBarrierView *BarrierView
 
@@ -255,6 +258,9 @@ type Core struct {
 
 	// token store is used to manage authentication tokens
 	tokenStore *TokenStore
+
+	// identityStore is used to manage client entities
+	identityStore *IdentityStore
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}

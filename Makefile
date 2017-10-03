@@ -73,6 +73,9 @@ bootstrap:
 proto:
 	protoc -I helper/forwarding -I vault -I ../../.. vault/*.proto --go_out=plugins=grpc:vault
 	protoc -I helper/forwarding -I vault -I ../../.. helper/forwarding/types.proto --go_out=plugins=grpc:helper/forwarding
+	protoc -I helper/storagepacker helper/storagepacker/types.proto --go_out=plugins=grpc:helper/storagepacker
+	protoc -I helper/identity -I ../../.. helper/identity/types.proto --go_out=plugins=grpc:helper/identity
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Pingid/PingID/' -e 's/Id/ID/' -e 's/EntityId/EntityID/' -e 's/Mfa/MFA/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Api/API/' helper/identity/types.pb.go helper/storagepacker/types.pb.go
 
 fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"

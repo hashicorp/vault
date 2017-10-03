@@ -3,6 +3,10 @@ package gcpauth
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/vault-plugin-auth-gcp/plugin/util"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -11,9 +15,6 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -39,8 +40,8 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:           b.pathLogin,
-			logical.PersonaLookaheadOperation: b.pathLogin,
+			logical.UpdateOperation:         b.pathLogin,
+			logical.AliasLookaheadOperation: b.pathLogin,
 		},
 
 		HelpSynopsis:    pathLoginHelpSyn,
@@ -280,10 +281,10 @@ func (b *GcpAuthBackend) pathIamLogin(req *logical.Request, loginInfo *gcpLoginI
 		return nil, errors.New("service account is empty")
 	}
 
-	if req.Operation == logical.PersonaLookaheadOperation {
+	if req.Operation == logical.AliasLookaheadOperation {
 		return &logical.Response{
 			Auth: &logical.Auth{
-				Persona: &logical.Persona{
+				Alias: &logical.Alias{
 					Name: serviceAccount.UniqueId,
 				},
 			},
@@ -298,7 +299,7 @@ func (b *GcpAuthBackend) pathIamLogin(req *logical.Request, loginInfo *gcpLoginI
 	resp := &logical.Response{
 		Auth: &logical.Auth{
 			Period: role.Period,
-			Persona: &logical.Persona{
+			Alias: &logical.Alias{
 				Name: serviceAccount.UniqueId,
 			},
 			Policies: role.Policies,
@@ -403,7 +404,7 @@ func (b *GcpAuthBackend) pathGceLogin(req *logical.Request, loginInfo *gcpLoginI
 		Auth: &logical.Auth{
 			InternalData: map[string]interface{}{},
 			Period:       role.Period,
-			Persona: &logical.Persona{
+			Alias: &logical.Alias{
 				Name: fmt.Sprintf("gce-%s", strconv.FormatUint(instance.Id, 10)),
 			},
 			Policies: role.Policies,
