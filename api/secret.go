@@ -83,40 +83,6 @@ func (s *Secret) TokenAccessor() string {
 	return accessor
 }
 
-// TokenMeta returns the standardized token metadata for the given secret.
-// If the secret is nil or does not contain an accessor, this returns the empty
-// string. Metadata is usually modeled as an map[string]interface{}, but token
-// metadata is always a map[string]string. This function handles the coercion.
-func (s *Secret) TokenMeta() map[string]string {
-	if s == nil {
-		return nil
-	}
-
-	if s.Auth != nil && len(s.Auth.Metadata) > 0 {
-		return s.Auth.Metadata
-	}
-
-	if s.Data == nil || s.Data["meta"] == nil {
-		return nil
-	}
-
-	metaRaw, ok := s.Data["meta"].(map[string]interface{})
-	if !ok {
-		return nil
-	}
-
-	meta := make(map[string]string, len(metaRaw))
-	for k, v := range metaRaw {
-		m, ok := v.(string)
-		if !ok {
-			return nil
-		}
-		meta[k] = m
-	}
-
-	return meta
-}
-
 // TokenRemainingUses returns the standardized remaining uses for the given
 // secret. If the secret is nil or does not contain the "num_uses", this returns
 // 0..
