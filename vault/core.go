@@ -557,6 +557,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 		return b, nil
 	}
+
+	logicalBackends["identity"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return NewIdentityStore(c, config)
+	}
+
 	c.logicalBackends = logicalBackends
 
 	credentialBackends := make(map[string]logical.Factory)
