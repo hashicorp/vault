@@ -55,7 +55,7 @@ func (h *CLIHandler) Help() string {
 	help := `
 Usage: vault login -method=okta [CONFIG K=V...]
 
-  The OKTA auth method allows users to authenticate using OKTA.
+  The Okta auth method allows users to authenticate using Okta.
 
   Authenticate as "sally":
 
@@ -69,11 +69,11 @@ Usage: vault login -method=okta [CONFIG K=V...]
 Configuration:
 
   password=<string>
-      OKTA password to use for authentication. If not provided, the CLI will
+      Okta password to use for authentication. If not provided, the CLI will
       prompt for this on stdin.
 
   username=<string>
-      OKTA username to use for authentication.
+      Okta username to use for authentication.
 `
 
 	return strings.TrimSpace(help)
