@@ -1,16 +1,16 @@
 package logical
 
-// Persona represents the information used by core to create implicit entity.
+// Alias represents the information used by core to create implicit entity.
 // Implicit entities get created when a client authenticates successfully from
 // any of the authentication backends (except token backend).
 //
-// This is applicable to enterprise binaries only. Persona should be set in the
+// This is applicable to enterprise binaries only. Alias should be set in the
 // Auth response returned by the credential backends. This structure is placed
 // in the open source repository only to enable custom authetication plugins to
 // be used along with enterprise binary. The custom auth plugins should make
-// use of this and fill out the Persona information in the authentication
+// use of this and fill out the Alias information in the authentication
 // response.
-type Persona struct {
+type Alias struct {
 	// MountType is the backend mount's type to which this identity belongs
 	// to.
 	MountType string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
