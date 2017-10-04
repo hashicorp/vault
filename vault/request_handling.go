@@ -67,7 +67,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		resp.WrapInfo.TTL != 0
 
 	if wrapping {
-		cubbyResp, cubbyErr := c.wrapInCubbyhole(req, resp)
+		cubbyResp, cubbyErr := c.wrapInCubbyhole(req, resp, auth)
 		// If not successful, returns either an error response from the
 		// cubbyhole backend or an error; if either is set, set resp and err to
 		// those and continue so that that's what we audit log. Otherwise
