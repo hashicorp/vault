@@ -24,6 +24,9 @@ type CredentialsConfig struct {
 	// the client elsewhere.
 	Region string
 
+	//Endpoint to custom IAM server URL
+	Endpoint string
+
 	// The filename for the shared credentials provider, if being used
 	Filename string
 

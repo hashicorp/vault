@@ -23,6 +23,10 @@ func pathConfigRoot() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Region for API calls.",
 			},
+			"endpoint": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Endpoint to custom IAM server URL",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -37,10 +41,16 @@ func pathConfigRoot() *framework.Path {
 func pathConfigRootWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
+	endpoint := data.Get("endpoint").(string)
+
+	if endpoint == "" {
+		endpoint = "none"
+	}
 
 	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
 		AccessKey: data.Get("access_key").(string),
 		SecretKey: data.Get("secret_key").(string),
+		Endpoint:  endpoint,
 		Region:    region,
 	})
 	if err != nil {
@@ -57,6 +67,7 @@ func pathConfigRootWrite(
 type rootConfig struct {
 	AccessKey string `json:"access_key"`
 	SecretKey string `json:"secret_key"`
+	Endpoint  string `json:"endpoint"`
 	Region    string `json:"region"`
 }
 

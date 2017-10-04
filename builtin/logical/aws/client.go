@@ -29,6 +29,7 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
 		credsConfig.Region = config.Region
+		credsConfig.Endpoint = config.Endpoint
 	}
 
 	if credsConfig.Region == "" {
@@ -51,6 +52,7 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 	return &aws.Config{
 		Credentials: creds,
 		Region:      aws.String(credsConfig.Region),
+		Endpoint:    aws.String(credsConfig.Endpoint),
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}, nil
 }
@@ -60,7 +62,13 @@ func clientIAM(s logical.Storage) (*iam.IAM, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	client := iam.New(session.New(awsConfig))
+
+	if *awsConfig.Endpoint != "none" {
+		client = iam.New(session.New(awsConfig.WithEndpoint(*awsConfig.Endpoint)))
+	}
+
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain iam client")
 	}
@@ -73,6 +81,9 @@ func clientSTS(s logical.Storage) (*sts.STS, error) {
 		return nil, err
 	}
 	client := sts.New(session.New(awsConfig))
+	if *awsConfig.Endpoint != "none" {
+		client = sts.New(session.New(awsConfig.WithEndpoint(*awsConfig.Endpoint)))
+	}
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain sts client")
 	}
