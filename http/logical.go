@@ -82,6 +82,8 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	req := requestAuth(core, r, &logical.Request{
 		ID:         request_id,
 		Operation:  op,
+		URL:        r.URL,
+		Query:      r.URL.Query(),
 		Path:       path,
 		Data:       data,
 		Connection: getConnection(r),
