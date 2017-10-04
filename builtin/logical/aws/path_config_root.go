@@ -23,9 +23,13 @@ func pathConfigRoot() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Region for API calls.",
 			},
-			"endpoint": &framework.FieldSchema{
+			"iamendpoint": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Endpoint to custom IAM server URL",
+			},
+			"stsendpoint": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Endpoint to custom STS server URL",
 			},
 		},
 
@@ -41,17 +45,15 @@ func pathConfigRoot() *framework.Path {
 func pathConfigRootWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
-	endpoint := data.Get("endpoint").(string)
-
-	if endpoint == "" {
-		endpoint = "none"
-	}
+	iamendpoint := data.Get("iamendpoint").(string)
+	stsendpoint := data.Get("stsendpoint").(string)
 
 	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
-		AccessKey: data.Get("access_key").(string),
-		SecretKey: data.Get("secret_key").(string),
-		Endpoint:  endpoint,
-		Region:    region,
+		AccessKey:   data.Get("access_key").(string),
+		SecretKey:   data.Get("secret_key").(string),
+		IAMEndpoint: iamendpoint,
+		STSEndpoint: stsendpoint,
+		Region:      region,
 	})
 	if err != nil {
 		return nil, err
@@ -65,10 +67,11 @@ func pathConfigRootWrite(
 }
 
 type rootConfig struct {
-	AccessKey string `json:"access_key"`
-	SecretKey string `json:"secret_key"`
-	Endpoint  string `json:"endpoint"`
-	Region    string `json:"region"`
+	AccessKey   string `json:"access_key"`
+	SecretKey   string `json:"secret_key"`
+	IAMEndpoint string `json:"iamendpoint"`
+	STSEndpoint string `json:"stsendpoint"`
+	Region      string `json:"region"`
 }
 
 const pathConfigRootHelpSyn = `
