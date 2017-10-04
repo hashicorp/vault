@@ -8,6 +8,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -387,7 +388,41 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	// If the response generated an authentication, then generate the token
 	var auth *logical.Auth
 	if resp != nil && resp.Auth != nil {
+		var entity *identity.Entity
 		auth = resp.Auth
+
+		if auth.Alias != nil {
+			// Overwrite the mount type and mount path in the alias
+			// information
+			auth.Alias.MountType = req.MountType
+			auth.Alias.MountAccessor = req.MountAccessor
+
+			if auth.Alias.Name == "" {
+				return nil, nil, fmt.Errorf("missing name in alias")
+			}
+
+			var err error
+
+			// Check if an entity already exists for the given alias
+			entity, err = c.identityStore.EntityByAliasFactors(auth.Alias.MountAccessor, auth.Alias.Name, false)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			// If not, create one.
+			if entity == nil {
+				c.logger.Debug("core: creating a new entity", "alias", auth.Alias)
+				entity, err = c.identityStore.CreateEntity(auth.Alias)
+				if err != nil {
+					return nil, nil, err
+				}
+				if entity == nil {
+					return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
+				}
+			}
+
+			auth.EntityID = entity.ID
+		}
 
 		if strutil.StrListSubset(auth.Policies, []string{"root"}) {
 			return logical.ErrorResponse("authentication backends cannot create root tokens"), nil, logical.ErrInvalidRequest

@@ -6,12 +6,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
-	"github.com/hashicorp/vault/enthelpers/identity"
-	"github.com/hashicorp/vault/enthelpers/mfa"
-	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -68,72 +65,6 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 		resp.Data["name"] != updateData["name"] ||
 		!reflect.DeepEqual(resp.Data["policies"], updateData["policies"]) {
 		t.Fatalf("bad: entity response after update; resp: %#v\n updateData: %#v\n", resp.Data, updateData)
-	}
-}
-
-func TestIdentityStore_EntityUpgrade(t *testing.T) {
-	is, _, _ := testIdentityStoreWithGithubAuth(t)
-
-	oldAlias := &identity.PersonaIndexEntry{
-		ID:       "aliasid",
-		EntityID: "entityid",
-		Name:     "aliasname",
-		Metadata: map[string]string{
-			"aliasmetakey": "aliasmetavalue",
-		},
-		MountType:           "mounttype",
-		MountAccessor:       "mountaccessor",
-		MountPath:           "mountpath",
-		CreationTime:        ptypes.TimestampNow(),
-		LastUpdateTime:      ptypes.TimestampNow(),
-		MergedFromEntityIDs: []string{"mergedfromentityid"},
-	}
-
-	oldEntity := &identity.EntityStorageEntry{
-		ID:   "entityid",
-		Name: "entityname",
-		Metadata: map[string]string{
-			"metakey": "metavalue",
-		},
-		CreationTime:    ptypes.TimestampNow(),
-		LastUpdateTime:  ptypes.TimestampNow(),
-		MergedEntityIDs: []string{"mergedentityid"},
-		Policies:        []string{"testpolicy"},
-		BucketKeyHash:   "bucketkeyhash",
-		MFASecrets: map[string]*mfa.Secret{
-			"totp": &mfa.Secret{
-				MethodName: "mfamethodname",
-				Value: &mfa.Secret_TOTPSecret{
-					TOTPSecret: &mfa.TOTPSecret{
-						Issuer: "Hashicorp",
-					},
-				},
-			},
-		},
-		Personas: []*identity.PersonaIndexEntry{
-			oldAlias,
-		},
-	}
-
-	entityAsAny, err := ptypes.MarshalAny(oldEntity)
-	if err != nil {
-		t.Fatal(err)
-	}
-	item := &storagepacker.Item{
-		ID:      oldEntity.ID,
-		Message: entityAsAny,
-	}
-
-	// Persist the entity object
-	err = is.entityPacker.PutItem(item)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Just ensure that this doesn't error out
-	_, err = is.parseEntityFromBucketItem(item)
-	if err != nil {
-		t.Fatal(err)
 	}
 }
 
