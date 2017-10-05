@@ -48,9 +48,6 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
 	mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/renew", handleRequestForwarding(core, handleLogical(core, false, nil)))
-	mux.Handle("/v1/sys/renew/", handleRequestForwarding(core, handleLogical(core, false, nil)))
-	mux.Handle("/v1/sys/leases/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
 	mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core)))
@@ -62,8 +59,10 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/wrapping/lookup", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
 	mux.Handle("/v1/sys/wrapping/rewrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
 	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/capabilities-self", handleRequestForwarding(core, handleLogical(core, true, nil)))
-	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, true, nil)))
+	for _, path := range injectDataIntoTopRoutes {
+		mux.Handle(path, handleRequestForwarding(core, handleLogical(core, true, nil)))
+	}
+	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 
 	// Wrap the handler in another handler to trigger all help paths.
@@ -352,4 +351,28 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 
 type ErrorResponse struct {
 	Errors []string `json:"errors"`
+}
+
+var injectDataIntoTopRoutes = []string{
+	"/v1/sys/audit",
+	"/v1/sys/audit/",
+	"/v1/sys/audit-hash/",
+	"/v1/sys/auth",
+	"/v1/sys/auth/",
+	"/v1/sys/config/cors",
+	"/v1/sys/config/auditing/request-headers/",
+	"/v1/sys/config/auditing/request-headers",
+	"/v1/sys/capabilities",
+	"/v1/sys/capabilities-accessor",
+	"/v1/sys/capabilities-self",
+	"/v1/sys/key-status",
+	"/v1/sys/mounts",
+	"/v1/sys/mounts/",
+	"/v1/sys/policy",
+	"/v1/sys/policy/",
+	"/v1/sys/rekey/backup",
+	"/v1/sys/rekey/recovery-key-backup",
+	"/v1/sys/remount",
+	"/v1/sys/rotate",
+	"/v1/sys/wrapping/wrap",
 }
