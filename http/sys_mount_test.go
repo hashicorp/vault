@@ -56,6 +56,16 @@ func TestSysMounts(t *testing.T) {
 				},
 				"local": true,
 			},
+			"identity/": map[string]interface{}{
+				"description": "identity store",
+				"type":        "identity",
+				"config": map[string]interface{}{
+					"default_lease_ttl": json.Number("0"),
+					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
+				},
+				"local": false,
+			},
 		},
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
@@ -86,6 +96,16 @@ func TestSysMounts(t *testing.T) {
 				"force_no_cache":    false,
 			},
 			"local": true,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+			},
+			"local": false,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -167,6 +187,16 @@ func TestSysMount(t *testing.T) {
 				},
 				"local": true,
 			},
+			"identity/": map[string]interface{}{
+				"description": "identity store",
+				"type":        "identity",
+				"config": map[string]interface{}{
+					"default_lease_ttl": json.Number("0"),
+					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
+				},
+				"local": false,
+			},
 		},
 		"foo/": map[string]interface{}{
 			"description": "foo",
@@ -207,6 +237,16 @@ func TestSysMount(t *testing.T) {
 				"force_no_cache":    false,
 			},
 			"local": true,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+			},
+			"local": false,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -310,6 +350,16 @@ func TestSysRemount(t *testing.T) {
 				},
 				"local": true,
 			},
+			"identity/": map[string]interface{}{
+				"description": "identity store",
+				"type":        "identity",
+				"config": map[string]interface{}{
+					"default_lease_ttl": json.Number("0"),
+					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
+				},
+				"local": false,
+			},
 		},
 		"bar/": map[string]interface{}{
 			"description": "foo",
@@ -350,6 +400,16 @@ func TestSysRemount(t *testing.T) {
 				"force_no_cache":    false,
 			},
 			"local": true,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+			},
+			"local": false,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -424,6 +484,16 @@ func TestSysUnmount(t *testing.T) {
 				},
 				"local": true,
 			},
+			"identity/": map[string]interface{}{
+				"description": "identity store",
+				"type":        "identity",
+				"config": map[string]interface{}{
+					"default_lease_ttl": json.Number("0"),
+					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
+				},
+				"local": false,
+			},
 		},
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
@@ -454,6 +524,16 @@ func TestSysUnmount(t *testing.T) {
 				"force_no_cache":    false,
 			},
 			"local": true,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+			},
+			"local": false,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -535,6 +615,16 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local": true,
 			},
+			"identity/": map[string]interface{}{
+				"description": "identity store",
+				"type":        "identity",
+				"config": map[string]interface{}{
+					"default_lease_ttl": json.Number("0"),
+					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
+				},
+				"local": false,
+			},
 		},
 		"foo/": map[string]interface{}{
 			"description": "foo",
@@ -575,6 +665,16 @@ func TestSysTuneMount(t *testing.T) {
 				"force_no_cache":    false,
 			},
 			"local": true,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+			},
+			"local": false,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -677,6 +777,16 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local": true,
 			},
+			"identity/": map[string]interface{}{
+				"description": "identity store",
+				"type":        "identity",
+				"config": map[string]interface{}{
+					"default_lease_ttl": json.Number("0"),
+					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
+				},
+				"local": false,
+			},
 		},
 		"foo/": map[string]interface{}{
 			"description": "foo",
@@ -717,6 +827,16 @@ func TestSysTuneMount(t *testing.T) {
 				"force_no_cache":    false,
 			},
 			"local": true,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+			},
+			"local": false,
 		},
 	}
 
