@@ -117,9 +117,11 @@ func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Resp
 		if reply.Error.Error() == logical.ErrUnsupportedOperation.Error() {
 			return nil, logical.ErrUnsupportedOperation
 		}
+
+		return reply.Response, reply.Error
 	}
 
-	return reply.Response, reply.Error
+	return reply.Response, nil
 }
 
 func (b *backendPluginClient) SpecialPaths() *logical.Paths {
