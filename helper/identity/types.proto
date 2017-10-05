@@ -48,11 +48,10 @@ message Group {
 // Entity represents an entity that gets persisted and indexed.
 // Entity is fundamentally composed of zero or many aliases.
 message Entity {
-	// Deprecated in favor of Aliases.
-	// Personas are the identities that this entity is made of. This can be
+	// Aliases are the identities that this entity is made of. This can be
 	// empty as well to favor being able to create the entity first and then
-	// incrementally adding personas.
-	repeated Persona personas = 1;
+	// incrementally adding aliases.
+	repeated Alias aliases = 1;
 
 	// ID is the unique identifier of the entity which always be a UUID. This
 	// should never be allowed to be updated.
@@ -100,8 +99,6 @@ message Entity {
 	// MFASecrets holds the MFA secrets indexed by the identifier of the MFA
 	// method configuration.
 	//map<string, mfa.Secret> mfa_secrets = 10;
-
-	repeated Alias aliases = 11;
 }
 
 // Alias represents the alias that gets stored inside of the
@@ -150,47 +147,5 @@ message Alias {
 	// MergedFromEntityIDs is the FIFO history of merging activity by entity IDs from
 	// which this alias is transfered over to the entity to which it
 	// currently belongs to.
-	repeated string merged_from_entity_ids = 10;
-}
-
-message Persona {
-	string id = 1;
-	string entity_id = 2;
-	string mount_type = 3;
-	string mount_accessor = 4;
-	string mount_path = 5;
-	map<string, string> metadata = 6;
-	string name = 7;
-	google.protobuf.Timestamp creation_time = 8;
-	google.protobuf.Timestamp last_update_time = 9;
-	repeated string merged_from_entity_ids = 10;
-}
-
-// Deprecated. Retained for backwards compatibility.
-message EntityStorageEntry {
-	repeated PersonaIndexEntry personas = 1;
-	string id = 2;
-	string name = 3;
-	map<string, string> metadata = 4;
-	google.protobuf.Timestamp creation_time = 5;
-	google.protobuf.Timestamp last_update_time= 6;
-	repeated string merged_entity_ids = 7;
-	repeated string policies = 8;
-	string bucket_key_hash = 9;
-	// **Enterprise only**
-	// map<string, mfa.Secret> mfa_secrets = 10;
-}
-
-// Deprecated. Retained for backwards compatibility.
-message PersonaIndexEntry {
-	string id = 1;
-	string entity_id = 2;
-	string mount_type = 3;
-	string mount_accessor = 4;
-	string mount_path = 5;
-	map<string, string> metadata = 6;
-	string name = 7;
-	google.protobuf.Timestamp creation_time = 8;
-	google.protobuf.Timestamp last_update_time = 9;
 	repeated string merged_from_entity_ids = 10;
 }
