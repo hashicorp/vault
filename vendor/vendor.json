@@ -1147,10 +1147,16 @@
 			"revisionTime": "2017-09-02T04:25:43Z"
 		},
 		{
-			"checksumSHA1": "J/+RffHqbSdOeI82+ysAJruyO9w=",
+			"checksumSHA1": "/11y5HSVYFHHjBUHUIt35qi6D/g=",
+			"path": "github.com/hashicorp/vault-plugin-auth-gcp",
+			"revision": "440e5e20278c115840fab1f27b7a9f99d405ebbd",
+			"revisionTime": "2017-10-05T00:02:52Z"
+		},
+		{
+			"checksumSHA1": "a/6XqbRHzvZ1ngOoGASIIIcmjwM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "a807a8507e636e40403455258ed25954ec254cad",
-			"revisionTime": "2017-09-15T19:03:59Z"
+			"revision": "440e5e20278c115840fab1f27b7a9f99d405ebbd",
+			"revisionTime": "2017-10-05T00:02:52Z"
 		},
 		{
 			"checksumSHA1": "nrNcGdv/8Ut8ScFy3tQoY3dpQvs=",
@@ -1159,10 +1165,10 @@
 			"revisionTime": "2017-09-15T19:03:59Z"
 		},
 		{
-			"checksumSHA1": "U8kIY2Z/WO1nU+3g7wykzo20C+o=",
+			"checksumSHA1": "/xje1EITZoa0tj7KqPof+3FG+og=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "e6ff3b4fefe641225a7a81013337b3b62027b3a0",
-			"revisionTime": "2017-09-19T14:00:28Z"
+			"revision": "7b79e81da4f5d56811fb7ddda078a96f7f950814",
+			"revisionTime": "2017-10-05T00:02:34Z"
 		},
 		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",

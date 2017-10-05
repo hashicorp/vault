@@ -113,22 +113,22 @@ type LoggerServer struct {
 }
 
 func (l *LoggerServer) Trace(args *LoggerArgs, _ *struct{}) error {
-	l.logger.Trace(args.Msg, args.Args)
+	l.logger.Trace(args.Msg, args.Args...)
 	return nil
 }
 
 func (l *LoggerServer) Debug(args *LoggerArgs, _ *struct{}) error {
-	l.logger.Debug(args.Msg, args.Args)
+	l.logger.Debug(args.Msg, args.Args...)
 	return nil
 }
 
 func (l *LoggerServer) Info(args *LoggerArgs, _ *struct{}) error {
-	l.logger.Info(args.Msg, args.Args)
+	l.logger.Info(args.Msg, args.Args...)
 	return nil
 }
 
 func (l *LoggerServer) Warn(args *LoggerArgs, reply *LoggerReply) error {
-	err := l.logger.Warn(args.Msg, args.Args)
+	err := l.logger.Warn(args.Msg, args.Args...)
 	if err != nil {
 		*reply = LoggerReply{
 			Error: plugin.NewBasicError(err),
@@ -139,7 +139,7 @@ func (l *LoggerServer) Warn(args *LoggerArgs, reply *LoggerReply) error {
 }
 
 func (l *LoggerServer) Error(args *LoggerArgs, reply *LoggerReply) error {
-	err := l.logger.Error(args.Msg, args.Args)
+	err := l.logger.Error(args.Msg, args.Args...)
 	if err != nil {
 		*reply = LoggerReply{
 			Error: plugin.NewBasicError(err),
