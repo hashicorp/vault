@@ -18,6 +18,13 @@ import (
 // Register these types since we have to serialize and de-serialize tls.ConnectionState
 // over the wire as part of logical.Request.Connection.
 func init() {
+	// Common basic structs
+	gob.Register([]interface{}{})
+	gob.Register(map[string]interface{}{})
+	gob.Register(map[string]string{})
+	gob.Register(map[string]int{})
+
+	// tls.ConnectionState structs
 	gob.Register(rsa.PublicKey{})
 	gob.Register(ecdsa.PublicKey{})
 	gob.Register(time.Duration(0))
