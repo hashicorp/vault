@@ -207,6 +207,7 @@ func TestLogical_CreateToken(t *testing.T) {
 			"metadata":       nil,
 			"lease_duration": json.Number("0"),
 			"renewable":      false,
+			"entity_id":      "",
 		},
 		"warnings": nilWarnings,
 	}
