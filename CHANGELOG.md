@@ -1,3 +1,12 @@
+## 0.8.4 (Unreleased)
+
+IMPROVEMENTS:
+
+ * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
+   arrays [GH-3409]
+ * command/server: Add config option to disable requesting client certificates
+   [GH-3373]
+
 ## 0.8.3 (September 19th, 2017)
 
 CHANGES:
