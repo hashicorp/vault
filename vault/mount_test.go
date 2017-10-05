@@ -592,7 +592,7 @@ func testCore_MountTable_UpgradeToTyped_Common(
 }
 
 func verifyDefaultTable(t *testing.T, table *MountTable) {
-	if len(table.Entries) != 3 {
+	if len(table.Entries) != 4 {
 		t.Fatalf("bad: %v", table.Entries)
 	}
 	table.sortEntriesByPath()
@@ -632,7 +632,7 @@ func TestSingletonMountTableFunc(t *testing.T) {
 
 	mounts, auth := c.singletonMountTables()
 
-	if len(mounts.Entries) != 1 {
+	if len(mounts.Entries) != 2 {
 		t.Fatal("length of mounts is wrong")
 	}
 	for _, entry := range mounts.Entries {
