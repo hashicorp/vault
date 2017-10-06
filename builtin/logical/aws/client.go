@@ -13,8 +13,9 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func getRootConfig(s logical.Storage) (*aws.Config, error) {
+func getRootConfig(s logical.Storage, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
+	var endpoint string
 
 	entry, err := s.Get("config/root")
 	if err != nil {
@@ -29,8 +30,12 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
 		credsConfig.Region = config.Region
-		credsConfig.IAMEndpoint = config.IAMEndpoint
-		credsConfig.STSEndpoint = config.STSEndpoint
+		switch {
+		case clientType == "iam" && config.IAMEndpoint != "":
+			endpoint = *aws.String(config.IAMEndpoint)
+		case clientType == "sts" && config.STSEndpoint != "":
+			endpoint = *aws.String(config.STSEndpoint)
+		}
 	}
 
 	if credsConfig.Region == "" {
@@ -53,23 +58,18 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 	return &aws.Config{
 		Credentials: creds,
 		Region:      aws.String(credsConfig.Region),
-		IAMEndpoint: aws.String(credsConfig.IAMEndpoint),
-		STSEndpoint: aws.String(credsConfig.STSEndpoint),
+		Endpoint:    &endpoint,
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}, nil
 }
 
 func clientIAM(s logical.Storage) (*iam.IAM, error) {
-	awsConfig, err := getRootConfig(s)
+	awsConfig, err := getRootConfig(s, "iam")
 	if err != nil {
 		return nil, err
 	}
 
 	client := iam.New(session.New(awsConfig))
-
-	if *awsConfig.IAMEndpoint != "" {
-		client = iam.New(session.New(awsConfig.WithEndpoint(*awsConfig.IAMEndpoint)))
-	}
 
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain iam client")
@@ -78,14 +78,12 @@ func clientIAM(s logical.Storage) (*iam.IAM, error) {
 }
 
 func clientSTS(s logical.Storage) (*sts.STS, error) {
-	awsConfig, err := getRootConfig(s)
+	awsConfig, err := getRootConfig(s, "sts")
 	if err != nil {
 		return nil, err
 	}
 	client := sts.New(session.New(awsConfig))
-	if *awsConfig.STSEndpoint != "" {
-		client = sts.New(session.New(awsConfig.WithEndpoint(*awsConfig.STSEndpoint)))
-	}
+
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain sts client")
 	}

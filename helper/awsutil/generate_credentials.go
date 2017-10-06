@@ -24,12 +24,6 @@ type CredentialsConfig struct {
 	// the client elsewhere.
 	Region string
 
-	//Endpoint to custom IAM server URL
-	IAMEndpoint string
-
-	//Endpoint to custom STS server URL
-	STSEndpoint string
-
 	// The filename for the shared credentials provider, if being used
 	Filename string
 
