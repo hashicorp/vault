@@ -7,6 +7,11 @@ IMPROVEMENTS:
  * command/server: Add config option to disable requesting client certificates
    [GH-3373]
 
+BUG FIXES:
+
+ * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
+   matching [GH-3406]
+
 ## 0.8.3 (September 19th, 2017)
 
 CHANGES:
