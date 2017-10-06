@@ -12,6 +12,7 @@ BUG FIXES:
 
  * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
    matching [GH-3406]
+ * plugins: Allow response errors to be returned from backend plugins [GH-3412]
 
 ## 0.8.3 (September 19th, 2017)
 
