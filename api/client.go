@@ -242,6 +242,7 @@ type Client struct {
 	addr               *url.URL
 	config             *Config
 	token              string
+	headers            http.Header
 	wrappingLookupFunc WrappingLookupFunc
 }
 
@@ -350,6 +351,11 @@ func (c *Client) ClearToken() {
 	c.token = ""
 }
 
+// SetHeaders sets the headers to be used for future requests.
+func (c *Client) SetHeaders(headers http.Header) {
+	c.headers = headers
+}
+
 // Clone creates a copy of this client.
 func (c *Client) Clone() (*Client, error) {
 	return NewClient(c.config)
@@ -398,6 +404,9 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	}
 	if c.config.Timeout != 0 {
 		c.config.HttpClient.Timeout = c.config.Timeout
+	}
+	if c.headers != nil {
+		req.Headers = c.headers
 	}
 
 	return req
