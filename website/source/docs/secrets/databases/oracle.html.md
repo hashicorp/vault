@@ -25,7 +25,7 @@ at its own git repository here: [hashicorp/vault-plugin-database-oracle](https:/
 Before running the plugin you will need to have the the Oracle Instant Client
 library installed. These can be downloaded from Oracle. The libraries will need to
 be placed in the default library search path or somewhere defined in the
-`LD_LIBRARY_PATH`.
+`LD_LIBRARY_PATH` environment variable.
 
 ## Quick Start
 
