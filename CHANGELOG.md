@@ -2,10 +2,11 @@
 
 IMPROVEMENTS:
 
- * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
-   arrays [GH-3409]
+ * api: Add ability to set custom headers on each call [GH-3394]
  * command/server: Add config option to disable requesting client certificates
    [GH-3373]
+ * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
+   arrays [GH-3409]
 
 BUG FIXES:
 
