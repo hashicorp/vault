@@ -32,6 +32,7 @@ Successfully mounted 'nomad' at 'nomad'!
 For a quick start, you can use the SecretID token provided by the [Nomad ACL bootstrap
 process](https://www.nomadproject.io/guides/acl.html#generate-the-initial-token), although this
 is discouraged for production deployments. 
+
 ```
 $ nomad acl bootstrap
 Accessor ID  = 95a0ee55-eaa6-2c0a-a900-ed94c156754e
