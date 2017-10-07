@@ -3,6 +3,7 @@ package logical
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 )
 
@@ -31,6 +32,14 @@ type Request struct {
 
 	// Operation is the requested operation type
 	Operation Operation `json:"operation" structs:"operation" mapstructure:"operation"`
+
+	// URL is the raw url.URL that came from the original HTTP request. This is
+	// a lower-level API. Clients should use the higher-order APIs like "Path",
+	// "MountPoint", and "Query" where possible.
+	URL *url.URL `json:"url" structs:"url" mapstructure:"path"`
+
+	// Query returns the parsed query values.
+	Query url.Values `json:"query" structs:"query" mapstructure:"query"`
 
 	// Path is the part of the request path not consumed by the
 	// routing. As an example, if the original request path is "prod/aws/foo"
