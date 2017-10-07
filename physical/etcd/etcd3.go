@@ -200,7 +200,7 @@ func (c *EtcdBackend) List(prefix string) ([]string, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
 	defer cancel()
-	prefix = path.Join(c.path, prefix)
+	prefix = path.Join(c.path, prefix) + "/"
 	resp, err := c.etcd.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
 		return nil, err
