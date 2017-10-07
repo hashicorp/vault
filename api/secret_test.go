@@ -2,7 +2,6 @@ package api_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -69,11 +68,13 @@ func TestSecret_TokenID(t *testing.T) {
 		name   string
 		secret *api.Secret
 		exp    string
+		err    bool
 	}{
 		{
 			"nil",
 			nil,
 			"",
+			false,
 		},
 		{
 			"nil_auth",
@@ -81,6 +82,7 @@ func TestSecret_TokenID(t *testing.T) {
 				Auth: nil,
 			},
 			"",
+			false,
 		},
 		{
 			"empty_auth_client_token",
@@ -90,6 +92,7 @@ func TestSecret_TokenID(t *testing.T) {
 				},
 			},
 			"",
+			false,
 		},
 		{
 			"real_auth_client_token",
@@ -99,6 +102,7 @@ func TestSecret_TokenID(t *testing.T) {
 				},
 			},
 			"my-token",
+			false,
 		},
 		{
 			"nil_data",
@@ -106,6 +110,7 @@ func TestSecret_TokenID(t *testing.T) {
 				Data: nil,
 			},
 			"",
+			false,
 		},
 		{
 			"empty_data",
@@ -113,6 +118,7 @@ func TestSecret_TokenID(t *testing.T) {
 				Data: map[string]interface{}{},
 			},
 			"",
+			false,
 		},
 		{
 			"data_not_string",
@@ -122,6 +128,7 @@ func TestSecret_TokenID(t *testing.T) {
 				},
 			},
 			"",
+			true,
 		},
 		{
 			"data_string",
@@ -131,6 +138,7 @@ func TestSecret_TokenID(t *testing.T) {
 				},
 			},
 			"my-token",
+			false,
 		},
 	}
 
@@ -140,7 +148,10 @@ func TestSecret_TokenID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			act := tc.secret.TokenID()
+			act, err := tc.secret.TokenID()
+			if err != nil && !tc.err {
+				t.Fatal(err)
+			}
 			if act != tc.exp {
 				t.Errorf("expected %q to be %q", act, tc.exp)
 			}
@@ -171,8 +182,12 @@ func TestSecret_TokenID(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		if secret.TokenID() != token {
-			t.Errorf("expected %q to be %q", secret.TokenID(), token)
+		tokenID, err := secret.TokenID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenID != token {
+			t.Errorf("expected %q to be %q", tokenID, token)
 		}
 	})
 
@@ -190,8 +205,12 @@ func TestSecret_TokenID(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		if secret.TokenID() != token {
-			t.Errorf("expected %q to be %q", secret.TokenID(), token)
+		tokenID, err := secret.TokenID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenID != token {
+			t.Errorf("expected %q to be %q", tokenID, token)
 		}
 	})
 
@@ -214,8 +233,12 @@ func TestSecret_TokenID(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenID() != token {
-			t.Errorf("expected %q to be %q", secret.TokenID(), token)
+		tokenID, err := secret.TokenID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenID != token {
+			t.Errorf("expected %q to be %q", tokenID, token)
 		}
 	})
 
@@ -239,8 +262,12 @@ func TestSecret_TokenID(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenID() != token {
-			t.Errorf("expected %q to be %q", secret.TokenID(), token)
+		tokenID, err := secret.TokenID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenID != token {
+			t.Errorf("expected %q to be %q", tokenID, token)
 		}
 	})
 
@@ -263,8 +290,12 @@ func TestSecret_TokenID(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenID() != token {
-			t.Errorf("expected %q to be %q", secret.TokenID(), token)
+		tokenID, err := secret.TokenID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenID != token {
+			t.Errorf("expected %q to be %q", tokenID, token)
 		}
 	})
 
@@ -288,8 +319,12 @@ func TestSecret_TokenID(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenID() != token {
-			t.Errorf("expected %q to be %q", secret.TokenID(), token)
+		tokenID, err := secret.TokenID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenID != token {
+			t.Errorf("expected %q to be %q", tokenID, token)
 		}
 	})
 }
@@ -301,11 +336,13 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		name   string
 		secret *api.Secret
 		exp    string
+		err    bool
 	}{
 		{
 			"nil",
 			nil,
 			"",
+			false,
 		},
 		{
 			"nil_auth",
@@ -313,6 +350,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 				Auth: nil,
 			},
 			"",
+			false,
 		},
 		{
 			"empty_auth_accessor",
@@ -322,6 +360,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 				},
 			},
 			"",
+			false,
 		},
 		{
 			"real_auth_accessor",
@@ -331,6 +370,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 				},
 			},
 			"my-accessor",
+			false,
 		},
 		{
 			"nil_data",
@@ -338,6 +378,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 				Data: nil,
 			},
 			"",
+			false,
 		},
 		{
 			"empty_data",
@@ -345,6 +386,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 				Data: map[string]interface{}{},
 			},
 			"",
+			false,
 		},
 		{
 			"data_not_string",
@@ -354,6 +396,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 				},
 			},
 			"",
+			true,
 		},
 		{
 			"data_string",
@@ -363,6 +406,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 				},
 			},
 			"my-accessor",
+			false,
 		},
 	}
 
@@ -372,7 +416,10 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			act := tc.secret.TokenAccessor()
+			act, err := tc.secret.TokenAccessor()
+			if err != nil && !tc.err {
+				t.Fatal(err)
+			}
 			if act != tc.exp {
 				t.Errorf("expected %q to be %q", act, tc.exp)
 			}
@@ -403,8 +450,12 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		}
 		_, accessor := secret.Auth.ClientToken, secret.Auth.Accessor
 
-		if secret.TokenAccessor() != accessor {
-			t.Errorf("expected %q to be %q", secret.TokenAccessor(), accessor)
+		newAccessor, err := secret.TokenAccessor()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if newAccessor != accessor {
+			t.Errorf("expected %q to be %q", newAccessor, accessor)
 		}
 	})
 
@@ -422,8 +473,12 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		}
 		_, accessor := secret.Auth.ClientToken, secret.Auth.Accessor
 
-		if secret.TokenAccessor() != accessor {
-			t.Errorf("expected %q to be %q", secret.TokenAccessor(), accessor)
+		newAccessor, err := secret.TokenAccessor()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if newAccessor != accessor {
+			t.Errorf("expected %q to be %q", newAccessor, accessor)
 		}
 	})
 
@@ -446,8 +501,12 @@ func TestSecret_TokenAccessor(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenAccessor() != accessor {
-			t.Errorf("expected %q to be %q", secret.TokenAccessor(), accessor)
+		newAccessor, err := secret.TokenAccessor()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if newAccessor != accessor {
+			t.Errorf("expected %q to be %q", newAccessor, accessor)
 		}
 	})
 
@@ -471,8 +530,12 @@ func TestSecret_TokenAccessor(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenAccessor() != accessor {
-			t.Errorf("expected %q to be %q", secret.TokenAccessor(), accessor)
+		newAccessor, err := secret.TokenAccessor()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if newAccessor != accessor {
+			t.Errorf("expected %q to be %q", newAccessor, accessor)
 		}
 	})
 
@@ -495,8 +558,12 @@ func TestSecret_TokenAccessor(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenAccessor() != accessor {
-			t.Errorf("expected %q to be %q", secret.TokenAccessor(), accessor)
+		newAccessor, err := secret.TokenAccessor()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if newAccessor != accessor {
+			t.Errorf("expected %q to be %q", newAccessor, accessor)
 		}
 	})
 
@@ -520,8 +587,12 @@ func TestSecret_TokenAccessor(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenAccessor() != accessor {
-			t.Errorf("expected %q to be %q", secret.TokenAccessor(), accessor)
+		newAccessor, err := secret.TokenAccessor()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if newAccessor != accessor {
+			t.Errorf("expected %q to be %q", newAccessor, accessor)
 		}
 	})
 }
@@ -537,21 +608,21 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		{
 			"nil",
 			nil,
-			0,
+			-1,
 		},
 		{
 			"nil_data",
 			&api.Secret{
 				Data: nil,
 			},
-			0,
+			-1,
 		},
 		{
 			"empty_data",
 			&api.Secret{
 				Data: map[string]interface{}{},
 			},
-			0,
+			-1,
 		},
 		{
 			"data_not_json_number",
@@ -560,7 +631,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 					"num_uses": 123,
 				},
 			},
-			0,
+			123,
 		},
 		{
 			"data_json_number",
@@ -579,7 +650,10 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			act := tc.secret.TokenRemainingUses()
+			act, err := tc.secret.TokenRemainingUses()
+			if tc.exp != -1 && err != nil {
+				t.Fatal(err)
+			}
 			if act != tc.exp {
 				t.Errorf("expected %d to be %d", act, tc.exp)
 			}
@@ -613,9 +687,13 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 
 		// Remaining uses is not returned from this API
-		uses = 0
-		if secret.TokenRemainingUses() != uses {
-			t.Errorf("expected %d to be %d", secret.TokenRemainingUses(), uses)
+		uses = -1
+		remaining, err := secret.TokenRemainingUses()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if remaining != uses {
+			t.Errorf("expected %d to be %d", remaining, uses)
 		}
 	})
 
@@ -636,9 +714,13 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 
 		// /auth/token/create does not return the number of uses
-		uses = 0
-		if secret.TokenRemainingUses() != uses {
-			t.Errorf("expected %d to be %d", secret.TokenRemainingUses(), uses)
+		uses = -1
+		remaining, err := secret.TokenRemainingUses()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if remaining != uses {
+			t.Errorf("expected %d to be %d", remaining, uses)
 		}
 	})
 
@@ -664,8 +746,12 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenRemainingUses() != uses {
-			t.Errorf("expected %d to be %d", secret.TokenRemainingUses(), uses)
+		remaining, err := secret.TokenRemainingUses()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if remaining != uses {
+			t.Errorf("expected %d to be %d", remaining, uses)
 		}
 	})
 
@@ -693,8 +779,12 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 
 		uses = uses - 1 // we just used it
-		if secret.TokenRemainingUses() != uses {
-			t.Errorf("expected %d to be %d", secret.TokenRemainingUses(), uses)
+		remaining, err := secret.TokenRemainingUses()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if remaining != uses {
+			t.Errorf("expected %d to be %d", remaining, uses)
 		}
 	})
 
@@ -721,9 +811,13 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 
 		// /auth/token/renew does not return the number of uses
-		uses = 0
-		if secret.TokenRemainingUses() != uses {
-			t.Errorf("expected %d to be %d", secret.TokenRemainingUses(), uses)
+		uses = -1
+		remaining, err := secret.TokenRemainingUses()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if remaining != uses {
+			t.Errorf("expected %d to be %d", remaining, uses)
 		}
 	})
 
@@ -751,9 +845,13 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 
 		// /auth/token/renew-self does not return the number of uses
-		uses = 0
-		if secret.TokenRemainingUses() != uses {
-			t.Errorf("expected %d to be %d", secret.TokenRemainingUses(), uses)
+		uses = -1
+		remaining, err := secret.TokenRemainingUses()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if remaining != uses {
+			t.Errorf("expected %d to be %d", remaining, uses)
 		}
 	})
 }
@@ -765,11 +863,13 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		name   string
 		secret *api.Secret
 		exp    []string
+		err    bool
 	}{
 		{
 			"nil",
 			nil,
 			nil,
+			false,
 		},
 		{
 			"nil_auth",
@@ -777,6 +877,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 				Auth: nil,
 			},
 			nil,
+			false,
 		},
 		{
 			"nil_auth_policies",
@@ -786,6 +887,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 				},
 			},
 			nil,
+			false,
 		},
 		{
 			"empty_auth_policies",
@@ -795,6 +897,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 				},
 			},
 			nil,
+			false,
 		},
 		{
 			"real_auth_policies",
@@ -804,6 +907,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 				},
 			},
 			[]string{"foo"},
+			false,
 		},
 		{
 			"nil_data",
@@ -811,6 +915,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 				Data: nil,
 			},
 			nil,
+			false,
 		},
 		{
 			"empty_data",
@@ -818,6 +923,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 				Data: map[string]interface{}{},
 			},
 			nil,
+			false,
 		},
 		{
 			"data_not_slice",
@@ -827,6 +933,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 				},
 			},
 			nil,
+			true,
 		},
 		{
 			"data_slice",
@@ -836,6 +943,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 				},
 			},
 			[]string{"foo"},
+			false,
 		},
 	}
 
@@ -845,7 +953,10 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			act := tc.secret.TokenPolicies()
+			act, err := tc.secret.TokenPolicies()
+			if err != nil && !tc.err {
+				t.Fatal(err)
+			}
 			if !reflect.DeepEqual(act, tc.exp) {
 				t.Errorf("expected %#v to be %#v", act, tc.exp)
 			}
@@ -877,8 +988,12 @@ func TestSecret_TokenPolicies(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenPolicies(), policies) {
-			t.Errorf("expected %#v to be %#v", secret.TokenPolicies(), policies)
+		tPol, err := secret.TokenPolicies()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tPol, policies) {
+			t.Errorf("expected %#v to be %#v", tPol, policies)
 		}
 	})
 
@@ -897,8 +1012,12 @@ func TestSecret_TokenPolicies(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenPolicies(), policies) {
-			t.Errorf("expected %#v to be %#v", secret.TokenPolicies(), policies)
+		tPol, err := secret.TokenPolicies()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tPol, policies) {
+			t.Errorf("expected %#v to be %#v", tPol, policies)
 		}
 	})
 
@@ -923,8 +1042,12 @@ func TestSecret_TokenPolicies(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenPolicies(), policies) {
-			t.Errorf("expected %#v to be %#v", secret.TokenPolicies(), policies)
+		tPol, err := secret.TokenPolicies()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tPol, policies) {
+			t.Errorf("expected %#v to be %#v", tPol, policies)
 		}
 	})
 
@@ -950,8 +1073,12 @@ func TestSecret_TokenPolicies(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenPolicies(), policies) {
-			t.Errorf("expected %#v to be %#v", secret.TokenPolicies(), policies)
+		tPol, err := secret.TokenPolicies()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tPol, policies) {
+			t.Errorf("expected %#v to be %#v", tPol, policies)
 		}
 	})
 
@@ -976,8 +1103,12 @@ func TestSecret_TokenPolicies(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenPolicies(), policies) {
-			t.Errorf("expected %#v to be %#v", secret.TokenPolicies(), policies)
+		tPol, err := secret.TokenPolicies()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tPol, policies) {
+			t.Errorf("expected %#v to be %#v", tPol, policies)
 		}
 	})
 
@@ -1003,8 +1134,12 @@ func TestSecret_TokenPolicies(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenPolicies(), policies) {
-			t.Errorf("expected %#v to be %#v", secret.TokenPolicies(), policies)
+		tPol, err := secret.TokenPolicies()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tPol, policies) {
+			t.Errorf("expected %#v to be %#v", tPol, policies)
 		}
 	})
 }
@@ -1016,11 +1151,13 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		name   string
 		secret *api.Secret
 		exp    map[string]string
+		err    bool
 	}{
 		{
 			"nil",
 			nil,
 			nil,
+			false,
 		},
 		{
 			"nil_auth",
@@ -1028,6 +1165,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 				Auth: nil,
 			},
 			nil,
+			false,
 		},
 		{
 			"nil_auth_metadata",
@@ -1037,6 +1175,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 				},
 			},
 			nil,
+			false,
 		},
 		{
 			"empty_auth_metadata",
@@ -1046,6 +1185,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 				},
 			},
 			nil,
+			false,
 		},
 		{
 			"real_auth_metdata",
@@ -1055,6 +1195,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 				},
 			},
 			map[string]string{"foo": "bar"},
+			false,
 		},
 		{
 			"nil_data",
@@ -1062,6 +1203,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 				Data: nil,
 			},
 			nil,
+			false,
 		},
 		{
 			"empty_data",
@@ -1069,6 +1211,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 				Data: map[string]interface{}{},
 			},
 			nil,
+			false,
 		},
 		{
 			"data_not_map",
@@ -1078,6 +1221,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 				},
 			},
 			nil,
+			true,
 		},
 		{
 			"data_map",
@@ -1087,6 +1231,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 				},
 			},
 			map[string]string{"foo": "bar"},
+			false,
 		},
 		{
 			"data_map_bad_type",
@@ -1096,6 +1241,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 				},
 			},
 			nil,
+			true,
 		},
 	}
 
@@ -1105,7 +1251,10 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			act := tc.secret.TokenMetadata()
+			act, err := tc.secret.TokenMetadata()
+			if err != nil && !tc.err {
+				t.Fatal(err)
+			}
 			if !reflect.DeepEqual(act, tc.exp) {
 				t.Errorf("expected %#v to be %#v", act, tc.exp)
 			}
@@ -1137,8 +1286,12 @@ func TestSecret_TokenMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
-			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		tMeta, err := secret.TokenMetadata()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tMeta, metadata) {
+			t.Errorf("expected %#v to be %#v", tMeta, metadata)
 		}
 	})
 
@@ -1158,8 +1311,12 @@ func TestSecret_TokenMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
-			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		tMeta, err := secret.TokenMetadata()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tMeta, metadata) {
+			t.Errorf("expected %#v to be %#v", tMeta, metadata)
 		}
 	})
 
@@ -1185,8 +1342,12 @@ func TestSecret_TokenMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
-			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		tMeta, err := secret.TokenMetadata()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tMeta, metadata) {
+			t.Errorf("expected %#v to be %#v", tMeta, metadata)
 		}
 	})
 
@@ -1213,8 +1374,12 @@ func TestSecret_TokenMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
-			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		tMeta, err := secret.TokenMetadata()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tMeta, metadata) {
+			t.Errorf("expected %#v to be %#v", tMeta, metadata)
 		}
 	})
 
@@ -1240,8 +1405,12 @@ func TestSecret_TokenMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
-			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		tMeta, err := secret.TokenMetadata()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tMeta, metadata) {
+			t.Errorf("expected %#v to be %#v", tMeta, metadata)
 		}
 	})
 
@@ -1268,8 +1437,12 @@ func TestSecret_TokenMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(secret.TokenMetadata(), metadata) {
-			t.Errorf("expected %#v to be %#v", secret.TokenMetadata(), metadata)
+		tMeta, err := secret.TokenMetadata()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(tMeta, metadata) {
+			t.Errorf("expected %#v to be %#v", tMeta, metadata)
 		}
 	})
 }
@@ -1333,7 +1506,16 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 					"renewable": 123,
 				},
 			},
-			false,
+			true,
+		},
+		{
+			"data_bool_string",
+			&api.Secret{
+				Data: map[string]interface{}{
+					"renewable": "true",
+				},
+			},
+			true,
 		},
 		{
 			"data_bool_true",
@@ -1361,7 +1543,10 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			act := tc.secret.TokenIsRenewable()
+			act, err := tc.secret.TokenIsRenewable()
+			if err != nil {
+				t.Fatal(err)
+			}
 			if act != tc.exp {
 				t.Errorf("expected %t to be %t", act, tc.exp)
 			}
@@ -1393,8 +1578,12 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenIsRenewable() != renewable {
-			t.Errorf("expected %t to be %t", secret.TokenIsRenewable(), renewable)
+		tRenew, err := secret.TokenIsRenewable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tRenew != renewable {
+			t.Errorf("expected %t to be %t", tRenew, renewable)
 		}
 	})
 
@@ -1414,8 +1603,12 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenIsRenewable() != renewable {
-			t.Errorf("expected %t to be %t", secret.TokenIsRenewable(), renewable)
+		tRenew, err := secret.TokenIsRenewable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tRenew != renewable {
+			t.Errorf("expected %t to be %t", tRenew, renewable)
 		}
 	})
 
@@ -1441,8 +1634,12 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenIsRenewable() != renewable {
-			t.Errorf("expected %t to be %t", secret.TokenIsRenewable(), renewable)
+		tRenew, err := secret.TokenIsRenewable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tRenew != renewable {
+			t.Errorf("expected %t to be %t", tRenew, renewable)
 		}
 	})
 
@@ -1469,8 +1666,12 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenIsRenewable() != renewable {
-			t.Errorf("expected %t to be %t", secret.TokenIsRenewable(), renewable)
+		tRenew, err := secret.TokenIsRenewable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tRenew != renewable {
+			t.Errorf("expected %t to be %t", tRenew, renewable)
 		}
 	})
 
@@ -1496,8 +1697,12 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenIsRenewable() != renewable {
-			t.Errorf("expected %t to be %t", secret.TokenIsRenewable(), renewable)
+		tRenew, err := secret.TokenIsRenewable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tRenew != renewable {
+			t.Errorf("expected %t to be %t", tRenew, renewable)
 		}
 	})
 
@@ -1524,262 +1729,12 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenIsRenewable() != renewable {
-			t.Errorf("expected %t to be %t", secret.TokenIsRenewable(), renewable)
-		}
-	})
-}
-
-func TestSecret_TokenTTLInt(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name   string
-		secret *api.Secret
-		exp    int
-	}{
-		{
-			"nil",
-			nil,
-			0,
-		},
-		{
-			"nil_auth",
-			&api.Secret{
-				Auth: nil,
-			},
-			0,
-		},
-		{
-			"nil_auth_lease_duration",
-			&api.Secret{
-				Auth: &api.SecretAuth{
-					LeaseDuration: 0,
-				},
-			},
-			0,
-		},
-		{
-			"real_auth_lease_duration",
-			&api.Secret{
-				Auth: &api.SecretAuth{
-					LeaseDuration: 3600,
-				},
-			},
-			3600,
-		},
-		{
-			"nil_data",
-			&api.Secret{
-				Data: nil,
-			},
-			0,
-		},
-		{
-			"empty_data",
-			&api.Secret{
-				Data: map[string]interface{}{},
-			},
-			0,
-		},
-		{
-			"data_not_json_number",
-			&api.Secret{
-				Data: map[string]interface{}{
-					"ttl": 123,
-				},
-			},
-			0,
-		},
-		{
-			"data_json_number",
-			&api.Secret{
-				Data: map[string]interface{}{
-					"ttl": json.Number("3600"),
-				},
-			},
-			3600,
-		},
-	}
-
-	for _, tc := range cases {
-		tc := tc
-
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			act := tc.secret.TokenTTLInt()
-			if act != tc.exp {
-				t.Errorf("expected %d to be %d", act, tc.exp)
-			}
-		})
-	}
-
-	t.Run("auth", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ttl := 3600
-
-		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
-			"password":         "test",
-			"policies":         "default",
-			"ttl":              fmt.Sprintf("%ds", ttl),
-			"explicit_max_ttl": fmt.Sprintf("%ds", ttl),
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
-			"password": "test",
-		})
-		if err != nil || secret == nil {
-			t.Fatal(err)
-		}
-
-		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTL(), ttl)
-		}
-	})
-
-	t.Run("token-create", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ttl := 3600
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies:       []string{"default"},
-			TTL:            fmt.Sprintf("%ds", ttl),
-			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
-		})
+		tRenew, err := secret.TokenIsRenewable()
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
-		}
-	})
-
-	t.Run("token-lookup", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ttl := 3600
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies:       []string{"default"},
-			TTL:            fmt.Sprintf("%ds", ttl),
-			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		token := secret.Auth.ClientToken
-
-		secret, err = client.Auth().Token().Lookup(token)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
-		}
-	})
-
-	t.Run("token-lookup-self", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ttl := 3600
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies:       []string{"default"},
-			TTL:            fmt.Sprintf("%ds", ttl),
-			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		token := secret.Auth.ClientToken
-
-		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelf()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
-		}
-	})
-
-	t.Run("token-renew", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ttl := 3600
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies:       []string{"default"},
-			TTL:            fmt.Sprintf("%ds", ttl),
-			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		token := secret.Auth.ClientToken
-
-		secret, err = client.Auth().Token().Renew(token, 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
-		}
-	})
-
-	t.Run("token-renew-self", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		ttl := 3600
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies:       []string{"default"},
-			TTL:            fmt.Sprintf("%ds", ttl),
-			ExplicitMaxTTL: fmt.Sprintf("%ds", ttl),
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		token := secret.Auth.ClientToken
-
-		client.SetToken(token)
-		secret, err = client.Auth().Token().RenewSelf(0)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if secret.TokenTTLInt() == 0 || secret.TokenTTLInt() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTLInt(), ttl)
+		if tRenew != renewable {
+			t.Errorf("expected %t to be %t", tRenew, renewable)
 		}
 	})
 }
@@ -1843,7 +1798,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 					"ttl": 123,
 				},
 			},
-			0,
+			123 * time.Second,
 		},
 		{
 			"data_json_number",
@@ -1862,7 +1817,10 @@ func TestSecret_TokenTTL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			act := tc.secret.TokenTTL()
+			act, err := tc.secret.TokenTTL()
+			if err != nil {
+				t.Fatal(err)
+			}
 			if act != tc.exp {
 				t.Errorf("expected %q to be %q", act, tc.exp)
 			}
@@ -1896,8 +1854,12 @@ func TestSecret_TokenTTL(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenTTL() == 0 || secret.TokenTTL() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTL(), ttl)
+		tokenTTL, err := secret.TokenTTL()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenTTL == 0 || tokenTTL > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", tokenTTL, ttl)
 		}
 	})
 
@@ -1918,8 +1880,12 @@ func TestSecret_TokenTTL(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenTTL() == 0 || secret.TokenTTL() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTL(), ttl)
+		tokenTTL, err := secret.TokenTTL()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenTTL == 0 || tokenTTL > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", tokenTTL, ttl)
 		}
 	})
 
@@ -1946,8 +1912,12 @@ func TestSecret_TokenTTL(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenTTL() == 0 || secret.TokenTTL() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTL(), ttl)
+		tokenTTL, err := secret.TokenTTL()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenTTL == 0 || tokenTTL > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", tokenTTL, ttl)
 		}
 	})
 
@@ -1975,8 +1945,12 @@ func TestSecret_TokenTTL(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenTTL() == 0 || secret.TokenTTL() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTL(), ttl)
+		tokenTTL, err := secret.TokenTTL()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenTTL == 0 || tokenTTL > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", tokenTTL, ttl)
 		}
 	})
 
@@ -2003,8 +1977,12 @@ func TestSecret_TokenTTL(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenTTL() == 0 || secret.TokenTTL() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTL(), ttl)
+		tokenTTL, err := secret.TokenTTL()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenTTL == 0 || tokenTTL > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", tokenTTL, ttl)
 		}
 	})
 
@@ -2032,8 +2010,12 @@ func TestSecret_TokenTTL(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if secret.TokenTTL() == 0 || secret.TokenTTL() > ttl {
-			t.Errorf("expected %q to non-zero and less than %q", secret.TokenTTL(), ttl)
+		tokenTTL, err := secret.TokenTTL()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tokenTTL == 0 || tokenTTL > ttl {
+			t.Errorf("expected %q to non-zero and less than %q", tokenTTL, ttl)
 		}
 	})
 }

@@ -478,7 +478,10 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		// There was 1 use to start, make sure we didn't use it (verifying would
 		// use it).
-		uses := lookup.TokenRemainingUses()
+		uses, err := lookup.TokenRemainingUses()
+		if err != nil {
+			t.Fatal(err)
+		}
 		if uses != 1 {
 			t.Errorf("expected %d to be %d", uses, 1)
 		}

@@ -95,15 +95,39 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	// Return an auth struct that "looks" like the response from an auth method.
 	// lookup and lookup-self return their data in data, not auth. We try to
 	// mirror that data here.
+	id, err := secret.TokenID()
+	if err != nil {
+		return nil, fmt.Errorf("Error accessing token ID: %s", err)
+	}
+	accessor, err := secret.TokenAccessor()
+	if err != nil {
+		return nil, fmt.Errorf("Error accessing token accessor: %s", err)
+	}
+	policies, err := secret.TokenPolicies()
+	if err != nil {
+		return nil, fmt.Errorf("Error accessing token policies: %s", err)
+	}
+	metadata, err := secret.TokenMetadata()
+	if err != nil {
+		return nil, fmt.Errorf("Error accessing token metadata: %s", err)
+	}
+	dur, err := secret.TokenTTL()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting token TTL: %s", err)
+	}
+	renewable, err := secret.TokenIsRenewable()
+	if err != nil {
+		return nil, fmt.Errorf("Error checking if token is renewable: %s", err)
+	}
 	return &api.Secret{
 		Auth: &api.SecretAuth{
-			ClientToken: secret.TokenID(),
-			Accessor:    secret.TokenAccessor(),
-			Policies:    secret.TokenPolicies(),
-			Metadata:    secret.TokenMetadata(),
+			ClientToken: id,
+			Accessor:    accessor,
+			Policies:    policies,
+			Metadata:    metadata,
 
-			LeaseDuration: secret.TokenTTLInt(),
-			Renewable:     secret.TokenIsRenewable(),
+			LeaseDuration: int(dur.Seconds()),
+			Renewable:     renewable,
 		},
 	}, nil
 

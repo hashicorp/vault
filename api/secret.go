@@ -1,12 +1,12 @@
 package api
 
 import (
-	"encoding/json"
+	"fmt"
 	"io"
-	"strconv"
 	"time"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 )
 
 // Secret is the structure returned for every secret within Vault.
@@ -38,131 +38,125 @@ type Secret struct {
 }
 
 // TokenID returns the standardized token ID (token) for the given secret.
-func (s *Secret) TokenID() string {
+func (s *Secret) TokenID() (string, error) {
 	if s == nil {
-		return ""
+		return "", nil
 	}
 
 	if s.Auth != nil && len(s.Auth.ClientToken) > 0 {
-		return s.Auth.ClientToken
+		return s.Auth.ClientToken, nil
 	}
 
 	if s.Data == nil || s.Data["id"] == nil {
-		return ""
+		return "", nil
 	}
 
 	id, ok := s.Data["id"].(string)
 	if !ok {
-		return ""
+		return "", fmt.Errorf("token found but in the wrong format")
 	}
 
-	return id
+	return id, nil
 }
 
 // TokenAccessor returns the standardized token accessor for the given secret.
 // If the secret is nil or does not contain an accessor, this returns the empty
 // string.
-func (s *Secret) TokenAccessor() string {
+func (s *Secret) TokenAccessor() (string, error) {
 	if s == nil {
-		return ""
+		return "", nil
 	}
 
 	if s.Auth != nil && len(s.Auth.Accessor) > 0 {
-		return s.Auth.Accessor
+		return s.Auth.Accessor, nil
 	}
 
 	if s.Data == nil || s.Data["accessor"] == nil {
-		return ""
+		return "", nil
 	}
 
 	accessor, ok := s.Data["accessor"].(string)
 	if !ok {
-		return ""
+		return "", fmt.Errorf("token found but in the wrong format")
 	}
 
-	return accessor
+	return accessor, nil
 }
 
 // TokenRemainingUses returns the standardized remaining uses for the given
-// secret. If the secret is nil or does not contain the "num_uses", this returns
-// 0..
-func (s *Secret) TokenRemainingUses() int {
+// secret. If the secret is nil or does not contain the "num_uses", this
+// returns -1. On error, this will return -1 and a non-nil error.
+func (s *Secret) TokenRemainingUses() (int, error) {
 	if s == nil || s.Data == nil || s.Data["num_uses"] == nil {
-		return 0
+		return -1, nil
 	}
 
-	usesStr, ok := s.Data["num_uses"].(json.Number)
-	if !ok {
-		return 0
-	}
-
-	if string(usesStr) == "" {
-		return 0
-	}
-
-	uses, err := strconv.ParseInt(string(usesStr), 10, 64)
+	uses, err := parseutil.ParseInt(s.Data["num_uses"])
 	if err != nil {
-		return 0
+		return 0, err
 	}
 
-	return int(uses)
+	return int(uses), nil
 }
 
 // TokenPolicies returns the standardized list of policies for the given secret.
 // If the secret is nil or does not contain any policies, this returns nil.
-// Policies are usually returned as []interface{}, but this function ensures
-// they are []string.
-func (s *Secret) TokenPolicies() []string {
+func (s *Secret) TokenPolicies() ([]string, error) {
 	if s == nil {
-		return nil
+		return nil, nil
 	}
 
 	if s.Auth != nil && len(s.Auth.Policies) > 0 {
-		return s.Auth.Policies
+		return s.Auth.Policies, nil
 	}
 
 	if s.Data == nil || s.Data["policies"] == nil {
-		return nil
+		return nil, nil
+	}
+
+	sList, ok := s.Data["policies"].([]string)
+	if ok {
+		return sList, nil
 	}
 
 	list, ok := s.Data["policies"].([]interface{})
 	if !ok {
-		return nil
+		return nil, fmt.Errorf("unable to convert token policies to expected format")
 	}
 
 	policies := make([]string, len(list))
 	for i := range list {
 		p, ok := list[i].(string)
 		if !ok {
-			return nil
+			return nil, fmt.Errorf("unable to convert policy %v to string", list[i])
 		}
 		policies[i] = p
 	}
 
-	return policies
+	return policies, nil
 }
 
 // TokenMetadata returns the map of metadata associated with this token, if any
 // exists. If the secret is nil or does not contain the "metadata" key, this
 // returns nil.
-func (s *Secret) TokenMetadata() map[string]string {
+func (s *Secret) TokenMetadata() (map[string]string, error) {
 	if s == nil {
-		return nil
+		return nil, nil
 	}
 
 	if s.Auth != nil && len(s.Auth.Metadata) > 0 {
-		return s.Auth.Metadata
+		return s.Auth.Metadata, nil
 	}
 
 	if s.Data == nil || (s.Data["metadata"] == nil && s.Data["meta"] == nil) {
-		return nil
+		return nil, nil
 	}
 
 	data, ok := s.Data["metadata"].(map[string]interface{})
 	if !ok {
 		data, ok = s.Data["meta"].(map[string]interface{})
 		if !ok {
-			return nil
+			return nil, fmt.Errorf("unable to convert metadata field to expected format")
 		}
 	}
 
@@ -170,99 +164,59 @@ func (s *Secret) TokenMetadata() map[string]string {
 	for k, v := range data {
 		typed, ok := v.(string)
 		if !ok {
-			return nil
+			return nil, fmt.Errorf("unable to convert metadata value %v to string", v)
 		}
 		metadata[k] = typed
 	}
 
-	return metadata
+	return metadata, nil
 }
 
 // TokenIsRenewable returns the standardized token renewability for the given
 // secret. If the secret is nil or does not contain the "renewable" key, this
 // returns false.
-func (s *Secret) TokenIsRenewable() bool {
+func (s *Secret) TokenIsRenewable() (bool, error) {
 	if s == nil {
-		return false
+		return false, nil
 	}
 
 	if s.Auth != nil && s.Auth.Renewable {
-		return s.Auth.Renewable
+		return s.Auth.Renewable, nil
 	}
 
 	if s.Data == nil || s.Data["renewable"] == nil {
-		return false
+		return false, nil
 	}
 
-	renewable, ok := s.Data["renewable"].(bool)
-	if !ok {
-		return false
-	}
-
-	return renewable
-}
-
-// TokenTTLInt returns the token's TTL as an integer number of seconds.
-func (s *Secret) TokenTTLInt() int {
-	if s == nil {
-		return 0
-	}
-
-	if s.Auth != nil && s.Auth.LeaseDuration > 0 {
-		return s.Auth.LeaseDuration
-	}
-
-	if s.Data == nil || s.Data["ttl"] == nil {
-		return 0
-	}
-
-	ttlStr, ok := s.Data["ttl"].(json.Number)
-	if !ok {
-		return 0
-	}
-
-	if string(ttlStr) == "" {
-		return 0
-	}
-
-	i, err := strconv.ParseInt(string(ttlStr), 0, 64)
+	renewable, err := parseutil.ParseBool(s.Data["renewable"])
 	if err != nil {
-		return 0
+		return false, fmt.Errorf("could not convert renewable value to a boolean: %v", err)
 	}
 
-	return int(i)
+	return renewable, nil
 }
 
 // TokenTTL returns the standardized remaining token TTL for the given secret.
-// If the secret is nil or does not contain a TTL, this returns the 0.
-func (s *Secret) TokenTTL() time.Duration {
+// If the secret is nil or does not contain a TTL, this returns 0.
+func (s *Secret) TokenTTL() (time.Duration, error) {
 	if s == nil {
-		return 0
+		return 0, nil
 	}
 
 	if s.Auth != nil && s.Auth.LeaseDuration > 0 {
-		return time.Duration(s.Auth.LeaseDuration) * time.Second
+		return time.Duration(s.Auth.LeaseDuration) * time.Second, nil
 	}
 
 	if s.Data == nil || s.Data["ttl"] == nil {
-		return 0
+		return 0, nil
 	}
 
-	ttlStr, ok := s.Data["ttl"].(json.Number)
-	if !ok {
-		return 0
-	}
-
-	if string(ttlStr) == "" {
-		return 0
-	}
-
-	ttl, err := time.ParseDuration(string(ttlStr) + "s")
+	ttl, err := parseutil.ParseDurationSecond(s.Data["ttl"])
 	if err != nil {
-		return 0
+		return 0, err
 	}
 
-	return ttl
+	return ttl, nil
 }
 
 // SecretWrapInfo contains wrapping information if we have it. If what is
