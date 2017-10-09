@@ -267,6 +267,9 @@ func NewClient(c *Config) (*Client, error) {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
+	if c.HttpClient.Transport == nil {
+		c.HttpClient.Transport = cleanhttp.DefaultTransport()
+	}
 
 	tp := c.HttpClient.Transport.(*http.Transport)
 	if err := http2.ConfigureTransport(tp); err != nil {

@@ -37,6 +37,15 @@ func TestDefaultConfig_envvar(t *testing.T) {
 	}
 }
 
+func TestClientDefaultHttpClient(t *testing.T) {
+	_, err := NewClient(&Config{
+		HttpClient: http.DefaultClient,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestClientNilConfig(t *testing.T) {
 	client, err := NewClient(nil)
 	if err != nil {
