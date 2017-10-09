@@ -10,6 +10,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * api: Fix panic when setting a custom HTTP client but with a nil transport
+   [GH-3437]
  * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
    matching [GH-3406]
  * plugins: Allow response errors to be returned from backend plugins [GH-3412]
