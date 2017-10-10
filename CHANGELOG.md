@@ -2,10 +2,19 @@
 
 IMPROVEMENTS:
 
- * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
-   arrays [GH-3409]
+ * api: Add ability to set custom headers on each call [GH-3394]
  * command/server: Add config option to disable requesting client certificates
    [GH-3373]
+ * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
+   arrays [GH-3409]
+
+BUG FIXES:
+
+ * api: Fix panic when setting a custom HTTP client but with a nil transport
+   [GH-3437]
+ * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
+   matching [GH-3406]
+ * plugins: Allow response errors to be returned from backend plugins [GH-3412]
 
 ## 0.8.3 (September 19th, 2017)
 
