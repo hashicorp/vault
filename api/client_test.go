@@ -194,3 +194,22 @@ func TestClientTimeoutSetting(t *testing.T) {
 	}
 
 }
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (rt roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return rt(r)
+}
+
+func TestClientNonTransportRoundTripper(t *testing.T) {
+	client := &http.Client{
+		Transport: roundTripperFunc(http.DefaultTransport.RoundTrip),
+	}
+
+	_, err := NewClient(&Config{
+		HttpClient: client,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
