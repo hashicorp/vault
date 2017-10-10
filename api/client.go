@@ -271,9 +271,10 @@ func NewClient(c *Config) (*Client, error) {
 		c.HttpClient.Transport = cleanhttp.DefaultTransport()
 	}
 
-	tp := c.HttpClient.Transport.(*http.Transport)
-	if err := http2.ConfigureTransport(tp); err != nil {
-		return nil, err
+	if tp, ok := c.HttpClient.Transport.(*http.Transport); ok {
+		if err := http2.ConfigureTransport(tp); err != nil {
+			return nil, err
+		}
 	}
 
 	redirFunc := func() {
