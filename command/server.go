@@ -132,6 +132,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	grpclog.SetLogger(&grpclogFaker{
 		logger: c.logger,
+		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
 	})
 
 	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" && devRootTokenID == "" {
@@ -568,6 +569,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 0
 	}
 
+	handler := vaulthttp.Handler(core)
+
+	// This needs to happen before we first unseal, so before we trigger dev
+	// mode if it's set
+	core.SetClusterListenerAddrs(clusterAddrs)
+	core.SetClusterHandler(handler)
+
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
 
@@ -598,13 +606,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 		}
 	}
-
-	handler := vaulthttp.Handler(core)
-
-	// This needs to happen before we first unseal, so before we trigger dev
-	// mode if it's set
-	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterHandler(handler)
 
 	// If we're in Dev mode, then initialize the core
 	if dev && !devSkipInit {
@@ -1344,6 +1345,7 @@ func MakeSighupCh() chan struct{} {
 
 type grpclogFaker struct {
 	logger log.Logger
+	log    bool
 }
 
 func (g *grpclogFaker) Fatal(args ...interface{}) {
@@ -1362,13 +1364,19 @@ func (g *grpclogFaker) Fatalln(args ...interface{}) {
 }
 
 func (g *grpclogFaker) Print(args ...interface{}) {
-	g.logger.Warn(fmt.Sprint(args...))
+	if g.log || g.logger.IsTrace() {
+		g.logger.Trace(fmt.Sprint(args...))
+	}
 }
 
 func (g *grpclogFaker) Printf(format string, args ...interface{}) {
-	g.logger.Warn(fmt.Sprintf(format, args...))
+	if g.log || g.logger.IsTrace() {
+		g.logger.Trace(fmt.Sprintf(format, args...))
+	}
 }
 
 func (g *grpclogFaker) Println(args ...interface{}) {
-	g.logger.Warn(fmt.Sprintln(args...))
+	if g.log || g.logger.IsTrace() {
+		g.logger.Trace(fmt.Sprintln(args...))
+	}
 }
