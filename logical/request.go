@@ -27,7 +27,7 @@ type Request struct {
 
 	// If set, the name given to the replication secondary where this request
 	// originated
-	ReplicationCluster string `json:"replication_cluster" structs:"replication_cluster", mapstructure:"replication_cluster"`
+	ReplicationCluster string `json:"replication_cluster" structs:"replication_cluster" mapstructure:"replication_cluster"`
 
 	// Operation is the requested operation type
 	Operation Operation `json:"operation" structs:"operation" mapstructure:"operation"`
