@@ -1,25 +1,30 @@
 package logical
 
-type HTTPCodedError interface {
-	Error() string
-	Code() int
+// CodedError is an error which includes an HTTP status code. Various places in
+// Vault will "unwrap" this error to return the correct response to the user.
+type CodedError struct {
+	Status  int
+	Message string
 }
 
-func CodedError(c int, s string) HTTPCodedError {
-	return &codedError{s, c}
+// Error implements the standard error interface and returns the given message.
+func (e *CodedError) Error() string {
+	return e.Message
 }
 
-type codedError struct {
-	s    string
-	code int
+// Code returns the HTTP status code of this error. This exists for backwards
+// compatability. New implementations should use .Status directly.
+func (e *CodedError) Code() int {
+	return e.Status
 }
 
-func (e *codedError) Error() string {
-	return e.s
-}
-
-func (e *codedError) Code() int {
-	return e.code
+// NewCodedError creates a new HTTP CodedError from the given status and
+// message.
+func NewCodedError(status int, message string) *CodedError {
+	return &CodedError{
+		Status:  status,
+		Message: message,
+	}
 }
 
 // Struct to identify user input errors.  This is helpful in responding the
@@ -34,9 +39,9 @@ func (s *StatusBadRequest) Error() string {
 }
 
 // This is a new type declared to not cause potential compatibility problems if
-// the logic around the HTTPCodedError interface changes; in particular for
-// logical request paths it is basically ignored, and changing that behavior
-// might cause unforseen issues.
+// the logic around the CodedError changes; in particular for logical request
+// paths it is basically ignored, and changing that behavior might cause
+// unforseen issues.
 type ReplicationCodedError struct {
 	Msg  string
 	Code int

@@ -193,14 +193,14 @@ func (c *Core) mount(entry *MountEntry) error {
 	// Prevent protected paths from being mounted
 	for _, p := range protectedMounts {
 		if strings.HasPrefix(entry.Path, p) {
-			return logical.CodedError(403, fmt.Sprintf("cannot mount '%s'", entry.Path))
+			return logical.NewCodedError(403, fmt.Sprintf("cannot mount '%s'", entry.Path))
 		}
 	}
 
 	// Do not allow more than one instance of a singleton mount
 	for _, p := range singletonMounts {
 		if entry.Type == p {
-			return logical.CodedError(403, fmt.Sprintf("Cannot mount more than one instance of '%s'", entry.Type))
+			return logical.NewCodedError(403, fmt.Sprintf("Cannot mount more than one instance of '%s'", entry.Type))
 		}
 	}
 
@@ -209,7 +209,7 @@ func (c *Core) mount(entry *MountEntry) error {
 
 	// Verify there is no conflicting mount
 	if match := c.router.MatchingMount(entry.Path); match != "" {
-		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
+		return logical.NewCodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
 
 	// Generate a new UUID and view
@@ -259,7 +259,7 @@ func (c *Core) mount(entry *MountEntry) error {
 	newTable.Entries = append(newTable.Entries, entry)
 	if err := c.persistMounts(newTable, entry.Local); err != nil {
 		c.logger.Error("core: failed to update mount table", "error", err)
-		return logical.CodedError(500, "failed to update mount table")
+		return logical.NewCodedError(500, "failed to update mount table")
 	}
 	c.mounts = newTable
 
@@ -354,7 +354,7 @@ func (c *Core) removeMountEntry(path string) error {
 	entry := newTable.remove(path)
 	if entry == nil {
 		c.logger.Error("core: nil entry found removing entry in mounts table", "path", path)
-		return logical.CodedError(500, "failed to remove entry in mounts table")
+		return logical.NewCodedError(500, "failed to remove entry in mounts table")
 	}
 
 	// When unmounting all entries the JSON code will load back up from storage
@@ -366,7 +366,7 @@ func (c *Core) removeMountEntry(path string) error {
 	// Update the mount table
 	if err := c.persistMounts(newTable, entry.Local); err != nil {
 		c.logger.Error("core: failed to remove entry from mounts table", "error", err)
-		return logical.CodedError(500, "failed to remove entry from mounts table")
+		return logical.NewCodedError(500, "failed to remove entry from mounts table")
 	}
 
 	c.mounts = newTable
@@ -383,13 +383,13 @@ func (c *Core) taintMountEntry(path string) error {
 	entry := c.mounts.setTaint(path, true)
 	if entry == nil {
 		c.logger.Error("core: nil entry found tainting entry in mounts table", "path", path)
-		return logical.CodedError(500, "failed to taint entry in mounts table")
+		return logical.NewCodedError(500, "failed to taint entry in mounts table")
 	}
 
 	// Update the mount table
 	if err := c.persistMounts(c.mounts, entry.Local); err != nil {
 		c.logger.Error("core: failed to taint entry in mounts table", "error", err)
-		return logical.CodedError(500, "failed to taint entry in mounts table")
+		return logical.NewCodedError(500, "failed to taint entry in mounts table")
 	}
 
 	return nil
@@ -454,7 +454,7 @@ func (c *Core) remount(src, dst string) error {
 
 	if ent == nil {
 		c.logger.Error("core: failed to find entry in mounts table")
-		return logical.CodedError(500, "failed to find entry in mounts table")
+		return logical.NewCodedError(500, "failed to find entry in mounts table")
 	}
 
 	// Update the mount table
@@ -463,7 +463,7 @@ func (c *Core) remount(src, dst string) error {
 		ent.Tainted = true
 		c.mountsLock.Unlock()
 		c.logger.Error("core: failed to update mounts table", "error", err)
-		return logical.CodedError(500, "failed to update mounts table")
+		return logical.NewCodedError(500, "failed to update mounts table")
 	}
 	c.mountsLock.Unlock()
 

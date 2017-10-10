@@ -189,8 +189,8 @@ func TestCore_EnableCredential_twice_409(t *testing.T) {
 	// 2nd should be a 409 error
 	err2 := c.enableCredential(me)
 	switch err2.(type) {
-	case logical.HTTPCodedError:
-		if err2.(logical.HTTPCodedError).Code() != 409 {
+	case *logical.CodedError:
+		if err2.(*logical.CodedError).Status != 409 {
 			t.Fatalf("invalid code given")
 		}
 	default:
