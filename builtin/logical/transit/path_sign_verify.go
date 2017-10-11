@@ -37,6 +37,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 				Default: "sha2-256",
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
+* none
 * sha2-224
 * sha2-256
 * sha2-384
@@ -108,6 +109,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 				Default: "sha2-256",
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
+* none
 * sha2-224
 * sha2-256
 * sha2-384
@@ -166,7 +168,7 @@ func (b *backend) pathSignWrite(
 		}
 	}
 
-	if p.Type.HashSignatureInput() {
+	if p.Type.HashSignatureInput() && algorithm != "none" {
 		var hf hash.Hash
 		switch algorithm {
 		case "sha2-224":
@@ -259,7 +261,7 @@ func (b *backend) pathVerifyWrite(
 		}
 	}
 
-	if p.Type.HashSignatureInput() {
+	if p.Type.HashSignatureInput() && algorithm != "none" {
 		var hf hash.Hash
 		switch algorithm {
 		case "sha2-224":
