@@ -374,9 +374,9 @@ $ curl \
 
 ## Rotate CRLs
 
-This endpoint this endpoint forces a rotation of the CRL. This can be used by
-administrators to cut the size of the CRL if it contains a number of
-certificates that have now expired, but has not been rotated due to no further
+This endpoint forces a rotation of the CRL. This can be used by administrators
+to cut the size of the CRL if it contains a number of certificates
+that have now expired, but has not been rotated due to no further
 certificates being revoked.
 
 | Method   | Path                         | Produces               |
