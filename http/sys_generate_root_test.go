@@ -313,6 +313,7 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 		"path":             "auth/token/root",
 		"explicit_max_ttl": json.Number("0"),
 		"expire_time":      nil,
+		"entity_id":        "",
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
@@ -403,6 +404,7 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 		"path":             "auth/token/root",
 		"explicit_max_ttl": json.Number("0"),
 		"expire_time":      nil,
+		"entity_id":        "",
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")

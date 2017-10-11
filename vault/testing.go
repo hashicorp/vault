@@ -154,6 +154,15 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 	noopBackends["http"] = func(config *logical.BackendConfig) (logical.Backend, error) {
 		return new(rawHTTP), nil
 	}
+
+	credentialBackends := make(map[string]logical.Factory)
+	for backendName, backendFactory := range noopBackends {
+		credentialBackends[backendName] = backendFactory
+	}
+	for backendName, backendFactory := range testCredentialBackends {
+		credentialBackends[backendName] = backendFactory
+	}
+
 	logicalBackends := make(map[string]logical.Factory)
 	for backendName, backendFactory := range noopBackends {
 		logicalBackends[backendName] = backendFactory
@@ -167,7 +176,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		Physical:           physicalBackend,
 		AuditBackends:      noopAudits,
 		LogicalBackends:    logicalBackends,
-		CredentialBackends: noopBackends,
+		CredentialBackends: credentialBackends,
 		DisableMlock:       true,
 		Logger:             logger,
 	}
@@ -375,6 +384,7 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 }
 
 var testLogicalBackends = map[string]logical.Factory{}
+var testCredentialBackends = map[string]logical.Factory{}
 
 // Starts the test server which responds to SSH authentication.
 // Used to test the SSH secret backend.
@@ -465,6 +475,19 @@ func executeServerCommand(ch ssh.Channel, req *ssh.Request) {
 		}
 		ch.Close()
 	}()
+}
+
+// This adds a credential backend for the test core. This needs to be
+// invoked before the test core is created.
+func AddTestCredentialBackend(name string, factory logical.Factory) error {
+	if name == "" {
+		return fmt.Errorf("missing backend name")
+	}
+	if factory == nil {
+		return fmt.Errorf("missing backend factory function")
+	}
+	testCredentialBackends[name] = factory
+	return nil
 }
 
 // This adds a logical backend for the test core. This needs to be

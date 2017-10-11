@@ -87,12 +87,20 @@ type Request struct {
 	// aliases, generating different defaults depending on the alias)
 	MountType string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 
+	// MountAccessor is provided so that identities returned by the authentication
+	// backends can be tied to the mount it belongs to.
+	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
+
 	// WrapInfo contains requested response wrapping parameters
 	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
 
 	// ClientTokenRemainingUses represents the allowed number of uses left on the
 	// token supplied
 	ClientTokenRemainingUses int `json:"client_token_remaining_uses" structs:"client_token_remaining_uses" mapstructure:"client_token_remaining_uses"`
+
+	// EntityID is the identity of the caller extracted out of the token used
+	// to make this request
+	EntityID string `json:"entity_id" structs:"entity_id" mapstructure:"entity_id"`
 
 	// For replication, contains the last WAL on the remote side after handling
 	// the request, used for best-effort avoidance of stale read-after-write

@@ -1033,6 +1033,12 @@
 			"revisionTime": "2017-07-25T22:12:15Z"
 		},
 		{
+			"checksumSHA1": "2JVfMLNCW8hfVlPAwAHlOX4HW2s=",
+			"path": "github.com/hashicorp/go-memdb",
+			"revision": "75ff99613d288868d8888ec87594525906815dbc",
+			"revisionTime": "2017-10-05T03:07:53Z"
+		},
+		{
 			"checksumSHA1": "g7uHECbzuaWwdxvwoyxBwgeERPk=",
 			"path": "github.com/hashicorp/go-multierror",
 			"revision": "83588e72410abfbe4df460eeb6f30841ae47d4c4",
