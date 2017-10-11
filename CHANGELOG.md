@@ -7,6 +7,8 @@ IMPROVEMENTS:
    [GH-3373]
  * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
    arrays [GH-3409]
+ * secret/transit: Sign and verify operations now support a `none` hash
+   algorithm to allow signing/verifying pre-hashed data [GH-3448]
 
 BUG FIXES:
 
