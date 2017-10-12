@@ -9,6 +9,8 @@ IMPROVEMENTS:
    arrays [GH-3409]
  * secret/transit: Sign and verify operations now support a `none` hash
    algorithm to allow signing/verifying pre-hashed data [GH-3448]
+ * physical/file: Use `700` as permissions when creating directories. The files
+   themselves were `600` and are all encrypted, but this doesn't hurt.
 
 BUG FIXES:
 
