@@ -14,11 +14,18 @@ The Oracle Database Plugin is an external plugin for the Database
 backend. This plugin generates database credentials dynamically based on
 configured roles for the Oracle database.
 
+See the [Database Backend](/docs/secrets/databases/index.html) docs for more
+information about setting up the Database Backend.
+
+## Installation
+
 The Oracle Database Plugin does not live in the core Vault code tree and can be found
 at its own git repository here: [hashicorp/vault-plugin-database-oracle](https://github.com/hashicorp/vault-plugin-database-oracle)
 
-See the [Database Backend](/docs/secrets/databases/index.html) docs for more
-information about setting up the Database Backend.
+Before running the plugin you will need to have the the Oracle Instant Client
+library installed. These can be downloaded from Oracle. The libraries will need to
+be placed in the default library search path or somewhere defined in the
+`LD_LIBRARY_PATH` environment variable.
 
 ## Quick Start
 
