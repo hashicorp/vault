@@ -266,7 +266,7 @@ exist, a 404 is returned.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `DELET`  | `/aws/roles/:name`           | `204 (empty body)`     |
+| `DELETE`  | `/aws/roles/:name`           | `204 (empty body)`     |
 
 ### Parameters
 
