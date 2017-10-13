@@ -1,15 +1,18 @@
 package gcs
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
 	log "github.com/mgutz/logxi/v1"
@@ -21,6 +24,37 @@ import (
 	"google.golang.org/api/option"
 )
 
+const (
+	// GCSLockPrefix is the prefix used to mark GCS records
+	// as locks. This prefix causes them not to be returned by
+	// List operations.
+	GCSLockPrefix = "_"
+
+	// GCSLockTTL The lock TTL matches the default that Consul API uses, 15 seconds.
+	GCSLockTTL = 15 * time.Second
+
+	// GCSLockRenewInterval The amount of time to wait between the lock renewals
+	GCSLockRenewInterval = 5 * time.Second
+
+	// GCSLockRetryInterval is the amount of time to wait
+	// if a lock fails before trying again.
+	GCSLockRetryInterval = time.Second
+
+	// GCSWatchRetryMax is the number of times to re-try a
+	// failed watch before signaling that leadership is lost.
+	GCSWatchRetryMax = 5
+
+	// GCSWatchRetryInterval is the amount of time to wait
+	// if a watch fails before trying again.
+	GCSWatchRetryInterval = 5 * time.Second
+
+	// conditionCheckFailedError Condition Check Failed error
+	conditionCheckFailedError = "ConditionalCheckFailedException"
+
+	// gcsConditionNotMetError GCS API Error when condition for read/write is not satisfied
+	gcsConditionNotMetError = "Error 412: Precondition Failed, conditionNotMet"
+)
+
 // GCSBackend is a physical backend that stores data
 // within an Google Cloud Storage bucket.
 type GCSBackend struct {
@@ -28,6 +62,8 @@ type GCSBackend struct {
 	client     *storage.Client
 	permitPool *physical.PermitPool
 	logger     log.Logger
+
+	haEnabled bool
 }
 
 var (
@@ -71,8 +107,8 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		if err != nil {
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
-		if logger.IsDebug() {
-			logger.Debug("physical/gcs: max_parallel set", "max_parallel", maxParInt)
+		if logger.IsWarn() {
+			logger.Warn("physical/gcs: max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
@@ -88,10 +124,17 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		}
 	}
 
+	haEnabled := os.Getenv("GCS_HA_ENABLED")
+	if haEnabled == "" {
+		haEnabled = conf["ha_enabled"]
+	}
+	haEnabledBool, _ := strconv.ParseBool(haEnabled)
+
 	g := GCSBackend{
 		bucketName: bucketName,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParInt),
+		haEnabled:  haEnabledBool,
 		logger:     logger,
 	}
 
@@ -238,4 +281,285 @@ func (g *GCSBackend) List(ctx context.Context, prefix string) ([]string, error) 
 	sort.Strings(keys)
 
 	return keys, nil
+}
+
+// GCSLock implements a lock using an GCS client.
+type GCSLock struct {
+	backend  *GCSBackend
+	value    string
+	key      string
+	identity string
+	held     bool
+	lock     sync.Mutex
+	// Allow modifying the Lock durations for ease of unit testing.
+	renewInterval      time.Duration
+	ttl                time.Duration
+	watchRetryInterval time.Duration
+}
+
+// LockWith is used for mutual exclusion based on the given key.
+func (g *GCSBackend) LockWith(key, value string) (physical.Lock, error) {
+	identity, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	return &GCSLock{
+		backend:            g,
+		key:                key,
+		value:              value,
+		identity:           identity,
+		renewInterval:      GCSLockRenewInterval,
+		ttl:                GCSLockTTL,
+		watchRetryInterval: GCSWatchRetryInterval,
+	}, nil
+}
+
+func (g *GCSBackend) HAEnabled() bool {
+	return g.haEnabled
+}
+
+// Lock tries to acquire the lock by repeatedly trying to create
+// a record in the GCS. It will block until either the
+// stop channel is closed or the lock could be acquired successfully.
+// The returned channel will be closed once the lock is deleted or
+// changed in the GCS.
+func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr error) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
+	if l.held {
+		return nil, fmt.Errorf("lock already held")
+	}
+
+	done := make(chan struct{})
+	// close done channel even in case of error
+	defer func() {
+		if retErr != nil {
+			close(done)
+		}
+	}()
+
+	var (
+		stop    = make(chan struct{})
+		success = make(chan struct{})
+		errs    = make(chan error)
+		leader  = make(chan struct{})
+	)
+	// try to acquire the lock asynchronously
+	go l.tryToLock(stop, success, errs)
+
+	select {
+	case <-success:
+		l.held = true
+		// after acquiring it successfully, we must renew the lock periodically,
+		// and watch the lock in order to close the leader channel
+		// once it is lost.
+		go l.periodicallyRenewLock(leader)
+		go l.watch(leader)
+	case retErr = <-errs:
+		close(stop)
+		return nil, retErr
+	case <-stopCh:
+		close(stop)
+		return nil, nil
+	}
+
+	return leader, retErr
+}
+
+// Unlock releases the lock by deleting the lock record from the
+// GCS.
+func (l *GCSLock) Unlock() error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	if !l.held {
+		return nil
+	}
+
+	l.held = false
+	if err := l.backend.Delete(l.key); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Value checks whether or not the lock is held by any instance of GCSLock,
+// including this one, and returns the current value.
+func (l *GCSLock) Value() (bool, string, error) {
+	entry, err := l.backend.Get(l.key)
+	if err != nil {
+		return false, "", err
+	}
+
+	if entry == nil {
+		return false, "", nil
+	}
+
+	return true, string(entry.Value), nil
+}
+
+// tryToLock tries to create a new item in GCS
+// every `GCSLockRetryInterval`. As long as the item
+// cannot be created (because it already exists), it will
+// be retried. If the operation fails due to an error, it
+// is sent to the errors channel.
+// When the lock could be acquired successfully, the success
+// channel is closed.
+func (l *GCSLock) tryToLock(stop, success chan struct{}, errors chan error) {
+	ticker := time.NewTicker(GCSLockRetryInterval)
+
+	for {
+		select {
+		case <-stop:
+			ticker.Stop()
+		case <-ticker.C:
+			err := l.writeItem()
+			// Don't report a condition check failure, this means that the lock
+			// is already being held.
+			if err != nil {
+				if err.Error() != conditionCheckFailedError {
+					errors <- err
+				}
+				continue
+			} else {
+				ticker.Stop()
+				close(success)
+				return
+			}
+		}
+	}
+}
+
+func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
+	ticker := time.NewTicker(l.renewInterval)
+	for {
+		select {
+		case <-ticker.C:
+			l.writeItem()
+		case <-done:
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+// writeItem Attempts to put/update the gcs item using condition expressions to
+// evaluate the TTL.
+func (l *GCSLock) writeItem() error {
+	defer metrics.MeasureSince([]string{"gcs", "get"}, time.Now())
+
+	var err error
+	var rw *storage.Writer
+
+	expired := false
+	identityMatch := false
+
+	bucket := l.backend.client.Bucket(l.backend.bucketName)
+	obj := bucket.Object(l.key)
+	attrs, err := obj.Attrs(context.Background())
+
+	canWrite := false
+	conditions := storage.Conditions{DoesNotExist: true}
+	// if the object doesn't exist set the expiration time to the current time + ttl
+	expires := strconv.FormatInt(time.Now().Add(l.ttl).UnixNano(), 10)
+
+	// if the object exists we check its identity and expiration time to determine if we can update it
+	if attrs != nil {
+		// We can only write if:
+		// A. The object doesn't exist
+		// or
+		// B. identity is equal to our identity
+		// or
+		// C. The ttl on the item is <= to the current time
+		if identity, ok := attrs.Metadata["identity"]; ok && identity == l.identity {
+			canWrite = true
+		}
+
+		if ts, ok := attrs.Metadata["expires"]; ok {
+			exp, err := strconv.ParseInt(ts, 10, 64)
+			if err != nil {
+				return errors.New("error parsing unix timestamp")
+			}
+
+			if time.Unix(0, exp).UnixNano() <= time.Now().UnixNano() {
+				canWrite = true
+			}
+		}
+
+		if !expired && !identityMatch && attrs != nil {
+			return errors.New(conditionCheckFailedError)
+		}
+
+		conditions.DoesNotExist = false
+		// we must ensure that another process didn't change the object in the period
+		// between retrieving and writing it back
+		// to do that we add a condition to match the generation of the object
+		// https://cloud.google.com/storage/docs/generations-preconditions
+		conditions.GenerationMatch = attrs.Generation
+		conditions.MetagenerationMatch = attrs.Metageneration
+	}
+
+	if !canWrite && attrs != nil {
+		return errors.New(conditionCheckFailedError)
+	}
+
+	rw := obj.If(conditions).NewWriter(context.Background())
+	rw.ObjectAttrs.Metadata = map[string]string{
+		"expires":  expires,
+		"identity": l.identity,
+	}
+
+	if _, err = rw.Write([]byte(l.value)); err != nil {
+		return err
+	}
+
+	if err = rw.Close(); err != nil {
+		// catch the google api errors when conditions are not met
+		if err.Error() == gcsConditionNotMetError || err.Error() == "googleapi: "+gcsConditionNotMetError {
+			err = errors.New(conditionCheckFailedError)
+		}
+	}
+
+	return err
+}
+
+// watch checks whether the lock has changed in the
+// GCS and closes the leader channel if so.
+// The interval is set by `GCSWatchRetryInterval`.
+// If an error occurs during the check, watch will retry
+// the operation for `GCSWatchRetryMax` times and
+// close the leader channel if it can't succeed.
+func (l *GCSLock) watch(lost chan struct{}) {
+	retries := GCSWatchRetryMax
+	ticker := time.NewTicker(l.watchRetryInterval)
+	bucket := l.backend.client.Bucket(l.backend.bucketName)
+	obj := bucket.Object(l.key)
+
+WatchLoop:
+	for {
+		select {
+		case <-ticker.C:
+			attrs, err := obj.Attrs(context.Background())
+
+			if err != nil {
+				retries--
+				if retries == 0 {
+					break WatchLoop
+				}
+				continue
+			}
+
+			if attrs == nil {
+				break WatchLoop
+			}
+
+			if identity, ok := attrs.Metadata["identity"]; ok {
+				if identity != string(l.identity) {
+					break WatchLoop
+				}
+			}
+		}
+	}
+
+	close(lost)
 }

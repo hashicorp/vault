@@ -1773,6 +1773,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	}()
 
 	var manualStepDown bool
+
 	for {
 		// Check for a shutdown
 		select {
