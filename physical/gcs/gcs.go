@@ -1,15 +1,18 @@
 package gcs
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/physical"
 	log "github.com/mgutz/logxi/v1"
 
@@ -20,6 +23,31 @@ import (
 	"google.golang.org/api/option"
 )
 
+const (
+	// GCSLockPrefix is the prefix used to mark GCS records
+	// as locks. This prefix causes them not to be returned by
+	// List operations.
+	GCSLockPrefix = "_"
+
+	// GCSLockTTL The lock TTL matches the default that Consul API uses, 15 seconds.
+	GCSLockTTL = 15 * time.Second
+
+	// GCSLockRenewInterval The amount of time to wait between the lock renewals
+	GCSLockRenewInterval = 5 * time.Second
+
+	// GCSLockRetryInterval is the amount of time to wait
+	// if a lock fails before trying again.
+	GCSLockRetryInterval = time.Second
+
+	// GCSWatchRetryMax is the number of times to re-try a
+	// failed watch before signaling that leadership is lost.
+	GCSWatchRetryMax = 5
+
+	// GCSWatchRetryInterval is the amount of time to wait
+	// if a watch fails before trying again.
+	GCSWatchRetryInterval = 5 * time.Second
+)
+
 // GCSBackend is a physical backend that stores data
 // within an Google Cloud Storage bucket.
 type GCSBackend struct {
@@ -27,6 +55,8 @@ type GCSBackend struct {
 	client     *storage.Client
 	permitPool *physical.PermitPool
 	logger     log.Logger
+
+	haEnabled bool
 }
 
 // NewGCSBackend constructs a Google Cloud Storage backend using a pre-existing
@@ -61,8 +91,8 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		if err != nil {
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
-		if logger.IsDebug() {
-			logger.Debug("physical/gcs: max_parallel set", "max_parallel", maxParInt)
+		if logger.IsWarn() {
+			logger.Warn("physical/gcs: max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
@@ -213,4 +243,321 @@ func (g *GCSBackend) List(prefix string) ([]string, error) {
 	sort.Strings(keys)
 
 	return keys, nil
+}
+
+// GCSLock implements a lock using an GCS client.
+type GCSLock struct {
+	backend    *GCSBackend
+	value, key string
+	identity   string
+	held       bool
+	lock       sync.Mutex
+	recovery   bool
+	// Allow modifying the Lock durations for ease of unit testing.
+	renewInterval      time.Duration
+	ttl                time.Duration
+	watchRetryInterval time.Duration
+}
+
+type GCSLockRecord struct {
+	Path     string
+	Key      string
+	Value    []byte
+	Identity []byte
+	Expires  int64
+}
+
+// LockWith is used for mutual exclusion based on the given key.
+func (g *GCSBackend) LockWith(key, value string) (physical.Lock, error) {
+	identity, err := uuid.GenerateUUID()
+	log.Warn("Creating new identity: ", identity)
+	if err != nil {
+		return nil, err
+	}
+	return &GCSLock{
+		backend: g,
+		// key:     pkgPath.Join(pkgPath.Dir(key), GCSLockPrefix+pkgPath.Base(key)),
+		key:      key,
+		value:    value,
+		identity: identity,
+		// recovery:           g.recovery,
+		renewInterval:      GCSLockRenewInterval,
+		ttl:                GCSLockTTL,
+		watchRetryInterval: GCSWatchRetryInterval,
+	}, nil
+}
+
+func (g *GCSBackend) HAEnabled() bool {
+	return true
+}
+
+// Lock tries to acquire the lock by repeatedly trying to create
+// a record in the GCS. It will block until either the
+// stop channel is closed or the lock could be acquired successfully.
+// The returned channel will be closed once the lock is deleted or
+// changed in the GCS.
+func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr error) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	// log.Warn("Attempting to lock")
+	if l.held {
+		return nil, fmt.Errorf("lock already held")
+	}
+
+	done := make(chan struct{})
+	// close done channel even in case of error
+	defer func() {
+		if retErr != nil {
+			close(done)
+		}
+	}()
+
+	var (
+		stop    = make(chan struct{})
+		success = make(chan struct{})
+		errors  = make(chan error)
+		leader  = make(chan struct{})
+	)
+	// log.Warn("Attempting to lock async")
+	// try to acquire the lock asynchronously
+	go l.tryToLock(stop, success, errors)
+
+	select {
+	case <-success:
+		l.held = true
+		// after acquiring it successfully, we must renew the lock periodically,
+		// and watch the lock in order to close the leader channel
+		// once it is lost.
+		go l.periodicallyRenewLock(leader)
+
+		go l.watch(leader)
+	case retErr = <-errors:
+		close(stop)
+		return nil, retErr
+	case <-stopCh:
+		close(stop)
+		return nil, nil
+	}
+
+	return leader, retErr
+}
+
+// Unlock releases the lock by deleting the lock record from the
+// GCS.
+func (l *GCSLock) Unlock() error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	if !l.held {
+		return nil
+	}
+
+	l.held = false
+	if err := l.backend.Delete(l.key); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Value checks whether or not the lock is held by any instance of GCSLock,
+// including this one, and returns the current value.
+func (l *GCSLock) Value() (bool, string, error) {
+	entry, err := l.backend.Get(l.key)
+	if err != nil {
+		return false, "", err
+	}
+	if entry == nil {
+		return false, "", nil
+	}
+
+	return true, string(entry.Value), nil
+}
+
+// tryToLock tries to create a new item in GCS
+// every `GCSLockRetryInterval`. As long as the item
+// cannot be created (because it already exists), it will
+// be retried. If the operation fails due to an error, it
+// is sent to the errors channel.
+// When the lock could be acquired successfully, the success
+// channel is closed.
+func (l *GCSLock) tryToLock(stop, success chan struct{}, errors chan error) {
+	ticker := time.NewTicker(GCSLockRetryInterval)
+
+	for {
+		select {
+		case <-stop:
+			ticker.Stop()
+		case <-ticker.C:
+			// log.Warn("Before Write Item")
+			err := l.writeItem()
+			// Don't report a condition check failure, this means that the lock
+			// is already being held.
+			log.Warn("After Write Item: Erorr: ", err)
+			if err != nil {
+				if err.Error() != "ConditionalCheckFailedException" {
+					errors <- err
+				}
+			} else {
+				ticker.Stop()
+				close(success)
+			}
+			return
+		}
+	}
+}
+
+func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
+	ticker := time.NewTicker(l.renewInterval)
+	for {
+		select {
+		case <-ticker.C:
+			l.writeItem()
+		case <-done:
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+// Attempts to put/update the gcs item using condition expressions to
+// evaluate the TTL.
+func (l *GCSLock) writeItem() error {
+	now := time.Now()
+	// // If both key and path already exist, we can only write if
+	// // A. identity is equal to our identity (or the identity doesn't exist)
+	// // or
+	// // B. The ttl on the item is <= to the current time
+	// _, err := l.backend.Put()
+	defer metrics.MeasureSince([]string{"gcs", "get"}, time.Now())
+	var err error
+
+	canwriteExpired := false
+	newObj := true
+	canwriteIdentity := false
+	bucket := l.backend.client.Bucket(l.backend.bucketName)
+
+	exists, err := l.backend.Get(l.key)
+	if err != nil {
+		return errors.New("ERROR")
+	}
+
+	if exists != nil {
+		obj := bucket.Object(l.key)
+		attrs, _ := obj.Attrs(context.Background())
+
+		newObj = false
+		if identity, ok := attrs.Metadata["identity"]; ok && identity == l.identity {
+			canwriteIdentity = true
+		} else {
+			log.Warn("NO IDENTITY MATCH")
+			return errors.New("ConditionalCheckFailedException")
+		}
+
+		if ts, ok := attrs.Metadata["expires"]; ok {
+			i, err := strconv.ParseInt(ts, 10, 64)
+			if err != nil {
+				return errors.New("couldn't parse unix timestamp")
+			}
+			expires := time.Unix(i, 0)
+
+			// log.Warn("Expires: ", expires.Unix())
+			// log.Warn("Now: ", now.Unix())
+
+			canwriteExpired = true
+			if expires.UnixNano() > now.UnixNano() {
+				log.Warn("NOT EXPIRED")
+				return errors.New("ConditionalCheckFailedException")
+			}
+		}
+	}
+
+	if newObj || (canwriteExpired || canwriteIdentity) {
+		obj := bucket.Object(l.key)
+		rw := obj.NewWriter(context.Background())
+		defer rw.Close()
+
+		log.Warn("\n!!!Writing Object!!!: ", l.key, string(l.identity), "Value: ", string(l.value), "Expires: ", strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10))
+
+		// update the expire time
+		rw.ObjectAttrs.Metadata = map[string]string{}
+		rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10)
+		rw.ObjectAttrs.Metadata["identity"] = l.identity
+
+		_, err = rw.Write([]byte(l.value))
+	}
+
+	log.Warn("WRITING OBJECT    NEWOBJ: ", fmt.Sprintf("%t", newObj))
+	log.Warn("WRITING OBJECT    EXPIRED: ", fmt.Sprintf("%t", canwriteExpired))
+	log.Warn("WRITING OBJECT    IDENTITY MATCH", fmt.Sprintf("%t", canwriteIdentity))
+
+	return err
+}
+
+// watch checks whether the lock has changed in the
+// GCS and closes the leader channel if so.
+// The interval is set by `GCSWatchRetryInterval`.
+// If an error occurs during the check, watch will retry
+// the operation for `GCSWatchRetryMax` times and
+// close the leader channel if it can't succeed.
+func (l *GCSLock) watch(lost chan struct{}) {
+	retries := GCSWatchRetryMax
+
+	ticker := time.NewTicker(l.watchRetryInterval)
+WatchLoop:
+	for {
+		select {
+		case <-ticker.C:
+			bucket := l.backend.client.Bucket(l.backend.bucketName)
+			obj := bucket.Object(l.key)
+			attrs, err := obj.Attrs(context.Background())
+
+			if err != nil {
+				log.Warn("watch. Retrying. Retries left: ", retries)
+				retries--
+				if retries == 0 {
+					log.Warn("Breaking watch loop")
+					break WatchLoop
+				}
+				continue
+			}
+
+			if attrs == nil {
+				break WatchLoop
+			}
+
+			record := &GCSLockRecord{}
+			if identity, ok := attrs.Metadata["identity"]; ok {
+				record.Identity, err = uuid.ParseUUID(identity)
+				if err != nil {
+					break WatchLoop
+				}
+			}
+
+			reader, err := obj.NewReader(context.Background())
+			if err != nil {
+				break WatchLoop
+			}
+			defer reader.Close()
+			value, err := ioutil.ReadAll(reader)
+			if err != nil {
+				break WatchLoop
+			}
+
+			expires, err := strconv.ParseInt(attrs.Metadata["expires"], 10, 64)
+			record.Expires = expires
+			record.Value = value
+
+			compareId, err := uuid.FormatUUID(record.Identity)
+			if err != nil {
+				log.Warn("Coudln't format identity")
+				break WatchLoop
+			}
+
+			if err != nil || compareId != string(l.identity) {
+				log.Warn("Identity doesn't match.", "Expected:", string(l.identity), "Got: ", compareId)
+				break WatchLoop
+			}
+		}
+	}
+
+	close(lost)
 }
