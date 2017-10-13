@@ -361,8 +361,11 @@ func (l *GCSLock) Unlock() error {
 func (l *GCSLock) Value() (bool, string, error) {
 	err := l.writeItem()
 	if err != nil {
-		return false, "", err
+		if err.Error() != "ConditionalCheckFailedException" {
+			return false, "", err
+		}
 	}
+
 	entry, err := l.backend.Get(l.key)
 	if err != nil {
 		return false, "", err
@@ -463,9 +466,6 @@ func (l *GCSLock) writeItem() error {
 			}
 			expires := time.Unix(i, 0)
 
-			// log.Warn("Expires: ", expires.Unix())
-			// log.Warn("Now: ", now.Unix())
-
 			log.Warn("Now: ", strconv.FormatInt(now.Unix(), 10))
 			log.Warn("Expires: ", strconv.FormatInt(expires.Unix(), 10))
 
@@ -477,12 +477,28 @@ func (l *GCSLock) writeItem() error {
 		}
 	}
 
-	if newObj || (canwriteExpired || canwriteIdentity) {
+	if newObj {
 		obj := bucket.Object(l.key)
 		rw := obj.NewWriter(context.Background())
 		defer rw.Close()
 
-		log.Warn("\n!!!Writing Object!!!: ", l.key, string(l.identity), "Value: ", string(l.value), "Expires: ", strconv.FormatInt(now.Add(l.ttl).Unix(), 10))
+		log.Warn("\n!!!Writing NEW Object!!!: ", l.key, string(l.identity), "Value: ", string(l.value), "Expires: ", strconv.FormatInt(now.Add(l.ttl).Unix(), 10))
+
+		// update the expire time
+		rw.ObjectAttrs.Metadata = map[string]string{}
+		rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).Unix(), 10)
+		// rw.ObjectAttrs.Metadata["now"] = strconv.FormatInt(now.UnixNano(), 10)
+		rw.ObjectAttrs.Metadata["identity"] = l.identity
+
+		_, err = rw.Write([]byte(l.value))
+	}
+
+	if !newObj && (canwriteExpired || canwriteIdentity) {
+		obj := bucket.Object(l.key)
+		rw := obj.NewWriter(context.Background())
+		defer rw.Close()
+
+		log.Warn("\n!!!UPDATING Object!!!: ", l.key, string(l.identity), "Value: ", string(l.value), "Expires: ", strconv.FormatInt(now.Add(l.ttl).Unix(), 10))
 
 		// update the expire time
 		rw.ObjectAttrs.Metadata = map[string]string{}
