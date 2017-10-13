@@ -275,8 +275,7 @@ func (g *GCSBackend) LockWith(key, value string) (physical.Lock, error) {
 		return nil, err
 	}
 	return &GCSLock{
-		backend: g,
-		// key:     pkgPath.Join(pkgPath.Dir(key), GCSLockPrefix+pkgPath.Base(key)),
+		backend:  g,
 		key:      key,
 		value:    value,
 		identity: identity,
@@ -447,10 +446,11 @@ func (l *GCSLock) writeItem() error {
 		newObj = false
 		if identity, ok := attrs.Metadata["identity"]; ok && identity == l.identity {
 			canwriteIdentity = true
-		} else {
-			log.Warn("NO IDENTITY MATCH")
-			return errors.New("ConditionalCheckFailedException")
 		}
+		// else {
+		// 	log.Warn("NO IDENTITY MATCH")
+		// 	return errors.New("ConditionalCheckFailedException")
+		// }
 
 		if ts, ok := attrs.Metadata["expires"]; ok {
 			i, err := strconv.ParseInt(ts, 10, 64)
