@@ -329,7 +329,6 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 		// and watch the lock in order to close the leader channel
 		// once it is lost.
 		go l.periodicallyRenewLock(leader)
-
 		go l.watch(leader)
 	case retErr = <-errors:
 		close(stop)
@@ -411,6 +410,7 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 		select {
 		case <-ticker.C:
 			l.writeItem()
+			log.Warn("TRYING TO RENEW LOCK")
 		case <-done:
 			ticker.Stop()
 			return
@@ -462,8 +462,11 @@ func (l *GCSLock) writeItem() error {
 			// log.Warn("Expires: ", expires.Unix())
 			// log.Warn("Now: ", now.Unix())
 
+			log.Warn("Now: ", strconv.FormatInt(now.Unix(), 10))
+			log.Warn("Expires: ", strconv.FormatInt(expires.Unix(), 10))
+
 			canwriteExpired = true
-			if expires.UnixNano() > now.UnixNano() {
+			if expires.Unix() > now.Unix() {
 				log.Warn("NOT EXPIRED")
 				return errors.New("ConditionalCheckFailedException")
 			}
@@ -475,11 +478,12 @@ func (l *GCSLock) writeItem() error {
 		rw := obj.NewWriter(context.Background())
 		defer rw.Close()
 
-		log.Warn("\n!!!Writing Object!!!: ", l.key, string(l.identity), "Value: ", string(l.value), "Expires: ", strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10))
+		log.Warn("\n!!!Writing Object!!!: ", l.key, string(l.identity), "Value: ", string(l.value), "Expires: ", strconv.FormatInt(now.Add(l.ttl).Unix(), 10))
 
 		// update the expire time
 		rw.ObjectAttrs.Metadata = map[string]string{}
-		rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10)
+		rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).Unix(), 10)
+		// rw.ObjectAttrs.Metadata["now"] = strconv.FormatInt(now.UnixNano(), 10)
 		rw.ObjectAttrs.Metadata["identity"] = l.identity
 
 		_, err = rw.Write([]byte(l.value))

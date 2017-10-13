@@ -164,8 +164,8 @@ func TestGCSHABackend(t *testing.T) {
 // of the locks to a higher value than the lock TTL.
 func testGCSLockTTL(t *testing.T, ha physical.HABackend) {
 	// Set much smaller lock times to speed up the test.
-	lockTTL := time.Second * 6
-	renewInterval := time.Second * 3
+	lockTTL := time.Second * 3
+	renewInterval := time.Second * 1
 	watchInterval := time.Second * 1
 
 	// Get the lock
