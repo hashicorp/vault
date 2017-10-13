@@ -359,6 +359,10 @@ func (l *GCSLock) Unlock() error {
 // Value checks whether or not the lock is held by any instance of GCSLock,
 // including this one, and returns the current value.
 func (l *GCSLock) Value() (bool, string, error) {
+	err := l.writeItem()
+	if err != nil {
+		return false, "", err
+	}
 	entry, err := l.backend.Get(l.key)
 	if err != nil {
 		return false, "", err
