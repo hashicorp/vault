@@ -52,6 +52,9 @@ func (b *backend) pathLoginUpdate(req *logical.Request, data *framework.FieldDat
 		LeaseOptions: logical.LeaseOptions{
 			Renewable: true,
 		},
+		Alias: &logical.Alias{
+			Name: role.RoleID,
+		},
 	}
 
 	// If 'Period' is set, use the value of 'Period' as the TTL.

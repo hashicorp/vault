@@ -75,6 +75,9 @@ func (b *backend) pathLogin(
 			TTL:       cfg.TTL,
 			Renewable: true,
 		},
+		Alias: &logical.Alias{
+			Name: username,
+		},
 	}
 	return resp, nil
 }
