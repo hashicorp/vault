@@ -759,6 +759,9 @@ func (b *backend) pathLoginUpdateEc2(
 				Renewable: true,
 				TTL:       roleEntry.TTL,
 			},
+			Alias: &logical.Alias{
+				Name: identityDocParsed.InstanceID,
+			},
 		},
 	}
 
@@ -1261,6 +1264,9 @@ func (b *backend) pathLoginUpdateIam(
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       roleEntry.TTL,
+			},
+			Alias: &logical.Alias{
+				Name: callerUniqueId,
 			},
 		},
 	}

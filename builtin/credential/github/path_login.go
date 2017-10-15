@@ -67,6 +67,9 @@ func (b *backend) pathLogin(
 				TTL:       ttl,
 				Renewable: true,
 			},
+			Alias: &logical.Alias{
+				Name: *verifyResp.User.Login,
+			},
 		},
 	}, nil
 }
