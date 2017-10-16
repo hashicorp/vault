@@ -2224,6 +2224,12 @@
 			"path": "layeh.com/radius",
 			"revision": "eebc3671c1699b29d5ff236cf4a8c5519384dcb5",
 			"revisionTime": "2017-09-03T11:37:19Z"
+		},
+		{
+			"checksumSHA1": "Yqv7MmEf9UBtFxMig9bUvFn3C+Y=",
+			"path": "layeh.com/radius/rfc2865",
+			"revision": "eebc3671c1699b29d5ff236cf4a8c5519384dcb5",
+			"revisionTime": "2017-09-03T11:37:19Z"
 		}
 	],
 	"rootPath": "github.com/hashicorp/vault"
