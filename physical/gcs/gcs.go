@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"sort"
 	"strconv"
@@ -32,7 +33,7 @@ const (
 	GCSLockPrefix = "_"
 
 	// GCSLockTTL The lock TTL matches the default that Consul API uses, 15 seconds.
-	GCSLockTTL = 20 * time.Second
+	GCSLockTTL = 15 * time.Second
 
 	// GCSLockRenewInterval The amount of time to wait between the lock renewals
 	GCSLockRenewInterval = 5 * time.Second
@@ -370,8 +371,6 @@ func (l *GCSLock) Unlock() error {
 // Value checks whether or not the lock is held by any instance of GCSLock,
 // including this one, and returns the current value.
 func (l *GCSLock) Value() (bool, string, error) {
-	// log.Warn("VALUE")
-
 	entry, err := l.backend.Get(l.key)
 	if err != nil {
 		log.Warn("Value ERROR: ", err)
@@ -397,7 +396,8 @@ func (l *GCSLock) Value() (bool, string, error) {
 // When the lock could be acquired successfully, the success
 // channel is closed.
 func (l *GCSLock) tryToLock(stop, success chan struct{}, errors chan error) {
-	ticker := time.NewTicker(GCSLockRetryInterval)
+	// ticker := time.NewTicker(GCSLockRetryInterval + time.Millisecond*time.Duration(rand.Intn(250)))
+	ticker := time.NewTicker(GCSLockRetryInterval + time.Millisecond*time.Duration(rand.Intn(10000)))
 
 	for {
 		select {
@@ -481,7 +481,7 @@ func (l *GCSLock) writeItem() error {
 			}
 
 			expires := time.Unix(i, 0)
-			if expires.Unix() <= attrs.Created.Unix() {
+			if expires.Unix() <= attrs.Updated.Unix() {
 				expired = true
 			}
 		}
@@ -499,17 +499,19 @@ func (l *GCSLock) writeItem() error {
 
 	if !newObj && (expired || identityMatch) {
 		rw = obj.If(storage.Conditions{GenerationMatch: attrs.Generation}).NewWriter(context.Background())
-		log.Warn("UPDATE OBJECT Expired: ", fmt.Sprintf("%t", expired), "Match: ", fmt.Sprintf("%t", identityMatch))
+		log.Warn("UPDATE OBJECT Expired: ", fmt.Sprintf("%t", expired))
+		log.Warn("UPDATE OBJECT MATCH: ", fmt.Sprintf("%t", identityMatch))
 		rw.ObjectAttrs.Metadata = map[string]string{}
 	}
 
-	// update the expire time
-	expires := strconv.FormatInt(rw.Created.Add(l.ttl).Unix(), 10)
+	// // update the expire time
+	expires := strconv.FormatInt(rw.Updated.Add(l.ttl).Unix(), 10)
 	if attrs != nil {
-		expires = strconv.FormatInt(attrs.Created.Add(l.ttl).Unix(), 10)
+		expires = strconv.FormatInt(attrs.Updated.Add(l.ttl).Unix(), 10)
 	}
 
 	rw.ObjectAttrs.Metadata["expires"] = expires
+	// rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).Unix(), 10)
 	rw.ObjectAttrs.Metadata["identity"] = l.identity
 	_, err = rw.Write([]byte(l.value))
 	if err != nil {
@@ -524,9 +526,9 @@ func (l *GCSLock) writeItem() error {
 	// log.Warn("\nWRITING OBJECT    NEWOBJ: ", fmt.Sprintf("%t", newObj))
 	// log.Warn("WRITING OBJECT    EXPIRED: ", fmt.Sprintf("%t", expired))
 	// log.Warn("WRITING OBJECT    IDENTITY MATCH", fmt.Sprintf("%t", identityMatch))
-	log.Warn("CLOSE OBJECT      ERROR", err)
+	// log.Warn("CLOSE OBJECT      ERROR", err)
 
-	if (!expired && !identityMatch && !newObj) || (err != nil && (err.Error() == "conditionNotMet" || err.Error() == "Precondition Failed, conditionNotMet" || err.Error() == "googleapi: Error 412: Precondition Failed, conditionNotMet" || err.Error() == "Error 412: Precondition Failed, conditionNotMet")) {
+	if err != nil && (err.Error() == "conditionNotMet" || err.Error() == "Precondition Failed, conditionNotMet" || err.Error() == "googleapi: Error 412: Precondition Failed, conditionNotMet" || err.Error() == "Error 412: Precondition Failed, conditionNotMet") {
 		return errors.New("ConditionalCheckFailedException")
 	}
 
@@ -542,7 +544,7 @@ func (l *GCSLock) writeItem() error {
 func (l *GCSLock) watch(lost chan struct{}) {
 	retries := GCSWatchRetryMax
 
-	ticker := time.NewTicker(l.watchRetryInterval)
+	ticker := time.NewTicker(l.watchRetryInterval + +time.Millisecond*time.Duration(rand.Intn(5000)))
 	bucket := l.backend.client.Bucket(l.backend.bucketName)
 	obj := bucket.Object(l.key)
 
