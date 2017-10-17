@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/physical"
@@ -30,7 +32,7 @@ const (
 	GCSLockPrefix = "_"
 
 	// GCSLockTTL The lock TTL matches the default that Consul API uses, 15 seconds.
-	GCSLockTTL = 15 * time.Second
+	GCSLockTTL = 20 * time.Second
 
 	// GCSLockRenewInterval The amount of time to wait between the lock renewals
 	GCSLockRenewInterval = 5 * time.Second
@@ -270,16 +272,16 @@ type GCSLockRecord struct {
 // LockWith is used for mutual exclusion based on the given key.
 func (g *GCSBackend) LockWith(key, value string) (physical.Lock, error) {
 	identity, err := uuid.GenerateUUID()
+	log.Warn("Creating new identity: ", key, value)
 	log.Warn("Creating new identity: ", identity)
 	if err != nil {
 		return nil, err
 	}
 	return &GCSLock{
-		backend:  g,
-		key:      key,
-		value:    value,
-		identity: identity,
-		// recovery:           g.recovery,
+		backend:            g,
+		key:                key,
+		value:              value,
+		identity:           identity,
 		renewInterval:      GCSLockRenewInterval,
 		ttl:                GCSLockTTL,
 		watchRetryInterval: GCSWatchRetryInterval,
@@ -311,6 +313,8 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 		}
 	}()
 
+	log.Warn("LOCKING")
+
 	var (
 		stop    = make(chan struct{})
 		success = make(chan struct{})
@@ -319,7 +323,7 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 	)
 	// log.Warn("Attempting to lock async")
 	// try to acquire the lock asynchronously
-	go l.tryToLock(stop, success, errors)
+	l.tryToLock(stop, success, errors)
 
 	select {
 	case <-success:
@@ -327,13 +331,19 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 		// after acquiring it successfully, we must renew the lock periodically,
 		// and watch the lock in order to close the leader channel
 		// once it is lost.
+		log.Warn("LOCKED")
 		go l.periodicallyRenewLock(leader)
 		go l.watch(leader)
 	case retErr = <-errors:
+		// l.held = false
+		log.Warn("Lock() RETURN ERROR: ", retErr.Error())
 		close(stop)
+		// close(leader)
 		return nil, retErr
 	case <-stopCh:
+		// l.held = false
 		close(stop)
+		// close(leader)
 		return nil, nil
 	}
 
@@ -349,6 +359,7 @@ func (l *GCSLock) Unlock() error {
 		return nil
 	}
 
+	// log.Warn("UNLOCKING")
 	l.held = false
 	if err := l.backend.Delete(l.key); err != nil {
 		return err
@@ -359,20 +370,21 @@ func (l *GCSLock) Unlock() error {
 // Value checks whether or not the lock is held by any instance of GCSLock,
 // including this one, and returns the current value.
 func (l *GCSLock) Value() (bool, string, error) {
-	err := l.writeItem()
-	if err != nil {
-		if err.Error() != "ConditionalCheckFailedException" {
-			return false, "", err
-		}
-	}
+	// log.Warn("VALUE")
 
 	entry, err := l.backend.Get(l.key)
 	if err != nil {
+		log.Warn("Value ERROR: ", err)
 		return false, "", err
 	}
+
 	if entry == nil {
+		// log.Warn("Value Entry: ", entry)
+		// log.Warn("Value Entry RETURN: ", "false", "", "nil")
 		return false, "", nil
 	}
+
+	log.Warn("VALUE OKAY: ", string(entry.Value))
 
 	return true, string(entry.Value), nil
 }
@@ -385,29 +397,37 @@ func (l *GCSLock) Value() (bool, string, error) {
 // When the lock could be acquired successfully, the success
 // channel is closed.
 func (l *GCSLock) tryToLock(stop, success chan struct{}, errors chan error) {
-	ticker := time.NewTicker(GCSLockRetryInterval)
+	// ticker := time.NewTicker(GCSLockRetryInterval)
 
-	for {
-		select {
-		case <-stop:
-			ticker.Stop()
-		case <-ticker.C:
-			// log.Warn("Before Write Item")
-			err := l.writeItem()
-			// Don't report a condition check failure, this means that the lock
-			// is already being held.
+	// for {
+	// 	select {
+	// 	case <-stop:
+	// 		// log.Warn("tryToLock STOP")
+	// 		ticker.Stop()
+	// case <-ticker.C:
+	// log.Warn("Before Write Item")
+	err := l.writeItem()
+	// Don't report a condition check failure, this means that the lock
+	// is already being held.
+	// log.Warn("After Write Item: Erorr: ", err)
+	// if err != nil && err.Error() != "ConditionalCheckFailedException" {
+	// 	log.Warn("After Write Item: Erorr: ", err)
+	// 	errors <- err
+	if err != nil {
+		if err.Error() != "ConditionalCheckFailedException" {
 			log.Warn("After Write Item: Erorr: ", err)
-			if err != nil {
-				if err.Error() != "ConditionalCheckFailedException" {
-					errors <- err
-				}
-			} else {
-				ticker.Stop()
-				close(success)
-			}
-			return
+			errors <- err
 		}
+		// continue
+	} else {
+		log.Warn("ELSE tryToLock STOP")
+		// ticker.Stop()
+		close(success)
+		return
 	}
+	return
+	// 	}
+	// }
 }
 
 func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
@@ -416,8 +436,14 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 		select {
 		case <-ticker.C:
 			l.writeItem()
-			log.Warn("TRYING TO RENEW LOCK")
+			// err := l.writeItem()
+			// if err != nil && err.Error() != "ConditionalCheckFailedException" {
+			// 	log.Warn("Periodically renew lock: Erorr: ", err)
+			// 	return
+			// }
+			// log.Warn("TRYING TO RENEW LOCK")
 		case <-done:
+			log.Warn("TICKER STOP")
 			ticker.Stop()
 			return
 		}
@@ -435,83 +461,67 @@ func (l *GCSLock) writeItem() error {
 	// _, err := l.backend.Put()
 	defer metrics.MeasureSince([]string{"gcs", "get"}, time.Now())
 	var err error
+	var rw *storage.Writer
 
-	canwriteExpired := false
 	newObj := true
-	canwriteIdentity := false
+	expired := false
+	identityMatch := false
+
 	bucket := l.backend.client.Bucket(l.backend.bucketName)
-
-	exists, err := l.backend.Get(l.key)
-	if err != nil {
-		return errors.New("ERROR")
-	}
-
-	if exists != nil {
-		obj := bucket.Object(l.key)
-		attrs, _ := obj.Attrs(context.Background())
-
+	obj := bucket.Object(l.key)
+	attrs, err := obj.Attrs(context.Background())
+	if attrs != nil {
 		newObj = false
 		if identity, ok := attrs.Metadata["identity"]; ok && identity == l.identity {
-			canwriteIdentity = true
+			identityMatch = true
 		}
-		// else {
-		// 	log.Warn("NO IDENTITY MATCH")
-		// 	return errors.New("ConditionalCheckFailedException")
-		// }
 
 		if ts, ok := attrs.Metadata["expires"]; ok {
 			i, err := strconv.ParseInt(ts, 10, 64)
 			if err != nil {
 				return errors.New("couldn't parse unix timestamp")
 			}
+
 			expires := time.Unix(i, 0)
-
-			log.Warn("Now: ", strconv.FormatInt(now.Unix(), 10))
-			log.Warn("Expires: ", strconv.FormatInt(expires.Unix(), 10))
-
-			canwriteExpired = true
-			if expires.Unix() > now.Unix() {
-				log.Warn("NOT EXPIRED")
-				return errors.New("ConditionalCheckFailedException")
+			if expires.Unix() <= now.Unix() {
+				expired = true
 			}
 		}
 	}
 
+	if (!expired && !identityMatch && !newObj) || (err != nil && (err.Error() == "conditionNotMet" || err.Error() == "Precondition Failed, conditionNotMet" || err.Error() == "googleapi: Error 412: Precondition Failed, conditionNotMet" || err.Error() == "Error 412: Precondition Failed, conditionNotMet")) {
+		return errors.New("ConditionalCheckFailedException")
+	}
+
 	if newObj {
-		obj := bucket.Object(l.key)
-		rw := obj.NewWriter(context.Background())
-		defer rw.Close()
-
-		log.Warn("\n!!!Writing NEW Object!!!: ", l.key, string(l.identity), "Value: ", string(l.value), "Expires: ", strconv.FormatInt(now.Add(l.ttl).Unix(), 10))
-
-		// update the expire time
+		rw = obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(context.Background())
 		rw.ObjectAttrs.Metadata = map[string]string{}
-		rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).Unix(), 10)
-		// rw.ObjectAttrs.Metadata["now"] = strconv.FormatInt(now.UnixNano(), 10)
-		rw.ObjectAttrs.Metadata["identity"] = l.identity
-
-		_, err = rw.Write([]byte(l.value))
+		log.Warn("NEW OBJECT")
 	}
 
-	if !newObj && (canwriteExpired || canwriteIdentity) {
-		obj := bucket.Object(l.key)
-		rw := obj.NewWriter(context.Background())
-		defer rw.Close()
-
-		log.Warn("\n!!!UPDATING Object!!!: ", l.key, string(l.identity), "Value: ", string(l.value), "Expires: ", strconv.FormatInt(now.Add(l.ttl).Unix(), 10))
-
-		// update the expire time
+	if !newObj && (expired || identityMatch) {
+		rw = obj.If(storage.Conditions{GenerationMatch: attrs.Generation}).NewWriter(context.Background())
+		log.Warn("UPDATE OBJECT Expired: ", fmt.Sprintf("%t", expired), "Match: ", fmt.Sprintf("%t", identityMatch))
 		rw.ObjectAttrs.Metadata = map[string]string{}
-		rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).Unix(), 10)
-		// rw.ObjectAttrs.Metadata["now"] = strconv.FormatInt(now.UnixNano(), 10)
-		rw.ObjectAttrs.Metadata["identity"] = l.identity
-
-		_, err = rw.Write([]byte(l.value))
 	}
 
-	log.Warn("WRITING OBJECT    NEWOBJ: ", fmt.Sprintf("%t", newObj))
-	log.Warn("WRITING OBJECT    EXPIRED: ", fmt.Sprintf("%t", canwriteExpired))
-	log.Warn("WRITING OBJECT    IDENTITY MATCH", fmt.Sprintf("%t", canwriteIdentity))
+	// update the expire time
+	rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).Unix(), 10)
+	rw.ObjectAttrs.Metadata["identity"] = l.identity
+	_, err = rw.Write([]byte(l.value))
+	if err != nil {
+		log.Warn("ERROR WRITING: ", err)
+	}
+
+	err = rw.Close()
+	if err != nil {
+		log.Warn("ERROR WRITING: ", err)
+	}
+
+	// log.Warn("\nWRITING OBJECT    NEWOBJ: ", fmt.Sprintf("%t", newObj))
+	// log.Warn("WRITING OBJECT    EXPIRED: ", fmt.Sprintf("%t", expired))
+	// log.Warn("WRITING OBJECT    IDENTITY MATCH", fmt.Sprintf("%t", identityMatch))
+	log.Warn("CLOSE OBJECT      ERROR", err)
 
 	return err
 }
@@ -526,12 +536,13 @@ func (l *GCSLock) watch(lost chan struct{}) {
 	retries := GCSWatchRetryMax
 
 	ticker := time.NewTicker(l.watchRetryInterval)
+	bucket := l.backend.client.Bucket(l.backend.bucketName)
+	obj := bucket.Object(l.key)
+
 WatchLoop:
 	for {
 		select {
 		case <-ticker.C:
-			bucket := l.backend.client.Bucket(l.backend.bucketName)
-			obj := bucket.Object(l.key)
 			attrs, err := obj.Attrs(context.Background())
 
 			if err != nil {
@@ -556,20 +567,6 @@ WatchLoop:
 				}
 			}
 
-			reader, err := obj.NewReader(context.Background())
-			if err != nil {
-				break WatchLoop
-			}
-			defer reader.Close()
-			value, err := ioutil.ReadAll(reader)
-			if err != nil {
-				break WatchLoop
-			}
-
-			expires, err := strconv.ParseInt(attrs.Metadata["expires"], 10, 64)
-			record.Expires = expires
-			record.Value = value
-
 			compareId, err := uuid.FormatUUID(record.Identity)
 			if err != nil {
 				log.Warn("Coudln't format identity")
@@ -578,6 +575,7 @@ WatchLoop:
 
 			if err != nil || compareId != string(l.identity) {
 				log.Warn("Identity doesn't match.", "Expected:", string(l.identity), "Got: ", compareId)
+				log.Warn("Identity error: ", err)
 				break WatchLoop
 			}
 		}
