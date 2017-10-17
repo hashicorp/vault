@@ -312,7 +312,6 @@ func (c *ZooKeeperBackend) List(prefix string) ([]string, error) {
 
 // LockWith is used for mutual exclusion based on the given key.
 func (c *ZooKeeperBackend) LockWith(key, value string) (physical.Lock, error) {
-	log.Warn("New Identity", value)
 	l := &ZooKeeperHALock{
 		in:    c,
 		key:   key,
@@ -356,13 +355,10 @@ func (i *ZooKeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	// Wait for lock acquisition, failure, or shutdown
 	select {
 	case <-didLock:
-		log.Warn("Locked")
 		releaseCh <- false
 	case err := <-failLock:
-		log.Warn("FAILLOCK RETURN ERROR: ", err.Error())
 		return nil, err
 	case <-stopCh:
-		log.Warn("RELEASE LOCK", releaseCh)
 		releaseCh <- true
 		return nil, nil
 	}
@@ -374,11 +370,9 @@ func (i *ZooKeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	// Watch for Events which could result in loss of our zkLock and close(i.leaderCh)
 	currentVal, _, lockeventCh, err := i.in.client.GetW(lockpath)
 	if err != nil {
-		log.Warn("unable to watch HA lock: ", err)
 		return nil, fmt.Errorf("unable to watch HA lock: %v", err)
 	}
 	if i.value != string(currentVal) {
-		log.Warn("lost HA lock immediately before watch")
 		return nil, fmt.Errorf("lost HA lock immediately before watch")
 	}
 	go i.monitorLock(lockeventCh, i.leaderCh)
@@ -421,11 +415,8 @@ func (i *ZooKeeperHALock) monitorLock(lockeventCh <-chan zk.Event, leaderCh chan
 			// Lost connection?
 			switch event.State {
 			case zk.StateConnected:
-				log.Warn("Lost connection close leader")
 			case zk.StateHasSession:
-				log.Warn("Lost connection close leader")
 			default:
-				log.Warn("Lost connection close leader")
 				close(leaderCh)
 				return
 			}
@@ -433,11 +424,8 @@ func (i *ZooKeeperHALock) monitorLock(lockeventCh <-chan zk.Event, leaderCh chan
 			// Lost lock?
 			switch event.Type {
 			case zk.EventNodeChildrenChanged:
-				log.Warn("Lost LOCK close leader")
 			case zk.EventSession:
-				log.Warn("Lost LOCK close leader")
 			default:
-				log.Warn("Lost LOCK close leader")
 				close(leaderCh)
 				return
 			}
@@ -460,8 +448,5 @@ func (i *ZooKeeperHALock) Unlock() error {
 func (i *ZooKeeperHALock) Value() (bool, string, error) {
 	lockpath := i.in.nodePath(i.key)
 	value, _, err := i.in.client.Get(lockpath)
-
-	log.Warn("ZK VALUE: ", fmt.Sprintf("%t", (value != nil)), string(value))
-	log.Warn("ZK ERR: ", err)
 	return (value != nil), string(value), err
 }

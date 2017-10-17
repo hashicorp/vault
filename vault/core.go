@@ -871,22 +871,18 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 
 	// Initialize a lock
 	lock, err := c.ha.LockWith(coreLockPath, "read")
-
 	if err != nil {
 		return false, "", "", err
 	}
 
 	// Read the value
 	held, leaderUUID, err := lock.Value()
-	c.logger.Warn("=========Leader.Value(", held, leaderUUID, err)
 	if err != nil {
 		return false, "", "", err
 	}
 	if !held {
 		return false, "", "", nil
 	}
-	c.logger.Warn("=========REELECTED", held, leaderUUID, err)
-	c.logger.Warn("=========REELECTED ERROR", err)
 
 	c.clusterLeaderParamsLock.RLock()
 	localLeaderUUID := c.clusterLeaderUUID
@@ -897,11 +893,8 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
 	if leaderUUID == localLeaderUUID && localRedirAddr != "" {
-		c.logger.Warn("=========NO CHANGE IN LEADER", localLeaderUUID, leaderUUID, err)
 		return false, localRedirAddr, localClusterAddr, nil
 	}
-	c.logger.Warn("=========LEADER CHANGED LEADER", leaderUUID)
-	c.logger.Warn("=========LEADER CHANGED LOCALLEADER", localLeaderUUID, err)
 
 	c.logger.Trace("core: found new active node information, refreshing")
 
@@ -926,7 +919,6 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 
 	var adv activeAdvertisement
 	err = jsonutil.DecodeJSON(entry.Value, &adv)
-	c.logger.Warn("=========GET BARRIER", entry.Key, adv, localRedirAddr, err)
 	if err != nil {
 		// Fall back to pre-struct handling
 		adv.RedirectAddr = string(entry.Value)
@@ -1595,7 +1587,7 @@ func stopReplicationImpl(c *Core) error {
 func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
-	c.logger.Info("=============core: entering standby mode=============")
+	c.logger.Info("core: entering standby mode")
 
 	// Monitor for key rotation
 	keyRotateDone := make(chan struct{})
@@ -1612,8 +1604,6 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		<-checkLeaderDone
 	}()
 
-	c.logger.Warn("=============runStandBy=============")
-
 	for {
 		// Check for a shutdown
 		select {
@@ -1624,28 +1614,24 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 
 		// Create a lock
 		uuid, err := uuid.GenerateUUID()
-		log.Warn("Creating STANDBY lock: ", uuid)
 		if err != nil {
 			c.logger.Error("core: failed to generate uuid", "error", err)
 			return
 		}
 		lock, err := c.ha.LockWith(coreLockPath, uuid)
-		c.logger.Warn("=========LockWith STANDBY: ", coreLockPath, uuid)
 		if err != nil {
 			c.logger.Error("core: failed to create lock", "error", err)
 			return
 		}
 
-		c.logger.Warn("=========ATTEMPTING TO ACQUIRE LOCK=========")
 		// Attempt the acquisition
 		leaderLostCh := c.acquireLock(lock, stopCh)
 
 		// Bail if we are being shutdown
 		if leaderLostCh == nil {
-			c.logger.Warn("=========BAILING=========")
 			return
 		}
-		c.logger.Info("=========core: acquired lock, enabling active operation=========")
+		c.logger.Info("core: acquired lock, enabling active operation")
 
 		// This is used later to log a metrics event; this can be helpful to
 		// detect flapping
@@ -1892,21 +1878,16 @@ func (c *Core) performKeyUpgrades() error {
 // acquireLock blocks until the lock is acquired, returning the leaderLostCh
 func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan struct{} {
 	for {
-		c.logger.Error("Attempt lock acquisition=============", "chan", stopCh)
 		// Attempt lock acquisition
 		leaderLostCh, err := lock.Lock(stopCh)
 		if err == nil {
-			c.logger.Error("LOCK ACQUIRED =============", "error", leaderLostCh)
 			return leaderLostCh
-		} else {
-			c.logger.Error("LOCK NOT ACQ =============", err)
 		}
 
 		// Retry the acquisition
-		c.logger.Error("=============core: failed to acquire lock=============", "error", err)
+		c.logger.Error("core: failed to acquire lock", "error", err)
 		select {
 		case <-time.After(lockRetryInterval):
-			c.logger.Error("=============core: RETRYING ACQUISITION=============", "error", err)
 		case <-stopCh:
 			return nil
 		}
@@ -1954,7 +1935,6 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 
 	sd, ok := c.ha.(physical.ServiceDiscovery)
 	if ok {
-		c.logger.Warn("=====ADV LEADER NotifyActiveStateChange", fmt.Sprintf("%t", ok))
 		if err := sd.NotifyActiveStateChange(); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("core: failed to notify active status", "error", err)
@@ -1988,11 +1968,9 @@ func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
 	err := c.barrier.Delete(key)
 
-	c.logger.Warn("=====CLEARING LEADER", err)
 	// Advertise ourselves as a standby
 	sd, ok := c.ha.(physical.ServiceDiscovery)
 	if ok {
-		c.logger.Warn("=====ADVERTISE STANDBY", fmt.Sprintf("%t", ok))
 		if err := sd.NotifyActiveStateChange(); err != nil {
 			if c.logger.IsWarn() {
 				c.logger.Warn("core: failed to notify standby status", "error", err)
