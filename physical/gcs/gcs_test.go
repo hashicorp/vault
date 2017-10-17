@@ -215,7 +215,7 @@ func testGCSLockTTL(t *testing.T, ha physical.HABackend) {
 
 	// Cancel attempt in 6 sec so as not to block unit tests forever
 	stopCh := make(chan struct{})
-	time.AfterFunc(lockTTL*3, func() {
+	time.AfterFunc(lockTTL*2, func() {
 		close(stopCh)
 	})
 
@@ -264,4 +264,5 @@ func testGCSLockTTL(t *testing.T, ha physical.HABackend) {
 
 	// Cleanup
 	lock2.Unlock()
+	lock.Unlock()
 }
