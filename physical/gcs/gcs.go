@@ -49,6 +49,8 @@ const (
 	// GCSWatchRetryInterval is the amount of time to wait
 	// if a watch fails before trying again.
 	GCSWatchRetryInterval = 5 * time.Second
+
+	conditionCheckFailedError = "ConditionalCheckFailedException"
 )
 
 // GCSBackend is a physical backend that stores data
@@ -273,8 +275,6 @@ type GCSLockRecord struct {
 // LockWith is used for mutual exclusion based on the given key.
 func (g *GCSBackend) LockWith(key, value string) (physical.Lock, error) {
 	identity, err := uuid.GenerateUUID()
-	log.Warn("Creating new identity: ", key, value)
-	log.Warn("Creating new identity: ", identity)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +301,6 @@ func (g *GCSBackend) HAEnabled() bool {
 func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
-	// log.Warn("Attempting to lock")
 	if l.held {
 		return nil, fmt.Errorf("lock already held")
 	}
@@ -313,8 +312,6 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 			close(done)
 		}
 	}()
-
-	log.Warn("LOCKING")
 
 	var (
 		stop    = make(chan struct{})
@@ -332,19 +329,13 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 		// after acquiring it successfully, we must renew the lock periodically,
 		// and watch the lock in order to close the leader channel
 		// once it is lost.
-		log.Warn("LOCKED")
 		go l.periodicallyRenewLock(leader)
 		go l.watch(leader)
 	case retErr = <-errors:
-		// l.held = false
-		log.Warn("Lock() RETURN ERROR: ", retErr.Error())
 		close(stop)
-		// close(leader)
 		return nil, retErr
 	case <-stopCh:
-		// l.held = false
 		close(stop)
-		// close(leader)
 		return nil, nil
 	}
 
@@ -360,7 +351,6 @@ func (l *GCSLock) Unlock() error {
 		return nil
 	}
 
-	// log.Warn("UNLOCKING")
 	l.held = false
 	if err := l.backend.Delete(l.key); err != nil {
 		return err
@@ -373,17 +363,12 @@ func (l *GCSLock) Unlock() error {
 func (l *GCSLock) Value() (bool, string, error) {
 	entry, err := l.backend.Get(l.key)
 	if err != nil {
-		log.Warn("Value ERROR: ", err)
 		return false, "", err
 	}
 
 	if entry == nil {
-		// log.Warn("Value Entry: ", entry)
-		// log.Warn("Value Entry RETURN: ", "false", "", "nil")
 		return false, "", nil
 	}
-
-	log.Warn("VALUE OKAY: ", string(entry.Value))
 
 	return true, string(entry.Value), nil
 }
@@ -396,31 +381,23 @@ func (l *GCSLock) Value() (bool, string, error) {
 // When the lock could be acquired successfully, the success
 // channel is closed.
 func (l *GCSLock) tryToLock(stop, success chan struct{}, errors chan error) {
-	// ticker := time.NewTicker(GCSLockRetryInterval + time.Millisecond*time.Duration(rand.Intn(250)))
-	ticker := time.NewTicker(GCSLockRetryInterval + time.Millisecond*time.Duration(rand.Intn(10000)))
+	ticker := time.NewTicker(GCSLockRetryInterval + time.Millisecond*time.Duration(rand.Intn(5000)))
 
 	for {
 		select {
 		case <-stop:
-			// log.Warn("tryToLock STOP")
 			ticker.Stop()
 		case <-ticker.C:
 			log.Warn("Before Write Item")
 			err := l.writeItem()
 			// Don't report a condition check failure, this means that the lock
 			// is already being held.
-			// log.Warn("After Write Item: Erorr: ", err)
-			// if err != nil && err.Error() != "ConditionalCheckFailedException" {
-			// 	log.Warn("After Write Item: Erorr: ", err)
-			// 	errors <- err
 			if err != nil {
-				if err.Error() != "ConditionalCheckFailedException" {
-					log.Warn("After Write Item: Erorr: ", err)
+				if err.Error() != conditionCheckFailedError {
 					errors <- err
 				}
 				continue
 			} else {
-				log.Warn("ELSE tryToLock STOP")
 				ticker.Stop()
 				close(success)
 				return
@@ -435,12 +412,6 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 		select {
 		case <-ticker.C:
 			l.writeItem()
-			// err := l.writeItem()
-			// if err != nil && err.Error() != "ConditionalCheckFailedException" {
-			// 	log.Warn("Periodically renew lock: Erorr: ", err)
-			// 	return
-			// }
-			// log.Warn("TRYING TO RENEW LOCK")
 		case <-done:
 			ticker.Stop()
 			return
@@ -451,12 +422,10 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 // Attempts to put/update the gcs item using condition expressions to
 // evaluate the TTL.
 func (l *GCSLock) writeItem() error {
-	// now := time.Now()
 	// // If both key and path already exist, we can only write if
 	// // A. identity is equal to our identity (or the identity doesn't exist)
 	// // or
-	// // B. The ttl on the item is <= to the current time
-	// _, err := l.backend.Put()
+	// // B. The ttl on the item is <= to the last update time of the object
 	defer metrics.MeasureSince([]string{"gcs", "get"}, time.Now())
 	var err error
 	var rw *storage.Writer
@@ -494,13 +463,10 @@ func (l *GCSLock) writeItem() error {
 	if newObj {
 		rw = obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(context.Background())
 		rw.ObjectAttrs.Metadata = map[string]string{}
-		log.Warn("NEW OBJECT")
 	}
 
 	if !newObj && (expired || identityMatch) {
 		rw = obj.If(storage.Conditions{GenerationMatch: attrs.Generation}).NewWriter(context.Background())
-		log.Warn("UPDATE OBJECT Expired: ", fmt.Sprintf("%t", expired))
-		log.Warn("UPDATE OBJECT MATCH: ", fmt.Sprintf("%t", identityMatch))
 		rw.ObjectAttrs.Metadata = map[string]string{}
 	}
 
@@ -511,25 +477,13 @@ func (l *GCSLock) writeItem() error {
 	}
 
 	rw.ObjectAttrs.Metadata["expires"] = expires
-	// rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).Unix(), 10)
 	rw.ObjectAttrs.Metadata["identity"] = l.identity
 	_, err = rw.Write([]byte(l.value))
-	if err != nil {
-		log.Warn("ERROR WRITING: ", err)
-	}
 
 	err = rw.Close()
-	if err != nil {
-		log.Warn("ERROR WRITING: ", err)
-	}
-
-	// log.Warn("\nWRITING OBJECT    NEWOBJ: ", fmt.Sprintf("%t", newObj))
-	// log.Warn("WRITING OBJECT    EXPIRED: ", fmt.Sprintf("%t", expired))
-	// log.Warn("WRITING OBJECT    IDENTITY MATCH", fmt.Sprintf("%t", identityMatch))
-	// log.Warn("CLOSE OBJECT      ERROR", err)
 
 	if err != nil && (err.Error() == "conditionNotMet" || err.Error() == "Precondition Failed, conditionNotMet" || err.Error() == "googleapi: Error 412: Precondition Failed, conditionNotMet" || err.Error() == "Error 412: Precondition Failed, conditionNotMet") {
-		return errors.New("ConditionalCheckFailedException")
+		return errors.New(conditionCheckFailedError)
 	}
 
 	return err
@@ -555,10 +509,8 @@ WatchLoop:
 			attrs, err := obj.Attrs(context.Background())
 
 			if err != nil {
-				log.Warn("watch. Retrying. Retries left: ", retries)
 				retries--
 				if retries == 0 {
-					log.Warn("Breaking watch loop")
 					break WatchLoop
 				}
 				continue
@@ -578,13 +530,10 @@ WatchLoop:
 
 			compareId, err := uuid.FormatUUID(record.Identity)
 			if err != nil {
-				log.Warn("Coudln't format identity")
 				break WatchLoop
 			}
 
 			if err != nil || compareId != string(l.identity) {
-				log.Warn("Identity doesn't match.", "Expected:", string(l.identity), "Got: ", compareId)
-				log.Warn("Identity error: ", err)
 				break WatchLoop
 			}
 		}
