@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/version"
 )
 
 const (
@@ -64,16 +63,6 @@ func NewIdentityStore(core *Core, config *logical.BackendConfig) (*IdentityStore
 	}
 
 	return iStore, nil
-}
-
-func (i *IdentityStore) checkPremiumVersion(f framework.OperationFunc) framework.OperationFunc {
-	ver := version.GetVersion()
-	if ver.VersionMetadata == "pro" {
-		return func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
-			return logical.ErrorResponse("identity features not available in the pro version"), logical.ErrInvalidRequest
-		}
-	}
-	return f
 }
 
 // Invalidate is a callback wherein the backend is informed that the value at

@@ -42,7 +42,7 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.checkPremiumVersion(i.pathGroupRegister),
+				logical.UpdateOperation: i.pathGroupRegister,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["register"][0]),
@@ -77,9 +77,9 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.checkPremiumVersion(i.pathGroupIDUpdate),
-				logical.ReadOperation:   i.checkPremiumVersion(i.pathGroupIDRead),
-				logical.DeleteOperation: i.checkPremiumVersion(i.pathGroupIDDelete),
+				logical.UpdateOperation: i.pathGroupIDUpdate,
+				logical.ReadOperation:   i.pathGroupIDRead,
+				logical.DeleteOperation: i.pathGroupIDDelete,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-by-id"][0]),
@@ -88,7 +88,7 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "group/id/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.checkPremiumVersion(i.pathGroupIDList),
+				logical.ListOperation: i.pathGroupIDList,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["group-id-list"][0]),
