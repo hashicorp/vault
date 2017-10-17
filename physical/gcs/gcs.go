@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"sort"
 	"strconv"
@@ -50,7 +49,11 @@ const (
 	// if a watch fails before trying again.
 	GCSWatchRetryInterval = 5 * time.Second
 
+	// conditionCheckFailedError Condition Check Failed error
 	conditionCheckFailedError = "ConditionalCheckFailedException"
+
+	// gcsConditionNotMetError GCS API Error when condition for read/write is not met
+	gcsConditionNotMetError = "Error 412: Precondition Failed, conditionNotMet"
 )
 
 // GCSBackend is a physical backend that stores data
@@ -319,7 +322,6 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 		errors  = make(chan error)
 		leader  = make(chan struct{})
 	)
-	// log.Warn("Attempting to lock async")
 	// try to acquire the lock asynchronously
 	go l.tryToLock(stop, success, errors)
 
@@ -381,7 +383,8 @@ func (l *GCSLock) Value() (bool, string, error) {
 // When the lock could be acquired successfully, the success
 // channel is closed.
 func (l *GCSLock) tryToLock(stop, success chan struct{}, errors chan error) {
-	ticker := time.NewTicker(GCSLockRetryInterval + time.Millisecond*time.Duration(rand.Intn(5000)))
+	// + time.Millisecond*time.Duration(rand.Intn(5000))
+	ticker := time.NewTicker(GCSLockRetryInterval)
 
 	for {
 		select {
@@ -422,6 +425,7 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 // Attempts to put/update the gcs item using condition expressions to
 // evaluate the TTL.
 func (l *GCSLock) writeItem() error {
+	// now := time.Now()
 	// // If both key and path already exist, we can only write if
 	// // A. identity is equal to our identity (or the identity doesn't exist)
 	// // or
@@ -430,15 +434,14 @@ func (l *GCSLock) writeItem() error {
 	var err error
 	var rw *storage.Writer
 
-	newObj := true
 	expired := false
 	identityMatch := false
 
 	bucket := l.backend.client.Bucket(l.backend.bucketName)
 	obj := bucket.Object(l.key)
 	attrs, err := obj.Attrs(context.Background())
+
 	if attrs != nil {
-		newObj = false
 		if identity, ok := attrs.Metadata["identity"]; ok && identity == l.identity {
 			identityMatch = true
 		}
@@ -446,44 +449,46 @@ func (l *GCSLock) writeItem() error {
 		if ts, ok := attrs.Metadata["expires"]; ok {
 			i, err := strconv.ParseInt(ts, 10, 64)
 			if err != nil {
-				return errors.New("couldn't parse unix timestamp")
+				return errors.New("error parsing unix timestamp")
 			}
 
-			expires := time.Unix(i, 0)
-			if expires.Unix() <= attrs.Updated.Unix() {
+			if time.Unix(0, i).UnixNano() <= attrs.Updated.UnixNano() {
 				expired = true
 			}
 		}
 	}
 
-	if (!expired && !identityMatch && !newObj) || (err != nil && (err.Error() == "conditionNotMet" || err.Error() == "Precondition Failed, conditionNotMet" || err.Error() == "googleapi: Error 412: Precondition Failed, conditionNotMet" || err.Error() == "Error 412: Precondition Failed, conditionNotMet")) {
-		return errors.New("ConditionalCheckFailedException")
+	if !expired && !identityMatch && attrs != nil {
+		return errors.New(conditionCheckFailedError)
 	}
 
-	if newObj {
-		rw = obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(context.Background())
-		rw.ObjectAttrs.Metadata = map[string]string{}
-	}
-
-	if !newObj && (expired || identityMatch) {
-		rw = obj.If(storage.Conditions{GenerationMatch: attrs.Generation}).NewWriter(context.Background())
-		rw.ObjectAttrs.Metadata = map[string]string{}
+	conditions := storage.Conditions{}
+	if attrs == nil {
+		conditions.DoesNotExist = true // = storage.Conditions{DoesNotExist: true}
+	} else {
+		conditions.GenerationMatch = attrs.Generation // = storage.Conditions{GenerationMatch: attrs.Generation}
 	}
 
 	// // update the expire time
-	expires := strconv.FormatInt(rw.Updated.Add(l.ttl).Unix(), 10)
+	expires := strconv.FormatInt(time.Now().Add(l.ttl).UnixNano(), 10)
 	if attrs != nil {
-		expires = strconv.FormatInt(attrs.Updated.Add(l.ttl).Unix(), 10)
+		expires = strconv.FormatInt(attrs.Updated.Add(l.ttl).UnixNano(), 10)
 	}
 
-	rw.ObjectAttrs.Metadata["expires"] = expires
-	rw.ObjectAttrs.Metadata["identity"] = l.identity
-	_, err = rw.Write([]byte(l.value))
+	rw = obj.If(conditions).NewWriter(context.Background())
+	rw.ObjectAttrs.Metadata = map[string]string{
+		"expires":  expires,
+		"identity": l.identity,
+	}
 
-	err = rw.Close()
+	if _, err = rw.Write([]byte(l.value)); err != nil {
+		return err
+	}
 
-	if err != nil && (err.Error() == "conditionNotMet" || err.Error() == "Precondition Failed, conditionNotMet" || err.Error() == "googleapi: Error 412: Precondition Failed, conditionNotMet" || err.Error() == "Error 412: Precondition Failed, conditionNotMet") {
-		return errors.New(conditionCheckFailedError)
+	if err = rw.Close(); err != nil {
+		if err.Error() == gcsConditionNotMetError {
+			err = errors.New(conditionCheckFailedError)
+		}
 	}
 
 	return err
@@ -497,8 +502,8 @@ func (l *GCSLock) writeItem() error {
 // close the leader channel if it can't succeed.
 func (l *GCSLock) watch(lost chan struct{}) {
 	retries := GCSWatchRetryMax
-
-	ticker := time.NewTicker(l.watchRetryInterval + +time.Millisecond*time.Duration(rand.Intn(5000)))
+	//  + time.Millisecond*time.Duration(rand.Intn(5000))
+	ticker := time.NewTicker(l.watchRetryInterval)
 	bucket := l.backend.client.Bucket(l.backend.bucketName)
 	obj := bucket.Object(l.key)
 
@@ -520,22 +525,16 @@ WatchLoop:
 				break WatchLoop
 			}
 
-			record := &GCSLockRecord{}
+			// record := &GCSLockRecord{}
 			if identity, ok := attrs.Metadata["identity"]; ok {
-				record.Identity, err = uuid.ParseUUID(identity)
-				if err != nil {
+				if identity != string(l.identity) {
 					break WatchLoop
 				}
 			}
 
-			compareId, err := uuid.FormatUUID(record.Identity)
-			if err != nil {
-				break WatchLoop
-			}
-
-			if err != nil || compareId != string(l.identity) {
-				break WatchLoop
-			}
+			// if err != nil || compareId != string(l.identity) {
+			// 	break WatchLoop
+			// }
 		}
 	}
 
