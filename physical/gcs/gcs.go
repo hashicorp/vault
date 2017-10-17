@@ -323,7 +323,7 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 	)
 	// log.Warn("Attempting to lock async")
 	// try to acquire the lock asynchronously
-	l.tryToLock(stop, success, errors)
+	go l.tryToLock(stop, success, errors)
 
 	select {
 	case <-success:
@@ -397,37 +397,36 @@ func (l *GCSLock) Value() (bool, string, error) {
 // When the lock could be acquired successfully, the success
 // channel is closed.
 func (l *GCSLock) tryToLock(stop, success chan struct{}, errors chan error) {
-	// ticker := time.NewTicker(GCSLockRetryInterval)
+	ticker := time.NewTicker(GCSLockRetryInterval)
 
-	// for {
-	// 	select {
-	// 	case <-stop:
-	// 		// log.Warn("tryToLock STOP")
-	// 		ticker.Stop()
-	// case <-ticker.C:
-	// log.Warn("Before Write Item")
-	err := l.writeItem()
-	// Don't report a condition check failure, this means that the lock
-	// is already being held.
-	// log.Warn("After Write Item: Erorr: ", err)
-	// if err != nil && err.Error() != "ConditionalCheckFailedException" {
-	// 	log.Warn("After Write Item: Erorr: ", err)
-	// 	errors <- err
-	if err != nil {
-		if err.Error() != "ConditionalCheckFailedException" {
-			log.Warn("After Write Item: Erorr: ", err)
-			errors <- err
+	for {
+		select {
+		case <-stop:
+			// log.Warn("tryToLock STOP")
+			ticker.Stop()
+		case <-ticker.C:
+			log.Warn("Before Write Item")
+			err := l.writeItem()
+			// Don't report a condition check failure, this means that the lock
+			// is already being held.
+			// log.Warn("After Write Item: Erorr: ", err)
+			// if err != nil && err.Error() != "ConditionalCheckFailedException" {
+			// 	log.Warn("After Write Item: Erorr: ", err)
+			// 	errors <- err
+			if err != nil {
+				if err.Error() != "ConditionalCheckFailedException" {
+					log.Warn("After Write Item: Erorr: ", err)
+					errors <- err
+				}
+				continue
+			} else {
+				log.Warn("ELSE tryToLock STOP")
+				ticker.Stop()
+				close(success)
+				return
+			}
 		}
-		// continue
-	} else {
-		log.Warn("ELSE tryToLock STOP")
-		// ticker.Stop()
-		close(success)
-		return
 	}
-	return
-	// 	}
-	// }
 }
 
 func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
@@ -443,7 +442,6 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 			// }
 			// log.Warn("TRYING TO RENEW LOCK")
 		case <-done:
-			log.Warn("TICKER STOP")
 			ticker.Stop()
 			return
 		}
@@ -453,7 +451,7 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 // Attempts to put/update the gcs item using condition expressions to
 // evaluate the TTL.
 func (l *GCSLock) writeItem() error {
-	now := time.Now()
+	// now := time.Now()
 	// // If both key and path already exist, we can only write if
 	// // A. identity is equal to our identity (or the identity doesn't exist)
 	// // or
@@ -483,7 +481,7 @@ func (l *GCSLock) writeItem() error {
 			}
 
 			expires := time.Unix(i, 0)
-			if expires.Unix() <= now.Unix() {
+			if expires.Unix() <= attrs.Created.Unix() {
 				expired = true
 			}
 		}
@@ -506,7 +504,12 @@ func (l *GCSLock) writeItem() error {
 	}
 
 	// update the expire time
-	rw.ObjectAttrs.Metadata["expires"] = strconv.FormatInt(now.Add(l.ttl).Unix(), 10)
+	expires := strconv.FormatInt(rw.Created.Add(l.ttl).Unix(), 10)
+	if attrs != nil {
+		expires = strconv.FormatInt(attrs.Created.Add(l.ttl).Unix(), 10)
+	}
+
+	rw.ObjectAttrs.Metadata["expires"] = expires
 	rw.ObjectAttrs.Metadata["identity"] = l.identity
 	_, err = rw.Write([]byte(l.value))
 	if err != nil {
@@ -522,6 +525,10 @@ func (l *GCSLock) writeItem() error {
 	// log.Warn("WRITING OBJECT    EXPIRED: ", fmt.Sprintf("%t", expired))
 	// log.Warn("WRITING OBJECT    IDENTITY MATCH", fmt.Sprintf("%t", identityMatch))
 	log.Warn("CLOSE OBJECT      ERROR", err)
+
+	if (!expired && !identityMatch && !newObj) || (err != nil && (err.Error() == "conditionNotMet" || err.Error() == "Precondition Failed, conditionNotMet" || err.Error() == "googleapi: Error 412: Precondition Failed, conditionNotMet" || err.Error() == "Error 412: Precondition Failed, conditionNotMet")) {
+		return errors.New("ConditionalCheckFailedException")
+	}
 
 	return err
 }
