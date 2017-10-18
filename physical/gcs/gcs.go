@@ -446,7 +446,7 @@ func (l *GCSLock) writeItem() error {
 		// or
 		// B. identity is equal to our identity
 		// or
-		// C. The ttl on the item is <= to the last update time of the object
+		// C. The ttl on the item is <= to the current time
 		if identity, ok := attrs.Metadata["identity"]; ok && identity == l.identity {
 			canWrite = true
 		}
@@ -457,7 +457,7 @@ func (l *GCSLock) writeItem() error {
 				return errors.New("error parsing unix timestamp")
 			}
 
-			if time.Unix(0, exp).UnixNano() <= attrs.Updated.UnixNano() {
+			if time.Unix(0, exp).UnixNano() <= time.Now().UnixNano() {
 				canWrite = true
 			}
 		}
@@ -469,8 +469,7 @@ func (l *GCSLock) writeItem() error {
 		// https://cloud.google.com/storage/docs/generations-preconditions
 		conditions.GenerationMatch = attrs.Generation
 		conditions.MetagenerationMatch = attrs.Metageneration
-		// use the update time of the object on gcs + ttl for expiration
-		expires = strconv.FormatInt(attrs.Updated.Add(l.ttl).UnixNano(), 10)
+		expires = strconv.FormatInt(time.Now().Add(l.ttl).UnixNano(), 10)
 	}
 
 	if !canWrite && attrs != nil {
