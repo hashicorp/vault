@@ -13,6 +13,9 @@ The Google Cloud storage backend is used to persist Vault's data in
 [Google Cloud Storage][gcs].
 
 - **High Availability** – the Google Cloud storage backend supports high availability.
+   Because GCS uses the time on the Vault node to implement
+   the session lifetimes on its locks, significant clock skew across Vault nodes
+   could cause contention issues on the lock.
 
 - **Community Supported** – the Google Cloud storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
