@@ -34,7 +34,7 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.checkPremiumVersion(i.pathAliasRegister),
+				logical.UpdateOperation: i.pathAliasRegister,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
@@ -65,9 +65,9 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.checkPremiumVersion(i.pathAliasIDUpdate),
-				logical.ReadOperation:   i.checkPremiumVersion(i.pathAliasIDRead),
-				logical.DeleteOperation: i.checkPremiumVersion(i.pathAliasIDDelete),
+				logical.UpdateOperation: i.pathAliasIDUpdate,
+				logical.ReadOperation:   i.pathAliasIDRead,
+				logical.DeleteOperation: i.pathAliasIDDelete,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id"][0]),
@@ -76,7 +76,7 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "persona/id/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.checkPremiumVersion(i.pathAliasIDList),
+				logical.ListOperation: i.pathAliasIDList,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id-list"][0]),

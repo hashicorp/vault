@@ -41,7 +41,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.checkPremiumVersion(i.pathEntityRegister),
+				logical.UpdateOperation: i.pathEntityRegister,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity"][0]),
@@ -68,9 +68,9 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.checkPremiumVersion(i.pathEntityIDUpdate),
-				logical.ReadOperation:   i.checkPremiumVersion(i.pathEntityIDRead),
-				logical.DeleteOperation: i.checkPremiumVersion(i.pathEntityIDDelete),
+				logical.UpdateOperation: i.pathEntityIDUpdate,
+				logical.ReadOperation:   i.pathEntityIDRead,
+				logical.DeleteOperation: i.pathEntityIDDelete,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id"][0]),
@@ -79,7 +79,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "entity/id/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.checkPremiumVersion(i.pathEntityIDList),
+				logical.ListOperation: i.pathEntityIDList,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id-list"][0]),
@@ -102,7 +102,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.checkPremiumVersion(i.pathEntityMergeID),
+				logical.UpdateOperation: i.pathEntityMergeID,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-merge-id"][0]),
