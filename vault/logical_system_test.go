@@ -1178,6 +1178,7 @@ func TestSystemBackend_authAvailable(t *testing.T) {
 	mountAddWhitelistAndTest([]string{"foo1", "foo2"}, []string{}, map[string]interface{}{"foo1/": noopType, "foo2/": noopType})
 	mountAddWhitelistAndTest([]string{"foo1", "foo2"}, []string{"foo2"}, map[string]interface{}{"foo1/": noopType})
 	mountAddWhitelistAndTest([]string{"foo*"}, []string{}, map[string]interface{}{"foo1/": noopType, "foo2/": noopType, "foo3/": noopType})
+	mountAddWhitelistAndTest([]string{"foo1", "foo*"}, []string{"foo*"}, map[string]interface{}{"foo1/": noopType})
 	mountAddWhitelistAndTest([]string{"*"}, []string{}, map[string]interface{}{"foo1/": noopType, "foo2/": noopType, "foo3/": noopType, "token/": map[string]interface{}{"type": "token"}})
 
 }
