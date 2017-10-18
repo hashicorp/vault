@@ -5,6 +5,8 @@ IMPROVEMENTS:
  * api: Add ability to set custom headers on each call [GH-3394]
  * command/server: Add config option to disable requesting client certificates
    [GH-3373]
+ * secret/cassandra: Work around Cassandra ignoring consistency levels for a
+   user listing query [GH-3469]
  * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
    arrays [GH-3409]
  * secret/transit: Sign and verify operations now support a `none` hash
