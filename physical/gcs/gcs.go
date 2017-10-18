@@ -324,11 +324,11 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 	var (
 		stop    = make(chan struct{})
 		success = make(chan struct{})
-		errors  = make(chan error)
+		errs    = make(chan error)
 		leader  = make(chan struct{})
 	)
 	// try to acquire the lock asynchronously
-	go l.tryToLock(stop, success, errors)
+	go l.tryToLock(stop, success, errs)
 
 	select {
 	case <-success:
@@ -338,7 +338,7 @@ func (l *GCSLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, retErr e
 		// once it is lost.
 		go l.periodicallyRenewLock(leader)
 		go l.watch(leader)
-	case retErr = <-errors:
+	case retErr = <-errs:
 		close(stop)
 		return nil, retErr
 	case <-stopCh:
@@ -425,7 +425,7 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 	}
 }
 
-// Attempts to put/update the gcs item using condition expressions to
+// writeItem Attempts to put/update the gcs item using condition expressions to
 // evaluate the TTL.
 func (l *GCSLock) writeItem() error {
 	defer metrics.MeasureSince([]string{"gcs", "get"}, time.Now())
