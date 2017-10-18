@@ -242,6 +242,7 @@ type Client struct {
 	addr               *url.URL
 	config             *Config
 	token              string
+	headers            http.Header
 	wrappingLookupFunc WrappingLookupFunc
 }
 
@@ -266,10 +267,14 @@ func NewClient(c *Config) (*Client, error) {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
+	if c.HttpClient.Transport == nil {
+		c.HttpClient.Transport = cleanhttp.DefaultTransport()
+	}
 
-	tp := c.HttpClient.Transport.(*http.Transport)
-	if err := http2.ConfigureTransport(tp); err != nil {
-		return nil, err
+	if tp, ok := c.HttpClient.Transport.(*http.Transport); ok {
+		if err := http2.ConfigureTransport(tp); err != nil {
+			return nil, err
+		}
 	}
 
 	redirFunc := func() {
@@ -350,6 +355,11 @@ func (c *Client) ClearToken() {
 	c.token = ""
 }
 
+// SetHeaders sets the headers to be used for future requests.
+func (c *Client) SetHeaders(headers http.Header) {
+	c.headers = headers
+}
+
 // Clone creates a copy of this client.
 func (c *Client) Clone() (*Client, error) {
 	return NewClient(c.config)
@@ -398,6 +408,9 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	}
 	if c.config.Timeout != 0 {
 		c.config.HttpClient.Timeout = c.config.Timeout
+	}
+	if c.headers != nil {
+		req.Headers = c.headers
 	}
 
 	return req

@@ -50,12 +50,14 @@ var (
 		"auth/",
 		"sys/",
 		"cubbyhole/",
+		"identity/",
 	}
 
 	untunableMounts = []string{
 		"cubbyhole/",
 		"sys/",
 		"audit/",
+		"identity/",
 	}
 
 	// singletonMounts can only exist in one location and are
@@ -64,6 +66,7 @@ var (
 		"cubbyhole",
 		"system",
 		"token",
+		"identity",
 	}
 
 	// mountAliases maps old backend names to new backend names, allowing us
@@ -254,6 +257,8 @@ func (c *Core) mount(entry *MountEntry) error {
 	if err := backend.Initialize(); err != nil {
 		return err
 	}
+
+	c.setCoreBackend(entry, backend, view)
 
 	newTable := c.mounts.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
@@ -713,14 +718,8 @@ func (c *Core) setupMounts() error {
 			return err
 		}
 
-		switch entry.Type {
-		case "system":
-			c.systemBarrierView = view
-		case "cubbyhole":
-			ch := backend.(*CubbyholeBackend)
-			ch.saltUUID = entry.UUID
-			ch.storageView = view
-		}
+		c.setCoreBackend(entry, backend, view)
+
 	ROUTER_MOUNT:
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
@@ -865,8 +864,29 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:        sysUUID,
 		Accessor:    sysAccessor,
 	}
+
+	identityUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity mount entry UUID: %v", err))
+	}
+	identityAccessor, err := c.generateMountAccessor("identity")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate identity accessor: %v", err))
+	}
+
+	identityMount := &MountEntry{
+		Table:       mountTableType,
+		Path:        "identity/",
+		Type:        "identity",
+		Description: "identity store",
+		UUID:        identityUUID,
+		Accessor:    identityAccessor,
+	}
+
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
+	table.Entries = append(table.Entries, identityMount)
+
 	return table
 }
 
@@ -897,4 +917,18 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 	c.authLock.RUnlock()
 
 	return
+}
+
+func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *BarrierView) {
+	switch entry.Type {
+	case "system":
+		c.systemBackend = backend.(*SystemBackend)
+		c.systemBarrierView = view
+	case "cubbyhole":
+		ch := backend.(*CubbyholeBackend)
+		ch.saltUUID = entry.UUID
+		ch.storageView = view
+	case "identity":
+		c.identityStore = backend.(*IdentityStore)
+	}
 }

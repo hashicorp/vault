@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
@@ -240,6 +241,9 @@ type Core struct {
 	// can be output in the audit logs
 	auditedHeaders *AuditedHeadersConfig
 
+	// systemBackend is the backend which is used to manage internal operations
+	systemBackend *SystemBackend
+
 	// systemBarrierView is the barrier view for the system backend
 	systemBarrierView *BarrierView
 
@@ -255,6 +259,9 @@ type Core struct {
 
 	// token store is used to manage authentication tokens
 	tokenStore *TokenStore
+
+	// identityStore is used to manage client entities
+	identityStore *IdentityStore
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
@@ -551,6 +558,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 		return b, nil
 	}
+
+	logicalBackends["identity"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return NewIdentityStore(c, config)
+	}
+
 	c.logicalBackends = logicalBackends
 
 	credentialBackends := make(map[string]logical.Factory)
@@ -634,45 +646,88 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 	return c.tokenStore.Lookup(token)
 }
 
-func (c *Core) fetchACLandTokenEntry(req *logical.Request) (*ACL, *TokenEntry, error) {
+func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntry, *identity.Entity, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
 	// Ensure there is a client token
-	if req.ClientToken == "" {
-		return nil, nil, fmt.Errorf("missing client token")
+	if clientToken == "" {
+		return nil, nil, nil, fmt.Errorf("missing client token")
 	}
 
 	if c.tokenStore == nil {
 		c.logger.Error("core: token store is unavailable")
-		return nil, nil, ErrInternalError
+		return nil, nil, nil, ErrInternalError
 	}
 
 	// Resolve the token policy
-	te, err := c.tokenStore.Lookup(req.ClientToken)
+	te, err := c.tokenStore.Lookup(clientToken)
 	if err != nil {
 		c.logger.Error("core: failed to lookup token", "error", err)
-		return nil, nil, ErrInternalError
+		return nil, nil, nil, ErrInternalError
 	}
 
 	// Ensure the token is valid
 	if te == nil {
-		return nil, nil, logical.ErrPermissionDenied
+		return nil, nil, nil, logical.ErrPermissionDenied
+	}
+
+	tokenPolicies := te.Policies
+
+	var entity *identity.Entity
+
+	// Append the policies of the entity to those on the tokens and create ACL
+	// off of the combined list.
+	if te.EntityID != "" {
+		//c.logger.Debug("core: entity set on the token", "entity_id", te.EntityID)
+		// Fetch entity for the entity ID in the token entry
+		entity, err = c.identityStore.memDBEntityByID(te.EntityID, false)
+		if err != nil {
+			c.logger.Error("core: failed to lookup entity using its ID", "error", err)
+			return nil, nil, nil, ErrInternalError
+		}
+
+		if entity == nil {
+			// If there was no corresponding entity object found, it is
+			// possible that the entity got merged into another entity. Try
+			// finding entity based on the merged entity index.
+			entity, err = c.identityStore.memDBEntityByMergedEntityID(te.EntityID, false)
+			if err != nil {
+				c.logger.Error("core: failed to lookup entity in merged entity ID index", "error", err)
+				return nil, nil, nil, ErrInternalError
+			}
+		}
+
+		if entity != nil {
+			//c.logger.Debug("core: entity successfully fetched; adding entity policies to token's policies to create ACL")
+			// Attach the policies on the entity to the policies tied to the token
+			tokenPolicies = append(tokenPolicies, entity.Policies...)
+
+			groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
+			if err != nil {
+				c.logger.Error("core: failed to fetch group policies", "error", err)
+				return nil, nil, nil, ErrInternalError
+			}
+
+			// Attach the policies from all the groups to which this entity ID
+			// belongs to
+			tokenPolicies = append(tokenPolicies, groupPolicies...)
+		}
 	}
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(te.Policies...)
+	acl, err := c.policyStore.ACL(tokenPolicies...)
 	if err != nil {
 		c.logger.Error("core: failed to construct ACL", "error", err)
-		return nil, nil, ErrInternalError
+		return nil, nil, nil, ErrInternalError
 	}
 
-	return acl, te, nil
+	return acl, te, entity, nil
 }
 
 func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
-	acl, te, err := c.fetchACLandTokenEntry(req)
+	acl, te, _, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
 		return nil, te, err
 	}
@@ -720,9 +775,15 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
 		Accessor:    req.ClientTokenAccessor,
-		Policies:    te.Policies,
-		Metadata:    te.Meta,
-		DisplayName: te.DisplayName,
+	}
+
+	if te != nil {
+		auth.Policies = te.Policies
+		auth.Metadata = te.Meta
+		auth.DisplayName = te.DisplayName
+		auth.EntityID = te.EntityID
+		// Store the entity ID in the request object
+		req.EntityID = te.EntityID
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
@@ -1086,7 +1147,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	}
 
 	// Validate the token is a root token
-	acl, te, err := c.fetchACLandTokenEntry(req)
+	acl, te, _, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
 		// Since there is no token store in standby nodes, sealing cannot
 		// be done. Ideally, the request has to be forwarded to leader node
@@ -1204,7 +1265,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		return nil
 	}
 
-	acl, te, err := c.fetchACLandTokenEntry(req)
+	acl, te, _, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		return retErr

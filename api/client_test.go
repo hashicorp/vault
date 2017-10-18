@@ -37,6 +37,15 @@ func TestDefaultConfig_envvar(t *testing.T) {
 	}
 }
 
+func TestClientDefaultHttpClient(t *testing.T) {
+	_, err := NewClient(&Config{
+		HttpClient: http.DefaultClient,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestClientNilConfig(t *testing.T) {
 	client, err := NewClient(nil)
 	if err != nil {
@@ -184,4 +193,23 @@ func TestClientTimeoutSetting(t *testing.T) {
 		t.Fatalf("error setting client timeout using SetClientTimeout")
 	}
 
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (rt roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return rt(r)
+}
+
+func TestClientNonTransportRoundTripper(t *testing.T) {
+	client := &http.Client{
+		Transport: roundTripperFunc(http.DefaultTransport.RoundTrip),
+	}
+
+	_, err := NewClient(&Config{
+		HttpClient: client,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }

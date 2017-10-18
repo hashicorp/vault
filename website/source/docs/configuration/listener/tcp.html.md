@@ -74,6 +74,10 @@ listener "tcp" {
 - `tls_client_ca_file` `(string: "")` – PEM-encoded Certificate Authority file
   used for checking the authenticity of client.
 
+- `tls_disable_client_certs` `(string: "false")` – Turns off client
+  authentication for this listener. The default behavior (when this is false)
+  is for Vault to request client certificates when available.
+
 ## `tcp` Listener Examples
 
 ### Configuring TLS

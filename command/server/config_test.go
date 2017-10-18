@@ -269,7 +269,8 @@ listener "tcp" {
 	tls_key_file = "./certs/server.key"
 	tls_client_ca_file = "./certs/rootca.crt"
 	tls_min_version = "tls12"
-	tls_require_and_verify_client_cert =  true
+	tls_require_and_verify_client_cert = true
+	tls_disable_client_certs = true
 }`))
 
 	var config Config
@@ -298,6 +299,7 @@ listener "tcp" {
 					"tls_client_ca_file":                 "./certs/rootca.crt",
 					"tls_min_version":                    "tls12",
 					"tls_require_and_verify_client_cert": true,
+					"tls_disable_client_certs":           true,
 				},
 			},
 		},

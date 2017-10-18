@@ -72,7 +72,7 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) Run(args []string) int {
-	var dev, verifyOnly, devHA, devTransactional, devLeasedKV, devThreeNode bool
+	var dev, verifyOnly, devHA, devTransactional, devLeasedKV, devThreeNode, devSkipInit bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress, devPluginDir string
 	var devLatency, devLatencyJitter int
@@ -89,6 +89,7 @@ func (c *ServerCommand) Run(args []string) int {
 	flags.BoolVar(&devTransactional, "dev-transactional", false, "")
 	flags.BoolVar(&devLeasedKV, "dev-leased-kv", false, "")
 	flags.BoolVar(&devThreeNode, "dev-three-node", false, "")
+	flags.BoolVar(&devSkipInit, "dev-skip-init", false, "")
 	flags.Usage = func() { c.Ui.Output(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
@@ -131,6 +132,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	grpclog.SetLogger(&grpclogFaker{
 		logger: c.logger,
+		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
 	})
 
 	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" && devRootTokenID == "" {
@@ -567,6 +569,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 0
 	}
 
+	handler := vaulthttp.Handler(core)
+
+	// This needs to happen before we first unseal, so before we trigger dev
+	// mode if it's set
+	core.SetClusterListenerAddrs(clusterAddrs)
+	core.SetClusterHandler(handler)
+
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
 
@@ -598,15 +607,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	handler := vaulthttp.Handler(core)
-
-	// This needs to happen before we first unseal, so before we trigger dev
-	// mode if it's set
-	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterHandler(handler)
-
 	// If we're in Dev mode, then initialize the core
-	if dev {
+	if dev && !devSkipInit {
 		init, err := c.enableDev(core, coreConfig)
 		if err != nil {
 			c.Ui.Output(fmt.Sprintf(
@@ -621,19 +623,36 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			quote = ""
 		}
 
+		c.Ui.Output(fmt.Sprint(
+			"==> WARNING: Dev mode is enabled!\n\n" +
+				"In this mode, Vault is completely in-memory and unsealed.\n" +
+				"Vault is configured to only have a single unseal key. The root\n" +
+				"token has already been authenticated with the CLI, so you can\n" +
+				"immediately begin using the Vault CLI.\n\n" +
+				"The only step you need to take is to set the following\n" +
+				"environment variables:\n\n" +
+				"    " + export + " VAULT_ADDR=" + quote + "http://" + config.Listeners[0].Config["address"].(string) + quote + "\n\n" +
+				"The unseal key and root token are reproduced below in case you\n" +
+				"want to seal/unseal the Vault or play with authentication.\n",
+		))
+
+		// Unseal key is not returned if stored shares is supported
+		if len(init.SecretShares) > 0 {
+			c.Ui.Output(fmt.Sprintf(
+				"Unseal Key: %s",
+				base64.StdEncoding.EncodeToString(init.SecretShares[0]),
+			))
+		}
+
+		if len(init.RecoveryShares) > 0 {
+			c.Ui.Output(fmt.Sprintf(
+				"Recovery Key: %s",
+				base64.StdEncoding.EncodeToString(init.RecoveryShares[0]),
+			))
+		}
+
 		c.Ui.Output(fmt.Sprintf(
-			"==> WARNING: Dev mode is enabled!\n\n"+
-				"In this mode, Vault is completely in-memory and unsealed.\n"+
-				"Vault is configured to only have a single unseal key. The root\n"+
-				"token has already been authenticated with the CLI, so you can\n"+
-				"immediately begin using the Vault CLI.\n\n"+
-				"The only step you need to take is to set the following\n"+
-				"environment variables:\n\n"+
-				"    "+export+" VAULT_ADDR="+quote+"http://"+config.Listeners[0].Config["address"].(string)+quote+"\n\n"+
-				"The unseal key and root token are reproduced below in case you\n"+
-				"want to seal/unseal the Vault or play with authentication.\n\n"+
-				"Unseal Key: %s\nRoot Token: %s\n",
-			base64.StdEncoding.EncodeToString(init.SecretShares[0]),
+			"Root Token: %s\n",
 			init.RootToken,
 		))
 	}
@@ -706,29 +725,51 @@ CLUSTER_SYNTHESIS_COMPLETE:
 }
 
 func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {
-	// Initialize it with a basic single key
-	init, err := core.Initialize(&vault.InitParams{
-		BarrierConfig: &vault.SealConfig{
+	var recoveryConfig *vault.SealConfig
+	barrierConfig := &vault.SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	}
+
+	if core.SealAccess().RecoveryKeySupported() {
+		recoveryConfig = &vault.SealConfig{
 			SecretShares:    1,
 			SecretThreshold: 1,
-		},
-		RecoveryConfig: nil,
+		}
+	}
+
+	if core.SealAccess().StoredKeysSupported() {
+		barrierConfig.StoredShares = 1
+	}
+
+	// Initialize it with a basic single key
+	init, err := core.Initialize(&vault.InitParams{
+		BarrierConfig:  barrierConfig,
+		RecoveryConfig: recoveryConfig,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Copy the key so that it can be zeroed
-	key := make([]byte, len(init.SecretShares[0]))
-	copy(key, init.SecretShares[0])
+	// Handle unseal with stored keys
+	if core.SealAccess().StoredKeysSupported() {
+		err := core.UnsealWithStoredKeys()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Copy the key so that it can be zeroed
+		key := make([]byte, len(init.SecretShares[0]))
+		copy(key, init.SecretShares[0])
 
-	// Unseal the core
-	unsealed, err := core.Unseal(key)
-	if err != nil {
-		return nil, err
-	}
-	if !unsealed {
-		return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+		// Unseal the core
+		unsealed, err := core.Unseal(key)
+		if err != nil {
+			return nil, err
+		}
+		if !unsealed {
+			return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+		}
 	}
 
 	isLeader, _, _, err := core.Leader()
@@ -752,6 +793,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 	}
 
+	// Generate a dev root token if one is provided in the flag
 	if coreConfig.DevToken != "" {
 		req := &logical.Request{
 			ID:          "dev-gen-root",
@@ -1303,6 +1345,7 @@ func MakeSighupCh() chan struct{} {
 
 type grpclogFaker struct {
 	logger log.Logger
+	log    bool
 }
 
 func (g *grpclogFaker) Fatal(args ...interface{}) {
@@ -1321,13 +1364,19 @@ func (g *grpclogFaker) Fatalln(args ...interface{}) {
 }
 
 func (g *grpclogFaker) Print(args ...interface{}) {
-	g.logger.Warn(fmt.Sprint(args...))
+	if g.log || g.logger.IsTrace() {
+		g.logger.Trace(fmt.Sprint(args...))
+	}
 }
 
 func (g *grpclogFaker) Printf(format string, args ...interface{}) {
-	g.logger.Warn(fmt.Sprintf(format, args...))
+	if g.log || g.logger.IsTrace() {
+		g.logger.Trace(fmt.Sprintf(format, args...))
+	}
 }
 
 func (g *grpclogFaker) Println(args ...interface{}) {
-	g.logger.Warn(fmt.Sprintln(args...))
+	if g.log || g.logger.IsTrace() {
+		g.logger.Trace(fmt.Sprintln(args...))
+	}
 }
