@@ -23,9 +23,9 @@ func TestGCSBackend(t *testing.T) {
 	// projectID is only required for creating a bucket for this test
 	projectID := os.Getenv("GOOGLE_PROJECT_ID")
 
-	// if credentialsFile == "" || projectID == "" {
-	t.SkipNow()
-	// }
+	if credentialsFile == "" || projectID == "" {
+		t.SkipNow()
+	}
 
 	client, err := storage.NewClient(
 		context.Background(),
@@ -109,36 +109,38 @@ func TestGCSHABackend(t *testing.T) {
 	bucketName := fmt.Sprintf("vault-gcs-testacc-%d", randInt)
 
 	bucket := client.Bucket(bucketName)
-	err = bucket.Create(context.Background(), projectID, nil)
+	err = bucket.Create(context.Background(), projectID, &storage.BucketAttrs{
+		Location: "EU",
+	})
 
 	if err != nil {
 		t.Fatalf("error creating bucket '%v': '%v'", bucketName, err)
 	}
 
 	// test bucket teardown
-	// defer func() {
-	// 	objects_it := bucket.Objects(context.Background(), nil)
-	//
-	// 	// have to delete all objects before deleting bucket
-	// 	for {
-	// 		objAttrs, err := objects_it.Next()
-	// 		if err == iterator.Done {
-	// 			break
-	// 		}
-	// 		if err != nil {
-	// 			t.Fatalf("error listing bucket '%v' contents: '%v'", bucketName, err)
-	// 		}
-	//
-	// 		// ignore errors in deleting a single object, we only care about deleting the bucket
-	// 		// occassionally we get "storage: object doesn't exist" which is fine
-	// 		bucket.Object(objAttrs.Name).Delete(context.Background())
-	// 	}
-	//
-	// 	err := bucket.Delete(context.Background())
-	// 	if err != nil {
-	// 		t.Fatalf("error deleting bucket '%s': '%v'", bucketName, err)
-	// 	}
-	// }()
+	defer func() {
+		objects := bucket.Objects(context.Background(), nil)
+
+		// have to delete all objects before deleting bucket
+		for {
+			objAttrs, err := objects.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				t.Fatalf("error listing bucket '%v' contents: '%v'", bucketName, err)
+			}
+
+			// ignore errors in deleting a single object, we only care about deleting the bucket
+			// occassionally we get "storage: object doesn't exist" which is fine
+			bucket.Object(objAttrs.Name).Delete(context.Background())
+		}
+
+		err = bucket.Delete(context.Background())
+		if err != nil {
+			t.Fatalf("error deleting bucket '%s': '%v'", bucketName, err)
+		}
+	}()
 
 	logger := logformat.NewVaultLogger(log.LevelAll)
 
@@ -185,20 +187,19 @@ func testGCSLockTTL(t *testing.T, ha physical.HABackend) {
 		t.Fatalf("err: %v", err)
 	}
 	if leaderCh == nil {
-		t.Fatalf("FIRST failed to get leader ch")
+		t.Fatalf("failed to get leader ch")
 	}
 
 	// Check the value
 	held, val, err := lock.Value()
-	fmt.Println("lock: ", held, val, err)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if !held {
-		t.Fatalf("FIRST LOCK should be held")
+		t.Fatalf("should be held")
 	}
 	if val != "bar" {
-		t.Fatalf("SECOND bad value: %v", err)
+		t.Fatalf("bad value: %v", err)
 	}
 
 	// Second acquisition should succeed because the first lock should
@@ -213,9 +214,9 @@ func testGCSLockTTL(t *testing.T, ha physical.HABackend) {
 	lock2.ttl = lockTTL
 	lock2.watchRetryInterval = watchInterval
 
-	// Cancel attempt in 6 sec so as not to block unit tests forever
+	// // Cancel attempt in 10 sec so as not to block unit tests forever
 	stopCh := make(chan struct{})
-	time.AfterFunc(lockTTL*2, func() {
+	time.AfterFunc(time.Second*10, func() {
 		close(stopCh)
 	})
 
@@ -225,7 +226,7 @@ func testGCSLockTTL(t *testing.T, ha physical.HABackend) {
 		t.Fatalf("err: %v", err)
 	}
 	if leaderCh2 == nil {
-		t.Fatalf("SECOND should get leader ch")
+		t.Fatalf("should get leader ch")
 	}
 
 	// Check the value
@@ -234,10 +235,10 @@ func testGCSLockTTL(t *testing.T, ha physical.HABackend) {
 		t.Fatalf("err: %v", err)
 	}
 	if !held {
-		t.Fatalf("SECOND LOCK should be held")
+		t.Fatalf("should be held")
 	}
 	if val != "baz" {
-		t.Fatalf("SECOND bad value: %v", err)
+		t.Fatalf("bad value: %v", err)
 	}
 
 	// The first lock should have lost the leader channel
@@ -264,5 +265,4 @@ func testGCSLockTTL(t *testing.T, ha physical.HABackend) {
 
 	// Cleanup
 	lock2.Unlock()
-	lock.Unlock()
 }
