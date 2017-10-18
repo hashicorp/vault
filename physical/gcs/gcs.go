@@ -470,6 +470,7 @@ func (l *GCSLock) writeItem() error {
 		// to do that we add a condition to match the generation of the object
 		// https://cloud.google.com/storage/docs/generations-preconditions
 		conditions.GenerationMatch = attrs.Generation
+		conditions.MetagenerationMatch = attrs.Metageneration
 		// use the update time of the object on gcs + ttl for expiration
 		expires = strconv.FormatInt(attrs.Updated.Add(l.ttl).UnixNano(), 10)
 	}
