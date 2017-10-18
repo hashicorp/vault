@@ -11,8 +11,6 @@ import (
 	"sync"
 	"time"
 
-	_ "net/http/pprof"
-
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/physical"
