@@ -65,7 +65,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		case strings.HasPrefix(ent.Path, entry.Path):
 			fallthrough
 		case strings.HasPrefix(entry.Path, ent.Path):
-			return logical.CodedError(409, "path is already in use")
+			return logical.NewCodedError(409, "path is already in use")
 		}
 	}
 
@@ -75,7 +75,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	}
 
 	if match := c.router.MatchingMount(credentialRoutePrefix + entry.Path); match != "" {
-		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
+		return logical.NewCodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
 
 	// Generate a new UUID and view
@@ -213,7 +213,7 @@ func (c *Core) removeCredEntry(path string) error {
 	entry := newTable.remove(path)
 	if entry == nil {
 		c.logger.Error("core: nil entry found removing entry in auth table", "path", path)
-		return logical.CodedError(500, "failed to remove entry in auth table")
+		return logical.NewCodedError(500, "failed to remove entry in auth table")
 	}
 
 	// Update the auth table

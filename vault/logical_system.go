@@ -1374,11 +1374,11 @@ func (b *SystemBackend) handleMount(
 	return nil, nil
 }
 
-// used to intercept an HTTPCodedError so it goes back to callee
+// Intercept a CodedError so the correct status code is returned.
 func handleError(
 	err error) (*logical.Response, error) {
 	switch err.(type) {
-	case logical.HTTPCodedError:
+	case *logical.CodedError:
 		return logical.ErrorResponse(err.Error()), err
 	default:
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -2639,7 +2639,7 @@ and is unaffected by replication.`,
 	},
 
 	"mount_plugin_name": {
-		`Name of the plugin to mount based from the name registered 
+		`Name of the plugin to mount based from the name registered
 in the plugin catalog.`,
 	},
 
@@ -2989,7 +2989,7 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-catalog_sha-256": {
-		`The SHA256 sum of the executable used in the 
+		`The SHA256 sum of the executable used in the
 command field. This should be HEX encoded.`,
 		"",
 	},

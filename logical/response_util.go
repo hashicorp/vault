@@ -105,7 +105,7 @@ func AdjustErrorStatusCode(status *int, err error) {
 	}
 
 	// Allow HTTPCoded error passthrough to specify a code
-	if t, ok := err.(HTTPCodedError); ok {
-		*status = t.Code()
+	if t, ok := err.(*CodedError); ok {
+		*status = t.Status
 	}
 }

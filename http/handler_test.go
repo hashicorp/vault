@@ -340,7 +340,7 @@ func TestHandler_error(t *testing.T) {
 	// The code inside of the error should override
 	// the argument to respondError
 	w2 := httptest.NewRecorder()
-	e := logical.CodedError(403, "error text")
+	e := logical.NewCodedError(403, "error text")
 
 	respondError(w2, 500, e)
 
