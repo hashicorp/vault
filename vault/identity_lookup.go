@@ -27,7 +27,7 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.checkPremiumVersion(i.pathLookupGroupUpdate),
+				logical.UpdateOperation: i.pathLookupGroupUpdate,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(lookupHelp["lookup-group"][0]),
