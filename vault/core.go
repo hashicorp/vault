@@ -1171,6 +1171,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
+		EntityID:    te.EntityID,
 	}
 
 	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
@@ -1277,6 +1278,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
+		EntityID:    te.EntityID,
 	}
 
 	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
