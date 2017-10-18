@@ -52,7 +52,7 @@ const (
 	// conditionCheckFailedError Condition Check Failed error
 	conditionCheckFailedError = "ConditionalCheckFailedException"
 
-	// gcsConditionNotMetError GCS API Error when condition for read/write is not met
+	// gcsConditionNotMetError GCS API Error when condition for read/write is not satisfied
 	gcsConditionNotMetError = "Error 412: Precondition Failed, conditionNotMet"
 )
 
@@ -104,10 +104,17 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		}
 	}
 
+	haEnabled := os.Getenv("GCS_HA_ENABLED")
+	if haEnabled == "" {
+		haEnabled = conf["ha_enabled"]
+	}
+	haEnabledBool, _ := strconv.ParseBool(haEnabled)
+
 	g := GCSBackend{
 		bucketName: bucketName,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParInt),
+		haEnabled:  haEnabledBool,
 		logger:     logger,
 	}
 
@@ -293,7 +300,7 @@ func (g *GCSBackend) LockWith(key, value string) (physical.Lock, error) {
 }
 
 func (g *GCSBackend) HAEnabled() bool {
-	return true
+	return g.haEnabled
 }
 
 // Lock tries to acquire the lock by repeatedly trying to create
@@ -383,7 +390,6 @@ func (l *GCSLock) Value() (bool, string, error) {
 // When the lock could be acquired successfully, the success
 // channel is closed.
 func (l *GCSLock) tryToLock(stop, success chan struct{}, errors chan error) {
-	// + time.Millisecond*time.Duration(rand.Intn(5000))
 	ticker := time.NewTicker(GCSLockRetryInterval)
 
 	for {
@@ -391,7 +397,6 @@ func (l *GCSLock) tryToLock(stop, success chan struct{}, errors chan error) {
 		case <-stop:
 			ticker.Stop()
 		case <-ticker.C:
-			log.Warn("Before Write Item")
 			err := l.writeItem()
 			// Don't report a condition check failure, this means that the lock
 			// is already being held.
@@ -425,57 +430,55 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 // Attempts to put/update the gcs item using condition expressions to
 // evaluate the TTL.
 func (l *GCSLock) writeItem() error {
-	// now := time.Now()
-	// // If both key and path already exist, we can only write if
-	// // A. identity is equal to our identity (or the identity doesn't exist)
-	// // or
-	// // B. The ttl on the item is <= to the last update time of the object
 	defer metrics.MeasureSince([]string{"gcs", "get"}, time.Now())
-	var err error
-	var rw *storage.Writer
-
-	expired := false
-	identityMatch := false
 
 	bucket := l.backend.client.Bucket(l.backend.bucketName)
 	obj := bucket.Object(l.key)
 	attrs, err := obj.Attrs(context.Background())
 
+	canWrite := false
+	conditions := storage.Conditions{DoesNotExist: true}
+	// if the object doesn't exist set the expiration time to the current time + ttl
+	expires := strconv.FormatInt(time.Now().Add(l.ttl).UnixNano(), 10)
+
+	// if the object exists we check its identity and expiration time to determine if we can update it
 	if attrs != nil {
+		// We can only write if:
+		// A. The object doesn't exist
+		// or
+		// B. identity is equal to our identity
+		// or
+		// C. The ttl on the item is <= to the last update time of the object
 		if identity, ok := attrs.Metadata["identity"]; ok && identity == l.identity {
-			identityMatch = true
+			canWrite = true
 		}
 
 		if ts, ok := attrs.Metadata["expires"]; ok {
-			i, err := strconv.ParseInt(ts, 10, 64)
+			exp, err := strconv.ParseInt(ts, 10, 64)
 			if err != nil {
 				return errors.New("error parsing unix timestamp")
 			}
 
-			if time.Unix(0, i).UnixNano() <= attrs.Updated.UnixNano() {
-				expired = true
+			if time.Unix(0, exp).UnixNano() <= attrs.Updated.UnixNano() {
+				canWrite = true
 			}
 		}
-	}
 
-	if !expired && !identityMatch && attrs != nil {
-		return errors.New(conditionCheckFailedError)
-	}
-
-	conditions := storage.Conditions{}
-	if attrs == nil {
-		conditions.DoesNotExist = true // = storage.Conditions{DoesNotExist: true}
-	} else {
-		conditions.GenerationMatch = attrs.Generation // = storage.Conditions{GenerationMatch: attrs.Generation}
-	}
-
-	// // update the expire time
-	expires := strconv.FormatInt(time.Now().Add(l.ttl).UnixNano(), 10)
-	if attrs != nil {
+		conditions.DoesNotExist = false
+		// we must ensure that another process didn't change the object in the period
+		// between retrieving and writing it back
+		// to do that we add a condition to match the generation of the object
+		// https://cloud.google.com/storage/docs/generations-preconditions
+		conditions.GenerationMatch = attrs.Generation
+		// use the update time of the object on gcs + ttl for expiration
 		expires = strconv.FormatInt(attrs.Updated.Add(l.ttl).UnixNano(), 10)
 	}
 
-	rw = obj.If(conditions).NewWriter(context.Background())
+	if !canWrite && attrs != nil {
+		return errors.New(conditionCheckFailedError)
+	}
+
+	rw := obj.If(conditions).NewWriter(context.Background())
 	rw.ObjectAttrs.Metadata = map[string]string{
 		"expires":  expires,
 		"identity": l.identity,
@@ -486,7 +489,8 @@ func (l *GCSLock) writeItem() error {
 	}
 
 	if err = rw.Close(); err != nil {
-		if err.Error() == gcsConditionNotMetError {
+		// catch the google api errors when conditions are not met
+		if err.Error() == gcsConditionNotMetError || err.Error() == "googleapi: "+gcsConditionNotMetError {
 			err = errors.New(conditionCheckFailedError)
 		}
 	}
@@ -502,11 +506,9 @@ func (l *GCSLock) writeItem() error {
 // close the leader channel if it can't succeed.
 func (l *GCSLock) watch(lost chan struct{}) {
 	retries := GCSWatchRetryMax
-	//  + time.Millisecond*time.Duration(rand.Intn(5000))
 	ticker := time.NewTicker(l.watchRetryInterval)
 	bucket := l.backend.client.Bucket(l.backend.bucketName)
 	obj := bucket.Object(l.key)
-
 WatchLoop:
 	for {
 		select {
@@ -525,16 +527,11 @@ WatchLoop:
 				break WatchLoop
 			}
 
-			// record := &GCSLockRecord{}
 			if identity, ok := attrs.Metadata["identity"]; ok {
 				if identity != string(l.identity) {
 					break WatchLoop
 				}
 			}
-
-			// if err != nil || compareId != string(l.identity) {
-			// 	break WatchLoop
-			// }
 		}
 	}
 
