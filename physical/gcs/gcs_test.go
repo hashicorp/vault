@@ -109,9 +109,7 @@ func TestGCSHABackend(t *testing.T) {
 	bucketName := fmt.Sprintf("vault-gcs-testacc-%d", randInt)
 
 	bucket := client.Bucket(bucketName)
-	err = bucket.Create(context.Background(), projectID, &storage.BucketAttrs{
-		Location: "EU",
-	})
+	err = bucket.Create(context.Background(), projectID, nil)
 
 	if err != nil {
 		t.Fatalf("error creating bucket '%v': '%v'", bucketName, err)
