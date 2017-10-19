@@ -28,12 +28,14 @@ iam or ec2 and cannot be changed after role creation.`,
 			"bound_ami_id": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances that they should be
-using the AMI ID specified by this parameter.`,
+using the AMI ID specified by this parameter. This is only applicable when auth_type is ec2
+or inferred_entity_type is ec2_instance.`,
 			},
 			"bound_account_id": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances that the account ID
-in its identity document to match the one specified by this parameter.`,
+in its identity document to match the one specified by this parameter. This is only
+applicable when auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
 			"bound_iam_principal_arn": {
 				Type: framework.TypeString,
@@ -43,8 +45,8 @@ auth_type is iam.`,
 			"bound_region": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances that the region in
-its identity document to match the one specified by this parameter. Only applicable when
-auth_type is ec2.`,
+its identity document to match the one specified by this parameter. This is only
+applicable when auth_type is ec2.`,
 			},
 			"bound_iam_role_arn": {
 				Type: framework.TypeString,
@@ -52,17 +54,17 @@ auth_type is ec2.`,
 that it must match the IAM role ARN specified by this parameter.
 The value is prefix-matched (as though it were a glob ending in
 '*').  The configured IAM user or EC2 instance role must be allowed
-to execute the 'iam:GetInstanceProfile' action if this is
-specified. This is only checked when auth_type is
-ec2.`,
+to execute the 'iam:GetInstanceProfile' action if this is specified. This is
+only applicable when auth_type is ec2 or inferred_entity_type is
+ec2_instance.`,
 			},
 			"bound_iam_instance_profile_arn": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances to be associated
 with an IAM instance profile ARN which has a prefix that matches
 the value specified by this parameter. The value is prefix-matched
-(as though it were a glob ending in '*'). This is only checked when
-auth_type is ec2.`,
+(as though it were a glob ending in '*'). This is only applicable when
+auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
 			"resolve_aws_unique_ids": {
 				Type:    framework.TypeBool,
@@ -94,13 +96,15 @@ inferred_entity_type is set, the region to assume the inferred entity exists in.
 				Type: framework.TypeString,
 				Description: `
 If set, defines a constraint on the EC2 instance to be associated with the VPC
-ID that matches the value specified by this parameter.`,
+ID that matches the value specified by this parameter. This is only applicable
+when auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
 			"bound_subnet_id": {
 				Type: framework.TypeString,
 				Description: `
 If set, defines a constraint on the EC2 instance to be associated with the
-subnet ID that matches the value specified by this parameter.`,
+subnet ID that matches the value specified by this parameter. This is only
+applicable when auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
 			"role_tag": {
 				Type:    framework.TypeString,
@@ -115,7 +119,9 @@ is only allowed if auth_type is ec2.`,
 				Type:    framework.TypeDurationSecond,
 				Default: 0,
 				Description: `
-If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this parameter.`,
+If set, indicates that the token generated using this role should never expire.
+The token should be renewed within the duration specified by this value. At
+each renewal, the token's TTL will be set to the value of this parameter.`,
 			},
 			"ttl": {
 				Type:    framework.TypeDurationSecond,
@@ -144,9 +150,13 @@ previously-remembered time. Use with caution. This is only checked when
 auth_type is ec2.`,
 			},
 			"disallow_reauthentication": {
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint.",
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, only allows a single token to be granted per
+        instance ID. In order to perform a fresh login, the entry in whitelist
+        for the instance ID needs to be cleared using
+        'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint. This is only
+        applicable when auth_type is ec2.`,
 			},
 		},
 
