@@ -2,7 +2,8 @@ TEST?=$$(go list ./... | grep -v /vendor/)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox \
-	github.com/kardianos/govendor
+	github.com/kardianos/govendor \
+	github.com/client9/misspell/cmd/misspell
 BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
@@ -82,6 +83,10 @@ fmtcheck:
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
+
+spellcheck:
+	@echo "==> Spell checking website..."
+	@misspell -error -source=text website/source
 
 mysql-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
