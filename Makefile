@@ -7,6 +7,8 @@ EXTERNAL_TOOLS=\
 BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
+GO_VERSION_MIN=1.9.1
+
 default: dev
 
 # bin generates the releaseable binaries for Vault
@@ -61,6 +63,7 @@ vet:
 # prep runs `go generate` to build the dynamically generated
 # source files.
 prep:
+	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	go generate $(go list ./... | grep -v /vendor/)
 	cp .hooks/* .git/hooks/
 
