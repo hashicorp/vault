@@ -221,7 +221,7 @@ func ExerciseBackend(t *testing.T, b Backend) {
 		t.Fatalf("bad: %v", vals)
 	}
 	for _, val := range vals {
-		if val != "_zip/" || val != "_zip" {
+		if val != "_zip/" && val != "_zip" {
 			t.Fatalf("bad val: %v", val)
 		}
 	}
