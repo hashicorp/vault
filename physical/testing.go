@@ -196,7 +196,12 @@ func ExerciseBackend(t *testing.T, b Backend) {
 	}
 
 	// Underscores should not trip things up; ref GH-3476
-	e = &Entry{Key: "_zip/_zap", Value: []byte("foobar")}
+	e = &Entry{Key: "_zip", Value: []byte("foobar")}
+	err = b.Put(e)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	e = &Entry{Key: "_zip/_zap", Value: []byte("boofar")}
 	err = b.Put(e)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -212,7 +217,7 @@ func ExerciseBackend(t *testing.T, b Backend) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(vals) != 1 || vals[0] != "_zip/" {
+	if len(vals) != 2 || vals[0] != "_zip/" || vals[1] != "_zip" {
 		t.Fatalf("bad: %v", vals)
 	}
 	vals, err = b.List("_zip/")
@@ -223,6 +228,17 @@ func ExerciseBackend(t *testing.T, b Backend) {
 		t.Fatalf("bad: %v", vals)
 	}
 	err = b.Delete("_zip/_zap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	vals, err = b.List("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vals) != 1 || vals[0] != "_zip" {
+		t.Fatalf("bad: %v", vals)
+	}
+	err = b.Delete("_zip")
 	if err != nil {
 		t.Fatal(err)
 	}
