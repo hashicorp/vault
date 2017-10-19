@@ -35,7 +35,6 @@ func init() {
 	gob.Register(&plugin.BasicError{})
 	gob.Register(logical.CodedError(0, ""))
 	gob.Register(&logical.StatusBadRequest{})
-	gob.Register(&logical.ReplicationCodedError{})
 }
 
 // BackendPluginClient is a wrapper around backendPluginClient
@@ -145,8 +144,7 @@ func wrapError(err error) error {
 	switch err.(type) {
 	case *plugin.BasicError,
 		logical.HTTPCodedError,
-		*logical.StatusBadRequest,
-		*logical.ReplicationCodedError:
+		*logical.StatusBadRequest:
 		return err
 	}
 
