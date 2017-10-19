@@ -3,7 +3,6 @@ package plugin
 import (
 	"net/rpc"
 
-	plugin "github.com/hashicorp/go-plugin"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -131,7 +130,7 @@ func (l *LoggerServer) Warn(args *LoggerArgs, reply *LoggerReply) error {
 	err := l.logger.Warn(args.Msg, args.Args...)
 	if err != nil {
 		*reply = LoggerReply{
-			Error: plugin.NewBasicError(err),
+			Error: wrapError(err),
 		}
 		return nil
 	}
@@ -142,7 +141,7 @@ func (l *LoggerServer) Error(args *LoggerArgs, reply *LoggerReply) error {
 	err := l.logger.Error(args.Msg, args.Args...)
 	if err != nil {
 		*reply = LoggerReply{
-			Error: plugin.NewBasicError(err),
+			Error: wrapError(err),
 		}
 		return nil
 	}
@@ -201,5 +200,5 @@ type LoggerArgs struct {
 // for a particular RPC call.
 type LoggerReply struct {
 	IsTrue bool
-	Error  *plugin.BasicError
+	Error  error
 }
