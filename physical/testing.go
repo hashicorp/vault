@@ -217,8 +217,13 @@ func ExerciseBackend(t *testing.T, b Backend) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(vals) != 2 || vals[0] != "_zip/" || vals[1] != "_zip" {
+	if len(vals) != 2 || vals[0] == vals[1] {
 		t.Fatalf("bad: %v", vals)
+	}
+	for _, val := range vals {
+		if val != "_zip/" || val != "_zip" {
+			t.Fatalf("bad val: %v", val)
+		}
 	}
 	vals, err = b.List("_zip/")
 	if err != nil {
