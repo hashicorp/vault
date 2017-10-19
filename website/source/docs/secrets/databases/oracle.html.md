@@ -8,7 +8,7 @@ description: |-
 
 # Oracle Database Plugin
 
-Name: `oracle-database-plugin`
+Name: `vault-plugin-database-oracle`
 
 The Oracle Database Plugin is an external plugin for the Database
 backend. This plugin generates database credentials dynamically based on
@@ -37,9 +37,9 @@ build the plugin see the plugin's code repository. Once the plugin is built and
 the binary is placed in Vault's plugin directory the catalog should be updated:
 
 ```
-$ vault write sys/plugins/catalog/oracle-database-plugin \
+$ vault write sys/plugins/catalog/vault-plugin-database-oracle \
     sha_256=<expected SHA256 value> \
-    command=oracle-database-plugin
+    command=vault-plugin-database-oracle
 ```
 
 Once the plugin exists in the plugin catalog the Database backend can configure
@@ -47,7 +47,7 @@ a connection for the Oracle Database:
 
 ```
 $ vault write database/config/oracle \
-    plugin_name=oracle-database-plugin \
+    plugin_name=vault-plugin-database-oracle \
     connection_url="system/Oracle@localhost:1521/OraDoc.localhost" \
     allowed_roles="readonly"
 
