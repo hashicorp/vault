@@ -6,11 +6,7 @@ EXTERNAL_TOOLS=\
 BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
-# NOTE: This does NOT support specifying versions more granular than x.y
-# E.g., if you specify 1.9, it'll properly check that the build environment
-# is at least 1.9, but if you specify 1.9.1, it will still happily accept
-# a 1.9 build environment.
-GO_VERSION_MIN=1.9
+GO_VERSION_MIN=1.9.1
 
 default: dev
 
