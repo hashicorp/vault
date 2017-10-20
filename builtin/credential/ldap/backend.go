@@ -202,7 +202,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, ldapResponse, nil, nil
 	}
 
-	return policies, ldapResponse, ldapGroups, nil
+	return policies, ldapResponse, allGroups, nil
 }
 
 /*
