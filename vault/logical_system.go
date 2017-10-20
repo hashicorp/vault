@@ -2814,7 +2814,7 @@ and is unaffected by replication.`,
 	},
 
 	"mount_plugin_name": {
-		`Name of the plugin to mount based from the name registered 
+		`Name of the plugin to mount based from the name registered
 in the plugin catalog.`,
 	},
 
@@ -3164,7 +3164,7 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-catalog_sha-256": {
-		`The SHA256 sum of the executable used in the 
+		`The SHA256 sum of the executable used in the
 command field. This should be HEX encoded.`,
 		"",
 	},

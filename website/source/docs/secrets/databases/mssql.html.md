@@ -26,12 +26,22 @@ configuration:
 ```
 $ vault write database/config/mssql \
     plugin_name=mssql-database-plugin \
-    connection_url='sqlserver://sa:yourStrong(!)Password@localhost:1433' \
+    connection_url='server=localhost;port=1433;user id=sa;password=Password!;database=AdventureWorks;app name=vault;' \
     allowed_roles="readonly"
 
 The following warnings were returned from the Vault server:
 * Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
 ```
+
+In this case, we've configured Vault with the user "sa" and password "Password!",
+connecting to an instance at "localhost" on port 1433. It is not necessary
+that Vault has the sa login, but the user must have privileges to create
+logins and manage processes. The fixed server roles `securityadmin` and
+`processadmin` are examples of built-in roles that grant these permissions. The
+user also must have privileges to create database users and grant permissions in
+the databases that Vault manages.  The fixed database roles `db_accessadmin` and
+`db_securityadmin` are examples or built-in roles that grant these permissions.
+
 
 Once the MSSQL connection is configured we can add a role:
 
