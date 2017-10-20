@@ -97,12 +97,7 @@ type backend struct {
 // This removes stale CRL entries and expired certificates
 func (b *backend) periodicFunc(req *logical.Request) error {
 	bufferDuration := defaultSafetyBufferDuration * time.Second
-	err := b.tidyPKI(req, bufferDuration, true, true)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return b.tidyPKI(req, bufferDuration, true, true)
 }
 
 const backendHelp = `
