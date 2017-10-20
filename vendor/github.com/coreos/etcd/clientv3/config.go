@@ -15,10 +15,10 @@
 package clientv3
 
 import (
+	"context"
 	"crypto/tls"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -44,7 +44,7 @@ type Config struct {
 	// TLS holds the client secure credentials, if any.
 	TLS *tls.Config
 
-	// Username is a username for authentication.
+	// Username is a user name for authentication.
 	Username string `json:"username"`
 
 	// Password is a password for authentication.

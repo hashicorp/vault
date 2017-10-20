@@ -52,9 +52,10 @@ func (c *MssqlConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.
 }
 
 func (c *MssqlConn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
-	if len(query) > 10 && strings.EqualFold(query[:10], "INSERTBULK") {		
+	if len(query) > 10 && strings.EqualFold(query[:10], "INSERTBULK") {
 		return c.prepareCopyIn(query)
 	}
+
 	return c.prepareContext(ctx, query)
 }
 

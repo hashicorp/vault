@@ -529,7 +529,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 	// Decode the plaintext value
 	plaintext, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		return "", errutil.UserError{Err: "failed to base64-decode plaintext"}
+		return "", errutil.UserError{Err: err.Error()}
 	}
 
 	switch {

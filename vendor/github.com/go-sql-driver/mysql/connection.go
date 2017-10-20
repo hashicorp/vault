@@ -92,11 +92,21 @@ func (mc *mysqlConn) markBadConn(err error) error {
 }
 
 func (mc *mysqlConn) Begin() (driver.Tx, error) {
+	return mc.begin(false)
+}
+
+func (mc *mysqlConn) begin(readOnly bool) (driver.Tx, error) {
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
 		return nil, driver.ErrBadConn
 	}
-	err := mc.exec("START TRANSACTION")
+	var q string
+	if readOnly {
+		q = "START TRANSACTION READ ONLY"
+	} else {
+		q = "START TRANSACTION"
+	}
+	err := mc.exec(q)
 	if err == nil {
 		return &mysqlTx{mc}, err
 	}

@@ -1,15 +1,20 @@
 package vault
 
 import (
+	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/fatih/structs"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -22,7 +27,7 @@ var (
 	// protectedPaths cannot be accessed via the raw APIs.
 	// This is both for security and to prevent disrupting Vault.
 	protectedPaths = []string{
-		"core",
+		keyringPath,
 	}
 
 	replicationPaths = func(b *SystemBackend) []*framework.Path {
@@ -59,6 +64,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				"remount",
 				"audit",
 				"audit/*",
+				"raw",
 				"raw/*",
 				"replication/primary/secondary-token",
 				"replication/reindex",
@@ -653,25 +659,6 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			&framework.Path{
-				Pattern: "raw/(?P<path>.+)",
-
-				Fields: map[string]*framework.FieldSchema{
-					"path": &framework.FieldSchema{
-						Type: framework.TypeString,
-					},
-					"value": &framework.FieldSchema{
-						Type: framework.TypeString,
-					},
-				},
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleRawRead,
-					logical.UpdateOperation: b.handleRawWrite,
-					logical.DeleteOperation: b.handleRawDelete,
-				},
-			},
-
-			&framework.Path{
 				Pattern: "key-status$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -866,10 +853,100 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-reload"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["plugin-reload"][1]),
 			},
+			&framework.Path{
+				Pattern: "tools/hash" + framework.OptionalParamRegex("urlalgorithm"),
+				Fields: map[string]*framework.FieldSchema{
+					"input": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The base64-encoded input data",
+					},
+
+					"algorithm": &framework.FieldSchema{
+						Type:    framework.TypeString,
+						Default: "sha2-256",
+						Description: `Algorithm to use (POST body parameter). Valid values are:
+	
+	* sha2-224
+	* sha2-256
+	* sha2-384
+	* sha2-512
+	
+	Defaults to "sha2-256".`,
+					},
+
+					"urlalgorithm": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: `Algorithm to use (POST URL parameter)`,
+					},
+
+					"format": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Default:     "hex",
+						Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "hex".`,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.pathHashWrite,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["hash"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["hash"][1]),
+			},
+			&framework.Path{
+				Pattern: "tools/random" + framework.OptionalParamRegex("urlbytes"),
+				Fields: map[string]*framework.FieldSchema{
+					"urlbytes": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The number of bytes to generate (POST URL parameter)",
+					},
+
+					"bytes": &framework.FieldSchema{
+						Type:        framework.TypeInt,
+						Default:     32,
+						Description: "The number of bytes to generate (POST body parameter). Defaults to 32 (256 bits).",
+					},
+
+					"format": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Default:     "base64",
+						Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "base64".`,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.pathRandomWrite,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["random"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["random"][1]),
+			},
 		},
 	}
 
 	b.Backend.Paths = append(b.Backend.Paths, replicationPaths(b)...)
+
+	if core.rawEnabled {
+		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
+			Pattern: "(raw/?$|raw/(?P<path>.+))",
+
+			Fields: map[string]*framework.FieldSchema{
+				"path": &framework.FieldSchema{
+					Type: framework.TypeString,
+				},
+				"value": &framework.FieldSchema{
+					Type: framework.TypeString,
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   b.handleRawRead,
+				logical.UpdateOperation: b.handleRawWrite,
+				logical.DeleteOperation: b.handleRawDelete,
+				logical.ListOperation:   b.handleRawList,
+			},
+		})
+	}
 
 	b.Backend.Invalidate = b.invalidate
 
@@ -2143,6 +2220,29 @@ func (b *SystemBackend) handleRawDelete(
 	return nil, nil
 }
 
+// handleRawList is used to list directly from the barrier
+func (b *SystemBackend) handleRawList(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot list '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+	}
+
+	keys, err := b.Core.barrier.List(path)
+	if err != nil {
+		return handleError(err)
+	}
+	return logical.ListResponse(keys), nil
+}
+
 // handleKeyStatus returns status information about the backend key
 func (b *SystemBackend) handleKeyStatus(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -2458,6 +2558,108 @@ func (b *SystemBackend) handleWrappingRewrap(
 	}, nil
 }
 
+func (b *SystemBackend) pathHashWrite(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	inputB64 := d.Get("input").(string)
+	format := d.Get("format").(string)
+	algorithm := d.Get("urlalgorithm").(string)
+	if algorithm == "" {
+		algorithm = d.Get("algorithm").(string)
+	}
+
+	input, err := base64.StdEncoding.DecodeString(inputB64)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
+	}
+
+	switch format {
+	case "hex":
+	case "base64":
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
+	}
+
+	var hf hash.Hash
+	switch algorithm {
+	case "sha2-224":
+		hf = sha256.New224()
+	case "sha2-256":
+		hf = sha256.New()
+	case "sha2-384":
+		hf = sha512.New384()
+	case "sha2-512":
+		hf = sha512.New()
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
+	}
+	hf.Write(input)
+	retBytes := hf.Sum(nil)
+
+	var retStr string
+	switch format {
+	case "hex":
+		retStr = hex.EncodeToString(retBytes)
+	case "base64":
+		retStr = base64.StdEncoding.EncodeToString(retBytes)
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"sum": retStr,
+		},
+	}
+	return resp, nil
+}
+
+func (b *SystemBackend) pathRandomWrite(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	bytes := 0
+	var err error
+	strBytes := d.Get("urlbytes").(string)
+	if strBytes != "" {
+		bytes, err = strconv.Atoi(strBytes)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
+		}
+	} else {
+		bytes = d.Get("bytes").(int)
+	}
+	format := d.Get("format").(string)
+
+	if bytes < 1 {
+		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
+	}
+
+	switch format {
+	case "hex":
+	case "base64":
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
+	}
+
+	randBytes, err := uuid.GenerateRandomBytes(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	var retStr string
+	switch format {
+	case "hex":
+		retStr = hex.EncodeToString(randBytes)
+	case "base64":
+		retStr = base64.StdEncoding.EncodeToString(randBytes)
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"random_bytes": retStr,
+		},
+	}
+	return resp, nil
+}
+
 func sanitizeMountPath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -2612,7 +2814,7 @@ and is unaffected by replication.`,
 	},
 
 	"mount_plugin_name": {
-		`Name of the plugin to mount based from the name registered 
+		`Name of the plugin to mount based from the name registered
 in the plugin catalog.`,
 	},
 
@@ -2962,7 +3164,7 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-catalog_sha-256": {
-		`The SHA256 sum of the executable used in the 
+		`The SHA256 sum of the executable used in the
 command field. This should be HEX encoded.`,
 		"",
 	},
@@ -3003,5 +3205,13 @@ This path responds to the following HTTP methods.
 	"plugin-backend-reload-mounts": {
 		`The mount paths of the plugin backends to reload.`,
 		"",
+	},
+	"hash": {
+		"Generate a hash sum for input data",
+		"Generates a hash sum of the given algorithm against the given input data.",
+	},
+	"random": {
+		"Generate random bytes",
+		"This function can be used to generate high-entropy random bytes.",
 	},
 }

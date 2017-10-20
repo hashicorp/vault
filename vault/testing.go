@@ -85,18 +85,24 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
 func TestCore(t testing.T) *Core {
-	return TestCoreWithSeal(t, nil)
+	return TestCoreWithSeal(t, nil, false)
+}
+
+// TestCoreRaw returns a pure in-memory, uninitialized core for testing. The raw
+// storage endpoints are enabled with this core.
+func TestCoreRaw(t testing.T) *Core {
+	return TestCoreWithSeal(t, nil, true)
 }
 
 // TestCoreNewSeal returns a pure in-memory, uninitialized core with
 // the new seal configuration.
 func TestCoreNewSeal(t testing.T) *Core {
-	return TestCoreWithSeal(t, &TestSeal{})
+	return TestCoreWithSeal(t, &TestSeal{}, false)
 }
 
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
-func TestCoreWithSeal(t testing.T, testSeal Seal) *Core {
+func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
@@ -104,6 +110,10 @@ func TestCoreWithSeal(t testing.T, testSeal Seal) *Core {
 	}
 
 	conf := testCoreConfig(t, physicalBackend, logger)
+
+	if enableRaw {
+		conf.EnableRaw = true
+	}
 
 	if testSeal != nil {
 		conf.Seal = testSeal
@@ -144,11 +154,20 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 	noopBackends["http"] = func(config *logical.BackendConfig) (logical.Backend, error) {
 		return new(rawHTTP), nil
 	}
+
+	credentialBackends := make(map[string]logical.Factory)
+	for backendName, backendFactory := range noopBackends {
+		credentialBackends[backendName] = backendFactory
+	}
+	for backendName, backendFactory := range testCredentialBackends {
+		credentialBackends[backendName] = backendFactory
+	}
+
 	logicalBackends := make(map[string]logical.Factory)
 	for backendName, backendFactory := range noopBackends {
 		logicalBackends[backendName] = backendFactory
 	}
-	logicalBackends["generic"] = LeasedPassthroughBackendFactory
+	logicalBackends["kv"] = LeasedPassthroughBackendFactory
 	for backendName, backendFactory := range testLogicalBackends {
 		logicalBackends[backendName] = backendFactory
 	}
@@ -157,7 +176,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		Physical:           physicalBackend,
 		AuditBackends:      noopAudits,
 		LogicalBackends:    logicalBackends,
-		CredentialBackends: noopBackends,
+		CredentialBackends: credentialBackends,
 		DisableMlock:       true,
 		Logger:             logger,
 	}
@@ -198,6 +217,17 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 // initialized and unsealed.
 func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 	core := TestCore(t)
+	return testCoreUnsealed(t, core)
+}
+
+// TestCoreUnsealedRaw returns a pure in-memory core that is already
+// initialized, unsealed, and with raw endpoints enabled.
+func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
+	core := TestCoreRaw(t)
+	return testCoreUnsealed(t, core)
+}
+
+func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	keys, token := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -354,6 +384,7 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 }
 
 var testLogicalBackends = map[string]logical.Factory{}
+var testCredentialBackends = map[string]logical.Factory{}
 
 // Starts the test server which responds to SSH authentication.
 // Used to test the SSH secret backend.
@@ -444,6 +475,19 @@ func executeServerCommand(ch ssh.Channel, req *ssh.Request) {
 		}
 		ch.Close()
 	}()
+}
+
+// This adds a credential backend for the test core. This needs to be
+// invoked before the test core is created.
+func AddTestCredentialBackend(name string, factory logical.Factory) error {
+	if name == "" {
+		return fmt.Errorf("missing backend name")
+	}
+	if factory == nil {
+		return fmt.Errorf("missing backend factory function")
+	}
+	testCredentialBackends[name] = factory
+	return nil
 }
 
 // This adds a logical backend for the test core. This needs to be

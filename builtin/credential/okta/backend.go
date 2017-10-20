@@ -83,32 +83,25 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse("okta auth backend unexpected failure"), nil
 	}
 
-	oktaUser := &result.Embedded.User
-	rsp, err = client.Users.PopulateGroups(oktaUser)
-	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil
-	}
-	if rsp == nil {
-		return nil, logical.ErrorResponse("okta auth backend unexpected failure"), nil
-	}
-	oktaGroups := make([]string, 0, len(oktaUser.Groups))
-	for _, group := range oktaUser.Groups {
-		oktaGroups = append(oktaGroups, group.Profile.Name)
-	}
-	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/okta: Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", oktaGroups)
-	}
-
 	oktaResponse := &logical.Response{
 		Data: map[string]interface{}{},
 	}
-	if len(oktaGroups) == 0 {
-		errString := fmt.Sprintf(
-			"no Okta groups found; only policies from locally-defined groups available")
-		oktaResponse.AddWarning(errString)
-	}
 
 	var allGroups []string
+	// Only query the Okta API for group membership if we have a token
+	if cfg.Token != "" {
+		oktaGroups, err := b.getOktaGroups(client, &result.Embedded.User)
+		if err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("okta failure retrieving groups: %v", err)), nil
+		}
+		if len(oktaGroups) == 0 {
+			errString := fmt.Sprintf(
+				"no Okta groups found; only policies from locally-defined groups available")
+			oktaResponse.AddWarning(errString)
+		}
+		allGroups = append(allGroups, oktaGroups...)
+	}
+
 	// Import the custom added groups from okta backend
 	user, err := b.User(req.Storage, username)
 	if err != nil {
@@ -122,8 +115,6 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		}
 		allGroups = append(allGroups, user.Groups...)
 	}
-	// Merge local and Okta groups
-	allGroups = append(allGroups, oktaGroups...)
 
 	// Retrieve policies
 	var policies []string
@@ -155,6 +146,24 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	return policies, oktaResponse, nil
+}
+
+func (b *backend) getOktaGroups(client *okta.Client, user *okta.User) ([]string, error) {
+	rsp, err := client.Users.PopulateGroups(user)
+	if err != nil {
+		return nil, err
+	}
+	if rsp == nil {
+		return nil, fmt.Errorf("okta auth backend unexpected failure")
+	}
+	oktaGroups := make([]string, 0, len(user.Groups))
+	for _, group := range user.Groups {
+		oktaGroups = append(oktaGroups, group.Profile.Name)
+	}
+	if b.Logger().IsDebug() {
+		b.Logger().Debug("auth/okta: Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", oktaGroups)
+	}
+	return oktaGroups, nil
 }
 
 const backendHelp = `

@@ -1,4 +1,29 @@
-## 0.8.3 (Unreleased)
+## 0.8.4 (Unreleased)
+
+IMPROVEMENTS:
+
+ * api: Add ability to set custom headers on each call [GH-3394]
+ * command/server: Add config option to disable requesting client certificates
+   [GH-3373]
+ * secret/cassandra: Work around Cassandra ignoring consistency levels for a
+   user listing query [GH-3469]
+ * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
+   arrays [GH-3409]
+ * secret/transit: Sign and verify operations now support a `none` hash
+   algorithm to allow signing/verifying pre-hashed data [GH-3448]
+ * physical/file: Use `700` as permissions when creating directories. The files
+   themselves were `600` and are all encrypted, but this doesn't hurt.
+
+BUG FIXES:
+
+ * api: Fix panic when setting a custom HTTP client but with a nil transport
+   [GH-3437]
+ * auth/radius: Fix logging in in some situations [GH-3461]
+ * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
+   matching [GH-3406]
+ * plugins: Allow response errors to be returned from backend plugins [GH-3412]
+
+## 0.8.3 (September 19th, 2017)
 
 CHANGES:
 
@@ -8,7 +33,7 @@ CHANGES:
    array; and the `default` policy will not be forcefully added to policies
    saved in configurations. Please note that the `default` policy will continue
    to be added to generated tokens, however, rather than backends adding
-   `default` to the given set of input policies (in some cases, adn not in
+   `default` to the given set of input policies (in some cases, and not in
    others), the stored set will reflect the user-specified set.
  * `sign-self-issued` modifies Issuer in generated certificates: In 0.8.2 the
    endpoint would not modify the Issuer in the generated certificate, leaving
@@ -16,16 +41,36 @@ CHANGES:
    stacks were unhappy validating paths containing such certs. As a result,
    `sign-self-issued` now encodes the signing CA's Subject DN into the Issuer
    DN of the generated certificate.
+ * `sys/raw` requires enabling: While the `sys/raw` endpoint can be extremely
+   useful in break-glass or support scenarios, it is also extremely dangerous.
+   As of now, a configuration file option `raw_storage_endpoint` must be set in
+   order to enable this API endpoint. Once set, the available functionality has
+   been enhanced slightly; it now supports listing and decrypting most of
+   Vault's core data structures, except for the encryption keyring itself.
+ * `generic` is now `kv`: To better reflect its actual use, the `generic`
+   backend is now `kv`. Using `generic` will still work for backwards
+   compatibility.
+
+FEATURES:
+
+ * **GCE Support for GCP Auth**: GCE instances can now authenticate to Vault
+   using machine credentials.
+ * **Support for Kubernetes Service Account Auth**: Kubernetes Service Accounts
+   can now authenticate to vault using JWT tokens.
 
 IMPROVEMENTS:
 
+ * configuration: Provide a config option to store Vault server's process ID
+   (PID) in a file [GH-3321]
  * mfa (Enterprise): Add the ability to use identity metadata in username format
  * mfa/okta (Enterprise): Add support for configuring base_url for API calls
  * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value 
    longer than the signing CA certificate's NotAfter value. [GH-3325]
+ * sys/raw: Raw storage access is now disabled by default [GH-3329]
 
 BUG FIXES:
 
+ * auth/okta: Fix regression that removed the ability to set base_url [GH-3313]
  * core: Fix panic while loading leases at startup on ARM processors 
    [GH-3314]
  * secret/pki: Fix `sign-self-issued` encoding the wrong subject public key
@@ -75,7 +120,7 @@ IMPROVEMENTS:
  * auth/aws: Allow wildcards in `bound_iam_principal_id` [GH-3213]
  * auth/okta: Compare groups case-insensitively since Okta is only
    case-preserving [GH-3240]
- * auth/okta: Standarize Okta configuration APIs across backends [GH-3245]
+ * auth/okta: Standardize Okta configuration APIs across backends [GH-3245]
  * cli: Add subcommand autocompletion that can be enabled with 
    `vault -autocomplete-install` [GH-3223]
  * cli: Add ability to handle wrapped responses when using `vault auth`. What

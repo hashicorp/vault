@@ -33,6 +33,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 			Metadata:      input.Auth.Metadata,
 			LeaseDuration: int(input.Auth.TTL.Seconds()),
 			Renewable:     input.Auth.Renewable,
+			EntityID:      input.Auth.EntityID,
 		}
 	}
 
@@ -59,6 +60,7 @@ func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 			Accessor:    input.Auth.Accessor,
 			Policies:    input.Auth.Policies,
 			Metadata:    input.Auth.Metadata,
+			EntityID:    input.Auth.EntityID,
 		}
 		logicalResp.Auth.Renewable = input.Auth.Renewable
 		logicalResp.Auth.TTL = time.Second * time.Duration(input.Auth.LeaseDuration)
@@ -85,6 +87,7 @@ type HTTPAuth struct {
 	Metadata      map[string]string `json:"metadata"`
 	LeaseDuration int               `json:"lease_duration"`
 	Renewable     bool              `json:"renewable"`
+	EntityID      string            `json:"entity_id"`
 }
 
 type HTTPWrapInfo struct {

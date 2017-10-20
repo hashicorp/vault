@@ -14,13 +14,13 @@ The `cubbyhole` secret backend is used to store arbitrary secrets within
 the configured physical storage for Vault. It is mounted at the `cubbyhole/`
 prefix by default and cannot be mounted elsewhere or removed.
 
-This backend differs from the `generic` backend in that the `generic` backend's
+This backend differs from the `kv` backend in that the `kv` backend's
 values are accessible to any token with read privileges on that path. In
 `cubbyhole`, paths are scoped per token; no token can access another token's
 cubbyhole, whether to read, write, list, or for any other operation. When the
 token expires, its cubbyhole is destroyed.
 
-Also unlike the `generic` backend, because the cubbyhole's lifetime is linked
+Also unlike the `kv` backend, because the cubbyhole's lifetime is linked
 to that of an authentication token, there is no concept of a TTL or refresh
 interval for values contained in the token's cubbyhole.
 

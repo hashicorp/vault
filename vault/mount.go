@@ -50,12 +50,14 @@ var (
 		"auth/",
 		"sys/",
 		"cubbyhole/",
+		"identity/",
 	}
 
 	untunableMounts = []string{
 		"cubbyhole/",
 		"sys/",
 		"audit/",
+		"identity/",
 	}
 
 	// singletonMounts can only exist in one location and are
@@ -64,7 +66,12 @@ var (
 		"cubbyhole",
 		"system",
 		"token",
+		"identity",
 	}
+
+	// mountAliases maps old backend names to new backend names, allowing us
+	// to move/rename backends but maintain backwards compatibility
+	mountAliases = map[string]string{"generic": "kv"}
 )
 
 func (c *Core) generateMountAccessor(entryType string) (string, error) {
@@ -250,6 +257,8 @@ func (c *Core) mount(entry *MountEntry) error {
 	if err := backend.Initialize(); err != nil {
 		return err
 	}
+
+	c.setCoreBackend(entry, backend, view)
 
 	newTable := c.mounts.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
@@ -709,14 +718,8 @@ func (c *Core) setupMounts() error {
 			return err
 		}
 
-		switch entry.Type {
-		case "system":
-			c.systemBarrierView = view
-		case "cubbyhole":
-			ch := backend.(*CubbyholeBackend)
-			ch.saltUUID = entry.UUID
-			ch.storageView = view
-		}
+		c.setCoreBackend(entry, backend, view)
+
 	ROUTER_MOUNT:
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
@@ -760,6 +763,9 @@ func (c *Core) unloadMounts() error {
 
 // newLogicalBackend is used to create and configure a new logical backend by name
 func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+	if alias, ok := mountAliases[t]; ok {
+		t = alias
+	}
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
@@ -801,19 +807,19 @@ func (c *Core) defaultMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
 	}
-	mountAccessor, err := c.generateMountAccessor("generic")
+	mountAccessor, err := c.generateMountAccessor("kv")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
 	}
-	genericMount := &MountEntry{
+	kvMount := &MountEntry{
 		Table:       mountTableType,
 		Path:        "secret/",
-		Type:        "generic",
-		Description: "generic secret storage",
+		Type:        "kv",
+		Description: "key/value secret storage",
 		UUID:        mountUUID,
 		Accessor:    mountAccessor,
 	}
-	table.Entries = append(table.Entries, genericMount)
+	table.Entries = append(table.Entries, kvMount)
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
 	return table
 }
@@ -858,8 +864,29 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:        sysUUID,
 		Accessor:    sysAccessor,
 	}
+
+	identityUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity mount entry UUID: %v", err))
+	}
+	identityAccessor, err := c.generateMountAccessor("identity")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate identity accessor: %v", err))
+	}
+
+	identityMount := &MountEntry{
+		Table:       mountTableType,
+		Path:        "identity/",
+		Type:        "identity",
+		Description: "identity store",
+		UUID:        identityUUID,
+		Accessor:    identityAccessor,
+	}
+
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
+	table.Entries = append(table.Entries, identityMount)
+
 	return table
 }
 
@@ -890,4 +917,18 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 	c.authLock.RUnlock()
 
 	return
+}
+
+func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *BarrierView) {
+	switch entry.Type {
+	case "system":
+		c.systemBackend = backend.(*SystemBackend)
+		c.systemBarrierView = view
+	case "cubbyhole":
+		ch := backend.(*CubbyholeBackend)
+		ch.saltUUID = entry.UUID
+		ch.storageView = view
+	case "identity":
+		c.identityStore = backend.(*IdentityStore)
+	}
 }

@@ -46,6 +46,8 @@ type NodeInfo struct {
 	AuthMechanisms []AuthMechanism `json:"auth_mechanisms"`
 	ErlangApps     []ErlangApp     `json:"applications"`
 	Contexts       []BrokerContext `json:"contexts"`
+
+	Partitions []string `json:"partitions"`
 }
 
 //

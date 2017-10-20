@@ -21,7 +21,7 @@ on every path, use `vault path-help` after mounting the backend.
 ## Quick Start
 
 The first step to using the aws backend is to mount it.
-Unlike the `generic` backend, the `aws` backend is not mounted by default.
+Unlike the `kv` backend, the `aws` backend is not mounted by default.
 
 ```text
 $ vault mount aws
@@ -38,7 +38,7 @@ $ vault write aws/config/root \
 ```
 
 *Note that `root` does not mean it needs to be your AWS account's root credentials, and it 
-probably should not be. It is also unnecessary in many cases as Vault will use normal AWS credential mechanisms (instance profile, env vars, etc.) when possible. If you need to use static credentails, create an IAM user with permissions to manage IAM and STS.
+probably should not be. It is also unnecessary in many cases as Vault will use normal AWS credential mechanisms (instance profile, env vars, etc.) when possible. If you need to use static credentials, create an IAM user with permissions to manage IAM and STS.
 See below for the specific actions required.*
 
 The following parameters are required:

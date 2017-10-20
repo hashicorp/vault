@@ -54,12 +54,12 @@ func TestSysMountConfig(t *testing.T) {
 	}
 }
 
-// testMount sets up a test mount of a generic backend w/ a random path; caller
+// testMount sets up a test mount of a kv backend w/ a random path; caller
 // is responsible for unmounting
 func testMount(client *api.Client) (string, error) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	path := fmt.Sprintf("testmount-%d", randInt)
-	err := client.Sys().Mount(path, &api.MountInput{Type: "generic"})
+	err := client.Sys().Mount(path, &api.MountInput{Type: "kv"})
 	return path, err
 }

@@ -2,6 +2,7 @@ package vault
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -27,6 +28,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"remount",
 		"audit",
 		"audit/*",
+		"raw",
 		"raw/*",
 		"replication/primary/secondary-token",
 		"replication/reindex",
@@ -116,8 +118,8 @@ func TestSystemBackend_mounts(t *testing.T) {
 	// copy what's given
 	exp := map[string]interface{}{
 		"secret/": map[string]interface{}{
-			"type":        "generic",
-			"description": "generic secret storage",
+			"type":        "kv",
+			"description": "key/value secret storage",
 			"accessor":    resp.Data["secret/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
@@ -148,6 +150,17 @@ func TestSystemBackend_mounts(t *testing.T) {
 			},
 			"local": true,
 		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"accessor":    resp.Data["identity/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":    false,
+			},
+			"local": false,
+		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("Got:\n%#v\nExpected:\n%#v", resp.Data, exp)
@@ -158,7 +171,7 @@ func TestSystemBackend_mount(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
-	req.Data["type"] = "generic"
+	req.Data["type"] = "kv"
 
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -173,7 +186,7 @@ func TestSystemBackend_mount_force_no_cache(t *testing.T) {
 	core, b, _ := testCoreSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
-	req.Data["type"] = "generic"
+	req.Data["type"] = "kv"
 	req.Data["config"] = map[string]interface{}{
 		"force_no_cache": true,
 	}
@@ -422,7 +435,7 @@ func TestSystemBackend_leases(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["renewable"] == nil || resp.Data["renewable"].(bool) {
-		t.Fatal("generic leases are not renewable")
+		t.Fatal("kv leases are not renewable")
 	}
 
 	// Invalid lease
@@ -1447,7 +1460,7 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 }
 
 func TestSystemBackend_rawRead_Protected(t *testing.T) {
-	b := testSystemBackend(t)
+	b := testSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.ReadOperation, "raw/"+keyringPath)
 	_, err := b.HandleRequest(req)
@@ -1457,7 +1470,7 @@ func TestSystemBackend_rawRead_Protected(t *testing.T) {
 }
 
 func TestSystemBackend_rawWrite_Protected(t *testing.T) {
-	b := testSystemBackend(t)
+	b := testSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "raw/"+keyringPath)
 	_, err := b.HandleRequest(req)
@@ -1467,7 +1480,7 @@ func TestSystemBackend_rawWrite_Protected(t *testing.T) {
 }
 
 func TestSystemBackend_rawReadWrite(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
+	c, b, _ := testCoreSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
 	req.Data["value"] = `path "secret/" { policy = "read" }`
@@ -1503,7 +1516,7 @@ func TestSystemBackend_rawReadWrite(t *testing.T) {
 }
 
 func TestSystemBackend_rawDelete_Protected(t *testing.T) {
-	b := testSystemBackend(t)
+	b := testSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.DeleteOperation, "raw/"+keyringPath)
 	_, err := b.HandleRequest(req)
@@ -1513,7 +1526,7 @@ func TestSystemBackend_rawDelete_Protected(t *testing.T) {
 }
 
 func TestSystemBackend_rawDelete(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
+	c, b, _ := testCoreSystemBackendRaw(t)
 
 	// set the policy!
 	p := &Policy{Name: "test"}
@@ -1589,6 +1602,25 @@ func TestSystemBackend_rotate(t *testing.T) {
 
 func testSystemBackend(t *testing.T) logical.Backend {
 	c, _, _ := TestCoreUnsealed(t)
+	return testSystemBackendInternal(t, c)
+}
+
+func testSystemBackendRaw(t *testing.T) logical.Backend {
+	c, _, _ := TestCoreUnsealedRaw(t)
+	return testSystemBackendInternal(t, c)
+}
+
+func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
+	c, _, root := TestCoreUnsealed(t)
+	return c, testSystemBackendInternal(t, c), root
+}
+
+func testCoreSystemBackendRaw(t *testing.T) (*Core, logical.Backend, string) {
+	c, _, root := TestCoreUnsealedRaw(t)
+	return c, testSystemBackendInternal(t, c), root
+}
+
+func testSystemBackendInternal(t *testing.T, c *Core) logical.Backend {
 	bc := &logical.BackendConfig{
 		Logger: c.logger,
 		System: logical.StaticSystemView{
@@ -1604,24 +1636,6 @@ func testSystemBackend(t *testing.T) logical.Backend {
 	}
 
 	return b
-}
-
-func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
-	c, _, root := TestCoreUnsealed(t)
-	bc := &logical.BackendConfig{
-		Logger: c.logger,
-		System: logical.StaticSystemView{
-			DefaultLeaseTTLVal: time.Hour * 24,
-			MaxLeaseTTLVal:     time.Hour * 24 * 32,
-		},
-	}
-
-	b := NewSystemBackend(c)
-	err := b.Backend.Setup(bc)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return c, b, root
 }
 
 func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
@@ -1708,4 +1722,158 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
 	}
+}
+
+func TestSystemBackend_ToolsHash(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.UpdateOperation, "tools/hash")
+	req.Data = map[string]interface{}{
+		"input": "dGhlIHF1aWNrIGJyb3duIGZveA==",
+	}
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	doRequest := func(req *logical.Request, errExpected bool, expected string) {
+		t.Helper()
+		resp, err := b.HandleRequest(req)
+		if err != nil && !errExpected {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if errExpected {
+			if !resp.IsError() {
+				t.Fatalf("bad: got error response: %#v", *resp)
+			}
+			return
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: got error response: %#v", *resp)
+		}
+		sum, ok := resp.Data["sum"]
+		if !ok {
+			t.Fatal("no sum key found in returned data")
+		}
+		if sum.(string) != expected {
+			t.Fatal("mismatched hashes")
+		}
+	}
+
+	// Test defaults -- sha2-256
+	doRequest(req, false, "9ecb36561341d18eb65484e833efea61edc74b84cf5e6ae1b81c63533e25fc8f")
+
+	// Test algorithm selection in the path
+	req.Path = "tools/hash/sha2-224"
+	doRequest(req, false, "ea074a96cabc5a61f8298a2c470f019074642631a49e1c5e2f560865")
+
+	// Reset and test algorithm selection in the data
+	req.Path = "tools/hash"
+	req.Data["algorithm"] = "sha2-224"
+	doRequest(req, false, "ea074a96cabc5a61f8298a2c470f019074642631a49e1c5e2f560865")
+
+	req.Data["algorithm"] = "sha2-384"
+	doRequest(req, false, "15af9ec8be783f25c583626e9491dbf129dd6dd620466fdf05b3a1d0bb8381d30f4d3ec29f923ff1e09a0f6b337365a6")
+
+	req.Data["algorithm"] = "sha2-512"
+	doRequest(req, false, "d9d380f29b97ad6a1d92e987d83fa5a02653301e1006dd2bcd51afa59a9147e9caedaf89521abc0f0b682adcd47fb512b8343c834a32f326fe9bef00542ce887")
+
+	// Test returning as base64
+	req.Data["format"] = "base64"
+	doRequest(req, false, "2dOA8puXrWodkumH2D+loCZTMB4QBt0rzVGvpZqRR+nK7a+JUhq8DwtoKtzUf7USuDQ8g0oy8yb+m+8AVCzohw==")
+
+	// Test bad input/format/algorithm
+	req.Data["format"] = "base92"
+	doRequest(req, true, "")
+
+	req.Data["format"] = "hex"
+	req.Data["algorithm"] = "foobar"
+	doRequest(req, true, "")
+
+	req.Data["algorithm"] = "sha2-256"
+	req.Data["input"] = "foobar"
+	doRequest(req, true, "")
+}
+
+func TestSystemBackend_ToolsRandom(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.UpdateOperation, "tools/random")
+
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {
+		t.Helper()
+		getResponse := func() []byte {
+			resp, err := b.HandleRequest(req)
+			if err != nil && !errExpected {
+				t.Fatal(err)
+			}
+			if resp == nil {
+				t.Fatal("expected non-nil response")
+			}
+			if errExpected {
+				if !resp.IsError() {
+					t.Fatalf("bad: got error response: %#v", *resp)
+				}
+				return nil
+			}
+			if resp.IsError() {
+				t.Fatalf("bad: got error response: %#v", *resp)
+			}
+			if _, ok := resp.Data["random_bytes"]; !ok {
+				t.Fatal("no random_bytes found in response")
+			}
+
+			outputStr := resp.Data["random_bytes"].(string)
+			var outputBytes []byte
+			switch format {
+			case "base64":
+				outputBytes, err = base64.StdEncoding.DecodeString(outputStr)
+			case "hex":
+				outputBytes, err = hex.DecodeString(outputStr)
+			default:
+				t.Fatal("unknown format")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return outputBytes
+		}
+
+		rand1 := getResponse()
+		// Expected error
+		if rand1 == nil {
+			return
+		}
+		rand2 := getResponse()
+		if len(rand1) != numBytes || len(rand2) != numBytes {
+			t.Fatal("length of output random bytes not what is exepcted")
+		}
+		if reflect.DeepEqual(rand1, rand2) {
+			t.Fatal("found identical ouputs")
+		}
+	}
+
+	// Test defaults
+	doRequest(req, false, "base64", 32)
+
+	// Test size selection in the path
+	req.Path = "tools/random/24"
+	req.Data["format"] = "hex"
+	doRequest(req, false, "hex", 24)
+
+	// Test bad input/format
+	req.Path = "tools/random"
+	req.Data["format"] = "base92"
+	doRequest(req, true, "", 0)
+
+	req.Data["format"] = "hex"
+	req.Data["bytes"] = -1
+	doRequest(req, true, "", 0)
 }

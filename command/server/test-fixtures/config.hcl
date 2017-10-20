@@ -28,3 +28,5 @@ telemetry {
 max_lease_ttl = "10h"
 default_lease_ttl = "10h"
 cluster_name = "testcluster"
+pid_file = "./pidfile"
+raw_storage_endpoint = true
