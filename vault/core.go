@@ -680,7 +680,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 	if te.EntityID != "" {
 		//c.logger.Debug("core: entity set on the token", "entity_id", te.EntityID)
 		// Fetch entity for the entity ID in the token entry
-		entity, err = c.identityStore.memDBEntityByID(te.EntityID, false)
+		entity, err = c.identityStore.MemDBEntityByID(te.EntityID, false)
 		if err != nil {
 			c.logger.Error("core: failed to lookup entity using its ID", "error", err)
 			return nil, nil, nil, ErrInternalError
@@ -690,7 +690,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 			// If there was no corresponding entity object found, it is
 			// possible that the entity got merged into another entity. Try
 			// finding entity based on the merged entity index.
-			entity, err = c.identityStore.memDBEntityByMergedEntityID(te.EntityID, false)
+			entity, err = c.identityStore.MemDBEntityByMergedEntityID(te.EntityID, false)
 			if err != nil {
 				c.logger.Error("core: failed to lookup entity in merged entity ID index", "error", err)
 				return nil, nil, nil, ErrInternalError

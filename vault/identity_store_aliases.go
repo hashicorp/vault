@@ -13,10 +13,46 @@ import (
 
 // aliasPaths returns the API endpoints to operate on aliases.
 // Following are the paths supported:
-// alias - To register/modify a alias
+// alias - To register/modify an alias
 // alias/id - To lookup, delete and list aliases based on ID
 func aliasPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
+		{
+			Pattern: "entity-alias$",
+			Fields: map[string]*framework.FieldSchema{
+				"id": {
+					Type:        framework.TypeString,
+					Description: "ID of the alias",
+				},
+				"entity_id": {
+					Type:        framework.TypeString,
+					Description: "Entity ID to which this alias belongs to",
+				},
+				"parent_id": {
+					Type:        framework.TypeString,
+					Description: "Entity ID to which this alias belongs to",
+				},
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: "Mount accessor to which this alias belongs to",
+				},
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the alias",
+				},
+				"metadata": {
+					Type:        framework.TypeStringSlice,
+					Description: "Metadata to be associated with the alias. Format should be a list of `key=value` pairs.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.pathAliasRegister,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
+			HelpDescription: strings.TrimSpace(aliasHelp["alias"][1]),
+		},
+		// BC path for identity/entity-alias
 		{
 			Pattern: "alias$",
 			Fields: map[string]*framework.FieldSchema{
@@ -48,6 +84,44 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
 			HelpDescription: strings.TrimSpace(aliasHelp["alias"][1]),
 		},
+		{
+			Pattern: "entity-alias/id/" + framework.GenericNameRegex("id"),
+			Fields: map[string]*framework.FieldSchema{
+				"id": {
+					Type:        framework.TypeString,
+					Description: "ID of the alias",
+				},
+				"entity_id": {
+					Type:        framework.TypeString,
+					Description: "Entity ID to which this alias belongs to",
+				},
+				"parent_id": {
+					Type:        framework.TypeString,
+					Description: "Entity ID to which this alias should be tied to",
+				},
+				"mount_accessor": {
+					Type:        framework.TypeString,
+					Description: "Mount accessor to which this alias belongs to",
+				},
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the alias",
+				},
+				"metadata": {
+					Type:        framework.TypeStringSlice,
+					Description: "Metadata to be associated with the alias. Format should be a comma separated list of `key=value` pairs.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.pathAliasIDUpdate,
+				logical.ReadOperation:   i.pathAliasIDRead,
+				logical.DeleteOperation: i.pathAliasIDDelete,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id"][0]),
+			HelpDescription: strings.TrimSpace(aliasHelp["alias-id"][1]),
+		},
+		// BC path for identity/entity-alias/id/<id>
 		{
 			Pattern: "alias/id/" + framework.GenericNameRegex("id"),
 			Fields: map[string]*framework.FieldSchema{
@@ -82,6 +156,16 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(aliasHelp["alias-id"][1]),
 		},
 		{
+			Pattern: "entity-alias/id/?$",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ListOperation: i.pathAliasIDList,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id-list"][0]),
+			HelpDescription: strings.TrimSpace(aliasHelp["alias-id-list"][1]),
+		},
+		// BC path for identity/alias/id
+		{
 			Pattern: "alias/id/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathAliasIDList,
@@ -103,17 +187,17 @@ func (i *IdentityStore) pathAliasRegister(req *logical.Request, d *framework.Fie
 	return i.handleAliasUpdateCommon(req, d, nil)
 }
 
-// pathAliasIDUpdate is used to update a alias based on the given
+// pathAliasIDUpdate is used to update an alias based on the given
 // alias ID
 func (i *IdentityStore) pathAliasIDUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get alias id
 	aliasID := d.Get("id").(string)
 
 	if aliasID == "" {
-		return logical.ErrorResponse("missing alias ID"), nil
+		return logical.ErrorResponse("empty alias ID"), nil
 	}
 
-	alias, err := i.memDBAliasByID(aliasID, true)
+	alias, err := i.MemDBAliasByID(aliasID, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +208,7 @@ func (i *IdentityStore) pathAliasIDUpdate(req *logical.Request, d *framework.Fie
 	return i.handleAliasUpdateCommon(req, d, alias)
 }
 
-// handleAliasUpdateCommon is used to update a alias
+// handleAliasUpdateCommon is used to update an alias
 func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framework.FieldData, alias *identity.Alias) (*logical.Response, error) {
 	var err error
 	var newAlias bool
@@ -139,9 +223,13 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 	}
 
 	// Get entity id
-	entityID := d.Get("entity_id").(string)
-	if entityID != "" {
-		entity, err = i.memDBEntityByID(entityID, true)
+	parentID := d.Get("entity_id").(string)
+	if parentID == "" {
+		parentID = d.Get("parent_id").(string)
+	}
+
+	if parentID != "" {
+		entity, err = i.MemDBEntityByID(parentID, true)
 		if err != nil {
 			return nil, err
 		}
@@ -179,7 +267,7 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 		}
 	}
 
-	aliasByFactors, err := i.memDBAliasByFactors(mountValidationResp.MountAccessor, aliasName, false)
+	aliasByFactors, err := i.MemDBAliasByFactors(mountValidationResp.MountAccessor, aliasName, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +279,7 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 			return logical.ErrorResponse("combination of mount and alias name is already in use"), nil
 		}
 
-		// If this is a alias being tied to a non-existent entity, create
+		// If this is an alias being tied to a non-existent entity, create
 		// a new entity for it.
 		if entity == nil {
 			entity = &identity.Entity{
@@ -210,7 +298,7 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 		}
 
 		// Fetch the entity to which the alias is tied to
-		existingEntity, err := i.memDBEntityByAliasID(alias.ID, true)
+		existingEntity, err := i.MemDBEntityByAliasID(alias.ID, true)
 		if err != nil {
 			return nil, err
 		}
@@ -253,9 +341,9 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 	alias.MountAccessor = mountValidationResp.MountAccessor
 	alias.MountPath = mountValidationResp.MountPath
 
-	// Set the entity ID in the alias index. This should be done after
+	// Set the parent ID in the alias index. This should be done after
 	// sanitizing entity.
-	alias.EntityID = entity.ID
+	alias.ParentID = entity.ID
 
 	// ID creation and other validations
 	err = i.sanitizeAlias(alias)
@@ -275,13 +363,13 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 	// Return ID of both alias and entity
 	resp.Data = map[string]interface{}{
 		"id":        alias.ID,
-		"entity_id": entity.ID,
+		"parent_id": entity.ID,
 	}
 
 	return resp, nil
 }
 
-// pathAliasIDRead returns the properties of a alias for a given
+// pathAliasIDRead returns the properties of an alias for a given
 // alias ID
 func (i *IdentityStore) pathAliasIDRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	aliasID := d.Get("id").(string)
@@ -289,24 +377,28 @@ func (i *IdentityStore) pathAliasIDRead(req *logical.Request, d *framework.Field
 		return logical.ErrorResponse("missing alias id"), nil
 	}
 
-	alias, err := i.memDBAliasByID(aliasID, false)
+	alias, err := i.MemDBAliasByID(aliasID, false, false)
 	if err != nil {
 		return nil, err
 	}
 
+	return i.handleAliasReadCommon(alias)
+}
+
+func (i *IdentityStore) handleAliasReadCommon(alias *identity.Alias) (*logical.Response, error) {
 	if alias == nil {
 		return nil, nil
 	}
 
 	respData := map[string]interface{}{}
 	respData["id"] = alias.ID
-	respData["entity_id"] = alias.EntityID
+	respData["parent_id"] = alias.ParentID
 	respData["mount_type"] = alias.MountType
 	respData["mount_accessor"] = alias.MountAccessor
 	respData["mount_path"] = alias.MountPath
 	respData["metadata"] = alias.Metadata
 	respData["name"] = alias.Name
-	respData["merged_from_entity_ids"] = alias.MergedFromEntityIDs
+	respData["merged_from_parent_ids"] = alias.MergedFromParentIDs
 
 	// Convert protobuf timestamp into RFC3339 format
 	respData["creation_time"] = ptypes.TimestampString(alias.CreationTime)
@@ -317,7 +409,7 @@ func (i *IdentityStore) pathAliasIDRead(req *logical.Request, d *framework.Field
 	}, nil
 }
 
-// pathAliasIDDelete deleted the alias for a given alias ID
+// pathAliasIDDelete deletes the alias for a given alias ID
 func (i *IdentityStore) pathAliasIDDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	aliasID := d.Get("id").(string)
 	if aliasID == "" {
@@ -331,7 +423,7 @@ func (i *IdentityStore) pathAliasIDDelete(req *logical.Request, d *framework.Fie
 // store
 func (i *IdentityStore) pathAliasIDList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ws := memdb.NewWatchSet()
-	iter, err := i.memDBAliases(ws)
+	iter, err := i.MemDBAliases(ws, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch iterator for aliases in memdb: %v", err)
 	}
@@ -350,15 +442,15 @@ func (i *IdentityStore) pathAliasIDList(req *logical.Request, d *framework.Field
 
 var aliasHelp = map[string][2]string{
 	"alias": {
-		"Create a new alias",
+		"Create a new alias.",
 		"",
 	},
 	"alias-id": {
-		"Update, read or delete an entity using alias ID",
+		"Update, read or delete an alias ID.",
 		"",
 	},
 	"alias-id-list": {
-		"List all the entity IDs",
+		"List all the entity IDs.",
 		"",
 	},
 }

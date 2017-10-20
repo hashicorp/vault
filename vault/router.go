@@ -437,8 +437,13 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		resp, err := re.backend.HandleRequest(req)
 		if resp != nil &&
 			resp.Auth != nil &&
-			resp.Auth.Alias != nil {
-			resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
+			!strings.HasPrefix(req.Path, "renew") {
+			if resp.Auth.Alias != nil {
+				resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
+			}
+			for _, alias := range resp.Auth.GroupAliases {
+				alias.MountAccessor = re.mountEntry.Accessor
+			}
 		}
 		return resp, false, false, err
 	}

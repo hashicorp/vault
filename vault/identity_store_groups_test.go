@@ -9,6 +9,94 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestIdentityStore_Groups_TypeMembershipAdditions(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	i, _, _ := testIdentityStoreWithGithubAuth(t)
+	groupReq := &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type":              "external",
+			"member_entity_ids": "sampleentityid",
+		},
+	}
+
+	resp, err = i.HandleRequest(groupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected an error")
+	}
+
+	groupReq.Data = map[string]interface{}{
+		"type":             "external",
+		"member_group_ids": "samplegroupid",
+	}
+
+	resp, err = i.HandleRequest(groupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected an error")
+	}
+}
+
+func TestIdentityStore_Groups_TypeImmutability(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	i, _, _ := testIdentityStoreWithGithubAuth(t)
+	groupReq := &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+	}
+
+	resp, err = i.HandleRequest(groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	internalGroupID := resp.Data["id"].(string)
+
+	groupReq.Data = map[string]interface{}{
+		"type": "external",
+	}
+	resp, err = i.HandleRequest(groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	externalGroupID := resp.Data["id"].(string)
+
+	// Try to mark internal group as external
+	groupReq.Data = map[string]interface{}{
+		"type": "external",
+	}
+	groupReq.Path = "group/id/" + internalGroupID
+	resp, err = i.HandleRequest(groupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected an error")
+	}
+
+	// Try to mark internal group as external
+	groupReq.Data = map[string]interface{}{
+		"type": "internal",
+	}
+	groupReq.Path = "group/id/" + externalGroupID
+	resp, err = i.HandleRequest(groupReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected an error")
+	}
+}
+
 func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	var err error
 	i, _, _ := testIdentityStoreWithGithubAuth(t)
@@ -28,7 +116,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 
 	// Insert it into memdb
-	err = i.memDBUpsertGroup(group)
+	err = i.MemDBUpsertGroup(group)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +136,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 
 	// Insert it into memdb
-	err = i.memDBUpsertGroup(group)
+	err = i.MemDBUpsertGroup(group)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +144,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	var fetchedGroup *identity.Group
 
 	// Fetch group given the name
-	fetchedGroup, err = i.memDBGroupByName("testgroupname", false)
+	fetchedGroup, err = i.MemDBGroupByName("testgroupname", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +153,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 
 	// Fetch group given the ID
-	fetchedGroup, err = i.memDBGroupByID("testgroupid", false)
+	fetchedGroup, err = i.MemDBGroupByID("testgroupid", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +163,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 
 	var fetchedGroups []*identity.Group
 	// Fetch the subgroups of a given group ID
-	fetchedGroups, err = i.memDBGroupsByParentGroupID("testparentgroupid1", false)
+	fetchedGroups, err = i.MemDBGroupsByParentGroupID("testparentgroupid1", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +171,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		t.Fatalf("failed to fetch an indexed group")
 	}
 
-	fetchedGroups, err = i.memDBGroupsByParentGroupID("testparentgroupid2", false)
+	fetchedGroups, err = i.MemDBGroupsByParentGroupID("testparentgroupid2", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +180,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 
 	// Fetch groups based on policy name
-	fetchedGroups, err = i.memDBGroupsByPolicy("testpolicy1", false)
+	fetchedGroups, err = i.MemDBGroupsByPolicy("testpolicy1", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +188,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		t.Fatalf("failed to fetch an indexed group")
 	}
 
-	fetchedGroups, err = i.memDBGroupsByPolicy("testpolicy2", false)
+	fetchedGroups, err = i.MemDBGroupsByPolicy("testpolicy2", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +197,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 	}
 
 	// Fetch groups based on member entity ID
-	fetchedGroups, err = i.memDBGroupsByMemberEntityID("testentityid1", false)
+	fetchedGroups, err = i.MemDBGroupsByMemberEntityID("testentityid1", false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +205,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		t.Fatalf("failed to fetch an indexed group")
 	}
 
-	fetchedGroups, err = i.memDBGroupsByMemberEntityID("testentityid2", false)
+	fetchedGroups, err = i.MemDBGroupsByMemberEntityID("testentityid2", false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -496,7 +584,7 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 
 	var memberGroupIDs []string
 	// Fetch 'eng' group
-	engGroup, err := is.memDBGroupByID(engGroupID, false)
+	engGroup, err := is.MemDBGroupByID(engGroupID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -510,7 +598,7 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 		t.Fatalf("bad: group membership IDs; expected: %#v\n actual: %#v\n", engMemberGroupIDs, memberGroupIDs)
 	}
 
-	vaultGroup, err := is.memDBGroupByID(vaultGroupID, false)
+	vaultGroup, err := is.MemDBGroupByID(vaultGroupID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -524,7 +612,7 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 		t.Fatalf("bad: group membership IDs; expected: %#v\n actual: %#v\n", vaultMemberGroupIDs, memberGroupIDs)
 	}
 
-	opsGroup, err := is.memDBGroupByID(opsGroupID, false)
+	opsGroup, err := is.MemDBGroupByID(opsGroupID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
