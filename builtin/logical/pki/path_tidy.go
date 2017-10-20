@@ -141,7 +141,7 @@ func (b *backend) tidyPKI(
 	}
 
 	// Unset flag
-	atomic.StoreInt32(&b.tidyRunning, 0)
+	defer atomic.StoreInt32(&b.tidyRunning, 0)
 
 	return nil
 }
@@ -154,12 +154,7 @@ func (b *backend) pathTidyWrite(
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 
-	err := b.tidyPKI(req, bufferDuration, tidyCertStore, tidyRevocationList)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return nil, b.tidyPKI(req, bufferDuration, tidyCertStore, tidyRevocationList)
 }
 
 const pathTidyHelpSyn = `
