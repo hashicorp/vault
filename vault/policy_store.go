@@ -95,6 +95,20 @@ path "sys/wrapping/lookup" {
 path "sys/wrapping/unwrap" {
     capabilities = ["update"]
 }
+
+# Allow general purpose tools
+path "sys/tools/hash" {
+	capabilities = ["update"]
+}
+path "sys/tools/hash/*" {
+	capabilities = ["update"]
+}
+path "sys/tools/random" {
+	capabilities = ["update"]
+}
+path "sys/tools/random/*" {
+	capabilities = ["update"]
+}
 `
 )
 
