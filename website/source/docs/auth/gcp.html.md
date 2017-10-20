@@ -19,14 +19,23 @@ Currently supports authentication for:
   * GCP IAM service accounts (`iam`)
   * GCE IAM service accounts (`gce`)
 
-We will update the documentation as we introduce more supported entities.
+## Precursors:
 
 The following documentation assumes that the backend has been
 [mounted](/docs/plugin/index.html) at `auth/gcp`.
 
-~> Note: The `gcp` backend is implemented as a
-[Vault plugin](/docs/internals/plugins.html) backend. You must be using Vault
-v0.8.0+ to use plugins.
+You must also [enable the following GCP APIs](https://support.google.com/cloud/answer/6158841?hl=en)
+for your GCP project:
+
+  * IAM API for both `iam` service accounts and `gce` instances
+  * GCE API for just `gce` instances
+  
+The next sections review how the authN/Z workflows work. If you 
+have already reviewed these sections, here are some quick links to:
+
+  * [Usage](#usage)
+  * [API documentation](/api/auth/gcp/index.html) docs. 
+
 
 ## Authentication Workflow
 
@@ -34,7 +43,7 @@ v0.8.0+ to use plugins.
 
 The Vault authentication workflow for IAM service accounts is as follows:
 
-  1. A client with IAM service account credentials generates a signed JWT using the IAM [projects.serviceAccounts.signJwt](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt) method. See [usage](#the-iam-authentication-token) for the expected format and example code.
+  1. A client with IAM service account credentials generates a signed JWT using the IAM [projects.serviceAccounts.signJwt](https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/signJwt) method. See [here](#the-iam-authentication-token) for the expected format and example code.
   2. The client sends this JWT to Vault in a login request with a role name. This role should have type `iam`.
   3. Vault grabs the `kid` header value, which contains the ID of the key-pair used to generate the JWT, and the `sub` ID/email to find the service account key. If the service account does not exist or the key is not linked to the service account, Vault will deny authentication.
   4. Vault authorizes the confirmed service account against the given role. See [authorization section](#authorization-workflow) to see how each type of role handles authorization.

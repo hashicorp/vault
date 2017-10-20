@@ -566,7 +566,6 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	ts.expiration.restoreModeLock.Lock()
 	ts.expiration.restoreMode = 1
 	ts.expiration.restoreLocks = locksutil.CreateLocks()
-	ts.expiration.quitCh = make(chan struct{})
 	ts.expiration.restoreModeLock.Unlock()
 
 	// Test that the token lookup does not return the token entry due to the
@@ -1449,6 +1448,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"ttl":              int64(0),
 		"explicit_max_ttl": int64(0),
 		"expire_time":      nil,
+		"entity_id":        "",
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1488,6 +1488,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"ttl":              int64(3600),
 		"explicit_max_ttl": int64(0),
 		"renewable":        true,
+		"entity_id":        "",
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1538,6 +1539,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"ttl":              int64(3600),
 		"explicit_max_ttl": int64(0),
 		"renewable":        true,
+		"entity_id":        "",
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1619,6 +1621,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"creation_ttl":     int64(3600),
 		"ttl":              int64(3600),
 		"explicit_max_ttl": int64(0),
+		"entity_id":        "",
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {

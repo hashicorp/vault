@@ -779,6 +779,7 @@ supports signing.
   own hash algorithm). This can also be specified as part of the URL.
   Currently-supported algorithms are:
 
+    - `none`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`
@@ -831,6 +832,7 @@ data.
 - `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
   can also be specified as part of the URL. Currently-supported algorithms are:
 
+    - `none`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`

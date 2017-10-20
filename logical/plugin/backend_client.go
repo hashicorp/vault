@@ -33,7 +33,7 @@ type HandleRequestArgs struct {
 // HandleRequestReply is the reply for HandleRequest method.
 type HandleRequestReply struct {
 	Response *logical.Response
-	Error    *plugin.BasicError
+	Error    error
 }
 
 // SpecialPathsReply is the reply for SpecialPaths method.
@@ -44,7 +44,7 @@ type SpecialPathsReply struct {
 // SystemReply is the reply for System method.
 type SystemReply struct {
 	SystemView logical.SystemView
-	Error      *plugin.BasicError
+	Error      error
 }
 
 // HandleExistenceCheckArgs is the args for HandleExistenceCheck method.
@@ -57,7 +57,7 @@ type HandleExistenceCheckArgs struct {
 type HandleExistenceCheckReply struct {
 	CheckFound bool
 	Exists     bool
-	Error      *plugin.BasicError
+	Error      error
 }
 
 // SetupArgs is the args for Setup method.
@@ -70,7 +70,7 @@ type SetupArgs struct {
 
 // SetupReply is the reply for Setup method.
 type SetupReply struct {
-	Error *plugin.BasicError
+	Error error
 }
 
 // TypeReply is the reply for the Type method.
@@ -85,7 +85,7 @@ type RegisterLicenseArgs struct {
 
 // RegisterLicenseReply is the reply for the RegisterLicense method.
 type RegisterLicenseReply struct {
-	Error *plugin.BasicError
+	Error error
 }
 
 func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Response, error) {
@@ -117,7 +117,8 @@ func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Resp
 		if reply.Error.Error() == logical.ErrUnsupportedOperation.Error() {
 			return nil, logical.ErrUnsupportedOperation
 		}
-		return nil, reply.Error
+
+		return reply.Response, reply.Error
 	}
 
 	return reply.Response, nil

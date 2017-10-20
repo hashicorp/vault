@@ -149,6 +149,17 @@ func TestSystemBackend_mounts(t *testing.T) {
 			},
 			"local": true,
 		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"accessor":    resp.Data["identity/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":    false,
+			},
+			"local": false,
+		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("Got:\n%#v\nExpected:\n%#v", resp.Data, exp)

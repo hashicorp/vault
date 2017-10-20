@@ -18,6 +18,10 @@ type ResponseWrapInfo struct {
 	// created token's accessor will be accessible here
 	WrappedAccessor string `json:"wrapped_accessor" structs:"wrapped_accessor" mapstructure:"wrapped_accessor"`
 
+	// WrappedEntityID is the entity identifier of the caller who initiated the
+	// wrapping request
+	WrappedEntityID string `json:"wrapped_entity_id" structs:"wrapped_entity_id" mapstructure:"wrapped_entity_id"`
+
 	// The format to use. This doesn't get returned, it's only internal.
 	Format string `json:"format" structs:"format" mapstructure:"format"`
 

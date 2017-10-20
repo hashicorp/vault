@@ -758,6 +758,9 @@ func (b *backend) pathLoginUpdateEc2(
 				Renewable: true,
 				TTL:       roleEntry.TTL,
 			},
+			Alias: &logical.Alias{
+				Name: identityDocParsed.InstanceID,
+			},
 		},
 	}
 
@@ -1262,6 +1265,9 @@ func (b *backend) pathLoginUpdateIam(
 				Renewable: true,
 				TTL:       roleEntry.TTL,
 			},
+			Alias: &logical.Alias{
+				Name: callerUniqueId,
+			},
 		},
 	}
 
@@ -1507,7 +1513,7 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 		return nil, err
 	}
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("received error code %s from STS: %s", response.StatusCode, string(responseBody))
+		return nil, fmt.Errorf("received error code %d from STS: %s", response.StatusCode, string(responseBody))
 	}
 	callerIdentityResponse, err := parseGetCallerIdentityResponse(string(responseBody))
 	if err != nil {

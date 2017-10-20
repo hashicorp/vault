@@ -317,13 +317,15 @@ parameter.
 ### Parameters
 
 - `issuing_certificates` `(array<string>: nil)` – Specifies the URL values for
-  the Issuing Certificate field.
+  the Issuing Certificate field. This can be an array or a comma-separated
+  string list.
 
 - `crl_distribution_points` `(array<string>: nil)` – Specifies the URL values
-  for the CRL Distribution Points field.
+  for the CRL Distribution Points field. This can be an array or a
+  comma-separated string list.
 
 - `ocsp_servers` `(array<string>: nil)` – Specifies the URL values for the OCSP
-  Servers field.
+  Servers field. This can be an array or a comma-separated string list.
 
 ### Sample Payload
 
@@ -372,9 +374,9 @@ $ curl \
 
 ## Rotate CRLs
 
-This endpoint this endpoint forces a rotation of the CRL. This can be used by
-administrators to cut the size of the CRL if it contains a number of
-certificates that have now expired, but has not been rotated due to no further
+This endpoint forces a rotation of the CRL. This can be used by administrators
+to cut the size of the CRL if it contains a number of certificates
+that have now expired, but has not been rotated due to no further
 certificates being revoked.
 
 | Method   | Path                         | Produces               |
