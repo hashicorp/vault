@@ -186,6 +186,16 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				},
 				"local": true,
 			},
+			"identity/": map[string]interface{}{
+				"description": "identity store",
+				"type":        "identity",
+				"config": map[string]interface{}{
+					"default_lease_ttl": json.Number("0"),
+					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
+				},
+				"local": false,
+			},
 		},
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
@@ -216,6 +226,16 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"force_no_cache":    false,
 			},
 			"local": true,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
+			},
+			"local": false,
 		},
 	}
 	testResponseStatus(t, resp, 200)

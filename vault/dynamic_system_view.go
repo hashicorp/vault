@@ -109,7 +109,7 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 		resp.WrapInfo.Format = "jwt"
 	}
 
-	_, err := d.core.wrapInCubbyhole(req, resp)
+	_, err := d.core.wrapInCubbyhole(req, resp, nil)
 	if err != nil {
 		return nil, err
 	}

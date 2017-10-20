@@ -1033,6 +1033,12 @@
 			"revisionTime": "2017-07-25T22:12:15Z"
 		},
 		{
+			"checksumSHA1": "2JVfMLNCW8hfVlPAwAHlOX4HW2s=",
+			"path": "github.com/hashicorp/go-memdb",
+			"revision": "75ff99613d288868d8888ec87594525906815dbc",
+			"revisionTime": "2017-10-05T03:07:53Z"
+		},
+		{
 			"checksumSHA1": "g7uHECbzuaWwdxvwoyxBwgeERPk=",
 			"path": "github.com/hashicorp/go-multierror",
 			"revision": "83588e72410abfbe4df460eeb6f30841ae47d4c4",
@@ -1147,10 +1153,16 @@
 			"revisionTime": "2017-09-02T04:25:43Z"
 		},
 		{
-			"checksumSHA1": "J/+RffHqbSdOeI82+ysAJruyO9w=",
+			"checksumSHA1": "/11y5HSVYFHHjBUHUIt35qi6D/g=",
+			"path": "github.com/hashicorp/vault-plugin-auth-gcp",
+			"revision": "440e5e20278c115840fab1f27b7a9f99d405ebbd",
+			"revisionTime": "2017-10-05T00:02:52Z"
+		},
+		{
+			"checksumSHA1": "a/6XqbRHzvZ1ngOoGASIIIcmjwM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "a807a8507e636e40403455258ed25954ec254cad",
-			"revisionTime": "2017-09-15T19:03:59Z"
+			"revision": "440e5e20278c115840fab1f27b7a9f99d405ebbd",
+			"revisionTime": "2017-10-05T00:02:52Z"
 		},
 		{
 			"checksumSHA1": "nrNcGdv/8Ut8ScFy3tQoY3dpQvs=",
@@ -1159,10 +1171,10 @@
 			"revisionTime": "2017-09-15T19:03:59Z"
 		},
 		{
-			"checksumSHA1": "U8kIY2Z/WO1nU+3g7wykzo20C+o=",
+			"checksumSHA1": "/xje1EITZoa0tj7KqPof+3FG+og=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "e6ff3b4fefe641225a7a81013337b3b62027b3a0",
-			"revisionTime": "2017-09-19T14:00:28Z"
+			"revision": "7b79e81da4f5d56811fb7ddda078a96f7f950814",
+			"revisionTime": "2017-10-05T00:02:34Z"
 		},
 		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",
@@ -2210,6 +2222,12 @@
 		{
 			"checksumSHA1": "XQ5CfhpL7XdMmELFnc2Yds45cbk=",
 			"path": "layeh.com/radius",
+			"revision": "eebc3671c1699b29d5ff236cf4a8c5519384dcb5",
+			"revisionTime": "2017-09-03T11:37:19Z"
+		},
+		{
+			"checksumSHA1": "Yqv7MmEf9UBtFxMig9bUvFn3C+Y=",
+			"path": "layeh.com/radius/rfc2865",
 			"revision": "eebc3671c1699b29d5ff236cf4a8c5519384dcb5",
 			"revisionTime": "2017-09-03T11:37:19Z"
 		}

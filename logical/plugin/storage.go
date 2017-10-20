@@ -3,7 +3,6 @@ package plugin
 import (
 	"net/rpc"
 
-	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -70,7 +69,7 @@ func (s *StorageServer) List(prefix string, reply *StorageListReply) error {
 	keys, err := s.impl.List(prefix)
 	*reply = StorageListReply{
 		Keys:  keys,
-		Error: plugin.NewBasicError(err),
+		Error: wrapError(err),
 	}
 	return nil
 }
@@ -79,7 +78,7 @@ func (s *StorageServer) Get(key string, reply *StorageGetReply) error {
 	storageEntry, err := s.impl.Get(key)
 	*reply = StorageGetReply{
 		StorageEntry: storageEntry,
-		Error:        plugin.NewBasicError(err),
+		Error:        wrapError(err),
 	}
 	return nil
 }
@@ -87,7 +86,7 @@ func (s *StorageServer) Get(key string, reply *StorageGetReply) error {
 func (s *StorageServer) Put(entry *logical.StorageEntry, reply *StoragePutReply) error {
 	err := s.impl.Put(entry)
 	*reply = StoragePutReply{
-		Error: plugin.NewBasicError(err),
+		Error: wrapError(err),
 	}
 	return nil
 }
@@ -95,27 +94,27 @@ func (s *StorageServer) Put(entry *logical.StorageEntry, reply *StoragePutReply)
 func (s *StorageServer) Delete(key string, reply *StorageDeleteReply) error {
 	err := s.impl.Delete(key)
 	*reply = StorageDeleteReply{
-		Error: plugin.NewBasicError(err),
+		Error: wrapError(err),
 	}
 	return nil
 }
 
 type StorageListReply struct {
 	Keys  []string
-	Error *plugin.BasicError
+	Error error
 }
 
 type StorageGetReply struct {
 	StorageEntry *logical.StorageEntry
-	Error        *plugin.BasicError
+	Error        error
 }
 
 type StoragePutReply struct {
-	Error *plugin.BasicError
+	Error error
 }
 
 type StorageDeleteReply struct {
-	Error *plugin.BasicError
+	Error error
 }
 
 // NOOPStorage is used to deny access to the storage interface while running a

@@ -86,6 +86,9 @@ func (b *backend) pathLogin(
 				Renewable: true,
 				TTL:       ttl,
 			},
+			Alias: &logical.Alias{
+				Name: clientCerts[0].SerialNumber.String(),
+			},
 		},
 	}
 	return resp, nil
