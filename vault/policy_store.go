@@ -128,7 +128,6 @@ var (
 type PolicyStore struct {
 	aclView          *BarrierView
 	tokenPoliciesLRU *lru.TwoQueueCache
-	lru              *lru.TwoQueueCache
 	// This is used to ensure that writes to the store (acl/rgp) or to the egp
 	// path tree don't happen concurrently. We are okay reading stale data so
 	// long as there aren't concurrent writes.
@@ -154,8 +153,6 @@ func NewPolicyStore(baseView *BarrierView, system logical.SystemView) *PolicySto
 	if !system.CachingDisabled() {
 		cache, _ := lru.New2Q(policyCacheSize)
 		ps.tokenPoliciesLRU = cache
-		cache, _ = lru.New2Q(policyCacheSize)
-		p.lru = cache
 	}
 
 	keys, err := logical.CollectKeys(ps.aclView)
