@@ -677,18 +677,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		go server.Serve(ln)
 	}
 
-	if sealConfigError != nil {
-		init, err := core.Initialized()
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
-			return 1
-		}
-		if init {
-			c.Ui.Error("Vault is initialized but no Seal key could be loaded")
-			return 1
-		}
-	}
-
 	if newCoreError != nil {
 		c.Ui.Output("==> Warning:\n\nNon-fatal error during initialization; check the logs for more information.")
 		c.Ui.Output("")

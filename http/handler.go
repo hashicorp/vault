@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/consts"

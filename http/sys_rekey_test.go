@@ -62,7 +62,7 @@ func TestSysRekey_Init_Setup(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-		// Start rekey
+	// Start rekey
 	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
 		"secret_shares":    5,
 		"secret_threshold": 3,
@@ -89,7 +89,7 @@ func TestSysRekey_Init_Setup(t *testing.T) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
 
-		// Get rekey status
+	// Get rekey status
 	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/init")
 
 	actual = map[string]interface{}{}
