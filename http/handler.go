@@ -32,10 +32,26 @@ const (
 	// not to use request forwarding
 	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
 
+	// MFAHeaderName represents the HTTP header which carries the credentials
+	// required to perform MFA on any path.
+	MFAHeaderName = "X-Vault-MFA"
+
+	// canonicalMFAHeaderName is the MFA header value's format in the request
+	// headers. Do not alter the casing of this string.
+	canonicalMFAHeaderName = "X-Vault-Mfa"
+
+	// PolicyOverrideHeaderName is the header set to request overriding
+	// soft-mandatory Sentinel policies.
+	PolicyOverrideHeaderName = "X-Vault-Policy-Override"
+
 	// MaxRequestSize is the maximum accepted request size. This is to prevent
 	// a denial of service attack where no Content-Length is provided and the server
 	// is fed ever more data until it exhausts memory.
 	MaxRequestSize = 32 * 1024 * 1024
+)
+
+var (
+	ReplicationStaleReadTimeout = 2 * time.Second
 )
 
 // Handler returns an http.Handler for the API. This can be used on

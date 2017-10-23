@@ -51,22 +51,20 @@ func (c *MountsCommand) Run(args []string) int {
 		}
 		defTTL := "system"
 		switch {
-		case mount.Type == "system":
-			defTTL = "n/a"
-		case mount.Type == "cubbyhole":
+		case mount.Type == "system", mount.Type == "cubbyhole", mount.Type == "identity":
 			defTTL = "n/a"
 		case mount.Config.DefaultLeaseTTL != 0:
 			defTTL = strconv.Itoa(mount.Config.DefaultLeaseTTL)
 		}
+
 		maxTTL := "system"
 		switch {
-		case mount.Type == "system":
-			maxTTL = "n/a"
-		case mount.Type == "cubbyhole":
+		case mount.Type == "system", mount.Type == "cubbyhole", mount.Type == "identity":
 			maxTTL = "n/a"
 		case mount.Config.MaxLeaseTTL != 0:
 			maxTTL = strconv.Itoa(mount.Config.MaxLeaseTTL)
 		}
+
 		replicatedBehavior := "replicated"
 		if mount.Local {
 			replicatedBehavior = "local"

@@ -348,7 +348,7 @@ func (b *backend) pathKeyCreate(
 			// Prepare the url and barcode
 			urlString := keyObject.String()
 
-			// Don't include QR code is size is set to zero
+			// Don't include QR code if size is set to zero
 			if qrSize == 0 {
 				response = &logical.Response{
 					Data: map[string]interface{}{
@@ -358,7 +358,7 @@ func (b *backend) pathKeyCreate(
 			} else {
 				barcode, err := keyObject.Image(qrSize, qrSize)
 				if err != nil {
-					return logical.ErrorResponse("an error occured while generating a QR code image"), err
+					return nil, fmt.Errorf("failed to generate QR code image: %v", err)
 				}
 
 				var buff bytes.Buffer

@@ -106,7 +106,8 @@ needs to be supplied along with 'identity' parameter.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLoginUpdate,
+			logical.UpdateOperation:         b.pathLoginUpdate,
+			logical.AliasLookaheadOperation: b.pathLoginUpdate,
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -544,6 +545,17 @@ func (b *backend) pathLoginUpdateEc2(
 		if identityDocParsed == nil {
 			return logical.ErrorResponse("failed to verify the instance identity document using the SHA256 RSA digest"), nil
 		}
+	}
+
+	// If we're just looking up for MFA, return the Alias info
+	if req.Operation == logical.AliasLookaheadOperation {
+		return &logical.Response{
+			Auth: &logical.Auth{
+				Alias: &logical.Alias{
+					Name: identityDocParsed.InstanceID,
+				},
+			},
+		}, nil
 	}
 
 	roleName := data.Get("role").(string)
@@ -1157,6 +1169,18 @@ func (b *backend) pathLoginUpdateIam(
 	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
 	// (in the case of an IAM user).
 	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
+
+	// If we're just looking up for MFA, return the Alias info
+	if req.Operation == logical.AliasLookaheadOperation {
+		return &logical.Response{
+			Auth: &logical.Auth{
+				Alias: &logical.Alias{
+					Name: callerUniqueId,
+				},
+			},
+		}, nil
+	}
+
 	entity, err := parseIamArn(callerID.Arn)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error parsing arn %q: %v", callerID.Arn, err)), nil
