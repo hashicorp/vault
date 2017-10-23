@@ -441,7 +441,7 @@ func (c *Core) setupCredentials() error {
 		// Create a barrier view using the UUID
 		viewPath := credentialBarrierPrefix + entry.UUID + "/"
 		view = NewBarrierView(c.barrier, viewPath)
-			// Initialize the backend
+		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
 		conf := make(map[string]string)
 		if entry.Config.PluginName != "" {
@@ -464,9 +464,9 @@ func (c *Core) setupCredentials() error {
 		}
 
 		// Check for the correct backend type
-			backendType := backend.Type()
-			if entry.Type == "plugin" && backendType != logical.TypeCredential {
-				return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
+		backendType := backend.Type()
+		if entry.Type == "plugin" && backendType != logical.TypeCredential {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 		}
 
 		if err := backend.Initialize(); err != nil {

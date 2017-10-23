@@ -298,6 +298,6 @@ func (c *Core) UnsealWithStoredKeys() error {
 			}
 		}
 	}
-	
+
 	return nil
 }

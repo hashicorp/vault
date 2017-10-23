@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -53,8 +54,8 @@ var (
 
 func NewSystemBackend(core *Core) *SystemBackend {
 	b := &SystemBackend{
-		Core: core,
-		logger:   core.logger,
+		Core:   core,
+		logger: core.logger,
 	}
 
 	b.Backend = &framework.Backend{
@@ -609,12 +610,6 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
 			},
 
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
-			},
-
 			&framework.Path{
 				Pattern:         "seal-status$",
 				HelpSynopsis:    strings.TrimSpace(sysHelp["seal-status"][0]),
@@ -723,20 +718,6 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["rotate"][1]),
 			},
-
-			/*
-				// Disabled for the moment as we don't support this externally
-				&framework.Path{
-					Pattern: "wrapping/pubkey$",
-
-					Callbacks: map[logical.Operation]framework.OperationFunc{
-						logical.ReadOperation: b.handleWrappingPubkey,
-					},
-
-					HelpSynopsis:    strings.TrimSpace(sysHelp["wrappubkey"][0]),
-					HelpDescription: strings.TrimSpace(sysHelp["wrappubkey"][1]),
-				},
-			*/
 
 			&framework.Path{
 				Pattern: "wrapping/wrap$",
@@ -911,13 +892,13 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:    framework.TypeString,
 						Default: "sha2-256",
 						Description: `Algorithm to use (POST body parameter). Valid values are:
-	
-	* sha2-224
-	* sha2-256
-	* sha2-384
-	* sha2-512
-	
-	Defaults to "sha2-256".`,
+
+			* sha2-224
+			* sha2-256
+			* sha2-384
+			* sha2-512
+
+			Defaults to "sha2-256".`,
 					},
 
 					"urlalgorithm": &framework.FieldSchema{
@@ -939,6 +920,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["hash"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["hash"][1]),
 			},
+
 			&framework.Path{
 				Pattern: "tools/random" + framework.OptionalParamRegex("urlbytes"),
 				Fields: map[string]*framework.FieldSchema{
@@ -1004,8 +986,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
-	Core *Core
-	logger   log.Logger
+	Core   *Core
+	logger log.Logger
 }
 
 // handleCORSRead returns the current CORS configuration
@@ -2087,6 +2069,9 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) func(*logical.
 				"policy": policy.Raw,
 			},
 		}
+
+		return resp, nil
+	}
 }
 
 // handlePolicyRead handles the "policy/<name>" endpoint to read a policy
@@ -2141,7 +2126,6 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) func(*logical.R
 				return handleError(err)
 			}
 			policy.Paths = p.Paths
-
 
 		default:
 			return logical.ErrorResponse("unknown policy type"), nil

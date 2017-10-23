@@ -331,7 +331,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
 	req.Unauthenticated = true
-	
+
 	var auth *logical.Auth
 	// Create an audit trail of the request, auth is not available on login requests
 	// Create an audit trail of the request. Attach auth if it was returned,

@@ -80,12 +80,11 @@ var (
 // Policy is used to represent the policy specified by
 // an ACL configuration.
 type Policy struct {
-	Name             string       `hcl:"name"`
-	Paths            []*PathRules `hcl:"-"`
-	Raw              string
-	Type             PolicyType
+	Name  string       `hcl:"name"`
+	Paths []*PathRules `hcl:"-"`
+	Raw   string
+	Type  PolicyType
 }
-
 
 // PathRules represents a policy for a path in the namespace.
 type PathRules struct {
