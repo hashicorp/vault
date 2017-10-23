@@ -251,6 +251,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	return results, nil
 }
 
+// UnsealWithStoredKeys performs auto-unseal using stored keys.
 func (c *Core) UnsealWithStoredKeys() error {
 	if !c.seal.StoredKeysSupported() {
 		return nil
@@ -297,6 +298,6 @@ func (c *Core) UnsealWithStoredKeys() error {
 			}
 		}
 	}
-
+	
 	return nil
 }
