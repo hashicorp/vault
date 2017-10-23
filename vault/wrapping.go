@@ -134,7 +134,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, aut
 	case "jwt":
 		// Create the JWT
 		claims := jws.Claims{}
-		// Map the JWT ID to the token ID for ease ofuse
+		// Map the JWT ID to the token ID for ease of use
 		claims.SetJWTID(te.ID)
 		// Set the issue time to the creation time
 		claims.SetIssuedAt(creationTime)
@@ -152,6 +152,9 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, aut
 			return nil, ErrInternalError
 		}
 		resp.WrapInfo.Token = string(serWebToken)
+		if c.redirectAddr == "" {
+			resp.AddWarning("No redirect address set in Vault so none could be encoded in the token. You may need to supply Vault's API address when unwrapping the token.")
+		}
 	}
 
 	cubbyReq := &logical.Request{
