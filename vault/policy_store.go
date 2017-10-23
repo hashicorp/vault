@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -127,7 +128,7 @@ var (
 type PolicyStore struct {
 	aclView          *BarrierView
 	tokenPoliciesLRU *lru.TwoQueueCache
-	lru  *lru.TwoQueueCache
+	lru              *lru.TwoQueueCache
 	// This is used to ensure that writes to the store (acl/rgp) or to the egp
 	// path tree don't happen concurrently. We are okay reading stale data so
 	// long as there aren't concurrent writes.
@@ -140,15 +141,15 @@ type PolicyStore struct {
 type PolicyEntry struct {
 	Version int
 	Raw     string
-	Type             PolicyType
+	Type    PolicyType
 }
 
 // NewPolicyStore creates a new PolicyStore that is backed
 // using a given view. It used used to durable store and manage named policy.
 func NewPolicyStore(baseView *BarrierView, system logical.SystemView) *PolicyStore {
 	ps := &PolicyStore{
-		aclView:        baseView.SubView(policyACLSubPath),
-		modifyLock:     new(sync.RWMutex),
+		aclView:    baseView.SubView(policyACLSubPath),
+		modifyLock: new(sync.RWMutex),
 	}
 	if !system.CachingDisabled() {
 		cache, _ := lru.New2Q(policyCacheSize)
@@ -263,9 +264,9 @@ func (ps *PolicyStore) setPolicyInternal(p *Policy) error {
 	defer ps.modifyLock.Unlock()
 	// Create the entry
 	entry, err := logical.StorageEntryJSON(p.Name, &PolicyEntry{
-		Version:          2,
-		Raw:              p.Raw,
-		Type:             p.Type,
+		Version: 2,
+		Raw:     p.Raw,
+		Type:    p.Type,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create entry: %v", err)
@@ -384,18 +385,6 @@ func (ps *PolicyStore) GetPolicy(name string, policyType PolicyType) (*Policy, e
 		policy.Name = name
 
 		ps.policyTypeMap.Store(name, PolicyTypeACL)
-	} else {
-		// On error, attempt to use V1 parsing
-		p, err := Parse(string(out.Value))
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse policy: %v", err)
-		}
-		p.Name = name
-
-		// V1 used implicit glob, we need to do a fix-up
-		for _, pp := range p.Paths {
-			pp.Glob = true
-		}
 
 	default:
 		return nil, fmt.Errorf("unknown policy type %q", policyEntry.Type.String())
