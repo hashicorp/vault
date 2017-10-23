@@ -168,7 +168,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		t.Fatalf("bad: no rekey config received")
 	}
 
-	// Provide the master
+	// Provide the master/recovery keys
 	var result *RekeyResult
 	for _, key := range keys {
 		result, err = c.RekeyUpdate(key, rkconf.Nonce, recovery)
@@ -180,7 +180,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		}
 	}
 	if result == nil || len(result.SecretShares) != newConf.SecretShares {
-		t.Fatalf("Bad: %#v", result)
+		t.Fatalf("rekey update error: %#v", result)
 	}
 
 	// Should be no progress
@@ -189,16 +189,16 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		t.Fatalf("err: %v", err)
 	}
 	if num != 0 {
-		t.Fatalf("bad: %d", num)
+		t.Fatalf("rekey progress error: %d", num)
 	}
 
 	// Should be no config
 	conf, err := c.RekeyConfig(recovery)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("rekey config error: %v", err)
 	}
 	if conf != nil {
-		t.Fatalf("bad: %v", conf)
+		t.Fatalf("rekey config should be nil, got: %v", conf)
 	}
 
 	// SealConfig should update
@@ -209,7 +209,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		sealConf, err = c.seal.BarrierConfig()
 	}
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("seal config retrieval error: %v", err)
 	}
 	if sealConf == nil {
 		t.Fatal("seal configuration is nil")
@@ -226,7 +226,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		for i := 0; i < 3; i++ {
+		for i := 0; i < newConf.SecretThreshold; i++ {
 			_, err = TestCoreUnseal(c, TestKeyCopy(result.SecretShares[i]))
 			if err != nil {
 				t.Fatalf("err: %v", err)
@@ -238,6 +238,13 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	}
 
 	// Start another rekey, this time we require a quorum!
+	// Skip this step if we are rekeying the barrier key with
+	// recovery keys, since a new rekey should still be using
+	// the same set of recovery keys.
+	if !recovery && c.seal.RecoveryKeySupported() {
+		return
+	}
+
 	newConf = &SealConfig{
 		Type:            expType,
 		SecretThreshold: 1,
