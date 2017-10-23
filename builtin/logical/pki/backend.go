@@ -81,6 +81,7 @@ func Backend() *backend {
 	}
 
 	b.crlLifetime = time.Hour * 72
+	b.periodicTidyInterval = time.Hour * 48
 
 	return &b
 }
@@ -88,16 +89,22 @@ func Backend() *backend {
 type backend struct {
 	*framework.Backend
 
-	crlLifetime       time.Duration
-	revokeStorageLock sync.RWMutex
-	tidyRunning       int32
+	crlLifetime          time.Duration
+	periodicTidyInterval time.Duration
+	revokeStorageLock    sync.RWMutex
+	tidyRunning          int32
+	lastTidyTime         time.Time
 }
 
 // This periodicFunc will be invoked once per minute by the RollbackManager
 // This removes stale CRL entries and expired certificates
 func (b *backend) periodicFunc(req *logical.Request) error {
 	bufferDuration := defaultSafetyBufferDuration * time.Second
-	return b.tidyPKI(req, bufferDuration, true, true)
+	if time.Now().Sub(b.lastTidyTime) > b.periodicTidyInterval {
+		b.lastTidyTime = time.Now()
+		return b.tidyPKI(req, bufferDuration, true, true)
+	}
+	return nil
 }
 
 const backendHelp = `
