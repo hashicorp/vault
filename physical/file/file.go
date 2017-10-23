@@ -189,7 +189,7 @@ func (b *FileBackend) PutInternal(entry *physical.Entry) error {
 	path, key := b.expandPath(entry.Key)
 
 	// Make the parent tree
-	if err := os.MkdirAll(path, 0755); err != nil {
+	if err := os.MkdirAll(path, 0700); err != nil {
 		return err
 	}
 

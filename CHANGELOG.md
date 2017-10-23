@@ -1,3 +1,28 @@
+## 0.8.4 (Unreleased)
+
+IMPROVEMENTS:
+
+ * api: Add ability to set custom headers on each call [GH-3394]
+ * command/server: Add config option to disable requesting client certificates
+   [GH-3373]
+ * secret/cassandra: Work around Cassandra ignoring consistency levels for a
+   user listing query [GH-3469]
+ * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
+   arrays [GH-3409]
+ * secret/transit: Sign and verify operations now support a `none` hash
+   algorithm to allow signing/verifying pre-hashed data [GH-3448]
+ * physical/file: Use `700` as permissions when creating directories. The files
+   themselves were `600` and are all encrypted, but this doesn't hurt.
+
+BUG FIXES:
+
+ * api: Fix panic when setting a custom HTTP client but with a nil transport
+   [GH-3437]
+ * auth/radius: Fix logging in in some situations [GH-3461]
+ * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
+   matching [GH-3406]
+ * plugins: Allow response errors to be returned from backend plugins [GH-3412]
+
 ## 0.8.3 (September 19th, 2017)
 
 CHANGES:

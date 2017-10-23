@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"layeh.com/radius"
+	. "layeh.com/radius/rfc2865"
 
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -85,6 +86,9 @@ func (b *backend) pathLogin(
 		LeaseOptions: logical.LeaseOptions{
 			Renewable: true,
 		},
+		Alias: &logical.Alias{
+			Name: username,
+		},
 	}
 	return resp, nil
 }
@@ -124,16 +128,8 @@ func (b *backend) RadiusLogin(req *logical.Request, username string, password st
 	hostport := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 
 	packet := radius.New(radius.CodeAccessRequest, []byte(cfg.Secret))
-	usernameAttr, err := radius.NewString(username)
-	if err != nil {
-		return nil, nil, err
-	}
-	passwordAttr, err := radius.NewString(password)
-	if err != nil {
-		return nil, nil, err
-	}
-	packet.Add(1, usernameAttr)
-	packet.Add(2, passwordAttr)
+	UserName_SetString(packet, username)
+	UserPassword_SetString(packet, password)
 	packet.Add(5, radius.NewInteger(uint32(cfg.NasPort)))
 
 	client := radius.Client{

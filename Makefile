@@ -2,9 +2,12 @@ TEST?=$$(go list ./... | grep -v /vendor/)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox \
-	github.com/kardianos/govendor
+	github.com/kardianos/govendor \
+	github.com/client9/misspell/cmd/misspell
 BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
+
+GO_VERSION_MIN=1.9.1
 
 default: dev
 
@@ -60,6 +63,7 @@ vet:
 # prep runs `go generate` to build the dynamically generated
 # source files.
 prep:
+	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	go generate $(go list ./... | grep -v /vendor/)
 	cp .hooks/* .git/hooks/
 
@@ -73,12 +77,19 @@ bootstrap:
 proto:
 	protoc -I helper/forwarding -I vault -I ../../.. vault/*.proto --go_out=plugins=grpc:vault
 	protoc -I helper/forwarding -I vault -I ../../.. helper/forwarding/types.proto --go_out=plugins=grpc:helper/forwarding
+	protoc -I helper/storagepacker helper/storagepacker/types.proto --go_out=plugins=grpc:helper/storagepacker
+	protoc -I helper/identity -I ../../.. helper/identity/types.proto --go_out=plugins=grpc:helper/identity
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/EntityId/EntityID/' -e 's/Api/API/' helper/identity/types.pb.go helper/storagepacker/types.pb.go
 
 fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
+
+spellcheck:
+	@echo "==> Spell checking website..."
+	@misspell -error -source=text website/source
 
 mysql-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin

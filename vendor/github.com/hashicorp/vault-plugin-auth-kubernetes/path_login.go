@@ -44,8 +44,8 @@ func pathLogin(b *kubeAuthBackend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:           b.pathLogin(),
-			logical.PersonaLookaheadOperation: b.personaLookahead(),
+			logical.UpdateOperation:         b.pathLogin(),
+			logical.AliasLookaheadOperation: b.aliasLookahead(),
 		},
 
 		HelpSynopsis:    pathLoginHelpSyn,
@@ -100,7 +100,7 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 			Auth: &logical.Auth{
 				NumUses: role.NumUses,
 				Period:  role.Period,
-				Persona: &logical.Persona{
+				Alias: &logical.Alias{
 					Name: serviceAccount.UID,
 				},
 				InternalData: map[string]interface{}{
@@ -134,9 +134,9 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 	}
 }
 
-// personaLookahead returns the persona object with the SA UID from the JWT
+// aliasLookahead returns the alias object with the SA UID from the JWT
 // Claims.
-func (b *kubeAuthBackend) personaLookahead() framework.OperationFunc {
+func (b *kubeAuthBackend) aliasLookahead() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		jwtStr := data.Get("jwt").(string)
 		if len(jwtStr) == 0 {
@@ -156,7 +156,7 @@ func (b *kubeAuthBackend) personaLookahead() framework.OperationFunc {
 
 		return &logical.Response{
 			Auth: &logical.Auth{
-				Persona: &logical.Persona{
+				Alias: &logical.Alias{
 					Name: saUID,
 				},
 			},

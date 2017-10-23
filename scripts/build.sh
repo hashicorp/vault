@@ -44,13 +44,14 @@ if [ "${VAULT_DEV_BUILD}x" != "x" ]; then
 fi
 # If VAULT_STRIP_BINARIES env variable is set, then remove symbols from vault binary.
 if [[ "${VAULT_STRIP_BINARIES}x" != "x" ]]; then
-    LD_FLAGS="-s -w "
+    LD_FLAGS+=" -s -w "
 fi
 
 # Build!
 echo "==> Building..."
 gox \
     -osarch="${XC_OSARCH}" \
+    -gcflags "${GCFLAGS}" \
     -ldflags "${LD_FLAGS}-X github.com/hashicorp/vault/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}'" \
     -output "pkg/{{.OS}}_{{.Arch}}/vault" \
     -tags="${BUILD_TAGS}" \

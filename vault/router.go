@@ -47,6 +47,31 @@ type routeEntry struct {
 	loginPaths  *radix.Tree
 }
 
+type validateMountResponse struct {
+	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
+	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
+	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
+}
+
+// validateMountByAccessor returns the mount type and ID for a given mount
+// accessor
+func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse {
+	if accessor == "" {
+		return nil
+	}
+
+	mountEntry := r.MatchingMountByAccessor(accessor)
+	if mountEntry == nil {
+		return nil
+	}
+
+	return &validateMountResponse{
+		MountAccessor: mountEntry.Accessor,
+		MountType:     mountEntry.Type,
+		MountPath:     mountEntry.Path,
+	}
+}
+
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversible
 func (re *routeEntry) SaltID(id string) string {
 	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA1Hash)
@@ -330,6 +355,17 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	// Attach the storage view for the request
 	req.Storage = re.storageView
 
+	originalEntityID := req.EntityID
+
+	// Allow EntityID to passthrough to the system backend. This is required to
+	// allow clients to generate MFA credentials in respective entity objects
+	// in identity store via the system backend.
+	switch {
+	case strings.HasPrefix(originalPath, "sys/"):
+	default:
+		req.EntityID = ""
+	}
+
 	// Hash the request token unless this is the token backend
 	clientToken := req.ClientToken
 	switch {
@@ -385,6 +421,12 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		// This is only set in one place, after routing, so should never be set
 		// by a backend
 		req.SetLastRemoteWAL(0)
+
+		// This will be used for attaching the mount accessor for the identities
+		// returned by the authentication backends
+		req.MountAccessor = re.mountEntry.Accessor
+
+		req.EntityID = originalEntityID
 	}()
 
 	// Invoke the backend
@@ -393,6 +435,11 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		return nil, ok, exists, err
 	} else {
 		resp, err := re.backend.HandleRequest(req)
+		if resp != nil &&
+			resp.Auth != nil &&
+			resp.Auth.Alias != nil {
+			resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
+		}
 		return resp, false, false, err
 	}
 }
