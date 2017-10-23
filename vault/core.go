@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -520,7 +521,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		} else {
 			c.physical = physical.NewCache(phys, conf.CacheSize, conf.Logger)
 		}
-	}
 	}
 
 	if !conf.DisableMlock {
