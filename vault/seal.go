@@ -321,27 +321,3 @@ func (s *SealConfig) Clone() *SealConfig {
 	}
 	return ret
 }
-
-type SealAccess struct {
-	seal Seal
-}
-
-func (s *SealAccess) SetSeal(seal Seal) {
-	s.seal = seal
-}
-
-func (s *SealAccess) StoredKeysSupported() bool {
-	return s.seal.StoredKeysSupported()
-}
-
-func (s *SealAccess) BarrierConfig() (*SealConfig, error) {
-	return s.seal.BarrierConfig()
-}
-
-func (s *SealAccess) RecoveryKeySupported() bool {
-	return s.seal.RecoveryKeySupported()
-}
-
-func (s *SealAccess) RecoveryConfig() (*SealConfig, error) {
-	return s.seal.RecoveryConfig()
-}

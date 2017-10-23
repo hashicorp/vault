@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
+	"github.com/mitchellh/copystructure"
 )
 
 const (
@@ -739,7 +740,7 @@ func (c *Core) setupMounts() error {
 	defer c.mountsLock.Unlock()
 
 	var view *BarrierView
-	var err error
+	var backendType logical.BackendType
 
 	for _, entry := range c.mounts.Entries {
 
@@ -777,7 +778,7 @@ func (c *Core) setupMounts() error {
 		}
 
 		// Check for the correct backend type
-		backendType := backend.Type()
+		backendType = backend.Type()
 		if entry.Type == "plugin" && backendType != logical.TypeLogical {
 			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 		}

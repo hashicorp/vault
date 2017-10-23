@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -161,6 +162,11 @@ func (c *Core) disableCredential(path string) error {
 	if view == nil {
 		return fmt.Errorf("no matching backend %s", fullPath)
 	}
+
+	// Get the backend/mount entry for this path, used to remove ignored
+	// replication prefixes
+	backend := c.router.MatchingBackend(fullPath)
+	entry := c.router.MatchingMountEntry(fullPath)
 
 	// Mark the entry as tainted
 	if err := c.taintCredEntry(path); err != nil {
@@ -426,6 +432,7 @@ func (c *Core) setupCredentials() error {
 	var err error
 	var persistNeeded bool
 	var view *BarrierView
+	var backendType logical.BackendType
 
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
@@ -464,7 +471,7 @@ func (c *Core) setupCredentials() error {
 		}
 
 		// Check for the correct backend type
-		backendType := backend.Type()
+		backendType = backend.Type()
 		if entry.Type == "plugin" && backendType != logical.TypeCredential {
 			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 		}

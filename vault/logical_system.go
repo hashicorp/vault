@@ -1521,12 +1521,6 @@ func (b *SystemBackend) handleUnmount(
 		return nil, nil
 	}
 
-	_, prefix, found := b.Core.router.MatchingStoragePrefixByAPIPath(path)
-	if !found {
-		b.Backend.Logger().Error("sys: unable to find storage for path", "path", path)
-		return handleError(fmt.Errorf("unable to find storage for path: %s", path))
-	}
-
 	// Attempt unmount
 	if err := b.Core.unmount(path); err != nil {
 		b.Backend.Logger().Error("sys: unmount failed", "path", path, "error", err)
@@ -2116,8 +2110,6 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) func(*logical.R
 		if polBytes, err := base64.StdEncoding.DecodeString(policy.Raw); err == nil {
 			policy.Raw = string(polBytes)
 		}
-
-		var enforcementLevel string
 
 		switch policyType {
 		case PolicyTypeACL:

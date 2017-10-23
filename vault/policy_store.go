@@ -232,7 +232,7 @@ func (ps *PolicyStore) invalidate(name string, policyType PolicyType) {
 	}
 
 	// Force a reload
-	p, err := ps.GetPolicy(name, policyType)
+	_, err := ps.GetPolicy(name, policyType)
 	if err != nil {
 		vlogger.Error("policy: error fetching policy after invalidation", "name", saneName)
 	}
@@ -270,13 +270,6 @@ func (ps *PolicyStore) setPolicyInternal(p *Policy) error {
 	}
 	switch p.Type {
 	case PolicyTypeACL:
-		rgp, err := ps.rgpView.Get(entry.Key)
-		if err != nil {
-			return errwrap.Wrapf("failed looking up conflicting policy: {{err}}", err)
-		}
-		if rgp != nil {
-			return fmt.Errorf("cannot reuse policy names between ACLs and RGPs")
-		}
 		if err := ps.aclView.Put(entry); err != nil {
 			return errwrap.Wrapf("failed to persist policy: {{err}}", err)
 		}

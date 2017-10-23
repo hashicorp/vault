@@ -117,10 +117,6 @@ type Request struct {
 	// token supplied
 	ClientTokenRemainingUses int `json:"client_token_remaining_uses" structs:"client_token_remaining_uses" mapstructure:"client_token_remaining_uses"`
 
-	// MFACreds holds the parsed MFA information supplied over the API as part of
-	// X-Vault-MFA header
-	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
-
 	// EntityID is the identity of the caller extracted out of the token used
 	// to make this request
 	EntityID string `json:"entity_id" structs:"entity_id" mapstructure:"entity_id" sentinel:""`

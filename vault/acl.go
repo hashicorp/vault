@@ -1,11 +1,14 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/errwrap"
+	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
