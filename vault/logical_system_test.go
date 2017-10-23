@@ -124,7 +124,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
 				"force_no_cache":    false,
+				"seal_wrap":         false,
 			},
 			"local": false,
 		},
@@ -135,7 +137,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
 				"force_no_cache":    false,
+				"seal_wrap":         false,
 			},
 			"local": false,
 		},
@@ -146,7 +150,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
 				"force_no_cache":    false,
+				"seal_wrap":         false,
 			},
 			"local": true,
 		},
@@ -157,13 +163,15 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
 				"force_no_cache":    false,
+				"seal_wrap":         false,
 			},
 			"local": false,
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("Got:\n%#v\nExpected:\n%#v", resp.Data, exp)
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", resp.Data, exp)
 	}
 }
 
@@ -270,7 +278,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policy, _ := Parse(capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(capabilitiesPolicy)
 	err = core.policyStore.SetPolicy(policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -322,7 +330,7 @@ func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policy, _ := Parse(capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(capabilitiesPolicy)
 	err = core.policyStore.SetPolicy(policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1226,7 +1234,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp)
 	}
-	if resp != nil {
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -1480,7 +1488,7 @@ func TestSystemBackend_rawWrite_Protected(t *testing.T) {
 }
 
 func TestSystemBackend_rawReadWrite(t *testing.T) {
-	c, b, _ := testCoreSystemBackendRaw(t)
+	_, b, _ := testCoreSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
 	req.Data["value"] = `path "secret/" { policy = "read" }`
@@ -1502,17 +1510,8 @@ func TestSystemBackend_rawReadWrite(t *testing.T) {
 		t.Fatalf("bad: %v", resp)
 	}
 
-	// Read the policy!
-	p, err := c.policyStore.GetPolicy("test")
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if p == nil || len(p.Paths) == 0 {
-		t.Fatalf("missing policy %#v", p)
-	}
-	if p.Paths[0].Prefix != "secret/" || p.Paths[0].Policy != ReadCapability {
-		t.Fatalf("Bad: %#v", p)
-	}
+	// Note: since the upgrade code is gone that upgraded from 0.1, we can't
+	// simply parse this out directly via GetPolicy, so the test now ends here.
 }
 
 func TestSystemBackend_rawDelete_Protected(t *testing.T) {
@@ -1529,7 +1528,10 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 	c, b, _ := testCoreSystemBackendRaw(t)
 
 	// set the policy!
-	p := &Policy{Name: "test"}
+	p := &Policy{
+		Name: "test",
+		Type: PolicyTypeACL,
+	}
 	err := c.policyStore.SetPolicy(p)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1546,8 +1548,8 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 	}
 
 	// Policy should be gone
-	c.policyStore.lru.Purge()
-	out, err := c.policyStore.GetPolicy("test")
+	c.policyStore.tokenPoliciesLRU.Purge()
+	out, err := c.policyStore.GetPolicy("test", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
