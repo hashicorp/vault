@@ -273,7 +273,7 @@ func (b *FileBackend) validatePath(path string) error {
 	return nil
 }
 
-func (b *TransactionalFileBackend) Transaction(txns []physical.TxnEntry) error {
+func (b *TransactionalFileBackend) Transaction(txns []*physical.TxnEntry) error {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
