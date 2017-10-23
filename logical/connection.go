@@ -11,5 +11,5 @@ type Connection struct {
 	RemoteAddr string `json:"remote_addr"`
 
 	// ConnState is the TLS connection state if applicable.
-	ConnState *tls.ConnectionState
+	ConnState *tls.ConnectionState `sentinel:""`
 }

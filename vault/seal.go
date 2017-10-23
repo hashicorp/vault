@@ -21,11 +21,33 @@ const (
 	barrierSealConfigPath = "core/seal-config"
 
 	// recoverySealConfigPath is the path to the recovery key seal
-	// configuration. It is inside the barrier.
+	// configuration. It lives inside the barrier.
+	// DEPRECATED: Use recoverySealConfigPlaintextPath instead.
 	recoverySealConfigPath = "core/recovery-seal-config"
+
+	// recoverySealConfigPlaintextPath is the path to the recovery key seal
+	// configuration. This is stored in plaintext so that we can perform
+	// auto-unseal.
+	recoverySealConfigPlaintextPath = "core/recovery-config"
 
 	// recoveryKeyPath is the path to the recovery key
 	recoveryKeyPath = "core/recovery-key"
+
+	// hsmStoredKeysPath is the path used for storing HSM-encrypted unseal keys
+	hsmStoredKeysPath = "core/hsm/barrier-unseal-keys"
+
+	// hsmStoredIVPath is the path to the initialization vector for stored keys
+	hsmStoredIVPath = "core/hsm/iv"
+)
+
+const (
+	SealTypeShamir = "shamir"
+	SealTypePKCS11 = "hsm-pkcs11-auto"
+	SealTypeAWSKMS = "awskms-auto"
+	SealTypeTest   = "test-auto"
+
+	RecoveryTypeUnsupported = "unsupported"
+	RecoveryTypeShamir      = "shamir"
 )
 
 type KeyNotFoundError struct {
@@ -86,7 +108,7 @@ func (d *DefaultSeal) Finalize() error {
 }
 
 func (d *DefaultSeal) BarrierType() string {
-	return "shamir"
+	return SealTypeShamir
 }
 
 func (d *DefaultSeal) StoredKeysSupported() bool {
@@ -192,7 +214,7 @@ func (d *DefaultSeal) SetBarrierConfig(config *SealConfig) error {
 }
 
 func (d *DefaultSeal) RecoveryType() string {
-	return "unsupported"
+	return RecoveryTypeUnsupported
 }
 
 func (d *DefaultSeal) RecoveryConfig() (*SealConfig, error) {

@@ -28,6 +28,7 @@ var (
 	// This is both for security and to prevent disrupting Vault.
 	protectedPaths = []string{
 		keyringPath,
+		coreLocalClusterInfoPath,
 	}
 
 	replicationPaths = func(b *SystemBackend) []*framework.Path {
@@ -53,6 +54,7 @@ var (
 func NewSystemBackend(core *Core) *SystemBackend {
 	b := &SystemBackend{
 		Core: core,
+		logger:   core.logger,
 	}
 
 	b.Backend = &framework.Backend{
@@ -536,7 +538,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			&framework.Path{
-				Pattern: "policy$",
+				Pattern: "policy/?$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: b.handlePolicyList,
@@ -559,12 +561,54 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["policy-rules"][0]),
 					},
+					"policy": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["policy-rules"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handlePolicyRead,
 					logical.UpdateOperation: b.handlePolicySet,
 					logical.DeleteOperation: b.handlePolicyDelete,
+				},
+			},
+
+			&framework.Path{
+				Pattern: "policies/acl/?$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: b.handlePoliciesList(PolicyTypeACL),
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["policy-list"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["policy-list"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "policies/acl/(?P<name>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["policy-name"][0]),
+					},
+					"policy": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["policy-rules"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handlePoliciesRead(PolicyTypeACL),
+					logical.UpdateOperation: b.handlePoliciesSet(PolicyTypeACL),
+					logical.DeleteOperation: b.handlePoliciesDelete(PolicyTypeACL),
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
+			},
+
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
@@ -789,6 +833,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
 			},
+
 			&framework.Path{
 				Pattern: "plugins/catalog/?$",
 
@@ -801,6 +846,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 			},
+
 			&framework.Path{
 				Pattern: "plugins/catalog/(?P<name>.+)",
 
@@ -959,6 +1005,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 type SystemBackend struct {
 	*framework.Backend
 	Core *Core
+	logger   log.Logger
 }
 
 // handleCORSRead returns the current CORS configuration
@@ -1008,15 +1055,23 @@ func (b *SystemBackend) handleTidyLeases(req *logical.Request, d *framework.Fiel
 }
 
 func (b *SystemBackend) invalidate(key string) {
-	if b.Core.logger.IsTrace() {
-		b.Core.logger.Trace("sys: invalidating key", "key", key)
-	}
+	/*
+		if b.Core.logger.IsTrace() {
+			b.Core.logger.Trace("sys: invalidating key", "key", key)
+		}
+	*/
 	switch {
-	case strings.HasPrefix(key, policySubPath):
+	case strings.HasPrefix(key, policyACLSubPath):
 		b.Core.stateLock.RLock()
 		defer b.Core.stateLock.RUnlock()
 		if b.Core.policyStore != nil {
-			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policySubPath))
+			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policyACLSubPath), PolicyTypeACL)
+		}
+	case strings.HasPrefix(key, tokenSubPath):
+		b.Core.stateLock.RLock()
+		defer b.Core.stateLock.RUnlock()
+		if b.Core.tokenStore != nil {
+			b.Core.tokenStore.Invalidate(key)
 		}
 	}
 }
@@ -1317,15 +1372,18 @@ func (b *SystemBackend) handleMountTable(
 
 	for _, entry := range b.Core.mounts.Entries {
 		// Populate mount info
-		structConfig := structs.New(entry.Config).Map()
-		structConfig["default_lease_ttl"] = int64(structConfig["default_lease_ttl"].(time.Duration).Seconds())
-		structConfig["max_lease_ttl"] = int64(structConfig["max_lease_ttl"].(time.Duration).Seconds())
 		info := map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
 			"accessor":    entry.Accessor,
-			"config":      structConfig,
-			"local":       entry.Local,
+			"config": map[string]interface{}{
+				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+				"force_no_cache":    entry.Config.ForceNoCache,
+				"plugin_name":       entry.Config.PluginName,
+				"seal_wrap":         entry.Config.SealWrap,
+			},
+			"local": entry.Local,
 		}
 		resp.Data[entry.Path] = info
 	}
@@ -1396,15 +1454,21 @@ func (b *SystemBackend) handleMount(
 			logical.ErrInvalidRequest
 	}
 
-	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL {
+	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
 		return logical.ErrorResponse(fmt.Sprintf(
 				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
 			logical.ErrInvalidRequest
 	}
 
-	// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
-	// option taking precedence.
-	if logicalType == "plugin" {
+	switch logicalType {
+	case "":
+		return logical.ErrorResponse(
+				"backend type must be specified as a string"),
+			logical.ErrInvalidRequest
+
+	case "plugin":
+		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
+		// option taking precedence.
 		switch {
 		case apiConfig.PluginName != "":
 			config.PluginName = apiConfig.PluginName
@@ -1417,15 +1481,13 @@ func (b *SystemBackend) handleMount(
 		}
 	}
 
+	if apiConfig.SealWrap {
+		config.SealWrap = true
+	}
+
 	// Copy over the force no cache if set
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
-	}
-
-	if logicalType == "" {
-		return logical.ErrorResponse(
-				"backend type must be specified as a string"),
-			logical.ErrInvalidRequest
 	}
 
 	// Create the mount entry
@@ -1475,6 +1537,12 @@ func (b *SystemBackend) handleUnmount(
 	match := b.Core.router.MatchingMount(path)
 	if match == "" || path != match {
 		return nil, nil
+	}
+
+	_, prefix, found := b.Core.router.MatchingStoragePrefixByAPIPath(path)
+	if !found {
+		b.Backend.Logger().Error("sys: unable to find storage for path", "path", path)
+		return handleError(fmt.Errorf("unable to find storage for path: %s", path))
 	}
 
 	// Attempt unmount
@@ -1623,7 +1691,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 
 	var lock *sync.RWMutex
 	switch {
-	case strings.HasPrefix(path, "auth/"):
+	case strings.HasPrefix(path, credentialRoutePrefix):
 		lock = &b.Core.authLock
 	default:
 		lock = &b.Core.mountsLock
@@ -1871,7 +1939,6 @@ func (b *SystemBackend) handleAuthTable(
 func (b *SystemBackend) handleEnableAuth(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.replicationState
-
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
@@ -1942,6 +2009,7 @@ func (b *SystemBackend) handleDisableAuth(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	path = sanitizeMountPath(path)
+
 	fullPath := credentialRoutePrefix + path
 
 	repState := b.Core.replicationState
@@ -1969,7 +2037,7 @@ func (b *SystemBackend) handleDisableAuth(
 func (b *SystemBackend) handlePolicyList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the configured policies
-	policies, err := b.Core.policyStore.ListPolicies()
+	policies, err := b.Core.policyStore.ListPolicies(PolicyTypeACL)
 
 	// Add the special "root" policy
 	policies = append(policies, "root")
@@ -1981,12 +2049,52 @@ func (b *SystemBackend) handlePolicyList(
 	return resp, err
 }
 
+func (b *SystemBackend) handlePoliciesList(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		policies, err := b.Core.policyStore.ListPolicies(policyType)
+		if err != nil {
+			return nil, err
+		}
+
+		switch policyType {
+		case PolicyTypeACL:
+			// Add the special "root" policy if not egp
+			policies = append(policies, "root")
+			return logical.ListResponse(policies), nil
+
+		}
+
+		return logical.ErrorResponse("unknown policy type"), nil
+	}
+}
+
+func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
+
+		policy, err := b.Core.policyStore.GetPolicy(name, policyType)
+		if err != nil {
+			return handleError(err)
+		}
+
+		if policy == nil {
+			return nil, nil
+		}
+
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				"name":   policy.Name,
+				"policy": policy.Raw,
+			},
+		}
+}
+
 // handlePolicyRead handles the "policy/<name>" endpoint to read a policy
 func (b *SystemBackend) handlePolicyRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	policy, err := b.Core.policyStore.GetPolicy(name)
+	policy, err := b.Core.policyStore.GetPolicy(name, PolicyTypeACL)
 	if err != nil {
 		return handleError(err)
 	}
@@ -1995,44 +2103,106 @@ func (b *SystemBackend) handlePolicyRead(
 		return nil, nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"name":  policy.Name,
 			"rules": policy.Raw,
 		},
-	}, nil
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		policy := &Policy{
+			Name: strings.ToLower(data.Get("name").(string)),
+			Type: policyType,
+		}
+		if policy.Name == "" {
+			return logical.ErrorResponse("policy name must be provided in the URL"), nil
+		}
+
+		policy.Raw = data.Get("policy").(string)
+		if policy.Raw == "" {
+			return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
+		}
+
+		if polBytes, err := base64.StdEncoding.DecodeString(policy.Raw); err == nil {
+			policy.Raw = string(polBytes)
+		}
+
+		var enforcementLevel string
+
+		switch policyType {
+		case PolicyTypeACL:
+			p, err := ParseACLPolicy(policy.Raw)
+			if err != nil {
+				return handleError(err)
+			}
+			policy.Paths = p.Paths
+
+
+		default:
+			return logical.ErrorResponse("unknown policy type"), nil
+		}
+
+		// Update the policy
+		if err := b.Core.policyStore.SetPolicy(policy); err != nil {
+			return handleError(err)
+		}
+		return nil, nil
+	}
 }
 
 // handlePolicySet handles the "policy/<name>" endpoint to set a policy
 func (b *SystemBackend) handlePolicySet(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
 
-	rulesRaw, ok := data.GetOk("rules")
-	if !ok {
-		return logical.ErrorResponse("'rules' parameter not supplied"), nil
+	policy := &Policy{
+		Type: PolicyTypeACL,
+		Name: strings.ToLower(data.Get("name").(string)),
+	}
+	if policy.Name == "" {
+		return logical.ErrorResponse("policy name must be provided in the URL"), nil
 	}
 
-	rules := rulesRaw.(string)
-	if rules == "" {
-		return logical.ErrorResponse("'rules' parameter empty"), nil
+	var resp *logical.Response
+
+	policy.Raw = data.Get("policy").(string)
+	if policy.Raw == "" {
+		policy.Raw = data.Get("rules").(string)
+		if resp == nil {
+			resp = &logical.Response{}
+		}
+		resp.AddWarning("'rules' is deprecated, please use 'policy' instead")
+	}
+	if policy.Raw == "" {
+		return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
 	}
 
-	// Validate the rules parse
-	parse, err := Parse(rules)
+	p, err := ParseACLPolicy(policy.Raw)
 	if err != nil {
 		return handleError(err)
 	}
-
-	if name != "" {
-		parse.Name = name
-	}
+	policy.Paths = p.Paths
 
 	// Update the policy
-	if err := b.Core.policyStore.SetPolicy(parse); err != nil {
+	if err := b.Core.policyStore.SetPolicy(policy); err != nil {
 		return handleError(err)
 	}
-	return nil, nil
+	return resp, nil
+}
+
+func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
+
+		if err := b.Core.policyStore.DeletePolicy(name, policyType); err != nil {
+			return handleError(err)
+		}
+		return nil, nil
+	}
 }
 
 // handlePolicyDelete handles the "policy/<name>" endpoint to delete a policy
@@ -2040,7 +2210,7 @@ func (b *SystemBackend) handlePolicyDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	if err := b.Core.policyStore.DeletePolicy(name); err != nil {
+	if err := b.Core.policyStore.DeletePolicy(name, PolicyTypeACL); err != nil {
 		return handleError(err)
 	}
 	return nil, nil

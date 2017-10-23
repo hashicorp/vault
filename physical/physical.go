@@ -110,6 +110,7 @@ type Lock interface {
 type Entry struct {
 	Key   string
 	Value []byte
+	SealWrap     bool          `json:"seal_wrap,omitempty"`
 }
 
 // Factory is the factory function to create a physical backend.

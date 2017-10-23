@@ -136,7 +136,7 @@ func (c *Cache) List(prefix string) ([]string, error) {
 	return c.backend.List(prefix)
 }
 
-func (c *TransactionalCache) Transaction(txns []TxnEntry) error {
+func (c *TransactionalCache) Transaction(txns []*TxnEntry) error {
 	// Lock the world
 	for _, lock := range c.locks {
 		lock.Lock()
