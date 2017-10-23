@@ -97,7 +97,8 @@ func TestCoreRaw(t testing.T) *Core {
 // TestCoreNewSeal returns a pure in-memory, uninitialized core with
 // the new seal configuration.
 func TestCoreNewSeal(t testing.T) *Core {
-	return TestCoreWithSeal(t, &TestSeal{}, false)
+	seal := NewTestSeal(t, nil)
+	return TestCoreWithSeal(t, seal, false)
 }
 
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
@@ -249,7 +250,7 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	conf := testCoreConfig(t, backend, logger)
-	conf.Seal = &TestSeal{}
+	conf.Seal = NewTestSeal(t, nil)
 
 	core, err := NewCore(conf)
 	if err != nil {
