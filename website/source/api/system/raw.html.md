@@ -3,14 +3,14 @@ layout: "api"
 page_title: "/sys/raw - HTTP API"
 sidebar_current: "docs-http-system-raw"
 description: |-
-  The `/sys/raw` endpoint is access the raw underlying store in Vault.
+  The `/sys/raw` endpoint is used to access the raw underlying store in Vault.
 ---
 
 # `/sys/raw`
 
-The `/sys/raw` endpoint is access the raw underlying store in Vault.
+The `/sys/raw` endpoint is used to access the raw underlying store in Vault.
 
-This endpont is off by default.  See the 
+This endpoint is off by default.  See the 
 [Vault configuration documentation](/docs/configuration/index.html) to
 enable.
 
