@@ -86,7 +86,7 @@ func (c *PolicyFmtCommand) Run(args []string) int {
 	}
 
 	// Actually parse the policy
-	if _, err := vault.Parse(string(b)); err != nil {
+	if _, err := vault.ParseACLPolicy(string(b)); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
