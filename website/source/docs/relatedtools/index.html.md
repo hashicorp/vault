@@ -27,3 +27,5 @@ suitability or security.
 * [vault-exec](https://github.com/kmanning/vault_exec) - a shell wrapper to execute arbitrary scripts using temporary AWS credentials managed by Vault
 * [pouch](https://github.com/tuenti/pouch) - Pouch and friends are a set of tools to manage provisioning of secrets on hosts based on the AppRole authentication method of Vault.
 * [vault-aws-creds](https://github.com/jantman/vault-aws-creds) - Python helper to export Vault-provided temporary AWS creds into the environment.
+
+Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/master/website/source/docs/relatedtools/index.html.md).
