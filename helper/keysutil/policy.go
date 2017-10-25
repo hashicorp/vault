@@ -585,11 +585,11 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 		}
 
 		// Encrypt and tag with GCM
-		out := gcm.Seal(nil, nonce, plaintext, nil)
+		ciphertext = gcm.Seal(nil, nonce, plaintext, nil)
 
 		// Place the encrypted data after the nonce
 		if !p.ConvergentEncryption || p.ConvergentVersion > 1 {
-			ciphertext = append(nonce, out...)
+			ciphertext = append(nonce, ciphertext...)
 		}
 
 	case KeyType_RSA:
