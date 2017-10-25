@@ -24,4 +24,6 @@ suitability or security.
 
 * [HashiCorp Vault Jenkins plugin](https://plugins.jenkins.io/hashicorp-vault-plugin) - a Jenkins plugin for injecting Vault secrets into the build environment.
 * [Spring Vault](http://projects.spring.io/spring-vault/) - a Java Spring project for working with Vault secrets.
-* [vault-redirector-twisted](https://github.com/manheim/vault-redirector-twisted) - a Python/Twisted application to redirect queries to the active Vault HA cluster instance.
+* [vault-exec](https://github.com/kmanning/vault_exec) - a shell wrapper to execute arbitrary scripts using temporary AWS credentials managed by Vault
+* [pouch](https://github.com/tuenti/pouch) - Pouch and friends are a set of tools to manage provisioning of secrets on hosts based on the AppRole authentication method of Vault.
+* [vault-aws-creds](https://github.com/jantman/vault-aws-creds) - Python helper to export Vault-provided temporary AWS creds into the environment.
