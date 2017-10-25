@@ -42,9 +42,11 @@ func (b *backend) pathKeys() *framework.Path {
 			"type": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
-				Description: `The type of key to create. Currently,
-"aes256-gcm96" (symmetric) and "ecdsa-p256" (asymmetric), and
-'ed25519' (asymmetric) are supported. Defaults to "aes256-gcm96".`,
+				Description: `
+The type of key to create. Currently, "aes256-gcm96" (symmetric), "ecdsa-p256"
+(asymmetric), 'ed25519' (asymmetric), 'rsa' (asymmetric) are supported.
+Defaults to "aes256-gcm96".
+`,
 			},
 
 			"derived": &framework.FieldSchema{
