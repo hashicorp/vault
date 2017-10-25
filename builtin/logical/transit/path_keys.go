@@ -2,7 +2,9 @@ package transit
 
 import (
 	"crypto/elliptic"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"strconv"
 	"time"
@@ -131,6 +133,8 @@ func (b *backend) pathPolicyWrite(
 		polReq.KeyType = keysutil.KeyType_ECDSA_P256
 	case "ed25519":
 		polReq.KeyType = keysutil.KeyType_ED25519
+	case "rsa":
+		polReq.KeyType = keysutil.KeyType_RSA
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -225,7 +229,7 @@ func (b *backend) pathPolicyRead(
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519, keysutil.KeyType_RSA:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -253,6 +257,24 @@ func (b *backend) pathPolicyRead(
 					}
 				}
 				key.Name = "ed25519"
+			case keysutil.KeyType_RSA:
+				key.Name = "rsa"
+
+				// Encode the RSA public key in PEM format to return over the
+				// API
+				derBytes, err := x509.MarshalPKIXPublicKey(v.RSAKey.Public())
+				if err != nil {
+					return nil, fmt.Errorf("error marshaling RSA public key: %v", err)
+				}
+				pemBlock := &pem.Block{
+					Type:  "PUBLIC KEY",
+					Bytes: derBytes,
+				}
+				pemBytes := pem.EncodeToMemory(pemBlock)
+				if pemBytes == nil || len(pemBytes) == 0 {
+					return nil, fmt.Errorf("failed to PEM-encode RSA public key")
+				}
+				key.PublicKey = string(pemBytes)
 			}
 
 			retKeys[strconv.Itoa(k)] = structs.New(key).Map()
