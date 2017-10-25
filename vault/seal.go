@@ -33,8 +33,8 @@ const (
 	// recoveryKeyPath is the path to the recovery key
 	recoveryKeyPath = "core/recovery-key"
 
-	// hsmStoredKeysPath is the path used for storing HSM-encrypted unseal keys
-	hsmStoredKeysPath = "core/hsm/barrier-unseal-keys"
+	// storedBarrierKeysPath is the path used for storing HSM-encrypted unseal keys
+	storedBarrierKeysPath = "core/hsm/barrier-unseal-keys"
 
 	// hsmStoredIVPath is the path to the initialization vector for stored keys
 	hsmStoredIVPath = "core/hsm/iv"
