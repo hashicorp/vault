@@ -52,7 +52,8 @@ values set here cannot be changed after key creation.
       (symmetric, supports derivation)
     - `ecdsa-p256` – ECDSA using the P-256 elliptic curve (asymmetric)
     - `ed25519` – ED25519 (asymmetric, supports derivation)
-    - `rsa` - RSA with bit size of 2048 (asymmetric)
+    - `rsa-2048` - RSA with bit size of 2048 (asymmetric)
+    - `rsa-4096` - RSA with bit size of 4096 (asymmetric)
 
 ### Sample Payload
 
