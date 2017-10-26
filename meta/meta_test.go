@@ -18,7 +18,7 @@ func TestFlagSet(t *testing.T) {
 		},
 		{
 			FlagSetServer,
-			[]string{"address", "ca-cert", "ca-path", "client-cert", "client-key", "insecure", "tls-skip-verify", "wrap-ttl"},
+			[]string{"address", "ca-cert", "ca-path", "client-cert", "client-key", "insecure", "mfa", "policy-override", "tls-skip-verify", "wrap-ttl"},
 		},
 	}
 

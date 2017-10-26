@@ -152,9 +152,11 @@ func (c *Core) startForwarding() error {
 					}
 
 					c.logger.Trace("core: got request forwarding connection")
+					c.clusterParamsLock.RLock()
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: c.rpcServer,
 					})
+					c.clusterParamsLock.RUnlock()
 
 				default:
 					c.logger.Debug("core: unknown negotiated protocol on cluster port")

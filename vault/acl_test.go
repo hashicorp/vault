@@ -23,7 +23,7 @@ func TestACL_Capabilities(t *testing.T) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policies, err := Parse(aclPolicy)
+	policies, err := ParseACLPolicy(aclPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -64,17 +64,17 @@ func TestACL_Root(t *testing.T) {
 	request := new(logical.Request)
 	request.Operation = logical.UpdateOperation
 	request.Path = "sys/mount/foo"
-	allowed, rootPrivs := acl.AllowOperation(request)
-	if !rootPrivs {
+	authResults := acl.AllowOperation(request)
+	if !authResults.RootPrivs {
 		t.Fatalf("expected root")
 	}
-	if !allowed {
+	if !authResults.Allowed {
 		t.Fatalf("expected permissions")
 	}
 }
 
 func TestACL_Single(t *testing.T) {
-	policy, err := Parse(aclPolicy)
+	policy, err := ParseACLPolicy(aclPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -89,8 +89,8 @@ func TestACL_Single(t *testing.T) {
 	request := new(logical.Request)
 	request.Operation = logical.ReadOperation
 	request.Path = "sys/mount/foo"
-	_, rootPrivs := acl.AllowOperation(request)
-	if rootPrivs {
+	authResults := acl.AllowOperation(request)
+	if authResults.RootPrivs {
 		t.Fatalf("unexpected root")
 	}
 
@@ -128,23 +128,23 @@ func TestACL_Single(t *testing.T) {
 		request := new(logical.Request)
 		request.Operation = tc.op
 		request.Path = tc.path
-		allowed, rootPrivs := acl.AllowOperation(request)
-		if allowed != tc.allowed {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		authResults := acl.AllowOperation(request)
+		if authResults.Allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
-		if rootPrivs != tc.rootPrivs {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		if authResults.RootPrivs != tc.rootPrivs {
+			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
 	}
 }
 
 func TestACL_Layered(t *testing.T) {
-	policy1, err := Parse(aclPolicy)
+	policy1, err := ParseACLPolicy(aclPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	policy2, err := Parse(aclPolicy2)
+	policy2, err := ParseACLPolicy(aclPolicy2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -162,8 +162,8 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 	request := new(logical.Request)
 	request.Operation = logical.ReadOperation
 	request.Path = "sys/mount/foo"
-	_, rootPrivs := acl.AllowOperation(request)
-	if rootPrivs {
+	authResults := acl.AllowOperation(request)
+	if authResults.RootPrivs {
 		t.Fatalf("unexpected root")
 	}
 
@@ -206,18 +206,18 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 		request := new(logical.Request)
 		request.Operation = tc.op
 		request.Path = tc.path
-		allowed, rootPrivs := acl.AllowOperation(request)
-		if allowed != tc.allowed {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		authResults := acl.AllowOperation(request)
+		if authResults.Allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
-		if rootPrivs != tc.rootPrivs {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		if authResults.RootPrivs != tc.rootPrivs {
+			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
 	}
 }
 
 func TestACL_PolicyMerge(t *testing.T) {
-	policy, err := Parse(mergingPolicies)
+	policy, err := ParseACLPolicy(mergingPolicies)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -256,7 +256,7 @@ func TestACL_PolicyMerge(t *testing.T) {
 			t.Fatalf("Could not find acl entry for path %s", tc.path)
 		}
 
-		p := raw.(*Permissions)
+		p := raw.(*ACLPermissions)
 		if !reflect.DeepEqual(tc.allowed, p.AllowedParameters) {
 			t.Fatalf("Allowed paramaters did not match, Expected: %#v, Got: %#v", tc.allowed, p.AllowedParameters)
 		}
@@ -273,7 +273,7 @@ func TestACL_PolicyMerge(t *testing.T) {
 }
 
 func TestACL_AllowOperation(t *testing.T) {
-	policy, err := Parse(permissionsPolicy)
+	policy, err := ParseACLPolicy(permissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -333,16 +333,16 @@ func TestACL_AllowOperation(t *testing.T) {
 		}
 		for _, op := range toperations {
 			request.Operation = op
-			allowed, _ := acl.AllowOperation(&request)
-			if allowed != tc.allowed {
-				t.Fatalf("bad: case %#v: %v", tc, allowed)
+			authResults := acl.AllowOperation(&request)
+			if authResults.Allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
 			}
 		}
 	}
 }
 
 func TestACL_ValuePermissions(t *testing.T) {
-	policy, err := Parse(valuePermissionsPolicy)
+	policy, err := ParseACLPolicy(valuePermissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -408,9 +408,9 @@ func TestACL_ValuePermissions(t *testing.T) {
 		}
 		for _, op := range toperations {
 			request.Operation = op
-			allowed, _ := acl.AllowOperation(&request)
-			if allowed != tc.allowed {
-				t.Fatalf("bad: case %#v: %v", tc, allowed)
+			authResults := acl.AllowOperation(&request)
+			if authResults.Allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
 			}
 		}
 	}
@@ -418,7 +418,7 @@ func TestACL_ValuePermissions(t *testing.T) {
 
 // NOTE: this test doesn't catch any races ATM
 func TestACL_CreationRace(t *testing.T) {
-	policy, err := Parse(valuePermissionsPolicy)
+	policy, err := ParseACLPolicy(valuePermissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

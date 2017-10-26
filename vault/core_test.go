@@ -488,7 +488,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -546,7 +546,7 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -873,6 +873,9 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	}
 
 	// Ensure we got a new client token back
+	if resp.IsError() {
+		t.Fatalf("err: %v %v", err, *resp)
+	}
 	clientToken := resp.Auth.ClientToken
 	if clientToken == "" {
 		t.Fatalf("bad: %#v", resp)
@@ -1927,7 +1930,7 @@ path "secret/*" {
 `
 
 	ps := c.policyStore
-	policy, _ := Parse(secretWritingPolicy)
+	policy, _ := ParseACLPolicy(secretWritingPolicy)
 	if err := ps.SetPolicy(policy); err != nil {
 		t.Fatal(err)
 	}

@@ -27,7 +27,7 @@ func TestPolicyStore_Root(t *testing.T) {
 	ps := mockPolicyStore(t)
 
 	// Get should return a special policy
-	p, err := ps.GetPolicy("root")
+	p, err := ps.GetPolicy("root", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestPolicyStore_Root(t *testing.T) {
 	}
 
 	// Delete should fail
-	err = ps.DeletePolicy("root")
+	err = ps.DeletePolicy("root", PolicyTypeACL)
 	if err.Error() != "cannot delete root policy" {
 		t.Fatalf("err: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestPolicyStore_CRUD(t *testing.T) {
 
 func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	// Get should return nothing
-	p, err := ps.GetPolicy("Dev")
+	p, err := ps.GetPolicy("Dev", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -70,13 +70,13 @@ func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	}
 
 	// Delete should be no-op
-	err = ps.DeletePolicy("deV")
+	err = ps.DeletePolicy("deV", PolicyTypeACL)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// List should be blank
-	out, err := ps.ListPolicies()
+	out, err := ps.ListPolicies(PolicyTypeACL)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -85,14 +85,14 @@ func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	}
 
 	// Set should work
-	policy, _ := Parse(aclPolicy)
+	policy, _ := ParseACLPolicy(aclPolicy)
 	err = ps.SetPolicy(policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Get should work
-	p, err = ps.GetPolicy("dEv")
+	p, err = ps.GetPolicy("dEv", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -101,7 +101,7 @@ func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	}
 
 	// List should be one element
-	out, err = ps.ListPolicies()
+	out, err = ps.ListPolicies(PolicyTypeACL)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -110,13 +110,13 @@ func testPolicyStore_CRUD(t *testing.T, ps *PolicyStore) {
 	}
 
 	// Delete should be clear the entry
-	err = ps.DeletePolicy("Dev")
+	err = ps.DeletePolicy("Dev", PolicyTypeACL)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Get should fail
-	p, err = ps.GetPolicy("deV")
+	p, err = ps.GetPolicy("deV", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestPolicyStore_Predefined(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	// List should be two elements
-	out, err := core.policyStore.ListPolicies()
+	out, err := core.policyStore.ListPolicies(PolicyTypeACL)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -143,16 +143,22 @@ func TestPolicyStore_Predefined(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	pCubby, err := core.policyStore.GetPolicy("response-wrapping")
+	pCubby, err := core.policyStore.GetPolicy("response-wrapping", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+	if pCubby == nil {
+		t.Fatal("nil cubby policy")
 	}
 	if pCubby.Raw != responseWrappingPolicy {
 		t.Fatalf("bad: expected\n%s\ngot\n%s\n", responseWrappingPolicy, pCubby.Raw)
 	}
-	pRoot, err := core.policyStore.GetPolicy("root")
+	pRoot, err := core.policyStore.GetPolicy("root", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+	if pRoot == nil {
+		t.Fatal("nil root policy")
 	}
 
 	err = core.policyStore.SetPolicy(pCubby)
@@ -163,11 +169,11 @@ func TestPolicyStore_Predefined(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected err setting %s", pRoot.Name)
 	}
-	err = core.policyStore.DeletePolicy(pCubby.Name)
+	err = core.policyStore.DeletePolicy(pCubby.Name, PolicyTypeACL)
 	if err == nil {
 		t.Fatalf("expected err deleting %s", pCubby.Name)
 	}
-	err = core.policyStore.DeletePolicy(pRoot.Name)
+	err = core.policyStore.DeletePolicy(pRoot.Name, PolicyTypeACL)
 	if err == nil {
 		t.Fatalf("expected err deleting %s", pRoot.Name)
 	}
@@ -176,12 +182,12 @@ func TestPolicyStore_Predefined(t *testing.T) {
 func TestPolicyStore_ACL(t *testing.T) {
 	ps := mockPolicyStore(t)
 
-	policy, _ := Parse(aclPolicy)
+	policy, _ := ParseACLPolicy(aclPolicy)
 	err := ps.SetPolicy(policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	policy, _ = Parse(aclPolicy2)
+	policy, _ = ParseACLPolicy(aclPolicy2)
 	err = ps.SetPolicy(policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -192,27 +198,4 @@ func TestPolicyStore_ACL(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	testLayeredACL(t, acl)
-}
-
-func TestPolicyStore_v1Upgrade(t *testing.T) {
-	ps := mockPolicyStore(t)
-
-	// Put a V1 record
-	raw := `path "foo" { policy = "read" }`
-	ps.view.Put(&logical.StorageEntry{Key: "old", Value: []byte(raw)})
-
-	// Do a read
-	p, err := ps.GetPolicy("old")
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if p == nil || len(p.Paths) != 1 {
-		t.Fatalf("bad policy: %#v", p)
-	}
-
-	// Check that glob is enabled
-	if !p.Paths[0].Glob {
-		t.Fatalf("should enable glob")
-	}
 }

@@ -233,7 +233,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingStorageView("test/")
+	view := c.router.MatchingStorageByAPIPath("test/")
 
 	// Inject data
 	se := &logical.StorageEntry{
@@ -353,7 +353,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingStorageView("test/")
+	view := c.router.MatchingStorageByAPIPath("test/")
 
 	// Inject data
 	se := &logical.StorageEntry{
@@ -633,8 +633,9 @@ func TestSingletonMountTableFunc(t *testing.T) {
 	mounts, auth := c.singletonMountTables()
 
 	if len(mounts.Entries) != 2 {
-		t.Fatal("length of mounts is wrong")
+		t.Fatalf("length of mounts is wrong; expected 2, got %d", len(mounts.Entries))
 	}
+
 	for _, entry := range mounts.Entries {
 		switch entry.Type {
 		case "system":
