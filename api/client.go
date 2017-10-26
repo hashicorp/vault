@@ -32,6 +32,7 @@ const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
 const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 const EnvVaultToken = "VAULT_TOKEN"
+const EnvVaultMFA = "VAULT_MFA"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -236,14 +237,23 @@ func (c *Config) ReadEnvironment() error {
 	return nil
 }
 
-// Client is the client to the Vault API. Create a client with
-// NewClient.
+// Client is the client to the Vault API. Create a client with NewClient. Note:
+// it is not safe to modify client configuration from multiple goroutines at
+// once. Set configuration first, then run requests.
 type Client struct {
 	addr               *url.URL
 	config             *Config
 	token              string
 	headers            http.Header
 	wrappingLookupFunc WrappingLookupFunc
+	mfaCreds           []string
+	policyOverride     bool
+}
+
+// SetMFACreds sets the MFA credentials supplied either via the environment
+// variable or via the command line.
+func (c *Client) SetMFACreds(creds []string) {
+	c.mfaCreds = creds
 }
 
 // NewClient returns a new client for the given configuration.
@@ -365,6 +375,13 @@ func (c *Client) Clone() (*Client, error) {
 	return NewClient(c.config)
 }
 
+// SetPolicyOverride sets whether requests should be sent with the policy
+// override flag to request overriding soft-mandatory Sentinel policies (both
+// RGPs and EGPs)
+func (c *Client) SetPolicyOverride(override bool) {
+	c.policyOverride = override
+}
+
 // NewRequest creates a new raw request object to query the Vault server
 // configured for this client. This is an advanced method and generally
 // doesn't need to be called externally.
@@ -401,6 +418,9 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	default:
 		lookupPath = requestPath
 	}
+
+	req.MFAHeaderVals = c.mfaCreds
+
 	if c.wrappingLookupFunc != nil {
 		req.WrapTTL = c.wrappingLookupFunc(method, lookupPath)
 	} else {
@@ -412,6 +432,8 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	if c.headers != nil {
 		req.Headers = c.headers
 	}
+
+	req.PolicyOverride = c.policyOverride
 
 	return req
 }

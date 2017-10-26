@@ -18,7 +18,7 @@ func TestCapabilities(t *testing.T) {
 	}
 
 	// Create a policy
-	policy, _ := Parse(aclPolicy)
+	policy, _ := ParseACLPolicy(aclPolicy)
 	err = c.policyStore.SetPolicy(policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)

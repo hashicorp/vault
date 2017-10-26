@@ -281,7 +281,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil || resp.IsError() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -319,7 +319,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil || resp.IsError() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -340,7 +340,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil || resp.IsError() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -361,7 +361,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil || resp.IsError() {
 		t.Fatalf("bad: %#v", resp)
 	}
 

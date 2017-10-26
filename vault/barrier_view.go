@@ -66,8 +66,9 @@ func (v *BarrierView) Get(key string) (*logical.StorageEntry, error) {
 	}
 
 	return &logical.StorageEntry{
-		Key:   entry.Key,
-		Value: entry.Value,
+		Key:      entry.Key,
+		Value:    entry.Value,
+		SealWrap: entry.SealWrap,
 	}, nil
 }
 
@@ -84,8 +85,9 @@ func (v *BarrierView) Put(entry *logical.StorageEntry) error {
 	}
 
 	nested := &Entry{
-		Key:   expandedKey,
-		Value: entry.Value,
+		Key:      expandedKey,
+		Value:    entry.Value,
+		SealWrap: entry.SealWrap,
 	}
 	return v.barrier.Put(nested)
 }

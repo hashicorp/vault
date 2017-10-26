@@ -15,8 +15,8 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
-// Register these types since we have to serialize and de-serialize tls.ConnectionState
-// over the wire as part of logical.Request.Connection.
+// init registers basic structs with gob which will be used to transport complex
+// types through the plugin server and client.
 func init() {
 	// Common basic structs
 	gob.Register([]interface{}{})
@@ -24,10 +24,17 @@ func init() {
 	gob.Register(map[string]string{})
 	gob.Register(map[string]int{})
 
-	// tls.ConnectionState structs
+	// Register these types since we have to serialize and de-serialize
+	// tls.ConnectionState over the wire as part of logical.Request.Connection.
 	gob.Register(rsa.PublicKey{})
 	gob.Register(ecdsa.PublicKey{})
 	gob.Register(time.Duration(0))
+
+	// Custom common error types for requests. If you add something here, you must
+	// also add it to the switch statement in `wrapError`!
+	gob.Register(&plugin.BasicError{})
+	gob.Register(logical.CodedError(0, ""))
+	gob.Register(&logical.StatusBadRequest{})
 }
 
 // BackendPluginClient is a wrapper around backendPluginClient
@@ -123,4 +130,23 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 		client:              client,
 		backendPluginClient: backendRPC,
 	}, nil
+}
+
+// wrapError takes a generic error type and makes it usable with the plugin
+// interface. Only errors which have exported fields and have been registered
+// with gob can be unwrapped and transported. This checks error types and, if
+// none match, wrap the error in a plugin.BasicError.
+func wrapError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	switch err.(type) {
+	case *plugin.BasicError,
+		logical.HTTPCodedError,
+		*logical.StatusBadRequest:
+		return err
+	}
+
+	return plugin.NewBasicError(err)
 }

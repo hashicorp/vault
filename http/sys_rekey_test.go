@@ -13,7 +13,7 @@ import (
 
 // Test to check if the API errors out when wrong number of PGP keys are
 // supplied for rekey
-func TestSysRekeyInit_pgpKeysEntriesForRekey(t *testing.T) {
+func TestSysRekey_Init_pgpKeysEntriesForRekey(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -27,7 +27,7 @@ func TestSysRekeyInit_pgpKeysEntriesForRekey(t *testing.T) {
 	testResponseStatus(t, resp, 400)
 }
 
-func TestSysRekeyInit_Status(t *testing.T) {
+func TestSysRekey_Init_Status(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -56,12 +56,13 @@ func TestSysRekeyInit_Status(t *testing.T) {
 	}
 }
 
-func TestSysRekeyInit_Setup(t *testing.T) {
+func TestSysRekey_Init_Setup(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
+	// Start rekey
 	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
 		"secret_shares":    5,
 		"secret_threshold": 3,
@@ -88,6 +89,7 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
 
+	// Get rekey status
 	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/init")
 
 	actual = map[string]interface{}{}
@@ -114,7 +116,7 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 	}
 }
 
-func TestSysRekeyInit_Cancel(t *testing.T) {
+func TestSysRekey_Init_Cancel(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()

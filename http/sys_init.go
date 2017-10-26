@@ -57,6 +57,14 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		PGPKeys:         req.RecoveryPGPKeys,
 	}
 
+	// N.B. Although the core is capable of handling situations where some keys
+	// are stored and some aren't, in practice, replication + HSMs makes this
+	// extremely hard to reason about, to the point that it will probably never
+	// be supported. The reason is that each HSM needs to encode the master key
+	// separately, which means the shares must be generated independently,
+	// which means both that the shares will be different *AND* there would
+	// need to be a way to actually allow fetching of the generated keys by
+	// operators.
 	if core.SealAccess().StoredKeysSupported() {
 		if barrierConfig.SecretShares != 1 {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("secret shares must be 1"))

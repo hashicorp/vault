@@ -30,7 +30,7 @@ func (c *Core) Capabilities(token, path string) ([]string, error) {
 
 	var policies []*Policy
 	for _, tePolicy := range te.Policies {
-		policy, err := c.policyStore.GetPolicy(tePolicy)
+		policy, err := c.policyStore.GetPolicy(tePolicy, PolicyTypeToken)
 		if err != nil {
 			return nil, err
 		}

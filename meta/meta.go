@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"flag"
 	"io"
+	"os"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/helper/flag-slice"
 	"github.com/mitchellh/cli"
 )
 
@@ -34,6 +36,9 @@ var (
                           "s", "m", or "h"; if no suffix is specified it will
                           be parsed as seconds. May also be specified via
                           VAULT_WRAP_TTL.
+
+  -policy-override        Indicates that any soft-mandatory Sentinel policies
+                          be overridden.
 `
 	}
 )
@@ -48,13 +53,15 @@ type Meta struct {
 	ForceAddress string // Address to force for API clients
 
 	// These are set by the command line flags.
-	flagAddress    string
-	flagCACert     string
-	flagCAPath     string
-	flagClientCert string
-	flagClientKey  string
-	flagWrapTTL    string
-	flagInsecure   bool
+	flagAddress        string
+	flagCACert         string
+	flagCAPath         string
+	flagClientCert     string
+	flagClientKey      string
+	flagWrapTTL        string
+	flagInsecure       bool
+	flagMFA            []string
+	flagPolicyOverride bool
 
 	// Queried if no token can be found
 	TokenHelper TokenHelperFunc
@@ -105,6 +112,22 @@ func (m *Meta) Client() (*api.Client, error) {
 
 	client.SetWrappingLookupFunc(m.DefaultWrappingLookupFunc)
 
+	var mfaCreds []string
+
+	// Extract the MFA credentials from environment variable first
+	if os.Getenv(api.EnvVaultMFA) != "" {
+		mfaCreds = []string{os.Getenv(api.EnvVaultMFA)}
+	}
+
+	// If CLI MFA flags were supplied, prefer that over environment variable
+	if len(m.flagMFA) != 0 {
+		mfaCreds = m.flagMFA
+	}
+
+	client.SetMFACreds(mfaCreds)
+
+	client.SetPolicyOverride(m.flagPolicyOverride)
+
 	// If we have a token directly, then set that
 	token := m.ClientToken
 
@@ -154,6 +177,8 @@ func (m *Meta) FlagSet(n string, fs FlagSetFlags) *flag.FlagSet {
 		f.StringVar(&m.flagWrapTTL, "wrap-ttl", "", "")
 		f.BoolVar(&m.flagInsecure, "insecure", false, "")
 		f.BoolVar(&m.flagInsecure, "tls-skip-verify", false, "")
+		f.BoolVar(&m.flagPolicyOverride, "policy-override", false, "")
+		f.Var((*sliceflag.StringFlag)(&m.flagMFA), "mfa", "")
 	}
 
 	// Create an io.Writer that writes to our Ui properly for errors.
