@@ -274,7 +274,7 @@ func (b *backend) pathPolicyRead(
 					return nil, fmt.Errorf("error marshaling RSA public key: %v", err)
 				}
 				pemBlock := &pem.Block{
-					Type:  "RSA PUBLIC KEY",
+					Type:  "PUBLIC KEY",
 					Bytes: derBytes,
 				}
 				pemBytes := pem.EncodeToMemory(pemBlock)
