@@ -24,6 +24,7 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "ID of the alias",
 				},
+				// entity_id is deprecated
 				"entity_id": {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias belongs to",
@@ -60,7 +61,12 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "ID of the alias",
 				},
+				// entity_id is deprecated
 				"entity_id": {
+					Type:        framework.TypeString,
+					Description: "Entity ID to which this alias belongs to",
+				},
+				"parent_id": {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias belongs to",
 				},
@@ -91,6 +97,7 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "ID of the alias",
 				},
+				// entity_id is deprecated
 				"entity_id": {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias belongs to",
@@ -129,7 +136,12 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "ID of the alias",
 				},
+				// entity_id is deprecated
 				"entity_id": {
+					Type:        framework.TypeString,
+					Description: "Entity ID to which this alias should be tied to",
+				},
+				"parent_id": {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias should be tied to",
 				},
