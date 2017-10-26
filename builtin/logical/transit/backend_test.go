@@ -142,6 +142,38 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	if resp.Data["plaintext"].(string) != plaintext {
 		t.Fatal("failed to decrypt ciphertext after rotating the key")
 	}
+
+	signReq := &logical.Request{
+		Path:      "sign/rsa",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"input": plaintext,
+		},
+	}
+	resp, err = b.HandleRequest(signReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	signature := resp.Data["signature"].(string)
+
+	verifyReq := &logical.Request{
+		Path:      "verify/rsa",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"input":     plaintext,
+			"signature": signature,
+		},
+	}
+
+	resp, err = b.HandleRequest(verifyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if !resp.Data["valid"].(bool) {
+		t.Fatal("failed to verify the RSA signature")
+	}
 }
 
 func TestBackend_basic(t *testing.T) {
