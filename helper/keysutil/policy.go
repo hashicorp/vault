@@ -45,7 +45,8 @@ const (
 	KeyType_AES256_GCM96 = iota
 	KeyType_ECDSA_P256
 	KeyType_ED25519
-	KeyType_RSA
+	KeyType_RSA2048
+	KeyType_RSA4096
 )
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
@@ -63,7 +64,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96, KeyType_RSA:
+	case KeyType_AES256_GCM96, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -71,7 +72,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96, KeyType_RSA:
+	case KeyType_AES256_GCM96, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -79,7 +80,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA:
+	case KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -109,8 +110,10 @@ func (kt KeyType) String() string {
 		return "ecdsa-p256"
 	case KeyType_ED25519:
 		return "ed25519"
-	case KeyType_RSA:
-		return "rsa"
+	case KeyType_RSA2048:
+		return "rsa-2048"
+	case KeyType_RSA4096:
+		return "rsa-4096"
 	}
 
 	return "[unknown]"
@@ -592,11 +595,11 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 			ciphertext = append(nonce, ciphertext...)
 		}
 
-	case KeyType_RSA:
+	case KeyType_RSA2048, KeyType_RSA4096:
 		key := p.Keys[ver].RSAKey
 		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
 		if err != nil {
-			return "", errutil.InternalError{Err: fmt.Sprintf("RSA: Error from encryption: %s\n", err)}
+			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
 		}
 
 	default:
@@ -692,11 +695,11 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			return "", errutil.UserError{Err: "invalid ciphertext: unable to decrypt"}
 		}
 
-	case KeyType_RSA:
+	case KeyType_RSA2048, KeyType_RSA4096:
 		key := p.Keys[ver].RSAKey
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		if err != nil {
-			return "", errutil.InternalError{Err: fmt.Sprintf("error while decrypting RSA ciphertext: %v", err)}
+			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
 		}
 
 	default:
@@ -786,7 +789,7 @@ func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
 			return nil, err
 		}
 
-	case KeyType_RSA:
+	case KeyType_RSA2048, KeyType_RSA4096:
 		key := p.Keys[ver].RSAKey
 
 		hash := crypto.SHA256.New()
@@ -884,7 +887,7 @@ func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error
 
 		return ed25519.Verify(key.Public().(ed25519.PublicKey), input, sigBytes), nil
 
-	case KeyType_RSA:
+	case KeyType_RSA2048, KeyType_RSA4096:
 		key := p.Keys[ver].RSAKey
 
 		hash := crypto.SHA256.New()
@@ -964,8 +967,13 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 		entry.Key = pri
 		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub)
 
-	case KeyType_RSA:
-		entry.RSAKey, err = rsa.GenerateKey(rand.Reader, 2048)
+	case KeyType_RSA2048, KeyType_RSA4096:
+		bitSize := 2048
+		if p.Type == KeyType_RSA4096 {
+			bitSize = 4096
+		}
+
+		entry.RSAKey, err = rsa.GenerateKey(rand.Reader, bitSize)
 		if err != nil {
 			return err
 		}

@@ -44,8 +44,8 @@ func (b *backend) pathKeys() *framework.Path {
 				Default: "aes256-gcm96",
 				Description: `
 The type of key to create. Currently, "aes256-gcm96" (symmetric), "ecdsa-p256"
-(asymmetric), 'ed25519' (asymmetric), 'rsa' (asymmetric) are supported.
-Defaults to "aes256-gcm96".
+(asymmetric), 'ed25519' (asymmetric), 'rsa-2048' (asymmetric), 'rsa-4096'
+(asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 
@@ -135,8 +135,10 @@ func (b *backend) pathPolicyWrite(
 		polReq.KeyType = keysutil.KeyType_ECDSA_P256
 	case "ed25519":
 		polReq.KeyType = keysutil.KeyType_ED25519
-	case "rsa":
-		polReq.KeyType = keysutil.KeyType_RSA
+	case "rsa-2048":
+		polReq.KeyType = keysutil.KeyType_RSA2048
+	case "rsa-4096":
+		polReq.KeyType = keysutil.KeyType_RSA4096
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -231,7 +233,7 @@ func (b *backend) pathPolicyRead(
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519, keysutil.KeyType_RSA:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -259,8 +261,11 @@ func (b *backend) pathPolicyRead(
 					}
 				}
 				key.Name = "ed25519"
-			case keysutil.KeyType_RSA:
-				key.Name = "rsa"
+			case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+				key.Name = "rsa-2048"
+				if p.Type == keysutil.KeyType_RSA4096 {
+					key.Name = "rsa-4096"
+				}
 
 				// Encode the RSA public key in PEM format to return over the
 				// API
