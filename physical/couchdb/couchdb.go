@@ -22,7 +22,6 @@ import (
 // CouchDBBackend allows the management of couchdb users
 type CouchDBBackend struct {
 	logger     log.Logger
-	prefix     string
 	client     *couchDBClient
 	permitPool *physical.PermitPool
 }
@@ -159,12 +158,6 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 		username = conf["username"]
 	}
 
-	prefix := "$"
-	prefixedStr, ok := conf["prefixed"]
-	if ok {
-		prefix = prefixedStr
-	}
-
 	password := os.Getenv("COUCHDB_PASSWORD")
 	if password == "" {
 		password = conf["password"]
@@ -190,7 +183,6 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			password: password,
 			Client:   cleanhttp.DefaultPooledClient(),
 		},
-		prefix:     prefix,
 		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}, nil
@@ -234,10 +226,6 @@ func (m *CouchDBBackend) Delete(key string) error {
 // List is used to list all the keys under a given prefix
 func (m *CouchDBBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"couchdb", "list"}, time.Now())
-
-	if m.prefix != "" {
-		prefix = m.prefix + prefix
-	}
 
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
@@ -287,10 +275,6 @@ func NewTransactionalCouchDBBackend(conf map[string]string, logger log.Logger) (
 func (m *CouchDBBackend) GetInternal(key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"couchdb", "get"}, time.Now())
 
-	if m.prefix != "" {
-		key = m.prefix + key
-	}
-
 	return m.client.get(key)
 }
 
@@ -298,27 +282,18 @@ func (m *CouchDBBackend) GetInternal(key string) (*physical.Entry, error) {
 func (m *CouchDBBackend) PutInternal(entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"couchdb", "put"}, time.Now())
 
-	key := entry.Key
-	if m.prefix != "" {
-		key = m.prefix + entry.Key
-	}
-
-	revision, _ := m.client.rev(url.PathEscape(key))
+	revision, _ := m.client.rev(url.PathEscape(entry.Key))
 
 	return m.client.put(couchDBEntry{
 		Entry: entry,
 		Rev:   revision,
-		ID:    url.PathEscape(key),
+		ID:    url.PathEscape(entry.Key),
 	})
 }
 
 // DeleteInternal is used to permanently delete an entry
 func (m *CouchDBBackend) DeleteInternal(key string) error {
 	defer metrics.MeasureSince([]string{"couchdb", "delete"}, time.Now())
-
-	if m.prefix != "" {
-		key = m.prefix + key
-	}
 
 	revision, _ := m.client.rev(url.PathEscape(key))
 	deleted := true
