@@ -38,6 +38,115 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	return b, config.StorageView
 }
 
+func TestTransit_RSA(t *testing.T) {
+	fmt.Printf("now running rsa-2048\n")
+	testTransit_RSA(t, "rsa-2048")
+
+	fmt.Printf("now running rsa-4096\n")
+	testTransit_RSA(t, "rsa-4096")
+}
+
+func testTransit_RSA(t *testing.T, keyType string) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	keyReq := &logical.Request{
+		Path:      "keys/rsa",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": keyType,
+		},
+		Storage: storage,
+	}
+
+	resp, err = b.HandleRequest(keyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
+
+	encryptReq := &logical.Request{
+		Path:      "encrypt/rsa",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"plaintext": plaintext,
+		},
+	}
+
+	resp, err = b.HandleRequest(encryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	ciphertext1 := resp.Data["ciphertext"].(string)
+
+	decryptReq := &logical.Request{
+		Path:      "decrypt/rsa",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"ciphertext": ciphertext1,
+		},
+	}
+
+	resp, err = b.HandleRequest(decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	decryptedPlaintext := resp.Data["plaintext"]
+
+	if plaintext != decryptedPlaintext {
+		t.Fatalf("bad: plaintext; expected: %q\nactual: %q", plaintext, decryptedPlaintext)
+	}
+
+	// Rotate the key
+	rotateReq := &logical.Request{
+		Path:      "keys/rsa/rotate",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+	}
+	resp, err = b.HandleRequest(rotateReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Encrypt again
+	resp, err = b.HandleRequest(encryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	ciphertext2 := resp.Data["ciphertext"].(string)
+
+	if ciphertext1 == ciphertext2 {
+		t.Fatalf("expected different ciphertexts")
+	}
+
+	// See if the older ciphertext can still be decrypted
+	resp, err = b.HandleRequest(decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Data["plaintext"].(string) != plaintext {
+		t.Fatal("failed to decrypt old ciphertext after rotating the key")
+	}
+
+	// Decrypt the new ciphertext
+	decryptReq.Data = map[string]interface{}{
+		"ciphertext": ciphertext2,
+	}
+	resp, err = b.HandleRequest(decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Data["plaintext"].(string) != plaintext {
+		t.Fatal("failed to decrypt ciphertext after rotating the key")
+	}
+}
+
 func TestBackend_basic(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
