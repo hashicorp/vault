@@ -796,9 +796,7 @@ func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
 		hash.Write(input)
 		inputHash := hash.Sum(nil)
 
-		sig, err = rsa.SignPSS(rand.Reader, key, crypto.SHA256, inputHash, &rsa.PSSOptions{
-			SaltLength: rsa.PSSSaltLengthEqualsHash,
-		})
+		sig, err = rsa.SignPSS(rand.Reader, key, crypto.SHA256, inputHash, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -894,9 +892,7 @@ func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error
 		hash.Write(input)
 		inputHash := hash.Sum(nil)
 
-		err = rsa.VerifyPSS(&key.PublicKey, crypto.SHA256, inputHash, sigBytes, &rsa.PSSOptions{
-			SaltLength: rsa.PSSSaltLengthEqualsHash,
-		})
+		err = rsa.VerifyPSS(&key.PublicKey, crypto.SHA256, inputHash, sigBytes, nil)
 
 		return err == nil, nil
 
