@@ -30,11 +30,10 @@ storage "couchdb" {
 
 ## `couchdb` Parameters
 
-- `prefixed` `(string: "true")` – Specifies whether each value written to
-  CouchDB should be prefixed with `$`. If turned off, Vault may run into error
+- `prefix` `(string: "$")` – Specifies a prefix to use for each value written
+  to CouchDB. If turned off (by setting to `""`, Vault may run into error
   conditions if values are written that begin with an underscore, since it is a
-  reserved prefix in CouchDB. This can also be provided via the environment
-  variable `COUCHDB_PREFIXED`.
+  reserved prefix in CouchDB.
 
 - `endpoint` `(string: "")` – Specifies your CouchDB endpoint. This can also be
   provided via the environment variable `COUCHDB_ENDPOINT`.

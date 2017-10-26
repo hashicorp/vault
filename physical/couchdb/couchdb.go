@@ -22,7 +22,7 @@ import (
 // CouchDBBackend allows the management of couchdb users
 type CouchDBBackend struct {
 	logger     log.Logger
-	prefixed   bool
+	prefix     string
 	client     *couchDBClient
 	permitPool *physical.PermitPool
 }
@@ -159,17 +159,10 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 		username = conf["username"]
 	}
 
-	prefixed := true
-	prefixedStr := os.Getenv("COUCHDB_PREFIXED")
-	if prefixedStr == "" {
-		prefixedStr = conf["prefixed"]
-	}
-	if prefixedStr != "" {
-		var err error
-		prefixed, err = strconv.ParseBool(prefixedStr)
-		if err != nil {
-			return nil, err
-		}
+	prefix := "$"
+	prefixedStr, ok := conf["prefixed"]
+	if ok {
+		prefix = prefixedStr
 	}
 
 	password := os.Getenv("COUCHDB_PASSWORD")
@@ -197,7 +190,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			password: password,
 			Client:   cleanhttp.DefaultPooledClient(),
 		},
-		prefixed:   prefixed,
+		prefix:     prefix,
 		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}, nil
@@ -242,8 +235,8 @@ func (m *CouchDBBackend) Delete(key string) error {
 func (m *CouchDBBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"couchdb", "list"}, time.Now())
 
-	if m.prefixed {
-		prefix = "$" + prefix
+	if m.prefix != "" {
+		prefix = m.prefix + prefix
 	}
 
 	m.permitPool.Acquire()
@@ -294,8 +287,8 @@ func NewTransactionalCouchDBBackend(conf map[string]string, logger log.Logger) (
 func (m *CouchDBBackend) GetInternal(key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"couchdb", "get"}, time.Now())
 
-	if m.prefixed {
-		key = "$" + key
+	if m.prefix != "" {
+		key = m.prefix + key
 	}
 
 	return m.client.get(key)
@@ -306,8 +299,8 @@ func (m *CouchDBBackend) PutInternal(entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"couchdb", "put"}, time.Now())
 
 	key := entry.Key
-	if m.prefixed {
-		key = "$" + entry.Key
+	if m.prefix != "" {
+		key = m.prefix + entry.Key
 	}
 
 	revision, _ := m.client.rev(url.PathEscape(key))
@@ -323,8 +316,8 @@ func (m *CouchDBBackend) PutInternal(entry *physical.Entry) error {
 func (m *CouchDBBackend) DeleteInternal(key string) error {
 	defer metrics.MeasureSince([]string{"couchdb", "delete"}, time.Now())
 
-	if m.prefixed {
-		key = "$" + key
+	if m.prefix != "" {
+		key = m.prefix + key
 	}
 
 	revision, _ := m.client.rev(url.PathEscape(key))
