@@ -39,10 +39,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 }
 
 func TestTransit_RSA(t *testing.T) {
-	fmt.Printf("now running rsa-2048\n")
 	testTransit_RSA(t, "rsa-2048")
-
-	fmt.Printf("now running rsa-4096\n")
 	testTransit_RSA(t, "rsa-4096")
 }
 

@@ -152,6 +152,16 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 		switch policy.Type {
 		case keysutil.KeyType_AES256_GCM96:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
+
+		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+			derBytes := x509.MarshalPKCS1PrivateKey(key.RSAKey)
+			pemBlock := &pem.Block{
+				Type:  "RSA PRIVATE KEY",
+				Bytes: derBytes,
+			}
+			pemBytes := pem.EncodeToMemory(pemBlock)
+			return string(pemBytes), nil
+
 		}
 
 	case exportTypeSigningKey:
