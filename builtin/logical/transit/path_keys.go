@@ -273,6 +273,9 @@ func (b *backend) pathPolicyRead(
 				if err != nil {
 					return nil, fmt.Errorf("error marshaling RSA public key: %v", err)
 				}
+				// Not making the header 'RSA PUBLIC KEY' since the format is
+				// of generic public key and not specifically of RSA. If its
+				// 'RSA PUBLIC KEY', 'openssl' complains.
 				pemBlock := &pem.Block{
 					Type:  "PUBLIC KEY",
 					Bytes: derBytes,
