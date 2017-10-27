@@ -556,7 +556,7 @@ then made available to trusted users.
   part of the URL.
 
 - `name` `(string: <required>)` – Specifies the name of the encryption key to
-  re-encrypt against. This is specified as part of the URL.
+  use to encrypt the datakey. This is specified as part of the URL.
 
 - `context` `(string: "")` – Specifies the key derivation context, provided as a
   base64-encoded string. This must be provided if derivation is enabled.
