@@ -282,8 +282,19 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	if tp, ok := c.HttpClient.Transport.(*http.Transport); ok {
-		if err := http2.ConfigureTransport(tp); err != nil {
-			return nil, err
+		if tcc := tp.TLSClientConfig; tcc != nil {
+			var found bool
+			for _, proto := range tcc.NextProtos {
+				if proto == "h2" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				if err := http2.ConfigureTransport(tp); err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
 
