@@ -196,6 +196,13 @@ func (w *Writer) Uint64Str(n uint64) {
 	w.Buffer.Buf = append(w.Buffer.Buf, '"')
 }
 
+func (w *Writer) UintptrStr(n uintptr) {
+	w.Buffer.EnsureSpace(20)
+	w.Buffer.Buf = append(w.Buffer.Buf, '"')
+	w.Buffer.Buf = strconv.AppendUint(w.Buffer.Buf, uint64(n), 10)
+	w.Buffer.Buf = append(w.Buffer.Buf, '"')
+}
+
 func (w *Writer) Int8Str(n int8) {
 	w.Buffer.EnsureSpace(4)
 	w.Buffer.Buf = append(w.Buffer.Buf, '"')

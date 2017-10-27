@@ -1,5 +1,8 @@
 Change history of go-restful
 =
+2017-09-13
+- added route condition functions using `.If(func)` in route building.
+
 2017-02-16
 - solved issue #304, make operation names unique
 

@@ -2100,12 +2100,28 @@ func (i *Issue) GetComments() int {
 	return *i.Comments
 }
 
+// GetCommentsURL returns the CommentsURL field if it's non-nil, zero value otherwise.
+func (i *Issue) GetCommentsURL() string {
+	if i == nil || i.CommentsURL == nil {
+		return ""
+	}
+	return *i.CommentsURL
+}
+
 // GetCreatedAt returns the CreatedAt field if it's non-nil, zero value otherwise.
 func (i *Issue) GetCreatedAt() time.Time {
 	if i == nil || i.CreatedAt == nil {
 		return time.Time{}
 	}
 	return *i.CreatedAt
+}
+
+// GetEventsURL returns the EventsURL field if it's non-nil, zero value otherwise.
+func (i *Issue) GetEventsURL() string {
+	if i == nil || i.EventsURL == nil {
+		return ""
+	}
+	return *i.EventsURL
 }
 
 // GetHTMLURL returns the HTMLURL field if it's non-nil, zero value otherwise.
@@ -2124,6 +2140,14 @@ func (i *Issue) GetID() int {
 	return *i.ID
 }
 
+// GetLabelsURL returns the LabelsURL field if it's non-nil, zero value otherwise.
+func (i *Issue) GetLabelsURL() string {
+	if i == nil || i.LabelsURL == nil {
+		return ""
+	}
+	return *i.LabelsURL
+}
+
 // GetLocked returns the Locked field if it's non-nil, zero value otherwise.
 func (i *Issue) GetLocked() bool {
 	if i == nil || i.Locked == nil {
@@ -2138,6 +2162,14 @@ func (i *Issue) GetNumber() int {
 		return 0
 	}
 	return *i.Number
+}
+
+// GetRepositoryURL returns the RepositoryURL field if it's non-nil, zero value otherwise.
+func (i *Issue) GetRepositoryURL() string {
+	if i == nil || i.RepositoryURL == nil {
+		return ""
+	}
+	return *i.RepositoryURL
 }
 
 // GetState returns the State field if it's non-nil, zero value otherwise.

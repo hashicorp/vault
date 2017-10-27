@@ -161,6 +161,18 @@ func (s *Session) init() error {
 		return err
 	}
 
+	allHosts := hosts
+	hosts = hosts[:0]
+	hostMap := make(map[string]*HostInfo, len(allHosts))
+	for _, host := range allHosts {
+		if !s.cfg.filterHost(host) {
+			hosts = append(hosts, host)
+			hostMap[host.ConnectAddress().String()] = host
+		}
+	}
+
+	s.ring.endpoints = hosts
+
 	if !s.cfg.disableControlConn {
 		s.control = createControlConn(s)
 		if s.cfg.ProtoVersion == 0 {
@@ -182,17 +194,20 @@ func (s *Session) init() error {
 
 		if !s.cfg.DisableInitialHostLookup {
 			var partitioner string
-			hosts, partitioner, err = s.hostSource.GetHosts()
+			newHosts, partitioner, err := s.hostSource.GetHosts()
 			if err != nil {
 				return err
 			}
 			s.policy.SetPartitioner(partitioner)
+			for _, host := range newHosts {
+				hostMap[host.ConnectAddress().String()] = host
+			}
 		}
 	}
 
-	for _, host := range hosts {
+	for _, host := range hostMap {
 		host = s.ring.addOrUpdate(host)
-		s.handleNodeUp(host.ConnectAddress(), host.Port(), false)
+		s.addNewNode(host)
 	}
 
 	// TODO(zariel): we probably dont need this any more as we verify that we
@@ -210,7 +225,8 @@ func (s *Session) init() error {
 		newer, _ := checkSystemSchema(s.control)
 		s.useSystemSchema = newer
 	} else {
-		s.useSystemSchema = hosts[0].Version().Major >= 3
+		host := s.ring.rrHost()
+		s.useSystemSchema = host.Version().Major >= 3
 	}
 
 	if s.pool.Size() == 0 {
@@ -639,7 +655,7 @@ func (s *Session) MapExecuteBatchCAS(batch *Batch, dest map[string]interface{}) 
 }
 
 func (s *Session) connect(host *HostInfo, errorHandler ConnErrorHandler) (*Conn, error) {
-	return Connect(host, s.connCfg, errorHandler, s)
+	return s.dial(host.ConnectAddress(), host.Port(), s.connCfg, errorHandler)
 }
 
 // Query represents a CQL statement that can be executed.
@@ -1052,8 +1068,21 @@ func (iter *Iter) Columns() []ColumnInfo {
 }
 
 type Scanner interface {
+	// Next advances the row pointer to point at the next row, the row is valid until
+	// the next call of Next. It returns true if there is a row which is available to be
+	// scanned into with Scan.
+	// Next must be called before every call to Scan.
 	Next() bool
+
+	// Scan copies the current row's columns into dest. If the length of dest does not equal
+	// the number of columns returned in the row an error is returned. If an error is encountered
+	// when unmarshalling a column into the value in dest an error is returned and the row is invalidated
+	// until the next call to Next.
+	// Next must be called before calling Scan, if it is not an error is returned.
 	Scan(...interface{}) error
+
+	// Err returns the if there was one during iteration that resulted in iteration being unable to complete.
+	// Err will also release resources held by the iterator, the Scanner should not used after being called.
 	Err() error
 }
 
@@ -1062,10 +1091,6 @@ type iterScanner struct {
 	cols [][]byte
 }
 
-// Next advances the row pointer to point at the next row, the row is valid until
-// the next call of Next. It returns true if there is a row which is available to be
-// scanned into with Scan.
-// Next must be called before every call to Scan.
 func (is *iterScanner) Next() bool {
 	iter := is.iter
 	if iter.err != nil {
@@ -1119,11 +1144,6 @@ func scanColumn(p []byte, col ColumnInfo, dest []interface{}) (int, error) {
 	}
 }
 
-// Scan copies the current row's columns into dest. If the length of dest does not equal
-// the number of columns returned in the row an error is returned. If an error is encountered
-// when unmarshalling a column into the value in dest an error is returned and the row is invalidated
-// until the next call to Next.
-// Next must be called before calling Scan, if it is not an error is returned.
 func (is *iterScanner) Scan(dest ...interface{}) error {
 	if is.cols == nil {
 		return errors.New("gocql: Scan called without calling Next")
@@ -1154,8 +1174,6 @@ func (is *iterScanner) Scan(dest ...interface{}) error {
 	return err
 }
 
-// Err returns the if there was one during iteration that resulted in iteration being unable to complete.
-// Err will also release resources held by the iterator and should not used after being called.
 func (is *iterScanner) Err() error {
 	iter := is.iter
 	is.iter = nil
@@ -1299,11 +1317,17 @@ type nextIter struct {
 	pos  int
 	once sync.Once
 	next *Iter
+	conn *Conn
 }
 
 func (n *nextIter) fetch() *Iter {
 	n.once.Do(func() {
-		n.next = n.qry.session.executeQuery(&n.qry)
+		iter := n.qry.session.executor.attemptQuery(&n.qry, n.conn)
+		if iter != nil && iter.err == nil {
+			n.next = iter
+		} else {
+			n.next = n.qry.session.executeQuery(&n.qry)
+		}
 	})
 	return n.next
 }

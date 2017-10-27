@@ -64,6 +64,8 @@ func (r *ring) currentHosts() map[string]*HostInfo {
 }
 
 func (r *ring) addHost(host *HostInfo) bool {
+	// TODO(zariel): key all host info by HostID instead of
+	// ip addresses
 	if host.invalidConnectAddr() {
 		panic(fmt.Sprintf("invalid host: %v", host))
 	}
