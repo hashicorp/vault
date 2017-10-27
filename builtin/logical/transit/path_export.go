@@ -156,7 +156,7 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
 			derBytes := x509.MarshalPKCS1PrivateKey(key.RSAKey)
 			pemBlock := &pem.Block{
-				Type:  "PRIVATE KEY",
+				Type:  "RSA PRIVATE KEY",
 				Bytes: derBytes,
 			}
 			pemBytes := pem.EncodeToMemory(pemBlock)
