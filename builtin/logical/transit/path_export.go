@@ -3,6 +3,7 @@ package transit
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -154,14 +155,7 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 
 		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
-			derBytes := x509.MarshalPKCS1PrivateKey(key.RSAKey)
-			pemBlock := &pem.Block{
-				Type:  "RSA PRIVATE KEY",
-				Bytes: derBytes,
-			}
-			pemBytes := pem.EncodeToMemory(pemBlock)
-			return string(pemBytes), nil
-
+			return encodeRSAPrivateKey(key.RSAKey), nil
 		}
 
 	case exportTypeSigningKey:
@@ -175,10 +169,23 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 		case keysutil.KeyType_ED25519:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
+
+		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+			return encodeRSAPrivateKey(key.RSAKey), nil
 		}
 	}
 
 	return "", fmt.Errorf("unknown key type %v", policy.Type)
+}
+
+func encodeRSAPrivateKey(key *rsa.PrivateKey) string {
+	derBytes := x509.MarshalPKCS1PrivateKey(key)
+	pemBlock := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: derBytes,
+	}
+	pemBytes := pem.EncodeToMemory(pemBlock)
+	return string(pemBytes)
 }
 
 func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string, error) {
