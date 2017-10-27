@@ -23,14 +23,36 @@ func pathLogin(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLogin,
+			logical.UpdateOperation:         b.pathLogin,
+			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
 		},
 	}
 }
 
+func (b *backend) pathLoginAliasLookahead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	token := data.Get("token").(string)
+
+	var verifyResp *verifyCredentialsResp
+	if verifyResponse, resp, err := b.verifyCredentials(req, token); err != nil {
+		return nil, err
+	} else if resp != nil {
+		return resp, nil
+	} else {
+		verifyResp = verifyResponse
+	}
+
+	return &logical.Response{
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{
+				Name: *verifyResp.User.Login,
+			},
+		},
+	}, nil
+}
+
 func (b *backend) pathLogin(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	token := data.Get("token").(string)
 
 	var verifyResp *verifyCredentialsResp

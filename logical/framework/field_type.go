@@ -16,9 +16,11 @@ const (
 
 	// TypeSlice represents a slice of any type
 	TypeSlice
+
 	// TypeStringSlice is a helper for TypeSlice that returns a sanitized
 	// slice of strings
 	TypeStringSlice
+
 	// TypeCommaStringSlice is a helper for TypeSlice that returns a sanitized
 	// slice of strings and also supports parsing a comma-separated list in
 	// a string field

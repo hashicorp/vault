@@ -16,6 +16,10 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+const (
+	replTimeout = 10 * time.Second
+)
+
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
@@ -117,7 +121,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Validate the token
-	auth, te, ctErr := c.checkToken(req)
+	auth, te, ctErr := c.checkToken(req, false)
 	// We run this logic first because we want to decrement the use count even in the case of an error
 	if te != nil {
 		// Attempt to use the token (decrement NumUses)
@@ -323,11 +327,16 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
-func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
+func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
+	req.Unauthenticated = true
+
+	var auth *logical.Auth
 	// Create an audit trail of the request, auth is not available on login requests
-	if err := c.auditBroker.LogRequest(nil, req, c.auditedHeaders, nil); err != nil {
+	// Create an audit trail of the request. Attach auth if it was returned,
+	// e.g. if a token was provided.
+	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		return nil, nil, ErrInternalError
 	}
@@ -386,7 +395,6 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	}
 
 	// If the response generated an authentication, then generate the token
-	var auth *logical.Auth
 	if resp != nil && resp.Auth != nil {
 		var entity *identity.Entity
 		auth = resp.Auth

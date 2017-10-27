@@ -242,7 +242,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}()
 
 	if seal == nil {
-		c.Ui.Error(fmt.Sprintf("Could not create seal"))
+		c.Ui.Error(fmt.Sprintf("Could not create seal; most likely proper Seal configuration information was not set, but no error was generated."))
 		return 1
 	}
 
@@ -264,6 +264,7 @@ func (c *ServerCommand) Run(args []string) int {
 		PluginDirectory:    config.PluginDirectory,
 		EnableRaw:          config.EnableRawEndpoint,
 	}
+
 	if dev {
 		coreConfig.DevToken = devRootTokenID
 		if devLeasedKV {
@@ -575,6 +576,14 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(handler)
+
+	err = core.UnsealWithStoredKeys()
+	if err != nil {
+		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
+			c.Ui.Output(fmt.Sprintf("Error initializing core: %s", err))
+			return 1
+		}
+	}
 
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.

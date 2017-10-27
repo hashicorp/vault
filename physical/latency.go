@@ -84,7 +84,7 @@ func (l *LatencyInjector) List(prefix string) ([]string, error) {
 }
 
 // Transaction is a latent transaction request
-func (l *TransactionalLatencyInjector) Transaction(txns []TxnEntry) error {
+func (l *TransactionalLatencyInjector) Transaction(txns []*TxnEntry) error {
 	l.addLatency()
 	return l.Transactional.Transaction(txns)
 }
