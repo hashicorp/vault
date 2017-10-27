@@ -42,8 +42,8 @@ const (
 
 const (
 	SealTypeShamir = "shamir"
-	SealTypePKCS11 = "hsm-pkcs11-auto"
-	SealTypeAWSKMS = "awskms-auto"
+	SealTypePKCS11 = "pkcs11"
+	SealTypeAWSKMS = "awskms"
 	SealTypeTest   = "test-auto"
 
 	RecoveryTypeUnsupported = "unsupported"
