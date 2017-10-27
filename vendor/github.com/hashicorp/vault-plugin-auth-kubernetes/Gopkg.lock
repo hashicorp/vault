@@ -254,20 +254,26 @@
   revision = "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
 
 [[projects]]
-  branch = "release-1.7"
-  name = "k8s.io/apimachinery"
-  packages = ["pkg/api/errors","pkg/api/resource","pkg/apis/meta/v1","pkg/conversion","pkg/conversion/queryparams","pkg/fields","pkg/labels","pkg/openapi","pkg/runtime","pkg/runtime/schema","pkg/selection","pkg/types","pkg/util/errors","pkg/util/intstr","pkg/util/net","pkg/util/runtime","pkg/util/sets","pkg/util/validation","pkg/util/validation/field","pkg/util/wait","pkg/watch","third_party/forked/golang/reflect"]
-  revision = "8ab5f3d8a330c2e9baaf84e39042db8d49034ae2"
+  branch = "release-1.8"
+  name = "k8s.io/api"
+  packages = ["authentication/v1"]
+  revision = "6c6dac0277229b9e9578c5ca3f74a4345d35cdc2"
 
 [[projects]]
-  name = "k8s.io/client-go"
-  packages = ["pkg/apis/authentication","pkg/apis/authentication/v1"]
-  revision = "d92e8497f71b7b4e0494e5bd204b48d34bd6f254"
-  version = "v4.0.0"
+  branch = "release-1.8"
+  name = "k8s.io/apimachinery"
+  packages = ["pkg/api/errors","pkg/api/resource","pkg/apis/meta/v1","pkg/conversion","pkg/conversion/queryparams","pkg/fields","pkg/labels","pkg/runtime","pkg/runtime/schema","pkg/selection","pkg/types","pkg/util/errors","pkg/util/intstr","pkg/util/net","pkg/util/runtime","pkg/util/sets","pkg/util/validation","pkg/util/validation/field","pkg/util/wait","pkg/watch","third_party/forked/golang/reflect"]
+  revision = "019ae5ada31de202164b118aee88ee2d14075c31"
+
+[[projects]]
+  branch = "master"
+  name = "k8s.io/kube-openapi"
+  packages = ["pkg/common"]
+  revision = "61b46af70dfed79c6d24530cd23b41440a7f22a5"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "59a23adc8860feeb0e30da792c2fe8ed5f7c2bcee34c115fe55e93e5f2d9d9b7"
+  inputs-digest = "dfb0ef4889225ea4843fef5ed665c15d889d45d0a0e513a099655000e11a86eb"
   solver-name = "gps-cdcl"
   solver-version = 1
