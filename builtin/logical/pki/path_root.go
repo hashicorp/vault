@@ -149,7 +149,7 @@ func (b *backend) pathCAGenerateRoot(
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw cert bundle to cert bundle: {{err}}", err)
 	}
 
 	resp := &logical.Response{
@@ -205,7 +205,7 @@ func (b *backend) pathCAGenerateRoot(
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
+		return nil, errwrap.Wrapf("unable to store certificate locally: {{err}}", err)
 	}
 
 	// For ease of later use, also store just the certificate at a known
