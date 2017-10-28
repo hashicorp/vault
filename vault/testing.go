@@ -1252,6 +1252,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
 		transport := cleanhttp.DefaultPooledTransport()
 		transport.TLSClientConfig = tlsConfig
+		if err := http2.ConfigureTransport(transport); err != nil {
+			t.Fatal(err)
+		}
 		client := &http.Client{
 			Transport: transport,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
