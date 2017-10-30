@@ -27,6 +27,7 @@ IMPROVEMENTS:
    integer [GH-3507]
  * secret/transit: Sign and verify operations now support a `none` hash
    algorithm to allow signing/verifying pre-hashed data [GH-3448]
+ * secret/database: Add the ability to glob allowed roles in the Database Backend [GH-3387]
 
 BUG FIXES:
 
