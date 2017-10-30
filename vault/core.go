@@ -352,6 +352,11 @@ type Core struct {
 	// CORS Information
 	corsConfig *CORSConfig
 
+	// Request headers to pass through to backends
+	passthroughRequestHeaders *atomic.Value
+	// To prevent writers from concurrently modifying the map
+	passthroughRequestHeadersLock sync.Mutex
+
 	// The active set of upstream cluster addresses; stored via the Echo
 	// mechanism, loaded by the balancer
 	atomicPrimaryClusterAddrs *atomic.Value
@@ -490,6 +495,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 		rawEnabled:                       conf.EnableRaw,
+		passthroughRequestHeaders:        new(atomic.Value),
 		atomicPrimaryClusterAddrs:        new(atomic.Value),
 		atomicPrimaryFailoverAddrs:       new(atomic.Value),
 	}
