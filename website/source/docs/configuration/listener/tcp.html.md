@@ -86,8 +86,8 @@ This example shows enabling a TLS listener.
 
 ```hcl
 listener "tcp" {
-  tls_cert_file = "/etc/certs/nomad.crt"
-  tls_key_file  = "/etc/certs/nomad.key"
+  tls_cert_file = "/etc/certs/vault.crt"
+  tls_key_file  = "/etc/certs/vault.key"
 }
 ```
 
