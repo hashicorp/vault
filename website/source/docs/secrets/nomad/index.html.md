@@ -17,8 +17,7 @@ API tokens dynamically based on pre-existing Nomad ACL policies.
 This page will show a quick start for this backend. For detailed documentation
 on every path, use `vault path-help` after mounting the backend.
 
-~> **Version information** ACLs are only available on Nomad 0.7.0 and above,
-which is currently in beta.
+~> **Version information** ACLs are only available on Nomad 0.7.0 and above.
 
 ## Quick Start
 
@@ -46,7 +45,7 @@ Create Index = 7
 Modify Index = 7
 ```
 The suggested pattern is to generate a token specifically for Vault, following the 
-[Nomad ACL guide](https://www.consul.io/docs/agent/http/acl.html)
+[Nomad ACL guide](https://www.nomadproject.io/guides/acl.html)
 
 Next, we must configure Vault to know how to contact Nomad.
 This is done by writing the access information:

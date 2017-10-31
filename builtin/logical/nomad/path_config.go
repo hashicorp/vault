@@ -20,10 +20,7 @@ func pathConfigAccess() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "URI scheme for the Nomad address",
 
-				// https would be a better default but Consul on its own
-				// defaults to HTTP access, and when HTTPS is enabled it
-				// disables HTTP, so there isn't really any harm done here.
-				Default: "http",
+				Default: "https",
 			},
 
 			"token": &framework.FieldSchema{

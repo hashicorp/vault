@@ -2,7 +2,6 @@ package nomad
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -64,7 +63,7 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 			t.Fatalf("err: %v", err)
 		}
 		nomadToken = aclbootstrap.SecretID
-		log.Printf("[WARN] Generated Master token: %s", nomadToken)
+		t.Log("[WARN] Generated Master token: %s", nomadToken)
 		policy := &nomadapi.ACLPolicy{
 			Name:        "test",
 			Description: "test",
@@ -143,7 +142,7 @@ func TestBackend_config_access(t *testing.T) {
 
 	expected := map[string]interface{}{
 		"address": connData["address"].(string),
-		"scheme":  "http",
+		"scheme":  "https",
 	}
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
@@ -213,7 +212,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	log.Printf("[WARN] Generated token: %s with accesor %s", d.Token, d.Accessor)
+	t.Log("[WARN] Generated token: %s with accesor %s", d.Token, d.Accessor)
 
 	// Build a client and verify that the credentials work
 	nomadapiConfig := nomadapi.DefaultConfig()
@@ -224,7 +223,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Printf("[WARN] Verifying that the generated token works...")
+	t.Log("[WARN] Verifying that the generated token works...")
 	_, err = client.Agent().Members, nil
 	if err != nil {
 		t.Fatal(err)
@@ -256,7 +255,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 		Namespace: "default",
 	}
 
-	log.Printf("[WARN] Verifying that the generated token does not exist...")
+	t.Log("[WARN] Verifying that the generated token does not exist...")
 	_, _, err = mgmtclient.ACLTokens().Info(d.Accessor, q)
 	if err == nil {
 		t.Fatal("err: expected error")
