@@ -29,7 +29,7 @@ func (b *backend) pathTokenRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get("policy/" + name)
+	entry, err := req.Storage.Get("role/" + name)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}

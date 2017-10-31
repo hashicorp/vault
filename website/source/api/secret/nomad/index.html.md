@@ -59,7 +59,7 @@ updated attributes.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/nomad/roles/:name`         | `204 (empty body)`     |
+| `POST`   | `/nomad/role/:name`         | `204 (empty body)`     |
 
 ### Parameters
 
@@ -95,7 +95,7 @@ $ curl \
     --request POST \
     --header "X-Vault-Token: ..." \
     --data @payload.json \
-    https://vault.rocks/v1/nomad/roles/monitoring
+    https://vault.rocks/v1/nomad/role/monitoring
 ```
 
 ## Read Role
@@ -105,7 +105,7 @@ If no role exists with that name, a 404 is returned.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/nomad/roles/:name`         | `200 application/json` |
+| `GET`    | `/nomad/role/:name`         | `200 application/json` |
 
 ### Parameters
 
@@ -117,7 +117,7 @@ If no role exists with that name, a 404 is returned.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/nomad/roles/monitoring
+    https://vault.rocks/v1/nomad/role/monitoring
 ```
 
 ### Sample Response
@@ -147,8 +147,8 @@ This endpoint lists all existing roles in the backend.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`    | `/nomad/roles`              | `200 application/json` |
-| `GET`     | `/nomad/roles?list=true`    | `200 application/json` |
+| `LIST`    | `/nomad/role`              | `200 application/json` |
+| `GET`     | `/nomad/role?list=true`    | `200 application/json` |
 
 ### Sample Request
 
@@ -156,7 +156,7 @@ This endpoint lists all existing roles in the backend.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/nomad/roles
+    https://vault.rocks/v1/nomad/role
 ```
 
 ### Sample Response
@@ -185,7 +185,7 @@ not exist, this endpoint will still return a successful response.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/nomad/roles/:name`         | `204 (empty body)`     |
+| `DELETE` | `/nomad/role/:name`         | `204 (empty body)`     |
 
 ### Parameters
 
@@ -198,7 +198,7 @@ not exist, this endpoint will still return a successful response.
 $ curl \
     --request DELETE \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/nomad/roles/example-role
+    https://vault.rocks/v1/nomad/role/example-role
 ```
 
 ## Generate Credential

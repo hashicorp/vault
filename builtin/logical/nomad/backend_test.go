@@ -178,7 +178,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req.Path = "roles/test"
+	req.Path = "role/test"
 	req.Data = map[string]interface{}{
 		"policy": []string{"policy"},
 		"lease":  "6h",

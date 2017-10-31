@@ -10,7 +10,7 @@ import (
 
 func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/?$",
+		Pattern: "role/?$",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathRoleList,
@@ -20,7 +20,7 @@ func pathListRoles(b *backend) *framework.Path {
 
 func pathRoles() *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/" + framework.GenericNameRegex("name"),
+		Pattern: "role/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -62,7 +62,7 @@ Defaults to 'client'.`,
 
 func (b *backend) pathRoleList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("policy/")
+	entries, err := req.Storage.List("role/")
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func pathRolesRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get("policy/" + name)
+	entry, err := req.Storage.Get("role/" + name)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func pathRolesWrite(
 		}
 	}
 
-	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
+	entry, err := logical.StorageEntryJSON("role/"+name, roleConfig{
 		Policy:    policy,
 		Lease:     lease,
 		TokenType: tokenType,
@@ -158,7 +158,7 @@ func pathRolesWrite(
 func pathRolesDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	if err := req.Storage.Delete("policy/" + name); err != nil {
+	if err := req.Storage.Delete("role/" + name); err != nil {
 		return nil, err
 	}
 	return nil, nil
