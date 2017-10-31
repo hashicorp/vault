@@ -1009,9 +1009,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Handler: handler,
 		}
 		servers = append(servers, server)
-		if err := http2.ConfigureServer(server, nil); err != nil {
-			t.Fatal(err)
-		}
 	}
 
 	// Create three cores with the same physical and different redirect/cluster

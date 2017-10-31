@@ -13,12 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/sethgrid/pester"
+	"golang.org/x/net/http2"
 )
 
 const EnvVaultAddress = "VAULT_ADDR"
