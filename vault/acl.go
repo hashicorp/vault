@@ -334,16 +334,16 @@ CHECK:
 	// Only check parameter permissions for operations that can modify
 	// parameters.
 	if op == logical.UpdateOperation || op == logical.CreateOperation {
-		// If there are no data fields, allow
-		if len(req.Data) == 0 {
-			ret.Allowed = true
-			return
-		}
-
 		for _, parameter := range permissions.RequiredParameters {
 			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
 				return
 			}
+		}
+
+		// If there are no data fields, allow
+		if len(req.Data) == 0 {
+			ret.Allowed = true
+			return
 		}
 
 		if len(permissions.DeniedParameters) == 0 {
