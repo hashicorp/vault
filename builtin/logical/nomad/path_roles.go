@@ -126,6 +126,11 @@ func pathRolesWrite(
 			return logical.ErrorResponse(
 				"policy cannot be empty when not using management tokens"), nil
 		}
+	} else {
+		if len(policy) != 0 {
+			return logical.ErrorResponse(
+				"policy should be empty when using management tokens"), nil
+		}
 	}
 
 	var lease time.Duration
