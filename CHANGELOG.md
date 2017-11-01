@@ -34,6 +34,8 @@ BUG FIXES:
  * api: Fix panic when setting a custom HTTP client but with a nil transport
    [GH-3437]
  * auth/radius: Fix logging in in some situations [GH-3461]
+ * core: Fix memleak when a connection would connect to the cluster port and
+   then go away [GH-3513]
  * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
    matching [GH-3406]
  * physical/file: Fix listing when underscores are the first component of a
