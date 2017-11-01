@@ -57,12 +57,9 @@ func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
 
 func pathConfigAccessRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, userErr, intErr := readConfigAccess(req.Storage)
+	conf, _, intErr := readConfigAccess(req.Storage)
 	if intErr != nil {
 		return nil, intErr
-	}
-	if userErr != nil {
-		return logical.ErrorResponse(userErr.Error()), nil
 	}
 	if conf == nil {
 		return nil, fmt.Errorf("no user error reported but nomad access configuration not found")
