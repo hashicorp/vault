@@ -29,7 +29,7 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias belongs to",
 				},
-				"parent_id": {
+				"canonical_id": {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias belongs to",
 				},
@@ -66,7 +66,7 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias belongs to",
 				},
-				"parent_id": {
+				"canonical_id": {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias belongs to",
 				},
@@ -102,7 +102,7 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias belongs to",
 				},
-				"parent_id": {
+				"canonical_id": {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias should be tied to",
 				},
@@ -141,7 +141,7 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias should be tied to",
 				},
-				"parent_id": {
+				"canonical_id": {
 					Type:        framework.TypeString,
 					Description: "Entity ID to which this alias should be tied to",
 				},
@@ -235,13 +235,13 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 	}
 
 	// Get entity id
-	parentID := d.Get("entity_id").(string)
-	if parentID == "" {
-		parentID = d.Get("parent_id").(string)
+	canonicalID := d.Get("entity_id").(string)
+	if canonicalID == "" {
+		canonicalID = d.Get("canonical_id").(string)
 	}
 
-	if parentID != "" {
-		entity, err = i.MemDBEntityByID(parentID, true)
+	if canonicalID != "" {
+		entity, err = i.MemDBEntityByID(canonicalID, true)
 		if err != nil {
 			return nil, err
 		}
@@ -353,9 +353,9 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 	alias.MountAccessor = mountValidationResp.MountAccessor
 	alias.MountPath = mountValidationResp.MountPath
 
-	// Set the parent ID in the alias index. This should be done after
+	// Set the canonical ID in the alias index. This should be done after
 	// sanitizing entity.
-	alias.ParentID = entity.ID
+	alias.CanonicalID = entity.ID
 
 	// ID creation and other validations
 	err = i.sanitizeAlias(alias)
@@ -374,8 +374,8 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 
 	// Return ID of both alias and entity
 	resp.Data = map[string]interface{}{
-		"id":        alias.ID,
-		"parent_id": entity.ID,
+		"id":           alias.ID,
+		"canonical_id": entity.ID,
 	}
 
 	return resp, nil
@@ -404,13 +404,13 @@ func (i *IdentityStore) handleAliasReadCommon(alias *identity.Alias) (*logical.R
 
 	respData := map[string]interface{}{}
 	respData["id"] = alias.ID
-	respData["parent_id"] = alias.ParentID
+	respData["canonical_id"] = alias.CanonicalID
 	respData["mount_type"] = alias.MountType
 	respData["mount_accessor"] = alias.MountAccessor
 	respData["mount_path"] = alias.MountPath
 	respData["metadata"] = alias.Metadata
 	respData["name"] = alias.Name
-	respData["merged_from_parent_ids"] = alias.MergedFromParentIDs
+	respData["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 
 	// Convert protobuf timestamp into RFC3339 format
 	respData["creation_time"] = ptypes.TimestampString(alias.CreationTime)

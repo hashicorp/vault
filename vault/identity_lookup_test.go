@@ -27,7 +27,7 @@ func TestIdentityStore_Lookup_EntityAlias(t *testing.T) {
 		Path:      "entity-alias",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"parent_id":      entityID,
+			"canonical_id":   entityID,
 			"name":           "testentityaliasname",
 			"mount_type":     "ldap",
 			"mount_accessor": accessor,
@@ -79,8 +79,8 @@ func TestIdentityStore_Lookup_EntityAlias(t *testing.T) {
 	}
 
 	lookupReq.Data = map[string]interface{}{
-		"type":      "parent_id",
-		"parent_id": entityID,
+		"type":         "canonical_id",
+		"canonical_id": entityID,
 	}
 	resp, err = i.HandleRequest(lookupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -115,7 +115,7 @@ func TestIdentityStore_Lookup_GroupAlias(t *testing.T) {
 		Path:      "group-alias",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"parent_id":      groupID,
+			"canonical_id":   groupID,
 			"name":           "testgroupaliasname",
 			"mount_type":     "ldap",
 			"mount_accessor": accessor,
@@ -158,8 +158,8 @@ func TestIdentityStore_Lookup_GroupAlias(t *testing.T) {
 	}
 
 	lookupReq.Data = map[string]interface{}{
-		"type":      "parent_id",
-		"parent_id": groupID,
+		"type":         "canonical_id",
+		"canonical_id": groupID,
 	}
 	resp, err = i.HandleRequest(lookupReq)
 	if err != nil || (resp != nil && resp.IsError()) {

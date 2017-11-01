@@ -259,8 +259,8 @@ func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entit
 			return err
 		}
 
-		if aliasByFactors != nil && aliasByFactors.ParentID != entity.ID {
-			return fmt.Errorf("alias %q in already tied to a different entity %q", alias.ID, aliasByFactors.ParentID)
+		if aliasByFactors != nil && aliasByFactors.CanonicalID != entity.ID {
+			return fmt.Errorf("alias %q in already tied to a different entity %q", alias.ID, aliasByFactors.CanonicalID)
 		}
 
 		// Insert or update alias in MemDB using the transaction created above
@@ -584,8 +584,8 @@ func (i *IdentityStore) MemDBUpsertAlias(alias *identity.Alias, groupAlias bool)
 	return nil
 }
 
-func (i *IdentityStore) MemDBAliasByParentIDInTxn(txn *memdb.Txn, parentID string, clone bool, groupAlias bool) (*identity.Alias, error) {
-	if parentID == "" {
+func (i *IdentityStore) MemDBAliasByCanonicalIDInTxn(txn *memdb.Txn, canonicalID string, clone bool, groupAlias bool) (*identity.Alias, error) {
+	if canonicalID == "" {
 		return nil, fmt.Errorf("missing parent ID")
 	}
 
@@ -598,7 +598,7 @@ func (i *IdentityStore) MemDBAliasByParentIDInTxn(txn *memdb.Txn, parentID strin
 		tableName = groupAliasesTable
 	}
 
-	aliasRaw, err := txn.First(tableName, "parent_id", parentID)
+	aliasRaw, err := txn.First(tableName, "canonical_id", canonicalID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch alias from memdb using parent ID: %v", err)
 	}
@@ -619,14 +619,14 @@ func (i *IdentityStore) MemDBAliasByParentIDInTxn(txn *memdb.Txn, parentID strin
 	return alias, nil
 }
 
-func (i *IdentityStore) MemDBAliasByParentID(parentID string, clone bool, groupAlias bool) (*identity.Alias, error) {
-	if parentID == "" {
+func (i *IdentityStore) MemDBAliasByCanonicalID(canonicalID string, clone bool, groupAlias bool) (*identity.Alias, error) {
+	if canonicalID == "" {
 		return nil, fmt.Errorf("missing parent ID")
 	}
 
 	txn := i.db.Txn(false)
 
-	return i.MemDBAliasByParentIDInTxn(txn, parentID, clone, groupAlias)
+	return i.MemDBAliasByCanonicalIDInTxn(txn, canonicalID, clone, groupAlias)
 }
 
 func (i *IdentityStore) MemDBAliasByIDInTxn(txn *memdb.Txn, aliasID string, clone bool, groupAlias bool) (*identity.Alias, error) {
@@ -1069,7 +1069,7 @@ func (i *IdentityStore) MemDBEntityByAliasIDInTxn(txn *memdb.Txn, aliasID string
 		return nil, nil
 	}
 
-	return i.MemDBEntityByIDInTxn(txn, alias.ParentID, clone)
+	return i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, clone)
 }
 
 func (i *IdentityStore) MemDBEntityByAliasID(aliasID string, clone bool) (*identity.Entity, error) {
@@ -1147,7 +1147,7 @@ func (i *IdentityStore) sanitizeAlias(alias *identity.Alias) error {
 	}
 
 	// Alias must always be tied to a parent object
-	if alias.ParentID == "" {
+	if alias.CanonicalID == "" {
 		return fmt.Errorf("missing parent ID")
 	}
 
@@ -1315,7 +1315,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 
 	// Sanitize the group alias
 	if group.Alias != nil {
-		group.Alias.ParentID = group.ID
+		group.Alias.CanonicalID = group.ID
 
 		err = i.sanitizeAlias(group.Alias)
 		if err != nil {
@@ -2210,7 +2210,7 @@ func (i *IdentityStore) MemDBGroupByAliasIDInTxn(txn *memdb.Txn, aliasID string,
 		return nil, nil
 	}
 
-	return i.MemDBGroupByIDInTxn(txn, alias.ParentID, clone)
+	return i.MemDBGroupByIDInTxn(txn, alias.CanonicalID, clone)
 }
 
 func (i *IdentityStore) MemDBGroupByAliasID(aliasID string, clone bool) (*identity.Group, error) {
@@ -2329,7 +2329,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 		}
 	}
 
-	// Remove the entity ID to all the deleted groups
+	// Remove the entity ID from all the deleted groups
 	for _, group := range diff.Deleted {
 		if group.Type != groupTypeExternal {
 			continue

@@ -27,7 +27,7 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Mount accessor to which this alias belongs to.",
 				},
-				"parent_id": {
+				"canonical_id": {
 					Type:        framework.TypeString,
 					Description: "ID of the group to which this is an alias.",
 				},
@@ -54,7 +54,7 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Mount accessor to which this alias belongs to.",
 				},
-				"parent_id": {
+				"canonical_id": {
 					Type:        framework.TypeString,
 					Description: "ID of the group to which this is an alias.",
 				},
@@ -122,7 +122,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *fr
 		newGroupAlias = true
 	}
 
-	groupID := d.Get("parent_id").(string)
+	groupID := d.Get("canonical_id").(string)
 	if groupID != "" {
 		group, err = i.MemDBGroupByID(groupID, true)
 		if err != nil {
@@ -209,8 +209,8 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *fr
 	}
 
 	resp.Data = map[string]interface{}{
-		"id":        groupAlias.ID,
-		"parent_id": group.ID,
+		"id":           groupAlias.ID,
+		"canonical_id": group.ID,
 	}
 
 	return resp, nil

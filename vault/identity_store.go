@@ -301,7 +301,7 @@ func (i *IdentityStore) CreateEntity(alias *logical.Alias) (*identity.Entity, er
 
 	// Create a new alias
 	newAlias := &identity.Alias{
-		ParentID:      entity.ID,
+		CanonicalID:   entity.ID,
 		Name:          alias.Name,
 		MountAccessor: alias.MountAccessor,
 		MountPath:     mountValidationResp.MountPath,

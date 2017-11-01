@@ -124,7 +124,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 	}
 
 	alias := &identity.Alias{
-		ParentID:      entity.ID,
+		CanonicalID:   entity.ID,
 		ID:            "testaliasid",
 		MountAccessor: githubAccessor,
 		MountType:     validateMountResp.MountType,
@@ -149,7 +149,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		t.Fatalf("bad: mismatched aliases; expected: %#v\n actual: %#v\n", alias, aliasFetched)
 	}
 
-	aliasFetched, err = is.MemDBAliasByParentID(entity.ID, false, false)
+	aliasFetched, err = is.MemDBAliasByCanonicalID(entity.ID, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 	}
 
 	alias2 := &identity.Alias{
-		ParentID:      entity.ID,
+		CanonicalID:   entity.ID,
 		ID:            "testaliasid2",
 		MountAccessor: validateMountResp.MountAccessor,
 		MountType:     validateMountResp.MountType,
@@ -305,7 +305,7 @@ func TestIdentityStore_AliasRegister(t *testing.T) {
 		t.Fatalf("invalid alias id in alias register response")
 	}
 
-	entityIDRaw, ok := resp.Data["parent_id"]
+	entityIDRaw, ok := resp.Data["canonical_id"]
 	if !ok {
 		t.Fatalf("entity id not present in alias register response")
 	}
@@ -508,7 +508,7 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 	}
 
 	if resp.Data["id"].(string) == "" ||
-		resp.Data["parent_id"].(string) == "" ||
+		resp.Data["canonical_id"].(string) == "" ||
 		resp.Data["name"].(string) != registerData["name"] ||
 		resp.Data["mount_type"].(string) != "github" {
 		t.Fatalf("bad: alias read response; \nexpected: %#v \nactual: %#v\n", registerData, resp.Data)

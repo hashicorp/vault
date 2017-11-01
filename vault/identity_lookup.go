@@ -38,13 +38,13 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
-					Description: "Type of lookup. Current supported values are 'id', 'parent_id' and 'factors'.",
+					Description: "Type of lookup. Current supported values are 'id', 'canonical_id' and 'factors'.",
 				},
 				"id": {
 					Type:        framework.TypeString,
 					Description: "ID of the entity.",
 				},
-				"parent_id": {
+				"canonical_id": {
 					Type:        framework.TypeString,
 					Description: "ID of the entity to which the alias belongs to.",
 				},
@@ -69,13 +69,13 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
-					Description: "Type of lookup. Current supported values are 'id', 'parent_id' and 'factors'.",
+					Description: "Type of lookup. Current supported values are 'id', 'canonical_id' and 'factors'.",
 				},
 				"id": {
 					Type:        framework.TypeString,
 					Description: "ID of the group.",
 				},
-				"parent_id": {
+				"canonical_id": {
 					Type:        framework.TypeString,
 					Description: "ID of the group to which the alias belongs to.",
 				},
@@ -160,13 +160,13 @@ func (i *IdentityStore) handleLookupAliasUpdateCommon(req *logical.Request, d *f
 
 		return i.handleAliasReadCommon(alias)
 
-	case "parent_id":
-		parentID := d.Get("parent_id").(string)
-		if parentID == "" {
-			return logical.ErrorResponse("empty parent_id"), nil
+	case "canonical_id":
+		canonicalID := d.Get("canonical_id").(string)
+		if canonicalID == "" {
+			return logical.ErrorResponse("empty canonical_id"), nil
 		}
 
-		alias, err := i.MemDBAliasByParentID(parentID, false, groupAlias)
+		alias, err := i.MemDBAliasByCanonicalID(canonicalID, false, groupAlias)
 		if err != nil {
 			return nil, err
 		}
@@ -210,8 +210,8 @@ var lookupHelp = map[string][2]string{
 		`Supported types:
 		- 'id'
 		To query the group alias by its ID. This requires 'id' parameter to be set.
-		- 'parent_id'
-		To query the group alias by the ID of the group it belongs to. This requires the 'parent_id' parameter to be set.
+		- 'canonical_id'
+		To query the group alias by the ID of the group it belongs to. This requires the 'canonical_id' parameter to be set.
 		- 'factors'
 		To query the group alias using the factors that uniquely identifies a group alias; its name and the mount accessor. This requires the 'name' and 'mount_accessor' parameters to be set.
 		`,
@@ -221,8 +221,8 @@ var lookupHelp = map[string][2]string{
 		`Supported types:
 		- 'id'
 		To query the entity alias by its ID. This requires 'id' parameter to be set.
-		- 'parent_id'
-		To query the entity alias by the ID of the entity it belongs to. This requires the 'parent_id' parameter to be set.
+		- 'canonical_id'
+		To query the entity alias by the ID of the entity it belongs to. This requires the 'canonical_id' parameter to be set.
 		- 'factors'
 		To query the entity alias using the factors that uniquely identifies an entity alias; its name and the mount accessor. This requires the 'name' and 'mount_accessor' parameters to be set.
 		`,

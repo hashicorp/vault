@@ -119,8 +119,8 @@ message Alias {
 	// ID is the unique identifier that represents this alias
 	string id = 1;
 
-	// ParentID is the entity identifier to which this alias belongs to
-	string parent_id = 2;
+	// CanonicalID is the entity identifier to which this alias belongs to
+	string canonical_id = 2;
 
 	// MountType is the backend mount's type to which this alias belongs to.
 	// This enables categorically querying aliases of specific backend types.
@@ -155,8 +155,6 @@ message Alias {
 	// on its age and to take action on them, if desired.
 	google.protobuf.Timestamp last_update_time = 9;
 
-	// MergedFromParentIDs is the FIFO history of merging activity by parent IDs from
-	// which this alias is transfered over to the parent to which it
-	// currently belongs to.
-	repeated string merged_from_parent_ids = 10;
+	// MergedFromCanonicalIDs is the FIFO history of merging activity
+	repeated string merged_from_canonical_ids = 10;
 }

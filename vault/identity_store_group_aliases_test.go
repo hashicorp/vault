@@ -31,7 +31,7 @@ func TestIdentityStore_GroupAliases_CRUD(t *testing.T) {
 		Data: map[string]interface{}{
 			"name":           "testgroupalias",
 			"mount_accessor": accessor,
-			"parent_id":      groupID,
+			"canonical_id":   groupID,
 			"mount_type":     "ldap",
 		},
 	}
@@ -84,7 +84,7 @@ func TestIdentityStore_GroupAliases_MemDBIndexes(t *testing.T) {
 			ID:            "testgroupaliasid",
 			Name:          "testalias",
 			MountAccessor: accessor,
-			ParentID:      "testgroupid",
+			CanonicalID:   "testgroupid",
 			MountType:     "ldap",
 		},
 		ParentGroupIDs:  []string{"testparentgroupid1", "testparentgroupid2"},
@@ -150,7 +150,7 @@ func TestIdentityStore_GroupAliases_AliasOnInternalGroup(t *testing.T) {
 		Data: map[string]interface{}{
 			"name":           "testname",
 			"mount_accessor": accessor,
-			"parent_id":      groupID,
+			"canonical_id":   groupID,
 		},
 	}
 	resp, err = i.HandleRequest(aliasReq)

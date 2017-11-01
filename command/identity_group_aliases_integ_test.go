@@ -78,7 +78,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 
 	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
 		"name":           "Italians",
-		"parent_id":      italiansGroupID,
+		"canonical_id":   italiansGroupID,
 		"mount_accessor": accessor,
 	})
 	if err != nil {
@@ -87,7 +87,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 
 	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
 		"name":           "Scientists",
-		"parent_id":      scientistsGroupID,
+		"canonical_id":   scientistsGroupID,
 		"mount_accessor": accessor,
 	})
 	if err != nil {
@@ -96,7 +96,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 
 	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
 		"name":           "devops",
-		"parent_id":      devopsGroupID,
+		"canonical_id":   devopsGroupID,
 		"mount_accessor": accessor,
 	})
 	if err != nil {
@@ -108,7 +108,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 	aliasMap := secret.Data["alias"].(map[string]interface{})
-	if aliasMap["parent_id"] != italiansGroupID ||
+	if aliasMap["canonical_id"] != italiansGroupID ||
 		aliasMap["name"] != "Italians" ||
 		aliasMap["mount_accessor"] != accessor {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
@@ -119,7 +119,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 	aliasMap = secret.Data["alias"].(map[string]interface{})
-	if aliasMap["parent_id"] != scientistsGroupID ||
+	if aliasMap["canonical_id"] != scientistsGroupID ||
 		aliasMap["name"] != "Scientists" ||
 		aliasMap["mount_accessor"] != accessor {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)

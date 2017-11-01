@@ -210,9 +210,9 @@ func (i *IdentityStore) pathEntityMergeID(req *logical.Request, d *framework.Fie
 
 		for _, alias := range fromEntity.Aliases {
 			// Set the desired parent ID
-			alias.ParentID = toEntity.ID
+			alias.CanonicalID = toEntity.ID
 
-			alias.MergedFromParentIDs = append(alias.MergedFromParentIDs, fromEntity.ID)
+			alias.MergedFromCanonicalIDs = append(alias.MergedFromCanonicalIDs, fromEntity.ID)
 
 			err = i.MemDBUpsertAliasInTxn(txn, alias, false)
 			if err != nil {
@@ -426,13 +426,13 @@ func (i *IdentityStore) pathEntityIDRead(req *logical.Request, d *framework.Fiel
 	for aliasIdx, alias := range entity.Aliases {
 		aliasMap := map[string]interface{}{}
 		aliasMap["id"] = alias.ID
-		aliasMap["parent_id"] = alias.ParentID
+		aliasMap["canonical_id"] = alias.CanonicalID
 		aliasMap["mount_type"] = alias.MountType
 		aliasMap["mount_accessor"] = alias.MountAccessor
 		aliasMap["mount_path"] = alias.MountPath
 		aliasMap["metadata"] = alias.Metadata
 		aliasMap["name"] = alias.Name
-		aliasMap["merged_from_parent_ids"] = alias.MergedFromParentIDs
+		aliasMap["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 		aliasMap["creation_time"] = ptypes.TimestampString(alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(alias.LastUpdateTime)
 		aliasesToReturn[aliasIdx] = aliasMap
