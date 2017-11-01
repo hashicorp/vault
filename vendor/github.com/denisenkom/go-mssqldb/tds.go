@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 	"io"
 	"io/ioutil"
 	"net"
@@ -19,6 +18,8 @@ import (
 	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
+
+	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 )
 
 func parseInstances(msg []byte) map[string]map[string]string {
@@ -630,9 +631,7 @@ func writeAllHeaders(w io.Writer, headers []headerStruct) (err error) {
 	return nil
 }
 
-func sendSqlBatch72(buf *tdsBuffer,
-	sqltext string,
-	headers []headerStruct) (err error) {
+func sendSqlBatch72(buf *tdsBuffer, sqltext string, headers []headerStruct) (err error) {
 	buf.BeginPacket(packSQLBatch)
 
 	if err = writeAllHeaders(buf, headers); err != nil {
@@ -1016,8 +1015,7 @@ func parseConnectParams(dsn string) (connectParams, error) {
 	// https://msdn.microsoft.com/en-us/library/dd341108.aspx
 	p.keepAlive = 30 * time.Second
 
-	keepAlive, ok := params["keepalive"]
-	if ok {
+	if keepAlive, ok := params["keepalive"]; ok {
 		timeout, err := strconv.ParseUint(keepAlive, 0, 16)
 		if err != nil {
 			f := "Invalid keepAlive value '%s': %s"
@@ -1027,7 +1025,7 @@ func parseConnectParams(dsn string) (connectParams, error) {
 	}
 	encrypt, ok := params["encrypt"]
 	if ok {
-		if strings.ToUpper(encrypt) == "DISABLE" {
+		if strings.EqualFold(encrypt, "DISABLE") {
 			p.disableEncryption = true
 		} else {
 			var err error
@@ -1103,7 +1101,7 @@ func parseConnectParams(dsn string) (connectParams, error) {
 	return p, nil
 }
 
-type Auth interface {
+type auth interface {
 	InitialBytes() ([]byte, error)
 	NextBytes([]byte) ([]byte, error)
 	Free()
@@ -1171,7 +1169,6 @@ func dialConnection(p connectParams) (conn net.Conn, err error) {
 		f := "Unable to open tcp connection with host '%v:%v': %v"
 		return nil, fmt.Errorf(f, p.host, p.port, err.Error())
 	}
-
 	return conn, err
 }
 
@@ -1254,8 +1251,7 @@ initiate_connection:
 		if p.certificate != "" {
 			pem, err := ioutil.ReadFile(p.certificate)
 			if err != nil {
-				f := "Cannot read certificate '%s': %s"
-				return nil, fmt.Errorf(f, p.certificate, err.Error())
+				return nil, fmt.Errorf("Cannot read certificate %q: %v", p.certificate, err)
 			}
 			certs := x509.NewCertPool()
 			certs.AppendCertsFromPEM(pem)
@@ -1269,11 +1265,11 @@ initiate_connection:
 		toconn.buf = outbuf
 		tlsConn := tls.Client(toconn, &config)
 		err = tlsConn.Handshake()
+
 		toconn.buf = nil
 		outbuf.transport = tlsConn
 		if err != nil {
-			f := "TLS Handshake failed: %s"
-			return nil, fmt.Errorf(f, err.Error())
+			return nil, fmt.Errorf("TLS Handshake failed: %v", err)
 		}
 		if encrypt == encryptOff {
 			outbuf.afterFirst = func() {
@@ -1284,7 +1280,7 @@ initiate_connection:
 
 	login := login{
 		TDSVersion:   verTDS74,
-		PacketSize:   outbuf.PackageSize(),
+		PacketSize:   uint32(outbuf.PackageSize()),
 		Database:     p.database,
 		OptionFlags2: fODBC, // to get unlimited TEXTSIZE
 		HostName:     p.workstation,
@@ -1313,7 +1309,7 @@ initiate_connection:
 	var sspi_msg []byte
 continue_login:
 	tokchan := make(chan tokenStruct, 5)
-	go processResponse(context.Background(), &sess, tokchan)
+	go processResponse(context.Background(), &sess, tokchan, nil)
 	success := false
 	for tok := range tokchan {
 		switch token := tok.(type) {

@@ -6,7 +6,6 @@
 
 This package presents a client for the Docker remote API. It also provides
 support for the extensions in the [Swarm API](https://docs.docker.com/swarm/swarm-api/).
-It currently supports the Docker API up to version 1.23.
 
 This package also provides support for docker's network API, which is a simple
 passthrough to the libnetwork remote API.  Note that docker's network API is
@@ -110,6 +109,15 @@ Commited code must pass:
 Running `make test` will check all of these. If your editor does not
 automatically call ``gofmt -s``, `make fmt` will format all go files in this
 repository.
+
+## Vendoring
+
+go-dockerclient uses [dep](https://github.com/golang/dep/) for vendoring. If
+you're using dep, you should be able to pick go-dockerclient releases and get
+the proper dependencies.
+
+With other vendoring tools, users might need to specify go-dockerclient's
+dependencies manually.
 
 ## Using with Docker 1.9 and Go 1.4
 

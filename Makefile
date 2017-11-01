@@ -69,7 +69,7 @@ vet:
 prep: fmtcheck
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	go generate $(go list ./... | grep -v /vendor/)
-	cp .hooks/* .git/hooks/
+	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by downloading additional tools
 bootstrap:
