@@ -305,7 +305,7 @@ func TestIdentityStore_AliasRegister(t *testing.T) {
 		t.Fatalf("invalid alias id in alias register response")
 	}
 
-	entityIDRaw, ok := resp.Data["entity_id"]
+	entityIDRaw, ok := resp.Data["parent_id"]
 	if !ok {
 		t.Fatalf("entity id not present in alias register response")
 	}

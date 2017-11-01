@@ -291,12 +291,14 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 		},
 	}
 	expectedData["id"] = resp.Data["id"]
+	expectedData["type"] = resp.Data["type"]
 	expectedData["name"] = resp.Data["name"]
 	expectedData["member_group_ids"] = resp.Data["member_group_ids"]
 	expectedData["member_entity_ids"] = resp.Data["member_entity_ids"]
 	expectedData["creation_time"] = resp.Data["creation_time"]
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
+	expectedData["alias"] = resp.Data["alias"]
 
 	if !reflect.DeepEqual(expectedData, resp.Data) {
 		t.Fatalf("bad: group data;\nexpected: %#v\n actual: %#v\n", expectedData, resp.Data)
@@ -409,12 +411,14 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 		},
 	}
 	expectedData["id"] = resp.Data["id"]
+	expectedData["type"] = resp.Data["type"]
 	expectedData["name"] = resp.Data["name"]
 	expectedData["member_group_ids"] = resp.Data["member_group_ids"]
 	expectedData["member_entity_ids"] = resp.Data["member_entity_ids"]
 	expectedData["creation_time"] = resp.Data["creation_time"]
 	expectedData["last_update_time"] = resp.Data["last_update_time"]
 	expectedData["modify_index"] = resp.Data["modify_index"]
+	expectedData["alias"] = resp.Data["alias"]
 
 	if !reflect.DeepEqual(expectedData, resp.Data) {
 		t.Fatalf("bad: group data;\nexpected: %#v\n actual: %#v\n", expectedData, resp.Data)
