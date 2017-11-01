@@ -422,14 +422,18 @@ func (c *Client) SetHeaders(headers http.Header) {
 // goroutine at once may not be safe, so modify the client as needed and then
 // clone.
 func (c *Client) Clone() (*Client, error) {
+	c.modifyLock.RLock()
 	c.config.modifyLock.RLock()
+	config := c.config
+	c.modifyLock.RUnlock()
+
 	newConfig := &Config{
-		Address:    c.config.Address,
-		HttpClient: c.config.HttpClient,
-		MaxRetries: c.config.MaxRetries,
-		Timeout:    c.config.Timeout,
+		Address:    config.Address,
+		HttpClient: config.HttpClient,
+		MaxRetries: config.MaxRetries,
+		Timeout:    config.Timeout,
 	}
-	c.config.modifyLock.RUnlock()
+	config.modifyLock.RUnlock()
 
 	return NewClient(newConfig)
 }
