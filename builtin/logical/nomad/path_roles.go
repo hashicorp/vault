@@ -87,10 +87,6 @@ func pathRolesRead(
 		return nil, err
 	}
 
-	if result.TokenType == "" {
-		result.TokenType = "client"
-	}
-
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
