@@ -36,27 +36,27 @@ func pathConfigAccess() *framework.Path {
 	}
 }
 
-func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
+func readConfigAccess(storage logical.Storage) (*accessConfig, error) {
 	entry, err := storage.Get("config/access")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if entry == nil {
-		return nil, nil, fmt.Errorf(
-				"Access credentials for the backend itself haven't been configured. Please configure them at the '/config/access' endpoint")
+		return nil, fmt.Errorf(
+			"Access credentials for the backend itself haven't been configured. Please configure them at the '/config/access' endpoint")
 	}
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, nil, fmt.Errorf("error reading nomad access configuration: %s", err)
+		return nil, fmt.Errorf("error reading nomad access configuration: %s", err)
 	}
 
-	return conf, nil, nil
+	return conf, nil
 }
 
 func pathConfigAccessRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, _, intErr := readConfigAccess(req.Storage)
+	conf, intErr := readConfigAccess(req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}
