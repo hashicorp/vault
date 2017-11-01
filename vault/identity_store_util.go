@@ -60,6 +60,9 @@ func (i *IdentityStore) loadGroups() error {
 	}
 	i.logger.Debug("identity: groups collected", "num_existing", len(existing))
 
+	i.groupLock.Lock()
+	defer i.groupLock.Unlock()
+
 	for _, key := range existing {
 		bucket, err := i.groupPacker.GetBucket(i.groupPacker.BucketPath(key))
 		if err != nil {
@@ -83,14 +86,11 @@ func (i *IdentityStore) loadGroups() error {
 				i.logger.Trace("loading group", "name", group.Name, "id", group.ID)
 			}
 
-			i.groupLock.Lock()
-			defer i.groupLock.Unlock()
-
 			txn := i.db.Txn(true)
-			defer txn.Abort()
 
 			err = i.upsertGroupInTxn(txn, group, false)
 			if err != nil {
+				txn.Abort()
 				return fmt.Errorf("failed to update group in memdb: %v", err)
 			}
 
