@@ -41,14 +41,7 @@ func secretTokenRevoke(
 		return nil, userErr
 	}
 
-	tokenRaw, ok := req.Secret.InternalData["accessor_id"]
-	if !ok {
-		// We return nil here because this is a pre-0.5.3 problem and there is
-		// nothing we can do about it. We already can't revoke the lease
-		// properly if it has been renewed and this is documented pre-0.5.3
-		// behavior with a security bulletin about it.
-		return nil, nil
-	}
+	tokenRaw, _ := req.Secret.InternalData["accessor_id"]
 
 	_, err := c.ACLTokens().Delete(tokenRaw.(string), nil)
 	if err != nil {

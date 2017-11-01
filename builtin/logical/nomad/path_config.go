@@ -42,9 +42,8 @@ func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
 		return nil, nil, err
 	}
 	if entry == nil {
-		return nil, fmt.Errorf(
-				"Access credentials for the backend itself haven't been configured. Please configure them at the '/config/access' endpoint"),
-			nil
+		return nil, nil, fmt.Errorf(
+				"Access credentials for the backend itself haven't been configured. Please configure them at the '/config/access' endpoint")
 	}
 
 	conf := &accessConfig{}
@@ -62,7 +61,7 @@ func pathConfigAccessRead(
 		return nil, intErr
 	}
 	if conf == nil {
-		return nil, fmt.Errorf("no user error reported but nomad access configuration not found")
+		return nil, fmt.Errorf("no user or internal error reported but nomad access configuration not found")
 	}
 
 	return &logical.Response{
