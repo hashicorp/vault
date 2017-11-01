@@ -67,6 +67,15 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 	scientistsGroupID := secret.Data["id"].(string)
 
+	secret, err = client.Logical().Write("identity/group", map[string]interface{}{
+		"type": "external",
+		"name": "ldap_devops",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	devopsGroupID := secret.Data["id"].(string)
+
 	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
 		"name":           "Italians",
 		"parent_id":      italiansGroupID,
@@ -79,6 +88,15 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
 		"name":           "Scientists",
 		"parent_id":      scientistsGroupID,
+		"mount_accessor": accessor,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secret, err = client.Logical().Write("identity/group-alias", map[string]interface{}{
+		"name":           "devops",
+		"parent_id":      devopsGroupID,
 		"mount_accessor": accessor,
 	})
 	if err != nil {
@@ -119,7 +137,15 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create a local group in LDAP
+	// Create a local group in LDAP backend
+	secret, err = client.Logical().Write("auth/ldap/groups/devops", map[string]interface{}{
+		"policies": "default",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a local group in LDAP backend
 	secret, err = client.Logical().Write("auth/ldap/groups/engineers", map[string]interface{}{
 		"policies": "default",
 	})
@@ -130,7 +156,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Create a local user in LDAP
 	secret, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{
 		"policies": "default",
-		"groups":   "engineers",
+		"groups":   "engineers,devops",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +178,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 	entityID := secret.Data["entity_id"].(string)
 
-	// Re-read the Scientists and Italians group. This entity ID should have
+	// Re-read the Scientists, Italians and devops group. This entity ID should have
 	// been added to both of these groups by now.
 	secret, err = client.Logical().Read("identity/group/id/" + italiansGroupID)
 	if err != nil {
@@ -181,7 +207,22 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected entity ID %q to be part of Italians group")
+		t.Fatalf("expected entity ID %q to be part of Scientists group")
+	}
+
+	secret, err = client.Logical().Read("identity/group/id/" + devopsGroupID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	groupMap = secret.Data
+	found = false
+	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
+		if entityIDRaw.(string) == entityID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected entity ID %q to be part of devops group")
 	}
 
 	identityStore := cores[0].IdentityStore()
@@ -228,6 +269,27 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatalf("failed to remove entity ID from the group")
 	}
 
+	group, err = identityStore.MemDBGroupByID(devopsGroupID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Remove its member entities
+	group.MemberEntityIDs = nil
+
+	err = identityStore.UpsertGroup(group, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	group, err = identityStore.MemDBGroupByID(devopsGroupID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if group.MemberEntityIDs != nil {
+		t.Fatalf("failed to remove entity ID from the group")
+	}
+
 	_, err = client.Auth().Token().Renew(token, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -262,5 +324,45 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected entity ID %q to be part of Italians group")
+	}
+
+	secret, err = client.Logical().Read("identity/group/id/" + devopsGroupID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	groupMap = secret.Data
+	found = false
+	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
+		if entityIDRaw.(string) == entityID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected entity ID %q to be part of devops group")
+	}
+
+	// Remove user tesla from the devops group in LDAP backend
+	secret, err = client.Logical().Write("auth/ldap/users/tesla", map[string]interface{}{
+		"policies": "default",
+		"groups":   "engineers",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Renewing the token now should remove its entity ID from the devops
+	// group
+	_, err = client.Auth().Token().Renew(token, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	group, err = identityStore.MemDBGroupByID(devopsGroupID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if group.MemberEntityIDs != nil {
+		t.Fatalf("failed to remove entity ID from the group")
 	}
 }
