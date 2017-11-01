@@ -58,7 +58,7 @@ type Auth struct {
 
 	// Alias is the information about the authenticated client returned by
 	// the auth backend
-	Alias *Alias `json:"alias" structs:"alias" mapstructure:"alias" structs:"alias"`
+	Alias *Alias `json:"alias" mapstructure:"alias" structs:"alias"`
 
 	// GroupAliases are the informational mappings of external groups which an
 	// authenticated user belongs to. This is used to check if there are
