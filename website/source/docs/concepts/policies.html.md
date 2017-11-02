@@ -113,7 +113,7 @@ path "secret/super-secret" {
   capabilities = ["deny"]
 }
 
-# Policies can also specify allowed disallowed, and required parameters. Here 
+# Policies can also specify allowed, disallowed, and required parameters. Here 
 # the key "secret/restricted" can only contain "foo" (any value) and "bar" (one 
 # of "zip" or "zap").
 path "secret/restricted" {
