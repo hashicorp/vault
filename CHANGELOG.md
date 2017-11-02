@@ -49,6 +49,8 @@ BUG FIXES:
  * physical/file: Fix listing when underscores are the first component of a
    path [GH-3476]
  * plugins: Allow response errors to be returned from backend plugins [GH-3412]
+ * secret/transit: Fix panic if the length of the input ciphertext was less
+   than the expected nonce length [GH-3521]
 
 ## 0.8.3 (September 19th, 2017)
 
