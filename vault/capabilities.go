@@ -37,6 +37,45 @@ func (c *Core) Capabilities(token, path string) ([]string, error) {
 		policies = append(policies, policy)
 	}
 
+	if te.EntityID != "" {
+		entity, err := c.identityStore.MemDBEntityByID(te.EntityID, false)
+		if err != nil {
+			return nil, err
+		}
+
+		if entity == nil {
+			entity, err = c.identityStore.MemDBEntityByMergedEntityID(te.EntityID, false)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if entity != nil {
+			// Add policies from entity
+			for _, item := range entity.Policies {
+				policy, err := c.policyStore.GetPolicy(item, PolicyTypeToken)
+				if err != nil {
+					return nil, err
+				}
+				policies = append(policies, policy)
+			}
+
+			groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			// Add policies from groups
+			for _, item := range groupPolicies {
+				policy, err := c.policyStore.GetPolicy(item, PolicyTypeToken)
+				if err != nil {
+					return nil, err
+				}
+				policies = append(policies, policy)
+			}
+		}
+	}
+
 	if len(policies) == 0 {
 		return []string{DenyCapability}, nil
 	}
