@@ -675,6 +675,10 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.InternalError{Err: err.Error()}
 	}
 
+	if len(decoded) < gcm.NonceSize() {
+		return "", errutil.UserError{Err: "invalid ciphertext length"}
+	}
+
 	// Extract the nonce and ciphertext
 	var ciphertext []byte
 	if p.ConvergentEncryption && p.ConvergentVersion < 2 {
