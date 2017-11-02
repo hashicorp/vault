@@ -471,10 +471,26 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		return nil, ok, exists, err
 	} else {
 		resp, err := re.backend.HandleRequest(req)
+		// When a token gets renewed, the request hits this path and reaches
+		// token store. Token store delegates the renewal to the expiration
+		// manager. Expiration manager in-turn creates a different logical
+		// request and forwards the request to the auth backend that had
+		// initially authenticated the login request. The forwarding to auth
+		// backend will make this code path hit for the second time for the
+		// same renewal request. The accessors in the Alias structs should be
+		// of the auth backend and not of the token store. Therefore, avoiding
+		// the overwriting of accessors by having a check for path prefix
+		// having "renew". This gets applied for "renew" and "renew-self"
+		// requests.
 		if resp != nil &&
 			resp.Auth != nil &&
-			resp.Auth.Alias != nil {
-			resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
+			!strings.HasPrefix(req.Path, "renew") {
+			if resp.Auth.Alias != nil {
+				resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
+			}
+			for _, alias := range resp.Auth.GroupAliases {
+				alias.MountAccessor = re.mountEntry.Accessor
+			}
 		}
 		return resp, false, false, err
 	}
