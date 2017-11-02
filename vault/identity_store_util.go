@@ -586,7 +586,7 @@ func (i *IdentityStore) MemDBUpsertAlias(alias *identity.Alias, groupAlias bool)
 
 func (i *IdentityStore) MemDBAliasByCanonicalIDInTxn(txn *memdb.Txn, canonicalID string, clone bool, groupAlias bool) (*identity.Alias, error) {
 	if canonicalID == "" {
-		return nil, fmt.Errorf("missing parent ID")
+		return nil, fmt.Errorf("missing canonical ID")
 	}
 
 	if txn == nil {
@@ -600,7 +600,7 @@ func (i *IdentityStore) MemDBAliasByCanonicalIDInTxn(txn *memdb.Txn, canonicalID
 
 	aliasRaw, err := txn.First(tableName, "canonical_id", canonicalID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch alias from memdb using parent ID: %v", err)
+		return nil, fmt.Errorf("failed to fetch alias from memdb using canonical ID: %v", err)
 	}
 
 	if aliasRaw == nil {
@@ -621,7 +621,7 @@ func (i *IdentityStore) MemDBAliasByCanonicalIDInTxn(txn *memdb.Txn, canonicalID
 
 func (i *IdentityStore) MemDBAliasByCanonicalID(canonicalID string, clone bool, groupAlias bool) (*identity.Alias, error) {
 	if canonicalID == "" {
-		return nil, fmt.Errorf("missing parent ID")
+		return nil, fmt.Errorf("missing canonical ID")
 	}
 
 	txn := i.db.Txn(false)
@@ -1146,9 +1146,9 @@ func (i *IdentityStore) sanitizeAlias(alias *identity.Alias) error {
 		return fmt.Errorf("alias is nil")
 	}
 
-	// Alias must always be tied to a parent object
+	// Alias must always be tied to a canonical object
 	if alias.CanonicalID == "" {
-		return fmt.Errorf("missing parent ID")
+		return fmt.Errorf("missing canonical ID")
 	}
 
 	// Alias must have a name

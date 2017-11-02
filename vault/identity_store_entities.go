@@ -209,7 +209,7 @@ func (i *IdentityStore) pathEntityMergeID(req *logical.Request, d *framework.Fie
 		}
 
 		for _, alias := range fromEntity.Aliases {
-			// Set the desired parent ID
+			// Set the desired canonical ID
 			alias.CanonicalID = toEntity.ID
 
 			alias.MergedFromCanonicalIDs = append(alias.MergedFromCanonicalIDs, fromEntity.ID)
