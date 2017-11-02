@@ -414,10 +414,6 @@ func (i *IdentityStore) pathEntityIDRead(req *logical.Request, d *framework.Fiel
 }
 
 func (i *IdentityStore) handleEntityReadCommon(entity *identity.Entity) (*logical.Response, error) {
-	if entity == nil {
-		return nil, fmt.Errorf("nil entity")
-	}
-
 	respData := map[string]interface{}{}
 	respData["id"] = entity.ID
 	respData["name"] = entity.Name

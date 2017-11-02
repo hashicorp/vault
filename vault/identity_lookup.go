@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -127,32 +128,39 @@ func (i *IdentityStore) pathLookupEntityUpdate(req *logical.Request, d *framewor
 		return logical.ErrorResponse("empty type"), nil
 	}
 
+	var entity *identity.Entity
+	var err error
+
 	switch lookupType {
 	case "id":
 		entityID := d.Get("id").(string)
 		if entityID == "" {
 			return logical.ErrorResponse("empty id"), nil
 		}
-		entity, err := i.MemDBEntityByID(entityID, false)
+		entity, err = i.MemDBEntityByID(entityID, false)
 		if err != nil {
 			return nil, err
 		}
-		return i.handleEntityReadCommon(entity)
+
 	case "name":
 		entityName := d.Get("name").(string)
 		if entityName == "" {
 			return logical.ErrorResponse("empty name"), nil
 		}
-		entity, err := i.MemDBEntityByName(entityName, false)
+		entity, err = i.MemDBEntityByName(entityName, false)
 		if err != nil {
 			return nil, err
 		}
-		return i.handleEntityReadCommon(entity)
+
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unrecognized type %q", lookupType)), nil
 	}
 
-	return nil, nil
+	if entity == nil {
+		return nil, nil
+	}
+
+	return i.handleEntityReadCommon(entity)
 }
 
 func (i *IdentityStore) pathLookupGroupUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -253,6 +261,15 @@ func (i *IdentityStore) handleLookupAliasUpdateCommon(req *logical.Request, d *f
 }
 
 var lookupHelp = map[string][2]string{
+	"lookup-entity": {
+		"Query entities based on types.",
+		`Supported types:
+		- 'id'
+		To query the entity by its ID. This requires 'id' parameter to be set.
+		- 'name'
+		To query the entity by its name. This requires 'name' parameter to be set.
+		`,
+	},
 	"lookup-group": {
 		"Query groups based on types.",
 		`Supported types:
