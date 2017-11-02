@@ -272,6 +272,41 @@ func TestCore_Seal_BadToken(t *testing.T) {
 	}
 }
 
+// GH-3497
+func TestCore_Seal_SingleUse(t *testing.T) {
+	c, keys, _ := TestCoreUnsealed(t)
+	c.tokenStore.create(&TokenEntry{
+		ID:       "foo",
+		NumUses:  1,
+		Policies: []string{"root"},
+	})
+	if err := c.Seal("foo"); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed, err := c.Sealed(); err != nil || !sealed {
+		t.Fatalf("err: %v, sealed: %t", err, sealed)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
+	}
+	if err := c.Seal("foo"); err == nil {
+		t.Fatal("expected error from revoked token")
+	}
+	te, err := c.tokenStore.Lookup("foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te != nil {
+		t.Fatalf("expected nil token entry, got %#v", *te)
+	}
+}
+
 // Ensure we get a LeaseID
 func TestCore_HandleRequest_Lease(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)

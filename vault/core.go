@@ -1231,16 +1231,6 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 			c.stateLock.RUnlock()
 			return retErr
 		}
-		if te.NumUses == -1 {
-			// Token needs to be revoked
-			defer func(id string) {
-				err = c.tokenStore.Revoke(id)
-				if err != nil {
-					c.logger.Error("core: token needed revocation after seal but failed to revoke", "error", err)
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-			}(te.ID)
-		}
 	}
 
 	// Verify that this operation is allowed
@@ -1256,6 +1246,16 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr
+	}
+
+	if te != nil && te.NumUses == -1 {
+		// Token needs to be revoked. We do this immediately here because
+		// we won't have a token store after sealing.
+		err = c.tokenStore.Revoke(te.ID)
+		if err != nil {
+			c.logger.Error("core: token needed revocation before seal but failed to revoke", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+		}
 	}
 
 	// Tell any requests that know about this to stop
@@ -1334,16 +1334,6 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 			return retErr
 		}
-		if te.NumUses == -1 {
-			// Token needs to be revoked
-			defer func(id string) {
-				err = c.tokenStore.Revoke(id)
-				if err != nil {
-					c.logger.Error("core: token needed revocation after step-down but failed to revoke", "error", err)
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-			}(te.ID)
-		}
 	}
 
 	// Verify that this operation is allowed
@@ -1357,6 +1347,16 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	if !authResults.Allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr
+	}
+
+	if te != nil && te.NumUses == -1 {
+		// Token needs to be revoked. We do this immediately here because
+		// we won't have a token store after sealing.
+		err = c.tokenStore.Revoke(te.ID)
+		if err != nil {
+			c.logger.Error("core: token needed revocation before step-down but failed to revoke", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+		}
 	}
 
 	select {
