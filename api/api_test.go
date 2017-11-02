@@ -5,8 +5,6 @@ import (
 	"net"
 	"net/http"
 	"testing"
-
-	"golang.org/x/net/http2"
 )
 
 // testHTTPServer creates a test HTTP server that handles requests until
@@ -19,9 +17,6 @@ func testHTTPServer(
 	}
 
 	server := &http.Server{Handler: handler}
-	if err := http2.ConfigureServer(server, nil); err != nil {
-		t.Fatal(err)
-	}
 	go server.Serve(ln)
 
 	config := DefaultConfig()
