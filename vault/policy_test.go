@@ -85,6 +85,10 @@ path "test/types" {
 		"bool" = [false]
 	}
 }
+path "test/req" {
+	capabilities = ["create", "sudo"]
+	required_parameters = ["foo"]
+}
 `)
 
 func TestPolicy_Parse(t *testing.T) {
@@ -222,6 +226,20 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"map": []interface{}{map[string]interface{}{"good": "one"}}, "int": []interface{}{1, 2}},
 				DeniedParameters:   map[string][]interface{}{"string": []interface{}{"test"}, "bool": []interface{}{false}},
+			},
+			Glob: false,
+		},
+		&PathRules{
+			Prefix: "test/req",
+			Policy: "",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			RequiredParametersHCL: []string{"foo"},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+				RequiredParameters: []string{"foo"},
 			},
 			Glob: false,
 		},

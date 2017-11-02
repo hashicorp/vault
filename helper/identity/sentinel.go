@@ -50,7 +50,7 @@ func (p *Alias) SentinelGet(key string) (interface{}, error) {
 	case "last_update_time":
 		return ptypes.TimestampString(p.LastUpdateTime), nil
 	case "merged_from_entity_ids":
-		return p.MergedFromEntityIDs, nil
+		return p.MergedFromCanonicalIDs, nil
 	}
 
 	return nil, nil

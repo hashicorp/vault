@@ -90,7 +90,7 @@ func TestIdentityStore_EntityByAliasFactors(t *testing.T) {
 		t.Fatalf("expected a non-nil response")
 	}
 
-	entity, err := is.EntityByAliasFactors(ghAccessor, "alias_name", false)
+	entity, err := is.entityByAliasFactors(ghAccessor, "alias_name", false)
 	if err != nil {
 		t.Fatal(err)
 	}
