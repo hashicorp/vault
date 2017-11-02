@@ -11,6 +11,29 @@ import (
 func lookupPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
+			Pattern: "lookup/entity$",
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Type of lookup. Current supported values are 'id' and 'name'.",
+				},
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity.",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "ID of the entity.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.pathLookupEntityUpdate,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(lookupHelp["lookup-entity"][0]),
+			HelpDescription: strings.TrimSpace(lookupHelp["lookup-entity"][1]),
+		},
+		{
 			Pattern: "lookup/group$",
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
@@ -34,6 +57,40 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(lookupHelp["lookup-group"][1]),
 		},
 	}
+}
+
+func (i *IdentityStore) pathLookupEntityUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	lookupType := d.Get("type").(string)
+	if lookupType == "" {
+		return logical.ErrorResponse("empty type"), nil
+	}
+
+	switch lookupType {
+	case "id":
+		entityID := d.Get("id").(string)
+		if entityID == "" {
+			return logical.ErrorResponse("empty id"), nil
+		}
+		entity, err := i.memDBEntityByID(entityID, false)
+		if err != nil {
+			return nil, err
+		}
+		return i.handleEntityReadCommon(entity)
+	case "name":
+		entityName := d.Get("name").(string)
+		if entityName == "" {
+			return logical.ErrorResponse("empty name"), nil
+		}
+		entity, err := i.memDBEntityByName(entityName, false)
+		if err != nil {
+			return nil, err
+		}
+		return i.handleEntityReadCommon(entity)
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unrecognized type %q", lookupType)), nil
+	}
+
+	return nil, nil
 }
 
 func (i *IdentityStore) pathLookupGroupUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

@@ -411,6 +411,14 @@ func (i *IdentityStore) pathEntityIDRead(req *logical.Request, d *framework.Fiel
 		return nil, nil
 	}
 
+	return i.handleEntityReadCommon(entity)
+}
+
+func (i *IdentityStore) handleEntityReadCommon(entity *identity.Entity) (*logical.Response, error) {
+	if entity == nil {
+		return nil, fmt.Errorf("nil entity")
+	}
+
 	respData := map[string]interface{}{}
 	respData["id"] = entity.ID
 	respData["name"] = entity.Name
@@ -443,11 +451,9 @@ func (i *IdentityStore) pathEntityIDRead(req *logical.Request, d *framework.Fiel
 	// formats
 	respData["aliases"] = aliasesToReturn
 
-	resp := &logical.Response{
+	return &logical.Response{
 		Data: respData,
-	}
-
-	return resp, nil
+	}, nil
 }
 
 // pathEntityIDDelete deletes the entity for a given entity ID
