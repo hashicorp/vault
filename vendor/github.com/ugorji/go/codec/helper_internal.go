@@ -9,7 +9,6 @@ package codec
 import (
 	"errors"
 	"fmt"
-	"math"
 	"reflect"
 )
 
@@ -84,37 +83,6 @@ func pruneSignExt(v []byte, pos bool) (n int) {
 		}
 	}
 	return
-}
-
-func implementsIntf(typ, iTyp reflect.Type) (success bool, indir int8) {
-	if typ == nil {
-		return
-	}
-	rt := typ
-	// The type might be a pointer and we need to keep
-	// dereferencing to the base type until we find an implementation.
-	for {
-		if rt.Implements(iTyp) {
-			return true, indir
-		}
-		if p := rt; p.Kind() == reflect.Ptr {
-			indir++
-			if indir >= math.MaxInt8 { // insane number of indirections
-				return false, 0
-			}
-			rt = p.Elem()
-			continue
-		}
-		break
-	}
-	// No luck yet, but if this is a base type (non-pointer), the pointer might satisfy.
-	if typ.Kind() != reflect.Ptr {
-		// Not a pointer, but does the pointer work?
-		if reflect.PtrTo(typ).Implements(iTyp) {
-			return true, -1
-		}
-	}
-	return false, 0
 }
 
 // validate that this function is correct ...
@@ -218,25 +186,4 @@ func growCap(oldCap, unit, num int) (newCap int) {
 		}
 	}
 	return
-}
-
-func expandSliceValue(s reflect.Value, num int) reflect.Value {
-	if num <= 0 {
-		return s
-	}
-	l0 := s.Len()
-	l1 := l0 + num // new slice length
-	if l1 < l0 {
-		panic("ExpandSlice: slice overflow")
-	}
-	c0 := s.Cap()
-	if l1 <= c0 {
-		return s.Slice(0, l1)
-	}
-	st := s.Type()
-	c1 := growCap(c0, int(st.Elem().Size()), num)
-	s2 := reflect.MakeSlice(st, l1, c1)
-	// println("expandslicevalue: cap-old: ", c0, ", cap-new: ", c1, ", len-new: ", l1)
-	reflect.Copy(s2, s)
-	return s2
 }

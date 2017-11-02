@@ -33,6 +33,7 @@ func main() {
     cfg.CheckManager.API.TokenApp = "circonus-gometrics"
     cfg.CheckManager.API.TokenURL = "https://api.circonus.com/v2"
     cfg.CheckManager.API.CACert = nil
+    cfg.CheckManager.API.TLSConfig = nil
 
     // Check
     _, an := path.Split(os.Args[0])
@@ -52,6 +53,7 @@ func main() {
     cfg.CheckManager.Broker.ID = ""
     cfg.CheckManager.Broker.SelectTag = ""
     cfg.CheckManager.Broker.MaxResponseTime = "500ms"
+    cfg.CheckManager.Broker.TLSConfig = nil
 
     // create a new cgm instance and start sending metrics...
     // see the complete example in the main README.    
@@ -73,10 +75,11 @@ func main() {
 | `cfg.CheckManager.API.TokenKey` | "" | [Circonus API Token key](https://login.circonus.com/user/tokens) |
 | `cfg.CheckManager.API.TokenApp` | "circonus-gometrics" | App associated with API token |
 | `cfg.CheckManager.API.URL` | "https://api.circonus.com/v2" | Circonus API URL |
-| `cfg.CheckManager.API.CACert` | nil | [*x509.CertPool](https://golang.org/pkg/crypto/x509/#CertPool) with CA Cert to validate API endpoint using internal CA or self-signed certificates |
+| `cfg.CheckManager.API.TLSConfig` | nil | Custom tls.Config to use when communicating with Circonus API |
+| `cfg.CheckManager.API.CACert` | nil | DEPRECATED - use TLSConfig ~~[*x509.CertPool](https://golang.org/pkg/crypto/x509/#CertPool) with CA Cert to validate API endpoint using internal CA or self-signed certificates~~ |
 |Check||
 | `cfg.CheckManager.Check.ID` | "" | Check ID of previously created check. (*Note: **check id** not **check bundle id**.*) |
-| `cfg.CheckManager.Check.SubmissionURL` | "" | Submission URL of previously created check. |
+| `cfg.CheckManager.Check.SubmissionURL` | "" | Submission URL of previously created check. Metrics can also be sent to a local [circonus-agent](https://github.com/circonus-labs/circonus-agent) by using the agent's URL (e.g. `http://127.0.0.1:2609/write/appid` where `appid` is a unique identifier for the application which will prefix all metrics. Additionally, the circonus-agent can optionally listen for requests to `/write` on a unix socket - to leverage this feature, use a URL such as `http+unix:///path/to/socket_file/write/appid`). |
 | `cfg.CheckManager.Check.InstanceID` | hostname:program name | An identifier for the 'group of metrics emitted by this process or service'. |
 | `cfg.CheckManager.Check.TargetHost` | InstanceID | Explicit setting of `check.target`. |
 | `cfg.CheckManager.Check.DisplayName` | InstanceID | Custom `check.display_name`. Shows in UI check list. |
@@ -89,6 +92,7 @@ func main() {
 | `cfg.CheckManager.Broker.ID` | "" | ID of a specific broker to use when creating a check. Default is to use a random enterprise broker or the public Circonus default broker. |
 | `cfg.CheckManager.Broker.SelectTag` | "" | Used to select a broker with the same tag(s). If more than one broker has the tag(s), one will be selected randomly from the resulting list. (e.g. could be used to select one from a list of brokers serving a specific colo/region. "dc:sfo", "loc:nyc,dc:nyc01", "zone:us-west") |
 | `cfg.CheckManager.Broker.MaxResponseTime` | "500ms" | Maximum amount time to wait for a broker connection test to be considered valid. (if latency is > the broker will be considered invalid and not available for selection.) |
+| `cfg.CheckManager.Broker.TLSConfig` | nil | Custom tls.Config to use when communicating with Circonus Broker |
 
 ## Notes:
 

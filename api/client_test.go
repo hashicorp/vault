@@ -213,3 +213,16 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestClone(t *testing.T) {
+	client1, err1 := NewClient(nil)
+	if err1 != nil {
+		t.Fatalf("NewClient failed: %v", err1)
+	}
+	client2, err2 := client1.Clone()
+	if err2 != nil {
+		t.Fatalf("Clone failed: %v", err2)
+	}
+
+	_ = client2
+}

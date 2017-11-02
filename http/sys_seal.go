@@ -190,6 +190,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	progress, nonce := core.SecretProgress()
 
 	respondOk(w, &SealStatusResponse{
+		Type:        sealConfig.Type,
 		Sealed:      sealed,
 		T:           sealConfig.SecretThreshold,
 		N:           sealConfig.SecretShares,
@@ -202,6 +203,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 }
 
 type SealStatusResponse struct {
+	Type        string `json:"type"`
 	Sealed      bool   `json:"sealed"`
 	T           int    `json:"t"`
 	N           int    `json:"n"`

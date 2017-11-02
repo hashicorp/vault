@@ -169,6 +169,18 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				}
 			}
 
+			if len(pc.Permissions.RequiredParameters) > 0 {
+				if len(existingPerms.RequiredParameters) == 0 {
+					existingPerms.RequiredParameters = pc.Permissions.RequiredParameters
+				} else {
+					for _, v := range pc.Permissions.RequiredParameters {
+						if !strutil.StrListContains(existingPerms.RequiredParameters, v) {
+							existingPerms.RequiredParameters = append(existingPerms.RequiredParameters, v)
+						}
+					}
+				}
+			}
+
 		INSERT:
 			tree.Insert(pc.Prefix, existingPerms)
 		}
@@ -322,6 +334,12 @@ CHECK:
 	// Only check parameter permissions for operations that can modify
 	// parameters.
 	if op == logical.UpdateOperation || op == logical.CreateOperation {
+		for _, parameter := range permissions.RequiredParameters {
+			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
+				return
+			}
+		}
+
 		// If there are no data fields, allow
 		if len(req.Data) == 0 {
 			ret.Allowed = true

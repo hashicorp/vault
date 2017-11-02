@@ -609,6 +609,40 @@ func TestBackend_allowedRoles(t *testing.T) {
 		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
 	}
 
+	// update connection with glob allowed roles connection
+	data = map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  "allow*",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Get creds, should work.
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/allowed",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err = b.HandleRequest(req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+
+	if !testCredsExist(t, credsResp, connURL) {
+		t.Fatalf("Creds should exist")
+	}
+
 	// update connection with * allowed roles connection
 	data = map[string]interface{}{
 		"connection_url": connURL,

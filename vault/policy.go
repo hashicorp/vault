@@ -96,10 +96,11 @@ type PathRules struct {
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
-	MinWrappingTTLHCL    interface{}              `hcl:"min_wrapping_ttl"`
-	MaxWrappingTTLHCL    interface{}              `hcl:"max_wrapping_ttl"`
-	AllowedParametersHCL map[string][]interface{} `hcl:"allowed_parameters"`
-	DeniedParametersHCL  map[string][]interface{} `hcl:"denied_parameters"`
+	MinWrappingTTLHCL     interface{}              `hcl:"min_wrapping_ttl"`
+	MaxWrappingTTLHCL     interface{}              `hcl:"max_wrapping_ttl"`
+	AllowedParametersHCL  map[string][]interface{} `hcl:"allowed_parameters"`
+	DeniedParametersHCL   map[string][]interface{} `hcl:"denied_parameters"`
+	RequiredParametersHCL []string                 `hcl:"required_parameters"`
 }
 
 type ACLPermissions struct {
@@ -108,6 +109,7 @@ type ACLPermissions struct {
 	MaxWrappingTTL     time.Duration
 	AllowedParameters  map[string][]interface{}
 	DeniedParameters   map[string][]interface{}
+	RequiredParameters []string
 }
 
 func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
@@ -115,6 +117,7 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 		CapabilitiesBitmap: p.CapabilitiesBitmap,
 		MinWrappingTTL:     p.MinWrappingTTL,
 		MaxWrappingTTL:     p.MaxWrappingTTL,
+		RequiredParameters: p.RequiredParameters[:],
 	}
 
 	switch {
@@ -198,6 +201,7 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			"capabilities",
 			"allowed_parameters",
 			"denied_parameters",
+			"required_parameters",
 			"min_wrapping_ttl",
 			"max_wrapping_ttl",
 		}
@@ -289,6 +293,9 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			pc.Permissions.MaxWrappingTTL != 0 &&
 			pc.Permissions.MaxWrappingTTL < pc.Permissions.MinWrappingTTL {
 			return errors.New("max_wrapping_ttl cannot be less than min_wrapping_ttl")
+		}
+		if len(pc.RequiredParametersHCL) > 0 {
+			pc.Permissions.RequiredParameters = pc.RequiredParametersHCL[:]
 		}
 
 	PathFinished:
