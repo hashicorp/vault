@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestCapabilities_Entity(t *testing.T) {
+func TestCapabilities_DerivedPolicies(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
