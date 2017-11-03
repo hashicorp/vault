@@ -57,7 +57,7 @@ func TestIdentityStore_EntityReadGroupIDs(t *testing.T) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
 
-	impliedGroupID := resp.Data["id"].(string)
+	inheritedGroupID := resp.Data["id"].(string)
 
 	lookupReq := &logical.Request{
 		Path:      "lookup/entity",
@@ -73,16 +73,22 @@ func TestIdentityStore_EntityReadGroupIDs(t *testing.T) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
 
-	expected := []string{groupID}
+	expected := []string{groupID, inheritedGroupID}
 	actual := resp.Data["group_ids"].([]string)
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: group_ids; expected: %#v\nactual: %#v\n", expected, actual)
 	}
 
-	expected = []string{impliedGroupID}
-	actual = resp.Data["implied_group_ids"].([]string)
+	expected = []string{groupID}
+	actual = resp.Data["direct_group_ids"].([]string)
 	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("bad: group_ids; expected: %#v\nactual: %#v\n", expected, actual)
+		t.Fatalf("bad: direct_group_ids; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+
+	expected = []string{inheritedGroupID}
+	actual = resp.Data["inherited_group_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: inherited_group_ids; expected: %#v\nactual: %#v\n", expected, actual)
 	}
 }
 

@@ -456,13 +456,15 @@ func (i *IdentityStore) handleEntityReadCommon(entity *identity.Entity) (*logica
 	for i, group := range groups {
 		groupIDs[i] = group.ID
 	}
-	respData["group_ids"] = groupIDs
+	respData["direct_group_ids"] = groupIDs
 
 	impliedGroupIDs := make([]string, len(impliedGroups))
 	for i, group := range impliedGroups {
 		impliedGroupIDs[i] = group.ID
 	}
-	respData["implied_group_ids"] = impliedGroupIDs
+	respData["inherited_group_ids"] = impliedGroupIDs
+
+	respData["group_ids"] = append(groupIDs, impliedGroupIDs...)
 
 	return &logical.Response{
 		Data: respData,
