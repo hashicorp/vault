@@ -17,6 +17,10 @@ DEPRECATIONS/CHANGES:
    the TTL/max TTL values will now be an integer number of seconds rather than
    a string. This better matches the API elsewhere in Vault.
 
+FEATURES:
+ * ** RSA Support for Transit Backend**: Transit backend can now generate RSA
+   keys which can be used for encryption and signing. [GH-3489]
+
 IMPROVEMENTS:
 
  * api: Add ability to set custom headers on each call [GH-3394]
