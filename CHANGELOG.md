@@ -50,6 +50,8 @@ BUG FIXES:
    responses when requests were forwarded to the active node [GH-3485]
  * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
    matching [GH-3406]
+ * physical/etcd3: Fix case where standbys can lose their etcd client lease
+   [GH-3031]
  * physical/file: Fix listing when underscores are the first component of a
    path [GH-3476]
  * plugins: Allow response errors to be returned from backend plugins [GH-3412]
