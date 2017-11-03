@@ -1983,10 +1983,11 @@ func (i *IdentityStore) transitiveGroupsByEntityID(entityID string) ([]*identity
 	visited := make(map[string]bool)
 	var tGroups []*identity.Group
 	for _, group := range groups {
-		tGroups, err = i.collectGroupsReverseDFS(group, visited, nil)
+		gGroups, err := i.collectGroupsReverseDFS(group, visited, nil)
 		if err != nil {
 			return nil, err
 		}
+		tGroups = append(tGroups, gGroups...)
 	}
 
 	// Remove duplicates
@@ -1995,7 +1996,7 @@ func (i *IdentityStore) transitiveGroupsByEntityID(entityID string) ([]*identity
 		groupMap[group.ID] = group
 	}
 
-	tGroups = nil
+	tGroups = make([]*identity.Group, 0, len(groupMap))
 	for _, group := range groupMap {
 		tGroups = append(tGroups, group)
 	}
@@ -2022,10 +2023,11 @@ func (i *IdentityStore) collectGroupsReverseDFS(group *identity.Group, visited m
 		if err != nil {
 			return nil, err
 		}
-		groups, err = i.collectGroupsReverseDFS(parentGroup, visited, groups)
+		pGroups, err := i.collectGroupsReverseDFS(parentGroup, visited, groups)
 		if err != nil {
 			return nil, fmt.Errorf("failed to collect group at parent group ID %q", parentGroup.ID)
 		}
+		groups = append(groups, pGroups...)
 	}
 
 	return groups, nil
@@ -2050,13 +2052,14 @@ func (i *IdentityStore) collectPoliciesReverseDFS(group *identity.Group, visited
 		if err != nil {
 			return nil, err
 		}
-		policies, err = i.collectPoliciesReverseDFS(parentGroup, visited, policies)
+		parentPolicies, err := i.collectPoliciesReverseDFS(parentGroup, visited, policies)
 		if err != nil {
 			return nil, fmt.Errorf("failed to collect policies at parent group ID %q", parentGroup.ID)
 		}
+		policies = append(policies, parentPolicies...)
 	}
 
-	return policies, nil
+	return strutil.RemoveDuplicates(policies, false), nil
 }
 
 func (i *IdentityStore) detectCycleDFS(visited map[string]bool, startingGroupID, groupID string) (bool, error) {
@@ -2225,10 +2228,6 @@ func (i *IdentityStore) MemDBGroupByAliasID(aliasID string, clone bool) (*identi
 }
 
 func (i *IdentityStore) deleteGroupAlias(aliasID string) error {
-	var err error
-	var alias *identity.Alias
-	var group *identity.Group
-
 	if aliasID == "" {
 		return fmt.Errorf("missing alias ID")
 	}
@@ -2239,7 +2238,7 @@ func (i *IdentityStore) deleteGroupAlias(aliasID string) error {
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	alias, err = i.MemDBAliasByIDInTxn(txn, aliasID, false, true)
+	alias, err := i.MemDBAliasByIDInTxn(txn, aliasID, false, true)
 	if err != nil {
 		return err
 	}
@@ -2248,7 +2247,7 @@ func (i *IdentityStore) deleteGroupAlias(aliasID string) error {
 		return nil
 	}
 
-	group, err = i.MemDBGroupByAliasIDInTxn(txn, alias.ID, true)
+	group, err := i.MemDBGroupByAliasIDInTxn(txn, alias.ID, true)
 	if err != nil {
 		return err
 	}
