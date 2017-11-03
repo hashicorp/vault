@@ -20,7 +20,7 @@ func secretToken(b *backend) *framework.Secret {
 		},
 
 		Renew:  b.secretTokenRenew,
-		Revoke: secretTokenRevoke,
+		Revoke: b.secretTokenRevoke,
 	}
 }
 
@@ -30,15 +30,11 @@ func (b *backend) secretTokenRenew(
 	return framework.LeaseExtend(0, 0, b.System())(req, d)
 }
 
-func secretTokenRevoke(
+func (b *backend) secretTokenRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	c, userErr, intErr := client(req.Storage)
+	c, intErr := b.Client(req.Storage)
 	if intErr != nil {
 		return nil, intErr
-	}
-	if userErr != nil {
-		// Returning logical.ErrorResponse from revocation function is risky
-		return nil, userErr
 	}
 
 	tokenRaw, _ := req.Secret.InternalData["accessor_id"]
