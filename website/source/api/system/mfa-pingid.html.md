@@ -18,12 +18,12 @@ This endpoint defines a MFA method of type PingID.
 
 - `name` `(string: <required>)` – Name of the MFA method.
 
-- `mount_accessor` `(string: <required>)` - The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Personas associated with this mount as the username in the mapping.
+- `mount_accessor` `(string: <required>)` - The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.
 
-- `username_format` `(string)` - A format string for mapping Identity names to MFA method names. Values to substitute should be placed in `{{}}`. For example, `"{{persona.name}}@example.com"`. If blank, the Persona's Name field will be used as-is. Currently-supported mappings:
-  - persona.name: The name returned by the mount configured via the `mount_accessor` parameter
+- `username_format` `(string)` - A format string for mapping Identity names to MFA method names. Values to substitute should be placed in `{{}}`. For example, `"{{alias.name}}@example.com"`. If blank, the Alias's Name field will be used as-is. Currently-supported mappings:
+  - alias.name: The name returned by the mount configured via the `mount_accessor` parameter
   - entity.name: The name configured for the Entity
-  - persona.metadata.`<key>`: The value of the Persona's metadata parameter
+  - alias.metadata.`<key>`: The value of the Alias's metadata parameter
   - entity.metadata.`<key>`: The value of the Entity's metadata paramater
 
 - `settings_file_base64` `(string)` - A base64-encoded third-party settings file retrieved from PingID's configuration page.
