@@ -489,10 +489,10 @@ func (b *backend) getRole(s logical.Storage, n string) (*sshRole, error) {
 }
 
 // parseRole converts a sshRole object into its map[string]interface representation,
-// with appropriate values for each keyType. If the keyType is invalid, it will retun
+// with appropriate values for each KeyType. If the KeyType is invalid, it will retun
 // an error.
 func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
-	result := map[string]interface{}{}
+	var result map[string]interface{}
 
 	switch role.KeyType {
 	case KeyTypeOTP:
@@ -589,8 +589,10 @@ func (b *backend) pathRoleList(req *logical.Request, d *framework.FieldData) (*l
 			continue
 		}
 
-		keyInfo[entry] = map[string]interface{}{
-			"key_type": roleInfo["key_type"],
+		if keyType, ok := roleInfo["key_type"]; ok {
+			keyInfo[entry] = map[string]interface{}{
+				"key_type": keyType,
+			}
 		}
 	}
 

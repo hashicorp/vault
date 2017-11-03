@@ -116,12 +116,17 @@ func ListResponse(keys []string) *Response {
 func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Response {
 	resp := ListResponse(keys)
 
-	resp.Data["key_info"] = map[string]interface{}{}
+	keyInfoData := make(map[string]interface{})
 	for _, key := range keys {
 		val, ok := keyInfo[key]
 		if ok {
-			resp.Data["key_info"].(map[string]interface{})[key] = val
+			keyInfoData[key] = val
 		}
 	}
+
+	if len(keyInfoData) > 0 {
+		resp.Data["key_info"] = keyInfoData
+	}
+
 	return resp
 }
