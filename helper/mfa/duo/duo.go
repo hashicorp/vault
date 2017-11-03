@@ -69,7 +69,13 @@ type duoAuthRequest struct {
 func duoHandler(duoConfig *DuoConfig, duoAuthClient AuthClient, request *duoAuthRequest) (
 	*logical.Response, error) {
 
-	duoUser := fmt.Sprintf(duoConfig.UsernameFormat, request.username)
+	var username string
+	if duoConfig.ValidatorUsername == "" {
+		username = request.username
+	} else {
+		username = duoConfig.ValidatorUsername
+	}
+	duoUser := fmt.Sprintf(duoConfig.UsernameFormat, username)
 
 	preauth, err := duoAuthClient.Preauth(
 		authapi.PreauthUsername(duoUser),

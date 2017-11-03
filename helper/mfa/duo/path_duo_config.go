@@ -20,6 +20,10 @@ func pathDuoConfig() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Format string given auth backend username as argument to create Duo username (default '%s')",
 			},
+			"validator_username": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Username for the Duo's account that will receive the MFA challenge (default '')",
+			},
 			"push_info": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "A string of URL-encoded key/value pairs that provides additional context about the authentication attempt in the Duo Mobile app",
@@ -61,9 +65,10 @@ func pathDuoConfigWrite(
 		return nil, errors.New("username_format must include username ('%s')")
 	}
 	entry, err := logical.StorageEntryJSON("duo/config", DuoConfig{
-		UsernameFormat: username_format,
-		UserAgent:      d.Get("user_agent").(string),
-		PushInfo:       d.Get("push_info").(string),
+		UsernameFormat:    username_format,
+		ValidatorUsername: d.Get("validator_username").(string),
+		UserAgent:         d.Get("user_agent").(string),
+		PushInfo:          d.Get("push_info").(string),
 	})
 	if err != nil {
 		return nil, err
@@ -89,21 +94,23 @@ func pathDuoConfigRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"username_format": config.UsernameFormat,
-			"user_agent":      config.UserAgent,
-			"push_info":       config.PushInfo,
+			"username_format":    config.UsernameFormat,
+			"validator_username": config.ValidatorUsername,
+			"user_agent":         config.UserAgent,
+			"push_info":          config.PushInfo,
 		},
 	}, nil
 }
 
 type DuoConfig struct {
-	UsernameFormat string `json:"username_format"`
-	UserAgent      string `json:"user_agent"`
-	PushInfo       string `json:"push_info"`
+	UsernameFormat    string `json:"username_format"`
+	ValidatorUsername string `json:"validator_username"`
+	UserAgent         string `json:"user_agent"`
+	PushInfo          string `json:"push_info"`
 }
 
 const pathDuoConfigHelpSyn = `
-Configure Duo second factor behavior. 
+Configure Duo second factor behavior.
 `
 
 const pathDuoConfigHelpDesc = `
