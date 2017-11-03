@@ -247,10 +247,16 @@ func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
 	}
 
 	for i, name := range names {
-		if name[0] == '_' {
-			names[i] = name[1:]
-		} else {
+		fi, err := os.Stat(filepath.Join(path, name))
+		if err != nil {
+			return nil, err
+		}
+		if fi.IsDir() {
 			names[i] = name + "/"
+		} else {
+			if name[0] == '_' {
+				names[i] = name[1:]
+			}
 		}
 	}
 

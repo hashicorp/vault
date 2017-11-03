@@ -1276,3 +1276,38 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 	// Wait for them all to finish
 	wg.Wait()
 }
+
+func TestBadInput(t *testing.T) {
+	var b *backend
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	b = Backend(&logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	})
+
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test",
+	}
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil response")
+	}
+
+	req.Path = "decrypt/test"
+	req.Data = map[string]interface{}{
+		"ciphertext": "vault:v1:abcd",
+	}
+
+	_, err = b.HandleRequest(req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}

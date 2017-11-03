@@ -5,7 +5,10 @@
 
 package github
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // Installation represents a GitHub Apps installation.
 type Installation struct {
@@ -46,4 +49,36 @@ func (s *AppsService) ListRepos(ctx context.Context, opt *ListOptions) ([]*Repos
 	}
 
 	return r.Repositories, resp, nil
+}
+
+// AddRepository adds a single repository to an installation.
+//
+// GitHub API docs: https://developer.github.com/v3/apps/installations/#add-repository-to-installation
+func (s *AppsService) AddRepository(ctx context.Context, instID, repoID int) (*Repository, *Response, error) {
+	u := fmt.Sprintf("apps/installations/%v/repositories/%v", instID, repoID)
+	req, err := s.client.NewRequest("PUT", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r := new(Repository)
+	resp, err := s.client.Do(ctx, req, r)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return r, resp, nil
+}
+
+// RemoveRepository removes a single repository from an installation.
+//
+// GitHub docs: https://developer.github.com/v3/apps/installations/#remove-repository-from-installation
+func (s *AppsService) RemoveRepository(ctx context.Context, instID, repoID int) (*Response, error) {
+	u := fmt.Sprintf("apps/installations/%v/repositories/%v", instID, repoID)
+	req, err := s.client.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.client.Do(ctx, req, nil)
 }

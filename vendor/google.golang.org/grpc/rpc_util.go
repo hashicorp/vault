@@ -193,12 +193,11 @@ func Peer(peer *peer.Peer) CallOption {
 }
 
 // FailFast configures the action to take when an RPC is attempted on broken
-// connections or unreachable servers. If failfast is true, the RPC will fail
+// connections or unreachable servers. If failFast is true, the RPC will fail
 // immediately. Otherwise, the RPC client will block the call until a
-// connection is available (or the call is canceled or times out) and will retry
-// the call if it fails due to a transient error. Please refer to
-// https://github.com/grpc/grpc/blob/master/doc/wait-for-ready.md.
-// Note: failFast is default to true.
+// connection is available (or the call is canceled or times out). Please refer
+// to https://github.com/grpc/grpc/blob/master/doc/wait-for-ready.md.
+// The default behavior of RPCs is to fail fast.
 func FailFast(failFast bool) CallOption {
 	return beforeCall(func(c *callInfo) error {
 		c.failFast = failFast
@@ -275,7 +274,10 @@ func (p *parser) recvMsg(maxReceiveMessageSize int) (pf payloadFormat, msg []byt
 	if length == 0 {
 		return pf, nil, nil
 	}
-	if length > uint32(maxReceiveMessageSize) {
+	if int64(length) > int64(maxInt) {
+		return 0, nil, Errorf(codes.ResourceExhausted, "grpc: received message larger than max length allowed on current machine (%d vs. %d)", length, maxInt)
+	}
+	if int(length) > maxReceiveMessageSize {
 		return 0, nil, Errorf(codes.ResourceExhausted, "grpc: received message larger than max (%d vs. %d)", length, maxReceiveMessageSize)
 	}
 	// TODO(bradfitz,zhaoq): garbage. reuse buffer after proto decoding instead
@@ -440,80 +442,21 @@ func Errorf(c codes.Code, format string, a ...interface{}) error {
 	return status.Errorf(c, format, a...)
 }
 
-// MethodConfig defines the configuration recommended by the service providers for a
-// particular method.
-// This is EXPERIMENTAL and subject to change.
-type MethodConfig struct {
-	// WaitForReady indicates whether RPCs sent to this method should wait until
-	// the connection is ready by default (!failfast). The value specified via the
-	// gRPC client API will override the value set here.
-	WaitForReady *bool
-	// Timeout is the default timeout for RPCs sent to this method. The actual
-	// deadline used will be the minimum of the value specified here and the value
-	// set by the application via the gRPC client API.  If either one is not set,
-	// then the other will be used.  If neither is set, then the RPC has no deadline.
-	Timeout *time.Duration
-	// MaxReqSize is the maximum allowed payload size for an individual request in a
-	// stream (client->server) in bytes. The size which is measured is the serialized
-	// payload after per-message compression (but before stream compression) in bytes.
-	// The actual value used is the minumum of the value specified here and the value set
-	// by the application via the gRPC client API. If either one is not set, then the other
-	// will be used.  If neither is set, then the built-in default is used.
-	MaxReqSize *int
-	// MaxRespSize is the maximum allowed payload size for an individual response in a
-	// stream (server->client) in bytes.
-	MaxRespSize *int
-}
-
-// ServiceConfig is provided by the service provider and contains parameters for how
-// clients that connect to the service should behave.
-// This is EXPERIMENTAL and subject to change.
-type ServiceConfig struct {
-	// LB is the load balancer the service providers recommends. The balancer specified
-	// via grpc.WithBalancer will override this.
-	LB Balancer
-	// Methods contains a map for the methods in this service.
-	// If there is an exact match for a method (i.e. /service/method) in the map, use the corresponding MethodConfig.
-	// If there's no exact match, look for the default config for the service (/service/) and use the corresponding MethodConfig if it exists.
-	// Otherwise, the method has no MethodConfig to use.
-	Methods map[string]MethodConfig
-}
-
-func min(a, b *int) *int {
-	if *a < *b {
-		return a
-	}
-	return b
-}
-
-func getMaxSize(mcMax, doptMax *int, defaultVal int) *int {
-	if mcMax == nil && doptMax == nil {
-		return &defaultVal
-	}
-	if mcMax != nil && doptMax != nil {
-		return min(mcMax, doptMax)
-	}
-	if mcMax != nil {
-		return mcMax
-	}
-	return doptMax
-}
-
-// SupportPackageIsVersion3 is referenced from generated protocol buffer files.
-// The latest support package version is 4.
-// SupportPackageIsVersion3 is kept for compability. It will be removed in the
-// next support package version update.
-const SupportPackageIsVersion3 = true
-
-// SupportPackageIsVersion4 is referenced from generated protocol buffer files
-// to assert that that code is compatible with this version of the grpc package.
+// The SupportPackageIsVersion variables are referenced from generated protocol
+// buffer files to ensure compatibility with the gRPC version used.  The latest
+// support package version is 5.
 //
-// This constant may be renamed in the future if a change in the generated code
-// requires a synchronised update of grpc-go and protoc-gen-go. This constant
-// should not be referenced from any other code.
-const SupportPackageIsVersion4 = true
+// Older versions are kept for compatibility. They may be removed if
+// compatibility cannot be maintained.
+//
+// These constants should not be referenced from any other code.
+const (
+	SupportPackageIsVersion3 = true
+	SupportPackageIsVersion4 = true
+	SupportPackageIsVersion5 = true
+)
 
 // Version is the current grpc version.
-const Version = "1.7.0-dev"
+const Version = "1.8.0-dev"
 
 const grpcUA = "grpc-go/" + Version

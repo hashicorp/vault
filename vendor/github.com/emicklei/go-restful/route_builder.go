@@ -24,6 +24,7 @@ type RouteBuilder struct {
 	httpMethod  string        // required
 	function    RouteFunction // required
 	filters     []FilterFunction
+	conditions  []RouteSelectionConditionFunction
 
 	typeNameHandleFunc TypeNameHandleFunction // required
 
@@ -35,6 +36,7 @@ type RouteBuilder struct {
 	parameters              []*Parameter
 	errorMap                map[int]ResponseError
 	metadata                map[string]interface{}
+	deprecated              bool
 }
 
 // Do evaluates each argument with the RouteBuilder itself.
@@ -193,6 +195,12 @@ func (b *RouteBuilder) Metadata(key string, value interface{}) *RouteBuilder {
 	return b
 }
 
+// Deprecate sets the value of deprecated to true.  Deprecated routes have a special UI treatment to warn against use
+func (b *RouteBuilder) Deprecate() *RouteBuilder {
+	b.deprecated = true
+	return b
+}
+
 // ResponseError represents a response; not necessarily an error.
 type ResponseError struct {
 	Code      int
@@ -209,6 +217,21 @@ func (b *RouteBuilder) servicePath(path string) *RouteBuilder {
 // Filter appends a FilterFunction to the end of filters for this Route to build.
 func (b *RouteBuilder) Filter(filter FilterFunction) *RouteBuilder {
 	b.filters = append(b.filters, filter)
+	return b
+}
+
+// If sets a condition function that controls matching the Route based on custom logic.
+// The condition function is provided the HTTP request and should return true if the route
+// should be considered.
+//
+// Efficiency note: the condition function is called before checking the method, produces, and
+// consumes criteria, so that the correct HTTP status code can be returned.
+//
+// Lifecycle note: no filter functions have been called prior to calling the condition function,
+// so the condition function should not depend on any context that might be set up by container
+// or route filters.
+func (b *RouteBuilder) If(condition RouteSelectionConditionFunction) *RouteBuilder {
+	b.conditions = append(b.conditions, condition)
 	return b
 }
 
@@ -254,6 +277,7 @@ func (b *RouteBuilder) Build() Route {
 		Consumes:       b.consumes,
 		Function:       b.function,
 		Filters:        b.filters,
+		If:             b.conditions,
 		relativePath:   b.currentPath,
 		pathExpr:       pathExpr,
 		Doc:            b.doc,
@@ -263,7 +287,8 @@ func (b *RouteBuilder) Build() Route {
 		ResponseErrors: b.errorMap,
 		ReadSample:     b.readSample,
 		WriteSample:    b.writeSample,
-		Metadata:       b.metadata}
+		Metadata:       b.metadata,
+		Deprecated:     b.deprecated}
 	route.postBuild()
 	return route
 }

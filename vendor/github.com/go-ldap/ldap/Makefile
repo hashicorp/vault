@@ -7,7 +7,7 @@ IS_OLD_GO := $(shell test $(GO_VERSION) -le 2 && echo true)
 ifeq ($(IS_OLD_GO),true)
 	RACE_FLAG :=
 else
-	RACE_FLAG := -race
+	RACE_FLAG := -race -cpu 1,2,4
 endif
 
 default: fmt vet lint build quicktest
