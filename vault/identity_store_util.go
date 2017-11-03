@@ -1960,10 +1960,11 @@ func (i *IdentityStore) groupPoliciesByEntityID(entityID string) ([]string, erro
 	visited := make(map[string]bool)
 	var policies []string
 	for _, group := range groups {
-		policies, err = i.collectPoliciesReverseDFS(group, visited, nil)
+		groupPolicies, err := i.collectPoliciesReverseDFS(group, visited, nil)
 		if err != nil {
 			return nil, err
 		}
+		policies = append(policies, groupPolicies...)
 	}
 
 	return strutil.RemoveDuplicates(policies, false), nil
