@@ -47,6 +47,18 @@ func TestIdentityStore_EntityReadGroupIDs(t *testing.T) {
 
 	groupID := resp.Data["id"].(string)
 
+	// Create another group with the above created group as its subgroup
+
+	groupReq.Data = map[string]interface{}{
+		"member_group_ids": []string{groupID},
+	}
+	resp, err = i.HandleRequest(groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	impliedGroupID := resp.Data["id"].(string)
+
 	lookupReq := &logical.Request{
 		Path:      "lookup/entity",
 		Operation: logical.UpdateOperation,
@@ -63,6 +75,12 @@ func TestIdentityStore_EntityReadGroupIDs(t *testing.T) {
 
 	expected := []string{groupID}
 	actual := resp.Data["group_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: group_ids; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+
+	expected = []string{impliedGroupID}
+	actual = resp.Data["implied_group_ids"].([]string)
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: group_ids; expected: %#v\nactual: %#v\n", expected, actual)
 	}

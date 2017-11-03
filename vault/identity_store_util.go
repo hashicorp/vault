@@ -1969,14 +1969,14 @@ func (i *IdentityStore) groupPoliciesByEntityID(entityID string) ([]string, erro
 	return strutil.RemoveDuplicates(policies, false), nil
 }
 
-func (i *IdentityStore) transitiveGroupsByEntityID(entityID string) ([]*identity.Group, error) {
+func (i *IdentityStore) groupsByEntityID(entityID string) ([]*identity.Group, []*identity.Group, error) {
 	if entityID == "" {
-		return nil, fmt.Errorf("empty entity ID")
+		return nil, nil, fmt.Errorf("empty entity ID")
 	}
 
-	groups, err := i.MemDBGroupsByMemberEntityID(entityID, false, false)
+	groups, err := i.MemDBGroupsByMemberEntityID(entityID, true, false)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	visited := make(map[string]bool)
@@ -1984,7 +1984,7 @@ func (i *IdentityStore) transitiveGroupsByEntityID(entityID string) ([]*identity
 	for _, group := range groups {
 		tGroups, err = i.collectGroupsReverseDFS(group, visited, nil)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -1999,7 +1999,15 @@ func (i *IdentityStore) transitiveGroupsByEntityID(entityID string) ([]*identity
 		tGroups = append(tGroups, group)
 	}
 
-	return tGroups, nil
+	diff := diffGroups(groups, tGroups)
+
+	// For sanity
+	// There should not be any group that gets deleted
+	if len(diff.Deleted) != 0 {
+		return nil, nil, fmt.Errorf("failed to diff group memberships")
+	}
+
+	return diff.Unmodified, diff.New, nil
 }
 
 func (i *IdentityStore) collectGroupsReverseDFS(group *identity.Group, visited map[string]bool, groups []*identity.Group) ([]*identity.Group, error) {
