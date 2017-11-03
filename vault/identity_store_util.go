@@ -1996,7 +1996,7 @@ func (i *IdentityStore) transitiveGroupsByEntityID(entityID string) ([]*identity
 		groupMap[group.ID] = group
 	}
 
-	tGroups = make([]*identity.Group, len(groupMap))
+	tGroups = make([]*identity.Group, 0, len(groupMap))
 	for _, group := range groupMap {
 		tGroups = append(tGroups, group)
 	}
