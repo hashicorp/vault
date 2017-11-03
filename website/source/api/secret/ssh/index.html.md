@@ -310,7 +310,15 @@ $ curl \
 {
   "auth": null,
   "data": {
-    "keys": ["dev", "prod"]
+    "keys": ["dev", "prod"],
+    "key_info": {
+      "dev": {
+        "key_type": "ca"
+      },
+      "prod": {
+        "key_type": "dynamic"
+      }
+    }
   },
   "lease_duration": 2764800,
   "lease_id": "",
