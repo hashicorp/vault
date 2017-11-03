@@ -172,7 +172,54 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
 	if !resp.Data["valid"].(bool) {
-		t.Fatal("failed to verify the RSA signature")
+		t.Fatalf("failed to verify the RSA signature")
+	}
+
+	signReq.Data = map[string]interface{}{
+		"input":     plaintext,
+		"algorithm": "invalid",
+	}
+	resp, err = b.HandleRequest(signReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatal("expected an error response")
+	}
+
+	signReq.Data = map[string]interface{}{
+		"input":     plaintext,
+		"algorithm": "sha2-512",
+	}
+	resp, err = b.HandleRequest(signReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	signature = resp.Data["signature"].(string)
+
+	verifyReq.Data = map[string]interface{}{
+		"input":     plaintext,
+		"signature": signature,
+	}
+	resp, err = b.HandleRequest(verifyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Data["valid"].(bool) {
+		t.Fatalf("expected validation to fail")
+	}
+
+	verifyReq.Data = map[string]interface{}{
+		"input":     plaintext,
+		"signature": signature,
+		"algorithm": "sha2-512",
+	}
+	resp, err = b.HandleRequest(verifyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if !resp.Data["valid"].(bool) {
+		t.Fatalf("failed to verify the RSA signature")
 	}
 }
 
