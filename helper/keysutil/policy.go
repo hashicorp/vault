@@ -88,7 +88,7 @@ func (kt KeyType) SigningSupported() bool {
 
 func (kt KeyType) HashSignatureInput() bool {
 	switch kt {
-	case KeyType_ECDSA_P256:
+	case KeyType_ECDSA_P256, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -724,7 +724,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[version].HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -792,11 +792,21 @@ func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
 	case KeyType_RSA2048, KeyType_RSA4096:
 		key := p.Keys[ver].RSAKey
 
-		hash := crypto.SHA256.New()
-		hash.Write(input)
-		inputHash := hash.Sum(nil)
+		var algo crypto.Hash
+		switch algorithm {
+		case "sha2-224":
+			algo = crypto.SHA224
+		case "sha2-256":
+			algo = crypto.SHA256
+		case "sha2-384":
+			algo = crypto.SHA384
+		case "sha2-512":
+			algo = crypto.SHA512
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
+		}
 
-		sig, err = rsa.SignPSS(rand.Reader, key, crypto.SHA256, inputHash, nil)
+		sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -816,7 +826,7 @@ func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
 	return res, nil
 }
 
-func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error) {
+func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -888,11 +898,21 @@ func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error
 	case KeyType_RSA2048, KeyType_RSA4096:
 		key := p.Keys[ver].RSAKey
 
-		hash := crypto.SHA256.New()
-		hash.Write(input)
-		inputHash := hash.Sum(nil)
+		var algo crypto.Hash
+		switch algorithm {
+		case "sha2-224":
+			algo = crypto.SHA224
+		case "sha2-256":
+			algo = crypto.SHA256
+		case "sha2-384":
+			algo = crypto.SHA384
+		case "sha2-512":
+			algo = crypto.SHA512
+		default:
+			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
+		}
 
-		err = rsa.VerifyPSS(&key.PublicKey, crypto.SHA256, inputHash, sigBytes, nil)
+		err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, nil)
 
 		return err == nil, nil
 
