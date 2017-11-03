@@ -18,6 +18,7 @@ DEPRECATIONS/CHANGES:
    a string. This better matches the API elsewhere in Vault.
 
 FEATURES:
+
  * ** RSA Support for Transit Backend**: Transit backend can now generate RSA
    keys which can be used for encryption and signing. [GH-3489]
 
