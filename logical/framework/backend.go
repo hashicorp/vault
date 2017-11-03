@@ -612,6 +612,8 @@ func (t FieldType) Zero() interface{} {
 		return false
 	case TypeMap:
 		return map[string]interface{}{}
+	case TypeKeyPairs:
+		return map[string]string{}
 	case TypeDurationSecond:
 		return 0
 	case TypeSlice:
