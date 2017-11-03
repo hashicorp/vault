@@ -247,13 +247,13 @@ func (d *FieldData) getPrimitive(
 		}
 
 		// If map parse fails, parse as a string list of = delimited pairs
-		var csvResult []string
-		if err := mapstructure.WeakDecode(raw, &csvResult); err != nil {
+		var listResult []string
+		if err := mapstructure.WeakDecode(raw, &listResult); err != nil {
 			return nil, true, err
 		}
 
-		result := make(map[string]string, len(csvResult))
-		for _, keyPair := range csvResult {
+		result := make(map[string]string, len(listResult))
+		for _, keyPair := range listResult {
 			keyPairSlice := strings.SplitN(keyPair, "=", 2)
 			if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
 				return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
