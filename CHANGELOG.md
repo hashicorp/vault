@@ -16,6 +16,9 @@ DEPRECATIONS/CHANGES:
  * SSH CA role read changes: When reading back a role from the `ssh` backend,
    the TTL/max TTL values will now be an integer number of seconds rather than
    a string. This better matches the API elsewhere in Vault.
+ * SSH role list changes: When listing roles from the `ssh` backend via the API,
+   the response data will additionally return a `key_info` map that will contain
+   a map of each key with a corresponding object containing the `key_type`.
 
 FEATURES:
 
