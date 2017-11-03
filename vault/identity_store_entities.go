@@ -446,6 +446,18 @@ func (i *IdentityStore) handleEntityReadCommon(entity *identity.Entity) (*logica
 	// formats
 	respData["aliases"] = aliasesToReturn
 
+	// Fetch the groups this entity belongs to and return their identifiers
+	groups, err := i.MemDBGroupsByMemberEntityID(entity.ID, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	groupIDs := make([]string, len(groups))
+	for i, group := range groups {
+		groupIDs[i] = group.ID
+	}
+	respData["group_ids"] = groupIDs
+
 	return &logical.Response{
 		Data: respData,
 	}, nil
