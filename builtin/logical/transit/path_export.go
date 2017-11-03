@@ -179,9 +179,8 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 }
 
 func encodeRSAPrivateKey(key *rsa.PrivateKey) string {
-	// As per "https://wiki.openssl.org/index.php/Manual:Rsa(1)", the header
-	// should be 'RSA PRIVATE KEY'. 'openssl' also expects the header to be
-	// this.
+	// When encoding PKCS1, the PEM header should be `RSA PRIVATE KEY`. When Go
+	// has PKCS8 encoding support, we may want to change this.
 	derBytes := x509.MarshalPKCS1PrivateKey(key)
 	pemBlock := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
