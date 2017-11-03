@@ -235,6 +235,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 		"t":        json.Number("3"),
 		"n":        json.Number("5"),
 		"progress": json.Number("0"),
+		"type":     "shamir",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

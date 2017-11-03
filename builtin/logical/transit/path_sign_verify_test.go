@@ -164,9 +164,10 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
 
-	req.Data["algorithm"] = "none"
+	req.Data["prehashed"] = true
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
+	delete(req.Data, "prehashed")
 
 	// Test 512 and save sig for later to ensure we can't validate once min
 	// decryption version is set

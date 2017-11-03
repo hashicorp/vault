@@ -468,6 +468,82 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 	}
 }
 
+func TestIdentityStore_GroupMultiCase(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	is, _, _ := testIdentityStoreWithGithubAuth(t)
+	groupRegisterReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "group",
+	}
+
+	// Create 'build' group
+	buildGroupData := map[string]interface{}{
+		"name":     "build",
+		"policies": "buildpolicy",
+	}
+	groupRegisterReq.Data = buildGroupData
+	resp, err = is.HandleRequest(groupRegisterReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	buildGroupID := resp.Data["id"].(string)
+
+	// Create 'deploy' group
+	deployGroupData := map[string]interface{}{
+		"name":     "deploy",
+		"policies": "deploypolicy",
+	}
+	groupRegisterReq.Data = deployGroupData
+	resp, err = is.HandleRequest(groupRegisterReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	deployGroupID := resp.Data["id"].(string)
+
+	// Create an entity ID
+	entityRegisterReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity",
+	}
+	resp, err = is.HandleRequest(entityRegisterReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	entityID1 := resp.Data["id"].(string)
+
+	// Add the entity as a member of 'build' group
+	entityIDReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "group/id/" + buildGroupID,
+		Data: map[string]interface{}{
+			"member_entity_ids": []string{entityID1},
+		},
+	}
+	resp, err = is.HandleRequest(entityIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+
+	// Add the entity as a member of the 'deploy` group
+	entityIDReq.Path = "group/id/" + deployGroupID
+	resp, err = is.HandleRequest(entityIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+
+	policies, err := is.groupPoliciesByEntityID(entityID1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(policies)
+	expected := []string{"deploypolicy", "buildpolicy"}
+	sort.Strings(expected)
+	if !reflect.DeepEqual(expected, policies) {
+		t.Fatalf("bad: policies; expected: %#v\nactual:%#v", expected, policies)
+	}
+}
+
 /*
 Test groups hierarchy:
                 ------- eng(entityID3) -------
