@@ -1162,8 +1162,10 @@ func (c *Conn) localHostInfo() (*HostInfo, error) {
 		return nil, err
 	}
 
+	port := c.conn.RemoteAddr().(*net.TCPAddr).Port
+
 	// TODO(zariel): avoid doing this here
-	host, err := c.session.hostInfoFromMap(row)
+	host, err := c.session.hostInfoFromMap(row, port)
 	if err != nil {
 		return nil, err
 	}
