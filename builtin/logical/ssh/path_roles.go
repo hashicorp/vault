@@ -563,9 +563,7 @@ func (b *backend) pathRoleList(req *logical.Request, d *framework.FieldData) (*l
 		return nil, err
 	}
 
-	listResponse := logical.ListResponse(entries)
-	listResponse.Data["roles"] = map[string]interface{}{}
-
+	keyInfo := map[string]interface{}{}
 	for _, entry := range entries {
 		role, err := b.getRole(req.Storage, entry)
 		if err != nil {
@@ -591,10 +589,12 @@ func (b *backend) pathRoleList(req *logical.Request, d *framework.FieldData) (*l
 			continue
 		}
 
-		listResponse.Data["roles"].(map[string]interface{})[entry] = roleInfo
+		keyInfo[entry] = map[string]interface{}{
+			"key_type": roleInfo["key_type"],
+		}
 	}
 
-	return listResponse, nil
+	return logical.ListResponseWithInfo(entries, keyInfo), nil
 }
 
 func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
