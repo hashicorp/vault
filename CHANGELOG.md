@@ -30,6 +30,7 @@ IMPROVEMENTS:
  * api: Add ability to set custom headers on each call [GH-3394]
  * command/server: Add config option to disable requesting client certificates
    [GH-3373]
+ * core: Disallow mounting underneath an existing path, not just over [GH-2919]
  * physical/file: Use `700` as permissions when creating directories. The files
    themselves were `600` and are all encrypted, but this doesn't hurt.
  * secret/aws: Add ability to use custom IAM/STS endpoints [GH-3416]
