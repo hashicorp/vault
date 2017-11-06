@@ -446,6 +446,26 @@ func (i *IdentityStore) handleEntityReadCommon(entity *identity.Entity) (*logica
 	// formats
 	respData["aliases"] = aliasesToReturn
 
+	// Fetch the groups this entity belongs to and return their identifiers
+	groups, inheritedGroups, err := i.groupsByEntityID(entity.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	groupIDs := make([]string, len(groups))
+	for i, group := range groups {
+		groupIDs[i] = group.ID
+	}
+	respData["direct_group_ids"] = groupIDs
+
+	inheritedGroupIDs := make([]string, len(inheritedGroups))
+	for i, group := range inheritedGroups {
+		inheritedGroupIDs[i] = group.ID
+	}
+	respData["inherited_group_ids"] = inheritedGroupIDs
+
+	respData["group_ids"] = append(groupIDs, inheritedGroupIDs...)
+
 	return &logical.Response{
 		Data: respData,
 	}, nil
