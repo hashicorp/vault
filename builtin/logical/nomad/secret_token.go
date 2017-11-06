@@ -39,13 +39,13 @@ func (b *backend) secretTokenRenew(
 
 func (b *backend) secretTokenRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	c, intErr := b.client(req.Storage)
-	if intErr != nil {
-		return nil, intErr
+	c, err := b.client(req.Storage)
+	if err != nil {
+		return nil, err
 	}
 
 	tokenRaw := req.Secret.InternalData["accessor_id"]
-	_, err := c.ACLTokens().Delete(tokenRaw.(string), nil)
+	_, err = c.ACLTokens().Delete(tokenRaw.(string), nil)
 	if err != nil {
 		return nil, err
 	}
