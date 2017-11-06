@@ -75,8 +75,8 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		return fmt.Errorf("token credential backend cannot be instantiated")
 	}
 
-	if match := c.router.MatchingMount(credentialRoutePrefix + entry.Path); match != "" {
-		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
+	if conflict := c.router.MountConflict(credentialRoutePrefix + entry.Path); conflict != "" {
+		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", conflict))
 	}
 
 	// Generate a new UUID and view
