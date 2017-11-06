@@ -159,7 +159,7 @@ IMPROVEMENTS:
 
  * audit/file: Allow specifying `stdout` as the `file_path` to log to standard
    output [GH-3235]
- * auth/aws: Allow wildcards in `bound_iam_principal_id` [GH-3213]
+ * auth/aws: Allow wildcards in `bound_iam_principal_arn` [GH-3213]
  * auth/okta: Compare groups case-insensitively since Okta is only
    case-preserving [GH-3240]
  * auth/okta: Standardize Okta configuration APIs across backends [GH-3245]
