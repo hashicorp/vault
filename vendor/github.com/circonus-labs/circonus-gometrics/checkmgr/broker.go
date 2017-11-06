@@ -104,6 +104,7 @@ func (cm *CheckManager) selectBroker() (*api.Broker, error) {
 	haveEnterprise := false
 
 	for _, broker := range *brokerList {
+		broker := broker
 		if cm.isValidBroker(&broker) {
 			validBrokers[broker.CID] = broker
 			if broker.Type == "enterprise" {
@@ -166,6 +167,7 @@ func (cm *CheckManager) isValidBroker(broker *api.Broker) bool {
 	var brokerPort string
 	valid := false
 	for _, detail := range broker.Details {
+		detail := detail
 
 		// broker must be active
 		if detail.Status != statusActive {

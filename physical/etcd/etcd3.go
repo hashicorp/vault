@@ -200,7 +200,7 @@ func (c *EtcdBackend) List(prefix string) ([]string, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
 	defer cancel()
-	prefix = path.Join(c.path, prefix)
+	prefix = path.Join(c.path, prefix) + "/"
 	resp, err := c.etcd.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
 		return nil, err
@@ -265,6 +265,21 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	if c.held {
 		return nil, EtcdLockHeldError
+	}
+
+	select {
+	case _, ok := <-c.etcdSession.Done():
+		if !ok {
+			// The session's done channel is closed, so the session is over,
+			// and we need a new one
+			session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(etcd3LockTimeoutInSeconds))
+			if err != nil {
+				return nil, err
+			}
+			c.etcdSession = session
+			c.etcdMu = concurrency.NewMutex(session, c.prefix)
+		}
+	default:
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

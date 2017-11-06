@@ -123,6 +123,7 @@ func (f *AuditFormatter) FormatRequest(
 			DisplayName:   auth.DisplayName,
 			Policies:      auth.Policies,
 			Metadata:      auth.Metadata,
+			EntityID:      auth.EntityID,
 			RemainingUses: req.ClientTokenRemainingUses,
 		},
 
@@ -133,6 +134,7 @@ func (f *AuditFormatter) FormatRequest(
 			Operation:           req.Operation,
 			Path:                req.Path,
 			Data:                req.Data,
+			PolicyOverride:      req.PolicyOverride,
 			RemoteAddr:          getRemoteAddr(req),
 			ReplicationCluster:  req.ReplicationCluster,
 			Headers:             req.Headers,
@@ -309,12 +311,13 @@ func (f *AuditFormatter) FormatResponse(
 		Type:  "response",
 		Error: errString,
 		Auth: AuditAuth{
-			ClientToken:   auth.ClientToken,
-			Accessor:      auth.Accessor,
 			DisplayName:   auth.DisplayName,
 			Policies:      auth.Policies,
 			Metadata:      auth.Metadata,
+			ClientToken:   auth.ClientToken,
+			Accessor:      auth.Accessor,
 			RemainingUses: req.ClientTokenRemainingUses,
+			EntityID:      auth.EntityID,
 		},
 
 		Request: AuditRequest{
@@ -324,6 +327,7 @@ func (f *AuditFormatter) FormatResponse(
 			Operation:           req.Operation,
 			Path:                req.Path,
 			Data:                req.Data,
+			PolicyOverride:      req.PolicyOverride,
 			RemoteAddr:          getRemoteAddr(req),
 			ReplicationCluster:  req.ReplicationCluster,
 			Headers:             req.Headers,
@@ -376,6 +380,7 @@ type AuditRequest struct {
 	ClientTokenAccessor string                 `json:"client_token_accessor"`
 	Path                string                 `json:"path"`
 	Data                map[string]interface{} `json:"data"`
+	PolicyOverride      bool                   `json:"policy_override"`
 	RemoteAddr          string                 `json:"remote_address"`
 	WrapTTL             int                    `json:"wrap_ttl"`
 	Headers             map[string][]string    `json:"headers"`
@@ -397,6 +402,7 @@ type AuditAuth struct {
 	Metadata      map[string]string `json:"metadata"`
 	NumUses       int               `json:"num_uses,omitempty"`
 	RemainingUses int               `json:"remaining_uses,omitempty"`
+	EntityID      string            `json:"entity_id"`
 }
 
 type AuditSecret struct {

@@ -187,6 +187,9 @@ func (e *ExponentialBackoffRetryPolicy) napTime(attempts int) time.Duration {
 	napDuration := minFloat * math.Pow(2, float64(attempts-1))
 	// add some jitter
 	napDuration += rand.Float64()*minFloat - (minFloat / 2)
+	if napDuration > float64(e.Max) {
+		return time.Duration(e.Max)
+	}
 	return time.Duration(napDuration)
 }
 
@@ -294,6 +297,9 @@ type tokenAwareHostPolicy struct {
 }
 
 func (t *tokenAwareHostPolicy) SetPartitioner(partitioner string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	if t.partitioner != partitioner {
 		t.fallback.SetPartitioner(partitioner)
 		t.partitioner = partitioner
@@ -303,6 +309,9 @@ func (t *tokenAwareHostPolicy) SetPartitioner(partitioner string) {
 }
 
 func (t *tokenAwareHostPolicy) AddHost(host *HostInfo) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	t.hosts.add(host)
 	t.fallback.AddHost(host)
 
@@ -310,6 +319,9 @@ func (t *tokenAwareHostPolicy) AddHost(host *HostInfo) {
 }
 
 func (t *tokenAwareHostPolicy) RemoveHost(host *HostInfo) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	t.hosts.remove(host.ConnectAddress())
 	t.fallback.RemoveHost(host)
 
@@ -325,9 +337,6 @@ func (t *tokenAwareHostPolicy) HostDown(host *HostInfo) {
 }
 
 func (t *tokenAwareHostPolicy) resetTokenRing() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	if t.partitioner == "" {
 		// partitioner not yet set
 		return
@@ -537,43 +546,36 @@ func (host selectedHostPoolHost) Mark(err error) {
 }
 
 type dcAwareRR struct {
-	local string
-
+	local       string
+	pos         uint32
 	mu          sync.RWMutex
-	localHosts  map[string]*HostInfo
-	remoteHosts map[string]*HostInfo
+	localHosts  cowHostList
+	remoteHosts cowHostList
 }
 
-// DCAwareRoundRobinPolicy is a host selection policies which will priorities and
+// DCAwareRoundRobinPolicy is a host selection policies which will prioritize and
 // return hosts which are in the local datacentre before returning hosts in all
 // other datercentres
 func DCAwareRoundRobinPolicy(localDC string) HostSelectionPolicy {
 	return &dcAwareRR{
-		local:       localDC,
-		localHosts:  make(map[string]*HostInfo),
-		remoteHosts: make(map[string]*HostInfo),
+		local: localDC,
 	}
 }
 
 func (d *dcAwareRR) AddHost(host *HostInfo) {
-	d.mu.Lock()
-
 	if host.DataCenter() == d.local {
-		d.localHosts[host.HostID()] = host
+		d.localHosts.add(host)
 	} else {
-		d.remoteHosts[host.HostID()] = host
+		d.remoteHosts.add(host)
 	}
-
-	d.mu.Unlock()
 }
 
 func (d *dcAwareRR) RemoveHost(host *HostInfo) {
-	d.mu.Lock()
-
-	delete(d.localHosts, host.HostID())
-	delete(d.remoteHosts, host.HostID())
-
-	d.mu.Unlock()
+	if host.DataCenter() == d.local {
+		d.localHosts.remove(host.ConnectAddress())
+	} else {
+		d.remoteHosts.remove(host.ConnectAddress())
+	}
 }
 
 func (d *dcAwareRR) HostUp(host *HostInfo) {
@@ -587,29 +589,28 @@ func (d *dcAwareRR) HostDown(host *HostInfo) {
 func (d *dcAwareRR) SetPartitioner(p string) {}
 
 func (d *dcAwareRR) Pick(q ExecutableQuery) NextHost {
-	d.mu.RLock()
-
-	// TODO: this is O(len(hosts)) and requires calculating a full query plan for
-	// every query. On the other hand it is stupidly simply and provides random host
-	// order prefering local dcs over remote ones.
-	hosts := make([]*HostInfo, 0, len(d.localHosts)+len(d.remoteHosts))
-	for _, host := range d.localHosts {
-		hosts = append(hosts, host)
-	}
-	for _, host := range d.remoteHosts {
-		hosts = append(hosts, host)
-	}
-
-	d.mu.RUnlock()
-
+	var i int
 	return func() SelectedHost {
+		var hosts []*HostInfo
+		localHosts := d.localHosts.get()
+		remoteHosts := d.remoteHosts.get()
+		if len(localHosts) != 0 {
+			hosts = localHosts
+		} else {
+			hosts = remoteHosts
+		}
 		if len(hosts) == 0 {
 			return nil
 		}
 
-		host := hosts[0]
-		hosts = hosts[1:]
-
+		// always increment pos to evenly distribute traffic in case of
+		// failures
+		pos := atomic.AddUint32(&d.pos, 1) - 1
+		if i >= len(localHosts)+len(remoteHosts) {
+			return nil
+		}
+		host := hosts[(pos)%uint32(len(hosts))]
+		i++
 		return (*selectedHost)(host)
 	}
 }

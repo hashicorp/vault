@@ -132,6 +132,7 @@ type MountConfigInput struct {
 	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
 	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	SealWrap        bool   `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 type MountOutput struct {
@@ -147,4 +148,5 @@ type MountConfigOutput struct {
 	MaxLeaseTTL     int    `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
 	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	SealWrap        bool   `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
 }

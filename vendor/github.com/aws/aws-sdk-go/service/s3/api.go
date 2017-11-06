@@ -17085,6 +17085,9 @@ type PutObjectInput struct {
 	// body cannot be determined automatically.
 	ContentLength *int64 `location:"header" locationName:"Content-Length" type:"long"`
 
+	// The base64-encoded 128-bit MD5 digest of the part data.
+	ContentMD5 *string `location:"header" locationName:"Content-MD5" type:"string"`
+
 	// A standard MIME type describing the format of the object data.
 	ContentType *string `location:"header" locationName:"Content-Type" type:"string"`
 
@@ -17235,6 +17238,12 @@ func (s *PutObjectInput) SetContentLanguage(v string) *PutObjectInput {
 // SetContentLength sets the ContentLength field's value.
 func (s *PutObjectInput) SetContentLength(v int64) *PutObjectInput {
 	s.ContentLength = &v
+	return s
+}
+
+// SetContentMD5 sets the ContentMD5 field's value.
+func (s *PutObjectInput) SetContentMD5(v string) *PutObjectInput {
+	s.ContentMD5 = &v
 	return s
 }
 
@@ -19079,6 +19088,9 @@ type UploadPartInput struct {
 	// body cannot be determined automatically.
 	ContentLength *int64 `location:"header" locationName:"Content-Length" type:"long"`
 
+	// The base64-encoded 128-bit MD5 digest of the part data.
+	ContentMD5 *string `location:"header" locationName:"Content-MD5" type:"string"`
+
 	// Object key for which the multipart upload was initiated.
 	//
 	// Key is a required field
@@ -19175,6 +19187,12 @@ func (s *UploadPartInput) getBucket() (v string) {
 // SetContentLength sets the ContentLength field's value.
 func (s *UploadPartInput) SetContentLength(v int64) *UploadPartInput {
 	s.ContentLength = &v
+	return s
+}
+
+// SetContentMD5 sets the ContentMD5 field's value.
+func (s *UploadPartInput) SetContentMD5(v string) *UploadPartInput {
+	s.ContentMD5 = &v
 	return s
 }
 

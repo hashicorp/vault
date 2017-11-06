@@ -102,7 +102,7 @@ to specify where the configuration is.
 
 - `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which 
   allows the decryption/encryption of raw data into and out of the security 
-  barrier. This is a highly priveleged endpoint. 
+  barrier. This is a highly privileged endpoint. 
 
 - `ui` `(bool: false, Enterprise-only)` – Enables the built-in web UI, which is
   available on all listeners (address + port) at the `/ui` path. Browsers accessing

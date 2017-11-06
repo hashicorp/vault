@@ -8,6 +8,7 @@ import (
 )
 
 func ExerciseBackend(t *testing.T, b Backend) {
+	t.Helper()
 	// Should be empty
 	keys, err := b.List("")
 	if err != nil {
@@ -196,6 +197,7 @@ func ExerciseBackend(t *testing.T, b Backend) {
 }
 
 func ExerciseBackend_ListPrefix(t *testing.T, b Backend) {
+	t.Helper()
 	e1 := &Entry{Key: "foo", Value: []byte("test")}
 	e2 := &Entry{Key: "foo/bar", Value: []byte("test")}
 	e3 := &Entry{Key: "foo/bar/baz", Value: []byte("test")}
@@ -266,6 +268,7 @@ func ExerciseBackend_ListPrefix(t *testing.T, b Backend) {
 }
 
 func ExerciseHABackend(t *testing.T, b HABackend, b2 HABackend) {
+	t.Helper()
 	// Get the lock
 	lock, err := b.LockWith("foo", "bar")
 	if err != nil {
@@ -342,6 +345,7 @@ func ExerciseHABackend(t *testing.T, b HABackend, b2 HABackend) {
 }
 
 func ExerciseTransactionalBackend(t *testing.T, b Backend) {
+	t.Helper()
 	tb, ok := b.(Transactional)
 	if !ok {
 		t.Fatal("Not a transactional backend")
@@ -395,7 +399,8 @@ func ExerciseTransactionalBackend(t *testing.T, b Backend) {
 	}
 }
 
-func SetupTestingTransactions(t *testing.T, b Backend) []TxnEntry {
+func SetupTestingTransactions(t *testing.T, b Backend) []*TxnEntry {
+	t.Helper()
 	// Add a few keys so that we test rollback with deletion
 	if err := b.Put(&Entry{
 		Key:   "foo",
@@ -420,34 +425,34 @@ func SetupTestingTransactions(t *testing.T, b Backend) []TxnEntry {
 		t.Fatal(err)
 	}
 
-	txns := []TxnEntry{
-		TxnEntry{
+	txns := []*TxnEntry{
+		&TxnEntry{
 			Operation: PutOperation,
 			Entry: &Entry{
 				Key:   "foo",
 				Value: []byte("bar2"),
 			},
 		},
-		TxnEntry{
+		&TxnEntry{
 			Operation: DeleteOperation,
 			Entry: &Entry{
 				Key: "deleteme",
 			},
 		},
-		TxnEntry{
+		&TxnEntry{
 			Operation: PutOperation,
 			Entry: &Entry{
 				Key:   "foo",
 				Value: []byte("bar3"),
 			},
 		},
-		TxnEntry{
+		&TxnEntry{
 			Operation: DeleteOperation,
 			Entry: &Entry{
 				Key: "deleteme2",
 			},
 		},
-		TxnEntry{
+		&TxnEntry{
 			Operation: PutOperation,
 			Entry: &Entry{
 				Key:   "zip",

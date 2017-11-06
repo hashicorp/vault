@@ -1,0 +1,100 @@
+// Copyright (c) 2012-2015 Ugorji Nwoke. All rights reserved.
+// Use of this source code is governed by a MIT license found in the LICENSE file.
+
+// ************************************************************
+// DO NOT EDIT. 
+// THIS FILE IS AUTO-GENERATED from mammoth-test.go.tmpl
+// ************************************************************
+
+package codec
+
+import "testing"
+import "fmt"
+
+// TestMammoth has all the different paths optimized in fast-path
+// It has all the primitives, slices and maps.
+// 
+// For each of those types, it has a pointer and a non-pointer field.
+
+func init() { _ = fmt.Printf } // so we can include fmt as needed
+
+type TestMammoth struct {
+
+{{range .Values }}{{if .Primitive }}{{/*
+*/}}{{ .MethodNamePfx "F" true }} {{ .Primitive }}
+{{ .MethodNamePfx "Fptr" true }} *{{ .Primitive }}
+{{end}}{{end}}
+
+{{range .Values }}{{if not .Primitive }}{{if not .MapKey }}{{/*
+*/}}{{ .MethodNamePfx "F" false }} []{{ .Elem }}
+{{ .MethodNamePfx "Fptr" false }} *[]{{ .Elem }}
+{{end}}{{end}}{{end}}
+
+{{range .Values }}{{if not .Primitive }}{{if .MapKey }}{{/*
+*/}}{{ .MethodNamePfx "F" false }} map[{{ .MapKey }}]{{ .Elem }}
+{{ .MethodNamePfx "Fptr" false }} *map[{{ .MapKey }}]{{ .Elem }}
+{{end}}{{end}}{{end}}
+
+}
+
+{{range .Values }}{{if not .Primitive }}{{if not .MapKey }}{{/*
+*/}} type {{ .MethodNamePfx "type" false }} []{{ .Elem }}
+func (_ {{ .MethodNamePfx "type" false }}) MapBySlice() { }
+{{end}}{{end}}{{end}}
+
+func doTestMammothSlices(t *testing.T, h Handle) {
+{{range $i, $e := .Values }}{{if not .Primitive }}{{if not .MapKey }}{{/*
+*/}}
+    for _, v := range [][]{{ .Elem }}{ nil, []{{ .Elem }}{}, []{{ .Elem }}{ {{ nonzerocmd .Elem }}, {{ nonzerocmd .Elem }} } } {
+    // fmt.Printf(">>>> running mammoth slice v{{$i}}: %v\n", v)
+    var v{{$i}}v1, v{{$i}}v2, v{{$i}}v3, v{{$i}}v4 []{{ .Elem }}
+	v{{$i}}v1 = v
+	bs{{$i}}, _ := testMarshalErr(v{{$i}}v1, h, t, "enc-slice-v{{$i}}")
+    if v != nil { v{{$i}}v2 = make([]{{ .Elem }}, len(v)) }
+	testUnmarshalErr(v{{$i}}v2, bs{{$i}}, h, t, "dec-slice-v{{$i}}")
+	testDeepEqualErr(v{{$i}}v1, v{{$i}}v2, t, "equal-slice-v{{$i}}")
+	bs{{$i}}, _ = testMarshalErr(&v{{$i}}v1, h, t, "enc-slice-v{{$i}}-p")
+	v{{$i}}v2 = nil
+	testUnmarshalErr(&v{{$i}}v2, bs{{$i}}, h, t, "dec-slice-v{{$i}}-p")
+	testDeepEqualErr(v{{$i}}v1, v{{$i}}v2, t, "equal-slice-v{{$i}}-p")
+    // ...
+	v{{$i}}v2 = nil
+    if v != nil { v{{$i}}v2 = make([]{{ .Elem }}, len(v)) }
+    v{{$i}}v3 = {{ .MethodNamePfx "type" false }}(v{{$i}}v1)
+    bs{{$i}}, _ = testMarshalErr(v{{$i}}v3, h, t, "enc-slice-v{{$i}}-custom")
+    v{{$i}}v4 = {{ .MethodNamePfx "type" false }}(v{{$i}}v2)
+    testUnmarshalErr(v{{$i}}v4, bs{{$i}}, h, t, "dec-slice-v{{$i}}-custom")
+    testDeepEqualErr(v{{$i}}v3, v{{$i}}v4, t, "equal-slice-v{{$i}}-custom")
+    v{{$i}}v2 = nil
+    bs{{$i}}, _ = testMarshalErr(&v{{$i}}v3, h, t, "enc-slice-v{{$i}}-custom-p")
+    v{{$i}}v4 = {{ .MethodNamePfx "type" false }}(v{{$i}}v2)
+    testUnmarshalErr(&v{{$i}}v4, bs{{$i}}, h, t, "dec-slice-v{{$i}}-custom-p")
+    testDeepEqualErr(v{{$i}}v3, v{{$i}}v4, t, "equal-slice-v{{$i}}-custom-p")
+    }
+{{end}}{{end}}{{end}}
+}
+
+func doTestMammothMaps(t *testing.T, h Handle) {
+{{range $i, $e := .Values }}{{if not .Primitive }}{{if .MapKey }}{{/*
+*/}}
+    for _, v := range []map[{{ .MapKey }}]{{ .Elem }}{ nil, map[{{ .MapKey }}]{{ .Elem }}{}, map[{{ .MapKey }}]{{ .Elem }}{ {{ nonzerocmd .MapKey }}:{{ nonzerocmd .Elem }} } } {
+    // fmt.Printf(">>>> running mammoth map v{{$i}}: %v\n", v)
+    var v{{$i}}v1, v{{$i}}v2 map[{{ .MapKey }}]{{ .Elem }}
+	v{{$i}}v1 = v
+	bs{{$i}}, _ := testMarshalErr(v{{$i}}v1, h, t, "enc-map-v{{$i}}")
+    if v != nil { v{{$i}}v2 = make(map[{{ .MapKey }}]{{ .Elem }}, len(v)) }
+	testUnmarshalErr(v{{$i}}v2, bs{{$i}}, h, t, "dec-map-v{{$i}}")
+	testDeepEqualErr(v{{$i}}v1, v{{$i}}v2, t, "equal-map-v{{$i}}")
+	bs{{$i}}, _ = testMarshalErr(&v{{$i}}v1, h, t, "enc-map-v{{$i}}-p")
+	v{{$i}}v2 = nil
+	testUnmarshalErr(&v{{$i}}v2, bs{{$i}}, h, t, "dec-map-v{{$i}}-p")
+	testDeepEqualErr(v{{$i}}v1, v{{$i}}v2, t, "equal-map-v{{$i}}-p")
+    }
+{{end}}{{end}}{{end}}
+
+}
+
+func doTestMammothMapsAndSlices(t *testing.T, h Handle) {
+     doTestMammothSlices(t, h)
+     doTestMammothMaps(t, h)
+}

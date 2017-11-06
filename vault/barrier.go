@@ -160,15 +160,17 @@ type BarrierEncryptor interface {
 
 // Entry is used to represent data stored by the security barrier
 type Entry struct {
-	Key   string
-	Value []byte
+	Key      string
+	Value    []byte
+	SealWrap bool
 }
 
 // Logical turns the Entry into a logical storage entry.
 func (e *Entry) Logical() *logical.StorageEntry {
 	return &logical.StorageEntry{
-		Key:   e.Key,
-		Value: e.Value,
+		Key:      e.Key,
+		Value:    e.Value,
+		SealWrap: e.SealWrap,
 	}
 }
 

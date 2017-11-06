@@ -8,11 +8,16 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
+)
+
+const (
+	replTimeout = 10 * time.Second
 )
 
 // HandleRequest is used to handle a new incoming request
@@ -66,7 +71,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		resp.WrapInfo.TTL != 0
 
 	if wrapping {
-		cubbyResp, cubbyErr := c.wrapInCubbyhole(req, resp)
+		cubbyResp, cubbyErr := c.wrapInCubbyhole(req, resp, auth)
 		// If not successful, returns either an error response from the
 		// cubbyhole backend or an error; if either is set, set resp and err to
 		// those and continue so that that's what we audit log. Otherwise
@@ -116,7 +121,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Validate the token
-	auth, te, ctErr := c.checkToken(req)
+	auth, te, ctErr := c.checkToken(req, false)
 	// We run this logic first because we want to decrement the use count even in the case of an error
 	if te != nil {
 		// Attempt to use the token (decrement NumUses)
@@ -279,6 +284,21 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 	}
 
+	// If the request was to renew a token, and if there are group aliases set
+	// in the auth object, then the group memberships should be refreshed
+	if strings.HasPrefix(req.Path, "auth/token/renew") &&
+		resp != nil &&
+		resp.Auth != nil &&
+		resp.Auth.EntityID != "" &&
+		resp.Auth.GroupAliases != nil {
+		err := c.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
+		if err != nil {
+			c.logger.Error("core: failed to refresh external group memberships", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+	}
+
 	// Only the token store is allowed to return an auth block, for any
 	// other request this is an internal error. We exclude renewal of a token,
 	// since it does not need to be re-registered
@@ -317,16 +337,22 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	if routeErr != nil {
 		retErr = multierror.Append(retErr, routeErr)
 	}
+
 	return resp, auth, retErr
 }
 
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
-func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
+func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
+	req.Unauthenticated = true
+
+	var auth *logical.Auth
 	// Create an audit trail of the request, auth is not available on login requests
-	if err := c.auditBroker.LogRequest(nil, req, c.auditedHeaders, nil); err != nil {
+	// Create an audit trail of the request. Attach auth if it was returned,
+	// e.g. if a token was provided.
+	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		return nil, nil, ErrInternalError
 	}
@@ -385,9 +411,48 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	}
 
 	// If the response generated an authentication, then generate the token
-	var auth *logical.Auth
 	if resp != nil && resp.Auth != nil {
+		var entity *identity.Entity
 		auth = resp.Auth
+
+		if auth.Alias != nil {
+			// Overwrite the mount type and mount path in the alias
+			// information
+			auth.Alias.MountType = req.MountType
+			auth.Alias.MountAccessor = req.MountAccessor
+
+			if auth.Alias.Name == "" {
+				return nil, nil, fmt.Errorf("missing name in alias")
+			}
+
+			var err error
+
+			// Check if an entity already exists for the given alias
+			entity, err = c.identityStore.entityByAliasFactors(auth.Alias.MountAccessor, auth.Alias.Name, false)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			// If not, create one.
+			if entity == nil {
+				c.logger.Debug("core: creating a new entity", "alias", auth.Alias)
+				entity, err = c.identityStore.CreateEntity(auth.Alias)
+				if err != nil {
+					return nil, nil, err
+				}
+				if entity == nil {
+					return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
+				}
+			}
+
+			auth.EntityID = entity.ID
+			if auth.GroupAliases != nil {
+				err = c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+		}
 
 		if strutil.StrListSubset(auth.Policies, []string{"root"}) {
 			return logical.ErrorResponse("authentication backends cannot create root tokens"), nil, logical.ErrInvalidRequest
@@ -426,6 +491,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			CreationTime: time.Now().Unix(),
 			TTL:          auth.TTL,
 			NumUses:      auth.NumUses,
+			EntityID:     auth.EntityID,
 		}
 
 		te.Policies = policyutil.SanitizePolicies(te.Policies, true)

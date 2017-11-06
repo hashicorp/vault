@@ -630,6 +630,11 @@ func (c *Client) CreateContainer(opts CreateContainerOptions) (*Container, error
 		if e.Status == http.StatusConflict {
 			return nil, ErrContainerAlreadyExists
 		}
+		// Workaround for 17.09 bug returning 400 instead of 409.
+		// See https://github.com/moby/moby/issues/35021
+		if e.Status == http.StatusBadRequest && strings.Contains(e.Message, "Conflict.") {
+			return nil, ErrContainerAlreadyExists
+		}
 	}
 
 	if err != nil {
@@ -1473,7 +1478,7 @@ type LogsOptions struct {
 // stderr to LogsOptions.ErrorStream.
 //
 // When LogsOptions.RawTerminal is true, callers will get the raw stream on
-// LogOptions.OutputStream. The caller can use libraries such as dlog
+// LogsOptions.OutputStream. The caller can use libraries such as dlog
 // (github.com/ahmetalpbalkan/dlog).
 //
 // See https://goo.gl/krK0ZH for more details.

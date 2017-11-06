@@ -263,7 +263,7 @@ This endpoint promotes the DR secondary cluster to DR primary. For data safety a
 security reasons, new secondary tokens will need to be issued to other
 secondaries, and there should never be more than one primary at a time.
 
-If the DR secondary's primary cluster is also in a performace replication set,
+If the DR secondary's primary cluster is also in a performance replication set,
 the DR secondary will be promoted into that replication set. Care should be
 taken when promoting to ensure multiple performance primary clusters are not
 activate at the same time. 

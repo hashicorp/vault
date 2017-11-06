@@ -6,7 +6,20 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	glob "github.com/ryanuber/go-glob"
 )
+
+// StrListContainsGlob looks for a string in a list of strings and allows
+// globs.
+func StrListContainsGlob(haystack []string, needle string) bool {
+	for _, item := range haystack {
+		if glob.Glob(item, needle) {
+			return true
+		}
+	}
+	return false
+}
 
 // StrListContains looks for a string in a list of strings.
 func StrListContains(haystack []string, needle string) bool {

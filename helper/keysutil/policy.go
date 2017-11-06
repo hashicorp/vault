@@ -9,6 +9,7 @@ import (
 	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
@@ -44,6 +45,8 @@ const (
 	KeyType_AES256_GCM96 = iota
 	KeyType_ECDSA_P256
 	KeyType_ED25519
+	KeyType_RSA2048
+	KeyType_RSA4096
 )
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
@@ -61,7 +64,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96:
+	case KeyType_AES256_GCM96, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -69,7 +72,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96:
+	case KeyType_AES256_GCM96, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -77,7 +80,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ED25519:
+	case KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -85,7 +88,7 @@ func (kt KeyType) SigningSupported() bool {
 
 func (kt KeyType) HashSignatureInput() bool {
 	switch kt {
-	case KeyType_ECDSA_P256:
+	case KeyType_ECDSA_P256, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -107,6 +110,10 @@ func (kt KeyType) String() string {
 		return "ecdsa-p256"
 	case KeyType_ED25519:
 		return "ed25519"
+	case KeyType_RSA2048:
+		return "rsa-2048"
+	case KeyType_RSA4096:
+		return "rsa-4096"
 	}
 
 	return "[unknown]"
@@ -126,6 +133,8 @@ type KeyEntry struct {
 	EC_X *big.Int `json:"ec_x"`
 	EC_Y *big.Int `json:"ec_y"`
 	EC_D *big.Int `json:"ec_d"`
+
+	RSAKey *rsa.PrivateKey `json:"rsa_key"`
 
 	// The public key in an appropriate format for the type of key
 	FormattedPublicKey string `json:"public_key"`
@@ -519,17 +528,10 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
 
-	// Guard against a potentially invalid key type
-	switch p.Type {
-	case KeyType_AES256_GCM96:
-	default:
-		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
-	}
-
 	// Decode the plaintext value
 	plaintext, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		return "", errutil.UserError{Err: "failed to base64-decode plaintext"}
+		return "", errutil.UserError{Err: err.Error()}
 	}
 
 	switch {
@@ -543,62 +545,69 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
 	}
 
-	// Derive the key that should be used
-	key, err := p.DeriveKey(context, ver)
-	if err != nil {
-		return "", err
-	}
+	var ciphertext []byte
 
-	// Guard against a potentially invalid key type
 	switch p.Type {
 	case KeyType_AES256_GCM96:
+		// Derive the key that should be used
+		key, err := p.DeriveKey(context, ver)
+		if err != nil {
+			return "", err
+		}
+
+		// Setup the cipher
+		aesCipher, err := aes.NewCipher(key)
+		if err != nil {
+			return "", errutil.InternalError{Err: err.Error()}
+		}
+
+		// Setup the GCM AEAD
+		gcm, err := cipher.NewGCM(aesCipher)
+		if err != nil {
+			return "", errutil.InternalError{Err: err.Error()}
+		}
+
+		if p.ConvergentEncryption {
+			switch p.ConvergentVersion {
+			case 1:
+				if len(nonce) != gcm.NonceSize() {
+					return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
+				}
+			default:
+				nonceHmac := hmac.New(sha256.New, context)
+				nonceHmac.Write(plaintext)
+				nonceSum := nonceHmac.Sum(nil)
+				nonce = nonceSum[:gcm.NonceSize()]
+			}
+		} else {
+			// Compute random nonce
+			nonce, err = uuid.GenerateRandomBytes(gcm.NonceSize())
+			if err != nil {
+				return "", errutil.InternalError{Err: err.Error()}
+			}
+		}
+
+		// Encrypt and tag with GCM
+		ciphertext = gcm.Seal(nil, nonce, plaintext, nil)
+
+		// Place the encrypted data after the nonce
+		if !p.ConvergentEncryption || p.ConvergentVersion > 1 {
+			ciphertext = append(nonce, ciphertext...)
+		}
+
+	case KeyType_RSA2048, KeyType_RSA4096:
+		key := p.Keys[ver].RSAKey
+		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
+		if err != nil {
+			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
+		}
+
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
 
-	// Setup the cipher
-	aesCipher, err := aes.NewCipher(key)
-	if err != nil {
-		return "", errutil.InternalError{Err: err.Error()}
-	}
-
-	// Setup the GCM AEAD
-	gcm, err := cipher.NewGCM(aesCipher)
-	if err != nil {
-		return "", errutil.InternalError{Err: err.Error()}
-	}
-
-	if p.ConvergentEncryption {
-		switch p.ConvergentVersion {
-		case 1:
-			if len(nonce) != gcm.NonceSize() {
-				return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
-			}
-		default:
-			nonceHmac := hmac.New(sha256.New, context)
-			nonceHmac.Write(plaintext)
-			nonceSum := nonceHmac.Sum(nil)
-			nonce = nonceSum[:gcm.NonceSize()]
-		}
-	} else {
-		// Compute random nonce
-		nonce, err = uuid.GenerateRandomBytes(gcm.NonceSize())
-		if err != nil {
-			return "", errutil.InternalError{Err: err.Error()}
-		}
-	}
-
-	// Encrypt and tag with GCM
-	out := gcm.Seal(nil, nonce, plaintext, nil)
-
-	// Place the encrypted data after the nonce
-	full := out
-	if !p.ConvergentEncryption || p.ConvergentVersion > 1 {
-		full = append(nonce, out...)
-	}
-
 	// Convert to base64
-	encoded := base64.StdEncoding.EncodeToString(full)
+	encoded := base64.StdEncoding.EncodeToString(ciphertext)
 
 	// Prepend some information
 	encoded = "vault:v" + strconv.Itoa(ver) + ":" + encoded
@@ -644,50 +653,61 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: ErrTooOld}
 	}
 
-	// Derive the key that should be used
-	key, err := p.DeriveKey(context, ver)
-	if err != nil {
-		return "", err
-	}
-
-	// Guard against a potentially invalid key type
-	switch p.Type {
-	case KeyType_AES256_GCM96:
-	default:
-		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
-	}
-
 	// Decode the base64
 	decoded, err := base64.StdEncoding.DecodeString(splitVerCiphertext[1])
 	if err != nil {
 		return "", errutil.UserError{Err: "invalid ciphertext: could not decode base64"}
 	}
 
-	// Setup the cipher
-	aesCipher, err := aes.NewCipher(key)
-	if err != nil {
-		return "", errutil.InternalError{Err: err.Error()}
-	}
+	var plain []byte
 
-	// Setup the GCM AEAD
-	gcm, err := cipher.NewGCM(aesCipher)
-	if err != nil {
-		return "", errutil.InternalError{Err: err.Error()}
-	}
+	switch p.Type {
+	case KeyType_AES256_GCM96:
+		key, err := p.DeriveKey(context, ver)
+		if err != nil {
+			return "", err
+		}
 
-	// Extract the nonce and ciphertext
-	var ciphertext []byte
-	if p.ConvergentEncryption && p.ConvergentVersion < 2 {
-		ciphertext = decoded
-	} else {
-		nonce = decoded[:gcm.NonceSize()]
-		ciphertext = decoded[gcm.NonceSize():]
-	}
+		// Setup the cipher
+		aesCipher, err := aes.NewCipher(key)
+		if err != nil {
+			return "", errutil.InternalError{Err: err.Error()}
+		}
 
-	// Verify and Decrypt
-	plain, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return "", errutil.UserError{Err: "invalid ciphertext: unable to decrypt"}
+		// Setup the GCM AEAD
+		gcm, err := cipher.NewGCM(aesCipher)
+		if err != nil {
+			return "", errutil.InternalError{Err: err.Error()}
+		}
+
+		if len(decoded) < gcm.NonceSize() {
+			return "", errutil.UserError{Err: "invalid ciphertext length"}
+		}
+
+		// Extract the nonce and ciphertext
+		var ciphertext []byte
+		if p.ConvergentEncryption && p.ConvergentVersion < 2 {
+			ciphertext = decoded
+		} else {
+			nonce = decoded[:gcm.NonceSize()]
+			ciphertext = decoded[gcm.NonceSize():]
+		}
+
+		// Verify and Decrypt
+		plain, err = gcm.Open(nil, nonce, ciphertext, nil)
+		if err != nil {
+			return "", errutil.UserError{Err: "invalid ciphertext: unable to decrypt"}
+		}
+
+	case KeyType_RSA2048, KeyType_RSA4096:
+		key := p.Keys[ver].RSAKey
+		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
+		if err != nil {
+			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
+		}
+
+	default:
+		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
 
 	return base64.StdEncoding.EncodeToString(plain), nil
@@ -708,7 +728,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[version].HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -773,6 +793,28 @@ func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
 			return nil, err
 		}
 
+	case KeyType_RSA2048, KeyType_RSA4096:
+		key := p.Keys[ver].RSAKey
+
+		var algo crypto.Hash
+		switch algorithm {
+		case "sha2-224":
+			algo = crypto.SHA224
+		case "sha2-256":
+			algo = crypto.SHA256
+		case "sha2-384":
+			algo = crypto.SHA384
+		case "sha2-512":
+			algo = crypto.SHA512
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
+		}
+
+		sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
+		if err != nil {
+			return nil, err
+		}
+
 	default:
 		return nil, fmt.Errorf("unsupported key type %v", p.Type)
 	}
@@ -788,7 +830,7 @@ func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
 	return res, nil
 }
 
-func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error) {
+func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -857,6 +899,27 @@ func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error
 
 		return ed25519.Verify(key.Public().(ed25519.PublicKey), input, sigBytes), nil
 
+	case KeyType_RSA2048, KeyType_RSA4096:
+		key := p.Keys[ver].RSAKey
+
+		var algo crypto.Hash
+		switch algorithm {
+		case "sha2-224":
+			algo = crypto.SHA224
+		case "sha2-256":
+			algo = crypto.SHA256
+		case "sha2-384":
+			algo = crypto.SHA384
+		case "sha2-512":
+			algo = crypto.SHA512
+		default:
+			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
+		}
+
+		err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, nil)
+
+		return err == nil, nil
+
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -923,6 +986,17 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 		}
 		entry.Key = pri
 		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub)
+
+	case KeyType_RSA2048, KeyType_RSA4096:
+		bitSize := 2048
+		if p.Type == KeyType_RSA4096 {
+			bitSize = 4096
+		}
+
+		entry.RSAKey, err = rsa.GenerateKey(rand.Reader, bitSize)
+		if err != nil {
+			return err
+		}
 	}
 
 	p.Keys[p.LatestVersion] = entry

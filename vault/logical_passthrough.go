@@ -31,6 +31,12 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(passthroughHelp),
 
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"/",
+			},
+		},
+
 		Paths: []*framework.Path{
 			&framework.Path{
 				Pattern: ".*",

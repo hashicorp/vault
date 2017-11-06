@@ -17,6 +17,15 @@ type queryExecutor struct {
 	policy HostSelectionPolicy
 }
 
+func (q *queryExecutor) attemptQuery(qry ExecutableQuery, conn *Conn) *Iter {
+	start := time.Now()
+	iter := qry.execute(conn)
+
+	qry.attempt(time.Since(start))
+
+	return iter
+}
+
 func (q *queryExecutor) executeQuery(qry ExecutableQuery) (*Iter, error) {
 	rt := qry.retryPolicy()
 	hostIter := q.policy.Pick(qry)
@@ -38,10 +47,7 @@ func (q *queryExecutor) executeQuery(qry ExecutableQuery) (*Iter, error) {
 			continue
 		}
 
-		start := time.Now()
-		iter = qry.execute(conn)
-
-		qry.attempt(time.Since(start))
+		iter = q.attemptQuery(qry, conn)
 
 		// Update host
 		hostResponse.Mark(iter.err)

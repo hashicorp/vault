@@ -2,6 +2,7 @@ package approle
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -23,17 +24,33 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLoginUpdate,
+			logical.UpdateOperation:         b.pathLoginUpdate,
+			logical.AliasLookaheadOperation: b.pathLoginUpdateAliasLookahead,
 		},
 		HelpSynopsis:    pathLoginHelpSys,
 		HelpDescription: pathLoginHelpDesc,
 	}
 }
 
+func (b *backend) pathLoginUpdateAliasLookahead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleID := strings.TrimSpace(data.Get("role_id").(string))
+	if roleID == "" {
+		return nil, fmt.Errorf("missing role_id")
+	}
+
+	return &logical.Response{
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{
+				Name: roleID,
+			},
+		},
+	}, nil
+}
+
 // Returns the Auth object indicating the authentication and authorization information
 // if the credentials provided are validated by the backend.
 func (b *backend) pathLoginUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, roleName, metadata, err := b.validateCredentials(req, data)
+	role, roleName, metadata, _, err := b.validateCredentials(req, data)
 	if err != nil || role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to validate SecretID: %s", err)), nil
 	}
@@ -51,6 +68,9 @@ func (b *backend) pathLoginUpdate(req *logical.Request, data *framework.FieldDat
 		Policies: role.Policies,
 		LeaseOptions: logical.LeaseOptions{
 			Renewable: true,
+		},
+		Alias: &logical.Alias{
+			Name: role.RoleID,
 		},
 	}
 

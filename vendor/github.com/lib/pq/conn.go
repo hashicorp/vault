@@ -35,8 +35,12 @@ var (
 	errNoLastInsertID  = errors.New("no LastInsertId available after the empty statement")
 )
 
+// Driver is the Postgres database driver.
 type Driver struct{}
 
+// Open opens a new connection to the database. name is a connection string.
+// Most users should only use it through database/sql package from the standard
+// library.
 func (d *Driver) Open(name string) (driver.Conn, error) {
 	return Open(name)
 }
@@ -78,6 +82,8 @@ func (s transactionStatus) String() string {
 	panic("not reached")
 }
 
+// Dialer is the dialer interface. It can be used to obtain more control over
+// how pq creates network connections.
 type Dialer interface {
 	Dial(network, address string) (net.Conn, error)
 	DialTimeout(network, address string, timeout time.Duration) (net.Conn, error)
@@ -149,11 +155,7 @@ func (cn *conn) handleDriverSettings(o values) (err error) {
 	if err != nil {
 		return err
 	}
-	err = boolSetting("binary_parameters", &cn.binaryParameters)
-	if err != nil {
-		return err
-	}
-	return nil
+	return boolSetting("binary_parameters", &cn.binaryParameters)
 }
 
 func (cn *conn) handlePgpass(o values) {
@@ -165,11 +167,16 @@ func (cn *conn) handlePgpass(o values) {
 	if filename == "" {
 		// XXX this code doesn't work on Windows where the default filename is
 		// XXX %APPDATA%\postgresql\pgpass.conf
-		user, err := user.Current()
-		if err != nil {
-			return
+		// Prefer $HOME over user.Current due to glibc bug: golang.org/issue/13470
+		userHome := os.Getenv("HOME")
+		if userHome == "" {
+			user, err := user.Current()
+			if err != nil {
+				return
+			}
+			userHome = user.HomeDir
 		}
-		filename = filepath.Join(user.HomeDir, ".pgpass")
+		filename = filepath.Join(userHome, ".pgpass")
 	}
 	fileinfo, err := os.Stat(filename)
 	if err != nil {
@@ -237,10 +244,14 @@ func (cn *conn) writeBuf(b byte) *writeBuf {
 	}
 }
 
+// Open opens a new connection to the database. name is a connection string.
+// Most users should only use it through database/sql package from the standard
+// library.
 func Open(name string) (_ driver.Conn, err error) {
 	return DialOpen(defaultDialer{}, name)
 }
 
+// DialOpen opens a new connection to the database using a dialer.
 func DialOpen(d Dialer, name string) (_ driver.Conn, err error) {
 	// Handle any panics during connection initialization.  Note that we
 	// specifically do *not* want to use errRecover(), as that would turn any
@@ -706,7 +717,7 @@ func (noRows) RowsAffected() (int64, error) {
 
 // Decides which column formats to use for a prepared statement.  The input is
 // an array of type oids, one element per result column.
-func decideColumnFormats(colTyps []oid.Oid, forceText bool) (colFmts []format, colFmtData []byte) {
+func decideColumnFormats(colTyps []fieldDesc, forceText bool) (colFmts []format, colFmtData []byte) {
 	if len(colTyps) == 0 {
 		return nil, colFmtDataAllText
 	}
@@ -718,8 +729,8 @@ func decideColumnFormats(colTyps []oid.Oid, forceText bool) (colFmts []format, c
 
 	allBinary := true
 	allText := true
-	for i, o := range colTyps {
-		switch o {
+	for i, t := range colTyps {
+		switch t.OID {
 		// This is the list of types to use binary mode for when receiving them
 		// through a prepared statement.  If a type appears in this list, it
 		// must also be implemented in binaryDecode in encode.go.
@@ -1155,7 +1166,7 @@ type stmt struct {
 	colNames   []string
 	colFmts    []format
 	colFmtData []byte
-	colTyps    []oid.Oid
+	colTyps    []fieldDesc
 	paramTyps  []oid.Oid
 	closed     bool
 }
@@ -1318,7 +1329,7 @@ type rows struct {
 	cn       *conn
 	finish   func()
 	colNames []string
-	colTyps  []oid.Oid
+	colTyps  []fieldDesc
 	colFmts  []format
 	done     bool
 	rb       readBuf
@@ -1406,7 +1417,7 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 					dest[i] = nil
 					continue
 				}
-				dest[i] = decode(&conn.parameterStatus, rs.rb.next(l), rs.colTyps[i], rs.colFmts[i])
+				dest[i] = decode(&conn.parameterStatus, rs.rb.next(l), rs.colTyps[i].OID, rs.colFmts[i])
 			}
 			return
 		case 'T':
@@ -1431,7 +1442,8 @@ func (rs *rows) NextResultSet() error {
 //
 //    tblname := "my_table"
 //    data := "my_data"
-//    err = db.Exec(fmt.Sprintf("INSERT INTO %s VALUES ($1)", pq.QuoteIdentifier(tblname)), data)
+//    quoted := pq.QuoteIdentifier(tblname)
+//    err := db.Exec(fmt.Sprintf("INSERT INTO %s VALUES ($1)", quoted), data)
 //
 // Any double quotes in name will be escaped.  The quoted identifier will be
 // case sensitive when used in a query.  If the input string contains a zero
@@ -1573,7 +1585,7 @@ func (cn *conn) readParseResponse() {
 	}
 }
 
-func (cn *conn) readStatementDescribeResponse() (paramTyps []oid.Oid, colNames []string, colTyps []oid.Oid) {
+func (cn *conn) readStatementDescribeResponse() (paramTyps []oid.Oid, colNames []string, colTyps []fieldDesc) {
 	for {
 		t, r := cn.recv1()
 		switch t {
@@ -1599,7 +1611,7 @@ func (cn *conn) readStatementDescribeResponse() (paramTyps []oid.Oid, colNames [
 	}
 }
 
-func (cn *conn) readPortalDescribeResponse() (colNames []string, colFmts []format, colTyps []oid.Oid) {
+func (cn *conn) readPortalDescribeResponse() (colNames []string, colFmts []format, colTyps []fieldDesc) {
 	t, r := cn.recv1()
 	switch t {
 	case 'T':
@@ -1695,31 +1707,33 @@ func (cn *conn) readExecuteResponse(protocolState string) (res driver.Result, co
 	}
 }
 
-func parseStatementRowDescribe(r *readBuf) (colNames []string, colTyps []oid.Oid) {
+func parseStatementRowDescribe(r *readBuf) (colNames []string, colTyps []fieldDesc) {
 	n := r.int16()
 	colNames = make([]string, n)
-	colTyps = make([]oid.Oid, n)
+	colTyps = make([]fieldDesc, n)
 	for i := range colNames {
 		colNames[i] = r.string()
 		r.next(6)
-		colTyps[i] = r.oid()
-		r.next(6)
+		colTyps[i].OID = r.oid()
+		colTyps[i].Len = r.int16()
+		colTyps[i].Mod = r.int32()
 		// format code not known when describing a statement; always 0
 		r.next(2)
 	}
 	return
 }
 
-func parsePortalRowDescribe(r *readBuf) (colNames []string, colFmts []format, colTyps []oid.Oid) {
+func parsePortalRowDescribe(r *readBuf) (colNames []string, colFmts []format, colTyps []fieldDesc) {
 	n := r.int16()
 	colNames = make([]string, n)
 	colFmts = make([]format, n)
-	colTyps = make([]oid.Oid, n)
+	colTyps = make([]fieldDesc, n)
 	for i := range colNames {
 		colNames[i] = r.string()
 		r.next(6)
-		colTyps[i] = r.oid()
-		r.next(6)
+		colTyps[i].OID = r.oid()
+		colTyps[i].Len = r.int16()
+		colTyps[i].Mod = r.int32()
 		colFmts[i] = format(r.int16())
 	}
 	return

@@ -34,9 +34,26 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLogin,
+			logical.UpdateOperation:         b.pathLogin,
+			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
 		},
 	}
+}
+
+func (b *backend) pathLoginAliasLookahead(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	clientCerts := req.Connection.ConnState.PeerCertificates
+	if len(clientCerts) == 0 {
+		return nil, fmt.Errorf("no client certificate found")
+	}
+
+	return &logical.Response{
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{
+				Name: clientCerts[0].Subject.CommonName,
+			},
+		},
+	}, nil
 }
 
 func (b *backend) pathLogin(
@@ -85,6 +102,9 @@ func (b *backend) pathLogin(
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       ttl,
+			},
+			Alias: &logical.Alias{
+				Name: clientCerts[0].SerialNumber.String(),
 			},
 		},
 	}

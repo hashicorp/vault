@@ -189,7 +189,7 @@ func (b *FileBackend) PutInternal(entry *physical.Entry) error {
 	path, key := b.expandPath(entry.Key)
 
 	// Make the parent tree
-	if err := os.MkdirAll(path, 0755); err != nil {
+	if err := os.MkdirAll(path, 0700); err != nil {
 		return err
 	}
 
@@ -247,10 +247,16 @@ func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
 	}
 
 	for i, name := range names {
-		if name[0] == '_' {
-			names[i] = name[1:]
-		} else {
+		fi, err := os.Stat(filepath.Join(path, name))
+		if err != nil {
+			return nil, err
+		}
+		if fi.IsDir() {
 			names[i] = name + "/"
+		} else {
+			if name[0] == '_' {
+				names[i] = name[1:]
+			}
 		}
 	}
 
@@ -273,7 +279,7 @@ func (b *FileBackend) validatePath(path string) error {
 	return nil
 }
 
-func (b *TransactionalFileBackend) Transaction(txns []physical.TxnEntry) error {
+func (b *TransactionalFileBackend) Transaction(txns []*physical.TxnEntry) error {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 

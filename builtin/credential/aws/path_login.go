@@ -106,7 +106,8 @@ needs to be supplied along with 'identity' parameter.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLoginUpdate,
+			logical.UpdateOperation:         b.pathLoginUpdate,
+			logical.AliasLookaheadOperation: b.pathLoginUpdate,
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -546,6 +547,17 @@ func (b *backend) pathLoginUpdateEc2(
 		}
 	}
 
+	// If we're just looking up for MFA, return the Alias info
+	if req.Operation == logical.AliasLookaheadOperation {
+		return &logical.Response{
+			Auth: &logical.Auth{
+				Alias: &logical.Alias{
+					Name: identityDocParsed.InstanceID,
+				},
+			},
+		}, nil
+	}
+
 	roleName := data.Get("role").(string)
 
 	// If roleName is not supplied, a role in the name of the instance's AMI ID will be looked for
@@ -631,7 +643,7 @@ func (b *backend) pathLoginUpdateEc2(
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		// Don't let subsequent login attempts to bypass in initial
+		// Don't let subsequent login attempts to bypass the initial
 		// intent of disabling reauthentication, despite the properties
 		// of role getting updated. For example: Role has the value set
 		// to 'false', a role-tag login sets the value to 'true', then
@@ -681,7 +693,6 @@ func (b *backend) pathLoginUpdateEc2(
 
 	if roleTagResp != nil {
 		// Role tag is enabled on the role.
-		//
 
 		// Overwrite the policies with the ones returned from processing the role tag
 		// If there are no policies on the role tag, policies on the role are inherited.
@@ -759,11 +770,15 @@ func (b *backend) pathLoginUpdateEc2(
 				Renewable: true,
 				TTL:       roleEntry.TTL,
 			},
+			Alias: &logical.Alias{
+				Name: identityDocParsed.InstanceID,
+			},
 		},
 	}
 
-	// Return the nonce only if reauthentication is allowed
-	if !disallowReauthentication {
+	// Return the nonce only if reauthentication is allowed and if the nonce
+	// was not supplied by the user.
+	if !disallowReauthentication && !clientNonceSupplied {
 		// Echo the client nonce back. If nonce param was not supplied
 		// to the endpoint at all (setting it to empty string does not
 		// qualify here), callers should extract out the nonce from
@@ -1154,6 +1169,18 @@ func (b *backend) pathLoginUpdateIam(
 	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
 	// (in the case of an IAM user).
 	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
+
+	// If we're just looking up for MFA, return the Alias info
+	if req.Operation == logical.AliasLookaheadOperation {
+		return &logical.Response{
+			Auth: &logical.Auth{
+				Alias: &logical.Alias{
+					Name: callerUniqueId,
+				},
+			},
+		}, nil
+	}
+
 	entity, err := parseIamArn(callerID.Arn)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error parsing arn %q: %v", callerID.Arn, err)), nil
@@ -1261,6 +1288,9 @@ func (b *backend) pathLoginUpdateIam(
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       roleEntry.TTL,
+			},
+			Alias: &logical.Alias{
+				Name: callerUniqueId,
 			},
 		},
 	}
@@ -1507,7 +1537,7 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 		return nil, err
 	}
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("received error code %s from STS: %s", response.StatusCode, string(responseBody))
+		return nil, fmt.Errorf("received error code %d from STS: %s", response.StatusCode, string(responseBody))
 	}
 	callerIdentityResponse, err := parseGetCallerIdentityResponse(string(responseBody))
 	if err != nil {

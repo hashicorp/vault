@@ -53,12 +53,30 @@ func pathLogin(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLogin,
+			logical.UpdateOperation:         b.pathLogin,
+			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
 		},
 
 		HelpSynopsis:    pathLoginSyn,
 		HelpDescription: pathLoginDesc,
 	}
+}
+
+func (b *backend) pathLoginAliasLookahead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	appId := data.Get("app_id").(string)
+
+	if appId == "" {
+		return nil, fmt.Errorf("missing app_id")
+	}
+
+	return &logical.Response{
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{
+				Name: appId,
+			},
+		},
+	}, nil
 }
 
 func (b *backend) pathLogin(
@@ -100,6 +118,9 @@ func (b *backend) pathLogin(
 			Metadata:    metadata,
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
+			},
+			Alias: &logical.Alias{
+				Name: appId,
 			},
 		},
 	}, nil
