@@ -28,6 +28,15 @@ Unlike the `generic` backend, the `nomad` backend is not mounted by default.
 $ vault mount nomad
 Successfully mounted 'nomad' at 'nomad'!
 ```
+
+Optionally, we can configure the lease settings for credentials generated
+by Vault. This is done by writing to the `config/lease` key:
+
+```
+$ vault write nomad/config/lease ttl=3600 max_ttl=86400
+Success! Data written to: nomad/config/lease
+```
+
 For a quick start, you can use the SecretID token provided by the [Nomad ACL bootstrap
 process](https://www.nomadproject.io/guides/acl.html#generate-the-initial-token), although this
 is discouraged for production deployments. 

@@ -52,6 +52,39 @@ $ curl \
     https://vault.rocks/v1/nomad/config/access
 ```
 
+## Configure Lease
+
+This endpoint configures the lease settings for generated tokens.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/nomad/config/lease`     | `204 (empty body)` |
+
+### Parameters
+
+- `ttl` `(int: 0)` – Specifies the lease ttl provided in seconds.
+
+- `max_ttl` `(int: 0)` – Specifies the maximum ttl provided in seconds.
+
+### Sample Payload
+
+```json
+{
+  "ttl": 1800,
+  "max_ttl": 3600
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/nomad/config/lease
+```
+
 ## Create/Update Role
 
 This endpoint creates or updates the Nomad role definition in Vault. If the role does not exist, it will be created. If the role already exists, it will receive
