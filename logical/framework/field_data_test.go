@@ -278,6 +278,15 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			"bar.baz-bay123",
 		},
+
+		"name string type, not supplied": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeNameString},
+			},
+			map[string]interface{}{},
+			"foo",
+			"",
+		},
 	}
 
 	for name, tc := range cases {

@@ -604,6 +604,8 @@ func (s *FieldSchema) DefaultOrZero() interface{} {
 // Zero returns the correct zero-value for a specific FieldType
 func (t FieldType) Zero() interface{} {
 	switch t {
+	case TypeNameString:
+		return ""
 	case TypeString:
 		return ""
 	case TypeInt:
