@@ -808,36 +808,36 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 		t.Fatalf("bad: policies; expected: 'engpolicy'\nactual:%#v", policies)
 	}
 
-	groups, impliedGroups, err := is.groupsByEntityID(entityID1)
+	groups, inheritedGroups, err := is.groupsByEntityID(entityID1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(groups) != 1 {
 		t.Fatalf("bad: length of groups; expected: 1, actual: %d", len(groups))
 	}
-	if len(impliedGroups) != 2 {
-		t.Fatalf("bad: length of impliedGroups; expected: 2, actual: %d", len(impliedGroups))
+	if len(inheritedGroups) != 2 {
+		t.Fatalf("bad: length of inheritedGroups; expected: 2, actual: %d", len(inheritedGroups))
 	}
 
-	groups, impliedGroups, err = is.groupsByEntityID(entityID2)
+	groups, inheritedGroups, err = is.groupsByEntityID(entityID2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(groups) != 1 {
 		t.Fatalf("bad: length of groups; expected: 1, actual: %d", len(groups))
 	}
-	if len(impliedGroups) != 1 {
-		t.Fatalf("bad: length of impliedGroups; expected: 1, actual: %d", len(impliedGroups))
+	if len(inheritedGroups) != 1 {
+		t.Fatalf("bad: length of inheritedGroups; expected: 1, actual: %d", len(inheritedGroups))
 	}
 
-	groups, impliedGroups, err = is.groupsByEntityID(entityID3)
+	groups, inheritedGroups, err = is.groupsByEntityID(entityID3)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(groups) != 1 {
 		t.Fatalf("bad: length of groups; expected: 1, actual: %d", len(groups))
 	}
-	if len(impliedGroups) != 0 {
-		t.Fatalf("bad: length of impliedGroups; expected: 0, actual: %d", len(impliedGroups))
+	if len(inheritedGroups) != 0 {
+		t.Fatalf("bad: length of inheritedGroups; expected: 0, actual: %d", len(inheritedGroups))
 	}
 }
