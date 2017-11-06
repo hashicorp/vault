@@ -149,17 +149,17 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 
 	var clientCert tls.Certificate
 	foundClientCert := false
-	if t.ClientCert != "" || t.ClientKey != "" {
-		if t.ClientCert != "" && t.ClientKey != "" {
-			var err error
-			clientCert, err = tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)
-			if err != nil {
-				return err
-			}
-			foundClientCert = true
-		} else if t.ClientCert != "" || t.ClientKey != "" {
-			return fmt.Errorf("Both client cert and client key must be provided")
+
+	switch {
+	case t.ClientCert != "" && t.ClientKey != "":
+		var err error
+		clientCert, err = tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)
+		if err != nil {
+			return err
 		}
+		foundClientCert = true
+	case t.ClientCert != "" || t.ClientKey != "":
+		return fmt.Errorf("Both client cert and client key must be provided")
 	}
 
 	if t.CACert != "" || t.CAPath != "" {
