@@ -838,6 +838,9 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 	// Write the primary ID
 	path := lookupPrefix + saltedId
 	le := &logical.StorageEntry{Key: path, Value: enc}
+	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+		le.SealWrap = true
+	}
 	if err := ts.view.Put(le); err != nil {
 		return fmt.Errorf("failed to persist entry: %v", err)
 	}
