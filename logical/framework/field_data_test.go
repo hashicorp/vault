@@ -281,7 +281,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"keypair type, valid value map type": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeKeyPairs},
+				"foo": &FieldSchema{Type: TypeKVPairs},
 			},
 			map[string]interface{}{
 				"foo": map[string]interface{}{
@@ -300,7 +300,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"keypair type, list of equal sign delim key pairs type": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeKeyPairs},
+				"foo": &FieldSchema{Type: TypeKVPairs},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{"key1=value1", "key2=value2", "key3=1"},
@@ -315,7 +315,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"keypair type, single equal sign delim value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeKeyPairs},
+				"foo": &FieldSchema{Type: TypeKVPairs},
 			},
 			map[string]interface{}{
 				"foo": "key1=value1",
@@ -390,7 +390,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 		"keypair type, csv version empty key name": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeKeyPairs},
+				"foo": &FieldSchema{Type: TypeKVPairs},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{"=value1", "key2=value2", "key3=1"},

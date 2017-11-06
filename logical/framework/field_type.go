@@ -31,9 +31,9 @@ const (
 	// character and characters in the middle can be alphanumeric or . or -.
 	TypeNameString
 
-	// TypeKeyPairs allows you to represent the data as a map or a list of
+	// TypeKVPairs allows you to represent the data as a map or a list of
 	// equal sign delimited key pairs
-	TypeKeyPairs
+	TypeKVPairs
 )
 
 func (t FieldType) String() string {
@@ -48,7 +48,7 @@ func (t FieldType) String() string {
 		return "bool"
 	case TypeMap:
 		return "map"
-	case TypeKeyPairs:
+	case TypeKVPairs:
 		return "keypair"
 	case TypeDurationSecond:
 		return "duration (sec)"
