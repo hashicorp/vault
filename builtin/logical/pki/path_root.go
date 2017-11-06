@@ -188,6 +188,13 @@ func (b *backend) pathCAGenerateRoot(
 		}
 	}
 
+	if data.Get("private_key_format").(string) == "pkcs8" {
+		err = convertRespToPKCS8(resp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Store it as the CA bundle
 	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
