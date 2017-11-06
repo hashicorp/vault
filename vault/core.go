@@ -661,6 +661,57 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 	return c.tokenStore.Lookup(token)
 }
 
+// fetchEntityAndDerivedPolicies returns the entity object for the given entity
+// ID. If the entity is merged into a different entity object, the entity into
+// which the given entity ID is merged into will be returned. This function
+// also returns the cumulative list of policies that the entity is entitled to.
+// This list includes the policies from the entity itself and from all the
+// groups in which the given entity ID is a member of.
+func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity, []string, error) {
+	if entityID == "" {
+		return nil, nil, nil
+	}
+
+	//c.logger.Debug("core: entity set on the token", "entity_id", te.EntityID)
+
+	// Fetch the entity
+	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
+	if err != nil {
+		c.logger.Error("core: failed to lookup entity using its ID", "error", err)
+		return nil, nil, err
+	}
+
+	if entity == nil {
+		// If there was no corresponding entity object found, it is
+		// possible that the entity got merged into another entity. Try
+		// finding entity based on the merged entity index.
+		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, false)
+		if err != nil {
+			c.logger.Error("core: failed to lookup entity in merged entity ID index", "error", err)
+			return nil, nil, err
+		}
+	}
+
+	var policies []string
+	if entity != nil {
+		//c.logger.Debug("core: entity successfully fetched; adding entity policies to token's policies to create ACL")
+
+		// Attach the policies on the entity
+		policies = append(policies, entity.Policies...)
+
+		groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
+		if err != nil {
+			c.logger.Error("core: failed to fetch group policies", "error", err)
+			return nil, nil, err
+		}
+
+		// Attach the policies from all the groups
+		policies = append(policies, groupPolicies...)
+	}
+
+	return entity, policies, err
+}
+
 func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntry, *identity.Entity, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
@@ -688,46 +739,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 
 	tokenPolicies := te.Policies
 
-	var entity *identity.Entity
-
-	// Append the policies of the entity to those on the tokens and create ACL
-	// off of the combined list.
-	if te.EntityID != "" {
-		//c.logger.Debug("core: entity set on the token", "entity_id", te.EntityID)
-		// Fetch entity for the entity ID in the token entry
-		entity, err = c.identityStore.memDBEntityByID(te.EntityID, false)
-		if err != nil {
-			c.logger.Error("core: failed to lookup entity using its ID", "error", err)
-			return nil, nil, nil, ErrInternalError
-		}
-
-		if entity == nil {
-			// If there was no corresponding entity object found, it is
-			// possible that the entity got merged into another entity. Try
-			// finding entity based on the merged entity index.
-			entity, err = c.identityStore.memDBEntityByMergedEntityID(te.EntityID, false)
-			if err != nil {
-				c.logger.Error("core: failed to lookup entity in merged entity ID index", "error", err)
-				return nil, nil, nil, ErrInternalError
-			}
-		}
-
-		if entity != nil {
-			//c.logger.Debug("core: entity successfully fetched; adding entity policies to token's policies to create ACL")
-			// Attach the policies on the entity to the policies tied to the token
-			tokenPolicies = append(tokenPolicies, entity.Policies...)
-
-			groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
-			if err != nil {
-				c.logger.Error("core: failed to fetch group policies", "error", err)
-				return nil, nil, nil, ErrInternalError
-			}
-
-			// Attach the policies from all the groups to which this entity ID
-			// belongs to
-			tokenPolicies = append(tokenPolicies, groupPolicies...)
-		}
+	entity, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
+	if err != nil {
+		return nil, nil, nil, ErrInternalError
 	}
+
+	tokenPolicies = append(tokenPolicies, derivedPolicies...)
 
 	// Construct the corresponding ACL object
 	acl, err := c.policyStore.ACL(tokenPolicies...)

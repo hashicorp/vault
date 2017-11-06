@@ -17,6 +17,10 @@ const (
 	groupBucketsPrefix = "packer/group/buckets/"
 )
 
+func (c *Core) IdentityStore() *IdentityStore {
+	return c.identityStore
+}
+
 // NewIdentityStore creates a new identity store
 func NewIdentityStore(core *Core, config *logical.BackendConfig) (*IdentityStore, error) {
 	var err error
@@ -50,6 +54,7 @@ func NewIdentityStore(core *Core, config *logical.BackendConfig) (*IdentityStore
 		Paths: framework.PathAppend(
 			entityPaths(iStore),
 			aliasPaths(iStore),
+			groupAliasPaths(iStore),
 			groupPaths(iStore),
 			lookupPaths(iStore),
 			upgradePaths(iStore),
@@ -90,7 +95,7 @@ func (i *IdentityStore) Invalidate(key string) {
 		// entry key of the entity bucket. Fetch all the entities that
 		// belong to this bucket using the hash value. Remove these entities
 		// from MemDB along with all the aliases of each entity.
-		entitiesFetched, err := i.memDBEntitiesByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
+		entitiesFetched, err := i.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
 		if err != nil {
 			i.logger.Error("failed to fetch entities using the bucket entry key hash", "bucket_entry_key_hash", bucketKeyHash)
 			return
@@ -106,7 +111,7 @@ func (i *IdentityStore) Invalidate(key string) {
 			}
 
 			// Delete the entity using the same transaction
-			err = i.memDBDeleteEntityByIDInTxn(txn, entity.ID)
+			err = i.MemDBDeleteEntityByIDInTxn(txn, entity.ID)
 			if err != nil {
 				i.logger.Error("failed to delete entity from MemDB", "entity_id", entity.ID, "error", err)
 				return
@@ -160,7 +165,7 @@ func (i *IdentityStore) Invalidate(key string) {
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
-		groupsFetched, err := i.memDBGroupsByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
+		groupsFetched, err := i.MemDBGroupsByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
 		if err != nil {
 			i.logger.Error("failed to fetch groups using the bucket entry key hash", "bucket_entry_key_hash", bucketKeyHash)
 			return
@@ -168,7 +173,7 @@ func (i *IdentityStore) Invalidate(key string) {
 
 		for _, group := range groupsFetched {
 			// Delete the group using the same transaction
-			err = i.memDBDeleteGroupByIDInTxn(txn, group.ID)
+			err = i.MemDBDeleteGroupByIDInTxn(txn, group.ID)
 			if err != nil {
 				i.logger.Error("failed to delete group from MemDB", "group_id", group.ID, "error", err)
 				return
@@ -232,9 +237,9 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 	return &group, nil
 }
 
-// EntityByAliasFactors fetches the entity based on factors of alias, i.e mount
+// entityByAliasFactors fetches the entity based on factors of alias, i.e mount
 // accessor and the alias name.
-func (i *IdentityStore) EntityByAliasFactors(mountAccessor, aliasName string, clone bool) (*identity.Entity, error) {
+func (i *IdentityStore) entityByAliasFactors(mountAccessor, aliasName string, clone bool) (*identity.Entity, error) {
 	if mountAccessor == "" {
 		return nil, fmt.Errorf("missing mount accessor")
 	}
@@ -243,7 +248,7 @@ func (i *IdentityStore) EntityByAliasFactors(mountAccessor, aliasName string, cl
 		return nil, fmt.Errorf("missing alias name")
 	}
 
-	alias, err := i.memDBAliasByFactors(mountAccessor, aliasName, false)
+	alias, err := i.MemDBAliasByFactors(mountAccessor, aliasName, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -252,11 +257,11 @@ func (i *IdentityStore) EntityByAliasFactors(mountAccessor, aliasName string, cl
 		return nil, nil
 	}
 
-	return i.memDBEntityByAliasID(alias.ID, clone)
+	return i.MemDBEntityByAliasID(alias.ID, clone)
 }
 
 // CreateEntity creates a new entity. This is used by core to
-// associate each login attempt by a alias to a unified entity in Vault.
+// associate each login attempt by an alias to a unified entity in Vault.
 func (i *IdentityStore) CreateEntity(alias *logical.Alias) (*identity.Entity, error) {
 	var entity *identity.Entity
 	var err error
@@ -279,7 +284,7 @@ func (i *IdentityStore) CreateEntity(alias *logical.Alias) (*identity.Entity, er
 	}
 
 	// Check if an entity already exists for the given alais
-	entity, err = i.EntityByAliasFactors(alias.MountAccessor, alias.Name, false)
+	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +301,7 @@ func (i *IdentityStore) CreateEntity(alias *logical.Alias) (*identity.Entity, er
 
 	// Create a new alias
 	newAlias := &identity.Alias{
-		EntityID:      entity.ID,
+		CanonicalID:   entity.ID,
 		Name:          alias.Name,
 		MountAccessor: alias.MountAccessor,
 		MountPath:     mountValidationResp.MountPath,
