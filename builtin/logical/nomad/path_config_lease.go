@@ -3,7 +3,6 @@ package nomad
 import (
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -14,12 +13,10 @@ func pathConfigLease(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Default:     0,
 				Description: "Duration before which the issued token needs renewal",
 			},
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Default:     0,
 				Description: `Duration after which the issued token should not be allowed to be renewed`,
 			},
 		},
@@ -52,7 +49,7 @@ func (b *backend) pathLeaseUpdate(req *logical.Request, d *framework.FieldData) 
 
 // Returns the lease configuration parameters
 func (b *backend) pathLeaseRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.LeaseConfig(req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -60,18 +57,18 @@ func (b *backend) pathLeaseRead(req *logical.Request, data *framework.FieldData)
 		return nil, nil
 	}
 
-	lease.TTL = lease.TTL / time.Second
-	lease.MaxTTL = lease.MaxTTL / time.Second
-
 	return &logical.Response{
-		Data: structs.New(lease).Map(),
+		Data: map[string]interface{}{
+			"ttl":     lease.TTL.Seconds(),
+			"max_ttl": lease.MaxTTL.Seconds(),
+		},
 	}, nil
 }
 
 // Lease configuration information for the secrets issued by this backend
 type configLease struct {
-	TTL    time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
-	MaxTTL time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	TTL    time.Duration `json:"ttl" mapstructure:"ttl"`
+	MaxTTL time.Duration `json:"max_ttl" mapstructure:"max_ttl"`
 }
 
 var pathConfigLeaseHelpSyn = "Configure the lease parameters for generated tokens"

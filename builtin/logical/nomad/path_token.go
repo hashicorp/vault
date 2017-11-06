@@ -42,14 +42,10 @@ func (b *backend) pathTokenRead(
 		return nil, err
 	}
 
-	if result.TokenType == "" {
-		result.TokenType = "client"
-	}
-
 	// Get the nomad client
-	c, intErr := b.Client(req.Storage)
-	if intErr != nil {
-		return nil, intErr
+	c, err := b.client(req.Storage)
+	if err != nil {
+		return nil, err
 	}
 
 	// Generate a name for the token

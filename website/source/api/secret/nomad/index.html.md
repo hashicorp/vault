@@ -108,7 +108,7 @@ updated attributes.
 - `global` `(bool: "")` – Specifies if the token should be global, as defined in the [Nomad Documentation](https://www.nomadproject.io/guides/acl.html#acl-tokens).
 ma
 
-- `token_type` `(string: "client")` - Specifies the type of token to create when
+- `type` `(string: "client")` - Specifies the type of token to create when
   using this role. Valid values are `"client"` or `"management"`.
 
 ### Sample Payload

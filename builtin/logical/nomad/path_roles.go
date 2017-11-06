@@ -15,7 +15,7 @@ func pathListRoles(b *backend) *framework.Path {
 	}
 }
 
-func pathRoles() *framework.Path {
+func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -34,7 +34,7 @@ func pathRoles() *framework.Path {
 				Description: "Policy name as previously created in Nomad. Required",
 			},
 
-			"token_type": &framework.FieldSchema{
+			"type": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "client",
 				Description: `Which type of token to create: 'client'
@@ -45,9 +45,9 @@ Defaults to 'client'.`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   pathRolesRead,
-			logical.UpdateOperation: pathRolesWrite,
-			logical.DeleteOperation: pathRolesDelete,
+			logical.ReadOperation:   b.pathRolesRead,
+			logical.UpdateOperation: b.pathRolesWrite,
+			logical.DeleteOperation: b.pathRolesDelete,
 		},
 	}
 }
@@ -62,7 +62,7 @@ func (b *backend) pathRoleList(
 	return logical.ListResponse(entries), nil
 }
 
-func pathRolesRead(
+func (b *backend) pathRolesRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
@@ -82,8 +82,8 @@ func pathRolesRead(
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"token_type": result.TokenType,
-			"global":     result.Global,
+			"type":   result.TokenType,
+			"global": result.Global,
 		},
 	}
 	if len(result.Policy) != 0 {
@@ -92,32 +92,27 @@ func pathRolesRead(
 	return resp, nil
 }
 
-func pathRolesWrite(
+func (b *backend) pathRolesWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	tokenType := d.Get("token_type").(string)
-
-	switch tokenType {
-	case "client":
-	case "management":
-	default:
-		return logical.ErrorResponse(
-			"token_type must be \"client\" or \"management\""), nil
-	}
-
+	tokenType := d.Get("type").(string)
 	name := d.Get("name").(string)
 	global := d.Get("global").(bool)
 	policy := d.Get("policy").([]string)
-	var err error
-	if tokenType != "management" {
+
+	switch tokenType {
+	case "client":
 		if len(policy) == 0 {
 			return logical.ErrorResponse(
-				"policy cannot be empty when not using management tokens"), nil
+				"policy cannot be empty when using client tokens"), nil
 		}
-	} else {
+	case "management":
 		if len(policy) != 0 {
 			return logical.ErrorResponse(
 				"policy should be empty when using management tokens"), nil
 		}
+	default:
+		return logical.ErrorResponse(
+			"type must be \"client\" or \"management\""), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("role/"+name, roleConfig{
@@ -136,7 +131,7 @@ func pathRolesWrite(
 	return nil, nil
 }
 
-func pathRolesDelete(
+func (b *backend) pathRolesDelete(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if err := req.Storage.Delete("role/" + name); err != nil {
@@ -147,6 +142,6 @@ func pathRolesDelete(
 
 type roleConfig struct {
 	Policy    []string `json:"policy"`
-	TokenType string   `json:"token_type"`
+	TokenType string   `json:"type"`
 	Global    bool     `json:"global"`
 }
