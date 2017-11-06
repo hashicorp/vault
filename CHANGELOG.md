@@ -32,6 +32,7 @@ IMPROVEMENTS:
    [GH-3373]
  * physical/file: Use `700` as permissions when creating directories. The files
    themselves were `600` and are all encrypted, but this doesn't hurt.
+ * secret/aws: Add ability to use custom IAM/STS endpoints [GH-3416]
  * secret/cassandra: Work around Cassandra ignoring consistency levels for a
    user listing query [GH-3469]
  * secret/pki: Private keys can now be marshalled as PKCS#8 [GH-3518]
