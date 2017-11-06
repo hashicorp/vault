@@ -16,6 +16,14 @@ DEPRECATIONS/CHANGES:
  * SSH CA role read changes: When reading back a role from the `ssh` backend,
    the TTL/max TTL values will now be an integer number of seconds rather than
    a string. This better matches the API elsewhere in Vault.
+ * SSH role list changes: When listing roles from the `ssh` backend via the API,
+   the response data will additionally return a `key_info` map that will contain
+   a map of each key with a corresponding object containing the `key_type`.
+
+FEATURES:
+
+ * ** RSA Support for Transit Backend**: Transit backend can now generate RSA
+   keys which can be used for encryption and signing. [GH-3489]
 
 IMPROVEMENTS:
 
@@ -46,9 +54,13 @@ BUG FIXES:
    responses when requests were forwarded to the active node [GH-3485]
  * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
    matching [GH-3406]
+ * physical/etcd3: Fix case where standbys can lose their etcd client lease
+   [GH-3031]
  * physical/file: Fix listing when underscores are the first component of a
    path [GH-3476]
  * plugins: Allow response errors to be returned from backend plugins [GH-3412]
+ * secret/transit: Fix panic if the length of the input ciphertext was less
+   than the expected nonce length [GH-3521]
 
 ## 0.8.3 (September 19th, 2017)
 

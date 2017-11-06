@@ -42,6 +42,17 @@ message Group {
 	// the groups belonging to a particular bucket during invalidation of the
 	// storage key.
 	string bucket_key_hash = 10;
+
+	// Alias is used to mark this group as an internal mapping of a group that
+	// is external to the identity store. Alias can only be set if the 'type'
+	// is set to 'external'.
+	Alias alias = 11;
+
+	// Type indicates if this group is an internal group or an external group.
+	// Memberships of the internal groups can be managed over the API whereas
+	// the memberships on the external group --for which a corresponding alias
+	// will be set-- will be managed automatically.
+	string type = 12;
 }
 
 
@@ -108,8 +119,8 @@ message Alias {
 	// ID is the unique identifier that represents this alias
 	string id = 1;
 
-	// EntityID is the entity identifier to which this alias belongs to
-	string entity_id = 2;
+	// CanonicalID is the entity identifier to which this alias belongs to
+	string canonical_id = 2;
 
 	// MountType is the backend mount's type to which this alias belongs to.
 	// This enables categorically querying aliases of specific backend types.
@@ -130,8 +141,8 @@ message Alias {
 	map<string, string> metadata = 6;
 
 	// Name is the identifier of this alias in its authentication source.
-	// This does not uniquely identify a alias in Vault. This in conjunction
-	// with MountAccessor form to be the factors that represent a alias in a
+	// This does not uniquely identify an alias in Vault. This in conjunction
+	// with MountAccessor form to be the factors that represent an alias in a
 	// unique way. Aliases will be indexed based on this combined uniqueness
 	// factor.
 	string name = 7;
@@ -144,8 +155,6 @@ message Alias {
 	// on its age and to take action on them, if desired.
 	google.protobuf.Timestamp last_update_time = 9;
 
-	// MergedFromEntityIDs is the FIFO history of merging activity by entity IDs from
-	// which this alias is transfered over to the entity to which it
-	// currently belongs to.
-	repeated string merged_from_entity_ids = 10;
+	// MergedFromCanonicalIDs is the FIFO history of merging activity
+	repeated string merged_from_canonical_ids = 10;
 }
