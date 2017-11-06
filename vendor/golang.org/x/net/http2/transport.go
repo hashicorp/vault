@@ -1536,7 +1536,17 @@ func (rl *clientConnReadLoop) run() error {
 
 func (rl *clientConnReadLoop) processHeaders(f *MetaHeadersFrame) error {
 	cc := rl.cc
-	cs := cc.streamByID(f.StreamID, f.StreamEnded())
+	if f.StreamEnded() {
+		// Issue 20521: If the stream has ended, streamByID() causes
+		// clientStream.done to be closed, which causes the request's bodyWriter
+		// to be closed with an errStreamClosed, which may be received by
+		// clientConn.RoundTrip before the result of processing these headers.
+		// Deferring stream closure allows the header processing to occur first.
+		// clientConn.RoundTrip may still receive the bodyWriter error first, but
+		// the fix for issue 16102 prioritises any response.
+		defer cc.streamByID(f.StreamID, true)
+	}
+	cs := cc.streamByID(f.StreamID, false)
 	if cs == nil {
 		// We'd get here if we canceled a request while the
 		// server had its response still in flight. So if this
@@ -1841,6 +1851,14 @@ func (rl *clientConnReadLoop) processData(f *DataFrame) error {
 		return nil
 	}
 	if f.Length > 0 {
+		if cs.req.Method == "HEAD" && len(data) > 0 {
+			cc.logf("protocol error: received DATA on a HEAD request")
+			rl.endStreamError(cs, StreamError{
+				StreamID: f.StreamID,
+				Code:     ErrCodeProtocol,
+			})
+			return nil
+		}
 		// Check connection-level flow control.
 		cc.mu.Lock()
 		if cs.inflow.available() >= int32(f.Length) {

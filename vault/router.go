@@ -19,7 +19,6 @@ type Router struct {
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
 	tokenStoreSaltFunc func() (*salt.Salt, error)
-
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
@@ -39,12 +38,13 @@ func NewRouter() *Router {
 
 // routeEntry is used to represent a mount point in the router
 type routeEntry struct {
-	tainted     bool
-	backend     logical.Backend
-	mountEntry  *MountEntry
-	storageView *BarrierView
-	rootPaths   *radix.Tree
-	loginPaths  *radix.Tree
+	tainted       bool
+	backend       logical.Backend
+	mountEntry    *MountEntry
+	storageView   logical.Storage
+	storagePrefix string
+	rootPaths     *radix.Tree
+	loginPaths    *radix.Tree
 }
 
 type validateMountResponse struct {
@@ -89,6 +89,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 
 	// Build the paths
+	var localView logical.Storage = storageView
 	paths := new(logical.Paths)
 	if backend != nil {
 		specialPaths := backend.SpecialPaths()
@@ -99,18 +100,19 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Create a mount entry
 	re := &routeEntry{
-		tainted:     false,
-		backend:     backend,
-		mountEntry:  mountEntry,
-		storageView: storageView,
-		rootPaths:   pathsToRadix(paths.Root),
-		loginPaths:  pathsToRadix(paths.Unauthenticated),
+		tainted:       false,
+		backend:       backend,
+		mountEntry:    mountEntry,
+		storagePrefix: storageView.prefix,
+		storageView:   localView,
+		rootPaths:     pathsToRadix(paths.Root),
+		loginPaths:    pathsToRadix(paths.Unauthenticated),
 	}
 
 	switch {
 	case prefix == "":
 		return fmt.Errorf("missing prefix to be used for router entry; mount_path: %q, mount_type: %q", re.mountEntry.Path, re.mountEntry.Type)
-	case storageView.prefix == "":
+	case re.storagePrefix == "":
 		return fmt.Errorf("missing storage view prefix; mount_path: %q, mount_type: %q", re.mountEntry.Path, re.mountEntry.Type)
 	case re.mountEntry.UUID == "":
 		return fmt.Errorf("missing mount identifier; mount_path: %q, mount_type: %q", re.mountEntry.Path, re.mountEntry.Type)
@@ -119,7 +121,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 
 	r.root.Insert(prefix, re)
-	r.storagePrefix.Insert(storageView.prefix, re)
+	r.storagePrefix.Insert(re.storagePrefix, re)
 	r.mountUUIDCache.Insert(re.mountEntry.UUID, re.mountEntry)
 	r.mountAccessorCache.Insert(re.mountEntry.Accessor, re.mountEntry)
 
@@ -139,11 +141,13 @@ func (r *Router) Unmount(prefix string) error {
 
 	// Call backend's Cleanup routine
 	re := raw.(*routeEntry)
-	re.backend.Cleanup()
+	if re.backend != nil {
+		re.backend.Cleanup()
+	}
 
 	// Purge from the radix trees
 	r.root.Delete(prefix)
-	r.storagePrefix.Delete(re.storageView.prefix)
+	r.storagePrefix.Delete(re.storagePrefix)
 	r.mountUUIDCache.Delete(re.mountEntry.UUID)
 	r.mountAccessorCache.Delete(re.mountEntry.Accessor)
 
@@ -226,18 +230,63 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
+	defer r.l.RUnlock()
+	var mount = r.matchingMountInternal(path)
+	return mount
+}
+
+func (r *Router) matchingMountInternal(path string) string {
 	mount, _, ok := r.root.LongestPrefix(path)
-	r.l.RUnlock()
 	if !ok {
 		return ""
 	}
 	return mount
 }
 
-// MatchingStorageView returns the storageView used for a path
-func (r *Router) MatchingStorageView(path string) *BarrierView {
+// matchingPrefixInternal returns a mount prefix that a path may be a part of
+func (r *Router) matchingPrefixInternal(path string) string {
+	var existing string = ""
+	fn := func(existing_path string, _v interface{}) bool {
+		if strings.HasPrefix(existing_path, path) {
+			existing = existing_path
+			return true
+		}
+		return false
+	}
+	r.root.WalkPrefix(path, fn)
+	return existing
+}
+
+// MountConflict determines if there are potential path conflicts
+func (r *Router) MountConflict(path string) string {
 	r.l.RLock()
-	_, raw, ok := r.root.LongestPrefix(path)
+	defer r.l.RUnlock()
+	if exact_match := r.matchingMountInternal(path); exact_match != "" {
+		return exact_match
+	}
+	if prefix_match := r.matchingPrefixInternal(path); prefix_match != "" {
+		return prefix_match
+	}
+	return ""
+}
+
+// MatchingStorageByAPIPath/StoragePath returns the storage used for
+// API/Storage paths respectively
+func (r *Router) MatchingStorageByAPIPath(path string) logical.Storage {
+	return r.matchingStorage(path, true)
+}
+func (r *Router) MatchingStorageByStoragePath(path string) logical.Storage {
+	return r.matchingStorage(path, false)
+}
+func (r *Router) matchingStorage(path string, apiPath bool) logical.Storage {
+	var raw interface{}
+	var ok bool
+	r.l.RLock()
+	if apiPath {
+		_, raw, ok = r.root.LongestPrefix(path)
+	} else {
+		_, raw, ok = r.storagePrefix.LongestPrefix(path)
+	}
 	r.l.RUnlock()
 	if !ok {
 		return nil
@@ -278,11 +327,23 @@ func (r *Router) MatchingSystemView(path string) logical.SystemView {
 	return raw.(*routeEntry).backend.System()
 }
 
-// MatchingStoragePrefix returns the mount path matching and storage prefix
-// matching the given path
-func (r *Router) MatchingStoragePrefix(path string) (string, string, bool) {
+// MatchingStoragePrefixByAPIPath/StoragePath returns the mount path matching
+// and storage prefix matching the given API/Storage path respectively
+func (r *Router) MatchingStoragePrefixByAPIPath(path string) (string, string, bool) {
+	return r.matchingStoragePrefix(path, true)
+}
+func (r *Router) MatchingStoragePrefixByStoragePath(path string) (string, string, bool) {
+	return r.matchingStoragePrefix(path, false)
+}
+func (r *Router) matchingStoragePrefix(path string, apiPath bool) (string, string, bool) {
+	var raw interface{}
+	var ok bool
 	r.l.RLock()
-	_, raw, ok := r.storagePrefix.LongestPrefix(path)
+	if apiPath {
+		_, raw, ok = r.root.LongestPrefix(path)
+	} else {
+		_, raw, ok = r.storagePrefix.LongestPrefix(path)
+	}
 	r.l.RUnlock()
 	if !ok {
 		return "", "", false
@@ -291,10 +352,10 @@ func (r *Router) MatchingStoragePrefix(path string) (string, string, bool) {
 	// Extract the mount path and storage prefix
 	re := raw.(*routeEntry)
 	mountPath := re.mountEntry.Path
-	prefix := re.storageView.prefix
+	prefix := re.storagePrefix
 
 	// Add back the prefix for credential backends
-	if strings.HasPrefix(path, credentialBarrierPrefix) {
+	if !apiPath && strings.HasPrefix(path, credentialBarrierPrefix) {
 		mountPath = credentialRoutePrefix + mountPath
 	}
 
@@ -333,6 +394,11 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		strings.Replace(mount, "/", "-", -1)}, time.Now())
 	re := raw.(*routeEntry)
 
+	// Filtered mounts will have a nil backend
+	if re.backend == nil {
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+	}
+
 	// If the path is tainted, we reject any operation except for
 	// Rollback and Revoke
 	if re.tainted {
@@ -366,7 +432,8 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		req.EntityID = ""
 	}
 
-	// Hash the request token unless this is the token backend
+	// Hash the request token unless the request is being routed to the token
+	// or system backend.
 	clientToken := req.ClientToken
 	switch {
 	case strings.HasPrefix(originalPath, "auth/token/"):
@@ -435,10 +502,26 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		return nil, ok, exists, err
 	} else {
 		resp, err := re.backend.HandleRequest(req)
+		// When a token gets renewed, the request hits this path and reaches
+		// token store. Token store delegates the renewal to the expiration
+		// manager. Expiration manager in-turn creates a different logical
+		// request and forwards the request to the auth backend that had
+		// initially authenticated the login request. The forwarding to auth
+		// backend will make this code path hit for the second time for the
+		// same renewal request. The accessors in the Alias structs should be
+		// of the auth backend and not of the token store. Therefore, avoiding
+		// the overwriting of accessors by having a check for path prefix
+		// having "renew". This gets applied for "renew" and "renew-self"
+		// requests.
 		if resp != nil &&
 			resp.Auth != nil &&
-			resp.Auth.Alias != nil {
-			resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
+			!strings.HasPrefix(req.Path, "renew") {
+			if resp.Auth.Alias != nil {
+				resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
+			}
+			for _, alias := range resp.Auth.GroupAliases {
+				alias.MountAccessor = re.mountEntry.Accessor
+			}
 		}
 		return resp, false, false, err
 	}

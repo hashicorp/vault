@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -50,6 +51,10 @@ const (
 	// coreLeaderPrefix is the prefix used for the UUID that contains
 	// the currently elected leader.
 	coreLeaderPrefix = "core/leader/"
+
+	// knownPrimaryAddrsPrefix is used to store last-known cluster address
+	// information for primaries
+	knownPrimaryAddrsPrefix = "core/primary-addrs/"
 
 	// lockRetryInterval is the interval we re-attempt to acquire the
 	// HA lock if an error is encountered
@@ -104,6 +109,9 @@ var (
 	startReplication     = startReplicationImpl
 	stopReplication      = stopReplicationImpl
 	LastRemoteWAL        = lastRemoteWALImpl
+	// A package-available logger function, mainly to have access in ACL for
+	// error conditions
+	vlogger log.Logger
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -344,6 +352,11 @@ type Core struct {
 	// CORS Information
 	corsConfig *CORSConfig
 
+	// The active set of upstream cluster addresses; stored via the Echo
+	// mechanism, loaded by the balancer
+	atomicPrimaryClusterAddrs *atomic.Value
+
+	atomicPrimaryFailoverAddrs *atomic.Value
 	// replicationState keeps the current replication state cached for quick
 	// lookup
 	replicationState consts.ReplicationState
@@ -455,6 +468,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.Logger == nil {
 		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
+	vlogger = conf.Logger
 
 	// Setup the core
 	c := &Core{
@@ -476,6 +490,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 		rawEnabled:                       conf.EnableRaw,
+		atomicPrimaryClusterAddrs:        new(atomic.Value),
+		atomicPrimaryFailoverAddrs:       new(atomic.Value),
 	}
 
 	if conf.ClusterCipherSuites != "" {
@@ -486,16 +502,24 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.clusterCipherSuites = suites
 	}
 
-	c.corsConfig = &CORSConfig{core: c}
 	// Load CORS config and provide a value for the core field.
+	c.corsConfig = &CORSConfig{core: c}
 
+	phys := conf.Physical
 	_, txnOK := conf.Physical.(physical.Transactional)
-	// Wrap the physical backend in a cache layer if enabled and not already wrapped
-	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
+	if c.seal == nil {
+		c.seal = &DefaultSeal{}
+	}
+	c.seal.SetCore(c)
+
+	var ok bool
+
+	// Wrap the physical backend in a cache layer if enabled
+	if !conf.DisableCache {
 		if txnOK {
-			c.physical = physical.NewTransactionalCache(conf.Physical, conf.CacheSize, conf.Logger)
+			c.physical = physical.NewTransactionalCache(phys, conf.CacheSize, conf.Logger)
 		} else {
-			c.physical = physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
+			c.physical = physical.NewCache(phys, conf.CacheSize, conf.Logger)
 		}
 	}
 
@@ -546,7 +570,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
 	}
-	_, ok := logicalBackends["kv"]
+	_, ok = logicalBackends["kv"]
 	if !ok {
 		logicalBackends["kv"] = PassthroughBackendFactory
 	}
@@ -580,16 +604,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.auditBackends = auditBackends
 
-	if c.seal == nil {
-		c.seal = &DefaultSeal{}
-	}
-	c.seal.SetCore(c)
-
-	// Attempt unsealing with stored keys; if there are no stored keys this
-	// returns nil, otherwise returns nil or an error
-	storedKeyErr := c.UnsealWithStoredKeys()
-
-	return c, storedKeyErr
+	return c, nil
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -646,6 +661,57 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 	return c.tokenStore.Lookup(token)
 }
 
+// fetchEntityAndDerivedPolicies returns the entity object for the given entity
+// ID. If the entity is merged into a different entity object, the entity into
+// which the given entity ID is merged into will be returned. This function
+// also returns the cumulative list of policies that the entity is entitled to.
+// This list includes the policies from the entity itself and from all the
+// groups in which the given entity ID is a member of.
+func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity, []string, error) {
+	if entityID == "" {
+		return nil, nil, nil
+	}
+
+	//c.logger.Debug("core: entity set on the token", "entity_id", te.EntityID)
+
+	// Fetch the entity
+	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
+	if err != nil {
+		c.logger.Error("core: failed to lookup entity using its ID", "error", err)
+		return nil, nil, err
+	}
+
+	if entity == nil {
+		// If there was no corresponding entity object found, it is
+		// possible that the entity got merged into another entity. Try
+		// finding entity based on the merged entity index.
+		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, false)
+		if err != nil {
+			c.logger.Error("core: failed to lookup entity in merged entity ID index", "error", err)
+			return nil, nil, err
+		}
+	}
+
+	var policies []string
+	if entity != nil {
+		//c.logger.Debug("core: entity successfully fetched; adding entity policies to token's policies to create ACL")
+
+		// Attach the policies on the entity
+		policies = append(policies, entity.Policies...)
+
+		groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
+		if err != nil {
+			c.logger.Error("core: failed to fetch group policies", "error", err)
+			return nil, nil, err
+		}
+
+		// Attach the policies from all the groups
+		policies = append(policies, groupPolicies...)
+	}
+
+	return entity, policies, err
+}
+
 func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntry, *identity.Entity, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
@@ -673,46 +739,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 
 	tokenPolicies := te.Policies
 
-	var entity *identity.Entity
-
-	// Append the policies of the entity to those on the tokens and create ACL
-	// off of the combined list.
-	if te.EntityID != "" {
-		//c.logger.Debug("core: entity set on the token", "entity_id", te.EntityID)
-		// Fetch entity for the entity ID in the token entry
-		entity, err = c.identityStore.memDBEntityByID(te.EntityID, false)
-		if err != nil {
-			c.logger.Error("core: failed to lookup entity using its ID", "error", err)
-			return nil, nil, nil, ErrInternalError
-		}
-
-		if entity == nil {
-			// If there was no corresponding entity object found, it is
-			// possible that the entity got merged into another entity. Try
-			// finding entity based on the merged entity index.
-			entity, err = c.identityStore.memDBEntityByMergedEntityID(te.EntityID, false)
-			if err != nil {
-				c.logger.Error("core: failed to lookup entity in merged entity ID index", "error", err)
-				return nil, nil, nil, ErrInternalError
-			}
-		}
-
-		if entity != nil {
-			//c.logger.Debug("core: entity successfully fetched; adding entity policies to token's policies to create ACL")
-			// Attach the policies on the entity to the policies tied to the token
-			tokenPolicies = append(tokenPolicies, entity.Policies...)
-
-			groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
-			if err != nil {
-				c.logger.Error("core: failed to fetch group policies", "error", err)
-				return nil, nil, nil, ErrInternalError
-			}
-
-			// Attach the policies from all the groups to which this entity ID
-			// belongs to
-			tokenPolicies = append(tokenPolicies, groupPolicies...)
-		}
+	entity, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
+	if err != nil {
+		return nil, nil, nil, ErrInternalError
 	}
+
+	tokenPolicies = append(tokenPolicies, derivedPolicies...)
 
 	// Construct the corresponding ACL object
 	acl, err := c.policyStore.ACL(tokenPolicies...)
@@ -724,16 +756,33 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 	return acl, te, entity, nil
 }
 
-func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, error) {
+func (c *Core) checkToken(req *logical.Request, unauth bool) (*logical.Auth, *TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
-	acl, te, _, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
-	if err != nil {
-		return nil, te, err
+	var acl *ACL
+	var te *TokenEntry
+	var entity *identity.Entity
+	var err error
+
+	// Even if unauth, if a token is provided, there's little reason not to
+	// gather as much info as possible for the audit log and to e.g. control
+	// trace mode for EGPs.
+	if !unauth || (unauth && req.ClientToken != "") {
+		acl, te, entity, err = c.fetchACLTokenEntryAndEntity(req.ClientToken)
+		// In the unauth case we don't want to fail the command, since it's
+		// unauth, we just have no information to attach to the request, so
+		// ignore errors...this was best-effort anyways
+		if err != nil && !unauth {
+			return nil, te, err
+		}
 	}
 
 	// Check if this is a root protected path
 	rootPath := c.router.RootPath(req.Path)
+
+	if rootPath && unauth {
+		return nil, nil, errors.New("cannot access root path in unauthenticated request")
+	}
 
 	// When we receive a write of either type, rather than require clients to
 	// PUT/POST and trust the operation, we ask the backend to give us the real
@@ -788,12 +837,14 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
-	allowed, rootPrivs := acl.AllowOperation(req)
-	if !allowed {
-		// Return auth for audit logging even if not allowed
-		return auth, te, logical.ErrPermissionDenied
+	authResults := c.performPolicyChecks(acl, te, req, entity, &PolicyCheckOpts{
+		Unauth:            unauth,
+		RootPrivsRequired: rootPath,
+	})
+	if authResults.Error.ErrorOrNil() != nil {
+		return auth, te, authResults.Error
 	}
-	if rootPath && !rootPrivs {
+	if !authResults.Allowed {
 		// Return auth for audit logging even if not allowed
 		return auth, te, logical.ErrPermissionDenied
 	}
@@ -1147,7 +1198,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	}
 
 	// Validate the token is a root token
-	acl, te, _, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
+	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
 		// Since there is no token store in standby nodes, sealing cannot
 		// be done. Ideally, the request has to be forwarded to leader node
@@ -1171,6 +1222,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
+		EntityID:    te.EntityID,
 	}
 
 	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
@@ -1196,31 +1248,31 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 			c.stateLock.RUnlock()
 			return retErr
 		}
-		if te.NumUses == -1 {
-			// Token needs to be revoked
-			defer func(id string) {
-				err = c.tokenStore.Revoke(id)
-				if err != nil {
-					c.logger.Error("core: token needed revocation after seal but failed to revoke", "error", err)
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-			}(te.ID)
-		}
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req)
-	if !allowed {
+	authResults := c.performPolicyChecks(acl, te, req, entity, &PolicyCheckOpts{
+		RootPrivsRequired: true,
+	})
+	if authResults.Error.ErrorOrNil() != nil {
+		retErr = multierror.Append(retErr, authResults.Error)
+		c.stateLock.RUnlock()
+		return retErr
+	}
+	if !authResults.Allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr
 	}
 
-	// We always require root privileges for this operation
-	if !rootPrivs {
-		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
-		return retErr
+	if te != nil && te.NumUses == -1 {
+		// Token needs to be revoked. We do this immediately here because
+		// we won't have a token store after sealing.
+		err = c.tokenStore.Revoke(te.ID)
+		if err != nil {
+			c.logger.Error("core: token needed revocation before seal but failed to revoke", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+		}
 	}
 
 	// Tell any requests that know about this to stop
@@ -1265,7 +1317,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		return nil
 	}
 
-	acl, te, _, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
+	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		return retErr
@@ -1277,6 +1329,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
+		EntityID:    te.EntityID,
 	}
 
 	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
@@ -1298,29 +1351,29 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 			return retErr
 		}
-		if te.NumUses == -1 {
-			// Token needs to be revoked
-			defer func(id string) {
-				err = c.tokenStore.Revoke(id)
-				if err != nil {
-					c.logger.Error("core: token needed revocation after step-down but failed to revoke", "error", err)
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-			}(te.ID)
-		}
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req)
-	if !allowed {
+	authResults := c.performPolicyChecks(acl, te, req, entity, &PolicyCheckOpts{
+		RootPrivsRequired: true,
+	})
+	if authResults.Error.ErrorOrNil() != nil {
+		retErr = multierror.Append(retErr, authResults.Error)
+		return retErr
+	}
+	if !authResults.Allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr
 	}
 
-	// We always require root privileges for this operation
-	if !rootPrivs {
-		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		return retErr
+	if te != nil && te.NumUses == -1 {
+		// Token needs to be revoked. We do this immediately here because
+		// we won't have a token store after sealing.
+		err = c.tokenStore.Revoke(te.ID)
+		if err != nil {
+			c.logger.Error("core: token needed revocation before step-down but failed to revoke", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+		}
 	}
 
 	select {
@@ -1459,6 +1512,9 @@ func (c *Core) postUnseal() (retErr error) {
 		return err
 	}
 	if err := c.setupAudits(); err != nil {
+		return err
+	}
+	if err := c.loadIdentityStoreArtifacts(); err != nil {
 		return err
 	}
 	if err := c.setupAuditedHeadersConfig(); err != nil {
@@ -1965,9 +2021,7 @@ func (c *Core) ReplicationState() consts.ReplicationState {
 }
 
 func (c *Core) SealAccess() *SealAccess {
-	sa := &SealAccess{}
-	sa.SetSeal(c.seal)
-	return sa
+	return NewSealAccess(c.seal)
 }
 
 func (c *Core) Logger() log.Logger {
@@ -1986,4 +2040,16 @@ func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 
 func lastRemoteWALImpl(c *Core) uint64 {
 	return 0
+}
+
+func (c *Core) BarrierEncryptorAccess() *BarrierEncryptorAccess {
+	return NewBarrierEncryptorAccess(c.barrier)
+}
+
+func (c *Core) PhysicalAccess() *physical.PhysicalAccess {
+	return physical.NewPhysicalAccess(c.physical)
+}
+
+func (c *Core) RouterAccess() *RouterAccess {
+	return NewRouterAccess(c)
 }

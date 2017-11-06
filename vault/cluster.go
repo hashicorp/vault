@@ -462,6 +462,9 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 
 func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 	c.clusterListenerAddrs = addrs
+	if c.clusterAddr == "" && len(addrs) == 1 {
+		c.clusterAddr = fmt.Sprintf("https://%s", addrs[0].String())
+	}
 }
 
 func (c *Core) SetClusterHandler(handler http.Handler) {

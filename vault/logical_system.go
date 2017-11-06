@@ -1,20 +1,26 @@
 package vault
 
 import (
+	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/fatih/structs"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -23,6 +29,7 @@ var (
 	// This is both for security and to prevent disrupting Vault.
 	protectedPaths = []string{
 		keyringPath,
+		coreLocalClusterInfoPath,
 	}
 
 	replicationPaths = func(b *SystemBackend) []*framework.Path {
@@ -47,7 +54,8 @@ var (
 
 func NewSystemBackend(core *Core) *SystemBackend {
 	b := &SystemBackend{
-		Core: core,
+		Core:   core,
+		logger: core.logger,
 	}
 
 	b.Backend = &framework.Backend{
@@ -531,7 +539,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			&framework.Path{
-				Pattern: "policy$",
+				Pattern: "policy/?$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: b.handlePolicyList,
@@ -554,12 +562,48 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["policy-rules"][0]),
 					},
+					"policy": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["policy-rules"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handlePolicyRead,
 					logical.UpdateOperation: b.handlePolicySet,
 					logical.DeleteOperation: b.handlePolicyDelete,
+				},
+			},
+
+			&framework.Path{
+				Pattern: "policies/acl/?$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: b.handlePoliciesList(PolicyTypeACL),
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["policy-list"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["policy-list"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "policies/acl/(?P<name>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["policy-name"][0]),
+					},
+					"policy": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["policy-rules"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handlePoliciesRead(PolicyTypeACL),
+					logical.UpdateOperation: b.handlePoliciesSet(PolicyTypeACL),
+					logical.DeleteOperation: b.handlePoliciesDelete(PolicyTypeACL),
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
@@ -675,20 +719,6 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpDescription: strings.TrimSpace(sysHelp["rotate"][1]),
 			},
 
-			/*
-				// Disabled for the moment as we don't support this externally
-				&framework.Path{
-					Pattern: "wrapping/pubkey$",
-
-					Callbacks: map[logical.Operation]framework.OperationFunc{
-						logical.ReadOperation: b.handleWrappingPubkey,
-					},
-
-					HelpSynopsis:    strings.TrimSpace(sysHelp["wrappubkey"][0]),
-					HelpDescription: strings.TrimSpace(sysHelp["wrappubkey"][1]),
-				},
-			*/
-
 			&framework.Path{
 				Pattern: "wrapping/wrap$",
 
@@ -784,6 +814,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
 			},
+
 			&framework.Path{
 				Pattern: "plugins/catalog/?$",
 
@@ -796,6 +827,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 			},
+
 			&framework.Path{
 				Pattern: "plugins/catalog/(?P<name>.+)",
 
@@ -848,6 +880,75 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-reload"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["plugin-reload"][1]),
 			},
+			&framework.Path{
+				Pattern: "tools/hash" + framework.OptionalParamRegex("urlalgorithm"),
+				Fields: map[string]*framework.FieldSchema{
+					"input": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The base64-encoded input data",
+					},
+
+					"algorithm": &framework.FieldSchema{
+						Type:    framework.TypeString,
+						Default: "sha2-256",
+						Description: `Algorithm to use (POST body parameter). Valid values are:
+
+			* sha2-224
+			* sha2-256
+			* sha2-384
+			* sha2-512
+
+			Defaults to "sha2-256".`,
+					},
+
+					"urlalgorithm": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: `Algorithm to use (POST URL parameter)`,
+					},
+
+					"format": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Default:     "hex",
+						Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "hex".`,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.pathHashWrite,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["hash"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["hash"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "tools/random" + framework.OptionalParamRegex("urlbytes"),
+				Fields: map[string]*framework.FieldSchema{
+					"urlbytes": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The number of bytes to generate (POST URL parameter)",
+					},
+
+					"bytes": &framework.FieldSchema{
+						Type:        framework.TypeInt,
+						Default:     32,
+						Description: "The number of bytes to generate (POST body parameter). Defaults to 32 (256 bits).",
+					},
+
+					"format": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Default:     "base64",
+						Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "base64".`,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.pathRandomWrite,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["random"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["random"][1]),
+			},
 		},
 	}
 
@@ -885,7 +986,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
-	Core *Core
+	Core   *Core
+	logger log.Logger
 }
 
 // handleCORSRead returns the current CORS configuration
@@ -935,15 +1037,23 @@ func (b *SystemBackend) handleTidyLeases(req *logical.Request, d *framework.Fiel
 }
 
 func (b *SystemBackend) invalidate(key string) {
-	if b.Core.logger.IsTrace() {
-		b.Core.logger.Trace("sys: invalidating key", "key", key)
-	}
+	/*
+		if b.Core.logger.IsTrace() {
+			b.Core.logger.Trace("sys: invalidating key", "key", key)
+		}
+	*/
 	switch {
-	case strings.HasPrefix(key, policySubPath):
+	case strings.HasPrefix(key, policyACLSubPath):
 		b.Core.stateLock.RLock()
 		defer b.Core.stateLock.RUnlock()
 		if b.Core.policyStore != nil {
-			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policySubPath))
+			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policyACLSubPath), PolicyTypeACL)
+		}
+	case strings.HasPrefix(key, tokenSubPath):
+		b.Core.stateLock.RLock()
+		defer b.Core.stateLock.RUnlock()
+		if b.Core.tokenStore != nil {
+			b.Core.tokenStore.Invalidate(key)
 		}
 	}
 }
@@ -1244,15 +1354,18 @@ func (b *SystemBackend) handleMountTable(
 
 	for _, entry := range b.Core.mounts.Entries {
 		// Populate mount info
-		structConfig := structs.New(entry.Config).Map()
-		structConfig["default_lease_ttl"] = int64(structConfig["default_lease_ttl"].(time.Duration).Seconds())
-		structConfig["max_lease_ttl"] = int64(structConfig["max_lease_ttl"].(time.Duration).Seconds())
 		info := map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
 			"accessor":    entry.Accessor,
-			"config":      structConfig,
-			"local":       entry.Local,
+			"config": map[string]interface{}{
+				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+				"force_no_cache":    entry.Config.ForceNoCache,
+				"plugin_name":       entry.Config.PluginName,
+				"seal_wrap":         entry.Config.SealWrap,
+			},
+			"local": entry.Local,
 		}
 		resp.Data[entry.Path] = info
 	}
@@ -1323,15 +1436,21 @@ func (b *SystemBackend) handleMount(
 			logical.ErrInvalidRequest
 	}
 
-	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL {
+	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
 		return logical.ErrorResponse(fmt.Sprintf(
 				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
 			logical.ErrInvalidRequest
 	}
 
-	// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
-	// option taking precedence.
-	if logicalType == "plugin" {
+	switch logicalType {
+	case "":
+		return logical.ErrorResponse(
+				"backend type must be specified as a string"),
+			logical.ErrInvalidRequest
+
+	case "plugin":
+		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
+		// option taking precedence.
 		switch {
 		case apiConfig.PluginName != "":
 			config.PluginName = apiConfig.PluginName
@@ -1344,15 +1463,13 @@ func (b *SystemBackend) handleMount(
 		}
 	}
 
+	if apiConfig.SealWrap {
+		config.SealWrap = true
+	}
+
 	// Copy over the force no cache if set
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
-	}
-
-	if logicalType == "" {
-		return logical.ErrorResponse(
-				"backend type must be specified as a string"),
-			logical.ErrInvalidRequest
 	}
 
 	// Create the mount entry
@@ -1550,7 +1667,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 
 	var lock *sync.RWMutex
 	switch {
-	case strings.HasPrefix(path, "auth/"):
+	case strings.HasPrefix(path, credentialRoutePrefix):
 		lock = &b.Core.authLock
 	default:
 		lock = &b.Core.mountsLock
@@ -1798,7 +1915,6 @@ func (b *SystemBackend) handleAuthTable(
 func (b *SystemBackend) handleEnableAuth(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.replicationState
-
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
@@ -1869,6 +1985,7 @@ func (b *SystemBackend) handleDisableAuth(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	path = sanitizeMountPath(path)
+
 	fullPath := credentialRoutePrefix + path
 
 	repState := b.Core.replicationState
@@ -1896,7 +2013,7 @@ func (b *SystemBackend) handleDisableAuth(
 func (b *SystemBackend) handlePolicyList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the configured policies
-	policies, err := b.Core.policyStore.ListPolicies()
+	policies, err := b.Core.policyStore.ListPolicies(PolicyTypeACL)
 
 	// Add the special "root" policy
 	policies = append(policies, "root")
@@ -1908,12 +2025,55 @@ func (b *SystemBackend) handlePolicyList(
 	return resp, err
 }
 
+func (b *SystemBackend) handlePoliciesList(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		policies, err := b.Core.policyStore.ListPolicies(policyType)
+		if err != nil {
+			return nil, err
+		}
+
+		switch policyType {
+		case PolicyTypeACL:
+			// Add the special "root" policy if not egp
+			policies = append(policies, "root")
+			return logical.ListResponse(policies), nil
+
+		}
+
+		return logical.ErrorResponse("unknown policy type"), nil
+	}
+}
+
+func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
+
+		policy, err := b.Core.policyStore.GetPolicy(name, policyType)
+		if err != nil {
+			return handleError(err)
+		}
+
+		if policy == nil {
+			return nil, nil
+		}
+
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				"name":   policy.Name,
+				"policy": policy.Raw,
+			},
+		}
+
+		return resp, nil
+	}
+}
+
 // handlePolicyRead handles the "policy/<name>" endpoint to read a policy
 func (b *SystemBackend) handlePolicyRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	policy, err := b.Core.policyStore.GetPolicy(name)
+	policy, err := b.Core.policyStore.GetPolicy(name, PolicyTypeACL)
 	if err != nil {
 		return handleError(err)
 	}
@@ -1922,44 +2082,103 @@ func (b *SystemBackend) handlePolicyRead(
 		return nil, nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"name":  policy.Name,
 			"rules": policy.Raw,
 		},
-	}, nil
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		policy := &Policy{
+			Name: strings.ToLower(data.Get("name").(string)),
+			Type: policyType,
+		}
+		if policy.Name == "" {
+			return logical.ErrorResponse("policy name must be provided in the URL"), nil
+		}
+
+		policy.Raw = data.Get("policy").(string)
+		if policy.Raw == "" {
+			return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
+		}
+
+		if polBytes, err := base64.StdEncoding.DecodeString(policy.Raw); err == nil {
+			policy.Raw = string(polBytes)
+		}
+
+		switch policyType {
+		case PolicyTypeACL:
+			p, err := ParseACLPolicy(policy.Raw)
+			if err != nil {
+				return handleError(err)
+			}
+			policy.Paths = p.Paths
+
+		default:
+			return logical.ErrorResponse("unknown policy type"), nil
+		}
+
+		// Update the policy
+		if err := b.Core.policyStore.SetPolicy(policy); err != nil {
+			return handleError(err)
+		}
+		return nil, nil
+	}
 }
 
 // handlePolicySet handles the "policy/<name>" endpoint to set a policy
 func (b *SystemBackend) handlePolicySet(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
 
-	rulesRaw, ok := data.GetOk("rules")
-	if !ok {
-		return logical.ErrorResponse("'rules' parameter not supplied"), nil
+	policy := &Policy{
+		Type: PolicyTypeACL,
+		Name: strings.ToLower(data.Get("name").(string)),
+	}
+	if policy.Name == "" {
+		return logical.ErrorResponse("policy name must be provided in the URL"), nil
 	}
 
-	rules := rulesRaw.(string)
-	if rules == "" {
-		return logical.ErrorResponse("'rules' parameter empty"), nil
+	var resp *logical.Response
+
+	policy.Raw = data.Get("policy").(string)
+	if policy.Raw == "" {
+		policy.Raw = data.Get("rules").(string)
+		if resp == nil {
+			resp = &logical.Response{}
+		}
+		resp.AddWarning("'rules' is deprecated, please use 'policy' instead")
+	}
+	if policy.Raw == "" {
+		return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
 	}
 
-	// Validate the rules parse
-	parse, err := Parse(rules)
+	p, err := ParseACLPolicy(policy.Raw)
 	if err != nil {
 		return handleError(err)
 	}
-
-	if name != "" {
-		parse.Name = name
-	}
+	policy.Paths = p.Paths
 
 	// Update the policy
-	if err := b.Core.policyStore.SetPolicy(parse); err != nil {
+	if err := b.Core.policyStore.SetPolicy(policy); err != nil {
 		return handleError(err)
 	}
-	return nil, nil
+	return resp, nil
+}
+
+func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
+
+		if err := b.Core.policyStore.DeletePolicy(name, policyType); err != nil {
+			return handleError(err)
+		}
+		return nil, nil
+	}
 }
 
 // handlePolicyDelete handles the "policy/<name>" endpoint to delete a policy
@@ -1967,7 +2186,7 @@ func (b *SystemBackend) handlePolicyDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	if err := b.Core.policyStore.DeletePolicy(name); err != nil {
+	if err := b.Core.policyStore.DeletePolicy(name, PolicyTypeACL); err != nil {
 		return handleError(err)
 	}
 	return nil, nil
@@ -2485,6 +2704,108 @@ func (b *SystemBackend) handleWrappingRewrap(
 	}, nil
 }
 
+func (b *SystemBackend) pathHashWrite(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	inputB64 := d.Get("input").(string)
+	format := d.Get("format").(string)
+	algorithm := d.Get("urlalgorithm").(string)
+	if algorithm == "" {
+		algorithm = d.Get("algorithm").(string)
+	}
+
+	input, err := base64.StdEncoding.DecodeString(inputB64)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
+	}
+
+	switch format {
+	case "hex":
+	case "base64":
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
+	}
+
+	var hf hash.Hash
+	switch algorithm {
+	case "sha2-224":
+		hf = sha256.New224()
+	case "sha2-256":
+		hf = sha256.New()
+	case "sha2-384":
+		hf = sha512.New384()
+	case "sha2-512":
+		hf = sha512.New()
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
+	}
+	hf.Write(input)
+	retBytes := hf.Sum(nil)
+
+	var retStr string
+	switch format {
+	case "hex":
+		retStr = hex.EncodeToString(retBytes)
+	case "base64":
+		retStr = base64.StdEncoding.EncodeToString(retBytes)
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"sum": retStr,
+		},
+	}
+	return resp, nil
+}
+
+func (b *SystemBackend) pathRandomWrite(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	bytes := 0
+	var err error
+	strBytes := d.Get("urlbytes").(string)
+	if strBytes != "" {
+		bytes, err = strconv.Atoi(strBytes)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
+		}
+	} else {
+		bytes = d.Get("bytes").(int)
+	}
+	format := d.Get("format").(string)
+
+	if bytes < 1 {
+		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
+	}
+
+	switch format {
+	case "hex":
+	case "base64":
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
+	}
+
+	randBytes, err := uuid.GenerateRandomBytes(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	var retStr string
+	switch format {
+	case "hex":
+		retStr = hex.EncodeToString(randBytes)
+	case "base64":
+		retStr = base64.StdEncoding.EncodeToString(randBytes)
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"random_bytes": retStr,
+		},
+	}
+	return resp, nil
+}
+
 func sanitizeMountPath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -2639,7 +2960,7 @@ and is unaffected by replication.`,
 	},
 
 	"mount_plugin_name": {
-		`Name of the plugin to mount based from the name registered 
+		`Name of the plugin to mount based from the name registered
 in the plugin catalog.`,
 	},
 
@@ -2989,7 +3310,7 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-catalog_sha-256": {
-		`The SHA256 sum of the executable used in the 
+		`The SHA256 sum of the executable used in the
 command field. This should be HEX encoded.`,
 		"",
 	},
@@ -3030,5 +3351,13 @@ This path responds to the following HTTP methods.
 	"plugin-backend-reload-mounts": {
 		`The mount paths of the plugin backends to reload.`,
 		"",
+	},
+	"hash": {
+		"Generate a hash sum for input data",
+		"Generates a hash sum of the given algorithm against the given input data.",
+	},
+	"random": {
+		"Generate random bytes",
+		"This function can be used to generate high-entropy random bytes.",
 	},
 }

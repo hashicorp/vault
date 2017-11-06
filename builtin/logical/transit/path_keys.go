@@ -2,7 +2,9 @@ package transit
 
 import (
 	"crypto/elliptic"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"strconv"
 	"time"
@@ -40,9 +42,11 @@ func (b *backend) pathKeys() *framework.Path {
 			"type": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
-				Description: `The type of key to create. Currently,
-"aes256-gcm96" (symmetric) and "ecdsa-p256" (asymmetric), and
-'ed25519' (asymmetric) are supported. Defaults to "aes256-gcm96".`,
+				Description: `
+The type of key to create. Currently, "aes256-gcm96" (symmetric), "ecdsa-p256"
+(asymmetric), 'ed25519' (asymmetric), 'rsa-2048' (asymmetric), 'rsa-4096'
+(asymmetric) are supported.  Defaults to "aes256-gcm96".
+`,
 			},
 
 			"derived": &framework.FieldSchema{
@@ -131,6 +135,10 @@ func (b *backend) pathPolicyWrite(
 		polReq.KeyType = keysutil.KeyType_ECDSA_P256
 	case "ed25519":
 		polReq.KeyType = keysutil.KeyType_ED25519
+	case "rsa-2048":
+		polReq.KeyType = keysutil.KeyType_RSA2048
+	case "rsa-4096":
+		polReq.KeyType = keysutil.KeyType_RSA4096
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -225,7 +233,7 @@ func (b *backend) pathPolicyRead(
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -253,6 +261,27 @@ func (b *backend) pathPolicyRead(
 					}
 				}
 				key.Name = "ed25519"
+			case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+				key.Name = "rsa-2048"
+				if p.Type == keysutil.KeyType_RSA4096 {
+					key.Name = "rsa-4096"
+				}
+
+				// Encode the RSA public key in PEM format to return over the
+				// API
+				derBytes, err := x509.MarshalPKIXPublicKey(v.RSAKey.Public())
+				if err != nil {
+					return nil, fmt.Errorf("error marshaling RSA public key: %v", err)
+				}
+				pemBlock := &pem.Block{
+					Type:  "PUBLIC KEY",
+					Bytes: derBytes,
+				}
+				pemBytes := pem.EncodeToMemory(pemBlock)
+				if pemBytes == nil || len(pemBytes) == 0 {
+					return nil, fmt.Errorf("failed to PEM-encode RSA public key")
+				}
+				key.PublicKey = string(pemBytes)
 			}
 
 			retKeys[strconv.Itoa(k)] = structs.New(key).Map()

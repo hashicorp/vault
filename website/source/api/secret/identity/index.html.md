@@ -54,7 +54,7 @@ $ curl \
 {
   "data": {
     "id": "8d6a45e5-572f-8f13-d226-cd0d1ec57297",
-    "personas": null
+    "aliases": null
   }
 }
 ```
@@ -93,7 +93,7 @@ $ curl \
       "team": "vault"
     },
     "name": "entity-c323de27-2ad2-5ded-dbf3-0c7ef98bc613",
-    "personas": [],
+    "aliases": [],
     "policies": [
       "eng-dev",
       "infra-dev"
@@ -147,14 +147,14 @@ $ curl \
 {
   "data": {
     "id": "8d6a45e5-572f-8f13-d226-cd0d1ec57297",
-    "personas": null
+    "aliases": null
   }
 }
 ```
 
 ## Delete Entity by ID
 
-This endpoint deletes an entity and all its associated personas.
+This endpoint deletes an entity and all its associated aliases.
 
 | Method     | Path                        | Produces               |
 | :--------- | :-------------------------- | :----------------------|
@@ -209,29 +209,29 @@ $ curl \
 }
 ```
 
-## Register Persona
+## Register Alias
 
-This endpoint creates a new persona and attaches it to the entity with the
+This endpoint creates a new alias and attaches it to the entity with the
 given identifier.
 
 | Method   | Path                | Produces               |
 | :------- | :------------------ | :----------------------|
-| `POST`   | `/identity/persona`  | `200 application/json` |
+| `POST`   | `/identity/alias`   | `200 application/json` |
 
 ### Parameters
 
-- `name` (string: Required) - Name of the persona. Name should be the
+- `name` (string: Required) - Name of the alias. Name should be the
   identifier of the client in the authentication source. For example, if the
-  persona belongs to userpass backend, the name should be a valid username
-  within userpass backend. If persona belongs to GitHub, it should be the
+  alias belongs to userpass backend, the name should be a valid username
+  within userpass backend. If alias belongs to GitHub, it should be the
   GitHub username.
 
-- `entity_id` (string: required) - Entity ID to which this persona belongs to.
+- `entity_id` (string: required) - Entity ID to which this alias belongs to.
 
 - `mount_accessor` (string: required) - Accessor of the mount to which the
-  persona should belong to.
+  alias should belong to.
 
-- `metadata` `(list of strings: [])` – Metadata to be associated with the persona. Format should be a list of `key=value` pairs.
+- `metadata` `(list of strings: [])` – Metadata to be associated with the alias. Format should be a list of `key=value` pairs.
 
 ### Sample Payload
 
@@ -251,7 +251,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/identity/persona
+    https://vault.rocks/v1/identity/alias
 ```
 
 ### Sample Response
@@ -265,24 +265,24 @@ $ curl \
 }
 ```
 
-## Read Persona by ID
+## Read Alias by ID
 
-This endpoint queries the persona by its identifier.
+This endpoint queries the alias by its identifier.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/identity/persona/id/:id`   | `200 application/json` |
+| `GET`    | `/identity/alias/id/:id`     | `200 application/json` |
 
 ### Parameters
 
-- `id` `(string: <required>)` – Specifies the identifier of the persona.
+- `id` `(string: <required>)` – Specifies the identifier of the alias.
 
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/identity/persona/id/34982d3d-e3ce-5d8b-6e5f-b9bb34246c31
+    https://vault.rocks/v1/identity/alias/id/34982d3d-e3ce-5d8b-6e5f-b9bb34246c31
 ```
 
 ### Sample Response
@@ -306,31 +306,31 @@ $ curl \
 }
 ```
 
-## Update Persona by ID
+## Update Alias by ID
 
-This endpoint is used to update an existing persona.
+This endpoint is used to update an existing alias.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`    | `/identity/persona/id/:id`  | `200 application/json` |
+| `POST`    | `/identity/alias/id/:id`    | `200 application/json` |
 
 ### Parameters
 
 - `id` `(string: <required>)` – Specifies the identifier of the entity.
 
-- `name` (string: Required) - Name of the persona. Name should be the
+- `name` (string: Required) - Name of the alias. Name should be the
   identifier of the client in the authentication source. For example, if the
-  persona belongs to userpass backend, the name should be a valid username
-  within userpass backend. If persona belongs to GitHub, it should be the
+  alias belongs to userpass backend, the name should be a valid username
+  within userpass backend. If alias belongs to GitHub, it should be the
   GitHub username.
 
-- `entity_id` (string: required) - Entity ID to which this persona belongs to.
+- `entity_id` (string: required) - Entity ID to which this alias belongs to.
 
 - `mount_accessor` (string: required) - Accessor of the mount to which the
-  persona should belong to.
+  alias should belong to.
 
 - `metadata` `(list of strings: [])` – Metadata to be associated with the
-  persona. Format should be a list of `key=value` pairs.
+  alias. Format should be a list of `key=value` pairs.
 
 ### Sample Payload
 
@@ -350,7 +350,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/identity/persona/id/34982d3d-e3ce-5d8b-6e5f-b9bb34246c31
+    https://vault.rocks/v1/identity/alias/id/34982d3d-e3ce-5d8b-6e5f-b9bb34246c31
 ```
 
 ### Sample Response
@@ -364,17 +364,17 @@ $ curl \
 }
 ```
 
-### Delete Persona by ID
+### Delete Alias by ID
 
-This endpoint deletes a persona from its corresponding entity.
+This endpoint deletes a alias from its corresponding entity.
 
 | Method     | Path                        | Produces               |
 | :--------- | :-------------------------- | :----------------------|
-| `DELETE`   | `/identity/persona/id/:id`  | `204 (empty body)`     |
+| `DELETE`   | `/identity/alias/id/:id`    | `204 (empty body)`     |
 
 ## Parameters
 
-- `id` `(string: <required>)` – Specifies the identifier of the persona.
+- `id` `(string: <required>)` – Specifies the identifier of the alias.
 
 ### Sample Request
 
@@ -382,17 +382,17 @@ This endpoint deletes a persona from its corresponding entity.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/identity/persona/id/34982d3d-e3ce-5d8b-6e5f-b9bb34246c31
+    https://vault.rocks/v1/identity/alias/id/34982d3d-e3ce-5d8b-6e5f-b9bb34246c31
 ```
 
-### List Personas by ID
+### List Aliases by ID
 
-This endpoint returns a list of available personas by their identifiers.
+This endpoint returns a list of available aliases by their identifiers.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/identity/persona/id`       | `200 application/json` |
-| `GET`    | `/identity/persona/id?list=true` | `200 application/json` |
+| `LIST`   | `/identity/alias/id`       | `200 application/json` |
+| `GET`    | `/identity/alias/id?list=true` | `200 application/json` |
 
 ### Sample Request
 
@@ -400,7 +400,7 @@ This endpoint returns a list of available personas by their identifiers.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/identity/persona/id
+    https://vault.rocks/v1/identity/alias/id
 ```
 
 ### Sample Response

@@ -18,8 +18,6 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
 	testing "github.com/mitchellh/go-testing-interface"
@@ -228,6 +226,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
+	info["log level"] = logLevel
+	infoKeys = append(infoKeys, "log level")
 
 	var seal vault.Seal = &vault.DefaultSeal{}
 
@@ -242,7 +242,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}()
 
 	if seal == nil {
-		c.Ui.Error(fmt.Sprintf("Could not create seal"))
+		c.Ui.Error(fmt.Sprintf("Could not create seal; most likely proper Seal configuration information was not set, but no error was generated."))
 		return 1
 	}
 
@@ -264,6 +264,7 @@ func (c *ServerCommand) Run(args []string) int {
 		PluginDirectory:    config.PluginDirectory,
 		EnableRaw:          config.EnableRawEndpoint,
 	}
+
 	if dev {
 		coreConfig.DevToken = devRootTokenID
 		if devLeasedKV {
@@ -429,11 +430,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Compile server information for output later
 	info["storage"] = config.Storage.Type
-	info["log level"] = logLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())
-	infoKeys = append(infoKeys, "log level", "mlock", "storage")
+	infoKeys = append(infoKeys, "mlock", "storage")
 
 	if coreConfig.ClusterAddr != "" {
 		info["cluster address"] = coreConfig.ClusterAddr
@@ -576,6 +576,14 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(handler)
 
+	err = core.UnsealWithStoredKeys()
+	if err != nil {
+		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
+			c.Ui.Output(fmt.Sprintf("Error initializing core: %s", err))
+			return 1
+		}
+	}
+
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
 
@@ -657,14 +665,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		))
 	}
 
-	// Initialize the HTTP server
-	server := &http.Server{}
-	if err := http2.ConfigureServer(server, nil); err != nil {
-		c.Ui.Output(fmt.Sprintf("Error configuring server for HTTP/2: %s", err))
-		return 1
-	}
-	server.Handler = handler
+	// Initialize the HTTP servers
 	for _, ln := range lns {
+		server := &http.Server{
+			Handler: handler,
+		}
 		go server.Serve(ln)
 	}
 
@@ -849,7 +854,6 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
 
 	info["cluster parameters path"] = testCluster.TempDir
-	info["log level"] = "trace"
 	infoKeys = append(infoKeys, "cluster parameters path", "log level")
 
 	for i, core := range testCluster.Cores {

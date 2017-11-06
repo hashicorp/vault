@@ -168,6 +168,10 @@ func (cfg *ClusterConfig) translateAddressPort(addr net.IP, port int) (net.IP, i
 	return newAddr, newPort
 }
 
+func (cfg *ClusterConfig) filterHost(host *HostInfo) bool {
+	return !(cfg.HostFilter == nil || cfg.HostFilter.Accept(host))
+}
+
 var (
 	ErrNoHosts              = errors.New("no hosts provided")
 	ErrNoConnectionsStarted = errors.New("no connections were made when creating the session")

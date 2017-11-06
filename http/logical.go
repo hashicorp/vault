@@ -212,7 +212,7 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 
 	// Get the content type header; don't require it if the body is empty
 	contentTypeRaw, ok := resp.Data[logical.HTTPContentType]
-	if !ok && !nonEmpty {
+	if !ok && nonEmpty {
 		retErr(w, "no content type given")
 		return
 	}

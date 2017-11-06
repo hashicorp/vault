@@ -22,7 +22,7 @@ func pathDuoConfig() *framework.Path {
 			},
 			"push_info": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "A string of URL-encoded key/value pairs that provides additional context about the authentication attemmpt in the Duo Mobile app",
+				Description: "A string of URL-encoded key/value pairs that provides additional context about the authentication attempt in the Duo Mobile app",
 			},
 		},
 

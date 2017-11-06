@@ -117,4 +117,9 @@ type Paths struct {
 	// LocalStorage are paths (prefixes) that are local to this instance; this
 	// indicates that these paths should not be replicated
 	LocalStorage []string
+
+	// SealWrapStorage are storage paths that, when using a capable seal,
+	// should be seal wrapped with extra encryption. It is exact matching
+	// unless it ends with '/' in which case it will be treated as a prefix.
+	SealWrapStorage []string
 }

@@ -271,6 +271,31 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	})
 }
 
+func TestSSHBackend_RoleList(t *testing.T) {
+	testOTPRoleData := map[string]interface{}{
+		"key_type":     testOTPKeyType,
+		"default_user": testUserName,
+		"cidr_list":    testCIDRList,
+	}
+	resp1 := map[string]interface{}{}
+	resp2 := map[string]interface{}{
+		"keys": []string{testOTPRoleName},
+		"key_info": map[string]interface{}{
+			testOTPRoleName: map[string]interface{}{
+				"key_type": testOTPKeyType,
+			},
+		},
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: testingFactory,
+		Steps: []logicaltest.TestStep{
+			testRoleList(t, resp1),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
+			testRoleList(t, resp2),
+		},
+	})
+}
+
 func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 	testDynamicRoleData := map[string]interface{}{
 		"key_type":     testDynamicKeyType,
@@ -959,6 +984,25 @@ func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logic
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data:      data,
+	}
+}
+
+func testRoleList(t *testing.T, expected map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "roles",
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				return fmt.Errorf("nil response")
+			}
+			if resp.Data == nil {
+				return fmt.Errorf("nil data")
+			}
+			if !reflect.DeepEqual(resp.Data, expected) {
+				return fmt.Errorf("Invalid response:\nactual:%#v\nexpected is %#v", resp.Data, expected)
+			}
+			return nil
+		},
 	}
 }
 

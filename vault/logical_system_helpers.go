@@ -36,7 +36,7 @@ func (b *SystemBackend) tuneMountTTLs(path string, me *MountEntry, newDefault, n
 	// Update the mount table
 	var err error
 	switch {
-	case strings.HasPrefix(path, "auth/"):
+	case strings.HasPrefix(path, credentialRoutePrefix):
 		err = b.Core.persistAuth(b.Core.auth, me.Local)
 	default:
 		err = b.Core.persistMounts(b.Core.mounts, me.Local)

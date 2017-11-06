@@ -1,11 +1,14 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/errwrap"
+	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -23,6 +26,25 @@ type ACL struct {
 	root bool
 }
 
+type PolicyCheckOpts struct {
+	RootPrivsRequired bool
+	Unauth            bool
+}
+
+type AuthResults struct {
+	ACLResults *ACLResults
+	Allowed    bool
+	RootPrivs  bool
+	Error      *multierror.Error
+}
+
+type ACLResults struct {
+	Allowed    bool
+	RootPrivs  bool
+	IsRoot     bool
+	MFAMethods []string
+}
+
 // New is used to construct a policy based ACL from a set of policies.
 func NewACL(policies []*Policy) (*ACL, error) {
 	// Initialize
@@ -38,6 +60,13 @@ func NewACL(policies []*Policy) (*ACL, error) {
 		if policy == nil {
 			continue
 		}
+
+		switch policy.Type {
+		case PolicyTypeACL:
+		default:
+			return nil, fmt.Errorf("unable to parse policy (wrong type)")
+		}
+
 		// Check if this is root
 		if policy.Name == "root" {
 			a.root = true
@@ -61,7 +90,7 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			}
 
 			// these are the ones already in the tree
-			existingPerms := raw.(*Permissions)
+			existingPerms := raw.(*ACLPermissions)
 
 			switch {
 			case existingPerms.CapabilitiesBitmap&DenyCapabilityInt > 0:
@@ -140,9 +169,20 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				}
 			}
 
+			if len(pc.Permissions.RequiredParameters) > 0 {
+				if len(existingPerms.RequiredParameters) == 0 {
+					existingPerms.RequiredParameters = pc.Permissions.RequiredParameters
+				} else {
+					for _, v := range pc.Permissions.RequiredParameters {
+						if !strutil.StrListContains(existingPerms.RequiredParameters, v) {
+							existingPerms.RequiredParameters = append(existingPerms.RequiredParameters, v)
+						}
+					}
+				}
+			}
+
 		INSERT:
 			tree.Insert(pc.Prefix, existingPerms)
-
 		}
 	}
 	return a, nil
@@ -159,7 +199,7 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	raw, ok := a.exactRules.Get(path)
 
 	if ok {
-		perm := raw.(*Permissions)
+		perm := raw.(*ACLPermissions)
 		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
@@ -169,7 +209,7 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-		perm := raw.(*Permissions)
+		perm := raw.(*ACLPermissions)
 		capabilities = perm.CapabilitiesBitmap
 	}
 
@@ -201,29 +241,33 @@ CHECK:
 	return
 }
 
-// AllowOperation is used to check if the given operation is permitted. The
-// first bool indicates if an op is allowed, the second whether sudo priviliges
-// exist for that op and path.
-func (a *ACL) AllowOperation(req *logical.Request) (bool, bool) {
+// AllowOperation is used to check if the given operation is permitted.
+func (a *ACL) AllowOperation(req *logical.Request) (ret *ACLResults) {
+	ret = new(ACLResults)
+
 	// Fast-path root
 	if a.root {
-		return true, true
+		ret.Allowed = true
+		ret.RootPrivs = true
+		ret.IsRoot = true
+		return
 	}
 	op := req.Operation
 	path := req.Path
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
-		return true, false
+		ret.Allowed = true
+		return
 	}
 
-	var permissions *Permissions
+	var permissions *ACLPermissions
 
 	// Find an exact matching rule, look for glob if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
 	if ok {
-		permissions = raw.(*Permissions)
+		permissions = raw.(*ACLPermissions)
 		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
 	}
@@ -231,9 +275,9 @@ func (a *ACL) AllowOperation(req *logical.Request) (bool, bool) {
 	// Find a glob rule, default deny if no match
 	_, raw, ok = a.globRules.LongestPrefix(path)
 	if !ok {
-		return false, false
+		return
 	} else {
-		permissions = raw.(*Permissions)
+		permissions = raw.(*ACLPermissions)
 		capabilities = permissions.CapabilitiesBitmap
 	}
 
@@ -241,7 +285,8 @@ CHECK:
 	// Check if the minimum permissions are met
 	// If "deny" has been explicitly set, only deny will be in the map, so we
 	// only need to check for the existence of other values
-	sudo := capabilities&SudoCapabilityInt > 0
+	ret.RootPrivs = capabilities&SudoCapabilityInt > 0
+
 	operationAllowed := false
 	switch op {
 	case logical.ReadOperation:
@@ -261,21 +306,21 @@ CHECK:
 		operationAllowed = capabilities&UpdateCapabilityInt > 0
 
 	default:
-		return false, false
+		return
 	}
 
 	if !operationAllowed {
-		return false, sudo
+		return
 	}
 
 	if permissions.MaxWrappingTTL > 0 {
 		if req.WrapInfo == nil || req.WrapInfo.TTL > permissions.MaxWrappingTTL {
-			return false, sudo
+			return
 		}
 	}
 	if permissions.MinWrappingTTL > 0 {
 		if req.WrapInfo == nil || req.WrapInfo.TTL < permissions.MinWrappingTTL {
-			return false, sudo
+			return
 		}
 	}
 	// This situation can happen because of merging, even though in a single
@@ -283,15 +328,22 @@ CHECK:
 	if permissions.MinWrappingTTL != 0 &&
 		permissions.MaxWrappingTTL != 0 &&
 		permissions.MaxWrappingTTL < permissions.MinWrappingTTL {
-		return false, sudo
+		return
 	}
 
 	// Only check parameter permissions for operations that can modify
 	// parameters.
 	if op == logical.UpdateOperation || op == logical.CreateOperation {
+		for _, parameter := range permissions.RequiredParameters {
+			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
+				return
+			}
+		}
+
 		// If there are no data fields, allow
 		if len(req.Data) == 0 {
-			return true, sudo
+			ret.Allowed = true
+			return
 		}
 
 		if len(permissions.DeniedParameters) == 0 {
@@ -300,7 +352,7 @@ CHECK:
 
 		// Check if all parameters have been denied
 		if _, ok := permissions.DeniedParameters["*"]; ok {
-			return false, sudo
+			return
 		}
 
 		for parameter, value := range req.Data {
@@ -308,7 +360,7 @@ CHECK:
 			if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
 				// If the value exists in denied values slice, deny
 				if valueInParameterList(value, valueSlice) {
-					return false, sudo
+					return
 				}
 			}
 		}
@@ -316,30 +368,59 @@ CHECK:
 	ALLOWED_PARAMETERS:
 		// If we don't have any allowed parameters set, allow
 		if len(permissions.AllowedParameters) == 0 {
-			return true, sudo
+			ret.Allowed = true
+			return
 		}
 
 		_, allowedAll := permissions.AllowedParameters["*"]
 		if len(permissions.AllowedParameters) == 1 && allowedAll {
-			return true, sudo
+			ret.Allowed = true
+			return
 		}
 
 		for parameter, value := range req.Data {
 			valueSlice, ok := permissions.AllowedParameters[strings.ToLower(parameter)]
 			// Requested parameter is not in allowed list
 			if !ok && !allowedAll {
-				return false, sudo
+				return
 			}
 
 			// If the value doesn't exists in the allowed values slice,
 			// deny
 			if ok && !valueInParameterList(value, valueSlice) {
-				return false, sudo
+				return
 			}
 		}
 	}
 
-	return true, sudo
+	ret.Allowed = true
+	return
+}
+func (c *Core) performPolicyChecks(acl *ACL, te *TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) (ret *AuthResults) {
+	ret = new(AuthResults)
+
+	// First, perform normal ACL checks if requested. The only time no ACL
+	// should be applied is if we are only processing EGPs against a login
+	// path in which case opts.Unauth will be set.
+	if acl != nil && !opts.Unauth {
+		ret.ACLResults = acl.AllowOperation(req)
+		ret.RootPrivs = ret.ACLResults.RootPrivs
+		// Root is always allowed; skip Sentinel/MFA checks
+		if ret.ACLResults.IsRoot {
+			//c.logger.Warn("policy: token is root, skipping checks")
+			ret.Allowed = true
+			return
+		}
+		if !ret.ACLResults.Allowed {
+			return
+		}
+		if !ret.RootPrivs && opts.RootPrivsRequired {
+			return
+		}
+	}
+
+	ret.Allowed = true
+	return
 }
 
 func valueInParameterList(v interface{}, list []interface{}) bool {

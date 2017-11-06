@@ -563,7 +563,7 @@ func (b *GcpAuthBackend) authorizeGCEInstance(instance *compute.Instance, s logi
 
 		serviceAccount, err := util.ServiceAccount(iamClient, serviceAccountId, role.ProjectId)
 		if err != nil {
-			return fmt.Errorf("could not find service acocunt with id '%s': ")
+			return fmt.Errorf("could not find service account with id '%s': %v", serviceAccountId, err)
 		}
 
 		if !(strutil.StrListContains(role.BoundServiceAccounts, serviceAccount.Email) ||

@@ -122,11 +122,10 @@ func (c *Core) startForwarding() error {
 
 				// Accept the connection
 				conn, err := tlsLn.Accept()
-				if conn != nil {
-					// Always defer although it may be closed ahead of time
-					defer conn.Close()
-				}
-				if err != nil {
+				if err != nil || conn == nil {
+					if conn != nil {
+						conn.Close()
+					}
 					continue
 				}
 
@@ -138,9 +137,7 @@ func (c *Core) startForwarding() error {
 					if c.logger.IsDebug() {
 						c.logger.Debug("core: error handshaking cluster connection", "error", err)
 					}
-					if conn != nil {
-						conn.Close()
-					}
+					conn.Close()
 					continue
 				}
 
@@ -152,9 +149,15 @@ func (c *Core) startForwarding() error {
 					}
 
 					c.logger.Trace("core: got request forwarding connection")
-					go fws.ServeConn(conn, &http2.ServeConnOpts{
-						Handler: c.rpcServer,
-					})
+					c.clusterParamsLock.RLock()
+					rpcServer := c.rpcServer
+					c.clusterParamsLock.RUnlock()
+					go func() {
+						defer conn.Close()
+						fws.ServeConn(conn, &http2.ServeConnOpts{
+							Handler: rpcServer,
+						})
+					}()
 
 				default:
 					c.logger.Debug("core: unknown negotiated protocol on cluster port")
@@ -297,9 +300,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	if resp.HeaderEntries != nil {
 		header = make(http.Header)
 		for k, v := range resp.HeaderEntries {
-			for _, j := range v.Values {
-				header.Add(k, j)
-			}
+			header[k] = v.Values
 		}
 	}
 

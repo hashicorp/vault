@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/hpack"
 )
 
 const (
@@ -56,7 +57,9 @@ const (
 // control tasks, e.g., flow control, settings, streaming resetting, etc.
 
 type headerFrame struct {
-	p http2.HeadersFrameParam
+	streamID  uint32
+	hf        []hpack.HeaderField
+	endStream bool
 }
 
 func (*headerFrame) item() {}

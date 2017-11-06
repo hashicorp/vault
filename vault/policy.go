@@ -41,6 +41,30 @@ const (
 	SudoCapabilityInt
 )
 
+type PolicyType uint32
+
+const (
+	PolicyTypeACL PolicyType = iota
+	PolicyTypeRGP
+	PolicyTypeEGP
+
+	// Triggers a lookup in the map to figure out if ACL or RGP
+	PolicyTypeToken
+)
+
+func (p PolicyType) String() string {
+	switch p {
+	case PolicyTypeACL:
+		return "acl"
+	case PolicyTypeRGP:
+		return "rgp"
+	case PolicyTypeEGP:
+		return "egp"
+	}
+
+	return ""
+}
+
 var (
 	cap2Int = map[string]uint32{
 		DenyCapability:   DenyCapabilityInt,
@@ -56,40 +80,44 @@ var (
 // Policy is used to represent the policy specified by
 // an ACL configuration.
 type Policy struct {
-	Name  string              `hcl:"name"`
-	Paths []*PathCapabilities `hcl:"-"`
+	Name  string       `hcl:"name"`
+	Paths []*PathRules `hcl:"-"`
 	Raw   string
+	Type  PolicyType
 }
 
-// PathCapabilities represents a policy for a path in the namespace.
-type PathCapabilities struct {
+// PathRules represents a policy for a path in the namespace.
+type PathRules struct {
 	Prefix       string
 	Policy       string
-	Permissions  *Permissions
+	Permissions  *ACLPermissions
 	Glob         bool
 	Capabilities []string
 
 	// These keys are used at the top level to make the HCL nicer; we store in
-	// the Permissions object though
-	MinWrappingTTLHCL    interface{}              `hcl:"min_wrapping_ttl"`
-	MaxWrappingTTLHCL    interface{}              `hcl:"max_wrapping_ttl"`
-	AllowedParametersHCL map[string][]interface{} `hcl:"allowed_parameters"`
-	DeniedParametersHCL  map[string][]interface{} `hcl:"denied_parameters"`
+	// the ACLPermissions object though
+	MinWrappingTTLHCL     interface{}              `hcl:"min_wrapping_ttl"`
+	MaxWrappingTTLHCL     interface{}              `hcl:"max_wrapping_ttl"`
+	AllowedParametersHCL  map[string][]interface{} `hcl:"allowed_parameters"`
+	DeniedParametersHCL   map[string][]interface{} `hcl:"denied_parameters"`
+	RequiredParametersHCL []string                 `hcl:"required_parameters"`
 }
 
-type Permissions struct {
+type ACLPermissions struct {
 	CapabilitiesBitmap uint32
 	MinWrappingTTL     time.Duration
 	MaxWrappingTTL     time.Duration
 	AllowedParameters  map[string][]interface{}
 	DeniedParameters   map[string][]interface{}
+	RequiredParameters []string
 }
 
-func (p *Permissions) Clone() (*Permissions, error) {
-	ret := &Permissions{
+func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
+	ret := &ACLPermissions{
 		CapabilitiesBitmap: p.CapabilitiesBitmap,
 		MinWrappingTTL:     p.MinWrappingTTL,
 		MaxWrappingTTL:     p.MaxWrappingTTL,
+		RequiredParameters: p.RequiredParameters[:],
 	}
 
 	switch {
@@ -122,7 +150,7 @@ func (p *Permissions) Clone() (*Permissions, error) {
 // Parse is used to parse the specified ACL rules into an
 // intermediary set of policies, before being compiled into
 // the ACL
-func Parse(rules string) (*Policy, error) {
+func ParseACLPolicy(rules string) (*Policy, error) {
 	// Parse the rules
 	root, err := hcl.Parse(rules)
 	if err != nil {
@@ -147,6 +175,7 @@ func Parse(rules string) (*Policy, error) {
 	// Create the initial policy and store the raw text of the rules
 	var p Policy
 	p.Raw = rules
+	p.Type = PolicyTypeACL
 	if err := hcl.DecodeObject(&p, list); err != nil {
 		return nil, fmt.Errorf("Failed to parse policy: %s", err)
 	}
@@ -161,7 +190,7 @@ func Parse(rules string) (*Policy, error) {
 }
 
 func parsePaths(result *Policy, list *ast.ObjectList) error {
-	paths := make([]*PathCapabilities, 0, len(list.Items))
+	paths := make([]*PathRules, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
 		if len(item.Keys) > 0 {
@@ -172,6 +201,7 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			"capabilities",
 			"allowed_parameters",
 			"denied_parameters",
+			"required_parameters",
 			"min_wrapping_ttl",
 			"max_wrapping_ttl",
 		}
@@ -179,10 +209,10 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
 
-		var pc PathCapabilities
+		var pc PathRules
 
-		// allocate memory so that DecodeObject can initialize the Permissions struct
-		pc.Permissions = new(Permissions)
+		// allocate memory so that DecodeObject can initialize the ACLPermissions struct
+		pc.Permissions = new(ACLPermissions)
 
 		pc.Prefix = key
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
@@ -263,6 +293,9 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			pc.Permissions.MaxWrappingTTL != 0 &&
 			pc.Permissions.MaxWrappingTTL < pc.Permissions.MinWrappingTTL {
 			return errors.New("max_wrapping_ttl cannot be less than min_wrapping_ttl")
+		}
+		if len(pc.RequiredParametersHCL) > 0 {
+			pc.Permissions.RequiredParameters = pc.RequiredParametersHCL[:]
 		}
 
 	PathFinished:

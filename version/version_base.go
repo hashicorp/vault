@@ -1,5 +1,3 @@
-// +build vault
-
 package version
 
 func init() {
