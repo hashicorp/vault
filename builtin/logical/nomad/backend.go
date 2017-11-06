@@ -31,6 +31,7 @@ func Backend() *backend {
 			secretToken(&b),
 		},
 		BackendType: logical.TypeLogical,
+		Clean:       b.resetClient,
 	}
 
 	return &b
