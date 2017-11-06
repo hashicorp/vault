@@ -643,7 +643,7 @@ func (b *backend) pathLoginUpdateEc2(
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
-		// Don't let subsequent login attempts to bypass in initial
+		// Don't let subsequent login attempts to bypass the initial
 		// intent of disabling reauthentication, despite the properties
 		// of role getting updated. For example: Role has the value set
 		// to 'false', a role-tag login sets the value to 'true', then
@@ -693,7 +693,6 @@ func (b *backend) pathLoginUpdateEc2(
 
 	if roleTagResp != nil {
 		// Role tag is enabled on the role.
-		//
 
 		// Overwrite the policies with the ones returned from processing the role tag
 		// If there are no policies on the role tag, policies on the role are inherited.
@@ -777,8 +776,9 @@ func (b *backend) pathLoginUpdateEc2(
 		},
 	}
 
-	// Return the nonce only if reauthentication is allowed
-	if !disallowReauthentication {
+	// Return the nonce only if reauthentication is allowed and if the nonce
+	// was not supplied by the user.
+	if !disallowReauthentication && !clientNonceSupplied {
 		// Echo the client nonce back. If nonce param was not supplied
 		// to the endpoint at all (setting it to empty string does not
 		// qualify here), callers should extract out the nonce from

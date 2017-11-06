@@ -17,7 +17,6 @@ func (m *CirconusMetrics) TrackHTTPLatency(name string, handler func(http.Respon
 		start := time.Now().UnixNano()
 		handler(rw, req)
 		elapsed := time.Now().UnixNano() - start
-		//hist := m.NewHistogram("go`HTTP`" + req.Method + "`" + name + "`latency")
 		m.RecordValue("go`HTTP`"+req.Method+"`"+name+"`latency", float64(elapsed)/float64(time.Second))
 	}
 }

@@ -683,7 +683,7 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		}
 	case "awskms":
 		valid = []string{
-			"aws_region",
+			"region",
 			"access_key",
 			"secret_key",
 			"kms_key_id",

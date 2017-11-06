@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
@@ -163,7 +164,7 @@ func (b *backend) pathIssueSignCert(
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
-			`The "format" path parameter must be "pem", "der", or "pem_bundle"`), nil
+			`the "format" path parameter must be "pem", "der", or "pem_bundle"`), nil
 	}
 
 	var caErr error
@@ -171,10 +172,10 @@ func (b *backend) pathIssueSignCert(
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"Could not fetch the CA certificate (was one set?): %s", caErr)}
+			"could not fetch the CA certificate (was one set?): %s", caErr)}
 	case errutil.InternalError:
 		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"Error fetching CA certificate: %s", caErr)}
+			"error fetching CA certificate: %s", caErr)}
 	}
 
 	var parsedBundle *certutil.ParsedCertBundle
@@ -195,12 +196,12 @@ func (b *backend) pathIssueSignCert(
 
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting raw signing bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw signing bundle to cert bundle: {{err}}", err)
 	}
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw cert bundle to cert bundle: {{err}}", err)
 	}
 
 	respData := map[string]interface{}{
@@ -265,6 +266,13 @@ func (b *backend) pathIssueSignCert(
 				"serial_number": cb.SerialNumber,
 			})
 		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+	}
+
+	if data.Get("private_key_format").(string) == "pkcs8" {
+		err = convertRespToPKCS8(resp)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if !role.NoStore {

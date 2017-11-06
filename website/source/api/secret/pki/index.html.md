@@ -296,7 +296,7 @@ $ curl \
   "data": {
     "issuing_certificates": ["<url1>", "<url2>"],
     "crl_distribution_points": ["<url1>", "<url2>"],
-    "ocsp_servers": ["<url1>", "<url2>"],
+    "ocsp_servers": ["<url1>", "<url2>"]
   },
   "auth": null
 }
@@ -437,6 +437,11 @@ can be set in a CSR are supported.
   base64 encoded. If `pem_bundle`, the `csr` field will contain the private key
   (if exported) and CSR, concatenated.
 
+- `private_key_format` `(string: "")` – Specifies the format for marshaling the
+  private key. Defaults to `der` which will return either base64-encoded DER or
+  PEM-encoded DER, depending on the value of `format`. The other option is
+  `pkcs8` which will return the key marshalled as PEM-encoded PKCS8.
+
 - `key_type` `(string: "rsa")` – Specifies the desired key type; must be `rsa`
   or `ec`.
 
@@ -555,6 +560,11 @@ need to request a new certificate.**
   base64 encoded. If `pem_bundle`, the `certificate` field will contain the
   private key and certificate, concatenated; if the issuing CA is not a
   Vault-derived self-signed root, this will be included as well.
+
+- `private_key_format` `(string: "")` – Specifies the format for marshaling the
+  private key. Defaults to `der` which will return either base64-encoded DER or
+  PEM-encoded DER, depending on the value of `format`. The other option is
+  `pkcs8` which will return the key marshalled as PEM-encoded PKCS8.
 
 - `exclude_cn_from_sans` `(bool: false)` – If true, the given `common_name` will
   not be included in DNS or Email Subject Alternate Names (as appropriate).
@@ -931,6 +941,11 @@ Vault would overwrite the existing cert/key with new values.
   `pem_bundle`, the `certificate` field will contain the private key (if
   exported) and certificate, concatenated; if the issuing CA is not a
   Vault-derived self-signed root, this will be included as well.
+
+- `private_key_format` `(string: "")` – Specifies the format for marshaling the
+  private key. Defaults to `der` which will return either base64-encoded DER or
+  PEM-encoded DER, depending on the value of `format`. The other option is
+  `pkcs8` which will return the key marshalled as PEM-encoded PKCS8.
 
 - `key_type` `(string: "rsa")` – Specifies the desired key type; must be `rsa`
   or `ec`.

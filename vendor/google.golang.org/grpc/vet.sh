@@ -14,6 +14,8 @@ if git status --porcelain | read; then
   die "Uncommitted or untracked files found; commit changes first"
 fi
 
+PATH="$GOPATH/bin:$GOROOT/bin:$PATH"
+
 # Check proto in manual runs or cron runs.
 if [[ "$TRAVIS" != "true" || "$TRAVIS_EVENT_TYPE" = "cron" ]]; then
   check_proto="true"
@@ -62,13 +64,12 @@ trap cleanup EXIT
 git ls-files "*.go" | xargs sed -i 's:"golang.org/x/net/context":"context":'
 set +o pipefail
 # TODO: Stop filtering pb.go files once golang/protobuf#214 is fixed.
-# TODO: Remove clientconn exception once go1.6 support is removed.
-go tool vet -all . 2>&1 | grep -vE 'clientconn.go:.*cancel' | grep -vF '.pb.go:' | tee /dev/stderr | (! read)
+go tool vet -all . 2>&1 | grep -vF '.pb.go:' | tee /dev/stderr | (! read)
 set -o pipefail
 git reset --hard HEAD
 
 if [[ "$check_proto" = "true" ]]; then
-  PATH=/home/travis/bin:$PATH make proto && \
+  PATH="/home/travis/bin:$PATH" make proto && \
     git status --porcelain 2>&1 | (! read) || \
     (git status; git --no-pager diff; exit 1)
 fi
