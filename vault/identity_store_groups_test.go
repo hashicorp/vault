@@ -546,11 +546,11 @@ func TestIdentityStore_GroupMultiCase(t *testing.T) {
 
 /*
 Test groups hierarchy:
-               eng
-       |                |
-     vault             ops
-     |   |            |   |
-   kube identity  build  deploy
+                ------- eng(entityID3) -------
+                |                            |
+         ----- vault -----        -- ops(entityID2) --
+         |               |        |                  |
+   kube(entityID1)    identity    build            deploy
 */
 func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	var resp *logical.Response
@@ -808,27 +808,36 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 		t.Fatalf("bad: policies; expected: 'engpolicy'\nactual:%#v", policies)
 	}
 
-	groups, err := is.transitiveGroupsByEntityID(entityID1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(groups) != 3 {
-		t.Fatalf("bad: length of groups; expected: 3, actual: %d", len(groups))
-	}
-
-	groups, err = is.transitiveGroupsByEntityID(entityID2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(groups) != 2 {
-		t.Fatalf("bad: length of groups; expected: 2, actual: %d", len(groups))
-	}
-
-	groups, err = is.transitiveGroupsByEntityID(entityID3)
+	groups, inheritedGroups, err := is.groupsByEntityID(entityID1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(groups) != 1 {
 		t.Fatalf("bad: length of groups; expected: 1, actual: %d", len(groups))
+	}
+	if len(inheritedGroups) != 2 {
+		t.Fatalf("bad: length of inheritedGroups; expected: 2, actual: %d", len(inheritedGroups))
+	}
+
+	groups, inheritedGroups, err = is.groupsByEntityID(entityID2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(groups) != 1 {
+		t.Fatalf("bad: length of groups; expected: 1, actual: %d", len(groups))
+	}
+	if len(inheritedGroups) != 1 {
+		t.Fatalf("bad: length of inheritedGroups; expected: 1, actual: %d", len(inheritedGroups))
+	}
+
+	groups, inheritedGroups, err = is.groupsByEntityID(entityID3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(groups) != 1 {
+		t.Fatalf("bad: length of groups; expected: 1, actual: %d", len(groups))
+	}
+	if len(inheritedGroups) != 0 {
+		t.Fatalf("bad: length of inheritedGroups; expected: 0, actual: %d", len(inheritedGroups))
 	}
 }

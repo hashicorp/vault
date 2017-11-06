@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/flag-slice"
@@ -79,11 +78,6 @@ func (m *Meta) DefaultWrappingLookupFunc(operation, path string) string {
 // flag settings for this command.
 func (m *Meta) Client() (*api.Client, error) {
 	config := api.DefaultConfig()
-
-	err := config.ReadEnvironment()
-	if err != nil {
-		return nil, errwrap.Wrapf("error reading environment: {{err}}", err)
-	}
 
 	if m.flagAddress != "" {
 		config.Address = m.flagAddress

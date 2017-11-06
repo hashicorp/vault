@@ -12,6 +12,86 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestIdentityStore_EntityReadGroupIDs(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	i, _, _ := testIdentityStoreWithGithubAuth(t)
+
+	entityReq := &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+	}
+
+	resp, err = i.HandleRequest(entityReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	entityID := resp.Data["id"].(string)
+
+	groupReq := &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"member_entity_ids": []string{
+				entityID,
+			},
+		},
+	}
+
+	resp, err = i.HandleRequest(groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	groupID := resp.Data["id"].(string)
+
+	// Create another group with the above created group as its subgroup
+
+	groupReq.Data = map[string]interface{}{
+		"member_group_ids": []string{groupID},
+	}
+	resp, err = i.HandleRequest(groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	inheritedGroupID := resp.Data["id"].(string)
+
+	lookupReq := &logical.Request{
+		Path:      "lookup/entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": "id",
+			"id":   entityID,
+		},
+	}
+
+	resp, err = i.HandleRequest(lookupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	expected := []string{groupID, inheritedGroupID}
+	actual := resp.Data["group_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: group_ids; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+
+	expected = []string{groupID}
+	actual = resp.Data["direct_group_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: direct_group_ids; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+
+	expected = []string{inheritedGroupID}
+	actual = resp.Data["inherited_group_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: inherited_group_ids; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+}
+
 func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 	var err error
 	var resp *logical.Response
