@@ -200,8 +200,8 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
+	defer r.l.RUnlock()
 	var mount = r.matchingMountInternal(path)
-	r.l.RUnlock()
 	return mount
 }
 
