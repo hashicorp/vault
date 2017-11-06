@@ -73,7 +73,6 @@ func (b *backend) pathTokenRead(
 	}, map[string]interface{}{
 		"accessor_id": token.AccessorID,
 	})
-	s.Secret.TTL = result.Lease
 
 	return s, nil
 }

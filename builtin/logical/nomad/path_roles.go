@@ -1,9 +1,6 @@
 package nomad
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -45,11 +42,6 @@ or 'management'. If a 'management' token,
 the "policy" parameter is not required.
 Defaults to 'client'.`,
 			},
-
-			"lease": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Lease time of the role.",
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -90,7 +82,6 @@ func pathRolesRead(
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"lease":      result.Lease.String(),
 			"token_type": result.TokenType,
 			"global":     result.Global,
 		},
@@ -129,19 +120,8 @@ func pathRolesWrite(
 		}
 	}
 
-	var lease time.Duration
-	leaseParam := d.Get("lease").(string)
-	if leaseParam != "" {
-		lease, err = time.ParseDuration(leaseParam)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"error parsing given lease of %s: %s", leaseParam, err)), nil
-		}
-	}
-
 	entry, err := logical.StorageEntryJSON("role/"+name, roleConfig{
 		Policy:    policy,
-		Lease:     lease,
 		TokenType: tokenType,
 		Global:    global,
 	})
@@ -166,8 +146,7 @@ func pathRolesDelete(
 }
 
 type roleConfig struct {
-	Policy    []string      `json:"policy"`
-	Lease     time.Duration `json:"lease"`
-	TokenType string        `json:"token_type"`
-	Global    bool          `json:"global"`
+	Policy    []string `json:"policy"`
+	TokenType string   `json:"token_type"`
+	Global    bool     `json:"global"`
 }

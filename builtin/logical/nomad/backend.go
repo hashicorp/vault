@@ -22,6 +22,7 @@ func Backend() *backend {
 	b.Backend = &framework.Backend{
 		Paths: []*framework.Path{
 			pathConfigAccess(),
+			pathConfigLease(&b),
 			pathListRoles(&b),
 			pathRoles(),
 			pathToken(&b),
@@ -88,4 +89,22 @@ func (b *backend) resetClient() {
 	defer b.lock.Unlock()
 
 	b.client = nil
+}
+
+// Lease returns the lease information
+func (b *backend) Lease(s logical.Storage) (*configLease, error) {
+	entry, err := s.Get("config/lease")
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result configLease
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }

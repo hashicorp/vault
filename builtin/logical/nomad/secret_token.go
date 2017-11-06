@@ -26,8 +26,15 @@ func secretToken(b *backend) *framework.Secret {
 
 func (b *backend) secretTokenRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	lease, err := b.Lease(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if lease == nil {
+		lease = &configLease{}
+	}
 
-	return framework.LeaseExtend(0, 0, b.System())(req, d)
+	return framework.LeaseExtend(lease.TTL, lease.MaxTTL, b.System())(req, d)
 }
 
 func (b *backend) secretTokenRevoke(
