@@ -178,6 +178,7 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("bad: prod/aws/")
 	}
 
+	// No error is shown here because MountConflict is checked before Mount
 	err = r.Mount(n, "prod/", subMountEntry, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
