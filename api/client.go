@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -63,6 +64,10 @@ type Config struct {
 
 	// Timeout is for setting custom timeout parameter in the HttpClient
 	Timeout time.Duration
+
+	// If there is an error when creating the configuration, this will be the
+	// error
+	Error error
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -110,15 +115,13 @@ func DefaultConfig() *Config {
 		MinVersion: tls.VersionTLS12,
 	}
 	if err := http2.ConfigureTransport(transport); err != nil {
+		config.Error = err
 		return nil
 	}
 
 	if err := config.ReadEnvironment(); err != nil {
+		config.Error = err
 		return nil
-	}
-
-	if v := os.Getenv(EnvVaultAddress); v != "" {
-		config.Address = v
 	}
 
 	// Ensure redirects are not automatically followed
@@ -142,10 +145,11 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
+	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
 
 	var clientCert tls.Certificate
 	foundClientCert := false
-	if t.CACert != "" || t.CAPath != "" || t.ClientCert != "" || t.ClientKey != "" || t.Insecure {
+	if t.ClientCert != "" || t.ClientKey != "" {
 		if t.ClientCert != "" && t.ClientKey != "" {
 			var err error
 			clientCert, err = tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)
@@ -158,20 +162,24 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 		}
 	}
 
-	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
-	rootConfig := &rootcerts.Config{
-		CAFile: t.CACert,
-		CAPath: t.CAPath,
-	}
-	if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
-		return err
+	if t.CACert != "" || t.CAPath != "" {
+		rootConfig := &rootcerts.Config{
+			CAFile: t.CACert,
+			CAPath: t.CAPath,
+		}
+		if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
+			return err
+		}
 	}
 
-	clientTLSConfig.InsecureSkipVerify = t.Insecure
+	if t.Insecure {
+		clientTLSConfig.InsecureSkipVerify = true
+	}
 
 	if foundClientCert {
 		clientTLSConfig.Certificates = []tls.Certificate{clientCert}
 	}
+
 	if t.TLSServerName != "" {
 		clientTLSConfig.ServerName = t.TLSServerName
 	}
@@ -289,6 +297,9 @@ func NewClient(c *Config) (*Client, error) {
 	def := DefaultConfig()
 	if def == nil {
 		return nil, fmt.Errorf("could not create/read default configuration")
+	}
+	if def.Error != nil {
+		return nil, errwrap.Wrapf("error encountered setting up default configuration: {{err}}", def.Error)
 	}
 
 	if c == nil {
