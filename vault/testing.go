@@ -230,6 +230,10 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 	return core.Unseal(key)
 }
 
+func TestCoreUnsealWithRecoveryKeys(core *Core, key []byte) (bool, error) {
+	return core.UnsealWithRecoveryKeys(key)
+}
+
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
 func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {

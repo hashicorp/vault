@@ -2175,3 +2175,76 @@ func TestCore_Standby_Rotate(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
+
+func TestCore_Unseal_RecoveryKey(t *testing.T) {
+	c, _ := testCore_NewTestCore(t, NewTestSeal(t, nil))
+	bc, rc := TestSealDefConfigs()
+
+	bc.SecretShares = 3
+	bc.SecretThreshold = 3
+	bc.StoredShares = 3
+
+	res, err := c.Initialize(&InitParams{
+		BarrierConfig:  bc,
+		RecoveryConfig: rc,
+	})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	sealed, err := c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !sealed {
+		t.Fatalf("should be sealed")
+	}
+
+	if prog, _ := c.SecretProgress(); prog != 0 {
+		t.Fatalf("bad progress: %d", prog)
+	}
+
+	for i := 0; i < 5; i++ {
+		unseal, err := TestCoreUnsealWithRecoveryKeys(c, res.RecoveryShares[i])
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if i >= rc.SecretThreshold-1 {
+			if !unseal {
+				t.Fatalf("should be unsealed")
+			}
+			if prog, _ := c.SecretProgress(); prog != 0 {
+				t.Fatalf("bad progress: %d", prog)
+			}
+		} else {
+			if unseal {
+				t.Fatalf("should not be unsealed")
+			}
+			if prog, _ := c.SecretProgress(); prog != i+1 {
+				t.Fatalf("bad progress: %d", prog)
+			}
+		}
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed {
+		t.Fatalf("should not be sealed")
+	}
+
+	err = c.Seal(res.RootToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !sealed {
+		t.Fatalf("should be sealed")
+	}
+}
