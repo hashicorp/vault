@@ -28,11 +28,11 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 				},
 				"alias_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the alias.",
+					Description: "Name of the alias. This should be supplied in conjuction with 'alias_mount_accessor'.",
 				},
 				"alias_mount_accessor": {
 					Type:        framework.TypeString,
-					Description: "Accessor of the mount to which the alias belongs to.",
+					Description: "Accessor of the mount to which the alias belongs to. This should be supplied in conjunction with 'alias_name'.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -59,11 +59,11 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 				},
 				"alias_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the alias.",
+					Description: "Name of the alias. This should be supplied in conjuction with 'alias_mount_accessor'.",
 				},
 				"alias_mount_accessor": {
 					Type:        framework.TypeString,
-					Description: "Accessor of the mount to which the alias belongs to.",
+					Description: "Accessor of the mount to which the alias belongs to. This should be supplied in conjunction with 'alias_name'.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -131,9 +131,7 @@ func (i *IdentityStore) pathLookupEntityUpdate(req *logical.Request, d *framewor
 
 	if inputCount == 1 {
 		switch {
-		case aliasName != "" && aliasMountAccessor == "":
-			fallthrough
-		case aliasMountAccessor != "" && aliasName == "":
+		case aliasName != "" || aliasMountAccessor != "":
 			return logical.ErrorResponse(fmt.Sprintf("both 'alias_name' and 'alias_mount_accessor' needs to be set")), nil
 		}
 	}
@@ -244,9 +242,7 @@ func (i *IdentityStore) pathLookupGroupUpdate(req *logical.Request, d *framework
 
 	if inputCount == 1 {
 		switch {
-		case aliasName != "" && aliasMountAccessor == "":
-			fallthrough
-		case aliasMountAccessor != "" && aliasName == "":
+		case aliasName != "" || aliasMountAccessor != "":
 			return logical.ErrorResponse(fmt.Sprintf("both 'alias_name' and 'alias_mount_accessor' needs to be set")), nil
 		}
 	}
