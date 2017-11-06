@@ -16,6 +16,9 @@ DEPRECATIONS/CHANGES:
  * SSH CA role read changes: When reading back a role from the `ssh` backend,
    the TTL/max TTL values will now be an integer number of seconds rather than
    a string. This better matches the API elsewhere in Vault.
+ * SSH role list changes: When listing roles from the `ssh` backend via the API,
+   the response data will additionally return a `key_info` map that will contain
+   a map of each key with a corresponding object containing the `key_type`.
 
 FEATURES:
 
@@ -31,6 +34,7 @@ IMPROVEMENTS:
    themselves were `600` and are all encrypted, but this doesn't hurt.
  * secret/cassandra: Work around Cassandra ignoring consistency levels for a
    user listing query [GH-3469]
+ * secret/pki: Private keys can now be marshalled as PKCS#8 [GH-3518]
  * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
    arrays [GH-3409]
  * secret/ssh: Role TTL/max TTL can now be specified as either a string or an

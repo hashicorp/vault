@@ -268,6 +268,13 @@ func (b *backend) pathIssueSignCert(
 		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
 	}
 
+	if data.Get("private_key_format").(string) == "pkcs8" {
+		err = convertRespToPKCS8(resp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if !role.NoStore {
 		err = req.Storage.Put(&logical.StorageEntry{
 			Key:   "certs/" + normalizeSerial(cb.SerialNumber),

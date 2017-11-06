@@ -853,10 +853,10 @@
 			"revisionTime": "2017-10-17T18:16:16Z"
 		},
 		{
-			"checksumSHA1": "Gk4WdAKNJ1F28JTy4aXUAIHrLZE=",
+			"checksumSHA1": "QJoVB4TVwjbvG4zvJEHxDxXWE90=",
 			"path": "github.com/gocql/gocql",
-			"revision": "7fabcab850b7eade1d0e0ac5ac0b6b66d6801a75",
-			"revisionTime": "2017-10-26T22:00:49Z"
+			"revision": "aa93acc8f067e9233982b9a7de370e4d64b9c33e",
+			"revisionTime": "2017-11-03T11:33:55Z"
 		},
 		{
 			"checksumSHA1": "7RlYIbPYgPkxDDCSEuE6bvYEEeU=",
