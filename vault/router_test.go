@@ -118,6 +118,11 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	meUUID, err = uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if path := r.MatchingMount("prod/aws/foo"); path != "prod/aws/" {
 		t.Fatalf("bad: %s", path)
 	}
@@ -161,6 +166,25 @@ func TestRouter_Mount(t *testing.T) {
 	// Verify the path
 	if len(n.Paths) != 1 || n.Paths[0] != "foo" {
 		t.Fatalf("bad: %v", n.Paths)
+	}
+
+	subMountEntry := &MountEntry{
+		Path:     "prod/",
+		UUID:     meUUID,
+		Accessor: "prodaccessor",
+	}
+
+	if r.MountConflict("prod/aws/") == "" {
+		t.Fatalf("bad: prod/aws/")
+	}
+
+	// No error is shown here because MountConflict is checked before Mount
+	err = r.Mount(n, "prod/", subMountEntry, view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if r.MountConflict("prod/test") == "" {
+		t.Fatalf("bad: prod/test/")
 	}
 }
 
