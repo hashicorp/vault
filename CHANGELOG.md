@@ -13,6 +13,9 @@ DEPRECATIONS/CHANGES:
    nonce to the login endpoint. The custom nonce set by the client will from
    now on, not be returned back with the authentication response, and hence not
    audit logged.
+ * AWS Auth role options: The API will now error when trying to create or
+   update a role with the mutually-exclusive options
+   `disallow_reauthentication` and `allow_instance_migration`.
  * SSH CA role read changes: When reading back a role from the `ssh` backend,
    the TTL/max TTL values will now be an integer number of seconds rather than
    a string. This better matches the API elsewhere in Vault.
@@ -49,6 +52,7 @@ BUG FIXES:
 
  * api: Fix panic when setting a custom HTTP client but with a nil transport
    [GH-3435] [GH-3437]
+ * auth/aws: Don't allow mutually exclusive options [GH-3291]
  * auth/radius: Fix logging in in some situations [GH-3461]
  * core: Fix memleak when a connection would connect to the cluster port and
    then go away [GH-3513]
