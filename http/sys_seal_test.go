@@ -260,58 +260,6 @@ func TestSysUnseal_Reset(t *testing.T) {
 
 }
 
-func TestSysUnseal_RecoveryKeys(t *testing.T) {
-	seal := vault.NewTestSeal(t, nil)
-	core := vault.TestCoreWithSeal(t, seal, false)
-	_, recoveryKeys, _ := vault.TestCoreInitClusterWrapperSetup(t, core, nil, nil)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-
-	for i, key := range recoveryKeys {
-		resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
-			"key": hex.EncodeToString(key),
-		})
-
-		var actual map[string]interface{}
-		expected := map[string]interface{}{
-			"type":     "shamir",
-			"sealed":   true,
-			"t":        json.Number("3"),
-			"n":        json.Number("3"),
-			"progress": json.Number(fmt.Sprintf("%d", i+1)),
-			"nonce":    "",
-		}
-		if i == len(recoveryKeys)-1 {
-			expected["sealed"] = false
-			expected["progress"] = json.Number("0")
-		}
-		testResponseStatus(t, resp, 200)
-		testResponseBody(t, resp, &actual)
-		if i < len(recoveryKeys)-1 && (actual["nonce"] == nil || actual["nonce"].(string) == "") {
-			t.Fatalf("got nil nonce, actual is %#v", actual)
-		} else {
-			expected["nonce"] = actual["nonce"]
-		}
-		if actual["version"] == nil {
-			t.Fatalf("expected version information")
-		}
-		expected["version"] = actual["version"]
-		if actual["cluster_name"] == nil {
-			delete(expected, "cluster_name")
-		} else {
-			expected["cluster_name"] = actual["cluster_name"]
-		}
-		if actual["cluster_id"] == nil {
-			delete(expected, "cluster_id")
-		} else {
-			expected["cluster_id"] = actual["cluster_id"]
-		}
-		if !reflect.DeepEqual(actual, expected) {
-			t.Fatalf("bad: expected: \n%#v\nactual: \n%#v", expected, actual)
-		}
-	}
-}
-
 // Test Seal's permissions logic, which is slightly different than normal code
 // paths in that it queries the ACL rather than having checkToken do it. This
 // is because it was abusing RootPaths in logical_system, but that caused some
