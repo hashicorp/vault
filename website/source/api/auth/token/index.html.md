@@ -619,7 +619,7 @@ endpoint.
   parameter is a comma-delimited string of policy names. Adding `"default"` to 
   this list will prevent `"default"` from being added automatically to created
   tokens.
-- `orphan` `(bool: true)` - If `true`, tokens created against this policy will 
+- `orphan` `(bool: false)` - If `true`, tokens created against this policy will 
   be orphan tokens (they will have no parent). As such, they will not be 
   automatically revoked by the revocation of any other token.
 - `period` `(string: "")` - If specified, the token will be periodic; it will have 
