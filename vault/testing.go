@@ -34,6 +34,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
@@ -788,6 +789,7 @@ type TestClusterOptions struct {
 	BaseListenAddress  string
 	NumCores           int
 	SealFunc           func() Seal
+	RawLogger          interface{}
 }
 
 var DefaultNumCores = 3
@@ -1117,6 +1119,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			coreConfig.Seal = opts.SealFunc()
 		}
 
+		if opts != nil && opts.RawLogger != nil {
+			if hclogger, ok := opts.RawLogger.(*logbridge.Logger); ok {
+				coreConfig.Logger = hclogger.Named(fmt.Sprintf("core%d", i)).LogxiLogger()
+			}
+		}
+
 		c, err := NewCore(coreConfig)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -1260,7 +1268,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Transport: transport,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
 				// This can of course be overridden per-test by using its own client
-				return fmt.Errorf("redirects not allowed in these tests")
+				//return fmt.Errorf("redirects not allowed in these tests")
+				return http.ErrUseLastResponse
 			},
 		}
 		config := api.DefaultConfig()
