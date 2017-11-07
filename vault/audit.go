@@ -189,7 +189,9 @@ func (c *Core) loadAudits() error {
 			c.logger.Error("core: failed to decode local audit table", "error", err)
 			return errLoadAuditFailed
 		}
-		c.audit.Entries = append(c.audit.Entries, localAuditTable.Entries...)
+		if localAuditTable != nil && len(localAuditTable.Entries) > 0 {
+			c.audit.Entries = append(c.audit.Entries, localAuditTable.Entries...)
+		}
 	}
 
 	// Done if we have restored the audit table

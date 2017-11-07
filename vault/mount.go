@@ -587,7 +587,9 @@ func (c *Core) loadMounts() error {
 			c.logger.Error("core: failed to decompress and/or decode the local mount table", "error", err)
 			return err
 		}
-		c.mounts.Entries = append(c.mounts.Entries, localMountTable.Entries...)
+		if localMountTable != nil && len(localMountTable.Entries) > 0 {
+			c.mounts.Entries = append(c.mounts.Entries, localMountTable.Entries...)
+		}
 	}
 
 	// Ensure that required entries are loaded, or new ones
