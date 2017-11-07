@@ -281,11 +281,83 @@ func TestFieldDataGet(t *testing.T) {
 
 		"name string type, not supplied": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeNameString},
+				"foo": {Type: TypeNameString},
 			},
 			map[string]interface{}{},
 			"foo",
 			"",
+		},
+
+		"string type, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeString},
+			},
+			map[string]interface{}{},
+			"foo",
+			"",
+		},
+
+		"type int, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeInt},
+			},
+			map[string]interface{}{},
+			"foo",
+			0,
+		},
+
+		"type bool, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeBool},
+			},
+			map[string]interface{}{},
+			"foo",
+			false,
+		},
+
+		"type map, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeMap},
+			},
+			map[string]interface{}{},
+			"foo",
+			map[string]interface{}{},
+		},
+
+		"type duration second, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeDurationSecond},
+			},
+			map[string]interface{}{},
+			"foo",
+			0,
+		},
+
+		"type slice, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeSlice},
+			},
+			map[string]interface{}{},
+			"foo",
+			[]interface{}{},
+		},
+
+		"type string slice, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeStringSlice},
+			},
+			map[string]interface{}{},
+			"foo",
+			[]string{},
+		},
+
+		"type comma string slice, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{},
+			"foo",
+			[]string{},
 		},
 	}
 
