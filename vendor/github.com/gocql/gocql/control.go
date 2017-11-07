@@ -381,7 +381,7 @@ func (c *controlConn) HandleError(conn *Conn, err error, closed bool) {
 		return
 	}
 
-	c.reconnect(true)
+	c.reconnect(false)
 }
 
 func (c *controlConn) getConn() *connHost {

@@ -1063,10 +1063,9 @@ func (s *Role) MarshalJSON() ([]byte, error) {
 //
 // If the account already exists, the account's resource name is
 // returned
-// in util::Status's ResourceInfo.resource_name in the format
-// of
-// projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}. The caller can
-// use the name in other methods to access the account.
+// in the format of projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}. The
+// caller
+// can use the name in other methods to access the account.
 //
 // All other methods can identify the service account using the
 // format
@@ -1103,7 +1102,7 @@ type ServiceAccount struct {
 	// `projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}`.
 	Name string `json:"name,omitempty"`
 
-	// Oauth2ClientId: @OutputOnly. The OAuth2 client id for the service
+	// Oauth2ClientId: @OutputOnly The OAuth2 client id for the service
 	// account.
 	// This is used in conjunction with the OAuth2 clientconfig API to
 	// make

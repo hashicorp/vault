@@ -974,13 +974,13 @@ func (d *Decoder) kInterfaceNaked(f *codecFnInfo) (rvn reflect.Value) {
 				rvn = reflect.ValueOf(&v2).Elem()
 			}
 		} else {
-			rvn = reflect.New(d.h.MapType)
-			if useLookupRecognizedTypes && d.mtr { // isRecognizedRtid(d.mtid) {
+			if d.mtr {
+				rvn = reflect.New(d.h.MapType)
 				d.decode(rv2i(rvn))
 				rvn = rvn.Elem()
 			} else {
-				rvn = rvn.Elem()
-				d.decodeValue(rvn, nil, false, true)
+				rvn = reflect.New(d.h.MapType).Elem()
+				d.decodeValue(rvn, nil, true)
 			}
 		}
 	case valueTypeArray:
@@ -1002,13 +1002,13 @@ func (d *Decoder) kInterfaceNaked(f *codecFnInfo) (rvn reflect.Value) {
 				rvn = rvn2
 			}
 		} else {
-			rvn = reflect.New(d.h.SliceType)
-			if useLookupRecognizedTypes && d.str { // isRecognizedRtid(d.stid) {
+			if d.str {
+				rvn = reflect.New(d.h.SliceType)
 				d.decode(rv2i(rvn))
 				rvn = rvn.Elem()
 			} else {
-				rvn = rvn.Elem()
-				d.decodeValue(rvn, nil, false, true)
+				rvn = reflect.New(d.h.SliceType).Elem()
+				d.decodeValue(rvn, nil, true)
 			}
 		}
 	case valueTypeExt:
@@ -1104,25 +1104,17 @@ func (d *Decoder) kInterface(f *codecFnInfo, rv reflect.Value) {
 
 	rvn2, canDecode := isDecodeable(rvn)
 	if canDecode {
-		d.decodeValue(rvn2, nil, true, true)
+		d.decodeValue(rvn2, nil, true)
 		return
 	}
 
 	rvn2 = reflect.New(rvn.Type()).Elem()
 	rvn2.Set(rvn)
-	d.decodeValue(rvn2, nil, true, true)
+	d.decodeValue(rvn2, nil, true)
 	rv.Set(rvn2)
 }
 
 func (d *Decoder) kStruct(f *codecFnInfo, rv reflect.Value) {
-	// checking if recognized within kstruct is too expensive.
-	// only check where you can determine if valid outside the loop
-	// ie on homogenous collections: slices, arrays and maps.
-	//
-	// if true, we don't create too many decFn's.
-	// It's a delicate balance.
-	const checkRecognized bool = false // false: TODO
-
 	fti := f.ti
 	dd := d.d
 	elemsep := d.hh.hasElemSeparators()
@@ -1153,7 +1145,7 @@ func (d *Decoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 				if dd.TryDecodeAsNil() {
 					si.setToZeroValue(rv)
 				} else {
-					d.decodeValue(sfn.field(si), nil, checkRecognized, true)
+					d.decodeValue(sfn.field(si), nil, true)
 				}
 			} else {
 				d.structFieldNotFound(-1, rvkencname)
@@ -1180,7 +1172,7 @@ func (d *Decoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 			if dd.TryDecodeAsNil() {
 				si.setToZeroValue(rv)
 			} else {
-				d.decodeValue(sfn.field(si), nil, checkRecognized, true)
+				d.decodeValue(sfn.field(si), nil, true)
 			}
 		}
 		if containerLen > len(fti.sfip) {
@@ -1256,7 +1248,6 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 
 	rtelem0Size := int(rtelem0.Size())
 	rtElem0Kind := rtelem0.Kind()
-	rtElem0Id := rt2id(rtelem0)
 	rtelem0Mut := !isImmutableKind(rtElem0Kind)
 	rtelem := rtelem0
 	rtelemkind := rtelem.Kind()
@@ -1304,12 +1295,6 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 		}
 	}
 
-	var recognizedRtid, recognizedRtidPtr bool
-	if useLookupRecognizedTypes {
-		recognizedRtid = isRecognizedRtid(rtElem0Id)
-		recognizedRtidPtr = isRecognizedRtidPtr(rtElem0Id)
-	}
-
 	// consider creating new element once, and just decoding into it.
 	var rtelem0Zero reflect.Value
 	var rtelem0ZeroValid bool
@@ -1339,14 +1324,10 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 			if rtelem0Mut || !rv9.IsValid() { // || (rtElem0Kind == reflect.Ptr && rv9.IsNil()) {
 				rv9 = reflect.New(rtelem0).Elem()
 			}
-			if useLookupRecognizedTypes && (recognizedRtid || recognizedRtidPtr) {
-				d.decode(rv2i(rv9.Addr()))
-			} else {
-				if fn == nil {
-					fn = d.cf.get(rtelem, true, true)
-				}
-				d.decodeValue(rv9, fn, false, true)
+			if fn == nil {
+				fn = d.cf.get(rtelem, true, true)
 			}
+			d.decodeValue(rv9, fn, true)
 			rv.Send(rv9)
 		} else {
 			// if indefinite, etc, then expand the slice if necessary
@@ -1383,19 +1364,10 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 					continue
 				}
 
-				if useLookupRecognizedTypes && recognizedRtid {
-					d.decode(rv2i(rv9.Addr()))
-				} else if useLookupRecognizedTypes && recognizedRtidPtr { // && !rv9.IsNil() {
-					if rv9.IsNil() {
-						rv9.Set(reflect.New(rtelem))
-					}
-					d.decode(rv2i(rv9))
-				} else {
-					if fn == nil {
-						fn = d.cf.get(rtelem, true, true)
-					}
-					d.decodeValue(rv9, fn, false, true)
+				if fn == nil {
+					fn = d.cf.get(rtelem, true, true)
 				}
+				d.decodeValue(rv9, fn, true)
 			}
 		}
 	}
@@ -1441,15 +1413,7 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 
 	ktype, vtype := ti.rt.Key(), ti.rt.Elem()
 	ktypeId := rt2id(ktype)
-	vtypeId := rt2id(vtype)
 	vtypeKind := vtype.Kind()
-	var recognizedKtyp, recognizedVtyp, recognizedPtrKtyp, recognizedPtrVtyp bool
-	if useLookupRecognizedTypes {
-		recognizedKtyp = isRecognizedRtid(ktypeId)
-		recognizedVtyp = isRecognizedRtid(vtypeId)
-		recognizedPtrKtyp = isRecognizedRtidPtr(ktypeId)
-		recognizedPtrVtyp = isRecognizedRtidPtr(vtypeId)
-	}
 
 	var keyFn, valFn *codecFn
 	var ktypeLo, vtypeLo reflect.Type
@@ -1501,26 +1465,19 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 			kstrbs = dd.DecodeStringAsBytes()
 			rvk.SetString(stringView(kstrbs))
 			// NOTE: if doing an insert, you MUST use a real string (not stringview)
-		} else if useLookupRecognizedTypes && recognizedKtyp {
-			d.decode(rv2i(rvkp))
-			// rvk = rvkp.Elem() //TODO: remove, unnecessary
-		} else if useLookupRecognizedTypes && recognizedPtrKtyp {
-			if rvk.IsNil() {
-				rvk = reflect.New(ktypeLo)
-			}
-			d.decode(rv2i(rvk))
 		} else {
 			if keyFn == nil {
 				keyFn = d.cf.get(ktypeLo, true, true)
 			}
-			d.decodeValue(rvk, keyFn, false, true)
+			d.decodeValue(rvk, keyFn, true)
 		}
 		// special case if a byte array.
 		if ktypeIsIntf {
 			if rvk2 := rvk.Elem(); rvk2.IsValid() {
-				rvk = rvk2
-				if rvk.Type() == uint8SliceTyp {
-					rvk = reflect.ValueOf(d.string(rvk.Bytes()))
+				if rvk2.Type() == uint8SliceTyp {
+					rvk = reflect.ValueOf(d.string(rvk2.Bytes()))
+				} else {
+					rvk = rvk2
 				}
 			}
 		}
@@ -1579,21 +1536,11 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 		if mapSet && ktypeIsString {
 			rvk.SetString(d.string(kstrbs))
 		}
-		if useLookupRecognizedTypes && recognizedVtyp && rvv.CanAddr() {
-			d.decode(rv2i(rvv.Addr()))
-		} else if useLookupRecognizedTypes && recognizedPtrVtyp {
-			if rvv.IsNil() {
-				rvv = reflect.New(vtypeLo)
-				mapSet = true
-			}
-			d.decode(rv2i(rvv))
-		} else {
-			if valFn == nil {
-				valFn = d.cf.get(vtypeLo, true, true)
-			}
-			d.decodeValue(rvv, valFn, false, true)
-			// d.decodeValueFn(rvv, valFn)
+		if valFn == nil {
+			valFn = d.cf.get(vtypeLo, true, true)
 		}
+		d.decodeValue(rvv, valFn, true)
+		// d.decodeValueFn(rvv, valFn)
 		if mapSet {
 			rv.SetMapIndex(rvk, rvv)
 		}
@@ -1719,7 +1666,7 @@ type Decoder struct {
 	hh Handle
 	h  *BasicHandle
 
-	mtr, mtrp, str, strp bool //
+	mtr, str bool // whether maptype or slicetype are known types
 
 	be    bool // is binary encoding
 	bytes bool // is bytes reader
@@ -1812,23 +1759,16 @@ func (d *Decoder) resetCommon() {
 	d.d.reset()
 	d.cf.reset(d.hh)
 	d.err = nil
-	// reset all things which were cached from the Handle,
-	// but could be changed.
+	// reset all things which were cached from the Handle, but could change
 	d.mtid, d.stid = 0, 0
-	d.mtr, d.mtrp, d.str, d.strp = false, false, false, false
+	d.mtr, d.str = false, false
 	if d.h.MapType != nil {
 		d.mtid = rt2id(d.h.MapType)
-		if useLookupRecognizedTypes {
-			d.mtr = isRecognizedRtid(d.mtid)
-			d.mtrp = isRecognizedRtidPtr(d.mtid)
-		}
+		d.mtr = fastpathAV.index(d.mtid) != -1
 	}
 	if d.h.SliceType != nil {
 		d.stid = rt2id(d.h.SliceType)
-		if useLookupRecognizedTypes {
-			d.str = isRecognizedRtid(d.stid)
-			d.strp = isRecognizedRtidPtr(d.stid)
-		}
+		d.str = fastpathAV.index(d.stid) != -1
 	}
 }
 
@@ -1917,7 +1857,7 @@ func (d *Decoder) MustDecode(v interface{}) {
 		panic(d.err)
 	}
 	if d.d.TryDecodeAsNil() {
-		d.setZero(v)
+		setZero(v)
 	} else {
 		d.decode(v)
 	}
@@ -1995,7 +1935,7 @@ func (d *Decoder) swallow() {
 	}
 }
 
-func (d *Decoder) setZero(iv interface{}) {
+func setZero(iv interface{}) {
 	if iv == nil || definitelyNil(iv) {
 		return
 	}
@@ -2038,7 +1978,7 @@ func (d *Decoder) setZero(iv interface{}) {
 			v.Set(reflect.Zero(v.Type()))
 		} // TODO: else drain if chan, clear if map, set all to nil if slice???
 	default:
-		if !fastpathDecodeSetZeroTypeSwitch(iv, d) {
+		if !fastpathDecodeSetZeroTypeSwitch(iv) {
 			v := reflect.ValueOf(iv)
 			if v, canDecode = isDecodeable(v); canDecode && v.CanSet() {
 				v.Set(reflect.Zero(v.Type()))
@@ -2065,7 +2005,7 @@ func (d *Decoder) decode(iv interface{}) {
 
 	case reflect.Value:
 		v = d.ensureDecodeable(v)
-		d.decodeValue(v, nil, false, true) // TODO: maybe ask to recognize ...
+		d.decodeValue(v, nil, true) // TODO: maybe ask to recognize ...
 
 	case *string:
 		*v = d.d.DecodeString()
@@ -2102,20 +2042,20 @@ func (d *Decoder) decode(iv interface{}) {
 		*v = d.rawBytes()
 
 	case *interface{}:
-		d.decodeValue(reflect.ValueOf(iv).Elem(), nil, false, true) // TODO: consider recognize here
+		d.decodeValue(reflect.ValueOf(iv).Elem(), nil, true) // TODO: consider recognize here
 		// d.decodeValueNotNil(reflect.ValueOf(iv).Elem())
 
 	default:
 		if !fastpathDecodeTypeSwitch(iv, d) {
 			v := reflect.ValueOf(iv)
 			v = d.ensureDecodeable(v)
-			d.decodeValue(v, nil, false, false)
+			d.decodeValue(v, nil, false)
 			// d.decodeValueFallback(v)
 		}
 	}
 }
 
-func (d *Decoder) decodeValue(rv reflect.Value, fn *codecFn, tryRecognized, chkAll bool) {
+func (d *Decoder) decodeValue(rv reflect.Value, fn *codecFn, chkAll bool) {
 	// If stream is not containing a nil value, then we can deref to the base
 	// non-pointer value, and decode into that.
 	var rvp reflect.Value
@@ -2131,16 +2071,6 @@ func (d *Decoder) decodeValue(rv reflect.Value, fn *codecFn, tryRecognized, chkA
 			if rv.Kind() != reflect.Ptr {
 				break
 			}
-		}
-	}
-
-	if useLookupRecognizedTypes && tryRecognized && isRecognizedRtid(rv2rtid(rv)) {
-		if rvpValid {
-			d.decode(rv2i(rvp))
-			return
-		} else if rv.CanAddr() {
-			d.decode(rv2i(rv.Addr()))
-			return
 		}
 	}
 

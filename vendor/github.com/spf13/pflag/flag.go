@@ -568,6 +568,10 @@ func UnquoteUsage(flag *Flag) (name string, usage string) {
 		name = "strings"
 	case "intSlice":
 		name = "ints"
+	case "uintSlice":
+		name = "uints"
+	case "boolSlice":
+		name = "bools"
 	}
 
 	return
