@@ -324,6 +324,8 @@ func TestFieldDataGet(t *testing.T) {
 			map[string]string{
 				"key1": "value1",
 			},
+		},
+
 		"name string type, not supplied": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeNameString},
@@ -403,6 +405,15 @@ func TestFieldDataGet(t *testing.T) {
 			map[string]interface{}{},
 			"foo",
 			[]string{},
+		},
+
+		"type kv pair, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeKVPairs},
+			},
+			map[string]interface{}{},
+			"foo",
+			map[string]string{},
 		},
 	}
 
