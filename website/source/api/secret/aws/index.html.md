@@ -52,6 +52,10 @@ valid AWS credentials with proper permissions.
   will use the `AWS_REGION` env var, `AWS_DEFAULT_REGION` env var, or
   `us-east-1` in that order.
 
+- `iam_endpoint` `(string: <optional>)` – Specifies a custom HTTP IAM endpoint to use.
+
+- `sts_endpoint` `(string: <optional>)` – Specifies a custom HTTP STS endpoint to use.
+
 ### Sample Payload
 
 ```json
