@@ -312,7 +312,9 @@ func (c *Core) loadCredentials() error {
 			c.logger.Error("core: failed to decode local auth table", "error", err)
 			return errLoadAuthFailed
 		}
-		c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
+		if localAuthTable != nil && len(localAuthTable.Entries) > 0 {
+			c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
+		}
 	}
 
 	// Done if we have restored the auth table
