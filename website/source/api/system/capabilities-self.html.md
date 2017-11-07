@@ -9,8 +9,10 @@ description: |-
 
 # `/sys/capabilities-self`
 
-The `/sys/capabilities-self` endpoint is used to fetch the capabilities of a the
-supplied token.
+The `/sys/capabilities-self` endpoint is used to fetch the capabilities of a
+the supplied token.  The capabilities returned will be derived from the
+policies that are on the token, and from the policies to which token is
+entitled to through the entity and entity's group memberships.
 
 ## Query Self Capabilities
 

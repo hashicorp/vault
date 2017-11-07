@@ -313,10 +313,10 @@ in which Vault might make an AWS API call, but rather illustrative of why these
 are needed.
 
 * `ec2:DescribeInstances` is necessary when you are using the `ec2` auth method
-  or when you are inferring an `ec2_instance` entity type to validate the EC2
-  instance meets binding requirements of the role
+  or when you are inferring an `ec2_instance` entity type to validate that the
+  EC2 instance meets binding requirements of the role
 * `iam:GetInstanceProfile` is used when you have a `bound_iam_role_arn` in the
-  ec2 auth method. Vault needs determine which IAM role is attached to the
+  `ec2` auth method. Vault needs to determine which IAM role is attached to the
   instance profile.
 * `iam:GetUser` and `iam:GetRole` are used when using the iam auth method and
   binding to an IAM user or role principal to determine the unique AWS user ID

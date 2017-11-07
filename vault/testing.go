@@ -1009,9 +1009,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Handler: handler,
 		}
 		servers = append(servers, server)
-		if err := http2.ConfigureServer(server, nil); err != nil {
-			t.Fatal(err)
-		}
 	}
 
 	// Create three cores with the same physical and different redirect/cluster
@@ -1251,7 +1248,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
 		transport := cleanhttp.DefaultPooledTransport()
-		transport.TLSClientConfig = tlsConfig
+		transport.TLSClientConfig = tlsConfig.Clone()
+		if err := http2.ConfigureTransport(transport); err != nil {
+			t.Fatal(err)
+		}
 		client := &http.Client{
 			Transport: transport,
 			CheckRedirect: func(*http.Request, []*http.Request) error {

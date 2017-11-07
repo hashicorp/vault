@@ -26,7 +26,7 @@ func TestTransit_BatchEncryptionCase1(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
 
 	encData := map[string]interface{}{
 		"plaintext": plaintext,

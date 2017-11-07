@@ -52,8 +52,8 @@ func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 	for _, addr := range addrs {
 		config := api.DefaultConfig()
 		config.Address = addr
-		config.HttpClient = cleanhttp.DefaultClient()
 		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig
+
 		client, err := api.NewClient(config)
 		if err != nil {
 			t.Fatal(err)
@@ -100,8 +100,8 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 	for _, addr := range addrs {
 		config := api.DefaultConfig()
 		config.Address = addr
-		config.HttpClient = cleanhttp.DefaultClient()
 		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig
+
 		client, err := api.NewClient(config)
 		if err != nil {
 			t.Fatal(err)
@@ -505,6 +505,9 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 
 	transport = cleanhttp.DefaultTransport()
 	transport.TLSClientConfig = cores[0].TLSConfig
+	if err := http2.ConfigureTransport(transport); err != nil {
+		t.Fatal(err)
+	}
 
 	client = &http.Client{
 		Transport: transport,

@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -567,7 +568,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 
 	// Reset expiration manager to restore mode
 	ts.expiration.restoreModeLock.Lock()
-	ts.expiration.restoreMode = 1
+	atomic.StoreInt32(&ts.expiration.restoreMode, 1)
 	ts.expiration.restoreLocks = locksutil.CreateLocks()
 	ts.expiration.restoreModeLock.Unlock()
 
