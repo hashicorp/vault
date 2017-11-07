@@ -279,6 +279,53 @@ func TestFieldDataGet(t *testing.T) {
 			"bar.baz-bay123",
 		},
 
+		"keypair type, valid value map type": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeKVPairs},
+			},
+			map[string]interface{}{
+				"foo": map[string]interface{}{
+					"key1": "value1",
+					"key2": "value2",
+					"key3": 1,
+				},
+			},
+			"foo",
+			map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "1",
+			},
+		},
+
+		"keypair type, list of equal sign delim key pairs type": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeKVPairs},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"key1=value1", "key2=value2", "key3=1"},
+			},
+			"foo",
+			map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "1",
+			},
+		},
+
+		"keypair type, single equal sign delim value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeKVPairs},
+			},
+			map[string]interface{}{
+				"foo": "key1=value1",
+			},
+			"foo",
+			map[string]string{
+				"key1": "value1",
+			},
+		},
+
 		"name string type, not supplied": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeNameString},
@@ -359,6 +406,15 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			[]string{},
 		},
+
+		"type kv pair, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeKVPairs},
+			},
+			map[string]interface{}{},
+			"foo",
+			map[string]string{},
+		},
 	}
 
 	for name, tc := range cases {
@@ -419,6 +475,15 @@ func TestFieldDataGet_Error(t *testing.T) {
 			},
 			map[string]interface{}{
 				"foo": "",
+			},
+			"foo",
+		},
+		"keypair type, csv version empty key name": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeKVPairs},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"=value1", "key2=value2", "key3=1"},
 			},
 			"foo",
 		},
