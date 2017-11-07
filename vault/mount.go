@@ -582,6 +582,13 @@ func (c *Core) loadMounts() error {
 		}
 		c.mounts = mountTable
 	}
+
+	var needPersist bool
+	if c.mounts == nil {
+		c.mounts = c.defaultMountTable()
+		needPersist = true
+	}
+
 	if rawLocal != nil {
 		if err := jsonutil.DecodeJSON(rawLocal.Value, localMountTable); err != nil {
 			c.logger.Error("core: failed to decompress and/or decode the local mount table", "error", err)
@@ -592,69 +599,61 @@ func (c *Core) loadMounts() error {
 		}
 	}
 
-	// Ensure that required entries are loaded, or new ones
-	// added may never get loaded at all. Note that this
-	// is only designed to work with singletons, as it checks
-	// by type only.
-	if c.mounts != nil {
-		needPersist := false
+	// Note that this is only designed to work with singletons, as it checks by
+	// type only.
 
-		// Upgrade to typed mount table
-		if c.mounts.Type == "" {
-			c.mounts.Type = mountTableType
+	// Upgrade to typed mount table
+	if c.mounts.Type == "" {
+		c.mounts.Type = mountTableType
+		needPersist = true
+	}
+
+	for _, requiredMount := range c.requiredMountTable().Entries {
+		foundRequired := false
+		for _, coreMount := range c.mounts.Entries {
+			if coreMount.Type == requiredMount.Type {
+				foundRequired = true
+				break
+			}
+		}
+
+		// In a replication scenario we will let sync invalidation take
+		// care of creating a new required mount that doesn't exist yet.
+		// This should only happen in the upgrade case where a new one is
+		// introduced on the primary; otherwise initial bootstrapping will
+		// ensure this comes over. If we upgrade first, we simply don't
+		// create the mount, so we won't conflict when we sync. If this is
+		// local (e.g. cubbyhole) we do still add it.
+		if !foundRequired && (!c.replicationState.HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
+			c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 			needPersist = true
 		}
+	}
 
-		for _, requiredMount := range c.requiredMountTable().Entries {
-			foundRequired := false
-			for _, coreMount := range c.mounts.Entries {
-				if coreMount.Type == requiredMount.Type {
-					foundRequired = true
-					break
-				}
-			}
-
-			// In a replication scenario we will let sync invalidation take
-			// care of creating a new required mount that doesn't exist yet.
-			// This should only happen in the upgrade case where a new one is
-			// introduced on the primary; otherwise initial bootstrapping will
-			// ensure this comes over. If we upgrade first, we simply don't
-			// create the mount, so we won't conflict when we sync. If this is
-			// local (e.g. cubbyhole) we do still add it.
-			if !foundRequired && (!c.replicationState.HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
-				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
-				needPersist = true
-			}
+	// Upgrade to table-scoped entries
+	for _, entry := range c.mounts.Entries {
+		if entry.Type == "cubbyhole" && !entry.Local {
+			entry.Local = true
+			needPersist = true
 		}
-
-		// Upgrade to table-scoped entries
-		for _, entry := range c.mounts.Entries {
-			if entry.Type == "cubbyhole" && !entry.Local {
-				entry.Local = true
-				needPersist = true
-			}
-			if entry.Table == "" {
-				entry.Table = c.mounts.Type
-				needPersist = true
-			}
-			if entry.Accessor == "" {
-				accessor, err := c.generateMountAccessor(entry.Type)
-				if err != nil {
-					return err
-				}
-				entry.Accessor = accessor
-				needPersist = true
-			}
+		if entry.Table == "" {
+			entry.Table = c.mounts.Type
+			needPersist = true
 		}
-
-		// Done if we have restored the mount table and we don't need
-		// to persist
-		if !needPersist {
-			return nil
+		if entry.Accessor == "" {
+			accessor, err := c.generateMountAccessor(entry.Type)
+			if err != nil {
+				return err
+			}
+			entry.Accessor = accessor
+			needPersist = true
 		}
-	} else {
-		// Create and persist the default mount table
-		c.mounts = c.defaultMountTable()
+	}
+
+	// Done if we have restored the mount table and we don't need
+	// to persist
+	if !needPersist {
+		return nil
 	}
 
 	if err := c.persistMounts(c.mounts, false); err != nil {
