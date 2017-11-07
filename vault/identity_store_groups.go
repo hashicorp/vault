@@ -34,8 +34,8 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the group.",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the group. Format should be a list of `key=value` pairs.",
+					Type:        framework.TypeKVPairs,
+					Description: "Metadata to be associated with the group.",
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -74,8 +74,8 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the group.",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the group. Format should be a list of `key=value` pairs.",
+					Type:        framework.TypeKVPairs,
+					Description: "Metadata to be associated with the group.",
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -196,12 +196,12 @@ func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framewo
 		group.Name = groupName
 	}
 
-	metadataRaw, ok := d.GetOk("metadata")
+	metadata, ok, err := d.GetOkErr("metadata")
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
+	}
 	if ok {
-		group.Metadata, err = parseMetadata(metadataRaw.([]string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to parse group metadata: %v", err)), nil
-		}
+		group.Metadata = metadata.(map[string]string)
 	}
 
 	memberEntityIDsRaw, ok := d.GetOk("member_entity_ids")
