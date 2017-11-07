@@ -22,7 +22,7 @@ func Backend() *backend {
 			pathConfigLease(&b),
 			pathListRoles(&b),
 			pathRoles(&b),
-			pathToken(&b),
+			pathCredsCreate(&b),
 		},
 
 		Secrets: []*framework.Secret{

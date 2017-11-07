@@ -1,6 +1,8 @@
 package nomad
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -52,6 +54,22 @@ Defaults to 'client'.`,
 	}
 }
 
+func (b *backend) Role(storage logical.Storage, name string) (*roleConfig, error) {
+	entry, err := storage.Get("role/" + name)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving role: %s", err)
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result roleConfig
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 func (b *backend) pathRoleList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entries, err := req.Storage.List("role/")
@@ -66,28 +84,23 @@ func (b *backend) pathRolesRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get("role/" + name)
+	role, err := b.Role(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
+	if role == nil {
 		return nil, nil
-	}
-
-	var result roleConfig
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
 	}
 
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"type":   result.TokenType,
-			"global": result.Global,
+			"type":   role.TokenType,
+			"global": role.Global,
 		},
 	}
-	if len(result.Policy) != 0 {
-		resp.Data["policy"] = result.Policy
+	if len(role.Policy) > 0 {
+		resp.Data["policy"] = role.Policy
 	}
 	return resp, nil
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathToken(b *backend) *framework.Path {
+func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -29,17 +29,21 @@ func (b *backend) pathTokenRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get("role/" + name)
+	role, err := b.Role(req.Storage, name)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
-	if entry == nil {
+	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("Role '%s' not found", name)), nil
 	}
 
-	var result roleConfig
-	if err := entry.DecodeJSON(&result); err != nil {
+	// Determine if we have a lease configuration
+	leaseConfig, err := b.LeaseConfig(req.Storage)
+	if err != nil {
 		return nil, err
+	}
+	if leaseConfig == nil {
+		leaseConfig = &configLease{}
 	}
 
 	// Get the nomad client
@@ -54,21 +58,22 @@ func (b *backend) pathTokenRead(
 	// Create it
 	token, _, err := c.ACLTokens().Create(&api.ACLToken{
 		Name:     tokenName,
-		Type:     result.TokenType,
-		Policies: result.Policy,
-		Global:   result.Global,
+		Type:     role.TokenType,
+		Policies: role.Policy,
+		Global:   role.Global,
 	}, nil)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	// Use the helper to create the secret
-	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
+	resp := b.Secret(SecretTokenType).Response(map[string]interface{}{
 		"secret_id":   token.SecretID,
 		"accessor_id": token.AccessorID,
 	}, map[string]interface{}{
 		"accessor_id": token.AccessorID,
 	})
+	resp.Secret.TTL = leaseConfig.TTL
 
-	return s, nil
+	return resp, nil
 }
