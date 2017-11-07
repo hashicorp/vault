@@ -219,6 +219,83 @@ func (d *Decoder) kUint64(f *codecFnInfo, rv reflect.Value) {
 
 // ------------
 
+func (e *Encoder) kBool(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeBool(*(*bool)(v.ptr))
+}
+
+func (e *Encoder) kString(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeString(c_UTF8, *(*string)(v.ptr))
+}
+
+func (e *Encoder) kFloat64(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeFloat64(*(*float64)(v.ptr))
+}
+
+func (e *Encoder) kFloat32(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeFloat32(*(*float32)(v.ptr))
+}
+
+func (e *Encoder) kInt(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeInt(int64(*(*int)(v.ptr)))
+}
+
+func (e *Encoder) kInt8(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeInt(int64(*(*int8)(v.ptr)))
+}
+
+func (e *Encoder) kInt16(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeInt(int64(*(*int16)(v.ptr)))
+}
+
+func (e *Encoder) kInt32(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeInt(int64(*(*int32)(v.ptr)))
+}
+
+func (e *Encoder) kInt64(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeInt(int64(*(*int64)(v.ptr)))
+}
+
+func (e *Encoder) kUint(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeUint(uint64(*(*uint)(v.ptr)))
+}
+
+func (e *Encoder) kUint8(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeUint(uint64(*(*uint8)(v.ptr)))
+}
+
+func (e *Encoder) kUint16(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeUint(uint64(*(*uint16)(v.ptr)))
+}
+
+func (e *Encoder) kUint32(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeUint(uint64(*(*uint32)(v.ptr)))
+}
+
+func (e *Encoder) kUint64(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeUint(uint64(*(*uint64)(v.ptr)))
+}
+
+func (e *Encoder) kUintptr(f *codecFnInfo, rv reflect.Value) {
+	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
+	e.e.EncodeUint(uint64(*(*uintptr)(v.ptr)))
+}
+
+// ------------
+
 // func rt2id(rt reflect.Type) uintptr {
 // 	return uintptr(((*unsafeIntf)(unsafe.Pointer(&rt))).word)
 // 	// var i interface{} = rt

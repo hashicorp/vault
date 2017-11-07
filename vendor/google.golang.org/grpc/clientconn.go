@@ -51,7 +51,20 @@ var (
 	// underlying connections within the specified timeout.
 	// DEPRECATED: Please use context.DeadlineExceeded instead.
 	ErrClientConnTimeout = errors.New("grpc: timed out when dialing")
+	// errConnDrain indicates that the connection starts to be drained and does not accept any new RPCs.
+	errConnDrain = errors.New("grpc: the connection is drained")
+	// errConnClosing indicates that the connection is closing.
+	errConnClosing = errors.New("grpc: the connection is closing")
+	// errConnUnavailable indicates that the connection is unavailable.
+	errConnUnavailable = errors.New("grpc: the connection is unavailable")
+	// errBalancerClosed indicates that the balancer is closed.
+	errBalancerClosed = errors.New("grpc: balancer is closed")
+	// minimum time to give a connection to complete
+	minConnectTimeout = 20 * time.Second
+)
 
+// The following errors are returned from Dial and DialContext
+var (
 	// errNoTransportSecurity indicates that there is no transport security
 	// being set for ClientConn. Users should either set one or explicitly
 	// call WithInsecure DialOption to disable security.
@@ -65,16 +78,6 @@ var (
 	errCredentialsConflict = errors.New("grpc: transport credentials are set for an insecure connection (grpc.WithTransportCredentials() and grpc.WithInsecure() are both called)")
 	// errNetworkIO indicates that the connection is down due to some network I/O error.
 	errNetworkIO = errors.New("grpc: failed with network I/O error")
-	// errConnDrain indicates that the connection starts to be drained and does not accept any new RPCs.
-	errConnDrain = errors.New("grpc: the connection is drained")
-	// errConnClosing indicates that the connection is closing.
-	errConnClosing = errors.New("grpc: the connection is closing")
-	// errConnUnavailable indicates that the connection is unavailable.
-	errConnUnavailable = errors.New("grpc: the connection is unavailable")
-	// errBalancerClosed indicates that the balancer is closed.
-	errBalancerClosed = errors.New("grpc: balancer is closed")
-	// minimum time to give a connection to complete
-	minConnectTimeout = 20 * time.Second
 )
 
 // dialOptions configure a Dial call. dialOptions are set by the DialOption
@@ -103,6 +106,16 @@ const (
 
 // DialOption configures how we set up the connection.
 type DialOption func(*dialOptions)
+
+// UseCompressor returns a CallOption which sets the compressor used when sending the request.
+// If WithCompressor is set, UseCompressor has higher priority.
+// This API is EXPERIMENTAL.
+func UseCompressor(name string) CallOption {
+	return beforeCall(func(c *callInfo) error {
+		c.compressorType = name
+		return nil
+	})
+}
 
 // WithWriteBufferSize lets you set the size of write buffer, this determines how much data can be batched
 // before doing a write on the wire.
@@ -156,7 +169,8 @@ func WithCodec(c Codec) DialOption {
 }
 
 // WithCompressor returns a DialOption which sets a CompressorGenerator for generating message
-// compressor.
+// compressor. It has lower priority than the compressor set by RegisterCompressor.
+// This function is deprecated.
 func WithCompressor(cp Compressor) DialOption {
 	return func(o *dialOptions) {
 		o.cp = cp
@@ -164,7 +178,8 @@ func WithCompressor(cp Compressor) DialOption {
 }
 
 // WithDecompressor returns a DialOption which sets a DecompressorGenerator for generating
-// message decompressor.
+// message decompressor. It has higher priority than the decompressor set by RegisterCompressor.
+// This function is deprecated.
 func WithDecompressor(dc Decompressor) DialOption {
 	return func(o *dialOptions) {
 		o.dc = dc
@@ -867,7 +882,7 @@ type addrConn struct {
 // receiving a GoAway.
 func (ac *addrConn) adjustParams(r transport.GoAwayReason) {
 	switch r {
-	case transport.TooManyPings:
+	case transport.GoAwayTooManyPings:
 		v := 2 * ac.dopts.copts.KeepaliveParams.Time
 		ac.cc.mu.Lock()
 		if v > ac.cc.mkp.Time {
@@ -1025,6 +1040,10 @@ func (ac *addrConn) transportMonitor() {
 		default:
 		}
 		ac.mu.Lock()
+		if ac.state == connectivity.Shutdown {
+			ac.mu.Unlock()
+			return
+		}
 		// Set connectivity state to TransientFailure before calling
 		// resetTransport. Transition READY->CONNECTING is not valid.
 		ac.state = connectivity.TransientFailure

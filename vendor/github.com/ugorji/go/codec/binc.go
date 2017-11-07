@@ -65,24 +65,18 @@ type bincEncDriver struct {
 	encDriverNoopContainerWriter
 }
 
-func (e *bincEncDriver) IsBuiltinType(rt uintptr) bool {
-	return rt == timeTypId
-}
+// func (e *bincEncDriver) IsBuiltinType(rt uintptr) bool {
+// 	return rt == timeTypId
+// }
 
 func (e *bincEncDriver) EncodeBuiltin(rt uintptr, v interface{}) {
 	if rt == timeTypId {
-		var bs []byte
-		switch x := v.(type) {
-		case time.Time:
-			bs = encodeTime(x)
-		case *time.Time:
-			bs = encodeTime(*x)
-		default:
-			e.e.errorf("binc error encoding builtin: expect time.Time, received %T", v)
-		}
+		bs := encodeTime(v.(time.Time))
 		e.w.writen1(bincVdTimestamp<<4 | uint8(len(bs)))
 		e.w.writeb(bs)
+		return
 	}
+	e.e.errorf("binc error encoding builtin: expect time.Time, received %T", v)
 }
 
 func (e *bincEncDriver) EncodeNil() {
@@ -388,9 +382,9 @@ func (d *bincDecDriver) TryDecodeAsNil() bool {
 	return false
 }
 
-func (d *bincDecDriver) IsBuiltinType(rt uintptr) bool {
-	return rt == timeTypId
-}
+// func (d *bincDecDriver) IsBuiltinType(rt uintptr) bool {
+// 	return rt == timeTypId
+// }
 
 func (d *bincDecDriver) DecodeBuiltin(rt uintptr, v interface{}) {
 	if !d.bdRead {
@@ -408,7 +402,9 @@ func (d *bincDecDriver) DecodeBuiltin(rt uintptr, v interface{}) {
 		var vt *time.Time = v.(*time.Time)
 		*vt = tt
 		d.bdRead = false
+		return
 	}
+	d.d.errorf("binc error decoding builtin: expect *time.Time, received %T", v)
 }
 
 func (d *bincDecDriver) decFloatPre(vs, defaultLen byte) {

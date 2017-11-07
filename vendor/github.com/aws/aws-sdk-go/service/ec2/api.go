@@ -60892,6 +60892,24 @@ const (
 	// InstanceTypeC48xlarge is a InstanceType enum value
 	InstanceTypeC48xlarge = "c4.8xlarge"
 
+	// InstanceTypeC5Large is a InstanceType enum value
+	InstanceTypeC5Large = "c5.large"
+
+	// InstanceTypeC5Xlarge is a InstanceType enum value
+	InstanceTypeC5Xlarge = "c5.xlarge"
+
+	// InstanceTypeC52xlarge is a InstanceType enum value
+	InstanceTypeC52xlarge = "c5.2xlarge"
+
+	// InstanceTypeC54xlarge is a InstanceType enum value
+	InstanceTypeC54xlarge = "c5.4xlarge"
+
+	// InstanceTypeC59xlarge is a InstanceType enum value
+	InstanceTypeC59xlarge = "c5.9xlarge"
+
+	// InstanceTypeC518xlarge is a InstanceType enum value
+	InstanceTypeC518xlarge = "c5.18xlarge"
+
 	// InstanceTypeCc14xlarge is a InstanceType enum value
 	InstanceTypeCc14xlarge = "cc1.4xlarge"
 

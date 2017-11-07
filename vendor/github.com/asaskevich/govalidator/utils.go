@@ -108,7 +108,7 @@ func CamelCaseToUnderscore(str string) string {
 	var output []rune
 	var segment []rune
 	for _, r := range str {
-		if !unicode.IsLower(r) {
+		if !unicode.IsLower(r) && string(r) != "_" {
 			output = addSegment(output, segment)
 			segment = nil
 		}

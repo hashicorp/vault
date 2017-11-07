@@ -28,6 +28,7 @@ type SimpleSchema struct {
 	Items            *Items      `json:"items,omitempty"`
 	CollectionFormat string      `json:"collectionFormat,omitempty"`
 	Default          interface{} `json:"default,omitempty"`
+	Example          interface{} `json:"example,omitempty"`
 }
 
 func (s *SimpleSchema) TypeName() string {
