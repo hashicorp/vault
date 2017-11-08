@@ -84,5 +84,5 @@ func (s *PullRequestsService) RemoveReviewers(ctx context.Context, owner, repo s
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeTeamReviewPreview)
 
-	return s.client.Do(ctx, req, reviewers)
+	return s.client.Do(ctx, req, nil)
 }

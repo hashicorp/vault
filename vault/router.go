@@ -19,7 +19,6 @@ type Router struct {
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
 	tokenStoreSaltFunc func() (*salt.Salt, error)
-
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
@@ -231,12 +230,44 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
+	defer r.l.RUnlock()
+	var mount = r.matchingMountInternal(path)
+	return mount
+}
+
+func (r *Router) matchingMountInternal(path string) string {
 	mount, _, ok := r.root.LongestPrefix(path)
-	r.l.RUnlock()
 	if !ok {
 		return ""
 	}
 	return mount
+}
+
+// matchingPrefixInternal returns a mount prefix that a path may be a part of
+func (r *Router) matchingPrefixInternal(path string) string {
+	var existing string = ""
+	fn := func(existing_path string, _v interface{}) bool {
+		if strings.HasPrefix(existing_path, path) {
+			existing = existing_path
+			return true
+		}
+		return false
+	}
+	r.root.WalkPrefix(path, fn)
+	return existing
+}
+
+// MountConflict determines if there are potential path conflicts
+func (r *Router) MountConflict(path string) string {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	if exact_match := r.matchingMountInternal(path); exact_match != "" {
+		return exact_match
+	}
+	if prefix_match := r.matchingPrefixInternal(path); prefix_match != "" {
+		return prefix_match
+	}
+	return ""
 }
 
 // MatchingStorageByAPIPath/StoragePath returns the storage used for

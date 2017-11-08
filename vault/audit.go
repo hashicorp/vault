@@ -184,45 +184,47 @@ func (c *Core) loadAudits() error {
 		}
 		c.audit = auditTable
 	}
+
+	var needPersist bool
+	if c.audit == nil {
+		c.audit = defaultAuditTable()
+		needPersist = true
+	}
+
 	if rawLocal != nil {
 		if err := jsonutil.DecodeJSON(rawLocal.Value, localAuditTable); err != nil {
 			c.logger.Error("core: failed to decode local audit table", "error", err)
 			return errLoadAuditFailed
 		}
-		c.audit.Entries = append(c.audit.Entries, localAuditTable.Entries...)
+		if localAuditTable != nil && len(localAuditTable.Entries) > 0 {
+			c.audit.Entries = append(c.audit.Entries, localAuditTable.Entries...)
+		}
 	}
 
-	// Done if we have restored the audit table
-	if c.audit != nil {
-		needPersist := false
+	// Upgrade to typed auth table
+	if c.audit.Type == "" {
+		c.audit.Type = auditTableType
+		needPersist = true
+	}
 
-		// Upgrade to typed auth table
-		if c.audit.Type == "" {
-			c.audit.Type = auditTableType
+	// Upgrade to table-scoped entries
+	for _, entry := range c.audit.Entries {
+		if entry.Table == "" {
+			entry.Table = c.audit.Type
 			needPersist = true
 		}
-
-		// Upgrade to table-scoped entries
-		for _, entry := range c.audit.Entries {
-			if entry.Table == "" {
-				entry.Table = c.audit.Type
-				needPersist = true
+		if entry.Accessor == "" {
+			accessor, err := c.generateMountAccessor("audit_" + entry.Type)
+			if err != nil {
+				return err
 			}
-			if entry.Accessor == "" {
-				accessor, err := c.generateMountAccessor("audit_" + entry.Type)
-				if err != nil {
-					return err
-				}
-				entry.Accessor = accessor
-				needPersist = true
-			}
+			entry.Accessor = accessor
+			needPersist = true
 		}
+	}
 
-		if !needPersist {
-			return nil
-		}
-	} else {
-		c.audit = defaultAuditTable()
+	if !needPersist {
+		return nil
 	}
 
 	if err := c.persistAudit(c.audit, false); err != nil {

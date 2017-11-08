@@ -128,40 +128,6 @@ const (
 	// allowing zero-alloc initialization.
 	arrayCacheLen = 8
 
-	// We tried an optimization, where we detect if a type is one of the known types
-	// we optimized for (e.g. int, []uint64, etc).
-	//
-	// However, we notice some worse performance when using this optimization.
-	// So we hide it behind a flag, to turn on if needed.
-	useLookupRecognizedTypes = false
-
-	// using recognized allows us to do d.decode(interface{}) instead of d.decodeValue(reflect.Value)
-	// when we can infer that the kind of the interface{} is one of the ones hard-coded in the
-	// type switch for known types or the ones defined by fast-path.
-	//
-	// However, it seems we get better performance when we don't recognize, and just let
-	// reflection handle it.
-	//
-	// Reasoning is as below:
-	// typeswitch is a binary search with a branch to a code-point.
-	// getdecfn is a binary search with a call to a function pointer.
-	//
-	// both are about the same.
-	//
-	// so: why prefer typeswitch?
-	//
-	// is recognized does the following:
-	// - lookup rtid
-	// - check if in sorted list
-	// - calls decode(type switch)
-	//   - 1 or 2 binary search to a point in code
-	//   - branch there
-	//
-	// vs getdecfn
-	// - lookup rtid
-	// - check in sorted list for a function pointer
-	// - calls it to decode using reflection (optimized)
-
 	// always set xDebug = false before releasing software
 	xDebug = true
 )
@@ -224,32 +190,25 @@ const (
 	// valueTypeInvalid = 0xff
 )
 
+var valueTypeStrings = [...]string{
+	"Unset",
+	"Nil",
+	"Int",
+	"Uint",
+	"Float",
+	"Bool",
+	"String",
+	"Symbol",
+	"Bytes",
+	"Map",
+	"Array",
+	"Timestamp",
+	"Ext",
+}
+
 func (x valueType) String() string {
-	switch x {
-	case valueTypeNil:
-		return "Nil"
-	case valueTypeInt:
-		return "Int"
-	case valueTypeUint:
-		return "Uint"
-	case valueTypeFloat:
-		return "Float"
-	case valueTypeBool:
-		return "Bool"
-	case valueTypeString:
-		return "String"
-	case valueTypeSymbol:
-		return "Symbol"
-	case valueTypeBytes:
-		return "Bytes"
-	case valueTypeMap:
-		return "Map"
-	case valueTypeArray:
-		return "Array"
-	case valueTypeTimestamp:
-		return "Timestamp"
-	case valueTypeExt:
-		return "Ext"
+	if int(x) < len(valueTypeStrings) {
+		return valueTypeStrings[x]
 	}
 	return strconv.FormatInt(int64(x), 10)
 }
@@ -406,85 +365,6 @@ var immutableKindsSet = [32]bool{
 	reflect.String: true,
 	// reflect.Struct
 	// reflect.UnsafePointer
-}
-
-var (
-	recognizedRtids       []uintptr
-	recognizedRtidPtrs    []uintptr
-	recognizedRtidOrPtrs  []uintptr
-	recognizedRtidsLoaded bool
-)
-
-func init() {
-	if !useLookupRecognizedTypes {
-		return
-	}
-	if recognizedRtidsLoaded {
-		panic("recognizedRtidsLoaded = true - cannot happen")
-	}
-	for _, v := range [...]interface{}{
-		float32(0),
-		float64(0),
-		uintptr(0),
-		uint(0),
-		uint8(0),
-		uint16(0),
-		uint32(0),
-		uint64(0),
-		uintptr(0),
-		int(0),
-		int8(0),
-		int16(0),
-		int32(0),
-		int64(0),
-		bool(false),
-		string(""),
-		Raw{},
-		[]byte(nil),
-	} {
-		rt := reflect.TypeOf(v)
-		recognizedRtids = append(recognizedRtids, rt2id(rt))
-		recognizedRtidPtrs = append(recognizedRtidPtrs, rt2id(reflect.PtrTo(rt)))
-	}
-
-	// now sort it.
-	sort.Sort(uintptrSlice(recognizedRtids))
-	sort.Sort(uintptrSlice(recognizedRtidPtrs))
-	recognizedRtidOrPtrs = make([]uintptr, len(recognizedRtids)+len(recognizedRtidPtrs))
-	copy(recognizedRtidOrPtrs, recognizedRtids)
-	copy(recognizedRtidOrPtrs[len(recognizedRtids):], recognizedRtidPtrs)
-	sort.Sort(uintptrSlice(recognizedRtidOrPtrs))
-
-	recognizedRtidsLoaded = true
-}
-
-func containsU(s []uintptr, v uintptr) bool {
-	// return false // TODO: REMOVE
-	h, i, j := 0, 0, len(s)
-	for i < j {
-		h = i + (j-i)/2
-		if s[h] < v {
-			i = h + 1
-		} else {
-			j = h
-		}
-	}
-	if i < len(s) && s[i] == v {
-		return true
-	}
-	return false
-}
-
-func isRecognizedRtid(rtid uintptr) bool {
-	return containsU(recognizedRtids, rtid)
-}
-
-func isRecognizedRtidPtr(rtid uintptr) bool {
-	return containsU(recognizedRtidPtrs, rtid)
-}
-
-func isRecognizedRtidOrPtr(rtid uintptr) bool {
-	return containsU(recognizedRtidOrPtrs, rtid)
 }
 
 // Selfer defines methods by which a value can encode or decode itself.
@@ -823,10 +703,10 @@ func (si *structFieldInfo) field(v reflect.Value, update bool) (rv2 reflect.Valu
 	return v, true
 }
 
-func (si *structFieldInfo) fieldval(v reflect.Value, update bool) reflect.Value {
-	v, _ = si.field(v, update)
-	return v
-}
+// func (si *structFieldInfo) fieldval(v reflect.Value, update bool) reflect.Value {
+// 	v, _ = si.field(v, update)
+// 	return v
+// }
 
 func parseStructFieldInfo(fname string, stag string) *structFieldInfo {
 	// if fname == "" {
@@ -1555,36 +1435,36 @@ func (c *codecFner) get(rt reflect.Type, checkFastpath, checkCodecSelfer bool) (
 				fn.fd = (*Decoder).kInt
 				fn.fe = (*Encoder).kInt
 			case reflect.Int8:
-				fn.fe = (*Encoder).kInt
+				fn.fe = (*Encoder).kInt8
 				fn.fd = (*Decoder).kInt8
 			case reflect.Int16:
-				fn.fe = (*Encoder).kInt
+				fn.fe = (*Encoder).kInt16
 				fn.fd = (*Decoder).kInt16
 			case reflect.Int32:
-				fn.fe = (*Encoder).kInt
+				fn.fe = (*Encoder).kInt32
 				fn.fd = (*Decoder).kInt32
 			case reflect.Int64:
-				fn.fe = (*Encoder).kInt
+				fn.fe = (*Encoder).kInt64
 				fn.fd = (*Decoder).kInt64
 			case reflect.Uint:
 				fn.fd = (*Decoder).kUint
 				fn.fe = (*Encoder).kUint
 			case reflect.Uint8:
-				fn.fe = (*Encoder).kUint
+				fn.fe = (*Encoder).kUint8
 				fn.fd = (*Decoder).kUint8
 			case reflect.Uint16:
-				fn.fe = (*Encoder).kUint
+				fn.fe = (*Encoder).kUint16
 				fn.fd = (*Decoder).kUint16
 			case reflect.Uint32:
-				fn.fe = (*Encoder).kUint
+				fn.fe = (*Encoder).kUint32
 				fn.fd = (*Decoder).kUint32
 			case reflect.Uint64:
-				fn.fe = (*Encoder).kUint
+				fn.fe = (*Encoder).kUint64
 				fn.fd = (*Decoder).kUint64
 				// case reflect.Ptr:
 				// 	fn.fd = (*Decoder).kPtr
 			case reflect.Uintptr:
-				fn.fe = (*Encoder).kUint
+				fn.fe = (*Encoder).kUintptr
 				fn.fd = (*Decoder).kUintptr
 			case reflect.Float32:
 				fn.fe = (*Encoder).kFloat32
@@ -1594,6 +1474,7 @@ func (c *codecFner) get(rt reflect.Type, checkFastpath, checkCodecSelfer bool) (
 				fn.fd = (*Decoder).kFloat64
 			case reflect.Invalid:
 				fn.fe = (*Encoder).kInvalid
+				fn.fd = (*Decoder).kErr
 			case reflect.Chan:
 				fi.seq = seqTypeChan
 				fn.fe = (*Encoder).kSlice
@@ -1631,6 +1512,7 @@ func (c *codecFner) get(rt reflect.Type, checkFastpath, checkCodecSelfer bool) (
 			case reflect.Interface:
 				// encode: reflect.Interface are handled already by preEncodeValue
 				fn.fd = (*Decoder).kInterface
+				fn.fe = (*Encoder).kErr
 			default:
 				fn.fe = (*Encoder).kErr
 				fn.fd = (*Decoder).kErr
@@ -1886,39 +1768,42 @@ func (s *set) remove(v uintptr) (exists bool) {
 
 type bitset256 [32]byte
 
-func (x *bitset256) set(pos byte) {
-	x[pos>>3] |= (1 << (pos & 7))
-}
-func (x *bitset256) unset(pos byte) {
-	x[pos>>3] &^= (1 << (pos & 7))
-}
 func (x *bitset256) isset(pos byte) bool {
 	return x[pos>>3]&(1<<(pos&7)) != 0
 }
+func (x *bitset256) set(pos byte) {
+	x[pos>>3] |= (1 << (pos & 7))
+}
+
+// func (x *bitset256) unset(pos byte) {
+// 	x[pos>>3] &^= (1 << (pos & 7))
+// }
 
 type bitset128 [16]byte
 
-func (x *bitset128) set(pos byte) {
-	x[pos>>3] |= (1 << (pos & 7))
-}
-func (x *bitset128) unset(pos byte) {
-	x[pos>>3] &^= (1 << (pos & 7))
-}
 func (x *bitset128) isset(pos byte) bool {
 	return x[pos>>3]&(1<<(pos&7)) != 0
 }
+func (x *bitset128) set(pos byte) {
+	x[pos>>3] |= (1 << (pos & 7))
+}
+
+// func (x *bitset128) unset(pos byte) {
+// 	x[pos>>3] &^= (1 << (pos & 7))
+// }
 
 type bitset32 [4]byte
 
-func (x *bitset32) set(pos byte) {
-	x[pos>>3] |= (1 << (pos & 7))
-}
-func (x *bitset32) unset(pos byte) {
-	x[pos>>3] &^= (1 << (pos & 7))
-}
 func (x *bitset32) isset(pos byte) bool {
 	return x[pos>>3]&(1<<(pos&7)) != 0
 }
+func (x *bitset32) set(pos byte) {
+	x[pos>>3] |= (1 << (pos & 7))
+}
+
+// func (x *bitset32) unset(pos byte) {
+// 	x[pos>>3] &^= (1 << (pos & 7))
+// }
 
 // ------------
 

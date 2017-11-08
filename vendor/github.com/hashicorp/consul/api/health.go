@@ -34,6 +34,21 @@ type HealthCheck struct {
 	ServiceID   string
 	ServiceName string
 	ServiceTags []string
+
+	Definition HealthCheckDefinition
+}
+
+// HealthCheckDefinition is used to store the details about
+// a health check's execution.
+type HealthCheckDefinition struct {
+	HTTP                           string
+	Header                         map[string][]string
+	Method                         string
+	TLSSkipVerify                  bool
+	TCP                            string
+	Interval                       ReadableDuration
+	Timeout                        ReadableDuration
+	DeregisterCriticalServiceAfter ReadableDuration
 }
 
 // HealthChecks is a collection of HealthCheck structs.

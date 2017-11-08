@@ -75,8 +75,8 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		return fmt.Errorf("token credential backend cannot be instantiated")
 	}
 
-	if match := c.router.MatchingMount(credentialRoutePrefix + entry.Path); match != "" {
-		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
+	if conflict := c.router.MountConflict(credentialRoutePrefix + entry.Path); conflict != "" {
+		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", conflict))
 	}
 
 	// Generate a new UUID and view
@@ -307,45 +307,47 @@ func (c *Core) loadCredentials() error {
 		}
 		c.auth = authTable
 	}
+
+	var needPersist bool
+	if c.auth == nil {
+		c.auth = c.defaultAuthTable()
+		needPersist = true
+	}
+
 	if rawLocal != nil {
 		if err := jsonutil.DecodeJSON(rawLocal.Value, localAuthTable); err != nil {
 			c.logger.Error("core: failed to decode local auth table", "error", err)
 			return errLoadAuthFailed
 		}
-		c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
+		if localAuthTable != nil && len(localAuthTable.Entries) > 0 {
+			c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
+		}
 	}
 
-	// Done if we have restored the auth table
-	if c.auth != nil {
-		needPersist := false
+	// Upgrade to typed auth table
+	if c.auth.Type == "" {
+		c.auth.Type = credentialTableType
+		needPersist = true
+	}
 
-		// Upgrade to typed auth table
-		if c.auth.Type == "" {
-			c.auth.Type = credentialTableType
+	// Upgrade to table-scoped entries
+	for _, entry := range c.auth.Entries {
+		if entry.Table == "" {
+			entry.Table = c.auth.Type
 			needPersist = true
 		}
-
-		// Upgrade to table-scoped entries
-		for _, entry := range c.auth.Entries {
-			if entry.Table == "" {
-				entry.Table = c.auth.Type
-				needPersist = true
+		if entry.Accessor == "" {
+			accessor, err := c.generateMountAccessor("auth_" + entry.Type)
+			if err != nil {
+				return err
 			}
-			if entry.Accessor == "" {
-				accessor, err := c.generateMountAccessor("auth_" + entry.Type)
-				if err != nil {
-					return err
-				}
-				entry.Accessor = accessor
-				needPersist = true
-			}
+			entry.Accessor = accessor
+			needPersist = true
 		}
+	}
 
-		if !needPersist {
-			return nil
-		}
-	} else {
-		c.auth = c.defaultAuthTable()
+	if !needPersist {
+		return nil
 	}
 
 	if err := c.persistAuth(c.auth, false); err != nil {

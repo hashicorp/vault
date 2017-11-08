@@ -51,6 +51,33 @@ func (s *AppsService) ListRepos(ctx context.Context, opt *ListOptions) ([]*Repos
 	return r.Repositories, resp, nil
 }
 
+// ListUserRepos lists repositories that are accessible
+// to the authenticated user for an installation.
+//
+// GitHub API docs: https://developer.github.com/v3/apps/installations/#list-repositories-accessible-to-the-user-for-an-installation
+func (s *AppsService) ListUserRepos(ctx context.Context, id int, opt *ListOptions) ([]*Repository, *Response, error) {
+	u := fmt.Sprintf("user/installations/%v/repositories", id)
+	u, err := addOptions(u, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var r struct {
+		Repositories []*Repository `json:"repositories"`
+	}
+	resp, err := s.client.Do(ctx, req, &r)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return r.Repositories, resp, nil
+}
+
 // AddRepository adds a single repository to an installation.
 //
 // GitHub API docs: https://developer.github.com/v3/apps/installations/#add-repository-to-installation

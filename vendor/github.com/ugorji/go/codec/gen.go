@@ -504,7 +504,7 @@ func (x *genRunner) selfer(encode bool) {
 	t0 := t
 	// always make decode use a pointer receiver,
 	// and structs always use a ptr receiver (encode|decode)
-	isptr := !encode || t.Kind() == reflect.Struct
+	isptr := !encode || (t.Kind() == reflect.Struct || t.Kind() == reflect.Array)
 	x.varsfxreset()
 	fnSigPfx := "func (x "
 	if isptr {
@@ -701,11 +701,11 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 	defer func() { x.line("}") }() //end if block
 
 	if t == rawTyp {
-		x.linef("} else { z.EncRaw(%v)", varname)
+		x.linef("} else { z.EncRaw(%s)", varname)
 		return
 	}
 	if t == rawExtTyp {
-		x.linef("} else { r.EncodeRawExt(%v, e)", varname)
+		x.linef("} else { r.EncodeRawExt(%s, e)", varname)
 		return
 	}
 	// HACK: Support for Builtins.
@@ -714,7 +714,7 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 	if t == timeTyp {
 		vrtid := genTempVarPfx + "m" + x.varsfx()
 		x.linef("} else if %s := z.TimeRtidIfBinc(); %s != 0 { ", vrtid, vrtid)
-		x.linef("r.EncodeBuiltin(%s, %s)", vrtid, varname)
+		x.linef("r.EncodeBuiltin(%s, *%s)", vrtid, varname)
 	}
 	// only check for extensions if the type is named, and has a packagePath.
 	if !x.nx && genImportPath(t) != "" && t.Name() != "" {
@@ -999,7 +999,7 @@ func (x *genRunner) encListFallback(varname string, t reflect.Type) {
 		return
 	}
 	if t.Kind() == reflect.Array && t.Elem().Kind() == reflect.Uint8 {
-		x.linef("r.EncodeStringBytes(codecSelferC_RAW%s, ([%v]byte(%s))[:])", x.xs, t.Len(), varname)
+		x.linef("r.EncodeStringBytes(codecSelferC_RAW%s, ((*[%d]byte)(%s))[:])", x.xs, t.Len(), varname)
 		return
 	}
 	i := x.varsfx()
@@ -1332,7 +1332,7 @@ func (x *genRunner) decListFallback(varname string, rtid uintptr, t reflect.Type
 		return
 	}
 	if t.Kind() == reflect.Array && t.Elem().Kind() == reflect.Uint8 {
-		x.linef("r.DecodeBytes( ((*[%s]byte)(%s))[:], true)", t.Len(), varname)
+		x.linef("r.DecodeBytes( ((*[%d]byte)(%s))[:], true)", t.Len(), varname)
 		return
 	}
 	type tstruc struct {

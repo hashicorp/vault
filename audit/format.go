@@ -146,7 +146,7 @@ func (f *AuditFormatter) FormatRequest(
 	}
 
 	if !config.OmitTime {
-		reqEntry.Time = time.Now().UTC().Format(time.RFC3339)
+		reqEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
 	}
 
 	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
@@ -347,7 +347,7 @@ func (f *AuditFormatter) FormatResponse(
 	}
 
 	if !config.OmitTime {
-		respEntry.Time = time.Now().UTC().Format(time.RFC3339)
+		respEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
 	}
 
 	return f.AuditFormatWriter.WriteResponse(w, respEntry)

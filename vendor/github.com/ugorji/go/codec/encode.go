@@ -350,10 +350,6 @@ func (e *Encoder) builtin(f *codecFnInfo, rv reflect.Value) {
 	e.e.EncodeBuiltin(f.ti.rtid, rv2i(rv))
 }
 
-func (e *Encoder) raw(f *codecFnInfo, rv reflect.Value) {
-	e.rawBytes(rv2i(rv).(Raw))
-}
-
 func (e *Encoder) rawExt(f *codecFnInfo, rv reflect.Value) {
 	// rev := rv2i(rv).(RawExt)
 	// e.e.EncodeRawExt(&rev, e)
@@ -408,28 +404,8 @@ func (e *Encoder) jsonMarshal(f *codecFnInfo, rv reflect.Value) {
 	e.marshal(bs, fnerr, true, c_UTF8)
 }
 
-func (e *Encoder) kBool(f *codecFnInfo, rv reflect.Value) {
-	e.e.EncodeBool(rv.Bool())
-}
-
-func (e *Encoder) kString(f *codecFnInfo, rv reflect.Value) {
-	e.e.EncodeString(c_UTF8, rv.String())
-}
-
-func (e *Encoder) kFloat64(f *codecFnInfo, rv reflect.Value) {
-	e.e.EncodeFloat64(rv.Float())
-}
-
-func (e *Encoder) kFloat32(f *codecFnInfo, rv reflect.Value) {
-	e.e.EncodeFloat32(float32(rv.Float()))
-}
-
-func (e *Encoder) kInt(f *codecFnInfo, rv reflect.Value) {
-	e.e.EncodeInt(rv.Int())
-}
-
-func (e *Encoder) kUint(f *codecFnInfo, rv reflect.Value) {
-	e.e.EncodeUint(rv.Uint())
+func (e *Encoder) raw(f *codecFnInfo, rv reflect.Value) {
+	e.rawBytes(rv2i(rv).(Raw))
 }
 
 func (e *Encoder) kInvalid(f *codecFnInfo, rv reflect.Value) {
@@ -508,20 +484,14 @@ func (e *Encoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 
 	if l > 0 {
 		var fn *codecFn
-		var recognizedVtyp bool
-		if useLookupRecognizedTypes {
-			recognizedVtyp = isRecognizedRtidOrPtr(rt2id(rtelem))
+		for rtelem.Kind() == reflect.Ptr {
+			rtelem = rtelem.Elem()
 		}
-		if !(useLookupRecognizedTypes && recognizedVtyp) {
-			for rtelem.Kind() == reflect.Ptr {
-				rtelem = rtelem.Elem()
-			}
-			// if kind is reflect.Interface, do not pre-determine the
-			// encoding type, because preEncodeValue may break it down to
-			// a concrete type and kInterface will bomb.
-			if rtelem.Kind() != reflect.Interface {
-				fn = e.cf.get(rtelem, true, true)
-			}
+		// if kind is reflect.Interface, do not pre-determine the
+		// encoding type, because preEncodeValue may break it down to
+		// a concrete type and kInterface will bomb.
+		if rtelem.Kind() != reflect.Interface {
+			fn = e.cf.get(rtelem, true, true)
 		}
 		// TODO: Consider perf implication of encoding odd index values as symbols if type is string
 		for j := 0; j < l; j++ {
@@ -538,20 +508,12 @@ func (e *Encoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 			}
 			if f.seq == seqTypeChan {
 				if rv2, ok2 := rv.Recv(); ok2 {
-					if useLookupRecognizedTypes && recognizedVtyp {
-						e.encode(rv2i(rv2))
-					} else {
-						e.encodeValue(rv2, fn, true)
-					}
+					e.encodeValue(rv2, fn, true)
 				} else {
 					ee.EncodeNil() // WE HAVE TO DO SOMETHING, so nil if nothing received.
 				}
 			} else {
-				if useLookupRecognizedTypes && recognizedVtyp {
-					e.encode(rv2i(rv.Index(j)))
-				} else {
-					e.encodeValue(rv.Index(j), fn, true)
-				}
+				e.encodeValue(rv.Index(j), fn, true)
 			}
 		}
 	}
@@ -768,7 +730,6 @@ func (e *Encoder) kMap(f *codecFnInfo, rv reflect.Value) {
 	rtval0 := ti.rt.Elem()
 	rtval := rtval0
 	rtkeyid := rt2id(rtkey0)
-	rtvalid := rt2id(rtval0)
 	for rtval.Kind() == reflect.Ptr {
 		rtval = rtval.Elem()
 	}
@@ -783,17 +744,10 @@ func (e *Encoder) kMap(f *codecFnInfo, rv reflect.Value) {
 		return
 	}
 
-	var recognizedKtyp, recognizedVtyp bool
 	var keyTypeIsString = rtkeyid == stringTypId
 	if keyTypeIsString {
 		asSymbols = e.h.AsSymbols&AsSymbolMapStringKeysFlag != 0
 	} else {
-		if useLookupRecognizedTypes {
-			recognizedKtyp = isRecognizedRtidOrPtr(rtkeyid)
-			if recognizedKtyp {
-				goto LABEL1
-			}
-		}
 		for rtkey.Kind() == reflect.Ptr {
 			rtkey = rtkey.Elem()
 		}
@@ -804,10 +758,6 @@ func (e *Encoder) kMap(f *codecFnInfo, rv reflect.Value) {
 	}
 
 	// for j, lmks := 0, len(mks); j < lmks; j++ {
-LABEL1:
-	if useLookupRecognizedTypes {
-		recognizedVtyp = isRecognizedRtidOrPtr(rtvalid)
-	}
 	for j := range mks {
 		if elemsep {
 			ee.WriteMapElemKey()
@@ -818,19 +768,14 @@ LABEL1:
 			} else {
 				ee.EncodeString(c_UTF8, mks[j].String())
 			}
-		} else if useLookupRecognizedTypes && recognizedKtyp {
-			e.encode(rv2i(mks[j]))
 		} else {
 			e.encodeValue(mks[j], keyFn, true)
 		}
 		if elemsep {
 			ee.WriteMapElemValue()
 		}
-		if useLookupRecognizedTypes && recognizedVtyp {
-			e.encode(rv2i(rv.MapIndex(mks[j])))
-		} else {
-			e.encodeValue(rv.MapIndex(mks[j]), valFn, true)
-		}
+		e.encodeValue(rv.MapIndex(mks[j]), valFn, true)
+
 	}
 	ee.WriteMapEnd()
 }
@@ -1321,11 +1266,6 @@ TOP:
 
 	if fn == nil {
 		rt := rv.Type()
-		// TODO: calling isRecognizedRtid here is a major slowdown
-		if false && useLookupRecognizedTypes && isRecognizedRtidOrPtr(rt2id(rt)) {
-			e.encode(rv2i(rv))
-			return
-		}
 		// always pass checkCodecSelfer=true, in case T or ****T is passed, where *T is a Selfer
 		fn = e.cf.get(rt, checkFastpath, true)
 	}
