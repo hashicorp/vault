@@ -1268,8 +1268,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Transport: transport,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
 				// This can of course be overridden per-test by using its own client
-				//return fmt.Errorf("redirects not allowed in these tests")
-				return http.ErrUseLastResponse
+				return fmt.Errorf("redirects not allowed in these tests")
 			},
 		}
 		config := api.DefaultConfig()
