@@ -13,19 +13,33 @@ DEPRECATIONS/CHANGES:
    nonce to the login endpoint. The custom nonce set by the client will from
    now on, not be returned back with the authentication response, and hence not
    audit logged.
+ * AWS Auth role options: The API will now error when trying to create or
+   update a role with the mutually-exclusive options
+   `disallow_reauthentication` and `allow_instance_migration`.
  * SSH CA role read changes: When reading back a role from the `ssh` backend,
    the TTL/max TTL values will now be an integer number of seconds rather than
    a string. This better matches the API elsewhere in Vault.
+ * SSH role list changes: When listing roles from the `ssh` backend via the API,
+   the response data will additionally return a `key_info` map that will contain
+   a map of each key with a corresponding object containing the `key_type`.
+
+FEATURES:
+
+ * ** RSA Support for Transit Backend**: Transit backend can now generate RSA
+   keys which can be used for encryption and signing. [GH-3489]
 
 IMPROVEMENTS:
 
  * api: Add ability to set custom headers on each call [GH-3394]
  * command/server: Add config option to disable requesting client certificates
    [GH-3373]
+ * core: Disallow mounting underneath an existing path, not just over [GH-2919]
  * physical/file: Use `700` as permissions when creating directories. The files
    themselves were `600` and are all encrypted, but this doesn't hurt.
+ * secret/aws: Add ability to use custom IAM/STS endpoints [GH-3416]
  * secret/cassandra: Work around Cassandra ignoring consistency levels for a
    user listing query [GH-3469]
+ * secret/pki: Private keys can now be marshalled as PKCS#8 [GH-3518]
  * secret/pki: Allow entering URLs for `pki` as both comma-separated strings and JSON
    arrays [GH-3409]
  * secret/ssh: Role TTL/max TTL can now be specified as either a string or an
@@ -38,6 +52,7 @@ BUG FIXES:
 
  * api: Fix panic when setting a custom HTTP client but with a nil transport
    [GH-3435] [GH-3437]
+ * auth/aws: Don't allow mutually exclusive options [GH-3291]
  * auth/radius: Fix logging in in some situations [GH-3461]
  * core: Fix memleak when a connection would connect to the cluster port and
    then go away [GH-3513]
@@ -46,9 +61,13 @@ BUG FIXES:
    responses when requests were forwarded to the active node [GH-3485]
  * physical/etcd3: Fix some listing issues due to how etcd3 does prefix
    matching [GH-3406]
+ * physical/etcd3: Fix case where standbys can lose their etcd client lease
+   [GH-3031]
  * physical/file: Fix listing when underscores are the first component of a
    path [GH-3476]
  * plugins: Allow response errors to be returned from backend plugins [GH-3412]
+ * secret/transit: Fix panic if the length of the input ciphertext was less
+   than the expected nonce length [GH-3521]
 
 ## 0.8.3 (September 19th, 2017)
 
@@ -144,7 +163,7 @@ IMPROVEMENTS:
 
  * audit/file: Allow specifying `stdout` as the `file_path` to log to standard
    output [GH-3235]
- * auth/aws: Allow wildcards in `bound_iam_principal_id` [GH-3213]
+ * auth/aws: Allow wildcards in `bound_iam_principal_arn` [GH-3213]
  * auth/okta: Compare groups case-insensitively since Okta is only
    case-preserving [GH-3240]
  * auth/okta: Standardize Okta configuration APIs across backends [GH-3245]

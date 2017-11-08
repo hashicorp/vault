@@ -17,7 +17,8 @@
  */
 
 // Package transport defines and implements message oriented communication
-// channel to complete various transactions (e.g., an RPC).
+// channel to complete various transactions (e.g., an RPC).  It is meant for
+// grpc-internal usage and is not intended to be imported directly by users.
 package transport // import "google.golang.org/grpc/transport"
 
 import (
@@ -133,7 +134,7 @@ func (r *recvBufferReader) read(p []byte) (n int, err error) {
 	case <-r.ctx.Done():
 		return 0, ContextErr(r.ctx.Err())
 	case <-r.goAway:
-		return 0, ErrStreamDrain
+		return 0, errStreamDrain
 	case m := <-r.recv.get():
 		r.recv.load()
 		if m.err != nil {
@@ -210,61 +211,42 @@ const (
 
 // Stream represents an RPC in the transport layer.
 type Stream struct {
-	id uint32
-	// nil for client side Stream.
-	st ServerTransport
-	// ctx is the associated context of the stream.
-	ctx context.Context
-	// cancel is always nil for client side Stream.
-	cancel context.CancelFunc
-	// done is closed when the final status arrives.
-	done chan struct{}
-	// goAway is closed when the server sent GoAways signal before this stream was initiated.
-	goAway chan struct{}
-	// method records the associated RPC method of the stream.
-	method       string
+	id           uint32
+	st           ServerTransport    // nil for client side Stream
+	ctx          context.Context    // the associated context of the stream
+	cancel       context.CancelFunc // always nil for client side Stream
+	done         chan struct{}      // closed when the final status arrives
+	goAway       chan struct{}      // closed when a GOAWAY control message is received
+	method       string             // the associated RPC method of the stream
 	recvCompress string
 	sendCompress string
 	buf          *recvBuffer
 	trReader     io.Reader
 	fc           *inFlow
 	recvQuota    uint32
-
-	// TODO: Remote this unused variable.
-	// The accumulated inbound quota pending for window update.
-	updateQuota uint32
+	waiters      waiters
 
 	// Callback to state application's intentions to read data. This
-	// is used to adjust flow control, if need be.
+	// is used to adjust flow control, if needed.
 	requestRead func(int)
 
-	sendQuotaPool  *quotaPool
-	localSendQuota *quotaPool
-	// Close headerChan to indicate the end of reception of header metadata.
-	headerChan chan struct{}
-	// header caches the received header metadata.
-	header metadata.MD
-	// The key-value map of trailer metadata.
-	trailer metadata.MD
+	sendQuotaPool *quotaPool
+	headerChan    chan struct{} // closed to indicate the end of header metadata.
+	headerDone    bool          // set when headerChan is closed. Used to avoid closing headerChan multiple times.
+	header        metadata.MD   // the received header metadata.
+	trailer       metadata.MD   // the key-value map of trailer metadata.
 
-	mu sync.RWMutex // guard the following
-	// headerOK becomes true from the first header is about to send.
-	headerOk bool
+	mu       sync.RWMutex // guard the following
+	headerOk bool         // becomes true from the first header is about to send
 	state    streamState
-	// true iff headerChan is closed. Used to avoid closing headerChan
-	// multiple times.
-	headerDone bool
-	// the status error received from the server.
-	status *status.Status
-	// rstStream indicates whether a RST_STREAM frame needs to be sent
-	// to the server to signify that this stream is closing.
-	rstStream bool
-	// rstError is the error that needs to be sent along with the RST_STREAM frame.
-	rstError http2.ErrCode
-	// bytesSent and bytesReceived indicates whether any bytes have been sent or
-	// received on this stream.
-	bytesSent     bool
-	bytesReceived bool
+
+	status *status.Status // the status error received from the server
+
+	rstStream bool          // indicates whether a RST_STREAM frame needs to be sent
+	rstError  http2.ErrCode // the error that needs to be sent along with the RST_STREAM frame
+
+	bytesReceived bool // indicates whether any bytes have been received on this stream
+	unprocessed   bool // set if the server sends a refused stream or GOAWAY including this stream
 }
 
 // RecvCompress returns the compression algorithm applied to the inbound
@@ -299,7 +281,7 @@ func (s *Stream) Header() (metadata.MD, error) {
 	case <-s.ctx.Done():
 		err = ContextErr(s.ctx.Err())
 	case <-s.goAway:
-		err = ErrStreamDrain
+		err = errStreamDrain
 	case <-s.headerChan:
 		return s.header.Copy(), nil
 	}
@@ -416,18 +398,19 @@ func (s *Stream) finish(st *status.Status) {
 	close(s.done)
 }
 
-// BytesSent indicates whether any bytes have been sent on this stream.
-func (s *Stream) BytesSent() bool {
-	s.mu.Lock()
-	bs := s.bytesSent
-	s.mu.Unlock()
-	return bs
-}
-
 // BytesReceived indicates whether any bytes have been received on this stream.
 func (s *Stream) BytesReceived() bool {
 	s.mu.Lock()
 	br := s.bytesReceived
+	s.mu.Unlock()
+	return br
+}
+
+// Unprocessed indicates whether the server did not process this stream --
+// i.e. it sent a refused stream or GOAWAY including this stream ID.
+func (s *Stream) Unprocessed() bool {
+	s.mu.Lock()
+	br := s.unprocessed
 	s.mu.Unlock()
 	return br
 }
@@ -686,9 +669,13 @@ func (e ConnectionError) Origin() error {
 var (
 	// ErrConnClosing indicates that the transport is closing.
 	ErrConnClosing = connectionErrorf(true, nil, "transport is closing")
-	// ErrStreamDrain indicates that the stream is rejected by the server because
+	// errStreamDrain indicates that the stream is rejected by the server because
 	// the server stops accepting new RPCs.
-	ErrStreamDrain = streamErrorf(codes.Unavailable, "the server stops accepting new RPCs")
+	// TODO: delete this error; it is no longer necessary.
+	errStreamDrain = streamErrorf(codes.Unavailable, "the server stops accepting new RPCs")
+	// StatusGoAway indicates that the server sent a GOAWAY that included this
+	// stream's ID in unprocessed RPCs.
+	statusGoAway = status.New(codes.Unavailable, "the server stopped accepting new RPCs")
 )
 
 // TODO: See if we can replace StreamError with status package errors.
@@ -703,38 +690,27 @@ func (e StreamError) Error() string {
 	return fmt.Sprintf("stream error: code = %s desc = %q", e.Code, e.Desc)
 }
 
-// wait blocks until it can receive from one of the provided contexts or
-// channels.  ctx is the context of the RPC, tctx is the context of the
-// transport, done is a channel closed to indicate the end of the RPC, goAway
-// is a channel closed to indicate a GOAWAY was received, and proceed is a
-// quota channel, whose received value is returned from this function if none
-// of the other signals occur first.
-func wait(ctx, tctx context.Context, done, goAway <-chan struct{}, proceed <-chan int) (int, error) {
-	select {
-	case <-ctx.Done():
-		return 0, ContextErr(ctx.Err())
-	case <-done:
-		return 0, io.EOF
-	case <-goAway:
-		return 0, ErrStreamDrain
-	case <-tctx.Done():
-		return 0, ErrConnClosing
-	case i := <-proceed:
-		return i, nil
-	}
+// waiters are passed to quotaPool get methods to
+// wait on in addition to waiting on quota.
+type waiters struct {
+	ctx    context.Context
+	tctx   context.Context
+	done   chan struct{}
+	goAway chan struct{}
 }
 
 // GoAwayReason contains the reason for the GoAway frame received.
 type GoAwayReason uint8
 
 const (
-	// Invalid indicates that no GoAway frame is received.
-	Invalid GoAwayReason = 0
-	// NoReason is the default value when GoAway frame is received.
-	NoReason GoAwayReason = 1
-	// TooManyPings indicates that a GoAway frame with ErrCodeEnhanceYourCalm
-	// was received and that the debug data said "too_many_pings".
-	TooManyPings GoAwayReason = 2
+	// GoAwayInvalid indicates that no GoAway frame is received.
+	GoAwayInvalid GoAwayReason = 0
+	// GoAwayNoReason is the default value when GoAway frame is received.
+	GoAwayNoReason GoAwayReason = 1
+	// GoAwayTooManyPings indicates that a GoAway frame with
+	// ErrCodeEnhanceYourCalm was received and that the debug data said
+	// "too_many_pings".
+	GoAwayTooManyPings GoAwayReason = 2
 )
 
 // loopyWriter is run in a separate go routine. It is the single code path that will
@@ -745,6 +721,7 @@ func loopyWriter(ctx context.Context, cbuf *controlBuffer, handler func(item) er
 		case i := <-cbuf.get():
 			cbuf.load()
 			if err := handler(i); err != nil {
+				errorf("transport: Error while handling item. Err: %v", err)
 				return
 			}
 		case <-ctx.Done():
@@ -756,12 +733,14 @@ func loopyWriter(ctx context.Context, cbuf *controlBuffer, handler func(item) er
 			case i := <-cbuf.get():
 				cbuf.load()
 				if err := handler(i); err != nil {
+					errorf("transport: Error while handling item. Err: %v", err)
 					return
 				}
 			case <-ctx.Done():
 				return
 			default:
 				if err := handler(&flushIO{}); err != nil {
+					errorf("transport: Error while flushing. Err: %v", err)
 					return
 				}
 				break hasData

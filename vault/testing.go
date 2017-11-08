@@ -34,6 +34,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
@@ -228,6 +229,10 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, clusterAddrs []*ne
 
 func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 	return core.Unseal(key)
+}
+
+func TestCoreUnsealWithRecoveryKeys(core *Core, key []byte) (bool, error) {
+	return core.UnsealWithRecoveryKeys(key)
 }
 
 // TestCoreUnsealed returns a pure in-memory core that is already
@@ -784,6 +789,7 @@ type TestClusterOptions struct {
 	BaseListenAddress  string
 	NumCores           int
 	SealFunc           func() Seal
+	RawLogger          interface{}
 }
 
 var DefaultNumCores = 3
@@ -1111,6 +1117,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		// if opts.SealFunc is provided, use that to generate a seal for the config instead
 		if opts != nil && opts.SealFunc != nil {
 			coreConfig.Seal = opts.SealFunc()
+		}
+
+		if opts != nil && opts.RawLogger != nil {
+			if hclogger, ok := opts.RawLogger.(*logbridge.Logger); ok {
+				coreConfig.Logger = hclogger.Named(fmt.Sprintf("core%d", i)).LogxiLogger()
+			}
 		}
 
 		c, err := NewCore(coreConfig)

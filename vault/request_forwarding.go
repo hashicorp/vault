@@ -122,12 +122,19 @@ func (c *Core) startForwarding() error {
 
 				// Accept the connection
 				conn, err := tlsLn.Accept()
-				if err != nil || conn == nil {
+				if err != nil {
+					if err, ok := err.(net.Error); ok && !err.Timeout() {
+						c.logger.Debug("core: non-timeout error accepting on cluster port", "error", err)
+					}
 					if conn != nil {
 						conn.Close()
 					}
 					continue
 				}
+				if conn == nil {
+					continue
+				}
+				defer conn.Close()
 
 				// Type assert to TLS connection and handshake to populate the
 				// connection state
@@ -137,14 +144,14 @@ func (c *Core) startForwarding() error {
 					if c.logger.IsDebug() {
 						c.logger.Debug("core: error handshaking cluster connection", "error", err)
 					}
-					conn.Close()
+					tlsConn.Close()
 					continue
 				}
 
 				switch tlsConn.ConnectionState().NegotiatedProtocol {
 				case requestForwardingALPN:
 					if !ha {
-						conn.Close()
+						tlsConn.Close()
 						continue
 					}
 
@@ -153,15 +160,15 @@ func (c *Core) startForwarding() error {
 					rpcServer := c.rpcServer
 					c.clusterParamsLock.RUnlock()
 					go func() {
-						defer conn.Close()
-						fws.ServeConn(conn, &http2.ServeConnOpts{
+						fws.ServeConn(tlsConn, &http2.ServeConnOpts{
 							Handler: rpcServer,
 						})
+						tlsConn.Close()
 					}()
 
 				default:
 					c.logger.Debug("core: unknown negotiated protocol on cluster port")
-					conn.Close()
+					tlsConn.Close()
 					continue
 				}
 			}

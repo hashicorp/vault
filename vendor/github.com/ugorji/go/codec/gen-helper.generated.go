@@ -155,7 +155,7 @@ func (f genHelperDecoder) DecFallback(iv interface{}, chkPtr bool) {
 	if chkPtr {
 		rv = f.d.ensureDecodeable(rv)
 	}
-	f.d.decodeValue(rv, nil, false, false)
+	f.d.decodeValue(rv, nil, false)
 	// f.d.decodeValueFallback(rv)
 }
 

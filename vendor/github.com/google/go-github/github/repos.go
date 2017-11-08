@@ -481,6 +481,8 @@ func (s *RepositoriesService) ListTeams(ctx context.Context, owner string, repo 
 		return nil, nil, err
 	}
 
+	req.Header.Set("Accept", mediaTypeNestedTeamsPreview)
+
 	var teams []*Team
 	resp, err := s.client.Do(ctx, req, &teams)
 	if err != nil {

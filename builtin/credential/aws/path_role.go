@@ -663,6 +663,10 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.AllowInstanceMigration = data.Get("allow_instance_migration").(bool)
 	}
 
+	if roleEntry.AllowInstanceMigration && roleEntry.DisallowReauthentication {
+		return logical.ErrorResponse("cannot specify both disallow_reauthentication=true and allow_instance_migration=true"), nil
+	}
+
 	var resp logical.Response
 
 	ttlRaw, ok := data.GetOk("ttl")

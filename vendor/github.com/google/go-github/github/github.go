@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	libraryVersion = "13"
+	libraryVersion = "14"
 	defaultBaseURL = "https://api.github.com/"
 	uploadBaseURL  = "https://uploads.github.com/"
 	userAgent      = "go-github/" + libraryVersion
@@ -102,6 +102,9 @@ const (
 
 	// https://developer.github.com/changes/2017-07-26-team-review-request-thor-preview/
 	mediaTypeTeamReviewPreview = "application/vnd.github.thor-preview+json"
+
+	// https://developer.github.com/changes/2017-08-30-preview-nested-teams/
+	mediaTypeNestedTeamsPreview = "application/vnd.github.hellcat-preview+json"
 )
 
 // A Client manages communication with the GitHub API.
@@ -233,6 +236,37 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Search = (*SearchService)(&c.common)
 	c.Users = (*UsersService)(&c.common)
 	return c
+}
+
+// NewEnterpriseClient returns a new GitHub API client with provided
+// base URL and upload URL (often the same URL).
+// If either URL does not have a trailing slash, one is added automatically.
+// If a nil httpClient is provided, http.DefaultClient will be used.
+//
+// Note that NewEnterpriseClient is a convenience helper only;
+// its behavior is equivalent to using NewClient, followed by setting
+// the BaseURL and UploadURL fields.
+func NewEnterpriseClient(baseURL, uploadURL string, httpClient *http.Client) (*Client, error) {
+	baseEndpoint, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasSuffix(baseEndpoint.Path, "/") {
+		baseEndpoint.Path += "/"
+	}
+
+	uploadEndpoint, err := url.Parse(uploadURL)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasSuffix(uploadEndpoint.Path, "/") {
+		uploadEndpoint.Path += "/"
+	}
+
+	c := NewClient(httpClient)
+	c.BaseURL = baseEndpoint
+	c.UploadURL = uploadEndpoint
+	return c, nil
 }
 
 // NewRequest creates an API request. A relative URL can be provided in urlStr,

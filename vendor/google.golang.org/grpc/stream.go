@@ -19,7 +19,6 @@
 package grpc
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"sync"
@@ -29,6 +28,7 @@ import (
 	"golang.org/x/net/trace"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/encoding"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
@@ -151,7 +151,9 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		// time soon, so we ask the transport to flush the header.
 		Flush: desc.ClientStreams,
 	}
-	if cc.dopts.cp != nil {
+	if c.compressorType != "" {
+		callHdr.SendCompress = c.compressorType
+	} else if cc.dopts.cp != nil {
 		callHdr.SendCompress = cc.dopts.cp.Type()
 	}
 	if c.creds != nil {
@@ -197,42 +199,39 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 			}
 		}()
 	}
+
 	for {
+		// Check to make sure the context has expired.  This will prevent us from
+		// looping forever if an error occurs for wait-for-ready RPCs where no data
+		// is sent on the wire.
+		select {
+		case <-ctx.Done():
+			return nil, toRPCErr(ctx.Err())
+		default:
+		}
+
 		t, done, err = cc.getTransport(ctx, c.failFast)
 		if err != nil {
-			// TODO(zhaoq): Probably revisit the error handling.
-			if _, ok := status.FromError(err); ok {
-				return nil, err
-			}
-			if err == errConnClosing || err == errConnUnavailable {
-				if c.failFast {
-					return nil, Errorf(codes.Unavailable, "%v", err)
-				}
-				continue
-			}
-			// All the other errors are treated as Internal errors.
-			return nil, Errorf(codes.Internal, "%v", err)
+			return nil, err
 		}
 
 		s, err = t.NewStream(ctx, callHdr)
 		if err != nil {
-			if _, ok := err.(transport.ConnectionError); ok && done != nil {
-				// If error is connection error, transport was sending data on wire,
-				// and we are not sure if anything has been sent on wire.
-				// If error is not connection error, we are sure nothing has been sent.
-				updateRPCInfoInContext(ctx, rpcInfo{bytesSent: true, bytesReceived: false})
-			}
 			if done != nil {
 				done(balancer.DoneInfo{Err: err})
 				done = nil
 			}
-			if _, ok := err.(transport.ConnectionError); (ok || err == transport.ErrStreamDrain) && !c.failFast {
+			// In the event of any error from NewStream, we never attempted to write
+			// anything to the wire, so we can retry indefinitely for non-fail-fast
+			// RPCs.
+			if !c.failFast {
 				continue
 			}
 			return nil, toRPCErr(err)
 		}
 		break
 	}
+
 	// Set callInfo.peer object from stream's context.
 	if peer, ok := peer.FromContext(s.Context()); ok {
 		c.peer = peer
@@ -242,6 +241,7 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		c:      c,
 		desc:   desc,
 		codec:  cc.dopts.codec,
+		cpType: c.compressorType,
 		cp:     cc.dopts.cp,
 		dc:     cc.dopts.dc,
 		cancel: cancel,
@@ -257,8 +257,8 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		statsCtx:     ctx,
 		statsHandler: cc.dopts.copts.StatsHandler,
 	}
-	// Listen on ctx.Done() to detect cancellation and s.Done() to detect normal termination
-	// when there is no pending I/O operations on this stream.
+	// Listen on s.Context().Done() to detect cancellation and s.Done() to detect
+	// normal termination when there is no pending I/O operations on this stream.
 	go func() {
 		select {
 		case <-t.Error():
@@ -292,6 +292,7 @@ type clientStream struct {
 	p      *parser
 	desc   *StreamDesc
 	codec  Codec
+	cpType string
 	cp     Compressor
 	dc     Decompressor
 	cancel context.CancelFunc
@@ -369,7 +370,10 @@ func (cs *clientStream) SendMsg(m interface{}) (err error) {
 			Client: true,
 		}
 	}
-	hdr, data, err := encode(cs.codec, m, cs.cp, bytes.NewBuffer([]byte{}), outPayload)
+	if cs.cpType != "" && encoding.GetCompressor(cs.cpType) == nil {
+		return Errorf(codes.Internal, "grpc: Compressor is not installed for grpc-encoding %q", cs.cpType)
+	}
+	hdr, data, err := encode(cs.codec, m, cs.cp, outPayload, encoding.GetCompressor(cs.cpType))
 	if err != nil {
 		return err
 	}
@@ -397,7 +401,7 @@ func (cs *clientStream) RecvMsg(m interface{}) (err error) {
 	if cs.c.maxReceiveMessageSize == nil {
 		return Errorf(codes.Internal, "callInfo maxReceiveMessageSize field uninitialized(nil)")
 	}
-	err = recv(cs.p, cs.codec, cs.s, cs.dc, m, *cs.c.maxReceiveMessageSize, inPayload)
+	err = recv(cs.p, cs.codec, cs.s, cs.dc, m, *cs.c.maxReceiveMessageSize, inPayload, encoding.GetCompressor(cs.cpType))
 	defer func() {
 		// err != nil indicates the termination of the stream.
 		if err != nil {
@@ -423,7 +427,7 @@ func (cs *clientStream) RecvMsg(m interface{}) (err error) {
 		if cs.c.maxReceiveMessageSize == nil {
 			return Errorf(codes.Internal, "callInfo maxReceiveMessageSize field uninitialized(nil)")
 		}
-		err = recv(cs.p, cs.codec, cs.s, cs.dc, m, *cs.c.maxReceiveMessageSize, nil)
+		err = recv(cs.p, cs.codec, cs.s, cs.dc, m, *cs.c.maxReceiveMessageSize, nil, encoding.GetCompressor(cs.cpType))
 		cs.closeTransportStream(err)
 		if err == nil {
 			return toRPCErr(errors.New("grpc: client streaming protocol violation: get <nil>, want <EOF>"))
@@ -495,7 +499,7 @@ func (cs *clientStream) finish(err error) {
 	}
 	if cs.done != nil {
 		updateRPCInfoInContext(cs.s.Context(), rpcInfo{
-			bytesSent:     cs.s.BytesSent(),
+			bytesSent:     true,
 			bytesReceived: cs.s.BytesReceived(),
 		})
 		cs.done(balancer.DoneInfo{Err: err})
@@ -552,6 +556,7 @@ type serverStream struct {
 	s                     *transport.Stream
 	p                     *parser
 	codec                 Codec
+	cpType                string
 	cp                    Compressor
 	dc                    Decompressor
 	maxReceiveMessageSize int
@@ -609,7 +614,12 @@ func (ss *serverStream) SendMsg(m interface{}) (err error) {
 	if ss.statsHandler != nil {
 		outPayload = &stats.OutPayload{}
 	}
-	hdr, data, err := encode(ss.codec, m, ss.cp, bytes.NewBuffer([]byte{}), outPayload)
+	if ss.cpType != "" {
+		if encoding.GetCompressor(ss.cpType) == nil && (ss.cp == nil || ss.cp != nil && ss.cp.Type() != ss.cpType) {
+			return Errorf(codes.Internal, "grpc: Compressor is not installed for grpc-encoding %q", ss.cpType)
+		}
+	}
+	hdr, data, err := encode(ss.codec, m, ss.cp, outPayload, encoding.GetCompressor(ss.cpType))
 	if err != nil {
 		return err
 	}
@@ -649,7 +659,7 @@ func (ss *serverStream) RecvMsg(m interface{}) (err error) {
 	if ss.statsHandler != nil {
 		inPayload = &stats.InPayload{}
 	}
-	if err := recv(ss.p, ss.codec, ss.s, ss.dc, m, ss.maxReceiveMessageSize, inPayload); err != nil {
+	if err := recv(ss.p, ss.codec, ss.s, ss.dc, m, ss.maxReceiveMessageSize, inPayload, encoding.GetCompressor(ss.cpType)); err != nil {
 		if err == io.EOF {
 			return err
 		}

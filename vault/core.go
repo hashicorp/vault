@@ -661,6 +661,57 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 	return c.tokenStore.Lookup(token)
 }
 
+// fetchEntityAndDerivedPolicies returns the entity object for the given entity
+// ID. If the entity is merged into a different entity object, the entity into
+// which the given entity ID is merged into will be returned. This function
+// also returns the cumulative list of policies that the entity is entitled to.
+// This list includes the policies from the entity itself and from all the
+// groups in which the given entity ID is a member of.
+func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity, []string, error) {
+	if entityID == "" {
+		return nil, nil, nil
+	}
+
+	//c.logger.Debug("core: entity set on the token", "entity_id", te.EntityID)
+
+	// Fetch the entity
+	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
+	if err != nil {
+		c.logger.Error("core: failed to lookup entity using its ID", "error", err)
+		return nil, nil, err
+	}
+
+	if entity == nil {
+		// If there was no corresponding entity object found, it is
+		// possible that the entity got merged into another entity. Try
+		// finding entity based on the merged entity index.
+		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, false)
+		if err != nil {
+			c.logger.Error("core: failed to lookup entity in merged entity ID index", "error", err)
+			return nil, nil, err
+		}
+	}
+
+	var policies []string
+	if entity != nil {
+		//c.logger.Debug("core: entity successfully fetched; adding entity policies to token's policies to create ACL")
+
+		// Attach the policies on the entity
+		policies = append(policies, entity.Policies...)
+
+		groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
+		if err != nil {
+			c.logger.Error("core: failed to fetch group policies", "error", err)
+			return nil, nil, err
+		}
+
+		// Attach the policies from all the groups
+		policies = append(policies, groupPolicies...)
+	}
+
+	return entity, policies, err
+}
+
 func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntry, *identity.Entity, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
@@ -688,46 +739,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 
 	tokenPolicies := te.Policies
 
-	var entity *identity.Entity
-
-	// Append the policies of the entity to those on the tokens and create ACL
-	// off of the combined list.
-	if te.EntityID != "" {
-		//c.logger.Debug("core: entity set on the token", "entity_id", te.EntityID)
-		// Fetch entity for the entity ID in the token entry
-		entity, err = c.identityStore.MemDBEntityByID(te.EntityID, false)
-		if err != nil {
-			c.logger.Error("core: failed to lookup entity using its ID", "error", err)
-			return nil, nil, nil, ErrInternalError
-		}
-
-		if entity == nil {
-			// If there was no corresponding entity object found, it is
-			// possible that the entity got merged into another entity. Try
-			// finding entity based on the merged entity index.
-			entity, err = c.identityStore.MemDBEntityByMergedEntityID(te.EntityID, false)
-			if err != nil {
-				c.logger.Error("core: failed to lookup entity in merged entity ID index", "error", err)
-				return nil, nil, nil, ErrInternalError
-			}
-		}
-
-		if entity != nil {
-			//c.logger.Debug("core: entity successfully fetched; adding entity policies to token's policies to create ACL")
-			// Attach the policies on the entity to the policies tied to the token
-			tokenPolicies = append(tokenPolicies, entity.Policies...)
-
-			groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
-			if err != nil {
-				c.logger.Error("core: failed to fetch group policies", "error", err)
-				return nil, nil, nil, ErrInternalError
-			}
-
-			// Attach the policies from all the groups to which this entity ID
-			// belongs to
-			tokenPolicies = append(tokenPolicies, groupPolicies...)
-		}
+	entity, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
+	if err != nil {
+		return nil, nil, nil, ErrInternalError
 	}
+
+	tokenPolicies = append(tokenPolicies, derivedPolicies...)
 
 	// Construct the corresponding ACL object
 	acl, err := c.policyStore.ACL(tokenPolicies...)
@@ -983,6 +1000,19 @@ func (c *Core) ResetUnsealProcess() {
 func (c *Core) Unseal(key []byte) (bool, error) {
 	defer metrics.MeasureSince([]string{"core", "unseal"}, time.Now())
 
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
+	// Explicitly check for init status. This also checks if the seal
+	// configuration is valid (i.e. non-nil).
+	init, err := c.Initialized()
+	if err != nil {
+		return false, err
+	}
+	if !init {
+		return false, ErrNotInit
+	}
+
 	// Verify the key length
 	min, max := c.barrier.KeyLength()
 	max += shamir.ShareOverhead
@@ -993,26 +1023,18 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		return false, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
 	}
 
-	// Get the seal configuration
+	// Get the barrier seal configuration
 	config, err := c.seal.BarrierConfig()
 	if err != nil {
 		return false, err
 	}
-
-	// Ensure the barrier is initialized
-	if config == nil {
-		return false, ErrNotInit
-	}
-
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
 
 	// Check if already unsealed
 	if !c.sealed {
 		return true, nil
 	}
 
-	masterKey, err := c.unsealPart(config, key)
+	masterKey, err := c.unsealPart(config, key, false)
 	if err != nil {
 		return false, err
 	}
@@ -1023,7 +1045,49 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	return false, nil
 }
 
-func (c *Core) unsealPart(config *SealConfig, key []byte) ([]byte, error) {
+// UnsealWithRecoveryKeys is used to provide one of the recovery key shares to
+// unseal the Vault.
+func (c *Core) UnsealWithRecoveryKeys(key []byte) (bool, error) {
+	// Explicitly check for init status
+	init, err := c.Initialized()
+	if err != nil {
+		return false, err
+	}
+	if !init {
+		return false, ErrNotInit
+	}
+
+	var config *SealConfig
+	// If recovery keys are supported then use recovery seal config to unseal
+	if c.seal.RecoveryKeySupported() {
+		config, err = c.seal.RecoveryConfig()
+		if err != nil {
+			return false, err
+		}
+	}
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
+	// Check if already unsealed
+	if !c.sealed {
+		return true, nil
+	}
+
+	masterKey, err := c.unsealPart(config, key, true)
+	if err != nil {
+		return false, err
+	}
+	if masterKey != nil {
+		return c.unsealInternal(masterKey)
+	}
+
+	return false, nil
+}
+
+// unsealPart takes in a key share, and returns the master key if the threshold
+// is met. If recovery keys are supported, recovery key shares may be provided.
+func (c *Core) unsealPart(config *SealConfig, key []byte, useRecoveryKeys bool) ([]byte, error) {
 	// Check if we already have this piece
 	if c.unlockInfo != nil {
 		for _, existing := range c.unlockInfo.Parts {
@@ -1044,7 +1108,8 @@ func (c *Core) unsealPart(config *SealConfig, key []byte) ([]byte, error) {
 	// Store this key
 	c.unlockInfo.Parts = append(c.unlockInfo.Parts, key)
 
-	// Check if we don't have enough keys to unlock
+	// Check if we don't have enough keys to unlock, proceed through the rest of
+	// the call only if we have met the threshold
 	if len(c.unlockInfo.Parts) < config.SecretThreshold {
 		if c.logger.IsDebug() {
 			c.logger.Debug("core: cannot unseal, not enough keys", "keys", len(c.unlockInfo.Parts), "threshold", config.SecretThreshold, "nonce", c.unlockInfo.Nonce)
@@ -1054,29 +1119,63 @@ func (c *Core) unsealPart(config *SealConfig, key []byte) ([]byte, error) {
 
 	// Best-effort memzero of unlock parts once we're done with them
 	defer func() {
-		for i, _ := range c.unlockInfo.Parts {
+		for i := range c.unlockInfo.Parts {
 			memzero(c.unlockInfo.Parts[i])
 		}
 		c.unlockInfo = nil
 	}()
 
-	// Recover the master key
-	var masterKey []byte
+	// Recover the split key. recoveredKey is the shamir combined
+	// key, or the single provided key if the threshold is 1.
+	var recoveredKey []byte
 	var err error
 	if config.SecretThreshold == 1 {
-		masterKey = make([]byte, len(c.unlockInfo.Parts[0]))
-		copy(masterKey, c.unlockInfo.Parts[0])
+		recoveredKey = make([]byte, len(c.unlockInfo.Parts[0]))
+		copy(recoveredKey, c.unlockInfo.Parts[0])
 	} else {
-		masterKey, err = shamir.Combine(c.unlockInfo.Parts)
+		recoveredKey, err = shamir.Combine(c.unlockInfo.Parts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compute master key: %v", err)
 		}
 	}
 
-	return masterKey, nil
+	if c.seal.RecoveryKeySupported() && useRecoveryKeys {
+		// Verify recovery key
+		if err := c.seal.VerifyRecoveryKey(recoveredKey); err != nil {
+			return nil, err
+		}
+
+		// Get stored keys and shamir combine into single master key. Unsealing with
+		// recovery keys currently does not support: 1) mixed stored and non-stored
+		// keys setup, nor 2) seals that support recovery keys but not stored keys.
+		// If insuffiencient shares are provided, shamir.Combine will error, and if
+		// no stored keys are found it will return masterKey as nil.
+		var masterKey []byte
+		if c.seal.StoredKeysSupported() {
+			masterKeyShares, err := c.seal.GetStoredKeys()
+			if err != nil {
+				return nil, fmt.Errorf("unable to retrieve stored keys: %v", err)
+			}
+
+			if len(masterKeyShares) == 1 {
+				return masterKeyShares[0], nil
+			}
+
+			masterKey, err = shamir.Combine(masterKeyShares)
+			if err != nil {
+				return nil, fmt.Errorf("failed to compute master key: %v", err)
+			}
+		}
+		return masterKey, nil
+	}
+
+	// If this is not a recovery key-supported seal, then the recovered key is
+	// the master key to be returned.
+	return recoveredKey, nil
 }
 
-// This must be called with the state write lock held
+// unsealInternal takes in the master key and attempts to unseal the barrier.
+// N.B.: This must be called with the state write lock held.
 func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	defer memzero(masterKey)
 

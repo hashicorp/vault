@@ -876,7 +876,7 @@ func (f *framer) parsePreparedMetadata() preparedMetadata {
 	}
 
 	if meta.flags&flagHasMorePages == flagHasMorePages {
-		meta.pagingState = f.readBytes()
+		meta.pagingState = copyBytes(f.readBytes())
 	}
 
 	if meta.flags&flagNoMetaData == flagNoMetaData {
@@ -961,7 +961,7 @@ func (f *framer) parseResultMetadata() resultMetadata {
 	meta.actualColCount = meta.colCount
 
 	if meta.flags&flagHasMorePages == flagHasMorePages {
-		meta.pagingState = f.readBytes()
+		meta.pagingState = copyBytes(f.readBytes())
 	}
 
 	if meta.flags&flagNoMetaData == flagNoMetaData {

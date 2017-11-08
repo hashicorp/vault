@@ -124,6 +124,10 @@ func (b *backend) pathRoleTagUpdate(
 		resp.AddWarning("Role does not allow instance migration. Login will not be allowed with this tag unless the role value is updated.")
 	}
 
+	if disallowReauthentication && allowInstanceMigration {
+		return logical.ErrorResponse("cannot set both disallow_reauthentication and allow_instance_migration"), nil
+	}
+
 	// max_ttl for the role tag should be less than the max_ttl set on the role.
 	maxTTL := time.Duration(data.Get("max_ttl").(int)) * time.Second
 

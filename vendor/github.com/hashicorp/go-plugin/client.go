@@ -606,7 +606,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 			if int(coreProtocol) != CoreProtocolVersion {
 				err = fmt.Errorf("Incompatible core API version with plugin. "+
-					"Plugin version: %s, Ours: %d\n\n"+
+					"Plugin version: %s, Core version: %d\n\n"+
 					"To fix this, the plugin usually only needs to be recompiled.\n"+
 					"Please report this to the plugin author.", parts[0], CoreProtocolVersion)
 				return
@@ -624,7 +624,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		// Test the API version
 		if uint(protocol) != c.config.ProtocolVersion {
 			err = fmt.Errorf("Incompatible API version with plugin. "+
-				"Plugin version: %s, Ours: %d", parts[1], c.config.ProtocolVersion)
+				"Plugin version: %s, Core version: %d", parts[1], c.config.ProtocolVersion)
 			return
 		}
 

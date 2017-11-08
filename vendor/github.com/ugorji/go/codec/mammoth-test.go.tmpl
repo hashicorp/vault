@@ -49,11 +49,11 @@ func doTestMammothSlices(t *testing.T, h Handle) {
     // fmt.Printf(">>>> running mammoth slice v{{$i}}: %v\n", v)
     var v{{$i}}v1, v{{$i}}v2, v{{$i}}v3, v{{$i}}v4 []{{ .Elem }}
 	v{{$i}}v1 = v
-	bs{{$i}}, _ := testMarshalErr(v{{$i}}v1, h, t, "enc-slice-v{{$i}}")
+	bs{{$i}} := testMarshalErr(v{{$i}}v1, h, t, "enc-slice-v{{$i}}")
     if v != nil { v{{$i}}v2 = make([]{{ .Elem }}, len(v)) }
 	testUnmarshalErr(v{{$i}}v2, bs{{$i}}, h, t, "dec-slice-v{{$i}}")
 	testDeepEqualErr(v{{$i}}v1, v{{$i}}v2, t, "equal-slice-v{{$i}}")
-	bs{{$i}}, _ = testMarshalErr(&v{{$i}}v1, h, t, "enc-slice-v{{$i}}-p")
+	bs{{$i}} = testMarshalErr(&v{{$i}}v1, h, t, "enc-slice-v{{$i}}-p")
 	v{{$i}}v2 = nil
 	testUnmarshalErr(&v{{$i}}v2, bs{{$i}}, h, t, "dec-slice-v{{$i}}-p")
 	testDeepEqualErr(v{{$i}}v1, v{{$i}}v2, t, "equal-slice-v{{$i}}-p")
@@ -61,12 +61,12 @@ func doTestMammothSlices(t *testing.T, h Handle) {
 	v{{$i}}v2 = nil
     if v != nil { v{{$i}}v2 = make([]{{ .Elem }}, len(v)) }
     v{{$i}}v3 = {{ .MethodNamePfx "type" false }}(v{{$i}}v1)
-    bs{{$i}}, _ = testMarshalErr(v{{$i}}v3, h, t, "enc-slice-v{{$i}}-custom")
+    bs{{$i}} = testMarshalErr(v{{$i}}v3, h, t, "enc-slice-v{{$i}}-custom")
     v{{$i}}v4 = {{ .MethodNamePfx "type" false }}(v{{$i}}v2)
     testUnmarshalErr(v{{$i}}v4, bs{{$i}}, h, t, "dec-slice-v{{$i}}-custom")
     testDeepEqualErr(v{{$i}}v3, v{{$i}}v4, t, "equal-slice-v{{$i}}-custom")
     v{{$i}}v2 = nil
-    bs{{$i}}, _ = testMarshalErr(&v{{$i}}v3, h, t, "enc-slice-v{{$i}}-custom-p")
+    bs{{$i}} = testMarshalErr(&v{{$i}}v3, h, t, "enc-slice-v{{$i}}-custom-p")
     v{{$i}}v4 = {{ .MethodNamePfx "type" false }}(v{{$i}}v2)
     testUnmarshalErr(&v{{$i}}v4, bs{{$i}}, h, t, "dec-slice-v{{$i}}-custom-p")
     testDeepEqualErr(v{{$i}}v3, v{{$i}}v4, t, "equal-slice-v{{$i}}-custom-p")
@@ -81,11 +81,11 @@ func doTestMammothMaps(t *testing.T, h Handle) {
     // fmt.Printf(">>>> running mammoth map v{{$i}}: %v\n", v)
     var v{{$i}}v1, v{{$i}}v2 map[{{ .MapKey }}]{{ .Elem }}
 	v{{$i}}v1 = v
-	bs{{$i}}, _ := testMarshalErr(v{{$i}}v1, h, t, "enc-map-v{{$i}}")
+	bs{{$i}} := testMarshalErr(v{{$i}}v1, h, t, "enc-map-v{{$i}}")
     if v != nil { v{{$i}}v2 = make(map[{{ .MapKey }}]{{ .Elem }}, len(v)) }
 	testUnmarshalErr(v{{$i}}v2, bs{{$i}}, h, t, "dec-map-v{{$i}}")
 	testDeepEqualErr(v{{$i}}v1, v{{$i}}v2, t, "equal-map-v{{$i}}")
-	bs{{$i}}, _ = testMarshalErr(&v{{$i}}v1, h, t, "enc-map-v{{$i}}-p")
+	bs{{$i}} = testMarshalErr(&v{{$i}}v1, h, t, "enc-map-v{{$i}}-p")
 	v{{$i}}v2 = nil
 	testUnmarshalErr(&v{{$i}}v2, bs{{$i}}, h, t, "dec-map-v{{$i}}-p")
 	testDeepEqualErr(v{{$i}}v1, v{{$i}}v2, t, "equal-map-v{{$i}}-p")

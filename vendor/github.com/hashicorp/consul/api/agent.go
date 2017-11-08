@@ -15,6 +15,7 @@ type AgentCheck struct {
 	Output      string
 	ServiceID   string
 	ServiceName string
+	Definition  HealthCheckDefinition
 }
 
 // AgentService represents a service known to the agent

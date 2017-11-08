@@ -70,7 +70,10 @@ type http2Server struct {
 	fc         *inFlow
 	// sendQuotaPool provides flow control to outbound message.
 	sendQuotaPool *quotaPool
-	stats         stats.Handler
+	// localSendQuota limits the amount of data that can be scheduled
+	// for writing before it is actually written out.
+	localSendQuota *quotaPool
+	stats          stats.Handler
 	// Flag to keep track of reading activity on transport.
 	// 1 is true and 0 is false.
 	activity uint32 // Accessed atomically.
@@ -152,12 +155,12 @@ func newHTTP2Server(conn net.Conn, config *ServerConfig) (_ ServerTransport, err
 			Val: uint32(iwz)})
 	}
 	if err := framer.fr.WriteSettings(isettings...); err != nil {
-		return nil, connectionErrorf(true, err, "transport: %v", err)
+		return nil, connectionErrorf(false, err, "transport: %v", err)
 	}
 	// Adjust the connection flow control window if needed.
 	if delta := uint32(icwz - defaultWindowSize); delta > 0 {
 		if err := framer.fr.WriteWindowUpdate(0, delta); err != nil {
-			return nil, connectionErrorf(true, err, "transport: %v", err)
+			return nil, connectionErrorf(false, err, "transport: %v", err)
 		}
 	}
 	kp := config.KeepaliveParams
@@ -199,6 +202,7 @@ func newHTTP2Server(conn net.Conn, config *ServerConfig) (_ ServerTransport, err
 		controlBuf:        newControlBuffer(),
 		fc:                &inFlow{limit: uint32(icwz)},
 		sendQuotaPool:     newQuotaPool(defaultWindowSize),
+		localSendQuota:    newQuotaPool(defaultLocalSendQuota),
 		state:             reachable,
 		activeStreams:     make(map[uint32]*Stream),
 		streamSendQuota:   defaultWindowSize,
@@ -223,6 +227,31 @@ func newHTTP2Server(conn net.Conn, config *ServerConfig) (_ ServerTransport, err
 		t.stats.HandleConn(t.ctx, connBegin)
 	}
 	t.framer.writer.Flush()
+
+	// Check the validity of client preface.
+	preface := make([]byte, len(clientPreface))
+	if _, err := io.ReadFull(t.conn, preface); err != nil {
+		return nil, connectionErrorf(false, err, "transport: http2Server.HandleStreams failed to receive the preface from client: %v", err)
+	}
+	if !bytes.Equal(preface, clientPreface) {
+		return nil, connectionErrorf(false, nil, "transport: http2Server.HandleStreams received bogus greeting from client: %q", preface)
+	}
+
+	frame, err := t.framer.fr.ReadFrame()
+	if err == io.EOF || err == io.ErrUnexpectedEOF {
+		t.Close()
+		return
+	}
+	if err != nil {
+		return nil, connectionErrorf(false, err, "transport: http2Server.HandleStreams failed to read initial settings frame: %v", err)
+	}
+	atomic.StoreUint32(&t.activity, 1)
+	sf, ok := frame.(*http2.SettingsFrame)
+	if !ok {
+		return nil, connectionErrorf(false, nil, "transport: http2Server.HandleStreams saw invalid preface type %T from client", frame)
+	}
+	t.handleSettings(sf)
+
 	go func() {
 		loopyWriter(t.ctx, t.controlBuf, t.itemHandler)
 		t.Close()
@@ -316,7 +345,6 @@ func (t *http2Server) operateHeaders(frame *http2.MetaHeadersFrame, handle func(
 	}
 	t.maxStreamID = streamID
 	s.sendQuotaPool = newQuotaPool(int(t.streamSendQuota))
-	s.localSendQuota = newQuotaPool(defaultLocalSendQuota)
 	t.activeStreams[streamID] = s
 	if len(t.activeStreams) == 1 {
 		t.idle = time.Time{}
@@ -346,6 +374,10 @@ func (t *http2Server) operateHeaders(frame *http2.MetaHeadersFrame, handle func(
 			t.updateWindow(s, uint32(n))
 		},
 	}
+	s.waiters = waiters{
+		ctx:  s.ctx,
+		tctx: t.ctx,
+	}
 	handle(s)
 	return
 }
@@ -354,41 +386,6 @@ func (t *http2Server) operateHeaders(frame *http2.MetaHeadersFrame, handle func(
 // typically run in a separate goroutine.
 // traceCtx attaches trace to ctx and returns the new context.
 func (t *http2Server) HandleStreams(handle func(*Stream), traceCtx func(context.Context, string) context.Context) {
-	// Check the validity of client preface.
-	preface := make([]byte, len(clientPreface))
-	if _, err := io.ReadFull(t.conn, preface); err != nil {
-		// Only log if it isn't a simple tcp accept check (ie: tcp balancer doing open/close socket)
-		if err != io.EOF {
-			errorf("transport: http2Server.HandleStreams failed to receive the preface from client: %v", err)
-		}
-		t.Close()
-		return
-	}
-	if !bytes.Equal(preface, clientPreface) {
-		errorf("transport: http2Server.HandleStreams received bogus greeting from client: %q", preface)
-		t.Close()
-		return
-	}
-
-	frame, err := t.framer.fr.ReadFrame()
-	if err == io.EOF || err == io.ErrUnexpectedEOF {
-		t.Close()
-		return
-	}
-	if err != nil {
-		errorf("transport: http2Server.HandleStreams failed to read initial settings frame: %v", err)
-		t.Close()
-		return
-	}
-	atomic.StoreUint32(&t.activity, 1)
-	sf, ok := frame.(*http2.SettingsFrame)
-	if !ok {
-		errorf("transport: http2Server.HandleStreams saw invalid preface type %T from client", frame)
-		t.Close()
-		return
-	}
-	t.handleSettings(sf)
-
 	for {
 		frame, err := t.framer.fr.ReadFrame()
 		atomic.StoreUint32(&t.activity, 1)
@@ -496,7 +493,6 @@ func (t *http2Server) updateFlowControl(n uint32) {
 	t.mu.Unlock()
 	t.controlBuf.put(&windowUpdate{0, t.fc.newLimit(n)})
 	t.controlBuf.put(&settings{
-		ack: false,
 		ss: []http2.Setting{
 			{
 				ID:  http2.SettingInitialWindowSize,
@@ -594,12 +590,29 @@ func (t *http2Server) handleSettings(f *http2.SettingsFrame) {
 	if f.IsAck() {
 		return
 	}
-	var ss []http2.Setting
+	var rs []http2.Setting
+	var ps []http2.Setting
 	f.ForeachSetting(func(s http2.Setting) error {
-		ss = append(ss, s)
+		if t.isRestrictive(s) {
+			rs = append(rs, s)
+		} else {
+			ps = append(ps, s)
+		}
 		return nil
 	})
-	t.controlBuf.put(&settings{ack: true, ss: ss})
+	t.applySettings(rs)
+	t.controlBuf.put(&settingsAck{})
+	t.applySettings(ps)
+}
+
+func (t *http2Server) isRestrictive(s http2.Setting) bool {
+	switch s.ID {
+	case http2.SettingInitialWindowSize:
+		// Note: we don't acquire a lock here to read streamSendQuota
+		// because the same goroutine updates it later.
+		return s.Val < t.streamSendQuota
+	}
+	return false
 }
 
 func (t *http2Server) applySettings(ss []http2.Setting) {
@@ -666,7 +679,7 @@ func (t *http2Server) handlePing(f *http2.PingFrame) {
 
 	if t.pingStrikes > maxPingStrikes {
 		// Send goaway and close the connection.
-		errorf("transport: Got to too many pings from the client, closing the connection.")
+		errorf("transport: Got too many pings from the client, closing the connection.")
 		t.controlBuf.put(&goAway{code: http2.ErrCodeEnhanceYourCalm, debugData: []byte("too_many_pings"), closeConn: true})
 	}
 }
@@ -845,9 +858,7 @@ func (t *http2Server) Write(s *Stream, hdr []byte, data []byte, opts *Options) e
 	var (
 		streamQuota    int
 		streamQuotaVer uint32
-		localSendQuota int
 		err            error
-		sqChan         <-chan int
 	)
 	for _, r := range [][]byte{hdr, data} {
 		for len(r) > 0 {
@@ -856,43 +867,38 @@ func (t *http2Server) Write(s *Stream, hdr []byte, data []byte, opts *Options) e
 				size = len(r)
 			}
 			if streamQuota == 0 { // Used up all the locally cached stream quota.
-				sqChan, streamQuotaVer = s.sendQuotaPool.acquireWithVersion()
-				// Wait until the stream has some quota to send the data.
-				streamQuota, err = wait(s.ctx, t.ctx, nil, nil, sqChan)
-				if err != nil {
-					return err
-				}
-			}
-			if localSendQuota <= 0 {
-				localSendQuota, err = wait(s.ctx, t.ctx, nil, nil, s.localSendQuota.acquire())
+				// Get all the stream quota there is.
+				streamQuota, streamQuotaVer, err = s.sendQuotaPool.get(math.MaxInt32, s.waiters)
 				if err != nil {
 					return err
 				}
 			}
 			if size > streamQuota {
 				size = streamQuota
-			} // No need to do that for localSendQuota since that's only a soft limit.
-			// Wait until the transport has some quota to send the data.
-			tq, err := wait(s.ctx, t.ctx, nil, nil, t.sendQuotaPool.acquire())
+			}
+			// Get size worth quota from transport.
+			tq, _, err := t.sendQuotaPool.get(size, s.waiters)
 			if err != nil {
 				return err
 			}
 			if tq < size {
 				size = tq
 			}
-			if tq > size {
-				t.sendQuotaPool.add(tq - size)
+			ltq, _, err := t.localSendQuota.get(size, s.waiters)
+			if err != nil {
+				return err
 			}
+			// even if ltq is smaller than size we don't adjust size since,
+			// ltq is only a soft limit.
 			streamQuota -= size
-			localSendQuota -= size
 			p := r[:size]
 			// Reset ping strikes when sending data since this might cause
 			// the peer to send ping.
 			atomic.StoreUint32(&t.resetPingStrikes, 1)
 			success := func() {
-				sz := size
+				ltq := ltq
 				t.controlBuf.put(&dataFrame{streamID: s.id, endStream: false, d: p, f: func() {
-					s.localSendQuota.add(sz)
+					t.localSendQuota.add(ltq)
 				}})
 				r = r[size:]
 			}
@@ -903,7 +909,7 @@ func (t *http2Server) Write(s *Stream, hdr []byte, data []byte, opts *Options) e
 			if !s.sendQuotaPool.compareAndExecute(streamQuotaVer, success, failure) {
 				// Couldn't send this chunk out.
 				t.sendQuotaPool.add(size)
-				localSendQuota += size
+				t.localSendQuota.add(ltq)
 				streamQuota = 0
 			}
 		}
@@ -911,9 +917,6 @@ func (t *http2Server) Write(s *Stream, hdr []byte, data []byte, opts *Options) e
 	if streamQuota > 0 {
 		// ADd the left over quota back to stream.
 		s.sendQuotaPool.add(streamQuota)
-	}
-	if localSendQuota > 0 {
-		s.localSendQuota.add(localSendQuota)
 	}
 	return nil
 }
@@ -1050,11 +1053,9 @@ func (t *http2Server) itemHandler(i item) error {
 	case *windowUpdate:
 		return t.framer.fr.WriteWindowUpdate(i.streamID, i.increment)
 	case *settings:
-		if i.ack {
-			t.applySettings(i.ss)
-			return t.framer.fr.WriteSettingsAck()
-		}
 		return t.framer.fr.WriteSettings(i.ss...)
+	case *settingsAck:
+		return t.framer.fr.WriteSettingsAck()
 	case *resetStream:
 		return t.framer.fr.WriteRSTStream(i.streamID, i.code)
 	case *goAway:

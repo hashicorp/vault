@@ -410,6 +410,10 @@ func (i *IdentityStore) pathEntityIDRead(req *logical.Request, d *framework.Fiel
 		return nil, nil
 	}
 
+	return i.handleEntityReadCommon(entity)
+}
+
+func (i *IdentityStore) handleEntityReadCommon(entity *identity.Entity) (*logical.Response, error) {
 	respData := map[string]interface{}{}
 	respData["id"] = entity.ID
 	respData["name"] = entity.Name
@@ -442,11 +446,29 @@ func (i *IdentityStore) pathEntityIDRead(req *logical.Request, d *framework.Fiel
 	// formats
 	respData["aliases"] = aliasesToReturn
 
-	resp := &logical.Response{
-		Data: respData,
+	// Fetch the groups this entity belongs to and return their identifiers
+	groups, inheritedGroups, err := i.groupsByEntityID(entity.ID)
+	if err != nil {
+		return nil, err
 	}
 
-	return resp, nil
+	groupIDs := make([]string, len(groups))
+	for i, group := range groups {
+		groupIDs[i] = group.ID
+	}
+	respData["direct_group_ids"] = groupIDs
+
+	inheritedGroupIDs := make([]string, len(inheritedGroups))
+	for i, group := range inheritedGroups {
+		inheritedGroupIDs[i] = group.ID
+	}
+	respData["inherited_group_ids"] = inheritedGroupIDs
+
+	respData["group_ids"] = append(groupIDs, inheritedGroupIDs...)
+
+	return &logical.Response{
+		Data: respData,
+	}, nil
 }
 
 // pathEntityIDDelete deletes the entity for a given entity ID
