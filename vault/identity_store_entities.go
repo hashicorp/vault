@@ -25,7 +25,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
-					Description: "ID of the entity",
+					Description: "ID of the entity. If set, updates the corresponding existing entity.",
 				},
 				"name": {
 					Type:        framework.TypeString,
@@ -33,11 +33,11 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				},
 				"metadata": {
 					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the entity.",
+					Description: "Metadata to be associated with the entity. Format should be a list of 'key=value' pairs.",
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Policies to be tied to the entity",
+					Description: "Policies to be tied to the entity. Format should be comma separated list of strings.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -52,19 +52,19 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
-					Description: "ID of the entity",
+					Description: "ID of the entity.",
 				},
 				"name": {
 					Type:        framework.TypeString,
-					Description: "Name of the entity",
+					Description: "Name of the entity.",
 				},
 				"metadata": {
 					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the entity.",
+					Description: "Metadata to be associated with the entity. Format should be a list of 'key=value' pairs.",
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Policies to be tied to the entity",
+					Description: "Policies to be tied to the entity. Format should be comma separated list of strings.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{

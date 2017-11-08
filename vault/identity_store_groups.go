@@ -23,7 +23,7 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
-					Description: "ID of the group.",
+					Description: "ID of the group. If set, updates the corresponding existing group.",
 				},
 				"type": {
 					Type:        framework.TypeString,
@@ -39,7 +39,7 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Policies to be tied to the group.",
+					Description: "Policies to be tied to the group. Format should be comma separated list of strings.",
 				},
 				"member_group_ids": {
 					Type:        framework.TypeCommaStringSlice,
