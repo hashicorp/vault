@@ -55,8 +55,8 @@ The following table describes them:
     <td><tt>VAULT_MAX_RETRIES</tt></td>
     <td>The maximum number of retries when a `5xx` error code is encountered. Default is `2`, for three total tries; set to `0` or less to disable retrying.</td>
   </tr>
-  <tr>
-    <td><tt>VAULT_REDIRECT_ADDR</tt></td>
+    <tr>
+    <td><tt>VAULT_API_ADDR</tt></td>
     <td>The address that should be used when clients are redirected to this node when in High Availability mode.</td>
   </tr>
   <tr>
