@@ -30,6 +30,16 @@ for instructions on setting the PATH on Linux and Mac.
 [This page](https://stackoverflow.com/questions/1618280/where-can-i-set-path-to-make-exe-on-windows)
 contains instructions for setting the PATH on Windows.
 
+## Installing the Vault snap
+
+Alternatively, on any of the [Linux distributions that support snaps](https://snapcraft.io/docs/core/install) you can install a fully confined Vault and get automatic updates:
+
+    $ sudo snap install vault
+
+If you want to help testing the latest changes, and get the new features earlier, you can install the snap from the edge channel:
+
+    $ sudo snap install vault --edge
+
 ## Verifying the Installation
 
 After installing Vault, verify the installation worked by opening a new
