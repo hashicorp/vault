@@ -117,19 +117,18 @@ func (i *IdentityStore) pathLookupEntityUpdate(req *logical.Request, d *framewor
 		aliasMountAccessor = aliasMountAccessorRaw.(string)
 	}
 
-	if inputCount == 0 {
+	switch {
+	case inputCount == 0:
 		return logical.ErrorResponse(fmt.Sprintf("query parameter not supplied")), nil
-	}
 
-	if inputCount != 1 {
+	case inputCount != 1:
 		switch {
 		case inputCount == 2 && aliasName != "" && aliasMountAccessor != "":
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("query parameter conflict; please supply distinct set of query parameters")), nil
 		}
-	}
 
-	if inputCount == 1 {
+	case inputCount == 1:
 		switch {
 		case aliasName != "" || aliasMountAccessor != "":
 			return logical.ErrorResponse(fmt.Sprintf("both 'alias_name' and 'alias_mount_accessor' needs to be set")), nil
@@ -228,19 +227,18 @@ func (i *IdentityStore) pathLookupGroupUpdate(req *logical.Request, d *framework
 		aliasMountAccessor = aliasMountAccessorRaw.(string)
 	}
 
-	if inputCount == 0 {
+	switch {
+	case inputCount == 0:
 		return logical.ErrorResponse(fmt.Sprintf("query parameter not supplied")), nil
-	}
 
-	if inputCount != 1 {
+	case inputCount != 1:
 		switch {
 		case inputCount == 2 && aliasName != "" && aliasMountAccessor != "":
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("query parameter conflict; please supply distinct set of query parameters")), nil
 		}
-	}
 
-	if inputCount == 1 {
+	case inputCount == 1:
 		switch {
 		case aliasName != "" || aliasMountAccessor != "":
 			return logical.ErrorResponse(fmt.Sprintf("both 'alias_name' and 'alias_mount_accessor' needs to be set")), nil
