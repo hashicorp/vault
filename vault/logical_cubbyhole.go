@@ -129,6 +129,9 @@ func (b *CubbyholeBackend) handleWrite(
 		Key:   req.ClientToken + "/" + req.Path,
 		Value: buf,
 	}
+	if req.WrapInfo != nil && req.WrapInfo.SealWrap {
+		entry.SealWrap = true
+	}
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, fmt.Errorf("failed to write: %v", err)
 	}

@@ -8,7 +8,7 @@ import (
 )
 
 // RequestWrapInfo is a struct that stores information about desired response
-// wrapping behavior
+// and seal wrapping behavior
 type RequestWrapInfo struct {
 	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
@@ -17,6 +17,10 @@ type RequestWrapInfo struct {
 	// The format to use for the wrapped response; if not specified it's a bare
 	// token
 	Format string `json:"format" structs:"format" mapstructure:"format" sentinel:""`
+
+	// A flag to conforming backends that data for a given request should be
+	// seal wrapped
+	SealWrap bool `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap" sentinel:""`
 }
 
 func (r *RequestWrapInfo) SentinelGet(key string) (interface{}, error) {
