@@ -883,6 +883,18 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 			resp.AddWarning("Role does not have any constraints set on it. Updates to this role will require a constraint to be set")
 		}
 
+		// People have been complaining about role becoming useless despite
+		// being able to read it. For sanity, verify that the index from
+		// role_id to role_name still exists. If the index is missing, return a
+		// warning.
+		roleIDIndex, err := b.roleIDEntry(req.Storage, role.ID)
+		if err != nil {
+			return nil, err
+		}
+		if roleIDIndex == nil {
+			resp.AddWarning("Role identifier to role name index is missing")
+		}
+
 		return resp, nil
 	}
 }
