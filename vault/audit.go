@@ -421,6 +421,10 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 		})
 
 		c.reloadFuncsLock.Unlock()
+	case "socket":
+		if c.logger.IsDebug() {
+			c.logger.Debug("audit: socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
+		}
 	}
 
 	return be, err
