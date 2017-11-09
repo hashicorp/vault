@@ -32,8 +32,8 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the entity",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the entity. Format should be a list of `key=value` pairs.",
+					Type:        framework.TypeKVPairs,
+					Description: "Metadata to be associated with the entity.",
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -59,8 +59,8 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the entity",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the entity. Format should be a comma separated list of `key=value` pairs.",
+					Type:        framework.TypeKVPairs,
+					Description: "Metadata to be associated with the entity.",
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -353,17 +353,13 @@ func (i *IdentityStore) handleEntityUpdateCommon(req *logical.Request, d *framew
 	}
 
 	// Get entity metadata
-
-	// Accept metadata in the form of map[string]string to be able to index on
-	// it
-	entityMetadataRaw, ok := d.GetOk("metadata")
-	if ok {
-		entity.Metadata, err = parseMetadata(entityMetadataRaw.([]string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to parse entity metadata: %v", err)), nil
-		}
+	metadata, ok, err := d.GetOkErr("metadata")
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
 	}
-
+	if ok {
+		entity.Metadata = metadata.(map[string]string)
+	}
 	// ID creation and some validations
 	err = i.sanitizeEntity(entity)
 	if err != nil {

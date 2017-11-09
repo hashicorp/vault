@@ -42,8 +42,8 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the alias. Format should be a list of `key=value` pairs.",
+					Type:        framework.TypeKVPairs,
+					Description: "Metadata to be associated with the alias.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -79,8 +79,8 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the alias. Format should be a list of `key=value` pairs.",
+					Type:        framework.TypeKVPairs,
+					Description: "Metadata to be associated with the alias.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -115,8 +115,8 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the alias. Format should be a comma separated list of `key=value` pairs.",
+					Type:        framework.TypeKVPairs,
+					Description: "Metadata to be associated with the alias.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -154,8 +154,8 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the alias. Format should be a comma separated list of `key=value` pairs.",
+					Type:        framework.TypeKVPairs,
+					Description: "Metadata to be associated with the alias.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -267,16 +267,13 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 	}
 
 	// Get alias metadata
-
-	// Accept metadata in the form of map[string]string to be able to index on
-	// it
+	metadata, ok, err := d.GetOkErr("metadata")
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
+	}
 	var aliasMetadata map[string]string
-	aliasMetadataRaw, ok := d.GetOk("metadata")
 	if ok {
-		aliasMetadata, err = parseMetadata(aliasMetadataRaw.([]string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to parse alias metadata: %v", err)), nil
-		}
+		aliasMetadata = metadata.(map[string]string)
 	}
 
 	aliasByFactors, err := i.MemDBAliasByFactors(mountValidationResp.MountAccessor, aliasName, false, false)

@@ -16,24 +16,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// parseMetadata takes in a slice of string and parses each item as a key value pair separated by an '=' sign.
-func parseMetadata(keyPairs []string) (map[string]string, error) {
-	if len(keyPairs) == 0 {
-		return nil, nil
-	}
-
-	metadata := make(map[string]string, len(keyPairs))
-	for _, keyPair := range keyPairs {
-		keyPairSlice := strings.SplitN(keyPair, "=", 2)
-		if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
-			return nil, fmt.Errorf("invalid key pair %q", keyPair)
-		}
-		metadata[keyPairSlice[0]] = keyPairSlice[1]
-	}
-
-	return metadata, nil
-}
-
 func (c *Core) loadIdentityStoreArtifacts() error {
 	var err error
 	if c.identityStore == nil {
