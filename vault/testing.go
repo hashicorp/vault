@@ -997,7 +997,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
 			ClientCAs:      testCluster.RootCAs,
-			ClientAuth:     tls.VerifyClientCertIfGiven,
+			ClientAuth:     tls.RequestClientCert,
 			NextProtos:     []string{"h2", "http/1.1"},
 			GetCertificate: certGetter.GetCertificate,
 		}
