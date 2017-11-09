@@ -884,15 +884,24 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 		}
 
 		// People have been complaining about role becoming useless despite
-		// being able to read it. For sanity, verify that the index from
-		// role_id to role_name still exists. If the index is missing, return a
-		// warning.
-		roleIDIndex, err := b.roleIDEntry(req.Storage, role.ID)
+		// being able to read it. It seems that the reason for that is not
+		// being able to find the role_id to role_name index. For sanity,
+		// verify that the index still exists. If the index is missing, add one
+		// and return a warning so it can be reported.
+		roleIDIndex, err := b.roleIDEntry(req.Storage, role.RoleID)
 		if err != nil {
 			return nil, err
 		}
 		if roleIDIndex == nil {
-			resp.AddWarning("Role identifier to role name index is missing")
+			// The index should never be nil for a valid role. If it is, create
+			// a new one.
+			err = b.setRoleIDEntry(req.Storage, role.RoleID, &roleIDStorageEntry{
+				Name: roleName,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to create secondary index for role_id %q: %v", role.RoleID, err)
+			}
+			resp.AddWarning("Role identifier was missing an index back to role name. A new index has been added. Please report this observation.")
 		}
 
 		return resp, nil
