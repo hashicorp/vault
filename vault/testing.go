@@ -1275,6 +1275,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			},
 		}
 		config := api.DefaultConfig()
+		if config.Error != nil {
+			t.Fatal(config.Error)
+		}
 		config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
 		config.HttpClient = client
 		apiClient, err := api.NewClient(config)

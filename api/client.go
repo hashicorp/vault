@@ -116,12 +116,12 @@ func DefaultConfig() *Config {
 	}
 	if err := http2.ConfigureTransport(transport); err != nil {
 		config.Error = err
-		return nil
+		return config
 	}
 
 	if err := config.ReadEnvironment(); err != nil {
 		config.Error = err
-		return nil
+		return config
 	}
 
 	// Ensure redirects are not automatically followed
