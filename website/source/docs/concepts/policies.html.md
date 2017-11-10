@@ -485,7 +485,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data 'path "..." {} \'
+  --data '{"rules":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-policy
 ```
 
@@ -509,7 +509,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data 'path "..." {} \'
+  --data '{"rules":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-existing-policy
 ```
 
