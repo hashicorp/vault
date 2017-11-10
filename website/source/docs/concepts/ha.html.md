@@ -28,6 +28,12 @@ scalability. In general, the bottleneck of Vault is the data store itself, not
 Vault core. For example: to increase the scalability of Vault with Consul, you
 would generally scale Consul instead of Vault.
 
+Certain storage backends can support high availability mode, which enables them
+to store both Vault's information in addition to the HA lock. However, a
+combination of storage and ha_storage backend may be specified if . For
+instance, a Vault cluster can be set up to use Consul as the ha_storage to
+manage the lock, and use Amazon S3 as the storage for all other persisted data. 
+
 The sections below explain the server communication patterns and each type of
 request handling in more detail. At a minimum, the requirements for redirection
 mode must be met for an HA cluster to work successfully.
