@@ -198,6 +198,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
 		var wrapFormat, creationPath string
+		var sealWrap bool
 
 		// Ensure no wrap info information is set other than, possibly, the TTL
 		if resp.WrapInfo != nil {
@@ -206,6 +207,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			}
 			wrapFormat = resp.WrapInfo.Format
 			creationPath = resp.WrapInfo.CreationPath
+			sealWrap = resp.WrapInfo.SealWrap
 			resp.WrapInfo = nil
 		}
 
@@ -230,6 +232,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 				TTL:          wrapTTL,
 				Format:       wrapFormat,
 				CreationPath: creationPath,
+				SealWrap:     sealWrap,
 			}
 		}
 	}
@@ -370,6 +373,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
 		var wrapFormat, creationPath string
+		var sealWrap bool
 
 		// Ensure no wrap info information is set other than, possibly, the TTL
 		if resp.WrapInfo != nil {
@@ -378,6 +382,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			}
 			wrapFormat = resp.WrapInfo.Format
 			creationPath = resp.WrapInfo.CreationPath
+			sealWrap = resp.WrapInfo.SealWrap
 			resp.WrapInfo = nil
 		}
 
@@ -400,6 +405,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 				TTL:          wrapTTL,
 				Format:       wrapFormat,
 				CreationPath: creationPath,
+				SealWrap:     sealWrap,
 			}
 		}
 	}

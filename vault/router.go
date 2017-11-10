@@ -468,8 +468,9 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	var wrapInfo *logical.RequestWrapInfo
 	if req.WrapInfo != nil {
 		wrapInfo = &logical.RequestWrapInfo{
-			TTL:    req.WrapInfo.TTL,
-			Format: req.WrapInfo.Format,
+			TTL:      req.WrapInfo.TTL,
+			Format:   req.WrapInfo.Format,
+			SealWrap: req.WrapInfo.SealWrap,
 		}
 	}
 
