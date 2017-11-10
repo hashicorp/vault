@@ -997,7 +997,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
 			ClientCAs:      testCluster.RootCAs,
-			ClientAuth:     tls.VerifyClientCertIfGiven,
+			ClientAuth:     tls.RequestClientCert,
 			NextProtos:     []string{"h2", "http/1.1"},
 			GetCertificate: certGetter.GetCertificate,
 		}
@@ -1120,8 +1120,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 
 		if opts != nil && opts.RawLogger != nil {
-			if hclogger, ok := opts.RawLogger.(*logbridge.Logger); ok {
-				coreConfig.Logger = hclogger.Named(fmt.Sprintf("core%d", i)).LogxiLogger()
+			switch opts.RawLogger.(type) {
+			case *logbridge.Logger:
+				coreConfig.Logger = opts.RawLogger.(*logbridge.Logger).Named(fmt.Sprintf("core%d", i)).LogxiLogger()
+			case *logbridge.LogxiLogger:
+				coreConfig.Logger = opts.RawLogger.(*logbridge.LogxiLogger).Named(fmt.Sprintf("core%d", i))
 			}
 		}
 

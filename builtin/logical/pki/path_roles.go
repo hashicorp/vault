@@ -362,6 +362,8 @@ func (b *backend) pathRoleRead(
 	delete(resp.Data, "lease")
 	delete(resp.Data, "lease_max")
 	delete(resp.Data, "allowed_base_domain")
+	delete(resp.Data, "allow_base_domain")
+	delete(resp.Data, "AllowExpirationPastCA")
 
 	return resp, nil
 }
