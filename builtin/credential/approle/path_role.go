@@ -857,55 +857,79 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 
 	lock := b.roleLock(roleName)
 	lock.RLock()
-	defer lock.RUnlock()
+	writeLockHeld := false
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	if err != nil {
+		lock.RUnlock()
 		return nil, err
-	} else if role == nil {
+	}
+
+	if role == nil {
+		lock.RUnlock()
 		return nil, nil
-	} else {
-		// Convert the 'time.Duration' values to second.
-		role.SecretIDTTL /= time.Second
-		role.TokenTTL /= time.Second
-		role.TokenMaxTTL /= time.Second
-		role.Period /= time.Second
+	}
 
-		// Create a map of data to be returned and remove sensitive information from it
-		data := structs.New(role).Map()
-		delete(data, "role_id")
-		delete(data, "hmac_key")
+	// Convert the 'time.Duration' values to second.
+	role.SecretIDTTL /= time.Second
+	role.TokenTTL /= time.Second
+	role.TokenMaxTTL /= time.Second
+	role.Period /= time.Second
 
-		resp := &logical.Response{
-			Data: data,
-		}
+	// Create a map of data to be returned and remove sensitive information from it
+	respData := structs.New(role).Map()
+	delete(respData, "role_id")
+	delete(respData, "hmac_key")
 
-		if err := validateRoleConstraints(role); err != nil {
-			resp.AddWarning("Role does not have any constraints set on it. Updates to this role will require a constraint to be set")
-		}
+	resp := &logical.Response{
+		Data: respData,
+	}
 
-		// People have been complaining about role becoming useless despite
-		// being able to read it. It seems that the reason for that is not
-		// being able to find the role_id to role_name index. For sanity,
-		// verify that the index still exists. If the index is missing, add one
-		// and return a warning so it can be reported.
-		roleIDIndex, err := b.roleIDEntry(req.Storage, role.RoleID)
+	if err := validateRoleConstraints(role); err != nil {
+		resp.AddWarning("Role does not have any constraints set on it. Updates to this role will require a constraint to be set")
+	}
+
+	// For sanity, verify that the index still exists. If the index is missing,
+	// add one and return a warning so it can be reported.
+	roleIDIndex, err := b.roleIDEntry(req.Storage, role.RoleID)
+	if err != nil {
+		lock.RUnlock()
+		return nil, err
+	}
+
+	if roleIDIndex == nil {
+		// Switch to a write lock
+		lock.RUnlock()
+		lock.Lock()
+		writeLockHeld = true
+
+		// Check again if the index is missing
+		roleIDIndex, err = b.roleIDEntry(req.Storage, role.RoleID)
 		if err != nil {
+			lock.Unlock()
 			return nil, err
 		}
+
 		if roleIDIndex == nil {
-			// The index should never be nil for a valid role. If it is, create
-			// a new one.
+			// Create a new index
 			err = b.setRoleIDEntry(req.Storage, role.RoleID, &roleIDStorageEntry{
 				Name: roleName,
 			})
 			if err != nil {
+				lock.Unlock()
 				return nil, fmt.Errorf("failed to create secondary index for role_id %q: %v", role.RoleID, err)
 			}
 			resp.AddWarning("Role identifier was missing an index back to role name. A new index has been added. Please report this observation.")
 		}
-
-		return resp, nil
 	}
+
+	if writeLockHeld {
+		lock.Unlock()
+	} else {
+		lock.RUnlock()
+	}
+
+	return resp, nil
 }
 
 // pathRoleDelete removes the role from the storage
