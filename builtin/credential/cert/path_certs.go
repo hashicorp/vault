@@ -67,6 +67,13 @@ seconds. Defaults to system/backend default TTL.`,
 				Description: `TTL for tokens issued by this backend.
 Defaults to system/backend default TTL time.`,
 			},
+			"period": &framework.FieldSchema{
+				Type: framework.TypeDurationSecond,
+				Description: `If set, indicates that the token generated using this role
+should never expire. The token should be renewed within the
+duration specified by this value. At each renewal, the token's
+TTL will be set to the value of this parameter.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -129,12 +136,15 @@ func (b *backend) pathCertRead(
 		duration = b.System().DefaultLeaseTTL()
 	}
 
+	period := cert.Period
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"certificate":  cert.Certificate,
 			"display_name": cert.DisplayName,
 			"policies":     cert.Policies,
 			"ttl":          duration / time.Second,
+			"period":       period / time.Second,
 		},
 	}, nil
 }
@@ -146,6 +156,15 @@ func (b *backend) pathCertWrite(
 	displayName := d.Get("display_name").(string)
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
+
+	periodRaw, ok := d.GetOk("period")
+	var period time.Duration
+	if ok {
+		period = time.Second * time.Duration(periodRaw.(int))
+	}
+	if period > b.System().MaxLeaseTTL() {
+		return logical.ErrorResponse(fmt.Sprintf("'period' of '%s' is greater than the backend's maximum lease TTL of '%s'", period.String(), b.System().MaxLeaseTTL().String())), nil
+	}
 
 	// Default the display name to the certificate name if not given
 	if displayName == "" {
@@ -177,6 +196,7 @@ func (b *backend) pathCertWrite(
 		DisplayName:  displayName,
 		Policies:     policies,
 		AllowedNames: allowedNames,
+		Period:       period,
 	}
 
 	// Parse the lease duration or default to backend/system default
@@ -210,6 +230,7 @@ type CertEntry struct {
 	Policies     []string
 	TTL          time.Duration
 	AllowedNames []string
+	Period       time.Duration
 }
 
 const pathCertHelpSyn = `

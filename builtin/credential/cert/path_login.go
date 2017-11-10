@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -84,31 +85,41 @@ func (b *backend) pathLogin(
 	skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 	akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
 
-	// Generate a response
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			InternalData: map[string]interface{}{
-				"subject_key_id":   skid,
-				"authority_key_id": akid,
-			},
-			Policies:    matched.Entry.Policies,
-			DisplayName: matched.Entry.DisplayName,
-			Metadata: map[string]string{
-				"cert_name":        matched.Entry.Name,
-				"common_name":      clientCerts[0].Subject.CommonName,
-				"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
-				"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
-			},
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       ttl,
-			},
-			Alias: &logical.Alias{
-				Name: clientCerts[0].SerialNumber.String(),
-			},
+	auth := &logical.Auth{
+		Period: matched.Entry.Period,
+		InternalData: map[string]interface{}{
+			"subject_key_id":   skid,
+			"authority_key_id": akid,
+		},
+		Policies:    matched.Entry.Policies,
+		DisplayName: matched.Entry.DisplayName,
+		Metadata: map[string]string{
+			"cert_name":        matched.Entry.Name,
+			"common_name":      clientCerts[0].Subject.CommonName,
+			"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
+			"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
+		},
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+			TTL:       ttl,
+		},
+		Alias: &logical.Alias{
+			Name: clientCerts[0].SerialNumber.String(),
 		},
 	}
-	return resp, nil
+
+	// If 'Period' is set, use the value of 'Period' as the TTL.
+	// Otherwise, set the normal TokenTTL.
+	if matched.Entry.Period > time.Duration(0) {
+		auth.TTL = matched.Entry.Period
+	} else {
+		auth.TTL = ttl
+	}
+
+	// Generate a response
+	return &logical.Response{
+		Auth: auth,
+	}, nil
 }
 
 func (b *backend) pathLoginRenew(
@@ -158,6 +169,15 @@ func (b *backend) pathLoginRenew(
 
 	if !policyutil.EquivalentPolicies(cert.Policies, req.Auth.Policies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
+	}
+
+	// If 'Period' is set on the Role, the token should never expire.
+	// Replenish the TTL with 'Period's value.
+	if cert.Period > time.Duration(0) {
+		// If 'Period' was updated after the token was issued,
+		// token will bear the updated 'Period' value as its TTL.
+		req.Auth.TTL = cert.Period
+		return &logical.Response{Auth: req.Auth}, nil
 	}
 
 	return framework.LeaseExtend(cert.TTL, 0, b.System())(req, d)
