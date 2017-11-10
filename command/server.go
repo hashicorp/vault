@@ -864,7 +864,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
 
 	info["cluster parameters path"] = testCluster.TempDir
-	infoKeys = append(infoKeys, "cluster parameters path", "log level")
+	infoKeys = append(infoKeys, "cluster parameters path")
 
 	for i, core := range testCluster.Cores {
 		info[fmt.Sprintf("node %d redirect address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
