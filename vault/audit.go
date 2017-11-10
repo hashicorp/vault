@@ -411,7 +411,9 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 
 		if c.logger.IsDebug() {
 			c.logger.Debug("audit: adding reload function", "path", entry.Path)
-			c.logger.Debug("audit: file backend options", "path", entry.Path, "file_path", entry.Options["file_path"])
+			if entry.Options != nil {
+				c.logger.Debug("audit: file backend options", "path", entry.Path, "file_path", entry.Options["file_path"])
+			}
 		}
 
 		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]interface{}) error {
@@ -424,11 +426,15 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 		c.reloadFuncsLock.Unlock()
 	case "socket":
 		if c.logger.IsDebug() {
-			c.logger.Debug("audit: socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
+			if entry.Options != nil {
+				c.logger.Debug("audit: socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
+			}
 		}
 	case "syslog":
 		if c.logger.IsDebug() {
-			c.logger.Debug("audit: syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
+			if entry.Options != nil {
+				c.logger.Debug("audit: syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
+			}
 		}
 	}
 
