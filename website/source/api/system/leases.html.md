@@ -90,7 +90,7 @@ $ curl \
 
 ## Renew Lease
 
-This endpoint renews a lease, requesting to extend the lease.
+This endpoint renews a lease, requesting to extend the lease. Be sure to check the returned TTL / lease duration to make sure that it has actually increased, as you may be limited by max TTL. A renewal request can still return a 200 OK even if the lease duration has not increased.  
 
 | Method   | Path                          | Produces               |
 | :------- | :---------------------------- | :--------------------- |
