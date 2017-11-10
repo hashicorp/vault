@@ -857,29 +857,30 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 
 	lock := b.roleLock(roleName)
 	lock.RLock()
-	writeLockHeld := false
+	lockRelease := lock.RUnlock
 
 	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
 	if err != nil {
-		lock.RUnlock()
+		lockRelease()
 		return nil, err
 	}
 
 	if role == nil {
-		lock.RUnlock()
+		lockRelease()
 		return nil, nil
 	}
 
-	// Convert the 'time.Duration' values to second.
-	role.SecretIDTTL /= time.Second
-	role.TokenTTL /= time.Second
-	role.TokenMaxTTL /= time.Second
-	role.Period /= time.Second
-
-	// Create a map of data to be returned and remove sensitive information from it
-	respData := structs.New(role).Map()
-	delete(respData, "role_id")
-	delete(respData, "hmac_key")
+	respData := map[string]interface{}{
+		"bind_secret_id":     role.BindSecretID,
+		"bound_cidr_list":    role.BoundCIDRList,
+		"period":             role.Period / time.Second,
+		"policies":           role.Policies,
+		"secret_id_num_uses": role.SecretIDNumUses,
+		"secret_id_ttl":      role.SecretIDTTL / time.Second,
+		"token_max_ttl":      role.TokenMaxTTL / time.Second,
+		"token_num_uses":     role.TokenNumUses,
+		"token_ttl":          role.TokenTTL / time.Second,
+	}
 
 	resp := &logical.Response{
 		Data: respData,
@@ -893,7 +894,7 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 	// add one and return a warning so it can be reported.
 	roleIDIndex, err := b.roleIDEntry(req.Storage, role.RoleID)
 	if err != nil {
-		lock.RUnlock()
+		lockRelease()
 		return nil, err
 	}
 
@@ -901,12 +902,12 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 		// Switch to a write lock
 		lock.RUnlock()
 		lock.Lock()
-		writeLockHeld = true
+		lockRelease = lock.Unlock
 
 		// Check again if the index is missing
 		roleIDIndex, err = b.roleIDEntry(req.Storage, role.RoleID)
 		if err != nil {
-			lock.Unlock()
+			lockRelease()
 			return nil, err
 		}
 
@@ -916,18 +917,14 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 				Name: roleName,
 			})
 			if err != nil {
-				lock.Unlock()
+				lockRelease()
 				return nil, fmt.Errorf("failed to create secondary index for role_id %q: %v", role.RoleID, err)
 			}
 			resp.AddWarning("Role identifier was missing an index back to role name. A new index has been added. Please report this observation.")
 		}
 	}
 
-	if writeLockHeld {
-		lock.Unlock()
-	} else {
-		lock.RUnlock()
-	}
+	lockRelease()
 
 	return resp, nil
 }
