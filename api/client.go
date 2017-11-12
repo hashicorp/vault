@@ -116,12 +116,12 @@ func DefaultConfig() *Config {
 	}
 	if err := http2.ConfigureTransport(transport); err != nil {
 		config.Error = err
-		return nil
+		return config
 	}
 
 	if err := config.ReadEnvironment(); err != nil {
 		config.Error = err
-		return nil
+		return config
 	}
 
 	// Ensure redirects are not automatically followed
@@ -177,7 +177,12 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	}
 
 	if foundClientCert {
-		clientTLSConfig.Certificates = []tls.Certificate{clientCert}
+		// We use this function to ignore the server's preferential list of
+		// CAs, otherwise any CA used for the cert auth backend must be in the
+		// server's CA pool
+		clientTLSConfig.GetClientCertificate = func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return &clientCert, nil
+		}
 	}
 
 	if t.TLSServerName != "" {

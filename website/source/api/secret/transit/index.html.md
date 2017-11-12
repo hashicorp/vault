@@ -789,6 +789,15 @@ supports signing.
 
 - `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
 
+- `context` `(string: "")` - Base64 encoded context for key derivation.
+   Required if key derivation is enabled; currently only available with ed25519
+   keys.
+
+ - `prehashed` `(bool: false)` - Set to `true` when the input is already
+   hashed. If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used
+   to hash the input should be indicated by the `algorithm` parameter.
+
+
 ### Sample Payload
 
 ```json
@@ -849,6 +858,14 @@ data.
 - `hmac` `(string: "")` – Specifies the signature output from the
   `/transit/hmac` function. Either this must be supplied or `signature` must be
   supplied.
+
+ - `context` `(string: "")` - Base64 encoded context for key derivation.
+   Required if key derivation is enabled; currently only available with ed25519
+   keys.
+
+ - `prehashed` `(bool: false)` - Set to `true` when the input is already
+   hashed. If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used
+   to hash the input should be indicated by the `algorithm` parameter.
 
 ### Sample Payload
 

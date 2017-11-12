@@ -95,7 +95,9 @@ func (m *Meta) Client() (*api.Client, error) {
 			TLSServerName: "",
 			Insecure:      m.flagInsecure,
 		}
-		config.ConfigureTLS(t)
+		if err := config.ConfigureTLS(t); err != nil {
+			return nil, err
+		}
 	}
 
 	// Build the client

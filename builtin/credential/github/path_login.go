@@ -96,6 +96,9 @@ func (b *backend) pathLogin(
 	}
 
 	for _, teamName := range verifyResp.TeamNames {
+		if teamName == "" {
+			continue
+		}
 		resp.Auth.GroupAliases = append(resp.Auth.GroupAliases, &logical.Alias{
 			Name: teamName,
 		})

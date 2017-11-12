@@ -52,7 +52,7 @@ func (b *backend) pathLoginUpdateAliasLookahead(req *logical.Request, data *fram
 func (b *backend) pathLoginUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	role, roleName, metadata, _, err := b.validateCredentials(req, data)
 	if err != nil || role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to validate SecretID: %s", err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("failed to validate credentials: %v", err)), nil
 	}
 
 	// Always include the role name, for later filtering
@@ -94,8 +94,12 @@ func (b *backend) pathLoginRenew(req *logical.Request, data *framework.FieldData
 		return nil, fmt.Errorf("failed to fetch role_name during renewal")
 	}
 
+	lock := b.roleLock(roleName)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	// Ensure that the Role still exists.
-	role, err := b.roleEntry(req.Storage, roleName)
+	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate role %s during renewal:%s", roleName, err)
 	}

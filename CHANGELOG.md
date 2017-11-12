@@ -52,6 +52,9 @@ BUG FIXES:
 
  * api: Fix panic when setting a custom HTTP client but with a nil transport
    [GH-3435] [GH-3437]
+ * api: Fix authing to the `cert` backend when the CA for the client cert is
+   not known to the server's listener [GH-2946]
+ * auth/approle: Create role ID index during read if a role is missing one [GH-3561]
  * auth/aws: Don't allow mutually exclusive options [GH-3291]
  * auth/radius: Fix logging in in some situations [GH-3461]
  * core: Fix memleak when a connection would connect to the cluster port and
