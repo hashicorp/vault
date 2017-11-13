@@ -163,7 +163,7 @@ func TestClientEnvSettings(t *testing.T) {
 	if len(tlsConfig.RootCAs.Subjects()) == 0 {
 		t.Fatalf("bad: expected a cert pool with at least one subject")
 	}
-	if tlsConfig.GetCertificate == nil {
+	if tlsConfig.GetClientCertificate == nil {
 		t.Fatalf("bad: expected client tls config to have a certificate getter")
 	}
 	if tlsConfig.InsecureSkipVerify != true {
