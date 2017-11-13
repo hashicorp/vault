@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/sethgrid/pester"
-	"golang.org/x/net/http2"
 )
 
 const EnvVaultAddress = "VAULT_ADDR"
@@ -113,10 +112,6 @@ func DefaultConfig() *Config {
 	transport.TLSHandshakeTimeout = 10 * time.Second
 	transport.TLSClientConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
-	}
-	if err := http2.ConfigureTransport(transport); err != nil {
-		config.Error = err
-		return config
 	}
 
 	if err := config.ReadEnvironment(); err != nil {
