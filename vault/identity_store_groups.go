@@ -34,8 +34,12 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the group.",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the group.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the group.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -74,8 +78,12 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the group.",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the group.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the group.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,

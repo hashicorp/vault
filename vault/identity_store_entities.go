@@ -32,8 +32,12 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the entity",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the entity. Format should be a list of 'key=value' pairs.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the entity.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -59,8 +63,12 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the entity.",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the entity. Format should be a list of 'key=value' pairs.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the entity.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
