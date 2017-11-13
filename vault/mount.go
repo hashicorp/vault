@@ -181,6 +181,7 @@ type MountEntry struct {
 	Config      MountConfig       `json:"config"`            // Configuration related to this mount (but not backend-derived)
 	Options     map[string]string `json:"options"`           // Backend options
 	Local       bool              `json:"local"`             // Local mounts are not replicated or affected by replication
+	SealWrap    bool              `json:"seal_wrap"`         // Whether to wrap CSPs
 	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
 }
 
@@ -190,7 +191,6 @@ type MountConfig struct {
 	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache    bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
 	PluginName      string        `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	SealWrap        bool          `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -199,7 +199,6 @@ type APIMountConfig struct {
 	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
 	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	SealWrap        bool   `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 // Clone returns a deep copy of the mount entry
