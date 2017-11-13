@@ -308,6 +308,11 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Default:     false,
 						Description: strings.TrimSpace(sysHelp["mount_local"][0]),
 					},
+					"seal_wrap": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     false,
+						Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
+					},
 					"plugin_name": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_plugin_name"][0]),
@@ -522,6 +527,11 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeBool,
 						Default:     false,
 						Description: strings.TrimSpace(sysHelp["mount_local"][0]),
+					},
+					"seal_wrap": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     false,
+						Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
 					},
 					"plugin_name": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -1363,9 +1373,9 @@ func (b *SystemBackend) handleMountTable(
 				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 				"force_no_cache":    entry.Config.ForceNoCache,
 				"plugin_name":       entry.Config.PluginName,
-				"seal_wrap":         entry.Config.SealWrap,
 			},
-			"local": entry.Local,
+			"local":     entry.Local,
+			"seal_wrap": entry.SealWrap,
 		}
 		resp.Data[entry.Path] = info
 	}
@@ -1388,6 +1398,7 @@ func (b *SystemBackend) handleMount(
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
+	sealWrap := data.Get("seal_wrap").(bool)
 
 	path = sanitizeMountPath(path)
 
@@ -1463,10 +1474,6 @@ func (b *SystemBackend) handleMount(
 		}
 	}
 
-	if apiConfig.SealWrap {
-		config.SealWrap = true
-	}
-
 	// Copy over the force no cache if set
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
@@ -1480,6 +1487,7 @@ func (b *SystemBackend) handleMount(
 		Description: description,
 		Config:      config,
 		Local:       local,
+		SealWrap:    sealWrap,
 	}
 
 	// Attempt mount
@@ -1904,7 +1912,8 @@ func (b *SystemBackend) handleAuthTable(
 				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
 				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 			},
-			"local": entry.Local,
+			"local":     entry.Local,
+			"seal_wrap": entry.SealWrap,
 		}
 		resp.Data[entry.Path] = info
 	}
@@ -1925,6 +1934,7 @@ func (b *SystemBackend) handleEnableAuth(
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
+	sealWrap := data.Get("seal_wrap").(bool)
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1970,6 +1980,7 @@ func (b *SystemBackend) handleEnableAuth(
 		Description: description,
 		Config:      config,
 		Local:       local,
+		SealWrap:    sealWrap,
 	}
 
 	// Attempt enabling
@@ -2962,6 +2973,10 @@ and is unaffected by replication.`,
 	"mount_plugin_name": {
 		`Name of the plugin to mount based from the name registered
 in the plugin catalog.`,
+	},
+
+	"seal_wrap": {
+		`Whether to turn on seal wrapping for the mount.`,
 	},
 
 	"tune_default_lease_ttl": {
