@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend - HTTP API"
-sidebar_current: "docs-http-secret-identity-entities"
+sidebar_current: "docs-http-secret-identity-entity"
 description: |-
   This is the API documentation for managing entities in the identity store.
 ---

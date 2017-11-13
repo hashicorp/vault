@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend - HTTP API"
-sidebar_current: "docs-http-secret-identity-group-aliases"
+sidebar_current: "docs-http-secret-identity-group-alias"
 description: |-
   This is the API documentation for managing the group aliases in the identity store.
 ---

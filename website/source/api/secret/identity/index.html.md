@@ -15,8 +15,8 @@ please see the
 
 ## API Sections
 
- * [Entities](entities.html)
- * [Entity Aliases](entity-aliases.html)
- * [Groups](groups.html)
- * [Group Aliases](group-aliases.html)
+ * [Entity](entity.html)
+ * [Entity Alias](entity-alias.html)
+ * [Group](group.html)
+ * [Group Alias](group-alias.html)
  * [Lookup](lookup.html)

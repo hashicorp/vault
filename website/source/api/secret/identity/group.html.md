@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend - HTTP API"
-sidebar_current: "docs-http-secret-identity-groups"
+sidebar_current: "docs-http-secret-identity-group"
 description: |-
   This is the API documentation for managing groups in the identity store.
 ---
