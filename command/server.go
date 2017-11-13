@@ -1380,19 +1380,19 @@ func (g *grpclogFaker) Fatalln(args ...interface{}) {
 }
 
 func (g *grpclogFaker) Print(args ...interface{}) {
-	if g.log || g.logger.IsTrace() {
+	if g.log && g.logger.IsTrace() {
 		g.logger.Trace(fmt.Sprint(args...))
 	}
 }
 
 func (g *grpclogFaker) Printf(format string, args ...interface{}) {
-	if g.log || g.logger.IsTrace() {
+	if g.log && g.logger.IsTrace() {
 		g.logger.Trace(fmt.Sprintf(format, args...))
 	}
 }
 
 func (g *grpclogFaker) Println(args ...interface{}) {
-	if g.log || g.logger.IsTrace() {
+	if g.log && g.logger.IsTrace() {
 		g.logger.Trace(fmt.Sprintln(args...))
 	}
 }
