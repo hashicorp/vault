@@ -65,6 +65,7 @@ These metrics represent operational aspects of the running Vault instance.
 | ---------------- | ----------------------------------| ---- | ---- |
 |`vault.audit.log_request`| This measures the number of audit log requests | Number of requests | Summary |
 |`vault.audit.log_response`| This measures the number of audit log responses | Number of responses | Summary |
+|`vault.audit.log_request_failure` | The number of audit log request failures | Number of failures | Counter |
 |`vault.barrier.delete`| This measures the number of delete operations at the barrier | Number of operations | Summary |
 |`vault.barrier.get`| This measures the number of get operations at the barrier | Number of operations | Summary |
 |`vault.barrier.put`| This measures the number of put operations at the barrier | Number of operations | Summary |
@@ -112,7 +113,7 @@ These metrics relate to policies and tokens.
 `vault.policy.list_policies`| This measures the number of policy list operations | Number of operations | Counter |
 `vault.policy.delete_policy`| This measures the number of policy delete operations | Number of operations | Counter |
 `vault.policy.set_policy`| This measures the number of policy set operations | Number of operations | Gauge |
-`vault.token.create`| This measures the number of token create operations | Number of operations | Gauge |
+`vault.token.create`| This measures the time taken to create a token | Number of operations | Gauge |
 `vault.token.createAccessor`| This measures the number of Token ID identifier operations | Number of operations | Gauge |
 `vault.token.lookup`| This measures the number of token lookups | Number of lookups | Counter |
 `vault.token.revoke`| This measures the number of token revocation operations | Number of operations | Gauge |
