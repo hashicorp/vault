@@ -190,7 +190,7 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 		t.Fatalf("Bad, result is nil")
 	}
 
-	encodedRootToken := result.EncodedRootToken
+	encodedToken := result.EncodedToken
 
 	// Should be no progress
 	num, err := c.GenerateRootProgress()
@@ -210,7 +210,7 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 		t.Fatalf("bad: %v", conf)
 	}
 
-	tokenBytes, err := xor.XORBase64(encodedRootToken, otp)
+	tokenBytes, err := xor.XORBase64(encodedToken, otp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +267,7 @@ func testCore_GenerateRoot_Update_PGP_Common(t *testing.T, c *Core, keys [][]byt
 		t.Fatalf("Bad, result is nil")
 	}
 
-	encodedRootToken := result.EncodedRootToken
+	encodedToken := result.EncodedToken
 
 	// Should be no progress
 	num, err := c.GenerateRootProgress()
@@ -287,7 +287,7 @@ func testCore_GenerateRoot_Update_PGP_Common(t *testing.T, c *Core, keys [][]byt
 		t.Fatalf("bad: %v", conf)
 	}
 
-	ptBuf, err := pgpkeys.DecryptBytes(encodedRootToken, pgpkeys.TestPrivKey1)
+	ptBuf, err := pgpkeys.DecryptBytes(encodedToken, pgpkeys.TestPrivKey1)
 	if err != nil {
 		t.Fatal(err)
 	}
