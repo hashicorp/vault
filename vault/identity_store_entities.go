@@ -41,7 +41,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Policies to be tied to the entity. Format should be comma separated list of strings.",
+					Description: "Policies to be tied to the entity.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -72,7 +72,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Policies to be tied to the entity. Format should be comma separated list of strings.",
+					Description: "Policies to be tied to the entity.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{

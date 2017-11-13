@@ -24,8 +24,7 @@ This endpoint creates or updates an Entity.
 - `metadata` `(key-value-map: {})` – Metadata to be associated with the
   entity.
 
-- `policies` `(list of strings: [])` – Policies to be tied to the entity. Comma
-  separated list of strings.
+- `policies` `(list of strings: [])` – Policies to be tied to the entity.
 
 ### Sample Payload
 
@@ -116,7 +115,7 @@ This endpoint is used to update an existing entity.
 
 - `metadata` `(key-value-map: {})` – Metadata to be associated with the entity.
 
-- `policies` `(list of strings: [])` – Policies to be tied to the entity. Format should be comma separated list of strings.
+- `policies` `(list of strings: [])` – Policies to be tied to the entity.
 
 
 ### Sample Payload

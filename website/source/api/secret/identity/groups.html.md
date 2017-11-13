@@ -27,8 +27,7 @@ This endpoint creates or updates a Group.
 - `metadata` `(key-value-map: {})` – Metadata to be associated with the
   group.
 
-- `policies` `(list of strings: [])` – Policies to be tied to the group. Format
-  should be comma separated list of strings.
+- `policies` `(list of strings: [])` – Policies to be tied to the group.
 
 - `member_group_ids` `(list of strings: [])` -  Group IDs to be assigned as
   group members.
@@ -131,8 +130,7 @@ This endpoint is used to update an existing group.
 - `metadata` `(key-value-map: {})` – Metadata to be associated with the
   group.
 
-- `policies` `(list of strings: [])` – Policies to be tied to the group. Format
-  should be comma separated list of strings.
+- `policies` `(list of strings: [])` – Policies to be tied to the group.
 
 - `member_group_ids` `(list of strings: [])` -  Group IDs to be assigned as
   group members.
