@@ -29,15 +29,15 @@ This endpoint creates a new alias for an entity.
 - `mount_accessor` `(string: <required>)` - Accessor of the mount to which the
   alias should belong to.
 
-- `metadata` `(list of strings: [])` – Metadata to be associated with the
-  alias. Format should be a list of `key=value` pairs.
+- `metadata` `(key-value-map: {})` – Metadata to be associated with the
+  alias.
 
 ### Sample Payload
 
 ```
 {
 	"name": "testuser",
-	"metadata": ["group=san_francisco", "region=west"],
+	"metadata": {"group=san_francisco", "region=west"},
 	"canonical_id": "404e57bc-a0b1-a80f-0a73-b6e92e8a52d3",
 	"mount_accessor": "auth_userpass_e50b1a44"
 }
@@ -127,7 +127,7 @@ This endpoint is used to update an existing entity alias.
 - `mount_accessor` `(string: <required>)` - Accessor of the mount to which the
   alias should belong to.
 
-- `metadata` `(list of strings: [])` – Metadata to be associated with the
+- `metadata` `(key-value-map: {})` – Metadata to be associated with the
   alias. Format should be a list of `key=value` pairs.
 
 ### Sample Payload
@@ -135,7 +135,7 @@ This endpoint is used to update an existing entity alias.
 ```
 {
 	"name": "testuser",
-	"metadata": ["group=philadelphia", "region=east"],
+	"metadata": {"group=philadelphia", "region=east"},
 	"canonical_id": "404e57bc-a0b1-a80f-0a73-b6e92e8a52d3",
 	"mount_accessor": "auth_userpass_e50b1a44"
 }

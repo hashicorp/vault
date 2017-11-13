@@ -21,8 +21,8 @@ This endpoint creates or updates an Entity.
 - `id` `(string: <optional>)` - ID of the entity. If set, updates the
   corresponding existing entity.
 
-- `metadata` `(list of strings: [])` – Metadata to be associated with the
-  entity. Format should be a list of `key=value` pairs.
+- `metadata` `(key-value-map: {})` – Metadata to be associated with the
+  entity.
 
 - `policies` `(list of strings: [])` – Policies to be tied to the entity. Comma
   separated list of strings.
@@ -31,7 +31,7 @@ This endpoint creates or updates an Entity.
 
 ```json
 {
-	"metadata": ["organization=hashicorp", "team=vault"],
+	"metadata": {"organization=hashicorp", "team=vault"},
 	"policies": ["eng-dev", "infra-dev"]
 }
 ```
@@ -114,7 +114,7 @@ This endpoint is used to update an existing entity.
 
 - `name` `(string: entity-<UUID>)` – Name of the entity.
 
-- `metadata` `(list of strings: [])` – Metadata to be associated with the entity. Format should be a list of `key=value` pairs.
+- `metadata` `(key-value-map: {})` – Metadata to be associated with the entity.
 
 - `policies` `(list of strings: [])` – Policies to be tied to the entity. Format should be comma separated list of strings.
 
@@ -124,7 +124,7 @@ This endpoint is used to update an existing entity.
 ```json
 {
 	"name":"updatedEntityName",
-	"metadata": ["organization=hashi", "team=nomad"],
+	"metadata": {"organization=hashi", "team=nomad"},
 	"policies": ["eng-developers", "infra-developers"]
 }
 ```

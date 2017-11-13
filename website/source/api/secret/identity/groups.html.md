@@ -24,8 +24,8 @@ This endpoint creates or updates a Group.
 - `type` `(string: "internal")` - Type of the group, `internal` or `external`.
   Defaults to `internal`.
 
-- `metadata` `(list of strings: [])` – Metadata to be associated with the
-  group. Format should be a list of `key=value` pairs.
+- `metadata` `(key-value-map: {})` – Metadata to be associated with the
+  group.
 
 - `policies` `(list of strings: [])` – Policies to be tied to the group. Format
   should be comma separated list of strings.
@@ -40,7 +40,7 @@ This endpoint creates or updates a Group.
 
 ```json
 {
-	"metadata": ["hello=world"],
+	"metadata": {"hello=world"},
 	"policies": ["grouppolicy1", "grouppolicy2"]
 }
 ```
@@ -128,8 +128,8 @@ This endpoint is used to update an existing group.
 - `type` `(string: "internal")` - Type of the group, `internal` or `external`.
   Defaults to `internal`.
 
-- `metadata` `(list of strings: [])` – Metadata to be associated with the
-  group. Format should be a list of `key=value` pairs.
+- `metadata` `(key-value-map: {})` – Metadata to be associated with the
+  group.
 
 - `policies` `(list of strings: [])` – Policies to be tied to the group. Format
   should be comma separated list of strings.
@@ -145,7 +145,7 @@ This endpoint is used to update an existing group.
 ```json
 {
 	"name": "testgroupname",
-	"metadata": ["hello=everyone"],
+	"metadata": {"hello=everyone"},
 	"policies": ["grouppolicy2", "grouppolicy3"]
 }
 ```
