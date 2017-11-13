@@ -104,6 +104,7 @@ type GenerateRootStatusResponse struct {
 	Progress         int
 	Required         int
 	Complete         bool
+	EncodedToken     string `json:"encoded_token"`
 	EncodedRootToken string `json:"encoded_root_token"`
 	PGPFingerprint   string `json:"pgp_fingerprint"`
 }
