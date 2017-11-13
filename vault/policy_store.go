@@ -124,9 +124,11 @@ var (
 	immutablePolicies = []string{
 		"root",
 		responseWrappingPolicyName,
+		controlGroupPolicyName,
 	}
 	nonAssignablePolicies = []string{
 		responseWrappingPolicyName,
+		controlGroupPolicyName,
 	}
 )
 
