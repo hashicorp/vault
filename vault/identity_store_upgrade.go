@@ -107,7 +107,7 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
+					Type:        framework.TypeKVPairs,
 					Description: "Metadata to be associated with the alias. Format should be a list of `key=value` pairs.",
 				},
 			},
@@ -144,7 +144,7 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
+					Type:        framework.TypeKVPairs,
 					Description: "Metadata to be associated with the alias. Format should be a comma separated list of `key=value` pairs.",
 				},
 			},
