@@ -115,6 +115,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, aut
 	}
 
 	resp.WrapInfo.Token = te.ID
+	resp.WrapInfo.Accessor = te.Accessor
 	resp.WrapInfo.CreationTime = creationTime
 	// If this is not a rewrap, store the request path as creation_path
 	if req.Path != "sys/wrapping/rewrap" {
@@ -328,7 +329,7 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 		return false, nil
 	}
 
-	if te.Policies[0] != responseWrappingPolicyName {
+	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
 		return false, nil
 	}
 

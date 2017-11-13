@@ -242,12 +242,13 @@ func (f *AuditFormatter) FormatResponse(
 
 		// Cache and restore accessor in the response
 		if resp != nil {
-			var accessor, wrappedAccessor string
+			var accessor, wrappedAccessor, wrappingAccessor string
 			if !config.HMACAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
 				accessor = resp.Auth.Accessor
 			}
 			if !config.HMACAccessor && resp != nil && resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
 				wrappedAccessor = resp.WrapInfo.WrappedAccessor
+				wrappingAccessor = resp.WrapInfo.Accessor
 			}
 			if err := Hash(salt, resp); err != nil {
 				return err
@@ -257,6 +258,9 @@ func (f *AuditFormatter) FormatResponse(
 			}
 			if wrappedAccessor != "" {
 				resp.WrapInfo.WrappedAccessor = wrappedAccessor
+			}
+			if wrappingAccessor != "" {
+				resp.WrapInfo.Accessor = wrappingAccessor
 			}
 		}
 	}
@@ -301,6 +305,7 @@ func (f *AuditFormatter) FormatResponse(
 		respWrapInfo = &AuditResponseWrapInfo{
 			TTL:             int(resp.WrapInfo.TTL / time.Second),
 			Token:           token,
+			Accessor:        resp.WrapInfo.Accessor,
 			CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
 			CreationPath:    resp.WrapInfo.CreationPath,
 			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
@@ -412,6 +417,7 @@ type AuditSecret struct {
 type AuditResponseWrapInfo struct {
 	TTL             int    `json:"ttl"`
 	Token           string `json:"token"`
+	Accessor        string `json:"accessor"`
 	CreationTime    string `json:"creation_time"`
 	CreationPath    string `json:"creation_path"`
 	WrappedAccessor string `json:"wrapped_accessor,omitempty"`

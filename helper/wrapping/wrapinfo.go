@@ -10,6 +10,9 @@ type ResponseWrapInfo struct {
 	// The token containing the wrapped response
 	Token string `json:"token" structs:"token" mapstructure:"token" sentinel:""`
 
+	// The token accessor for the wrapped response token
+	Accessor string `json:"accessor" structs:"accessor" mapstructure:"accessor"`
+
 	// The creation time. This can be used with the TTL to figure out an
 	// expected expiration.
 	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time" sentinel:""`
