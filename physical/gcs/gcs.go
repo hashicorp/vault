@@ -260,24 +260,16 @@ func (g *GCSBackend) List(prefix string) ([]string, error) {
 
 // GCSLock implements a lock using an GCS client.
 type GCSLock struct {
-	backend    *GCSBackend
-	value, key string
-	identity   string
-	held       bool
-	lock       sync.Mutex
-	recovery   bool
+	backend  *GCSBackend
+	value    string
+	key      string
+	identity string
+	held     bool
+	lock     sync.Mutex
 	// Allow modifying the Lock durations for ease of unit testing.
 	renewInterval      time.Duration
 	ttl                time.Duration
 	watchRetryInterval time.Duration
-}
-
-type GCSLockRecord struct {
-	Path     string
-	Key      string
-	Value    []byte
-	Identity []byte
-	Expires  int64
 }
 
 // LockWith is used for mutual exclusion based on the given key.
@@ -428,8 +420,6 @@ func (l *GCSLock) periodicallyRenewLock(done chan struct{}) {
 // writeItem Attempts to put/update the gcs item using condition expressions to
 // evaluate the TTL.
 func (l *GCSLock) writeItem() error {
-	defer metrics.MeasureSince([]string{"gcs", "get"}, time.Now())
-
 	bucket := l.backend.client.Bucket(l.backend.bucketName)
 	obj := bucket.Object(l.key)
 	attrs, err := obj.Attrs(context.Background())
@@ -469,7 +459,6 @@ func (l *GCSLock) writeItem() error {
 		// https://cloud.google.com/storage/docs/generations-preconditions
 		conditions.GenerationMatch = attrs.Generation
 		conditions.MetagenerationMatch = attrs.Metageneration
-		expires = strconv.FormatInt(time.Now().Add(l.ttl).UnixNano(), 10)
 	}
 
 	if !canWrite && attrs != nil {
@@ -507,6 +496,7 @@ func (l *GCSLock) watch(lost chan struct{}) {
 	ticker := time.NewTicker(l.watchRetryInterval)
 	bucket := l.backend.client.Bucket(l.backend.bucketName)
 	obj := bucket.Object(l.key)
+
 WatchLoop:
 	for {
 		select {
