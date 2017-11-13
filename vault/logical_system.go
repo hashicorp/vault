@@ -72,6 +72,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				"replication/primary/secondary-token",
 				"replication/reindex",
 				"rotate",
+				"config/auth-available/*",
 				"config/cors",
 				"config/auditing/*",
 				"plugins/catalog/*",
@@ -83,9 +84,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			Unauthenticated: []string{
+				"auth-available",
+				"replication/status",
 				"wrapping/lookup",
 				"wrapping/pubkey",
-				"replication/status",
 			},
 		},
 
@@ -110,6 +112,47 @@ func NewSystemBackend(core *Core) *SystemBackend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["capabilities_accessor"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "auth-available$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleAnonymousAuthTableEntries,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["auth-available"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["auth-available"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "config/auth-available/(?P<path>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleAnonAuthTableConfigUpdate,
+					logical.DeleteOperation: b.handleAnonAuthTableConfigDelete,
+					logical.ReadOperation:   b.handleAnonAuthTableConfigRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["cfg-auth-available-name"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["cfg-auth-available-name"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "config/auth-available$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleAnonAuthTablesConfigRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["cfg-auth-available"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["cfg-auth-available"][1]),
 			},
 
 			&framework.Path{
@@ -491,7 +534,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "auth$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleAuthTable,
+					logical.ReadOperation: b.handleAllAuthTableEntries,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["auth-table"][0]),
@@ -1157,6 +1200,83 @@ func (b *SystemBackend) handlePluginReloadUpdate(req *logical.Request, d *framew
 	}
 
 	return nil, nil
+}
+
+// handleAnonAuthTableConfigUpdate adds an auth path to be whitelisted for returning
+// via the anonoymous auth-available backend
+func (b *SystemBackend) handleAnonAuthTableConfigUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	path := d.Get("path").(string)
+	if path == "" {
+		return nil, fmt.Errorf("missing path")
+	}
+	if !strings.HasSuffix(path, "*") {
+		path = sanitizeMountPath(path)
+		fullPath := credentialRoutePrefix + path
+		match := b.Core.router.MatchingMount(fullPath)
+		// NB: This technically "leaks" whether the mount exists or not. However, the
+		// whole point of this call is to expose anonymously metadata about this mount
+		// point anyway via the sys/auth-available endpoint, so it doesn't actually
+		// make a difference
+		if match == "" || fullPath != match {
+			return logical.ErrorResponse(fmt.Sprintf("auth path %q is not enabled", path)), nil
+		}
+	}
+
+	anonAuthConfig := b.Core.AnonymousAuthTableConfig()
+	err := anonAuthConfig.add(path)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// handleAnonAuthTableConfigDelete removes a path from the whitelist
+func (b *SystemBackend) handleAnonAuthTableConfigDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	path := d.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("missing path"), nil
+	}
+
+	anonAuthConfig := b.Core.AnonymousAuthTableConfig()
+	err := anonAuthConfig.remove(path)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// handleAnonAuthTableConfigRead returns metadata about the credential backend listed (currently nothing meaningful, will only error out if not present)
+func (b *SystemBackend) handleAnonAuthTableConfigRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	path := d.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path cannot be empty"), nil
+	}
+	anonAuthConfig := b.Core.AnonymousAuthTableConfig()
+	resp, err := anonAuthConfig.read(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			path: resp,
+		},
+	}, nil
+}
+
+// handleAnonAuthTablesConfigRead returns data about all auth paths whitelisted for
+// the anonymous auth-available path
+func (b *SystemBackend) handleAnonAuthTablesConfigRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	anonAuthConfig := b.Core.AnonymousAuthTableConfig()
+	resp, err := anonAuthConfig.readAll()
+	if err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"paths": resp,
+		},
+	}, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -1886,17 +2006,27 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 	return nil, nil
 }
 
-// handleAuthTable handles the "auth" endpoint to provide the auth table
-func (b *SystemBackend) handleAuthTable(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+// handleAnonymousAuthTableEntries handles the unauthenticated "auth-available"
+// endpoint to provide a minimal auth table
+func (b *SystemBackend) handleAnonymousAuthTableEntries(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.authLock.RLock()
 	defer b.Core.authLock.RUnlock()
 
+	return b.Core.AnonymousAuthTableConfig().apply(b.Core.auth.Entries)
+}
+
+// handleAllAuthTableEntries handles the authenticated "auth" endpoint to
+// provide the auth table
+func (b *SystemBackend) handleAllAuthTableEntries(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.authLock.RLock()
+	defer b.Core.authLock.RUnlock()
+
+	entries := b.Core.auth.Entries
 	resp := &logical.Response{
 		Data: make(map[string]interface{}),
 	}
-	for _, entry := range b.Core.auth.Entries {
-		info := map[string]interface{}{
+	for _, entry := range entries {
+		resp.Data[entry.Path] = map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
 			"accessor":    entry.Accessor,
@@ -1906,7 +2036,6 @@ func (b *SystemBackend) handleAuthTable(
 			},
 			"local": entry.Local,
 		}
-		resp.Data[entry.Path] = info
 	}
 	return resp, nil
 }
@@ -1981,6 +2110,7 @@ func (b *SystemBackend) handleEnableAuth(
 }
 
 // handleDisableAuth is used to disable a credential backend
+// TODO: Also call b.Core.AnonymousAuthTableConfig().remove
 func (b *SystemBackend) handleDisableAuth(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
@@ -2006,7 +2136,9 @@ func (b *SystemBackend) handleDisableAuth(
 		b.Backend.Logger().Error("sys: disable auth mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
-	return nil, nil
+
+	err := b.Core.AnonymousAuthTableConfig().remove(path)
+	return nil, err
 }
 
 // handlePolicyList handles the "policy" endpoint to provide the enabled policies
@@ -3058,8 +3190,47 @@ of external secrets. Access to this prefix should be tightly controlled.
 		"",
 	},
 
+	"cfg-auth-available": {
+		"List currently enabled credential backends for anonymous access",
+		`
+This path responds to the following HTTP methods.
+
+    GET /
+        List the currently enabled credential backends available for anonymous
+        access at the sys/auth-available endpoint.
+    
+    POST /<mount point>
+        Enable a credential backend to be available for anonymous access at the
+        sys/auth-available endpoint. This can either be the path of a currently
+        enabled credential backend or a wildcard-terminated string.
+
+    DELETE /<mount point>
+        Remove a credential backend from being accessible via the
+        sys/auth-available endpoint.
+    `,
+	},
+
+	"cfg-auth-available-name": {
+		"Enable/disable a credential backend for anonymous read access",
+		`
+Enable or disable a credential backend (or multiple backends via a wildcard) in
+the anonymous sys/auth-available endpoint.
+    `,
+	},
+
+	"auth-available": {
+		"List currently enabled credential backends",
+		`
+This path responds to the following HTTP methods.
+
+    GET /
+        List the currently enabled credential backends: the path and type. This
+        is an unauthenticated endpoint.
+    `,
+	},
+
 	"auth-table": {
-		"List the currently enabled credential backends.",
+		"Manage credential backends.",
 		`
 This path responds to the following HTTP methods.
 

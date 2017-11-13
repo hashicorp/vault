@@ -33,6 +33,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"replication/primary/secondary-token",
 		"replication/reindex",
 		"rotate",
+		"config/auth-available/*",
 		"config/cors",
 		"config/auditing/*",
 		"plugins/catalog/*",
@@ -1125,6 +1126,147 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 	}
 	if te != nil {
 		t.Fatalf("bad: %v", te)
+	}
+}
+
+func TestSystemBackend_authAvailable(t *testing.T) {
+	mountAddWhitelistAndTest := func(whitelist []string, remove []string, exp map[string]interface{}) {
+		c, b, _ := testCoreSystemBackend(t)
+		c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+			return &NoopBackend{}, nil
+		}
+
+		for i := 1; i <= 3; i++ {
+			req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("auth/foo%d", i))
+			req.Data["type"] = "noop"
+			resp, err := b.HandleRequest(req)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if resp != nil {
+				t.Fatalf("bad: %v", resp)
+			}
+		}
+
+		for _, entry := range whitelist {
+			req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("config/auth-available/%s", entry))
+			resp, err := b.HandleRequest(req)
+			if err != nil {
+				t.Fatalf("err whitelisting %q: %v", entry, err)
+			}
+			if resp != nil {
+				t.Fatalf("bad while whitelisting %q: %v", entry, resp)
+			}
+		}
+
+		for _, entry := range remove {
+			req := logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("config/auth-available/%s", entry))
+			resp, err := b.HandleRequest(req)
+			if err != nil {
+				t.Fatalf("err removing %q from whitelist: %v", entry, err)
+			}
+			if resp != nil {
+				t.Fatalf("bad while removing %q from whitelist: %v", entry, resp)
+			}
+		}
+
+		req := logical.TestRequest(t, logical.ReadOperation, "auth-available")
+		resp, err := b.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !reflect.DeepEqual(resp.Data, exp) {
+			t.Fatalf("got: %#v, expected: %#v", resp.Data, exp)
+		}
+	}
+
+	noopType := map[string]interface{}{"type": "noop"}
+	mountAddWhitelistAndTest([]string{}, []string{}, map[string]interface{}{})
+	mountAddWhitelistAndTest([]string{"foo1"}, []string{}, map[string]interface{}{"foo1/": noopType})
+	mountAddWhitelistAndTest([]string{"foo1", "foo2"}, []string{}, map[string]interface{}{"foo1/": noopType, "foo2/": noopType})
+	mountAddWhitelistAndTest([]string{"foo1", "foo2"}, []string{"foo2"}, map[string]interface{}{"foo1/": noopType})
+	mountAddWhitelistAndTest([]string{"foo*"}, []string{}, map[string]interface{}{"foo1/": noopType, "foo2/": noopType, "foo3/": noopType})
+	mountAddWhitelistAndTest([]string{"foo1", "foo*"}, []string{"foo*"}, map[string]interface{}{"foo1/": noopType})
+	mountAddWhitelistAndTest([]string{"*"}, []string{}, map[string]interface{}{"foo1/": noopType, "foo2/": noopType, "foo3/": noopType, "token/": map[string]interface{}{"type": "token"}})
+
+}
+
+func TestSystemBackend_authAvailableNonExistentMount(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.UpdateOperation, "config/auth-available/DoesNotExist")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("unexpected error when whitelisting non-existent auth backend for auth-available: #v", err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("bad: expected error when whitelisting non-existent auth backend for auth-available, got none; resp: %#v", resp)
+	}
+}
+
+func TestSystemBackend_authAvailableRemovesDeletedMount(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{}, nil
+	}
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")
+	req.Data["type"] = "noop"
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "config/auth-available/foo")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/auth-available")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("bad: %v", resp)
+	}
+	paths, ok := resp.Data["paths"]
+	if !ok {
+		t.Fatalf("didn't get paths back from config/auth-available")
+	}
+	if _, ok := paths.(map[string]*authTableEntry)["foo/"]; !ok {
+		t.Fatalf("didn't find foo/ in whitelisted auth-available entries")
+	}
+
+	req = logical.TestRequest(t, logical.DeleteOperation, "auth/foo")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/auth-available")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("bad: %v", resp)
+	}
+	paths, ok = resp.Data["paths"]
+	if !ok {
+		t.Fatalf("didn't get paths back from config/auth-available")
+	}
+	if _, ok := paths.(map[string]*authTableEntry)["foo/"]; ok {
+		t.Fatalf("still found foo/ in whitelisted auth-available entries")
 	}
 }
 

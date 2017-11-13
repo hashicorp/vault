@@ -252,6 +252,10 @@ type Core struct {
 	// systemBackend is the backend which is used to manage internal operations
 	systemBackend *SystemBackend
 
+	// anonAuthTable is used to configure which enabled auth backends
+	// are allowed to be shown on the anonymous endpoint
+	anonAuthTable *AnonymousAuthTableConfig
+
 	// systemBarrierView is the barrier view for the system backend
 	systemBarrierView *BarrierView
 
@@ -1602,6 +1606,9 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupAuditedHeadersConfig(); err != nil {
 		return err
 	}
+	if err := c.setupAnonymousAuthTableConfig(); err != nil {
+		return err
+	}
 
 	if c.ha != nil {
 		if err := c.startClusterListener(); err != nil {
@@ -2118,6 +2125,10 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 
 func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 	return c.auditedHeaders
+}
+
+func (c *Core) AnonymousAuthTableConfig() *AnonymousAuthTableConfig {
+	return c.anonAuthTable
 }
 
 func lastRemoteWALImpl(c *Core) uint64 {
