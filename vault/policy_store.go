@@ -22,8 +22,15 @@ const (
 	// policyCacheSize is the number of policies that are kept cached
 	policyCacheSize = 1024
 
+	// defaultPolicyName is the name of the default policy
+	defaultPolicyName = "default"
+
 	// responseWrappingPolicyName is the name of the fixed policy
 	responseWrappingPolicyName = "response-wrapping"
+
+	// controlGroupPolicyName is the name of the fixed policy for control group
+	// tokens
+	controlGroupPolicyName = "control-group"
 
 	// responseWrappingPolicy is the policy that ensures cubbyhole response
 	// wrapping can always succeed.
@@ -117,9 +124,11 @@ var (
 	immutablePolicies = []string{
 		"root",
 		responseWrappingPolicyName,
+		controlGroupPolicyName,
 	}
 	nonAssignablePolicies = []string{
 		responseWrappingPolicyName,
+		controlGroupPolicyName,
 	}
 )
 
@@ -181,27 +190,12 @@ func (c *Core) setupPolicyStore() error {
 	}
 
 	// Ensure that the default policy exists, and if not, create it
-	policy, err := c.policyStore.GetPolicy("default", PolicyTypeACL)
-	if err != nil {
-		return errwrap.Wrapf("error fetching default policy from store: {{err}}", err)
+	if err := c.policyStore.loadACLPolicy(defaultPolicyName, defaultPolicy); err != nil {
+		return err
 	}
-	if policy == nil {
-		err := c.policyStore.createDefaultPolicy()
-		if err != nil {
-			return err
-		}
-	}
-
-	// Ensure that the cubbyhole response wrapping policy exists
-	policy, err = c.policyStore.GetPolicy(responseWrappingPolicyName, PolicyTypeACL)
-	if err != nil {
-		return errwrap.Wrapf("error fetching response-wrapping policy from store: {{err}}", err)
-	}
-	if policy == nil || policy.Raw != responseWrappingPolicy {
-		err := c.policyStore.createResponseWrappingPolicy()
-		if err != nil {
-			return err
-		}
+	// Ensure that the response wrapping policy exists
+	if err := c.policyStore.loadACLPolicy(responseWrappingPolicyName, responseWrappingPolicy); err != nil {
+		return err
 	}
 
 	return nil
@@ -478,32 +472,30 @@ func (ps *PolicyStore) ACL(names ...string) (*ACL, error) {
 	return acl, nil
 }
 
-func (ps *PolicyStore) createDefaultPolicy() error {
-	policy, err := ParseACLPolicy(defaultPolicy)
+func (ps *PolicyStore) loadACLPolicy(policyName, policyText string) error {
+	// Check if the policy already exists
+	policy, err := ps.GetPolicy(policyName, PolicyTypeACL)
+
 	if err != nil {
-		return errwrap.Wrapf("error parsing default policy: {{err}}", err)
+		return errwrap.Wrapf(fmt.Sprintf("error fetching %s policy from store: {{err}}", policyName), err)
+	}
+
+	if policy != nil {
+		if !strutil.StrListContains(immutablePolicies, policyName) || policyText == policy.Raw {
+			return nil
+		}
+	}
+
+	policy, err = ParseACLPolicy(policyText)
+	if err != nil {
+		return errwrap.Wrapf(fmt.Sprintf("error parsing %s policy: {{err}}", policyName), err)
 	}
 
 	if policy == nil {
-		return fmt.Errorf("parsing default policy resulted in nil policy")
+		return fmt.Errorf("parsing %s policy resulted in nil policy", policyName)
 	}
 
-	policy.Name = "default"
-	policy.Type = PolicyTypeACL
-	return ps.setPolicyInternal(policy)
-}
-
-func (ps *PolicyStore) createResponseWrappingPolicy() error {
-	policy, err := ParseACLPolicy(responseWrappingPolicy)
-	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("error parsing %s policy: {{err}}", responseWrappingPolicyName), err)
-	}
-
-	if policy == nil {
-		return fmt.Errorf("parsing %s policy resulted in nil policy", responseWrappingPolicyName)
-	}
-
-	policy.Name = responseWrappingPolicyName
+	policy.Name = policyName
 	policy.Type = PolicyTypeACL
 	return ps.setPolicyInternal(policy)
 }

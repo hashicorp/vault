@@ -151,6 +151,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 			httpResp = &logical.HTTPResponse{
 				WrapInfo: &logical.HTTPWrapInfo{
 					Token:           resp.WrapInfo.Token,
+					Accessor:        resp.WrapInfo.Accessor,
 					TTL:             int(resp.WrapInfo.TTL.Seconds()),
 					CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
 					CreationPath:    resp.WrapInfo.CreationPath,

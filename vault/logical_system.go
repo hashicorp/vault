@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash"
 	"strconv"
@@ -2507,42 +2508,36 @@ func (b *SystemBackend) handleWrappingUnwrap(
 		token = req.ClientToken
 	}
 
-	if thirdParty {
-		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseTokenByID(token)
-		if err != nil {
-			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+	// Get the policies so we can determine if this is a normal response
+	// wrapping request or a control group token.
+	//
+	// We use lookupTainted here because the token might have already been used
+	// by handleRequest(), this happens when it's a normal response wrapping
+	// request and the token was provided "first party". We want to inspect the
+	// token policies but will not use this token entry for anything else.
+	te, err := b.Core.tokenStore.lookupTainted(token)
+	if err != nil {
+		return nil, err
+	}
+	if te == nil {
+		return nil, errors.New("could not find token")
+	}
+	if len(te.Policies) != 1 {
+		return nil, errors.New("token is not a valid unwrap token")
+	}
+
+	var response string
+	switch te.Policies[0] {
+	case responseWrappingPolicyName:
+		response, err = b.responseWrappingUnwrap(token, thirdParty)
+	}
+	if err != nil {
+		var respErr *logical.Response
+		if len(response) > 0 {
+			respErr = logical.ErrorResponse(response)
 		}
 
-		defer b.Core.tokenStore.Revoke(token)
-	}
-
-	cubbyReq := &logical.Request{
-		Operation:   logical.ReadOperation,
-		Path:        "cubbyhole/response",
-		ClientToken: token,
-	}
-	cubbyResp, err := b.Core.router.Route(cubbyReq)
-	if err != nil {
-		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
-	}
-	if cubbyResp == nil {
-		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
-	}
-	if cubbyResp != nil && cubbyResp.IsError() {
-		return cubbyResp, nil
-	}
-	if cubbyResp.Data == nil {
-		return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
-	}
-
-	responseRaw := cubbyResp.Data["response"]
-	if responseRaw == nil {
-		return nil, fmt.Errorf("no response found inside the cubbyhole")
-	}
-	response, ok := responseRaw.(string)
-	if !ok {
-		return nil, fmt.Errorf("could not decode response inside the cubbyhole")
+		return respErr, err
 	}
 
 	resp := &logical.Response{
@@ -2557,6 +2552,50 @@ func (b *SystemBackend) handleWrappingUnwrap(
 	}
 
 	return resp, nil
+}
+
+// responseWrappingUnwrap will read the stored response in the cubbyhole and
+// return the raw HTTP response.
+func (b *SystemBackend) responseWrappingUnwrap(token string, thirdParty bool) (string, error) {
+	if thirdParty {
+		// Use the token to decrement the use count to avoid a second operation on the token.
+		_, err := b.Core.tokenStore.UseTokenByID(token)
+		if err != nil {
+			return "", fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+		}
+
+		defer b.Core.tokenStore.Revoke(token)
+	}
+
+	cubbyReq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/response",
+		ClientToken: token,
+	}
+	cubbyResp, err := b.Core.router.Route(cubbyReq)
+	if err != nil {
+		return "", fmt.Errorf("error looking up wrapping information: %v", err)
+	}
+	if cubbyResp == nil {
+		return "no information found; wrapping token may be from a previous Vault version", ErrInternalError
+	}
+	if cubbyResp != nil && cubbyResp.IsError() {
+		return cubbyResp.Error().Error(), nil
+	}
+	if cubbyResp.Data == nil {
+		return "wrapping information was nil; wrapping token may be from a previous Vault version", ErrInternalError
+	}
+
+	responseRaw := cubbyResp.Data["response"]
+	if responseRaw == nil {
+		return "", fmt.Errorf("no response found inside the cubbyhole")
+	}
+	response, ok := responseRaw.(string)
+	if !ok {
+		return "", fmt.Errorf("could not decode response inside the cubbyhole")
+	}
+
+	return response, nil
 }
 
 func (b *SystemBackend) handleWrappingLookup(

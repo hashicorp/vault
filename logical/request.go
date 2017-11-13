@@ -37,6 +37,13 @@ func (r *RequestWrapInfo) SentinelGet(key string) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *RequestWrapInfo) SentinelKeys() []string {
+	return []string{
+		"ttl",
+		"ttl_seconds",
+	}
+}
+
 // Request is a struct that stores the parameters and context of a request
 // being made to Vault. It is used to abstract the details of the higher level
 // request protocol from the handlers.
@@ -176,6 +183,14 @@ func (r *Request) SentinelGet(key string) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Request) SentinelKeys() []string {
+	return []string{
+		"path",
+		"wrapping",
+		"wrap_info",
+	}
+}
+
 func (r *Request) LastRemoteWAL() uint64 {
 	return r.lastRemoteWAL
 }
@@ -260,4 +275,8 @@ var (
 
 	// ErrPermissionDenied is returned if the client is not authorized
 	ErrPermissionDenied = errors.New("permission denied")
+
+	// ErrMultiAuthzPending is returned if the the request needs more
+	// authorizations
+	ErrMultiAuthzPending = errors.New("request needs further approval")
 )
