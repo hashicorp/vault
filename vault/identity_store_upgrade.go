@@ -29,8 +29,12 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the alias.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the alias.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -60,8 +64,12 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the alias.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the alias.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -106,8 +114,12 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the alias. Format should be a list of `key=value` pairs.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the alias.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -142,8 +154,12 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 					Description: "Name of the alias",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the alias. Format should be a comma separated list of `key=value` pairs.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the alias.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{

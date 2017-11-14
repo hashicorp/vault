@@ -31,9 +31,9 @@ This endpoint creates or updates a group alias.
 
 ```json
 {
-	"canonical_id": "b86920ea-2831-00ff-15c5-a3f923f1ee3b",
-	"mount_accessor": "auth_github_232a90dc",
-	"name": "dev-team"
+  "canonical_id": "b86920ea-2831-00ff-15c5-a3f923f1ee3b",
+  "mount_accessor": "auth_github_232a90dc",
+  "name": "dev-team"
 }
 ```
 
@@ -83,16 +83,16 @@ $ curl \
 ```json
 {
   "data": {
-                "canonical_id": "b86920ea-2831-00ff-15c5-a3f923f1ee3b",
-                "creation_time": "2017-11-13T20:09:41.661694Z",
-                "id": "ca726050-d8ac-6f1f-4210-3b5c5b613824",
-                "last_update_time": "2017-11-13T20:09:41.661694Z",
-                "merged_from_canonical_ids": null,
-                "metadata": null,
-                "mount_accessor": "auth_github_232a90dc",
-                "mount_path": "",
-                "mount_type": "github",
-                "name": "dev-team"
+    "canonical_id": "b86920ea-2831-00ff-15c5-a3f923f1ee3b",
+    "creation_time": "2017-11-13T20:09:41.661694Z",
+    "id": "ca726050-d8ac-6f1f-4210-3b5c5b613824",
+    "last_update_time": "2017-11-13T20:09:41.661694Z",
+    "merged_from_canonical_ids": null,
+    "metadata": null,
+    "mount_accessor": "auth_github_232a90dc",
+    "mount_path": "",
+    "mount_type": "github",
+    "name": "dev-team"
   }
 }
 ```
@@ -142,7 +142,7 @@ $ curl \
 {
   "data": {
     "keys": [
-        "ca726050-d8ac-6f1f-4210-3b5c5b613824"
+      "ca726050-d8ac-6f1f-4210-3b5c5b613824"
     ]
   }
 }

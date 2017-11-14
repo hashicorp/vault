@@ -35,7 +35,7 @@ be `name`, `id`, `alias_id`, or a combination of `alias_name` and
 
 ```json
 {
-	"id": "043fedec-967d-b2c9-d3af-0c467b04e1fd"
+  "id": "043fedec-967d-b2c9-d3af-0c467b04e1fd"
 }
 ```
 
@@ -53,19 +53,19 @@ $ curl \
 
 ```json
 {
-        "data": {
-                "aliases": [],
-                "creation_time": "2017-11-13T21:01:33.543497Z",
-                "direct_group_ids": [],
-                "group_ids": [],
-                "id": "043fedec-967d-b2c9-d3af-0c467b04e1fd",
-                "inherited_group_ids": [],
-                "last_update_time": "2017-11-13T21:01:33.543497Z",
-                "merged_entity_ids": null,
-                "metadata": null,
-                "name": "entity_43cc451b",
-                "policies": null
-        }
+  "data": {
+    "aliases": [],
+    "creation_time": "2017-11-13T21:01:33.543497Z",
+    "direct_group_ids": [],
+    "group_ids": [],
+    "id": "043fedec-967d-b2c9-d3af-0c467b04e1fd",
+    "inherited_group_ids": [],
+    "last_update_time": "2017-11-13T21:01:33.543497Z",
+    "merged_entity_ids": null,
+    "metadata": null,
+    "name": "entity_43cc451b",
+    "policies": null
+  }
 }
 ```
 
@@ -97,7 +97,7 @@ be `name`, `id`, `alias_id`, or a combination of `alias_name` and
 
 ```json
 {
-	"id": "70a4bdef-9da3-4460-b524-bb08542eef25"
+  "id": "70a4bdef-9da3-4460-b524-bb08542eef25"
 }
 ```
 
@@ -115,18 +115,18 @@ $ curl \
 
 ```json
 {
-        "data": {
-                "alias": {},
-                "creation_time": "2017-11-13T21:06:44.475587Z",
-                "id": "70a4bdef-9da3-4460-b524-bb08542eef25",
-                "last_update_time": "2017-11-13T21:06:44.475587Z",
-                "member_entity_ids": [],
-                "member_group_ids": null,
-                "metadata": null,
-                "modify_index": 1,
-                "name": "group_eaf2aab1",
-                "policies": null,
-                "type": "internal"
-        }
+  "data": {
+    "alias": {},
+    "creation_time": "2017-11-13T21:06:44.475587Z",
+    "id": "70a4bdef-9da3-4460-b524-bb08542eef25",
+    "last_update_time": "2017-11-13T21:06:44.475587Z",
+    "member_entity_ids": [],
+    "member_group_ids": null,
+    "metadata": null,
+    "modify_index": 1,
+    "name": "group_eaf2aab1",
+    "policies": null,
+    "type": "internal"
+  }
 }
 ```
