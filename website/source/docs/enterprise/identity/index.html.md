@@ -98,8 +98,8 @@ to policies on both GroupA and GroupB.
 ### External vs Internal Groups
 
 By default, the groups created in identity store are called the internal
-groups.  The membership management of these groups should be carried out
-manually.  A group can also be created as an external group. In this case, the
+groups. The membership management of these groups should be carried out
+manually. A group can also be created as an external group. In this case, the
 entity membership in the group is managed semi-automatically. External group
 serves as a mapping to a group that is outside of the identity store. External
 groups can have one (and only one) alias. This alias should map to a notion of
