@@ -65,10 +65,15 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 		return nil
 	}
 
+	mountPath := mountEntry.Path
+	if mountEntry.Table == credentialTableType {
+		mountPath = credentialRoutePrefix + mountPath
+	}
+
 	return &validateMountResponse{
 		MountAccessor: mountEntry.Accessor,
 		MountType:     mountEntry.Type,
-		MountPath:     mountEntry.Path,
+		MountPath:     mountPath,
 	}
 }
 
