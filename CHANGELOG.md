@@ -1,4 +1,4 @@
-## 0.8.4 (Unreleased)
+## 0.9.0 (November 14th, 2017)
 
 DEPRECATIONS/CHANGES:
 
@@ -25,7 +25,24 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
- * ** RSA Support for Transit Backend**: Transit backend can now generate RSA
+ * **Identity System**: Now in open source and with significant enhancements,
+   Identity is an integrated system for understanding users across tokens and
+   enabling easier management of users directly and via groups.
+ * **External Groups in Identity**: Vault can now automatically assign users
+   and systems to groups in Identity based on their membership in external
+   groups.
+ * **Seal Wrap / FIPS 140-2 Compatibility (Enterprise)**: Vault can now take
+   advantage of FIPS 140-2-certified HSMs to ensure that Critical Security
+   Parameters are protected in a compliant fashion. Vault's implementation has
+   received a statement of compliance from Leidos.
+ * **Control Groups (Enterprise)**: Require multiple members of an Identity
+   group to authorize a requested action before it is allowed to run.
+ * **Cloud Auto-Unseal (Enterprise)**: Automatically unseal Vault using AWS KMS
+   and GCP CKMS.
+ * **Sentinel Integration (Enterprise)**: Take advantage of HashiCorp Sentinel
+   to create extremely flexible access control policies -- even on
+   unauthenticated endpoints.
+ * **RSA Support for Transit Backend**: Transit backend can now generate RSA
    keys which can be used for encryption and signing. [GH-3489]
 
 IMPROVEMENTS:
