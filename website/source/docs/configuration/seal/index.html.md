@@ -17,6 +17,9 @@ is not configured.
 As of Vault 0.9.0, the seal can also be used for [seal wrapping][sealwrap] to
 add an extra layer of protection and satisfy compliance and regulatory requirements.
 
+For more examples, please choose a specific auto unsealing technology from the
+sidebar.
+
 ## Configuration
 
 Seal configuration can be done through the Vault configuration file using the
@@ -24,7 +27,7 @@ Seal configuration can be done through the Vault configuration file using the
 
 ```hcl
 seal [NAME] {
-  ...
+  # ...
 }
 ```
 
@@ -32,7 +35,7 @@ For example:
 
 ```hcl
 seal "pkcs11" {
-  ...
+  # ...
 }
 ```
 
