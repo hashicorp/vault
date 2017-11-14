@@ -66,7 +66,7 @@ Operators can create entities for all the users of an auth mount
 beforehand and assign policies to them, so that when users login, the desired
 capabilities to the tokens via entities are already assigned. But if that's not
 done, upon a successful user login from any of the authentication backends,
-Vault will create a new entity and assign a alias against the login that was
+Vault will create a new entity and assign an alias against the login that was
 successful.
 
 Note that, tokens created using the token authentication backend will not have

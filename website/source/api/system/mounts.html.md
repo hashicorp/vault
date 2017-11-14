@@ -36,7 +36,9 @@ $ curl \
     "config": {
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
-      "force_no_cache": false
+      "force_no_cache": false,
+      "plugin_name": "",
+      "seal_wrap": false
     }
   },
   "sys": {
@@ -45,7 +47,9 @@ $ curl \
     "config": {
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
-      "force_no_cache": false
+      "force_no_cache": false,
+      "plugin_name": "",
+      "seal_wrap": false
     }
   }
 }
@@ -80,12 +84,18 @@ This endpoint mounts a new secret backend at the given path.
     - `max_lease_ttl`
     - `force_no_cache`
     - `plugin_name`
+    - `seal_wrap`
 
     These control the default and maximum lease time-to-live, force
     disabling backend caching, and option plugin name for plugin backends 
     respectively. The first three options override the global defaults if
     set on a specific mount. The plugin_name can be provided in the config
     map or as a top-level option, with the former taking precedence.
+    
+    When used with supported seals (`pkcs11`, `awskms`, etc.), `seal_wrap`
+    causes key material for supporting mounts to be wrapped by the seal's
+    encryption capability. This is currently only supported for `transit` and
+    `pki` backends. This is only available in Vault Enterprise.
 
 - `plugin_name` `(string: "")` – Specifies the name of the plugin to
   use based from the name in the plugin catalog. Applies only to plugin
