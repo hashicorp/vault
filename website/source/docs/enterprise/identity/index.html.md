@@ -26,8 +26,8 @@ made up of zero or more aliases.
 Entities in Vault **do not** automatically pull identity information from
 anywhere. It needs to be explicitly managed by operators. This way, it is
 flexible in terms of administratively controlling the number of entities to be
-pulled-in and pulled-out of Vault. In some sense, Vault will serve as a _cache_
-of identities and not as a _source_ of identities.
+synced against Vault. In some sense, Vault will serve as a _cache_ of
+identities and not as a _source_ of identities.
 
 ### Entity Policies
 
