@@ -1,6 +1,6 @@
 ---
 layout: "api"
-page_title: "Identity Secret Backend - HTTP API"
+page_title: "Identity Secret Backend: Group - HTTP API"
 sidebar_current: "docs-http-secret-identity-group"
 description: |-
   This is the API documentation for managing groups in the identity store.
@@ -39,7 +39,9 @@ This endpoint creates or updates a Group.
 
 ```json
 {
-	"metadata": {"hello=world"},
+	"metadata": {
+        "hello": "world"
+    },
 	"policies": ["grouppolicy1", "grouppolicy2"]
 }
 ```
@@ -143,7 +145,9 @@ This endpoint is used to update an existing group.
 ```json
 {
 	"name": "testgroupname",
-	"metadata": {"hello=everyone"},
+	"metadata": {
+        "hello": "everyone"
+    },
 	"policies": ["grouppolicy2", "grouppolicy3"]
 }
 ```

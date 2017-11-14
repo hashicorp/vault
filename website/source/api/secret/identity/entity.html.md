@@ -1,6 +1,6 @@
 ---
 layout: "api"
-page_title: "Identity Secret Backend - HTTP API"
+page_title: "Identity Secret Backend: Entity - HTTP API"
 sidebar_current: "docs-http-secret-identity-entity"
 description: |-
   This is the API documentation for managing entities in the identity store.
@@ -30,7 +30,10 @@ This endpoint creates or updates an Entity.
 
 ```json
 {
-	"metadata": {"organization=hashicorp", "team=vault"},
+	"metadata": {
+        "organization": "hashicorp",
+        "team": "vault"
+    },
 	"policies": ["eng-dev", "infra-dev"]
 }
 ```
@@ -123,7 +126,10 @@ This endpoint is used to update an existing entity.
 ```json
 {
 	"name":"updatedEntityName",
-	"metadata": {"organization=hashi", "team=nomad"},
+	"metadata": {
+        "organization": "hashi",
+        "team": "nomad"
+    },
 	"policies": ["eng-developers", "infra-developers"]
 }
 ```

@@ -89,10 +89,9 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "ID of the alias",
 				},
-				// entity_id is deprecated
 				"entity_id": {
 					Type:        framework.TypeString,
-					Description: "Entity ID to which this alias belongs to",
+					Description: "Entity ID to which this alias belongs to. This field is deprecated in favor of 'canonical_id'.",
 				},
 				"canonical_id": {
 					Type:        framework.TypeString,
@@ -126,10 +125,9 @@ func upgradePaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "ID of the alias",
 				},
-				// entity_id is deprecated
 				"entity_id": {
 					Type:        framework.TypeString,
-					Description: "Entity ID to which this alias should be tied to",
+					Description: "Entity ID to which this alias should be tied to. This field is deprecated in favor of 'canonical_id'.",
 				},
 				"canonical_id": {
 					Type:        framework.TypeString,

@@ -60,8 +60,6 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				// Update operation on group alias does not make sense as of now
-				// logical.UpdateOperation: i.pathGroupAliasIDUpdate,
 				logical.ReadOperation:   i.pathGroupAliasIDRead,
 				logical.DeleteOperation: i.pathGroupAliasIDDelete,
 			},
