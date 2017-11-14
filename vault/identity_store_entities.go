@@ -25,19 +25,23 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
-					Description: "ID of the entity",
+					Description: "ID of the entity. If set, updates the corresponding existing entity.",
 				},
 				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the entity",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the entity.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the entity.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Policies to be tied to the entity",
+					Description: "Policies to be tied to the entity.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -52,19 +56,23 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
-					Description: "ID of the entity",
+					Description: "ID of the entity.",
 				},
 				"name": {
 					Type:        framework.TypeString,
-					Description: "Name of the entity",
+					Description: "Name of the entity.",
 				},
 				"metadata": {
-					Type:        framework.TypeKVPairs,
-					Description: "Metadata to be associated with the entity.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the entity.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Policies to be tied to the entity",
+					Description: "Policies to be tied to the entity.",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{

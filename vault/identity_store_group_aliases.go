@@ -60,7 +60,6 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupAliasIDUpdate,
 				logical.ReadOperation:   i.pathGroupAliasIDRead,
 				logical.DeleteOperation: i.pathGroupAliasIDDelete,
 			},
