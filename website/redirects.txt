@@ -98,3 +98,5 @@
 /docs/vault-enterprise/mfa/mfa-okta.html        /docs/enterprise/mfa/mfa-okta.html
 /docs/vault-enterprise/mfa/mfa-pingid.html      /docs/enterprise/mfa/mfa-pingid.html
 /docs/vault-enterprise/mfa/mfa-totp.html        /docs/enterprise/mfa/mfa-totp.html
+
+/docs/enterprise/hsm/configuration.html /docs/configuration/seal/pkcs11.html

@@ -1,7 +1,7 @@
 ---
-layout: "docs"
+layout: "api"
 page_title: "Related Tools"
-sidebar_current: "docs-related-related"
+sidebar_current: "docs-http-related"
 description: |-
   Short list of third-party tools that work with or are related to Vault.
 ---
@@ -25,4 +25,4 @@ The following list of tools is maintained by the community of Vault users; Hashi
 * [pouch](https://github.com/tuenti/pouch) - A set of tools to manage provisioning of secrets on hosts based on the AppRole authentication method of Vault
 * [vault-aws-creds](https://github.com/jantman/vault-aws-creds) - Python helper to export Vault-provided temporary AWS creds into the environment
 
-Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/master/website/source/docs/relatedtools/index.html.md).
+Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/master/website/source/api/relatedtools.html.md).
