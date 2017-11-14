@@ -36,7 +36,7 @@ $ curl \
 
 ## Read Policy
 
-This endpoint retrieve the rules for the named policy.
+This endpoint retrieve the policy body for the named policy.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -59,7 +59,7 @@ $ curl \
 
 ```json
 {
-  "rules": "path \"secret/foo\" {..."
+  "policy": "path \"secret/foo\" {..."
 }
 ```
 
@@ -77,13 +77,13 @@ updated, it takes effect immediately to all associated users.
 - `name` `(string: <required>)` – Specifies the name of the policy to create.
   This is specified as part of the request URL.
 
-- `rules` `(string: <required>)` - Specifies the policy document.
+- `policy` `(string: <required>)` - Specifies the policy document.
 
 ### Sample Payload
 
 ```json
 {
-  "rules": "path \"secret/foo\" {..."
+  "policy": "path \"secret/foo\" {..."
 }
 ```
 
