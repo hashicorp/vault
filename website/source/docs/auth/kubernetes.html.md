@@ -4,7 +4,7 @@ page_title: "Auth Plugin Backend: Kubernetes"
 sidebar_current: "docs-auth-kubernetes"
 description: |-
   The Kubernetes auth backend allows automated authentication of Kubernetes
-  Service Accouts.
+  Service Accounts.
 ---
 
 # Auth Backend: Kubernetes

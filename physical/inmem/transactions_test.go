@@ -54,7 +54,7 @@ func (f *faultyPseudo) List(prefix string) ([]string, error) {
 	return f.underlying.List(prefix)
 }
 
-func (f *faultyPseudo) Transaction(txns []physical.TxnEntry) error {
+func (f *faultyPseudo) Transaction(txns []*physical.TxnEntry) error {
 	f.underlying.permitPool.Acquire()
 	defer f.underlying.permitPool.Release()
 

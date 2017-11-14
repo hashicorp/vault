@@ -49,7 +49,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		// If role name isn't in the database's allowed roles, send back a
 		// permission denied.
-		if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContains(dbConfig.AllowedRoles, name) {
+		if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContainsGlob(dbConfig.AllowedRoles, name) {
 			return nil, logical.ErrPermissionDenied
 		}
 

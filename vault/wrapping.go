@@ -72,7 +72,7 @@ func (c *Core) ensureWrappingKey() error {
 	return nil
 }
 
-func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*logical.Response, error) {
+func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, auth *logical.Auth) (*logical.Response, error) {
 	// Before wrapping, obey special rules for listing: if no entries are
 	// found, 404. This prevents unwrapping only to find empty data.
 	if req.Operation == logical.ListOperation {
@@ -93,6 +93,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	}
 
 	var err error
+	sealWrap := resp.WrapInfo.SealWrap
 
 	// If we are wrapping, the first part (performed in this functions) happens
 	// before auditing so that resp.WrapInfo.Token can contain the HMAC'd
@@ -114,10 +115,15 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	}
 
 	resp.WrapInfo.Token = te.ID
+	resp.WrapInfo.Accessor = te.Accessor
 	resp.WrapInfo.CreationTime = creationTime
 	// If this is not a rewrap, store the request path as creation_path
 	if req.Path != "sys/wrapping/rewrap" {
 		resp.WrapInfo.CreationPath = req.Path
+	}
+
+	if auth != nil && auth.EntityID != "" {
+		resp.WrapInfo.WrappedEntityID = auth.EntityID
 	}
 
 	// This will only be non-nil if this response contains a token, so in that
@@ -130,7 +136,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	case "jwt":
 		// Create the JWT
 		claims := jws.Claims{}
-		// Map the JWT ID to the token ID for ease ofuse
+		// Map the JWT ID to the token ID for ease of use
 		claims.SetJWTID(te.ID)
 		// Set the issue time to the creation time
 		claims.SetIssuedAt(creationTime)
@@ -148,12 +154,20 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 			return nil, ErrInternalError
 		}
 		resp.WrapInfo.Token = string(serWebToken)
+		if c.redirectAddr == "" {
+			resp.AddWarning("No redirect address set in Vault so none could be encoded in the token. You may need to supply Vault's API address when unwrapping the token.")
+		}
 	}
 
 	cubbyReq := &logical.Request{
 		Operation:   logical.CreateOperation,
 		Path:        "cubbyhole/response",
 		ClientToken: te.ID,
+	}
+	if sealWrap {
+		cubbyReq.WrapInfo = &logical.RequestWrapInfo{
+			SealWrap: true,
+		}
 	}
 
 	// During a rewrap, store the original response, don't wrap it again.
@@ -199,6 +213,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	}
 
 	// Store info for lookup
+	cubbyReq.WrapInfo = nil
 	cubbyReq.Path = "cubbyhole/wrapinfo"
 	cubbyReq.Data = map[string]interface{}{
 		"creation_ttl":  resp.WrapInfo.TTL,
@@ -223,7 +238,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 		return cubbyResp, nil
 	}
 
-	auth := &logical.Auth{
+	wAuth := &logical.Auth{
 		ClientToken: te.ID,
 		Policies:    []string{"response-wrapping"},
 		LeaseOptions: logical.LeaseOptions{
@@ -233,7 +248,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	}
 
 	// Register the wrapped token with the expiration manager
-	if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
+	if err := c.expiration.RegisterAuth(te.Path, wAuth); err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.Revoke(te.ID)
 		c.logger.Error("core: failed to register cubbyhole wrapping token lease", "request_path", req.Path, "error", err)
@@ -314,7 +329,7 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 		return false, nil
 	}
 
-	if te.Policies[0] != responseWrappingPolicyName {
+	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
 		return false, nil
 	}
 

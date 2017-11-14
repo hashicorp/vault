@@ -1,4 +1,4 @@
-// Copyright 2009 The Go Authors.  All rights reserved.
+// Copyright 2009 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -201,6 +201,21 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	PulseEvent(event Handle) (err error) = kernel32.PulseEvent
 
 // syscall interface implementation for other packages
+
+// GetProcAddressByOrdinal retrieves the address of the exported
+// function from module by ordinal.
+func GetProcAddressByOrdinal(module Handle, ordinal uintptr) (proc uintptr, err error) {
+	r0, _, e1 := syscall.Syscall(procGetProcAddress.Addr(), 2, uintptr(module), ordinal, 0)
+	proc = uintptr(r0)
+	if proc == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
 
 func Exit(code int) { ExitProcess(uint32(code)) }
 

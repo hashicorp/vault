@@ -6,7 +6,6 @@ import (
 
 	"fmt"
 
-	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -182,7 +181,7 @@ func (s *SystemViewServer) ResponseWrapData(args *ResponseWrapDataArgs, reply *R
 	info, err := s.impl.ResponseWrapData(args.Data, args.TTL, false)
 	if err != nil {
 		*reply = ResponseWrapDataReply{
-			Error: plugin.NewBasicError(err),
+			Error: wrapError(err),
 		}
 		return nil
 	}
@@ -239,7 +238,7 @@ type ResponseWrapDataArgs struct {
 
 type ResponseWrapDataReply struct {
 	ResponseWrapInfo *wrapping.ResponseWrapInfo
-	Error            *plugin.BasicError
+	Error            error
 }
 
 type MlockEnabledReply struct {

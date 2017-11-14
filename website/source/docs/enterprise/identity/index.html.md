@@ -14,12 +14,12 @@ the tokens used in Vault.
 
 ## Concepts
 
-### Entities and Personas
+### Entities and Aliases
 
 Each user will have multiple accounts with various identity providers. Users
 can now be mapped as `Entities` and their corresponding accounts with
-authentication providers can be mapped as `Personas`. In essence, each entity
-is made up of zero or more personas.
+authentication providers can be mapped as `Aliases`. In essence, each entity
+is made up of zero or more aliases.
 
 ### Entity Management
 
@@ -50,15 +50,15 @@ _additional_ capabilities and not a replacement for the policies on the token,
 and to know the full set of capabilities of the token with an associated entity
 identifier, the policies on the token should be taken into account.
 
-### Mount Bound Personas
+### Mount Bound Aliases
 
 Vault supports multiple authentication backends and also allows enabling same
-authentication backend on different mounts. The persona name of the user with
+authentication backend on different mounts. The alias name of the user with
 each identity provider will be unique within the provider. But Vault also needs
-to uniquely distinguish between conflicting persona names across different
-mounts of these identity providers. Hence the persona name, in combination with
+to uniquely distinguish between conflicting alias names across different
+mounts of these identity providers. Hence the alias name, in combination with
 the authentication backend mount's accessor serve as the unique identifier of a
-persona.
+alias.
 
 ### Implicit Entities
 
@@ -66,7 +66,7 @@ Operators can create entities for all the users of an auth mount
 beforehand and assign policies to them, so that when users login, the desired
 capabilities to the tokens via entities are already assigned. But if that's not
 done, upon a successful user login from any of the authentication backends,
-Vault will create a new entity and assign a persona against the login that was
+Vault will create a new entity and assign an alias against the login that was
 successful.
 
 Note that, tokens created using the token authentication backend will not have

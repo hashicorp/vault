@@ -28,6 +28,17 @@ func (m *CirconusMetrics) RecordValue(metric string, val float64) {
 	m.SetHistogramValue(metric, val)
 }
 
+// RecordCountForValue adds count n for value to a histogram
+func (m *CirconusMetrics) RecordCountForValue(metric string, val float64, n int64) {
+	hist := m.NewHistogram(metric)
+
+	m.hm.Lock()
+	hist.rw.Lock()
+	hist.hist.RecordValues(val, n)
+	hist.rw.Unlock()
+	m.hm.Unlock()
+}
+
 // SetHistogramValue adds a value to a histogram
 func (m *CirconusMetrics) SetHistogramValue(metric string, val float64) {
 	hist := m.NewHistogram(metric)

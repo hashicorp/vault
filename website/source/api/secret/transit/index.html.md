@@ -52,6 +52,8 @@ values set here cannot be changed after key creation.
       (symmetric, supports derivation)
     - `ecdsa-p256` – ECDSA using the P-256 elliptic curve (asymmetric)
     - `ed25519` – ED25519 (asymmetric, supports derivation)
+    - `rsa-2048` - RSA with bit size of 2048 (asymmetric)
+    - `rsa-4096` - RSA with bit size of 4096 (asymmetric)
 
 ### Sample Payload
 
@@ -779,6 +781,7 @@ supports signing.
   own hash algorithm). This can also be specified as part of the URL.
   Currently-supported algorithms are:
 
+    - `none`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`
@@ -840,6 +843,7 @@ data.
 - `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
   can also be specified as part of the URL. Currently-supported algorithms are:
 
+    - `none`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`

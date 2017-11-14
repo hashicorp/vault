@@ -78,6 +78,77 @@ func TestLoadConfigFile(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFile_topLevel(t *testing.T) {
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
+	config, err := LoadConfigFile("./test-fixtures/config2.hcl", logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address": "127.0.0.1:443",
+				},
+			},
+		},
+
+		Storage: &Storage{
+			Type:         "consul",
+			RedirectAddr: "top_level_api_addr",
+			ClusterAddr:  "top_level_cluster_addr",
+			Config: map[string]string{
+				"foo": "bar",
+			},
+		},
+
+		HAStorage: &Storage{
+			Type:         "consul",
+			RedirectAddr: "top_level_api_addr",
+			ClusterAddr:  "top_level_cluster_addr",
+			Config: map[string]string{
+				"bar": "baz",
+			},
+			DisableClustering: true,
+		},
+
+		Telemetry: &Telemetry{
+			StatsdAddr:      "bar",
+			StatsiteAddr:    "foo",
+			DisableHostname: false,
+			DogStatsDAddr:   "127.0.0.1:7254",
+			DogStatsDTags:   []string{"tag_1:val_1", "tag_2:val_2"},
+		},
+
+		DisableCache:    true,
+		DisableCacheRaw: true,
+		DisableMlock:    true,
+		DisableMlockRaw: true,
+		EnableUI:        true,
+		EnableUIRaw:     true,
+
+		EnableRawEndpoint:    true,
+		EnableRawEndpointRaw: true,
+
+		MaxLeaseTTL:        10 * time.Hour,
+		MaxLeaseTTLRaw:     "10h",
+		DefaultLeaseTTL:    10 * time.Hour,
+		DefaultLeaseTTLRaw: "10h",
+		ClusterName:        "testcluster",
+
+		PidFile: "./pidfile",
+
+		APIAddr:     "top_level_api_addr",
+		ClusterAddr: "top_level_cluster_addr",
+	}
+	if !reflect.DeepEqual(config, expected) {
+		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
+	}
+}
+
 func TestLoadConfigFile_json(t *testing.T) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
@@ -269,7 +340,8 @@ listener "tcp" {
 	tls_key_file = "./certs/server.key"
 	tls_client_ca_file = "./certs/rootca.crt"
 	tls_min_version = "tls12"
-	tls_require_and_verify_client_cert =  true
+	tls_require_and_verify_client_cert = true
+	tls_disable_client_certs = true
 }`))
 
 	var config Config
@@ -298,6 +370,7 @@ listener "tcp" {
 					"tls_client_ca_file":                 "./certs/rootca.crt",
 					"tls_min_version":                    "tls12",
 					"tls_require_and_verify_client_cert": true,
+					"tls_disable_client_certs":           true,
 				},
 			},
 		},

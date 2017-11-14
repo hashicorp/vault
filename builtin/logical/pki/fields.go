@@ -22,6 +22,17 @@ key and issuing cert will be appended to the
 certificate pem. Defaults to "pem".`,
 	}
 
+	fields["private_key_format"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "der",
+		Description: `Format for the returned private key.
+Generally the default will be controlled by the "format"
+parameter as either base64-encoded DER or PEM-encoded DER.
+However, this can be set to "pkcs8" to have the returned
+private key contain base64-encoded pkcs8 or PEM-encoded
+pkcs8 instead. Defaults to "der".`,
+	}
+
 	fields["ip_sans"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The requested IP SANs, if any, in a

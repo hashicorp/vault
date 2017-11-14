@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
-
-	"strconv"
 
 	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 )
@@ -218,7 +217,7 @@ func (b *MssqlBulk) Done() (rowcount int64, err error) {
 	buf.FinishPacket()
 
 	tokchan := make(chan tokenStruct, 5)
-	go processResponse(context.Background(), b.cn.sess, tokchan)
+	go processResponse(context.Background(), b.cn.sess, tokchan, nil)
 
 	var rowCount int64
 	for token := range tokchan {
@@ -231,7 +230,7 @@ func (b *MssqlBulk) Done() (rowcount int64, err error) {
 				return 0, token.getError()
 			}
 		case error:
-			return 0, token
+			return 0, b.cn.checkBadConn(token)
 		}
 	}
 	return rowCount, nil
@@ -309,7 +308,8 @@ func (s *MssqlStmt) QueryMeta() (cols []columnStruct, err error) {
 		return
 	}
 	tokchan := make(chan tokenStruct, 5)
-	go processResponse(context.Background(), s.c.sess, tokchan)
+	go processResponse(context.Background(), s.c.sess, tokchan, s.c.outs)
+	s.c.clearOuts()
 loop:
 	for tok := range tokchan {
 		switch token := tok.(type) {
@@ -319,7 +319,7 @@ loop:
 			cols = token
 			break loop
 		case error:
-			return nil, token
+			return nil, s.c.checkBadConn(token)
 		}
 	}
 	return cols, nil
@@ -501,9 +501,9 @@ func (b *MssqlBulk) makeParam(val DataValue, col columnStruct) (res Param, err e
 				res.ti.Size = 8
 				res.buffer = make([]byte, 8)
 
-				ref := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
-				dur := val.Sub(ref)
-				days := math.Floor(float64(dur) / float64(24*time.Hour))
+				days := divFloor(val.Unix(), 24*60*60)
+				//25567 - number of days since Jan 1 1900 UTC to Jan 1 1970
+				days = days + 25567
 				tm := (val.Hour()*60*60+val.Minute()*60+val.Second())*300 + int(val.Nanosecond()/10000000*3)
 
 				binary.LittleEndian.PutUint32(res.buffer[0:4], uint32(days))

@@ -58,6 +58,9 @@ to specify where the configuration is.
 - `listener` <tt>([Listener][listener]: \<required\>)</tt> – Configures how
   Vault is listening for API requests.
 
+- `seal` <tt>([Seal][seal]: nil)</tt> – Configures the seal type to use for
+  [seal wrapping][sealwrapping] as an additional layer of data protection.
+
 - `cache_size` `(string: "32000")` – Specifies the size of the read cache used
   by the physical storage subsystem. The value is in number of entries, so the
   total cache size depends on the size of stored entries.
@@ -112,6 +115,27 @@ to specify where the configuration is.
 - `pid_file` `(string: "")` - Path to the file in which the Vault server's
   Process ID (PID) should be stored.
 
+### High Availability Parameters
+
+The following parameters are used on backends that support [high availability][high-availability].
+
+- `api_addr` `(string: "")` - Specifies the address (full URL) to
+  advertise to other Vault servers in the cluster for client redirection. This
+  can also be provided via the environment variable `VAULT_API_ADDR`.
+
+- `cluster_addr` `(string: "")` -  – Specifies the address to advertise to other
+  Vault servers in the cluster for request forwarding. This can also be provided
+  via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
+  `api_addr`, but Vault will ignore the scheme (all cluster members always
+  use TLS with a private key/certificate).
+
+- `disable_clustering` `(bool: false)` – Specifies whether clustering features
+  such as request forwarding are enabled. Setting this to true on one Vault node
+  will disable these features _only when that node is the active node_.
+
 [storage-backend]: /docs/configuration/storage/index.html
 [listener]: /docs/configuration/listener/index.html
+[seal]: /docs/configuration/seal/index.html
+[sealwrapping]: /docs/enterprise/sealwrapping/index.html
 [telemetry]: /docs/configuration/telemetry.html
+[high-availability]: /docs/concepts/ha.html

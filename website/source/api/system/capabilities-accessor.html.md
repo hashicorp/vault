@@ -9,8 +9,11 @@ description: |-
 
 # `/sys/capabilities-accessor`
 
-The `/sys/capabilities-accessor` endpoint is used to fetch the capabilities of a
-token associated with an accessor.
+The `/sys/capabilities-accessor` endpoint is used to fetch the capabilities of
+a token associated with an accessor. The capabilities returned will be derived
+from the policies that are on the token, and from the policies to which token
+is entitled to through the entity and entity's group memberships.
+
 
 ## Query Token Accessor Capabilities
 

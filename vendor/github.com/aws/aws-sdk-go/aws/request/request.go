@@ -28,6 +28,10 @@ const (
 	// during body reads.
 	ErrCodeResponseTimeout = "ResponseTimeout"
 
+	// ErrCodeInvalidPresignExpire is returned when the expire time provided to
+	// presign is invalid
+	ErrCodeInvalidPresignExpire = "InvalidPresignExpireError"
+
 	// CanceledErrorCode is the error code that will be returned by an
 	// API request that was canceled. Requests given a aws.Context may
 	// return this error when canceled.
@@ -42,7 +46,6 @@ type Request struct {
 
 	Retryer
 	Time                   time.Time
-	ExpireTime             time.Duration
 	Operation              *Operation
 	HTTPRequest            *http.Request
 	HTTPResponse           *http.Response
@@ -59,6 +62,11 @@ type Request struct {
 	SignedHeaderVals       http.Header
 	LastSignedAt           time.Time
 	DisableFollowRedirects bool
+
+	// A value greater than 0 instructs the request to be signed as Presigned URL
+	// You should not set this field directly. Instead use Request's
+	// Presign or PresignRequest methods.
+	ExpireTime time.Duration
 
 	context aws.Context
 
@@ -250,27 +258,26 @@ func (r *Request) SetReaderBody(reader io.ReadSeeker) {
 
 // Presign returns the request's signed URL. Error will be returned
 // if the signing fails.
-func (r *Request) Presign(expireTime time.Duration) (string, error) {
-	r.ExpireTime = expireTime
+//
+// It is invalid to create a presigned URL with a expire duration 0 or less. An
+// error is returned if expire duration is 0 or less.
+func (r *Request) Presign(expire time.Duration) (string, error) {
+	r = r.copy()
+
+	// Presign requires all headers be hoisted. There is no way to retrieve
+	// the signed headers not hoisted without this. Making the presigned URL
+	// useless.
 	r.NotHoist = false
 
-	if r.Operation.BeforePresignFn != nil {
-		r = r.copy()
-		err := r.Operation.BeforePresignFn(r)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	r.Sign()
-	if r.Error != nil {
-		return "", r.Error
-	}
-	return r.HTTPRequest.URL.String(), nil
+	u, _, err := getPresignedURL(r, expire)
+	return u, err
 }
 
 // PresignRequest behaves just like presign, with the addition of returning a
 // set of headers that were signed.
+//
+// It is invalid to create a presigned URL with a expire duration 0 or less. An
+// error is returned if expire duration is 0 or less.
 //
 // Returns the URL string for the API operation with signature in the query string,
 // and the HTTP headers that were included in the signature. These headers must
@@ -278,12 +285,32 @@ func (r *Request) Presign(expireTime time.Duration) (string, error) {
 //
 // To prevent hoisting any headers to the query string set NotHoist to true on
 // this Request value prior to calling PresignRequest.
-func (r *Request) PresignRequest(expireTime time.Duration) (string, http.Header, error) {
-	r.ExpireTime = expireTime
-	r.Sign()
-	if r.Error != nil {
-		return "", nil, r.Error
+func (r *Request) PresignRequest(expire time.Duration) (string, http.Header, error) {
+	r = r.copy()
+	return getPresignedURL(r, expire)
+}
+
+func getPresignedURL(r *Request, expire time.Duration) (string, http.Header, error) {
+	if expire <= 0 {
+		return "", nil, awserr.New(
+			ErrCodeInvalidPresignExpire,
+			"presigned URL requires an expire duration greater than 0",
+			nil,
+		)
 	}
+
+	r.ExpireTime = expire
+
+	if r.Operation.BeforePresignFn != nil {
+		if err := r.Operation.BeforePresignFn(r); err != nil {
+			return "", nil, err
+		}
+	}
+
+	if err := r.Sign(); err != nil {
+		return "", nil, err
+	}
+
 	return r.HTTPRequest.URL.String(), r.SignedHeaderVals, nil
 }
 

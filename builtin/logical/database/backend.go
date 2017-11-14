@@ -28,6 +28,12 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/*",
+			},
+		},
+
 		Paths: []*framework.Path{
 			pathListPluginConnection(&b),
 			pathConfigurePluginConnection(&b),

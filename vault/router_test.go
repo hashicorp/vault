@@ -118,11 +118,16 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	meUUID, err = uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if path := r.MatchingMount("prod/aws/foo"); path != "prod/aws/" {
 		t.Fatalf("bad: %s", path)
 	}
 
-	if v := r.MatchingStorageView("prod/aws/foo"); v != view {
+	if v := r.MatchingStorageByAPIPath("prod/aws/foo"); v.(*BarrierView) != view {
 		t.Fatalf("bad: %v", v)
 	}
 
@@ -130,7 +135,7 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("bad: %s", path)
 	}
 
-	if v := r.MatchingStorageView("stage/aws/foo"); v != nil {
+	if v := r.MatchingStorageByAPIPath("stage/aws/foo"); v != nil {
 		t.Fatalf("bad: %v", v)
 	}
 
@@ -139,7 +144,7 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("failed to fetch mount entry using its ID; expected: %#v\n actual: %#v\n", mountEntry, mountEntryFetched)
 	}
 
-	mount, prefix, ok := r.MatchingStoragePrefix("logical/foo")
+	mount, prefix, ok := r.MatchingStoragePrefixByStoragePath("logical/foo")
 	if !ok {
 		t.Fatalf("missing storage prefix")
 	}
@@ -161,6 +166,25 @@ func TestRouter_Mount(t *testing.T) {
 	// Verify the path
 	if len(n.Paths) != 1 || n.Paths[0] != "foo" {
 		t.Fatalf("bad: %v", n.Paths)
+	}
+
+	subMountEntry := &MountEntry{
+		Path:     "prod/",
+		UUID:     meUUID,
+		Accessor: "prodaccessor",
+	}
+
+	if r.MountConflict("prod/aws/") == "" {
+		t.Fatalf("bad: prod/aws/")
+	}
+
+	// No error is shown here because MountConflict is checked before Mount
+	err = r.Mount(n, "prod/", subMountEntry, view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if r.MountConflict("prod/test") == "" {
+		t.Fatalf("bad: prod/test/")
 	}
 }
 
@@ -200,7 +224,7 @@ func TestRouter_MountCredential(t *testing.T) {
 		t.Fatalf("bad: %s", path)
 	}
 
-	if v := r.MatchingStorageView("auth/aws/foo"); v != view {
+	if v := r.MatchingStorageByAPIPath("auth/aws/foo"); v.(*BarrierView) != view {
 		t.Fatalf("bad: %v", v)
 	}
 
@@ -208,7 +232,7 @@ func TestRouter_MountCredential(t *testing.T) {
 		t.Fatalf("bad: %s", path)
 	}
 
-	if v := r.MatchingStorageView("auth/stage/aws/foo"); v != nil {
+	if v := r.MatchingStorageByAPIPath("auth/stage/aws/foo"); v != nil {
 		t.Fatalf("bad: %v", v)
 	}
 
@@ -217,7 +241,7 @@ func TestRouter_MountCredential(t *testing.T) {
 		t.Fatalf("failed to fetch mount entry using its ID; expected: %#v\n actual: %#v\n", mountEntry, mountEntryFetched)
 	}
 
-	mount, prefix, ok := r.MatchingStoragePrefix("auth/foo")
+	mount, prefix, ok := r.MatchingStoragePrefixByStoragePath("auth/foo")
 	if !ok {
 		t.Fatalf("missing storage prefix")
 	}
@@ -270,7 +294,7 @@ func TestRouter_Unmount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if _, _, ok := r.MatchingStoragePrefix("logical/foo"); ok {
+	if _, _, ok := r.MatchingStoragePrefixByStoragePath("logical/foo"); ok {
 		t.Fatalf("should not have matching storage prefix")
 	}
 }
@@ -324,7 +348,7 @@ func TestRouter_Remount(t *testing.T) {
 	}
 
 	// Check the resolve from storage still works
-	mount, prefix, _ := r.MatchingStoragePrefix("logical/foobar")
+	mount, prefix, _ := r.MatchingStoragePrefixByStoragePath("logical/foobar")
 	if mount != "stage/aws/" {
 		t.Fatalf("bad mount: %s", mount)
 	}

@@ -18,8 +18,6 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
 	testing "github.com/mitchellh/go-testing-interface"
@@ -31,11 +29,13 @@ import (
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/hashicorp/errwrap"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
 	"github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -72,7 +72,7 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) Run(args []string) int {
-	var dev, verifyOnly, devHA, devTransactional, devLeasedKV, devThreeNode bool
+	var dev, verifyOnly, devHA, devTransactional, devLeasedKV, devThreeNode, devSkipInit bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress, devPluginDir string
 	var devLatency, devLatencyJitter int
@@ -89,6 +89,7 @@ func (c *ServerCommand) Run(args []string) int {
 	flags.BoolVar(&devTransactional, "dev-transactional", false, "")
 	flags.BoolVar(&devLeasedKV, "dev-leased-kv", false, "")
 	flags.BoolVar(&devThreeNode, "dev-three-node", false, "")
+	flags.BoolVar(&devSkipInit, "dev-skip-init", false, "")
 	flags.Usage = func() { c.Ui.Output(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
@@ -124,13 +125,21 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
-		c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
+		if devThreeNode {
+			c.logger = logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+				Mutex:  &sync.Mutex{},
+				Output: c.logGate,
+			})).LogxiLogger()
+		} else {
+			c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
+		}
 	default:
 		c.logger = log.NewLogger(c.logGate, "vault")
 		c.logger.SetLevel(level)
 	}
 	grpclog.SetLogger(&grpclogFaker{
 		logger: c.logger,
+		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
 	})
 
 	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" && devRootTokenID == "" {
@@ -226,6 +235,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
+	info["log level"] = logLevel
+	infoKeys = append(infoKeys, "log level")
 
 	var seal vault.Seal = &vault.DefaultSeal{}
 
@@ -240,7 +251,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}()
 
 	if seal == nil {
-		c.Ui.Error(fmt.Sprintf("Could not create seal"))
+		c.Ui.Error(fmt.Sprintf("Could not create seal; most likely proper Seal configuration information was not set, but no error was generated."))
 		return 1
 	}
 
@@ -262,6 +273,7 @@ func (c *ServerCommand) Run(args []string) int {
 		PluginDirectory:    config.PluginDirectory,
 		EnableRaw:          config.EnableRawEndpoint,
 	}
+
 	if dev {
 		coreConfig.DevToken = devRootTokenID
 		if devLeasedKV {
@@ -329,7 +341,9 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
+	if envRA := os.Getenv("VAULT_API_ADDR"); envRA != "" {
+		coreConfig.RedirectAddr = envRA
+	} else if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
 		coreConfig.RedirectAddr = envRA
 	} else if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
 		coreConfig.RedirectAddr = envAA
@@ -427,11 +441,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Compile server information for output later
 	info["storage"] = config.Storage.Type
-	info["log level"] = logLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())
-	infoKeys = append(infoKeys, "log level", "mlock", "storage")
+	infoKeys = append(infoKeys, "mlock", "storage")
 
 	if coreConfig.ClusterAddr != "" {
 		info["cluster address"] = coreConfig.ClusterAddr
@@ -567,6 +580,21 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 0
 	}
 
+	handler := vaulthttp.Handler(core)
+
+	// This needs to happen before we first unseal, so before we trigger dev
+	// mode if it's set
+	core.SetClusterListenerAddrs(clusterAddrs)
+	core.SetClusterHandler(handler)
+
+	err = core.UnsealWithStoredKeys()
+	if err != nil {
+		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
+			c.Ui.Output(fmt.Sprintf("Error initializing core: %s", err))
+			return 1
+		}
+	}
+
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
 
@@ -598,15 +626,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 	}
 
-	handler := vaulthttp.Handler(core)
-
-	// This needs to happen before we first unseal, so before we trigger dev
-	// mode if it's set
-	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterHandler(handler)
-
 	// If we're in Dev mode, then initialize the core
-	if dev {
+	if dev && !devSkipInit {
 		init, err := c.enableDev(core, coreConfig)
 		if err != nil {
 			c.Ui.Output(fmt.Sprintf(
@@ -621,31 +642,45 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			quote = ""
 		}
 
+		c.Ui.Output(fmt.Sprint(
+			"==> WARNING: Dev mode is enabled!\n\n" +
+				"In this mode, Vault is completely in-memory and unsealed.\n" +
+				"Vault is configured to only have a single unseal key. The root\n" +
+				"token has already been authenticated with the CLI, so you can\n" +
+				"immediately begin using the Vault CLI.\n\n" +
+				"The only step you need to take is to set the following\n" +
+				"environment variables:\n\n" +
+				"    " + export + " VAULT_ADDR=" + quote + "http://" + config.Listeners[0].Config["address"].(string) + quote + "\n\n" +
+				"The unseal key and root token are reproduced below in case you\n" +
+				"want to seal/unseal the Vault or play with authentication.\n",
+		))
+
+		// Unseal key is not returned if stored shares is supported
+		if len(init.SecretShares) > 0 {
+			c.Ui.Output(fmt.Sprintf(
+				"Unseal Key: %s",
+				base64.StdEncoding.EncodeToString(init.SecretShares[0]),
+			))
+		}
+
+		if len(init.RecoveryShares) > 0 {
+			c.Ui.Output(fmt.Sprintf(
+				"Recovery Key: %s",
+				base64.StdEncoding.EncodeToString(init.RecoveryShares[0]),
+			))
+		}
+
 		c.Ui.Output(fmt.Sprintf(
-			"==> WARNING: Dev mode is enabled!\n\n"+
-				"In this mode, Vault is completely in-memory and unsealed.\n"+
-				"Vault is configured to only have a single unseal key. The root\n"+
-				"token has already been authenticated with the CLI, so you can\n"+
-				"immediately begin using the Vault CLI.\n\n"+
-				"The only step you need to take is to set the following\n"+
-				"environment variables:\n\n"+
-				"    "+export+" VAULT_ADDR="+quote+"http://"+config.Listeners[0].Config["address"].(string)+quote+"\n\n"+
-				"The unseal key and root token are reproduced below in case you\n"+
-				"want to seal/unseal the Vault or play with authentication.\n\n"+
-				"Unseal Key: %s\nRoot Token: %s\n",
-			base64.StdEncoding.EncodeToString(init.SecretShares[0]),
+			"Root Token: %s\n",
 			init.RootToken,
 		))
 	}
 
-	// Initialize the HTTP server
-	server := &http.Server{}
-	if err := http2.ConfigureServer(server, nil); err != nil {
-		c.Ui.Output(fmt.Sprintf("Error configuring server for HTTP/2: %s", err))
-		return 1
-	}
-	server.Handler = handler
+	// Initialize the HTTP servers
 	for _, ln := range lns {
+		server := &http.Server{
+			Handler: handler,
+		}
 		go server.Serve(ln)
 	}
 
@@ -706,29 +741,51 @@ CLUSTER_SYNTHESIS_COMPLETE:
 }
 
 func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig) (*vault.InitResult, error) {
-	// Initialize it with a basic single key
-	init, err := core.Initialize(&vault.InitParams{
-		BarrierConfig: &vault.SealConfig{
+	var recoveryConfig *vault.SealConfig
+	barrierConfig := &vault.SealConfig{
+		SecretShares:    1,
+		SecretThreshold: 1,
+	}
+
+	if core.SealAccess().RecoveryKeySupported() {
+		recoveryConfig = &vault.SealConfig{
 			SecretShares:    1,
 			SecretThreshold: 1,
-		},
-		RecoveryConfig: nil,
+		}
+	}
+
+	if core.SealAccess().StoredKeysSupported() {
+		barrierConfig.StoredShares = 1
+	}
+
+	// Initialize it with a basic single key
+	init, err := core.Initialize(&vault.InitParams{
+		BarrierConfig:  barrierConfig,
+		RecoveryConfig: recoveryConfig,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Copy the key so that it can be zeroed
-	key := make([]byte, len(init.SecretShares[0]))
-	copy(key, init.SecretShares[0])
+	// Handle unseal with stored keys
+	if core.SealAccess().StoredKeysSupported() {
+		err := core.UnsealWithStoredKeys()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Copy the key so that it can be zeroed
+		key := make([]byte, len(init.SecretShares[0]))
+		copy(key, init.SecretShares[0])
 
-	// Unseal the core
-	unsealed, err := core.Unseal(key)
-	if err != nil {
-		return nil, err
-	}
-	if !unsealed {
-		return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+		// Unseal the core
+		unsealed, err := core.Unseal(key)
+		if err != nil {
+			return nil, err
+		}
+		if !unsealed {
+			return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+		}
 	}
 
 	isLeader, _, _, err := core.Leader()
@@ -752,6 +809,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 	}
 
+	// Generate a dev root token if one is provided in the flag
 	if coreConfig.DevToken != "" {
 		req := &logical.Request{
 			ID:          "dev-gen-root",
@@ -803,12 +861,12 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: devListenAddress,
+		RawLogger:         c.logger,
 	})
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
 
 	info["cluster parameters path"] = testCluster.TempDir
-	info["log level"] = "trace"
-	infoKeys = append(infoKeys, "cluster parameters path", "log level")
+	infoKeys = append(infoKeys, "cluster parameters path")
 
 	for i, core := range testCluster.Cores {
 		info[fmt.Sprintf("node %d redirect address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
@@ -1303,6 +1361,7 @@ func MakeSighupCh() chan struct{} {
 
 type grpclogFaker struct {
 	logger log.Logger
+	log    bool
 }
 
 func (g *grpclogFaker) Fatal(args ...interface{}) {
@@ -1321,13 +1380,19 @@ func (g *grpclogFaker) Fatalln(args ...interface{}) {
 }
 
 func (g *grpclogFaker) Print(args ...interface{}) {
-	g.logger.Warn(fmt.Sprint(args...))
+	if g.log && g.logger.IsTrace() {
+		g.logger.Trace(fmt.Sprint(args...))
+	}
 }
 
 func (g *grpclogFaker) Printf(format string, args ...interface{}) {
-	g.logger.Warn(fmt.Sprintf(format, args...))
+	if g.log && g.logger.IsTrace() {
+		g.logger.Trace(fmt.Sprintf(format, args...))
+	}
 }
 
 func (g *grpclogFaker) Println(args ...interface{}) {
-	g.logger.Warn(fmt.Sprintln(args...))
+	if g.log && g.logger.IsTrace() {
+		g.logger.Trace(fmt.Sprintln(args...))
+	}
 }

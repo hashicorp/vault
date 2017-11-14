@@ -490,8 +490,9 @@ func (b *AESGCMBarrier) CreateUpgrade(term uint32) error {
 	value := b.encrypt(key, prevTerm, primary, buf)
 	// Create upgrade key
 	pe := &physical.Entry{
-		Key:   key,
-		Value: value,
+		Key:      key,
+		Value:    value,
+		SealWrap: true,
 	}
 	return b.backend.Put(pe)
 }
@@ -642,8 +643,9 @@ func (b *AESGCMBarrier) Put(entry *Entry) error {
 	}
 
 	pe := &physical.Entry{
-		Key:   entry.Key,
-		Value: b.encrypt(entry.Key, term, primary, entry.Value),
+		Key:      entry.Key,
+		Value:    b.encrypt(entry.Key, term, primary, entry.Value),
+		SealWrap: entry.SealWrap,
 	}
 	return b.backend.Put(pe)
 }
@@ -673,8 +675,9 @@ func (b *AESGCMBarrier) Get(key string) (*Entry, error) {
 
 	// Wrap in a logical entry
 	entry := &Entry{
-		Key:   key,
-		Value: plain,
+		Key:      key,
+		Value:    plain,
+		SealWrap: pe.SealWrap,
 	}
 	return entry, nil
 }

@@ -1,7 +1,3 @@
-// Copyright 2011 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package ldap
 
 import (
@@ -83,20 +79,18 @@ const (
 type Conn struct {
 	conn                net.Conn
 	isTLS               bool
-	closeCount          uint32
+	closing             uint32
 	closeErr            atomicValue
 	isStartingTLS       bool
 	Debug               debugging
-	chanConfirm         chan bool
+	chanConfirm         chan struct{}
 	messageContexts     map[int64]*messageContext
 	chanMessage         chan *messagePacket
 	chanMessageID       chan int64
-	wgSender            sync.WaitGroup
 	wgClose             sync.WaitGroup
-	once                sync.Once
 	outstandingRequests uint
 	messageMutex        sync.Mutex
-	requestTimeout      time.Duration
+	requestTimeout      int64
 }
 
 var _ Client = &Conn{}
@@ -143,7 +137,7 @@ func DialTLS(network, addr string, config *tls.Config) (*Conn, error) {
 func NewConn(conn net.Conn, isTLS bool) *Conn {
 	return &Conn{
 		conn:            conn,
-		chanConfirm:     make(chan bool),
+		chanConfirm:     make(chan struct{}),
 		chanMessageID:   make(chan int64),
 		chanMessage:     make(chan *messagePacket, 10),
 		messageContexts: map[int64]*messageContext{},
@@ -161,20 +155,20 @@ func (l *Conn) Start() {
 
 // isClosing returns whether or not we're currently closing.
 func (l *Conn) isClosing() bool {
-	return atomic.LoadUint32(&l.closeCount) > 0
+	return atomic.LoadUint32(&l.closing) == 1
 }
 
 // setClosing sets the closing value to true
-func (l *Conn) setClosing() {
-	atomic.AddUint32(&l.closeCount, 1)
+func (l *Conn) setClosing() bool {
+	return atomic.CompareAndSwapUint32(&l.closing, 0, 1)
 }
 
 // Close closes the connection.
 func (l *Conn) Close() {
-	l.once.Do(func() {
-		l.setClosing()
-		l.wgSender.Wait()
+	l.messageMutex.Lock()
+	defer l.messageMutex.Unlock()
 
+	if l.setClosing() {
 		l.Debug.Printf("Sending quit message and waiting for confirmation")
 		l.chanMessage <- &messagePacket{Op: MessageQuit}
 		<-l.chanConfirm
@@ -182,27 +176,25 @@ func (l *Conn) Close() {
 
 		l.Debug.Printf("Closing network connection")
 		if err := l.conn.Close(); err != nil {
-			log.Print(err)
+			log.Println(err)
 		}
 
 		l.wgClose.Done()
-	})
+	}
 	l.wgClose.Wait()
 }
 
 // SetTimeout sets the time after a request is sent that a MessageTimeout triggers
 func (l *Conn) SetTimeout(timeout time.Duration) {
 	if timeout > 0 {
-		l.requestTimeout = timeout
+		atomic.StoreInt64(&l.requestTimeout, int64(timeout))
 	}
 }
 
 // Returns the next available messageID
 func (l *Conn) nextMessageID() int64 {
-	if l.chanMessageID != nil {
-		if messageID, ok := <-l.chanMessageID; ok {
-			return messageID
-		}
+	if messageID, ok := <-l.chanMessageID; ok {
+		return messageID
 	}
 	return 0
 }
@@ -327,12 +319,12 @@ func (l *Conn) finishMessage(msgCtx *messageContext) {
 }
 
 func (l *Conn) sendProcessMessage(message *messagePacket) bool {
+	l.messageMutex.Lock()
+	defer l.messageMutex.Unlock()
 	if l.isClosing() {
 		return false
 	}
-	l.wgSender.Add(1)
 	l.chanMessage <- message
-	l.wgSender.Done()
 	return true
 }
 
@@ -352,7 +344,6 @@ func (l *Conn) processMessages() {
 			delete(l.messageContexts, messageID)
 		}
 		close(l.chanMessageID)
-		l.chanConfirm <- true
 		close(l.chanConfirm)
 	}()
 
@@ -361,11 +352,7 @@ func (l *Conn) processMessages() {
 		select {
 		case l.chanMessageID <- messageID:
 			messageID++
-		case message, ok := <-l.chanMessage:
-			if !ok {
-				l.Debug.Printf("Shutting down - message channel is closed")
-				return
-			}
+		case message := <-l.chanMessage:
 			switch message.Op {
 			case MessageQuit:
 				l.Debug.Printf("Shutting down - quit message received")
@@ -388,14 +375,15 @@ func (l *Conn) processMessages() {
 				l.messageContexts[message.MessageID] = message.Context
 
 				// Add timeout if defined
-				if l.requestTimeout > 0 {
+				requestTimeout := time.Duration(atomic.LoadInt64(&l.requestTimeout))
+				if requestTimeout > 0 {
 					go func() {
 						defer func() {
 							if err := recover(); err != nil {
 								log.Printf("ldap: recovered panic in RequestTimeout: %v", err)
 							}
 						}()
-						time.Sleep(l.requestTimeout)
+						time.Sleep(requestTimeout)
 						timeoutMessage := &messagePacket{
 							Op:        MessageTimeout,
 							MessageID: message.MessageID,

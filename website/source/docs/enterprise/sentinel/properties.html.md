@@ -7,11 +7,11 @@ description: |-
 
 ---
 
+# Properties
+
 Vault injects a rich set of data into the running Sentinel environment,
 allowing for very fine-grained controls. The set of available properties are
 enumerated on this page.
-
-# Properties
 
 The following properties are available for use in Sentinel policies.
 
@@ -74,24 +74,24 @@ These exist at the `identity.entity` namespace.
 | `metadata` | `map (string -> string)` | Metadata associated with the entity |
 | `name` | `string` | The entity's name |
 | `merged_entity_ids` | `list (string)` | A list of IDs of entities that have been merged into this one |
-| `personas` | `list (persona)` | List of personas associated with this entity |
+| `aliases` | `list (alias)` | List of aliases associated with this entity |
 | `policies` | `list (string)` | List of the policies set on this entity |
 
-### Persona Properties
+### Alias Properties
 
-These can be retrieved from `identity.entity.personas`.
+These can be retrieved from `identity.entity.aliases`.
 
 | Name | Type | Description |
 | :------- | :--------------------------- | :--------------------- |
-| `creation_time` | `string` | The persona's creation time in RFC3339 format |
-| `id` | `string` | The persona's ID |
-| `last_update_time` | `string` | The persona's last update (modify) time in RFC3339 format |
-| `metadata` | `map (string -> string)` | Metadata associated with the persona|
-| `merged_from_entity_ids` | `list (string)` | If this persona was attached to the current entity via one or more merges, the original entity/entities will be in this list |
-| `mount_accessor` | `string` | The immutable accessor of the mount that created this persona |
-| `mount_path` | `string` | The path of the mount that created this persona; unlike the accessor, there is no guarantee that the current path represents the original mount |
-| `mount_type` | `string` | The type of the mount that created this persona |
-| `name` | `string` | The persona's name |
+| `creation_time` | `string` | The alias's creation time in RFC3339 format |
+| `id` | `string` | The alias's ID |
+| `last_update_time` | `string` | The alias's last update (modify) time in RFC3339 format |
+| `metadata` | `map (string -> string)` | Metadata associated with the alias|
+| `merged_from_entity_ids` | `list (string)` | If this alias was attached to the current entity via one or more merges, the original entity/entities will be in this list |
+| `mount_accessor` | `string` | The immutable accessor of the mount that created this alias |
+| `mount_path` | `string` | The path of the mount that created this alias; unlike the accessor, there is no guarantee that the current path represents the original mount |
+| `mount_type` | `string` | The type of the mount that created this alias |
+| `name` | `string` | The alias's name |
 
 ### Groups Properties
 
@@ -132,3 +132,23 @@ These properties can be accessed via the `mfa.methods` selector.
 | Name | Type | Description |
 | :------- | :--------------------------- | :--------------------- |
 | `valid` | `bool` | Whether the method has successfully been validated; if validation has not been attempted, this will trigger the validation attempt. The result of the validation attempt will be used for this method for all policies for the given request. |
+
+## Control Group Properties
+
+These properties exist at the `controlgroup` namespace.
+
+| Name | Type | Description |
+| :------- | :--------------------------- | :--------------------- |
+| `time`, `request_time` | `string` | The original request time in RFC3339 format |
+| `authorizations` | `list (authorization)` | List of control group authorizations |
+
+### Control Group Authorization
+
+These properties can be accessed via the `controlgroup.authorizations` selector.
+
+| Name | Type | Description |
+| :------- | :--------------------------- | :--------------------- |
+| `time` | `string` | The authorization time in RFC3339 format |
+| `entity` | `identity.entity` | The identity entity for the authorizer. |
+| `groups` | `identity.groups` | The map of identity groups associated with the authorizer. |
+

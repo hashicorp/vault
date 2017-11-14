@@ -31,6 +31,7 @@ func TestSysSealStatus(t *testing.T) {
 		"n":        json.Number("3"),
 		"progress": json.Number("0"),
 		"nonce":    "",
+		"type":     "shamir",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -119,6 +120,7 @@ func TestSysUnseal(t *testing.T) {
 			"n":        json.Number("3"),
 			"progress": json.Number(fmt.Sprintf("%d", i+1)),
 			"nonce":    "",
+			"type":     "shamir",
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
@@ -196,6 +198,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 			"t":        json.Number("3"),
 			"n":        json.Number("5"),
 			"progress": json.Number(strconv.Itoa(i + 1)),
+			"type":     "shamir",
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
@@ -232,6 +235,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 		"t":        json.Number("3"),
 		"n":        json.Number("5"),
 		"progress": json.Number("0"),
+		"type":     "shamir",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -281,7 +285,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil || resp.IsError() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -319,7 +323,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil || resp.IsError() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -340,7 +344,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil || resp.IsError() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -361,7 +365,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil || resp.IsError() {
 		t.Fatalf("bad: %#v", resp)
 	}
 

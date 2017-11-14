@@ -110,7 +110,10 @@ func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error
 //
 // Close need not be called at program exit.
 func (c *Client) Close() error {
+	// Set fields to nil so that subsequent uses
+	// will panic.
 	c.hc = nil
+	c.raw = nil
 	return nil
 }
 
@@ -167,7 +170,7 @@ type SignedURLOptions struct {
 	// Optional.
 	ContentType string
 
-	// Headers is a list of extention headers the client must provide
+	// Headers is a list of extension headers the client must provide
 	// in order to use the generated signed URL.
 	// Optional.
 	Headers []string
@@ -255,14 +258,15 @@ func SignedURL(bucket, name string, opts *SignedURLOptions) (string, error) {
 // ObjectHandle provides operations on an object in a Google Cloud Storage bucket.
 // Use BucketHandle.Object to get a handle.
 type ObjectHandle struct {
-	c             *Client
-	bucket        string
-	object        string
-	acl           ACLHandle
-	gen           int64 // a negative value indicates latest
-	conds         *Conditions
-	encryptionKey []byte // AES-256 key
-	userProject   string // for requester-pays buckets
+	c              *Client
+	bucket         string
+	object         string
+	acl            ACLHandle
+	gen            int64 // a negative value indicates latest
+	conds          *Conditions
+	encryptionKey  []byte // AES-256 key
+	userProject    string // for requester-pays buckets
+	readCompressed bool   // Accept-Encoding: gzip
 }
 
 // ACL provides access to the object's access control list.
@@ -464,6 +468,13 @@ func (o *ObjectHandle) Delete(ctx context.Context) error {
 	return err
 }
 
+// ReadCompressed when true causes the read to happen without decompressing.
+func (o *ObjectHandle) ReadCompressed(compressed bool) *ObjectHandle {
+	o2 := *o
+	o2.readCompressed = compressed
+	return &o2
+}
+
 // NewReader creates a new Reader to read the contents of the
 // object.
 // ErrObjectNotExist will be returned if the object is not found.
@@ -510,6 +521,9 @@ func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64)
 	}
 	if o.userProject != "" {
 		req.Header.Set("X-Goog-User-Project", o.userProject)
+	}
+	if o.readCompressed {
+		req.Header.Set("Accept-Encoding", "gzip")
 	}
 	if err := setEncryptionHeaders(req.Header, o.encryptionKey, false); err != nil {
 		return nil, err
@@ -635,11 +649,10 @@ func (o *ObjectHandle) validate() error {
 	return nil
 }
 
-// parseKey converts the binary contents of a private key file
-// to an *rsa.PrivateKey. It detects whether the private key is in a
-// PEM container or not. If so, it extracts the the private key
-// from PEM container before conversion. It only supports PEM
-// containers with no passphrase.
+// parseKey converts the binary contents of a private key file to an
+// *rsa.PrivateKey. It detects whether the private key is in a PEM container or
+// not. If so, it extracts the private key from PEM container before
+// conversion. It only supports PEM containers with no passphrase.
 func parseKey(key []byte) (*rsa.PrivateKey, error) {
 	if block, _ := pem.Decode(key); block != nil {
 		key = block.Bytes

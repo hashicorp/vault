@@ -44,6 +44,10 @@ func Backend() *backend {
 				"root",
 				"root/sign-self-issued",
 			},
+
+			SealWrapStorage: []string{
+				"config/ca_bundle",
+			},
 		},
 
 		Paths: []*framework.Path{

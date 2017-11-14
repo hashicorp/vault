@@ -132,7 +132,7 @@ func (i *InmemBackend) ListInternal(prefix string) ([]string, error) {
 }
 
 // Implements the transaction interface
-func (t *TransactionalInmemBackend) Transaction(txns []physical.TxnEntry) error {
+func (t *TransactionalInmemBackend) Transaction(txns []*physical.TxnEntry) error {
 	t.permitPool.Acquire()
 	defer t.permitPool.Release()
 

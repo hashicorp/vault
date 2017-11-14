@@ -197,7 +197,7 @@ This endpoint creates or updates a named role.
 
 - `key_id_format` `(string: "")` – When supplied, this value specifies a custom
   format for the key id of a signed certificate. The following variables are
-  availble for use: '{{token_display_name}}' - The display name of the token used
+  available for use: '{{token_display_name}}' - The display name of the token used
   to make the request. '{{role_name}}' - The name of the role signing the request.
   '{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
   e.g. "custom-keyid-{{token_display_name}}",
@@ -310,7 +310,15 @@ $ curl \
 {
   "auth": null,
   "data": {
-    "keys": ["dev", "prod"]
+    "keys": ["dev", "prod"],
+    "key_info": {
+      "dev": {
+        "key_type": "ca"
+      },
+      "prod": {
+        "key_type": "dynamic"
+      }
+    }
   },
   "lease_duration": 2764800,
   "lease_id": "",

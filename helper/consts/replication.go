@@ -33,6 +33,28 @@ func (r ReplicationState) String() string {
 	return "disabled"
 }
 
+func (r ReplicationState) GetDRString() string {
+	switch {
+	case r.HasState(ReplicationDRPrimary):
+		return ReplicationDRPrimary.String()
+	case r.HasState(ReplicationDRSecondary):
+		return ReplicationDRSecondary.String()
+	default:
+		return ReplicationDisabled.String()
+	}
+}
+
+func (r ReplicationState) GetPerformanceString() string {
+	switch {
+	case r.HasState(ReplicationPerformancePrimary):
+		return ReplicationPerformancePrimary.String()
+	case r.HasState(ReplicationPerformanceSecondary):
+		return ReplicationPerformanceSecondary.String()
+	default:
+		return ReplicationDisabled.String()
+	}
+}
+
 func (r ReplicationState) HasState(flag ReplicationState) bool { return r&flag != 0 }
 func (r *ReplicationState) AddState(flag ReplicationState)     { *r |= flag }
 func (r *ReplicationState) ClearState(flag ReplicationState)   { *r &= ^flag }

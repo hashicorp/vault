@@ -94,6 +94,20 @@
               </li>
             </ul>
           </li>
+          <li<%= sidebar_current("docs-configuration-seal") %>>
+          <a href="/docs/configuration/seal/index.html"><tt>seal</tt></a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-configuration-seal-awskms") %>>
+              <a href="/docs/configuration/seal/awskms.html">AWS KMS (Enterprise)</a>
+            </li>
+            <li<%= sidebar_current("docs-configuration-seal-gcpckms") %>>
+              <a href="/docs/configuration/seal/gcpckms.html">GCP Cloud KMS (Enterprise)</a>
+            </li>
+            <li<%= sidebar_current("docs-configuration-seal-pkcs11") %>>
+              <a href="/docs/configuration/seal/pkcs11.html">HSM PKCS11 (Enterprise)</a>
+            </li>
+          </ul>
+        </li>
           <li<%= sidebar_current("docs-configuration-storage") %>>
             <a href="/docs/configuration/storage/index.html"><tt>storage</tt></a>
             <ul class="nav">
@@ -374,13 +388,13 @@
               <li <%= sidebar_current("docs-vault-enterprise-hsm-behavior")%>>
                 <a href="/docs/enterprise/hsm/behavior.html">Behavioral Changes</a>
               </li>
-              <li <%= sidebar_current("docs-vault-enterprise-hsm-configuration")%>>
-                <a href="/docs/enterprise/hsm/configuration.html">Configuration</a>
-              </li>
               <li <%= sidebar_current("docs-vault-enterprise-hsm-security")%>>
                 <a href="/docs/enterprise/hsm/security.html">Security</a>
               </li>
             </ul>
+          </li>
+          <li <%= sidebar_current("docs-vault-enterprise-sealwrap")%> >
+            <a href="/docs/enterprise/sealwrap/index.html">Seal Wrap / FIPS 140-2</a>
           </li>
           <li<%= sidebar_current("docs-vault-enterprise-ui") %>>
             <a href="/docs/enterprise/ui/index.html">UI (Web Interface)</a>
@@ -388,7 +402,10 @@
           <li<%= sidebar_current("docs-vault-enterprise-identity") %>>
             <a href="/docs/enterprise/identity/index.html">Identity</a>
           </li>
-          <li <%= sidebar_current("docs-vault-enterprise-mfa")%> >
+          <li<%= sidebar_current("docs-vault-enterprise-control-groups") %>>
+          <a href="/docs/enterprise/control-groups/index.html">Control Groups</a>
+        </li>
+        <li <%= sidebar_current("docs-vault-enterprise-mfa")%> >
             <a href="/docs/enterprise/mfa/index.html">MFA</a>
             <ul class="nav">
               <li <%= sidebar_current("docs-vault-enterprise-mfa-duo")%>>

@@ -46,9 +46,9 @@
   name = "github.com/mitchellh/mapstructure"
 
 [[constraint]]
-  branch = "release-1.7"
+  branch = "release-1.8"
   name = "k8s.io/apimachinery"
 
 [[constraint]]
-  name = "k8s.io/client-go"
-  version = "4.0.0"
+  name = "k8s.io/api"
+  branch = "release-1.8"
