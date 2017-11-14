@@ -10,7 +10,7 @@ description: |-
 # Seal Wrap
 
 Vault Enterprise features a mechanism to wrap values with an extra layer of
-encryption for supporting [seals](/docs/configuration/seal.html). This adds an
+encryption for supporting [seals](/docs/configuration/seal/index.html). This adds an
 extra layer of protection and is useful in some compliance and regulatory
 environments, including FIPS 140-2 environments.
 

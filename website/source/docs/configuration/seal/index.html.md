@@ -14,7 +14,7 @@ master key. This stanza is optional, and in the case of the master key, Vault
 will use the Shamir algorithm to cryptographically split the master key if this
 is not configured.
 
-As of Vault 0.9.0, the seal can also be used for [seal wrapping][sealwrapping] to
+As of Vault 0.9.0, the seal can also be used for [seal wrapping][sealwrap] to
 add an extra layer of protection and satisfy compliance and regulatory requirements.
 
 ## Configuration
@@ -39,4 +39,4 @@ seal "pkcs11" {
 For configuration options which also read an environment variable, the
 environment variable will take precedence over values in the configuration file.
 
-[sealwrapping]: /docs/enterprise/sealwrapping/index.html
+[sealwrap]: /docs/enterprise/sealwrap/index.html
