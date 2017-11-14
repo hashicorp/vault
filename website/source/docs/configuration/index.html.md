@@ -59,7 +59,7 @@ to specify where the configuration is.
   Vault is listening for API requests.
 
 - `seal` <tt>([Seal][seal]: nil)</tt> – Configures the seal type to use for
-  [seal wrapping][sealwrapping] as an additional layer of data protection.
+  [seal wrapping][sealwrap] as an additional layer of data protection.
 
 - `cache_size` `(string: "32000")` – Specifies the size of the read cache used
   by the physical storage subsystem. The value is in number of entries, so the
@@ -136,6 +136,6 @@ The following parameters are used on backends that support [high availability][h
 [storage-backend]: /docs/configuration/storage/index.html
 [listener]: /docs/configuration/listener/index.html
 [seal]: /docs/configuration/seal/index.html
-[sealwrapping]: /docs/enterprise/sealwrapping/index.html
+[sealwrap]: /docs/enterprise/sealwrap/index.html
 [telemetry]: /docs/configuration/telemetry.html
 [high-availability]: /docs/concepts/ha.html
