@@ -22,9 +22,13 @@ DEPRECATIONS/CHANGES:
  * SSH role list changes: When listing roles from the `ssh` backend via the API,
    the response data will additionally return a `key_info` map that will contain
    a map of each key with a corresponding object containing the `key_type`.
+ * More granularity in audit logs: Audit request and response entires are still
+   in RFC3339 format but now have a granularity of nanoseconds.
 
 FEATURES:
 
+ * **RSA Support for Transit Backend**: Transit backend can now generate RSA
+   keys which can be used for encryption and signing. [GH-3489]
  * **Identity System**: Now in open source and with significant enhancements,
    Identity is an integrated system for understanding users across tokens and
    enabling easier management of users directly and via groups.
@@ -42,8 +46,25 @@ FEATURES:
  * **Sentinel Integration (Enterprise)**: Take advantage of HashiCorp Sentinel
    to create extremely flexible access control policies -- even on
    unauthenticated endpoints.
- * **RSA Support for Transit Backend**: Transit backend can now generate RSA
-   keys which can be used for encryption and signing. [GH-3489]
+ * **Barrier Rekey Support for Auto-Unseal (Enterprise)**: When using auto-unsealing
+   functionality, the `rekey` operation is now supported; it uses recovery keys
+   to authorize the master key rekey.
+ * **Operation Token for Disaster Recovery Actions (Enterprise)**: When using
+   Disaster Recovery replication, a token can be created that can be used to
+   authorize actions such as promotion and updating primary information, rather
+   than using recovery keys.
+ * **Trigger Auto-Unseal with Recovery Keys (Enterprise)**: When using
+   auto-unsealing, a request to unseal Vault can be triggered by a threshold of
+   recovery keys, rather than requiring the Vault process to be restarted.
+ * **UI Redesign (Enterprise)**: All new experience for the Vault Enterprise
+   UI. The look and feel has been completely redesigned to give users a better
+   experience and make managing secrets fast and easy.
+ * **UI: SSH Secret Backend (Enterprise)**: Configure an SSH secret backend,
+   create and browse roles. And use them to sign keys or generate one time
+   passwords.
+ * **UI: AWS Secret Backend (Enterprise)**: You can now configure the AWS
+   backend via the Vault Enterprise UI. In addition you can create roles,
+   browse the roles and Generate IAM Credentials from them in the UI.
 
 IMPROVEMENTS:
 
@@ -64,6 +85,9 @@ IMPROVEMENTS:
  * secret/transit: Sign and verify operations now support a `none` hash
    algorithm to allow signing/verifying pre-hashed data [GH-3448]
  * secret/database: Add the ability to glob allowed roles in the Database Backend [GH-3387]
+ * ui (enterprise): Support for RSA keys in the transit backend
+ * ui (enterprise): Support for DR Operation Token generation, promoting, and
+   updating primary on DR Secondary clusters
 
 BUG FIXES:
 
@@ -88,6 +112,8 @@ BUG FIXES:
  * plugins: Allow response errors to be returned from backend plugins [GH-3412]
  * secret/transit: Fix panic if the length of the input ciphertext was less
    than the expected nonce length [GH-3521]
+ * ui (enterprise): Reinstate support for generic secret backends - this was
+   erroneously removed in a previous release
 
 ## 0.8.3 (September 19th, 2017)
 
