@@ -99,6 +99,7 @@ configure it, use the `/config` endpoint.
 
 ```
 $ vault write auth/kubernetes/config \
+    token_reviewer_jwt="reviewer_service_account_jwt" \
     kubernetes_host=https://192.168.99.100:8443 \
     kubernetes_ca_cert=@ca.crt
 ```
@@ -132,10 +133,11 @@ will be able to authenticate to this backend.
 
 ### RBAC Configuration
 
-Service Accounts used in this backend will need to have access to the
-TokenReview API. If Kubernetes is configured to use Role Based Access Control
-the Service Account should be granted permissions to access this API. The
-following example ClusterRoleBinding could be used to grant these permissions:
+The Service Account used to lookup Tokens in this backend will need to have
+access to the TokenReview API. If Kubernetes is configured to use Role Based
+Access Control the Service Account should be granted permissions to access this
+API. The following example ClusterRoleBinding could be used to grant these
+permissions:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1beta1

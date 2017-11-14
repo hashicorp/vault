@@ -31,6 +31,9 @@ access the Kubernetes API.
 ### Parameters
  - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
  - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.
+ - `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
+    API to validate other JWTs during login. If not set
+    the JWT used for login will be used to access the API.
  - `pem_keys` `(array: [])` - Optional list of PEM-formated public keys or certificates
     used to verify the signatures of Kubernetes service account
     JWTs. If a certificate is given, its public key will be
