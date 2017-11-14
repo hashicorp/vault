@@ -27,14 +27,14 @@ KeyStorage and KeyTransit requirements. This is on by default for many parts of
 Vault and opt-in for each individual mount; see the Activating Seal Wrapping
 section below for details.
 
-[Download the current certification letter](/docs/enterprise/sealwrap/Vault_Compliance_Letter_signed.pdf)
+[Download the current compliance letter](/docs/enterprise/sealwrap/Vault_Compliance_Letter_signed.pdf)
 
 ### Updates Since The Latest FIPS Compliance Audit
 
 The following are values that take advantage of seal wrapping in the current
-release of Vault that have not yet been certified by Leidos. The mechanism for
-seal wrapping is the same, they simply were not specifically evaluated by the
-auditors.
+release of Vault that have not yet been asserted as compliant by Leidos. The
+mechanism for seal wrapping is the same, they simply were not specifically
+evaluated by the auditors.
 
 * Root tokens
 * Replication secondary activation tokens
