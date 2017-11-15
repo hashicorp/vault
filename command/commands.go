@@ -54,6 +54,7 @@ import (
 	physFile "github.com/hashicorp/vault/physical/file"
 	physGCS "github.com/hashicorp/vault/physical/gcs"
 	physInmem "github.com/hashicorp/vault/physical/inmem"
+	physManta "github.com/hashicorp/vault/physical/manta"
 	physMSSQL "github.com/hashicorp/vault/physical/mssql"
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
 	physPostgreSQL "github.com/hashicorp/vault/physical/postgresql"
@@ -457,6 +458,7 @@ func init() {
 					"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
 					"inmem_transactional":    physInmem.NewTransactionalInmem,
 					"inmem":                  physInmem.NewInmem,
+					"manta":                  physManta.NewMantaBackend,
 					"mssql":                  physMSSQL.NewMSSQLBackend,
 					"mysql":                  physMySQL.NewMySQLBackend,
 					"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
