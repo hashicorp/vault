@@ -98,13 +98,13 @@
           <a href="/docs/configuration/seal/index.html"><tt>seal</tt></a>
           <ul class="nav">
             <li<%= sidebar_current("docs-configuration-seal-awskms") %>>
-              <a href="/docs/configuration/seal/awskms.html">AWS KMS (Enterprise)</a>
+              <a href="/docs/configuration/seal/awskms.html">AWS KMS <sup>ENT</sup></a>
             </li>
             <li<%= sidebar_current("docs-configuration-seal-gcpckms") %>>
-              <a href="/docs/configuration/seal/gcpckms.html">GCP Cloud KMS (Enterprise)</a>
+              <a href="/docs/configuration/seal/gcpckms.html">GCP Cloud KMS <sup>ENT</sup></a>
             </li>
             <li<%= sidebar_current("docs-configuration-seal-pkcs11") %>>
-              <a href="/docs/configuration/seal/pkcs11.html">HSM PKCS11 (Enterprise)</a>
+              <a href="/docs/configuration/seal/pkcs11.html">HSM PKCS11 <sup>ENT</sup></a>
             </li>
           </ul>
         </li>
@@ -307,7 +307,7 @@
           <li<%= sidebar_current("docs-auth-gcp") %>>
             <a href="/docs/auth/gcp.html">Google Cloud</a>
           </li>
-  
+
           <li<%= sidebar_current("docs-auth-kubernetes") %>>
             <a href="/docs/auth/kubernetes.html">Kubernetes</a>
           </li>
@@ -379,10 +379,13 @@
       <li<%= sidebar_current("docs-vault-enterprise") %>>
         <a href="/docs/enterprise/index.html">Vault Enterprise</a>
         <ul class="nav">
-          <li <%= sidebar_current("docs-vault-enterprise-replication")%> >
+          <li <%= sidebar_current("docs-vault-enterprise-replication")%>>
             <a href="/docs/enterprise/replication/index.html">Replication</a>
           </li>
-          <li <%= sidebar_current("docs-vault-enterprise-hsm")%> >
+          <li<%= sidebar_current("docs-vault-enterprise-auto-unseal") %>>
+            <a href="/docs/enterprise/auto-unseal/index.html">Auto Unseal</a>
+          </li>
+          <li<%= sidebar_current("docs-vault-enterprise-hsm")%>>
             <a href="/docs/enterprise/hsm/index.html">HSM Support</a>
             <ul class="nav">
               <li <%= sidebar_current("docs-vault-enterprise-hsm-behavior")%>>
@@ -393,7 +396,7 @@
               </li>
             </ul>
           </li>
-          <li <%= sidebar_current("docs-vault-enterprise-sealwrap")%> >
+          <li<%= sidebar_current("docs-vault-enterprise-sealwrap")%>>
             <a href="/docs/enterprise/sealwrap/index.html">Seal Wrap / FIPS 140-2</a>
           </li>
           <li<%= sidebar_current("docs-vault-enterprise-ui") %>>
@@ -403,9 +406,9 @@
             <a href="/docs/enterprise/identity/index.html">Identity</a>
           </li>
           <li<%= sidebar_current("docs-vault-enterprise-control-groups") %>>
-          <a href="/docs/enterprise/control-groups/index.html">Control Groups</a>
-        </li>
-        <li <%= sidebar_current("docs-vault-enterprise-mfa")%> >
+            <a href="/docs/enterprise/control-groups/index.html">Control Groups</a>
+          </li>
+          <li<%= sidebar_current("docs-vault-enterprise-mfa")%>>
             <a href="/docs/enterprise/mfa/index.html">MFA</a>
             <ul class="nav">
               <li <%= sidebar_current("docs-vault-enterprise-mfa-duo")%>>

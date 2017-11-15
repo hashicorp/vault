@@ -20,6 +20,44 @@ the following:
   well as all other GCP-related environment variables that lends to successful
   authentication (i.e. `GOOGLE_PROJECT`, etc.).
 
+## `gcpckms` Example
+
+This example shows configuring GCP Cloud KMS seal through the Vault
+configuration file by providing all the required values:
+
+```hcl
+seal "gcpckms" {
+  credentials = "/usr/vault/vault-project-user-creds.json"
+  project     = "vault-project"
+  region      = "global"
+  key_ring    = "vault-keyring"
+  crypto_key  = "vault-key"
+}
+```
+
+## `gcpckms` Parameters
+
+These parameters apply to the `seal` stanza in the Vault configuration file:
+
+- `credentials` `(string: <required>)`: The path to the credentials JSON file
+  to use. May be also specified by the `GOOGLE_CREDENTIALS` or
+  `GOOGLE_APPLICATION_CREDENTIALS` environment variable or set automatically if
+  running under Google App Engine, Google Compute Engine or Google Container
+  Engine.
+
+- `project` `(string: <required>)`: The GCP project ID to use. May also be
+  specified by the `GOOGLE_PROJECT` environment variable.
+
+- `region` `(string: "us-east-1")`: The GCP region/location where the key ring
+  lives. May also be specified by the `GOOGLE_REGION` environment variable.
+
+- `key_ring` `(string: <required>)`: The GCP CKMS key ring to use. May also be
+  specified by the `VAULT_GCPCKMS_SEAL_KEY_RING` environment variable.
+
+- `crypto_key` `(string: <required>)`: The GCP CKMS crypto key to use for
+  encryption and decryption. May also be specified by the
+  `VAULT_GCPCKMS_SEAL_CRYPTO_KEY` environment variable.
+
 ## Authentication
 
 Authentication-related values must be provided, either as enviroment
@@ -38,25 +76,6 @@ credentials, environment credentials, or [application default
 credentials](https://developers.google.com/identity/protocols/application-default-credentials)
 in that order, if the above GCP specific values are not provided.
 
-## `gcpckms` Parameters
-
-These parameters apply to the `seal` stanza in the Vault configuration file:
-
-* `credentials` `(string: <required>)`: The path to the credentials JSON file
-  to use. May be also specified by the `GOOGLE_CREDENTIALS` or
-  `GOOGLE_APPLICATION_CREDENTIALS` environment variable or set automatically if
-  running under Google App Engine, Google Compute Engine or Google Container
-  Engine.
-* `project` `(string: <required>)`: The GCP project ID to use. May also be
-  specified by the `GOOGLE_PROJECT` environment variable.
-* `region` `(string: "us-east-1")`: The GCP region/location where the key ring
-  lives. May also be specified by the `GOOGLE_REGION` environment variable.
-* `key_ring` `(string: <required>)`: The GCP CKMS key ring to use. May also be
-  specified by the `VAULT_GCPCKMS_SEAL_KEY_RING` environment variable.
-* `crypto_key` `(string: <required>)`: The GCP CKMS crypto key to use for
-  encryption and decryption. May also be specified by the
-  `VAULT_GCPCKMS_SEAL_CRYPTO_KEY` environment variable.
-
 ## `gcpckms` Environment Variables
 
 Alternatively, the GCP Cloud KMS seal can be activated by providing the following
@@ -66,19 +85,4 @@ environment variables:
 * `VAULT_SEAL_TYPE`
 * `VAULT_GCPCKMS_SEAL_KEY_RING`
 * `VAULT_GCPCKMS_SEAL_CRYPTO_KEY`
-```
-
-## `gcpckms` Example
-
-This example shows configuring GCP Cloud KMS seal through the Vault
-configuration file by providing all the required values:
-
-```hcl
-seal "gcpckms" {
-  credentials = "/usr/vault/vault-project-user-creds.json" 
-  project     = "vault-project"
-  region      = "global"
-  key_ring    = "vault-keyring"
-  crypto_key  = "vault-key"
-}
 ```

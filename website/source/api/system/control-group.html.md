@@ -8,6 +8,8 @@ description: |-
 
 ## Authorize Control Group Request
 
+~> **Enterprise Only** – These endpoints require Vault Enterprise.
+
 This endpoint authorizes a control group request.
 
 | Method   | Path                           | Produces               |

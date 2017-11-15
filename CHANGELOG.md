@@ -24,7 +24,16 @@ DEPRECATIONS/CHANGES:
    a map of each key with a corresponding object containing the `key_type`.
  * More granularity in audit logs: Audit request and response entires are still
    in RFC3339 format but now have a granularity of nanoseconds.
-
+ * High availability related values have been moved out of the `storage` and
+   `ha_storage` stanzas, and into the top-level configuration. `redirect_addr`
+   has been renamed to `api_addr`. The stanzas still support accepting
+   HA-related values to maintain backward compatibility, but top-level values
+   will take precedence.
+ * A new `seal` stanza has been added to the configuration file, which is
+   optional and enables configuration of the seal type to use for additional
+   data protection, such as using HSM or Cloud KMS solutions to encrypt and
+   decrypt data.
+   
 FEATURES:
 
  * **RSA Support for Transit Backend**: Transit backend can now generate RSA
