@@ -64,6 +64,7 @@ tags
 # compiled output
 ui/dist
 ui/tmp
+ui/root
 
 # dependencies
 ui/node_modules
