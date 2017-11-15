@@ -148,13 +148,17 @@ func handleSysGenerateRootUpdate(core *vault.Core, generateStrategy vault.Genera
 		}
 
 		resp := &GenerateRootStatusResponse{
-			Complete:         result.Progress == result.Required,
-			Nonce:            req.Nonce,
-			Progress:         result.Progress,
-			Required:         result.Required,
-			Started:          true,
-			EncodedRootToken: result.EncodedRootToken,
-			PGPFingerprint:   result.PGPFingerprint,
+			Complete:       result.Progress == result.Required,
+			Nonce:          req.Nonce,
+			Progress:       result.Progress,
+			Required:       result.Required,
+			Started:        true,
+			EncodedToken:   result.EncodedToken,
+			PGPFingerprint: result.PGPFingerprint,
+		}
+
+		if generateStrategy == vault.GenerateStandardRootTokenStrategy {
+			resp.EncodedRootToken = result.EncodedToken
 		}
 
 		respondOk(w, resp)
@@ -172,6 +176,7 @@ type GenerateRootStatusResponse struct {
 	Progress         int    `json:"progress"`
 	Required         int    `json:"required"`
 	Complete         bool   `json:"complete"`
+	EncodedToken     string `json:"encoded_token"`
 	EncodedRootToken string `json:"encoded_root_token"`
 	PGPFingerprint   string `json:"pgp_fingerprint"`
 }

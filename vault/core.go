@@ -1048,6 +1048,11 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 // UnsealWithRecoveryKeys is used to provide one of the recovery key shares to
 // unseal the Vault.
 func (c *Core) UnsealWithRecoveryKeys(key []byte) (bool, error) {
+	defer metrics.MeasureSince([]string{"core", "unseal_with_recovery_keys"}, time.Now())
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
 	// Explicitly check for init status
 	init, err := c.Initialized()
 	if err != nil {
@@ -1065,9 +1070,6 @@ func (c *Core) UnsealWithRecoveryKeys(key []byte) (bool, error) {
 			return false, err
 		}
 	}
-
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
 
 	// Check if already unsealed
 	if !c.sealed {

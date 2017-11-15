@@ -623,6 +623,21 @@ func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
 	return nil, nil
 }
 
+func (te *TokenEntry) SentinelKeys() []string {
+	return []string{
+		"period",
+		"period_seconds",
+		"explicit_max_ttl",
+		"explicit_max_ttl_seconds",
+		"creation_ttl",
+		"creation_ttl_seconds",
+		"creation_time",
+		"creation_time_unix",
+		"meta",
+		"metadata",
+	}
+}
+
 // tsRoleEntry contains token store role information
 type tsRoleEntry struct {
 	// The name of the role. Embedded so it can be used for pathing
@@ -865,6 +880,12 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 		return te, nil
 	}
 
+	// If we are attempting to unwrap a control group request, don't use the token.
+	// It will be manually revoked by the handler.
+	if len(te.Policies) == 1 && te.Policies[0] == controlGroupPolicyName {
+		return te, nil
+	}
+
 	lock := locksutil.LockForKey(ts.tokenLocks, te.ID)
 	lock.Lock()
 	defer lock.Unlock()
@@ -932,6 +953,25 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 		return nil, err
 	}
 	return ts.lookupSalted(saltedID, false)
+}
+
+// lookupTainted is used to find a token that may or maynot be tainted given its
+// ID. It acquires a read lock, then calls lookupSalted.
+func (ts *TokenStore) lookupTainted(id string) (*TokenEntry, error) {
+	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
+	if id == "" {
+		return nil, fmt.Errorf("cannot lookup blank token")
+	}
+
+	lock := locksutil.LockForKey(ts.tokenLocks, id)
+	lock.RLock()
+	defer lock.RUnlock()
+
+	saltedID, err := ts.SaltID(id)
+	if err != nil {
+		return nil, err
+	}
+	return ts.lookupSalted(saltedID, true)
 }
 
 // lookupSalted is used to find a token given its salted ID. If tainted is

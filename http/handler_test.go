@@ -164,9 +164,9 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 					"plugin_name":       "",
-					"seal_wrap":         false,
 				},
-				"local": false,
+				"local":     false,
+				"seal_wrap": false,
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -176,9 +176,9 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 					"plugin_name":       "",
-					"seal_wrap":         false,
 				},
-				"local": false,
+				"local":     false,
+				"seal_wrap": false,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -188,9 +188,9 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 					"plugin_name":       "",
-					"seal_wrap":         false,
 				},
-				"local": true,
+				"local":     true,
+				"seal_wrap": false,
 			},
 			"identity/": map[string]interface{}{
 				"description": "identity store",
@@ -200,9 +200,9 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 					"plugin_name":       "",
-					"seal_wrap":         false,
 				},
-				"local": false,
+				"local":     false,
+				"seal_wrap": false,
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -213,9 +213,9 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 				"plugin_name":       "",
-				"seal_wrap":         false,
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -225,9 +225,9 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 				"plugin_name":       "",
-				"seal_wrap":         false,
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -237,9 +237,9 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 				"plugin_name":       "",
-				"seal_wrap":         false,
 			},
-			"local": true,
+			"local":     true,
+			"seal_wrap": false,
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -249,9 +249,9 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 				"plugin_name":       "",
-				"seal_wrap":         false,
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -324,6 +324,12 @@ func TestSysMounts_headerAuth_Wrapped(t *testing.T) {
 		t.Fatal("creation_path missing in wrap info")
 	}
 	expected["wrap_info"].(map[string]interface{})["creation_path"] = actualCreationPath
+
+	actualAccessor, ok := actual["wrap_info"].(map[string]interface{})["accessor"]
+	if !ok || actualAccessor == "" {
+		t.Fatal("accessor missing in wrap info")
+	}
+	expected["wrap_info"].(map[string]interface{})["accessor"] = actualAccessor
 
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n%T %T", expected, actual, actual["warnings"], actual["data"])

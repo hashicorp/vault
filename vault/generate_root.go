@@ -61,13 +61,13 @@ type GenerateRootConfig struct {
 // GenerateRootResult holds the result of a root generation update
 // command
 type GenerateRootResult struct {
-	Progress         int
-	Required         int
-	EncodedRootToken string
-	PGPFingerprint   string
+	Progress       int
+	Required       int
+	EncodedToken   string
+	PGPFingerprint string
 }
 
-// GenerateRoot is used to return the root generation progress (num shares)
+// GenerateRootProgress is used to return the root generation progress (num shares)
 func (c *Core) GenerateRootProgress() (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -84,7 +84,7 @@ func (c *Core) GenerateRootProgress() (int, error) {
 	return len(c.generateRootProgress), nil
 }
 
-// GenerateRootConfig is used to read the root generation configuration
+// GenerateRootConfiguration is used to read the root generation configuration
 // It stubbornly refuses to return the OTP if one is there.
 func (c *Core) GenerateRootConfiguration() (*GenerateRootConfig, error) {
 	c.stateLock.RLock()
@@ -328,10 +328,10 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string, strategy GenerateRoo
 	}
 
 	results := &GenerateRootResult{
-		Progress:         progress,
-		Required:         config.SecretThreshold,
-		EncodedRootToken: base64.StdEncoding.EncodeToString(tokenBytes),
-		PGPFingerprint:   c.generateRootConfig.PGPFingerprint,
+		Progress:       progress,
+		Required:       config.SecretThreshold,
+		EncodedToken:   base64.StdEncoding.EncodeToString(tokenBytes),
+		PGPFingerprint: c.generateRootConfig.PGPFingerprint,
 	}
 
 	if c.logger.IsInfo() {

@@ -68,7 +68,8 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		err == nil &&
 		!resp.IsError() &&
 		resp.WrapInfo != nil &&
-		resp.WrapInfo.TTL != 0
+		resp.WrapInfo.TTL != 0 &&
+		resp.WrapInfo.Token == ""
 
 	if wrapping {
 		cubbyResp, cubbyErr := c.wrapInCubbyhole(req, resp, auth)
@@ -161,12 +162,10 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
-		var errType error
+		errType := logical.ErrInvalidRequest
 		switch ctErr {
 		case ErrInternalError, logical.ErrPermissionDenied:
 			errType = ctErr
-		default:
-			errType = logical.ErrInvalidRequest
 		}
 
 		if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, ctErr); err != nil {

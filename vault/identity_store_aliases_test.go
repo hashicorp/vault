@@ -34,7 +34,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 	}
 	aliasReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "alias",
+		Path:      "entity-alias",
 		Data:      aliasData,
 	}
 	resp, err = is.HandleRequest(aliasReq)
@@ -51,7 +51,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 
 	listReq := &logical.Request{
 		Operation: logical.ListOperation,
-		Path:      "alias/id",
+		Path:      "entity-alias/id",
 	}
 	resp, err = is.HandleRequest(listReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -78,7 +78,7 @@ func TestIdentityStore_AliasSameAliasNames(t *testing.T) {
 
 	aliasReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "alias",
+		Path:      "entity-alias",
 		Data:      aliasData,
 	}
 
@@ -285,7 +285,7 @@ func TestIdentityStore_AliasRegister(t *testing.T) {
 
 	aliasReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "alias",
+		Path:      "entity-alias",
 		Data:      aliasData,
 	}
 
@@ -329,7 +329,7 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 
 	aliasReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "alias",
+		Path:      "entity-alias",
 		Data:      aliasData,
 	}
 
@@ -347,7 +347,7 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 	}
 
 	aliasReq.Data = updateData
-	aliasReq.Path = "alias/id/" + aliasID
+	aliasReq.Path = "entity-alias/id/" + aliasID
 	resp, err = is.HandleRequest(aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
@@ -381,7 +381,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 
 	updateReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "alias/id/invalidaliasid",
+		Path:      "entity-alias/id/invalidaliasid",
 		Data:      updateData,
 	}
 
@@ -402,7 +402,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 
 	registerReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "alias",
+		Path:      "entity-alias",
 		Data:      registerData,
 	}
 
@@ -420,7 +420,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 		t.Fatalf("invalid alias id")
 	}
 
-	updateReq.Path = "alias/id/" + id
+	updateReq.Path = "entity-alias/id/" + id
 	resp, err = is.HandleRequest(updateReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
@@ -479,7 +479,7 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 
 	registerReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "alias",
+		Path:      "entity-alias",
 		Data:      registerData,
 	}
 
@@ -500,7 +500,7 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 	// Read it back using alias id
 	aliasReq := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "alias/id/" + id,
+		Path:      "entity-alias/id/" + id,
 	}
 	resp, err = is.HandleRequest(aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {

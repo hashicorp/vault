@@ -309,6 +309,8 @@ func (c *GenerateRootCommand) dumpStatus(status *api.GenerateRootStatusResponse)
 	}
 	if len(status.EncodedRootToken) > 0 {
 		statString = fmt.Sprintf("%s\n\nEncoded root token: %s", statString, status.EncodedRootToken)
+	} else if len(status.EncodedToken) > 0 {
+		statString = fmt.Sprintf("%s\n\nEncoded token: %s", statString, status.EncodedToken)
 	}
 	c.Ui.Output(statString)
 }
