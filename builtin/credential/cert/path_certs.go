@@ -67,6 +67,12 @@ seconds. Defaults to system/backend default TTL.`,
 				Description: `TTL for tokens issued by this backend.
 Defaults to system/backend default TTL time.`,
 			},
+			"max_ttl": &framework.FieldSchema{
+				Type: framework.TypeDurationSecond,
+				Description: `Duration in either an integer number of seconds (3600) or
+an integer time unit (60m) after which the 
+issued token can no longer be renewed.`,
+			},
 			"period": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
 				Description: `If set, indicates that the token generated using this role
@@ -131,9 +137,14 @@ func (b *backend) pathCertRead(
 		return nil, nil
 	}
 
-	duration := cert.TTL
-	if duration == 0 {
-		duration = b.System().DefaultLeaseTTL()
+	ttl := cert.TTL
+	if ttl == 0 {
+		ttl = b.System().DefaultLeaseTTL()
+	}
+
+	maxTTL := cert.MaxTTL
+	if maxTTL == 0 {
+		maxTTL = b.System().MaxLeaseTTL()
 	}
 
 	period := cert.Period
@@ -143,7 +154,8 @@ func (b *backend) pathCertRead(
 			"certificate":  cert.Certificate,
 			"display_name": cert.DisplayName,
 			"policies":     cert.Policies,
-			"ttl":          duration / time.Second,
+			"ttl":          ttl / time.Second,
+			"max_ttl":      maxTTL / time.Second,
 			"period":       period / time.Second,
 		},
 	}, nil
@@ -157,13 +169,45 @@ func (b *backend) pathCertWrite(
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
 
-	periodRaw, ok := d.GetOk("period")
-	var period time.Duration
-	if ok {
-		period = time.Second * time.Duration(periodRaw.(int))
+	// Parse the ttl (or lease duration)
+	systemDefaultTTL := b.System().DefaultLeaseTTL()
+	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
+	if ttl == 0 {
+		ttl = time.Second * time.Duration(d.Get("lease").(int))
 	}
-	if period > b.System().MaxLeaseTTL() {
-		return logical.ErrorResponse(fmt.Sprintf("'period' of '%s' is greater than the backend's maximum lease TTL of '%s'", period.String(), b.System().MaxLeaseTTL().String())), nil
+	if ttl > systemDefaultTTL {
+		return logical.ErrorResponse(fmt.Sprintf("Given ttl of %d seconds is greater than current mount/system default of %d seconds", ttl/time.Second, systemDefaultTTL/time.Second)), nil
+	}
+
+	// Parse max_ttl
+	systemMaxTTL := b.System().MaxLeaseTTL()
+	maxTTL := time.Duration(d.Get("max_ttl").(int)) * time.Second
+	if maxTTL > systemMaxTTL {
+		return logical.ErrorResponse(fmt.Sprintf("Given max_ttl of %d seconds is greater than current mount/system default of %d seconds", maxTTL/time.Second, systemMaxTTL/time.Second)), nil
+	}
+
+	// Logic pertaining to interaction between ttl and max_ttl
+	if maxTTL != 0 {
+		// If ttl is 0, set the ttl as the max ttl
+		if ttl == 0 {
+			ttl = maxTTL
+		}
+
+		// Error if ttl is larger than maxTTL
+		if ttl > maxTTL {
+			return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
+		}
+	}
+
+	// Parse period
+	period := time.Duration(d.Get("period").(int)) * time.Second
+	if period > systemMaxTTL {
+		return logical.ErrorResponse(fmt.Sprintf("Given period of %d seconds is greater than the backend's maximum TTL of %d seconds", period/time.Second, systemMaxTTL/time.Second)), nil
+	}
+
+	// If a period is provided, use that as the ttl instead, ignoring previously set ttl
+	if period > 0 {
+		ttl = period
 	}
 
 	// Default the display name to the certificate name if not given
@@ -196,20 +240,9 @@ func (b *backend) pathCertWrite(
 		DisplayName:  displayName,
 		Policies:     policies,
 		AllowedNames: allowedNames,
+		TTL:          ttl,
+		MaxTTL:       maxTTL,
 		Period:       period,
-	}
-
-	// Parse the lease duration or default to backend/system default
-	maxTTL := b.System().MaxLeaseTTL()
-	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
-	if ttl == time.Duration(0) {
-		ttl = time.Second * time.Duration(d.Get("lease").(int))
-	}
-	if ttl > maxTTL {
-		return logical.ErrorResponse(fmt.Sprintf("Given TTL of %d seconds greater than current mount/system default of %d seconds", ttl/time.Second, maxTTL/time.Second)), nil
-	}
-	if ttl > time.Duration(0) {
-		certEntry.TTL = ttl
 	}
 
 	// Store it
@@ -229,6 +262,7 @@ type CertEntry struct {
 	DisplayName  string
 	Policies     []string
 	TTL          time.Duration
+	MaxTTL       time.Duration
 	AllowedNames []string
 	Period       time.Duration
 }

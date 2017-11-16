@@ -78,48 +78,51 @@ func (b *backend) pathLogin(
 		ttl = b.System().DefaultLeaseTTL()
 	}
 
+	maxTTL := matched.Entry.MaxTTL
+	if maxTTL == 0 {
+		maxTTL = b.System().MaxLeaseTTL()
+	}
+
 	clientCerts := req.Connection.ConnState.PeerCertificates
 	if len(clientCerts) == 0 {
-		return logical.ErrorResponse("no client certificate found"), nil
+		return nil, fmt.Errorf("no client certificate found")
 	}
 	skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 	akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
 
-	auth := &logical.Auth{
-		Period: matched.Entry.Period,
-		InternalData: map[string]interface{}{
-			"subject_key_id":   skid,
-			"authority_key_id": akid,
-		},
-		Policies:    matched.Entry.Policies,
-		DisplayName: matched.Entry.DisplayName,
-		Metadata: map[string]string{
-			"cert_name":        matched.Entry.Name,
-			"common_name":      clientCerts[0].Subject.CommonName,
-			"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
-			"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
-		},
-		LeaseOptions: logical.LeaseOptions{
-			Renewable: true,
-			TTL:       ttl,
-		},
-		Alias: &logical.Alias{
-			Name: clientCerts[0].SerialNumber.String(),
+	resp := &logical.Response{
+		Auth: &logical.Auth{
+			Period: matched.Entry.Period,
+			InternalData: map[string]interface{}{
+				"subject_key_id":   skid,
+				"authority_key_id": akid,
+			},
+			Policies:    matched.Entry.Policies,
+			DisplayName: matched.Entry.DisplayName,
+			Metadata: map[string]string{
+				"cert_name":        matched.Entry.Name,
+				"common_name":      clientCerts[0].Subject.CommonName,
+				"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
+				"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
+			},
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: true,
+				TTL:       ttl,
+			},
+			Alias: &logical.Alias{
+				Name: clientCerts[0].SerialNumber.String(),
+			},
 		},
 	}
 
-	// If 'Period' is set, use the value of 'Period' as the TTL.
-	// Otherwise, set the normal TokenTTL.
-	if matched.Entry.Period > time.Duration(0) {
-		auth.TTL = matched.Entry.Period
-	} else {
-		auth.TTL = ttl
+	// Adjust ttl value if it exceeds max_ttl, ignore check if period is non-zero
+	if ttl > maxTTL && matched.Entry.Period == 0 {
+		resp.AddWarning(fmt.Sprintf("Effective TTL of %d exceeded the effective max_ttl of %d; TTL value is capped accordingly", (ttl / time.Second), (maxTTL / time.Second)))
+		resp.Auth.TTL = maxTTL
 	}
 
 	// Generate a response
-	return &logical.Response{
-		Auth: auth,
-	}, nil
+	return resp, nil
 }
 
 func (b *backend) pathLoginRenew(
@@ -180,7 +183,7 @@ func (b *backend) pathLoginRenew(
 		return &logical.Response{Auth: req.Auth}, nil
 	}
 
-	return framework.LeaseExtend(cert.TTL, 0, b.System())(req, d)
+	return framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(req, d)
 }
 
 func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {

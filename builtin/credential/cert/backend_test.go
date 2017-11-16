@@ -587,7 +587,7 @@ func TestBackend_CRLs(t *testing.T) {
 func testFactory(t *testing.T) logical.Backend {
 	b, err := Factory(&logical.BackendConfig{
 		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: 300 * time.Second,
+			DefaultLeaseTTLVal: 1000 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,
 		},
 		StorageView: &logical.InmemStorage{},
@@ -646,6 +646,8 @@ func TestBackend_basic_CA(t *testing.T) {
 			testAccStepLogin(t, connState),
 			testAccStepCertLease(t, "web", ca, "foo"),
 			testAccStepCertTTL(t, "web", ca, "foo"),
+			testAccStepLogin(t, connState),
+			testAccStepCertMaxTTL(t, "web", ca, "foo"),
 			testAccStepLogin(t, connState),
 			testAccStepCertNoLease(t, "web", ca, "foo"),
 			testAccStepLoginDefaultLease(t, connState),
@@ -826,7 +828,7 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 		Unauthenticated: true,
 		ConnState:       &connState,
 		Check: func(resp *logical.Response) error {
-			if resp.Auth.TTL != 300*time.Second {
+			if resp.Auth.TTL != 1000*time.Second {
 				t.Fatalf("bad lease length: %#v", resp.Auth)
 			}
 
@@ -951,6 +953,21 @@ func testAccStepCertTTL(
 			"policies":     policies,
 			"display_name": name,
 			"ttl":          "1000s",
+		},
+	}
+}
+
+func testAccStepCertMaxTTL(
+	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "certs/" + name,
+		Data: map[string]interface{}{
+			"certificate":  string(cert),
+			"policies":     policies,
+			"display_name": name,
+			"ttl":          "1000s",
+			"max_ttl":      "1200s",
 		},
 	}
 }
