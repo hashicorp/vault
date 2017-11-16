@@ -2,6 +2,10 @@
 
 DEPRECATIONS/CHANGES:
 
+ * HSM config parameter requirements: When using Vault with an HSM, a new
+   paramter is required: `hmac_key_label`.  This performs a similar function to
+   `key_label` but for the HMAC key Vault will use. Vault will generate a
+   suitable key if this value is specified and `generate_key` is set true.
  * API HTTP client behavior: When calling `NewClient` the API no longer
    modifies the provided client/transport. In particular this means it will no
    longer enable redirection limiting and HTTP/2 support on custom clients. It
