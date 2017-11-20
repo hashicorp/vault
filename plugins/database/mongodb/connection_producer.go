@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -21,6 +22,7 @@ import (
 // interface for databases to make connections.
 type mongoDBConnectionProducer struct {
 	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
+	WriteConcern  string `json:"write_concern" structs:"write_concern" mapstructure:"write_concern"`
 
 	Initialized bool
 	Type        string
@@ -78,6 +80,20 @@ func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if c.WriteConcern != "" {
+		var concern writeConcern
+		json.Unmarshal([]byte(c.WriteConcern), &concern)
+
+		c.session.SetSafe(&mgo.Safe{
+			W:        concern.W,
+			WMode:    concern.WMode,
+			WTimeout: concern.WTimeout,
+			FSync:    concern.FSync,
+			J:        concern.J,
+		})
+	}
+
 	c.session.SetSyncTimeout(1 * time.Minute)
 	c.session.SetSocketTimeout(1 * time.Minute)
 
