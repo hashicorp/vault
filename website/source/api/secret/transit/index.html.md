@@ -297,13 +297,13 @@ $ curl \
 
 ## Encrypt Data
 
-This endpoint encrypts the provided plaintext using the named key. Currently,
-this only supports symmetric keys. This path supports the `create` and `update`
-policy capabilities as follows: if the user has the `create` capability for this
-endpoint in their policies, and the key does not exist, it will be upserted with
-default values (whether the key requires derivation depends on whether the
-context parameter is empty or not). If the user only has `update` capability and
-the key does not exist, an error will be returned.
+This endpoint encrypts the provided plaintext using the named key. This path
+supports the `create` and `update` policy capabilities as follows: if the user
+has the `create` capability for this endpoint in their policies, and the key
+does not exist, it will be upserted with default values (whether the key
+requires derivation depends on whether the context parameter is empty or not).
+If the user only has `update` capability and the key does not exist, an error
+will be returned.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -351,8 +351,7 @@ the key does not exist, an error will be returned.
 
 - `type` `(string: "aes256-gcm96")` –This parameter is required when encryption
   key is expected to be created. When performing an upsert operation, the type
-  of key to create. Currently, "aes256-gcm96" (symmetric) is the only type
-  supported.
+  of key to create.
 
 - `convergent_encryption` `(string: "")` – This parameter will only be used when
   a key is expected to be created.  Whether to support convergent encryption.
@@ -394,8 +393,7 @@ $ curl \
 
 ## Decrypt Data
 
-This endpoint decrypts the provided ciphertext using the named key. Currently,
-this only supports symmetric keys.
+This endpoint decrypts the provided ciphertext using the named key.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
