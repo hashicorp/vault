@@ -36,7 +36,7 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 
 	outStr := fmt.Sprintf(
-		"Type: %s\n"+
+		"Seal Type: %s\n"+
 			"Sealed: %v\n"+
 			"Key Shares: %d\n"+
 			"Key Threshold: %d\n"+
