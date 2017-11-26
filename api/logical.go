@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -25,7 +26,7 @@ var (
 			return os.Getenv(EnvVaultWrapTTL)
 		}
 
-		if (operation == "PUT" || operation == "POST") && path == "sys/wrapping/wrap" {
+		if (operation == http.MethodPut || operation == http.MethodPost) && path == "sys/wrapping/wrap" {
 			return DefaultWrappingTTL
 		}
 
@@ -43,9 +44,19 @@ func (c *Client) Logical() *Logical {
 	return &Logical{c: c}
 }
 
+// Read performs an HTTP GET operation on the given path, corresponding to a
+// "read" operation.
 func (c *Logical) Read(path string) (*Secret, error) {
-	r := c.c.NewRequest("GET", "/v1/"+path)
-	resp, err := c.c.RawRequest(r)
+	return c.ReadWithContext(context.Background(), path)
+}
+
+// ReadWithContext performs an HTTP GET operation on the given path with the
+// given context, corresponding to a "read" operation.
+func (c *Logical) ReadWithContext(ctx context.Context, path string) (*Secret, error) {
+	req := c.c.NewRequest(http.MethodGet, "/v1/"+path)
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -59,13 +70,23 @@ func (c *Logical) Read(path string) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// List performs an HTTP LIST operation on the given path corresponding to a
+// "list" operation.
 func (c *Logical) List(path string) (*Secret, error) {
-	r := c.c.NewRequest("LIST", "/v1/"+path)
+	return c.ListWithContext(context.Background(), path)
+}
+
+// ListWithContext performs an HTTP LIST operation on the given path with the
+// given context, corresponding to a "list" operation.
+func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, error) {
+	req := c.c.NewRequest("LIST", "/v1/"+path)
+	req = req.WithContext(ctx)
+
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
-	r.Method = "GET"
-	r.Params.Set("list", "true")
-	resp, err := c.c.RawRequest(r)
+	req.Method = http.MethodGet
+	req.Params.Set("list", "true")
+	resp, err := c.c.RawRequest(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -79,13 +100,23 @@ func (c *Logical) List(path string) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// Write performs an HTTP PUT operation on the given path corresponding to a
+// "write" operation.
 func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
-	r := c.c.NewRequest("PUT", "/v1/"+path)
-	if err := r.SetJSONBody(data); err != nil {
+	return c.WriteWithContext(context.Background(), path, data)
+}
+
+// WriteWithContext performs an HTTP put operation on the given path with the
+// given context, corresponding to a "write" operation.
+func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
+	req := c.c.NewRequest(http.MethodPut, "/v1/"+path)
+	req = req.WithContext(ctx)
+
+	if err := req.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	resp, err := c.c.RawRequest(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -100,9 +131,19 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 	return nil, nil
 }
 
+// Delete performs and HTTP DELETE operation on the given path corresponding to
+// a "delete" operation.
 func (c *Logical) Delete(path string) (*Secret, error) {
-	r := c.c.NewRequest("DELETE", "/v1/"+path)
-	resp, err := c.c.RawRequest(r)
+	return c.DeleteWithContext(context.Background(), path)
+}
+
+// DeleteWithContext performs an HTTP DELETE operation on the given path with
+// the given context, corresponding to a "delete" operation.
+func (c *Logical) DeleteWithContext(ctx context.Context, path string) (*Secret, error) {
+	req := c.c.NewRequest(http.MethodDelete, "/v1/"+path)
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -117,7 +158,14 @@ func (c *Logical) Delete(path string) (*Secret, error) {
 	return nil, nil
 }
 
+// Unwrap unwraps the value in the given token's cubbyhole.
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
+	return c.UnwrapWithContext(context.Background(), wrappingToken)
+}
+
+// UnwrapWithContext unwraps the value in the given token's cubbyhole with the
+// given context.
+func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (*Secret, error) {
 	var data map[string]interface{}
 	if wrappingToken != "" {
 		if c.c.Token() == "" {
@@ -129,12 +177,14 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 		}
 	}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/wrapping/unwrap")
-	if err := r.SetJSONBody(data); err != nil {
+	req := c.c.NewRequest(http.MethodPut, "/v1/sys/wrapping/unwrap")
+	req = req.WithContext(ctx)
+
+	if err := req.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	resp, err := c.c.RawRequest(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}

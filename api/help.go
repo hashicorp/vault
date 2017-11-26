@@ -1,14 +1,24 @@
 package api
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 )
 
-// Help reads the help information for the given path.
+// Help returns help information about the given path.
 func (c *Client) Help(path string) (*Help, error) {
-	r := c.NewRequest("GET", fmt.Sprintf("/v1/%s", path))
-	r.Params.Add("help", "1")
-	resp, err := c.RawRequest(r)
+	return c.HelpWithContext(context.Background(), path)
+}
+
+// HelpWithContext returns help information about the given path, with a context.
+func (c *Client) HelpWithContext(ctx context.Context, path string) (*Help, error) {
+	req := c.NewRequest(http.MethodGet, fmt.Sprintf("/v1/%s", path))
+	req = req.WithContext(ctx)
+
+	req.Params.Add("help", "1")
+
+	resp, err := c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +29,11 @@ func (c *Client) Help(path string) (*Help, error) {
 	return &result, err
 }
 
+// Help is the response from a help request.
 type Help struct {
-	Help    string   `json:"help"`
+	// Help is the raw help.
+	Help string `json:"help"`
+
+	// SeeAlso is a list of other methods to see for help.
 	SeeAlso []string `json:"see_also"`
 }

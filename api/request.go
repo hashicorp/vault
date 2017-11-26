@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -26,6 +27,45 @@ type Request struct {
 	// EGPs). If set, the override flag will take effect for all policies
 	// evaluated during the request.
 	PolicyOverride bool
+
+	// ctx is a context to use with this request. It should only be modified using
+	// WithContext.
+	ctx context.Context
+}
+
+// WithContext creates and returns a shallow copy of the request with the given
+// context.
+func (r *Request) WithContext(ctx context.Context) *Request {
+	// Forbid a nil context. The net/http package actually panics here, but that
+	// seems like a bad behavior.
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	// Copy the request
+	r2 := new(Request)
+	if r != nil {
+		*r2 = *r
+	}
+	r2.ctx = ctx
+
+	// Deep copy URL because it is mutable by users of WithContext.
+	if r.URL != nil {
+		r2URL := new(url.URL)
+		*r2URL = *r.URL
+		r2.URL = r2URL
+	}
+
+	return r2
+}
+
+// Context returns the context attached to this request, or context.Background()
+// if none exists.
+func (r *Request) Context() context.Context {
+	if r != nil && r.ctx != nil {
+		return r.ctx
+	}
+	return context.Background()
 }
 
 // SetJSONBody is used to set a request body that is a JSON-encoded value.
@@ -92,6 +132,9 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 	if r.PolicyOverride {
 		req.Header.Set("X-Vault-Policy-Override", "true")
 	}
+
+	// Add the context
+	req = req.WithContext(r.Context())
 
 	return req, nil
 }

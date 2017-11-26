@@ -12,9 +12,14 @@ type Secret struct {
 	// The request ID that generated this response
 	RequestID string `json:"request_id"`
 
-	LeaseID       string `json:"lease_id"`
-	LeaseDuration int    `json:"lease_duration"`
-	Renewable     bool   `json:"renewable"`
+	// LeaseID is the ID of the lease, if one exists.
+	LeaseID string `json:"lease_id"`
+
+	// LeaseDuration is the remaining lease duration, if one exists.
+	LeaseDuration int `json:"lease_duration"`
+
+	// Renewable indicates if this secret is renewable.
+	Renewable bool `json:"renewable"`
 
 	// Data is the actual contents of the secret. The format of the data
 	// is arbitrary and up to the secret backend.
