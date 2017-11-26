@@ -9,10 +9,13 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// AuditHash calculates the audit hash for the given input.
 func (c *Sys) AuditHash(path string, input string) (string, error) {
 	return c.AuditHashWithContext(context.Background(), path, input)
 }
 
+// AuditHashWithContext calculates the audit hash for the given input, with a
+// context.
 func (c *Sys) AuditHashWithContext(ctx context.Context, path string, input string) (string, error) {
 	req := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/sys/audit-hash/%s", path))
 	req = req.WithContext(ctx)
@@ -46,10 +49,12 @@ func (c *Sys) ListAudit() (map[string]*Audit, error) {
 	return c.ListAuditsWithContext(context.Background())
 }
 
+// ListAudits returns all enabled audit backends.
 func (c *Sys) ListAudits() (map[string]*Audit, error) {
 	return c.ListAuditsWithContext(context.Background())
 }
 
+// ListAuditsWithContext returns all enabled audit backends, with a context.
 func (c *Sys) ListAuditsWithContext(ctx context.Context) (map[string]*Audit, error) {
 	req := c.c.NewRequest(http.MethodGet, "/v1/sys/audit")
 	req = req.WithContext(ctx)
