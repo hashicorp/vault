@@ -569,7 +569,7 @@ authenticated user.
 Tokens are associated with their policies at creation time. For example:
 
 ```sh
-$ vault token-create -policy=dev-readonly,logs
+$ vault token-create -policy=dev-readonly -policy=logs
 ```
 
 Child tokens can be associated with a subset of a parent's policies. Root users
