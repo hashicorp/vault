@@ -1,8 +1,19 @@
 package api
 
+import (
+	"context"
+	"net/http"
+)
+
 func (c *Sys) RekeyStatus() (*RekeyStatusResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/rekey/init")
-	resp, err := c.c.RawRequest(r)
+	return c.RekeyStatusWithContext(context.Background())
+}
+
+func (c *Sys) RekeyStatusWithContext(ctx context.Context) (*RekeyStatusResponse, error) {
+	req := c.c.NewRequest(http.MethodGet, "/v1/sys/rekey/init")
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -14,8 +25,14 @@ func (c *Sys) RekeyStatus() (*RekeyStatusResponse, error) {
 }
 
 func (c *Sys) RekeyRecoveryKeyStatus() (*RekeyStatusResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/rekey-recovery-key/init")
-	resp, err := c.c.RawRequest(r)
+	return c.RekeyRecoveryKeyStatusWithContext(context.Background())
+}
+
+func (c *Sys) RekeyRecoveryKeyStatusWithContext(ctx context.Context) (*RekeyStatusResponse, error) {
+	req := c.c.NewRequest(http.MethodGet, "/v1/sys/rekey-recovery-key/init")
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -27,12 +44,18 @@ func (c *Sys) RekeyRecoveryKeyStatus() (*RekeyStatusResponse, error) {
 }
 
 func (c *Sys) RekeyInit(config *RekeyInitRequest) (*RekeyStatusResponse, error) {
-	r := c.c.NewRequest("PUT", "/v1/sys/rekey/init")
-	if err := r.SetJSONBody(config); err != nil {
+	return c.RekeyInitWithContext(context.Background(), config)
+}
+
+func (c *Sys) RekeyInitWithContext(ctx context.Context, config *RekeyInitRequest) (*RekeyStatusResponse, error) {
+	req := c.c.NewRequest(http.MethodPut, "/v1/sys/rekey/init")
+	req = req.WithContext(ctx)
+
+	if err := req.SetJSONBody(config); err != nil {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +67,18 @@ func (c *Sys) RekeyInit(config *RekeyInitRequest) (*RekeyStatusResponse, error) 
 }
 
 func (c *Sys) RekeyRecoveryKeyInit(config *RekeyInitRequest) (*RekeyStatusResponse, error) {
-	r := c.c.NewRequest("PUT", "/v1/sys/rekey-recovery-key/init")
-	if err := r.SetJSONBody(config); err != nil {
+	return c.RekeyRecoveryKeyInitWithContext(context.Background(), config)
+}
+
+func (c *Sys) RekeyRecoveryKeyInitWithContext(ctx context.Context, config *RekeyInitRequest) (*RekeyStatusResponse, error) {
+	req := c.c.NewRequest(http.MethodPut, "/v1/sys/rekey-recovery-key/init")
+	req = req.WithContext(ctx)
+
+	if err := req.SetJSONBody(config); err != nil {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -61,8 +90,14 @@ func (c *Sys) RekeyRecoveryKeyInit(config *RekeyInitRequest) (*RekeyStatusRespon
 }
 
 func (c *Sys) RekeyCancel() error {
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/init")
-	resp, err := c.c.RawRequest(r)
+	return c.RekeyCancelWithContext(context.Background())
+}
+
+func (c *Sys) RekeyCancelWithContext(ctx context.Context) error {
+	req := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/init")
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -70,8 +105,14 @@ func (c *Sys) RekeyCancel() error {
 }
 
 func (c *Sys) RekeyRecoveryKeyCancel() error {
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey-recovery-key/init")
-	resp, err := c.c.RawRequest(r)
+	return c.RekeyRecoveryKeyCancelWithContext(context.Background())
+}
+
+func (c *Sys) RekeyRecoveryKeyCancelWithContext(ctx context.Context) error {
+	req := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey-recovery-key/init")
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -79,17 +120,23 @@ func (c *Sys) RekeyRecoveryKeyCancel() error {
 }
 
 func (c *Sys) RekeyUpdate(shard, nonce string) (*RekeyUpdateResponse, error) {
+	return c.RekeyUpdateWithContext(context.Background(), shard, nonce)
+}
+
+func (c *Sys) RekeyUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyUpdateResponse, error) {
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,
 	}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/rekey/update")
-	if err := r.SetJSONBody(body); err != nil {
+	req := c.c.NewRequest(http.MethodPut, "/v1/sys/rekey/update")
+	req = req.WithContext(ctx)
+
+	if err := req.SetJSONBody(body); err != nil {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -101,17 +148,23 @@ func (c *Sys) RekeyUpdate(shard, nonce string) (*RekeyUpdateResponse, error) {
 }
 
 func (c *Sys) RekeyRecoveryKeyUpdate(shard, nonce string) (*RekeyUpdateResponse, error) {
+	return c.RekeyRecoveryKeyUpdateWithContext(context.Background(), shard, nonce)
+}
+
+func (c *Sys) RekeyRecoveryKeyUpdateWithContext(ctx context.Context, shard, nonce string) (*RekeyUpdateResponse, error) {
 	body := map[string]interface{}{
 		"key":   shard,
 		"nonce": nonce,
 	}
 
-	r := c.c.NewRequest("PUT", "/v1/sys/rekey-recovery-key/update")
-	if err := r.SetJSONBody(body); err != nil {
+	req := c.c.NewRequest(http.MethodPut, "/v1/sys/rekey-recovery-key/update")
+	req = req.WithContext(ctx)
+
+	if err := req.SetJSONBody(body); err != nil {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +176,14 @@ func (c *Sys) RekeyRecoveryKeyUpdate(shard, nonce string) (*RekeyUpdateResponse,
 }
 
 func (c *Sys) RekeyRetrieveBackup() (*RekeyRetrieveResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/rekey/backup")
-	resp, err := c.c.RawRequest(r)
+	return c.RekeyRetrieveBackupWithContext(context.Background())
+}
+
+func (c *Sys) RekeyRetrieveBackupWithContext(ctx context.Context) (*RekeyRetrieveResponse, error) {
+	req := c.c.NewRequest(http.MethodGet, "/v1/sys/rekey/backup")
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -136,8 +195,14 @@ func (c *Sys) RekeyRetrieveBackup() (*RekeyRetrieveResponse, error) {
 }
 
 func (c *Sys) RekeyRetrieveRecoveryBackup() (*RekeyRetrieveResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/rekey/recovery-backup")
-	resp, err := c.c.RawRequest(r)
+	return c.RekeyRetrieveRecoveryBackupWithContext(context.Background())
+}
+
+func (c *Sys) RekeyRetrieveRecoveryBackupWithContext(ctx context.Context) (*RekeyRetrieveResponse, error) {
+	req := c.c.NewRequest(http.MethodGet, "/v1/sys/rekey/recovery-backup")
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -149,8 +214,14 @@ func (c *Sys) RekeyRetrieveRecoveryBackup() (*RekeyRetrieveResponse, error) {
 }
 
 func (c *Sys) RekeyDeleteBackup() error {
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/backup")
-	resp, err := c.c.RawRequest(r)
+	return c.RekeyDeleteBackupWithContext(context.Background())
+}
+
+func (c *Sys) RekeyDeleteBackupWithContext(ctx context.Context) error {
+	req := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/backup")
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -159,8 +230,14 @@ func (c *Sys) RekeyDeleteBackup() error {
 }
 
 func (c *Sys) RekeyDeleteRecoveryBackup() error {
-	r := c.c.NewRequest("DELETE", "/v1/sys/rekey/recovery-backup")
-	resp, err := c.c.RawRequest(r)
+	return c.RekeyDeleteRecoveryBackupWithContext(context.Background())
+}
+
+func (c *Sys) RekeyDeleteRecoveryBackupWithContext(ctx context.Context) error {
+	req := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/recovery-backup")
+	req = req.WithContext(ctx)
+
+	resp, err := c.c.RawRequest(req)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -168,36 +245,78 @@ func (c *Sys) RekeyDeleteRecoveryBackup() error {
 	return err
 }
 
+// RekeyInitRequest is used as input to the rekey request.
 type RekeyInitRequest struct {
-	SecretShares    int      `json:"secret_shares"`
-	SecretThreshold int      `json:"secret_threshold"`
-	StoredShares    int      `json:"stored_shares"`
-	PGPKeys         []string `json:"pgp_keys"`
-	Backup          bool
+	// SecretShares is the new number of secret shares to use.
+	SecretShares int `json:"secret_shares"`
+
+	// SecretThreshold is the new number of secret threshold to use/
+	SecretThreshold int `json:"secret_threshold"`
+
+	// StoredShares is the new number of shares to store on the HSM.
+	StoredShares int `json:"stored_shares"`
+
+	// PGPKeys is the list of PGP keys to encrypt the new keys.
+	PGPKeys []string `json:"pgp_keys"`
+
+	// Backup is a boolean indicating if Vault should backup the current keys in
+	// case of rekeying failure.
+	Backup bool
 }
 
+// RekeyStatusResponse is the response from a rekey operation.
 type RekeyStatusResponse struct {
-	Nonce           string
-	Started         bool
-	T               int
-	N               int
-	Progress        int
-	Required        int
+	// Nonce is the operation nonce.
+	Nonce string
+
+	// Started is a boolean indicating if the rekeying operation is started.
+	Started bool
+
+	// T is the new threshold.
+	T int
+
+	// N is the new number of shares.
+	N int
+
+	// Progress is the current rekey progress, if any.
+	Progress int
+
+	// Required is the number of required shards to complete the rekey.
+	Required int
+
+	// PGPFingerprints is the list of PGP fingerprints, if given.
 	PGPFingerprints []string `json:"pgp_fingerprints"`
-	Backup          bool
+
+	// Backup is a bool indicating whether the rekey operation is backed up.
+	Backup bool
 }
 
+// RekeyUpdateResponse is the response when a user submits an unseal key.
 type RekeyUpdateResponse struct {
-	Nonce           string
-	Complete        bool
-	Keys            []string
-	KeysB64         []string `json:"keys_base64"`
+	// Nonce is the operation nonce.
+	Nonce string
+
+	// Complete is a boolean indicating if the rekey is complete.
+	Complete bool
+
+	// Keys is the list of unseal keys hex-encoded.
+	Keys []string
+
+	// KeysB64 is the list of unseal keys base64-encoded.
+	KeysB64 []string `json:"keys_base64"`
+
+	// PGPFingerprints is the list of PGP fingerprints, if given.
 	PGPFingerprints []string `json:"pgp_fingerprints"`
-	Backup          bool
+
+	// Backup is a bool indicating whether the rekey operation is backed up.
+	Backup bool
 }
 
+// RekeyRetrieveResponse is the response for getting the backup.
 type RekeyRetrieveResponse struct {
-	Nonce   string
+	// Nonce is the operation nonce.
+	Nonce string
+
 	Keys    map[string][]string
 	KeysB64 map[string][]string `json:"keys_base64"`
 }

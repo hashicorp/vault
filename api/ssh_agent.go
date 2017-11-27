@@ -1,10 +1,12 @@
 package api
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -32,7 +34,9 @@ const (
 // in order to verify the OTP entered by the user. It contains the path at which
 // SSH backend is mounted at the server.
 type SSHHelper struct {
-	c          *Client
+	c *Client
+
+	// MountPoint is the location of the SSH mount (default: "ssh")
 	MountPoint string
 }
 
@@ -190,22 +194,29 @@ func (c *Client) SSHHelperWithMountPoint(mountPoint string) *SSHHelper {
 	}
 }
 
-// Verify verifies if the key provided by user is present in Vault server. The response
-// will contain the IP address and username associated with the OTP. In case the
-// OTP matches the echo request message, instead of searching an entry for the OTP,
-// an echo response message is returned. This feature is used by ssh-helper to verify if
-// its configured correctly.
+// Verify verifies if the key provided by user is present in Vault server.
+// Please see VerifyWithContext for more details.
 func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
+	return c.VerifyWithContext(context.Background(), otp)
+}
+
+// VerifyWithContext verifies if the key provided by user is present in Vault
+// server. The response will contain the IP address and username associated with
+// the OTP. In case the OTP matches the echo request message, instead of
+// searching an entry for the OTP, an echo response message is returned. This
+// feature is used by ssh-helper to verify if its configured correctly.
+func (c *SSHHelper) VerifyWithContext(ctx context.Context, otp string) (*SSHVerifyResponse, error) {
+	req := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/%s/verify", c.MountPoint))
+	req = req.WithContext(ctx)
+
 	data := map[string]interface{}{
 		"otp": otp,
 	}
-	verifyPath := fmt.Sprintf("/v1/%s/verify", c.MountPoint)
-	r := c.c.NewRequest("PUT", verifyPath)
-	if err := r.SetJSONBody(data); err != nil {
+	if err := req.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}

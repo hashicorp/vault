@@ -1,10 +1,18 @@
 package api
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"net/http"
+)
 
-// SSH is used to return a client to invoke operations on SSH backend.
+// SSH is used to return a client to invoke operations on SSH backend. All of
+// these operations are also available via the standard "logical" requests,
+// but these are convenience functions and wrappers.
 type SSH struct {
-	c          *Client
+	c *Client
+
+	// MountPoint is the location of the SSH mount (default: "ssh")
 	MountPoint string
 }
 
@@ -21,14 +29,23 @@ func (c *Client) SSHWithMountPoint(mountPoint string) *SSH {
 	}
 }
 
-// Credential invokes the SSH backend API to create a credential to establish an SSH session.
+// Credential invokes the SSH backend API to create a credential to establish an
+// SSH session.
 func (c *SSH) Credential(role string, data map[string]interface{}) (*Secret, error) {
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/%s/creds/%s", c.MountPoint, role))
-	if err := r.SetJSONBody(data); err != nil {
+	return c.CredentialWithContext(context.Background(), role, data)
+}
+
+// CredentialWithContext invokes the SSH backend API to create a credential to
+// establish an SSH session, with a context.
+func (c *SSH) CredentialWithContext(ctx context.Context, role string, data map[string]interface{}) (*Secret, error) {
+	req := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/%s/creds/%s", c.MountPoint, role))
+	req = req.WithContext(ctx)
+
+	if err := req.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -40,12 +57,20 @@ func (c *SSH) Credential(role string, data map[string]interface{}) (*Secret, err
 // SignKey signs the given public key and returns a signed public key to pass
 // along with the SSH request.
 func (c *SSH) SignKey(role string, data map[string]interface{}) (*Secret, error) {
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/%s/sign/%s", c.MountPoint, role))
-	if err := r.SetJSONBody(data); err != nil {
+	return c.SignKeyWithContext(context.Background(), role, data)
+}
+
+// SignKeyWithContext signs the given public key and returns a signed public key to pass
+// along with the SSH request, with a context.
+func (c *SSH) SignKeyWithContext(ctx context.Context, role string, data map[string]interface{}) (*Secret, error) {
+	req := c.c.NewRequest(http.MethodPut, fmt.Sprintf("/v1/%s/sign/%s", c.MountPoint, role))
+	req = req.WithContext(ctx)
+
+	if err := req.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	resp, err := c.c.RawRequest(req)
 	if err != nil {
 		return nil, err
 	}

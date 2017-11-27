@@ -21,18 +21,22 @@ import (
 	"golang.org/x/net/http2"
 )
 
-const EnvVaultAddress = "VAULT_ADDR"
-const EnvVaultCACert = "VAULT_CACERT"
-const EnvVaultCAPath = "VAULT_CAPATH"
-const EnvVaultClientCert = "VAULT_CLIENT_CERT"
-const EnvVaultClientKey = "VAULT_CLIENT_KEY"
-const EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
-const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
-const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
-const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
-const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
-const EnvVaultToken = "VAULT_TOKEN"
-const EnvVaultMFA = "VAULT_MFA"
+// These are the names of the environment variables consumed by the Vault API
+// client to get some of its configuration.
+const (
+	EnvVaultAddress       = "VAULT_ADDR"
+	EnvVaultCACert        = "VAULT_CACERT"
+	EnvVaultCAPath        = "VAULT_CAPATH"
+	EnvVaultClientCert    = "VAULT_CLIENT_CERT"
+	EnvVaultClientKey     = "VAULT_CLIENT_KEY"
+	EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
+	EnvVaultInsecure      = "VAULT_SKIP_VERIFY"
+	EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
+	EnvVaultWrapTTL       = "VAULT_WRAP_TTL"
+	EnvVaultMaxRetries    = "VAULT_MAX_RETRIES"
+	EnvVaultToken         = "VAULT_TOKEN"
+	EnvVaultMFA           = "VAULT_MFA"
+)
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
