@@ -88,6 +88,8 @@ to specify where the configuration is.
     sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
     ```
 
+    If you use a Linux distribution with systemd, you can also add the above `setcap` command as an [ExecStartPre](https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecStartPre=) additional command in your Vault unit file to ensure that `mlock()` capability is added to the `vault` binary before executing.
+
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins.
