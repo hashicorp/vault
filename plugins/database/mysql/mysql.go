@@ -160,9 +160,9 @@ func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplug
 					return "", "", err
 				}
 				continue
-			} else {
-				return "", "", err
 			}
+
+			return "", "", err
 		}
 		defer stmt.Close()
 		if _, err := stmt.Exec(); err != nil {
