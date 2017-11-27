@@ -184,6 +184,19 @@ func TestMySQL_CreateUser(t *testing.T) {
 	if err := testCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
+
+	// Test with a manualy prepare statement
+	statements.CreationStatements = testMySQLRolePreparedStmt
+
+	username, password, err = db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
 }
 
 func TestMySQL_CreateUser_Legacy(t *testing.T) {
@@ -316,6 +329,13 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	return db.Ping()
 }
 
+const testMySQLRolePreparedStmt = `
+CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
+set @grants=CONCAT("GRANT SELECT ON ", "*", ".* TO '{{name}}'@'%'");
+PREPARE grantStmt from @grants;
+EXECUTE grantStmt;
+DEALLOCATE PREPARE grantStmt;
+`
 const testMySQLRoleWildCard = `
 CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
 GRANT SELECT ON *.* TO '{{name}}'@'%';
