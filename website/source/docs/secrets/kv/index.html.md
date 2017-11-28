@@ -19,6 +19,8 @@ of these backends at different mount points as you like.
 Writing to a key in the `kv` backend will replace the old value;
 sub-fields are not merged together.
 
+Key names must always be strings. If you write non-string values directly via the CLI, they will be converted into strings. However, you can preserve non-string values by writing the key/value pairs to Vault from a JSON file or using the HTTP API. 
+
 This backend honors the distinction between the `create` and `update`
 capabilities inside ACL policies.
 
