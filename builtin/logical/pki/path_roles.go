@@ -61,8 +61,7 @@ name in a request`,
 				Description: `If set, clients can request certificates for
 subdomains directly beneath these domains, including
 the wildcard subdomains. See the documentation for more
-information. This parameter accepts a comma-separated list
-of domains.`,
+information.`,
 			},
 
 			"allow_bare_domains": &framework.FieldSchema{
