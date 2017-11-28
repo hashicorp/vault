@@ -375,9 +375,9 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 			}
 		}
 
-		if role.AllowedDomains != "" {
+		if len(role.AllowedDomains) > 0 {
 			valid := false
-			for _, currDomain := range strings.Split(role.AllowedDomains, ",") {
+			for _, currDomain := range role.AllowedDomains {
 				// If there is, say, a trailing comma, ignore it
 				if currDomain == "" {
 					continue

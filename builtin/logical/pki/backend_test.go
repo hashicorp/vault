@@ -1759,10 +1759,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		commonNames.Localhost = true
 		addCnTests()
 
-		roleVals.AllowedDomains = "foobar.com"
+		roleVals.AllowedDomains = []string{"foobar.com"}
 		addCnTests()
 
-		roleVals.AllowedDomains = "example.com"
+		roleVals.AllowedDomains = []string{"example.com"}
 		roleVals.AllowSubdomains = true
 		commonNames.SubDomain = true
 		commonNames.Wildcard = true
@@ -1770,13 +1770,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		commonNames.SubSubdomainWildcard = true
 		addCnTests()
 
-		roleVals.AllowedDomains = "foobar.com,example.com"
+		roleVals.AllowedDomains = []string{"foobar.com", "example.com"}
 		commonNames.SecondDomain = true
 		roleVals.AllowBareDomains = true
 		commonNames.BareDomain = true
 		addCnTests()
 
-		roleVals.AllowedDomains = "foobar.com,*example.com"
+		roleVals.AllowedDomains = []string{"foobar.com", "*example.com"}
 		roleVals.AllowGlobDomains = true
 		commonNames.GlobDomain = true
 		addCnTests()

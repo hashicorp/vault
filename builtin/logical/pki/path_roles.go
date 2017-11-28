@@ -57,8 +57,7 @@ name in a request`,
 			},
 
 			"allowed_domains": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "",
+				Type: framework.TypeCommaStringSlice,
 				Description: `If set, clients can request certificates for
 subdomains directly beneath these domains, including
 the wildcard subdomains. See the documentation for more
@@ -267,23 +266,21 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		result.AllowBareDomains = true
 		modified = true
 	}
+	if result.AllowedDomainsOld != "" {
+		result.AllowedDomains = strings.Split(result.AllowedDomainsOld, ",")
+		result.AllowedDomainsOld = ""
+		modified = true
+	}
 	if result.AllowedBaseDomain != "" {
 		found := false
-		allowedDomains := strings.Split(result.AllowedDomains, ",")
-		if len(allowedDomains) != 0 {
-			for _, v := range allowedDomains {
-				if v == result.AllowedBaseDomain {
-					found = true
-					break
-				}
+		for _, v := range result.AllowedDomains {
+			if v == result.AllowedBaseDomain {
+				found = true
+				break
 			}
 		}
 		if !found {
-			if result.AllowedDomains == "" {
-				result.AllowedDomains = result.AllowedBaseDomain
-			} else {
-				result.AllowedDomains += "," + result.AllowedBaseDomain
-			}
+			result.AllowedDomains = append(result.AllowedDomains, result.AllowedBaseDomain)
 		}
 		result.AllowedBaseDomain = ""
 		modified = true
@@ -300,9 +297,9 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 	}
 
 	// Upgrade key usages
-	if result.KeyUsageOld != nil {
-		result.KeyUsage = strings.Split(*result.KeyUsageOld, ",")
-		result.KeyUsageOld = nil
+	if result.KeyUsageOld != "" {
+		result.KeyUsage = strings.Split(result.KeyUsageOld, ",")
+		result.KeyUsageOld = ""
 		modified = true
 	}
 
@@ -372,6 +369,7 @@ func (b *backend) pathRoleRead(
 	delete(resp.Data, "allow_base_domain")
 	delete(resp.Data, "AllowExpirationPastCA")
 	delete(resp.Data, "key_usage_old")
+	delete(resp.Data, "allowed_domains_old")
 
 	return resp, nil
 }
@@ -395,7 +393,7 @@ func (b *backend) pathRoleCreate(
 		MaxTTL:              data.Get("max_ttl").(string),
 		TTL:                 (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		AllowLocalhost:      data.Get("allow_localhost").(bool),
-		AllowedDomains:      data.Get("allowed_domains").(string),
+		AllowedDomains:      data.Get("allowed_domains").([]string),
 		AllowBareDomains:    data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:     data.Get("allow_subdomains").(bool),
 		AllowGlobDomains:    data.Get("allow_glob_domains").(bool),
@@ -518,7 +516,8 @@ type roleEntry struct {
 	TTL                   string   `json:"ttl" structs:"ttl" mapstructure:"ttl"`
 	AllowLocalhost        bool     `json:"allow_localhost" structs:"allow_localhost" mapstructure:"allow_localhost"`
 	AllowedBaseDomain     string   `json:"allowed_base_domain" structs:"allowed_base_domain" mapstructure:"allowed_base_domain"`
-	AllowedDomains        string   `json:"allowed_domains" structs:"allowed_domains" mapstructure:"allowed_domains"`
+	AllowedDomainsOld     string   `json:"allowed_domains,omit_empty" structs:"allowed_domains_old" mapstructure:"allowed_domains_old"`
+	AllowedDomains        []string `json:"allowed_domains_list" structs:"allowed_domains" mapstructure:"allowed_domains"`
 	AllowBaseDomain       bool     `json:"allow_base_domain" structs:"allow_base_domain" mapstructure:"allow_base_domain"`
 	AllowBareDomains      bool     `json:"allow_bare_domains" structs:"allow_bare_domains" mapstructure:"allow_bare_domains"`
 	AllowTokenDisplayName bool     `json:"allow_token_displayname" structs:"allow_token_displayname" mapstructure:"allow_token_displayname"`
@@ -536,7 +535,7 @@ type roleEntry struct {
 	KeyType               string   `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int      `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 	MaxPathLength         *int     `json:",omitempty" structs:"max_path_length,omitempty" mapstructure:"max_path_length"`
-	KeyUsageOld           *string  `json:"key_usage,omitempty" structs:"key_usage_old" mapstructure:"key_usage_old"`
+	KeyUsageOld           string   `json:"key_usage,omitempty" structs:"key_usage_old" mapstructure:"key_usage_old"`
 	KeyUsage              []string `json:"key_usage_list" structs:"key_usage" mapstructure:"key_usage"`
 	OU                    string   `json:"ou" structs:"ou" mapstructure:"ou"`
 	Organization          string   `json:"organization" structs:"organization" mapstructure:"organization"`
