@@ -1,3 +1,12 @@
+## 0.9.1 (Unreleased)
+
+IMPROVEMENTS:
+
+BUG FIXES:
+
+ * database/mysql: Allow the creation statement to use commands that are not
+   yet supported by the prepare statement protocol [GH-3619]
+
 ## 0.9.0.1 (November 21st, 2017) (Enterprise Only)
 
 IMPROVEMENTS:
