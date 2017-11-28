@@ -120,6 +120,95 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 	}
 }
 
+func TestPki_RoleKeyUsage(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"allowed_domains": "myvault.com",
+		"ttl":             "5h",
+		"key_usage":       []string{"KeyEncipherment", "DigitalSignature"},
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/testrole",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	keyUsage := resp.Data["key_usage"].([]string)
+	if len(keyUsage) != 2 {
+		t.Fatalf("key_usage should have 2 values")
+	}
+
+	// Check that old key usage value is nil
+	var role roleEntry
+	err = mapstructure.Decode(resp.Data, &role)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if role.KeyUsageOld != nil {
+		t.Fatalf("old key usage storage value should be nil")
+	}
+
+	// Make it explicit
+	usages := "KeyEncipherment,DigitalSignature"
+	role.KeyUsageOld = &usages
+	role.KeyUsage = nil
+
+	entry, err := logical.StorageEntryJSON("role/testrole", role)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Put(entry); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reading should upgrade key_usage
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	keyUsage = resp.Data["key_usage"].([]string)
+	if len(keyUsage) != 2 {
+		t.Fatalf("key_usage should have 2 values")
+	}
+
+	// Read back from storage to ensure upgrade
+	entry, err = storage.Get("role/testrole")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if entry == nil {
+		t.Fatalf("role should not be nil")
+	}
+	var result roleEntry
+	if err := entry.DecodeJSON(&result); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if result.KeyUsageOld != nil {
+		t.Fatal("old key usage value shoudl be nil")
+	}
+	if len(result.KeyUsage) != 2 {
+		t.Fatal("key_usage should have 2 values")
+	}
+}
+
 func TestPki_RoleNoStore(t *testing.T) {
 	var resp *logical.Response
 	var err error
