@@ -66,9 +66,17 @@ func (b *backend) pathConfigAccessRead(
 
 func (b *backend) pathConfigAccessWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	address := data.Get("address").(string)
+	if address == "" {
+		return logical.ErrorResponse("missing nomad server address"), nil
+	}
+	token := data.Get("token").(string)
+	if token == "" {
+		return logical.ErrorResponse("missing nomad management token"), nil
+	}
 	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
-		Address: data.Get("address").(string),
-		Token:   data.Get("token").(string),
+		Address: address,
+		Token:   token,
 	})
 	if err != nil {
 		return nil, err
