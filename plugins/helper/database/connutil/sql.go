@@ -1,6 +1,7 @@
 package connutil
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -25,7 +26,7 @@ type SQLConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *SQLConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 

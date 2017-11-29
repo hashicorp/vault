@@ -27,6 +27,7 @@ func Serve(db Database, tlsProvider func() (*tls.Config, error)) {
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		TLSProvider:     tlsProvider,
+		GRPCServer:      plugin.DefaultGRPCServer,
 	})
 }
 
@@ -47,7 +48,7 @@ func (s *gRPCServer) Type(context.Context, *pb.Empty) (*pb.TypeResponse, error) 
 	}, nil
 }
 
-func (s *gRPCServer) CreateUser(_ context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+func (s *gRPCServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
 	statements := Statements{
 		CreationStatements:   req.Statements.CreationStatements,
 		RevocationStatements: req.Statements.RevocationStatements,
@@ -65,7 +66,7 @@ func (s *gRPCServer) CreateUser(_ context.Context, req *pb.CreateUserRequest) (*
 		return nil, err
 	}
 
-	u, p, err := s.impl.CreateUser(statements, usernameConfig, e)
+	u, p, err := s.impl.CreateUser(ctx, statements, usernameConfig, e)
 
 	return &pb.CreateUserResponse{
 		Username: u,
@@ -73,7 +74,7 @@ func (s *gRPCServer) CreateUser(_ context.Context, req *pb.CreateUserRequest) (*
 	}, err
 }
 
-func (s *gRPCServer) RenewUser(_ context.Context, req *pb.RenewUserRequest) (*pb.Empty, error) {
+func (s *gRPCServer) RenewUser(ctx context.Context, req *pb.RenewUserRequest) (*pb.Empty, error) {
 	statements := Statements{
 		CreationStatements:   req.Statements.CreationStatements,
 		RevocationStatements: req.Statements.RevocationStatements,
@@ -85,11 +86,11 @@ func (s *gRPCServer) RenewUser(_ context.Context, req *pb.RenewUserRequest) (*pb
 	if err != nil {
 		return nil, err
 	}
-	err = s.impl.RenewUser(statements, req.Username, e)
+	err = s.impl.RenewUser(ctx, statements, req.Username, e)
 	return &pb.Empty{}, err
 }
 
-func (s *gRPCServer) RevokeUser(_ context.Context, req *pb.RevokeUserRequest) (*pb.Empty, error) {
+func (s *gRPCServer) RevokeUser(ctx context.Context, req *pb.RevokeUserRequest) (*pb.Empty, error) {
 	statements := Statements{
 		CreationStatements:   req.Statements.CreationStatements,
 		RevocationStatements: req.Statements.RevocationStatements,
@@ -97,7 +98,7 @@ func (s *gRPCServer) RevokeUser(_ context.Context, req *pb.RevokeUserRequest) (*
 		RenewStatements:      req.Statements.RenewStatements,
 	}
 
-	err := s.impl.RevokeUser(statements, req.Username)
+	err := s.impl.RevokeUser(ctx, statements, req.Username)
 	return &pb.Empty{}, err
 }
 
@@ -109,55 +110,11 @@ func (s *gRPCServer) Initialize(ctx context.Context, req *pb.InitializeRequest) 
 		return nil, err
 	}
 
-	err = s.impl.Initialize(config, req.VerifyConnection)
+	err = s.impl.Initialize(ctx, config, req.VerifyConnection)
 	return &pb.Empty{}, err
 }
 
 func (s *gRPCServer) Close(_ context.Context, _ *pb.Empty) (*pb.Empty, error) {
 	s.impl.Close()
 	return &pb.Empty{}, nil
-}
-
-// ---- RPC server domain ----
-
-// databasePluginRPCServer implements an RPC version of Database and is run
-// inside a plugin. It wraps an underlying implementation of Database.
-type databasePluginRPCServer struct {
-	impl Database
-}
-
-func (ds *databasePluginRPCServer) Type(_ struct{}, resp *string) error {
-	var err error
-	*resp, err = ds.impl.Type()
-	return err
-}
-
-func (ds *databasePluginRPCServer) CreateUser(args *CreateUserRequest, resp *CreateUserResponse) error {
-	var err error
-	resp.Username, resp.Password, err = ds.impl.CreateUser(args.Statements, args.UsernameConfig, args.Expiration)
-
-	return err
-}
-
-func (ds *databasePluginRPCServer) RenewUser(args *RenewUserRequest, _ *struct{}) error {
-	err := ds.impl.RenewUser(args.Statements, args.Username, args.Expiration)
-
-	return err
-}
-
-func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequest, _ *struct{}) error {
-	err := ds.impl.RevokeUser(args.Statements, args.Username)
-
-	return err
-}
-
-func (ds *databasePluginRPCServer) Initialize(args *InitializeRequest, _ *struct{}) error {
-	err := ds.impl.Initialize(args.Config, args.VerifyConnection)
-
-	return err
-}
-
-func (ds *databasePluginRPCServer) Close(_ struct{}, _ *struct{}) error {
-	ds.impl.Close()
-	return nil
 }

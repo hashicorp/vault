@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 	"time"
@@ -29,6 +30,8 @@ var (
 	UsernameLen       int = 32
 	LegacyUsernameLen int = 16
 )
+
+var _ dbplugin.Database = &MySQL{}
 
 type MySQL struct {
 	connutil.ConnectionProducer
@@ -97,7 +100,7 @@ func (m *MySQL) getConnection() (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -179,11 +182,11 @@ func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplug
 }
 
 // NOOP
-func (m *MySQL) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+func (m *MySQL) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	return nil
 }
 
-func (m *MySQL) RevokeUser(statements dbplugin.Statements, username string) error {
+func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// Grab the read lock
 	m.Lock()
 	defer m.Unlock()

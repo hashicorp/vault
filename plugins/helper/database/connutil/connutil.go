@@ -1,6 +1,7 @@
 package connutil
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
@@ -14,7 +15,7 @@ var (
 // connections and is used in all the builtin database types.
 type ConnectionProducer interface {
 	Close() error
-	Initialize(map[string]interface{}, bool) error
+	Initialize(context.Context, map[string]interface{}, bool) error
 	Connection() (interface{}, error)
 
 	sync.Locker

@@ -3,8 +3,6 @@ package dbplugin
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net/rpc"
 	"sync"
 	"time"
 
@@ -21,11 +19,11 @@ type DatabasePluginClient struct {
 	client *plugin.Client
 	sync.Mutex
 
-	*databasePluginRPCClient
+	*gRPCClient
 }
 
 func (dc *DatabasePluginClient) Close() error {
-	err := dc.databasePluginRPCClient.Close()
+	err := dc.gRPCClient.Close()
 	dc.client.Kill()
 
 	return err
@@ -59,12 +57,12 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 
 	// We should have a database type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	databaseRPC := raw.(*databasePluginRPCClient)
+	databaseRPC := raw.(*gRPCClient)
 
 	// Wrap RPC implimentation in DatabasePluginClient
 	return &DatabasePluginClient{
-		client:                  client,
-		databasePluginRPCClient: databaseRPC,
+		client:     client,
+		gRPCClient: databaseRPC,
 	}, nil
 }
 
@@ -83,7 +81,7 @@ func (c gRPCClient) Type() (string, error) {
 	return resp.Type, err
 }
 
-func (c gRPCClient) CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (c gRPCClient) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	s := &pb.Statements{
 		CreationStatements:   statements.CreationStatements,
 		RevocationStatements: statements.RevocationStatements,
@@ -101,7 +99,7 @@ func (c gRPCClient) CreateUser(statements Statements, usernameConfig UsernameCon
 		return "", "", err
 	}
 
-	resp, err := c.client.CreateUser(context.Background(), &pb.CreateUserRequest{
+	resp, err := c.client.CreateUser(ctx, &pb.CreateUserRequest{
 		Statements:     s,
 		UsernameConfig: u,
 		Expiration:     t,
@@ -113,7 +111,7 @@ func (c gRPCClient) CreateUser(statements Statements, usernameConfig UsernameCon
 	return resp.Username, resp.Password, err
 }
 
-func (c *gRPCClient) RenewUser(statements Statements, username string, expiration time.Time) error {
+func (c *gRPCClient) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error {
 	s := &pb.Statements{
 		CreationStatements:   statements.CreationStatements,
 		RevocationStatements: statements.RevocationStatements,
@@ -126,7 +124,7 @@ func (c *gRPCClient) RenewUser(statements Statements, username string, expiratio
 		return err
 	}
 
-	_, err = c.client.RenewUser(context.Background(), &pb.RenewUserRequest{
+	_, err = c.client.RenewUser(ctx, &pb.RenewUserRequest{
 		Statements: s,
 		Expiration: t,
 	})
@@ -134,7 +132,7 @@ func (c *gRPCClient) RenewUser(statements Statements, username string, expiratio
 	return err
 }
 
-func (c *gRPCClient) RevokeUser(statements Statements, username string) error {
+func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, username string) error {
 	s := &pb.Statements{
 		CreationStatements:   statements.CreationStatements,
 		RevocationStatements: statements.RevocationStatements,
@@ -142,20 +140,20 @@ func (c *gRPCClient) RevokeUser(statements Statements, username string) error {
 		RenewStatements:      statements.RenewStatements,
 	}
 
-	_, err := c.client.RevokeUser(context.Background(), &pb.RevokeUserRequest{
+	_, err := c.client.RevokeUser(ctx, &pb.RevokeUserRequest{
 		Statements: s,
 	})
 
 	return err
 }
 
-func (c *gRPCClient) Initialize(config map[string]interface{}, verifyConnection bool) error {
+func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error {
 	configRaw, err := json.Marshal(config)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.client.Initialize(context.Background(), &pb.InitializeRequest{
+	_, err = c.client.Initialize(ctx, &pb.InitializeRequest{
 		Config:           string(configRaw[:]),
 		VerifyConnection: verifyConnection,
 	})
@@ -165,73 +163,5 @@ func (c *gRPCClient) Initialize(config map[string]interface{}, verifyConnection 
 
 func (c *gRPCClient) Close() error {
 	_, err := c.client.Close(context.Background(), &pb.Empty{})
-	return err
-}
-
-// ---- RPC client domain ----
-
-// databasePluginRPCClient implements Database and is used on the client to
-// make RPC calls to a plugin.
-type databasePluginRPCClient struct {
-	client *rpc.Client
-}
-
-func (dr *databasePluginRPCClient) Type() (string, error) {
-	var dbType string
-	err := dr.client.Call("Plugin.Type", struct{}{}, &dbType)
-
-	return fmt.Sprintf("plugin-%s", dbType), err
-}
-
-func (dr *databasePluginRPCClient) CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	req := CreateUserRequest{
-		Statements:     statements,
-		UsernameConfig: usernameConfig,
-		Expiration:     expiration,
-	}
-
-	var resp CreateUserResponse
-	err = dr.client.Call("Plugin.CreateUser", req, &resp)
-
-	return resp.Username, resp.Password, err
-}
-
-func (dr *databasePluginRPCClient) RenewUser(statements Statements, username string, expiration time.Time) error {
-	req := RenewUserRequest{
-		Statements: statements,
-		Username:   username,
-		Expiration: expiration,
-	}
-
-	err := dr.client.Call("Plugin.RenewUser", req, &struct{}{})
-
-	return err
-}
-
-func (dr *databasePluginRPCClient) RevokeUser(statements Statements, username string) error {
-	req := RevokeUserRequest{
-		Statements: statements,
-		Username:   username,
-	}
-
-	err := dr.client.Call("Plugin.RevokeUser", req, &struct{}{})
-
-	return err
-}
-
-func (dr *databasePluginRPCClient) Initialize(conf map[string]interface{}, verifyConnection bool) error {
-	req := InitializeRequest{
-		Config:           conf,
-		VerifyConnection: verifyConnection,
-	}
-
-	err := dr.client.Call("Plugin.Initialize", req, &struct{}{})
-
-	return err
-}
-
-func (dr *databasePluginRPCClient) Close() error {
-	err := dr.client.Call("Plugin.Close", struct{}{}, &struct{}{})
-
 	return err
 }

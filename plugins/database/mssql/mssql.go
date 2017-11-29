@@ -1,6 +1,7 @@
 package mssql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -17,6 +18,8 @@ import (
 )
 
 const msSQLTypeName = "mssql"
+
+var _ dbplugin.Database = &MSSQL{}
 
 // MSSQL is an implementation of Database interface
 type MSSQL struct {
@@ -71,7 +74,7 @@ func (m *MSSQL) getConnection() (*sql.DB, error) {
 
 // CreateUser generates the username/password on the underlying MSSQL secret backend as instructed by
 // the CreationStatement provided.
-func (m *MSSQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -138,7 +141,7 @@ func (m *MSSQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplug
 }
 
 // RenewUser is not supported on MSSQL, so this is a no-op.
-func (m *MSSQL) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+func (m *MSSQL) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// NOOP
 	return nil
 }
@@ -146,7 +149,7 @@ func (m *MSSQL) RenewUser(statements dbplugin.Statements, username string, expir
 // RevokeUser attempts to drop the specified user. It will first attempt to disable login,
 // then kill pending connections from that user, and finally drop the user and login from the
 // database instance.
-func (m *MSSQL) RevokeUser(statements dbplugin.Statements, username string) error {
+func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	if statements.RevocationStatements == "" {
 		return m.revokeUserDefault(username)
 	}

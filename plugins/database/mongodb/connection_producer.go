@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -29,7 +30,7 @@ type mongoDBConnectionProducer struct {
 }
 
 // Initialize parses connection configuration.
-func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 

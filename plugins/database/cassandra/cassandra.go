@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -20,6 +21,8 @@ const (
 	defaultUserDeletionCQL = `DROP USER '{{username}}';`
 	cassandraTypeName      = "cassandra"
 )
+
+var _ dbplugin.Database = &Cassandra{}
 
 // Cassandra is an implementation of Database interface
 type Cassandra struct {
@@ -75,7 +78,7 @@ func (c *Cassandra) getConnection() (*gocql.Session, error) {
 
 // CreateUser generates the username/password on the underlying Cassandra secret backend as instructed by
 // the CreationStatement provided.
-func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	c.Lock()
 	defer c.Unlock()
@@ -138,13 +141,13 @@ func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernameConfig db
 }
 
 // RenewUser is not supported on Cassandra, so this is a no-op.
-func (c *Cassandra) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+func (c *Cassandra) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// NOOP
 	return nil
 }
 
 // RevokeUser attempts to drop the specified user.
-func (c *Cassandra) RevokeUser(statements dbplugin.Statements, username string) error {
+func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// Grab the lock
 	c.Lock()
 	defer c.Unlock()

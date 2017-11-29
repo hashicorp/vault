@@ -1,11 +1,14 @@
 package dbplugin
 
 import (
+	"context"
 	"fmt"
-	"net/rpc"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin/pb"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	log "github.com/mgutz/logxi/v1"
 )
@@ -13,11 +16,11 @@ import (
 // Database is the interface that all database objects must implement.
 type Database interface {
 	Type() (string, error)
-	CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
-	RenewUser(statements Statements, username string, expiration time.Time) error
-	RevokeUser(statements Statements, username string) error
+	CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
+	RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error
+	RevokeUser(ctx context.Context, statements Statements, username string) error
 
-	Initialize(config map[string]interface{}, verifyConnection bool) error
+	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error
 	Close() error
 }
 
@@ -96,7 +99,7 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  3,
+	ProtocolVersion:  4,
 	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
@@ -104,44 +107,15 @@ var handshakeConfig = plugin.HandshakeConfig{
 // DatabasePlugin implements go-plugin's Plugin interface. It has methods for
 // retrieving a server and a client instance of the plugin.
 type DatabasePlugin struct {
+	plugin.NetRPCUnsupportedPlugin
 	impl Database
 }
 
-func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	return &databasePluginRPCServer{impl: d.impl}, nil
+func (d DatabasePlugin) GRPCServer(s *grpc.Server) error {
+	pb.RegisterDatabaseServer(s, &gRPCServer{impl: d.impl})
+	return nil
 }
 
-func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
-	return &databasePluginRPCClient{client: c}, nil
-}
-
-// ---- RPC Request Args Domain ----
-
-type InitializeRequest struct {
-	Config           map[string]interface{}
-	VerifyConnection bool
-}
-
-type CreateUserRequest struct {
-	Statements     Statements
-	UsernameConfig UsernameConfig
-	Expiration     time.Time
-}
-
-type RenewUserRequest struct {
-	Statements Statements
-	Username   string
-	Expiration time.Time
-}
-
-type RevokeUserRequest struct {
-	Statements Statements
-	Username   string
-}
-
-// ---- RPC Response Args Domain ----
-
-type CreateUserResponse struct {
-	Username string
-	Password string
+func (DatabasePlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error) {
+	return &gRPCClient{client: pb.NewDatabaseClient(c)}, nil
 }

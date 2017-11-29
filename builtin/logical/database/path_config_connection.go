@@ -62,7 +62,7 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 		b.clearConnection(name)
 
 		// Execute plugin again, we don't need the object so throw away.
-		_, err := b.createDBObj(req.Storage, name)
+		_, err := b.createDBObj(req.Context, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
@@ -230,7 +230,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
 
-		err = db.Initialize(config.ConnectionDetails, verifyConnection)
+		err = db.Initialize(req.Context, config.ConnectionDetails, verifyConnection)
 		if err != nil {
 			db.Close()
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil

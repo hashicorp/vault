@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"io"
 	"strings"
 	"time"
@@ -26,6 +27,8 @@ type MongoDB struct {
 	connutil.ConnectionProducer
 	credsutil.CredentialsProducer
 }
+
+var _ dbplugin.Database = &MongoDB{}
 
 // New returns a new MongoDB instance
 func New() (interface{}, error) {
@@ -80,7 +83,7 @@ func (m *MongoDB) getConnection() (*mgo.Session, error) {
 //
 // JSON Example:
 //  { "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }
-func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -149,14 +152,14 @@ func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernameConfig dbpl
 }
 
 // RenewUser is not supported on MongoDB, so this is a no-op.
-func (m *MongoDB) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+func (m *MongoDB) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// NOOP
 	return nil
 }
 
 // RevokeUser drops the specified user from the authentication databse. If none is provided
 // in the revocation statement, the default "admin" authentication database will be assumed.
-func (m *MongoDB) RevokeUser(statements dbplugin.Statements, username string) error {
+func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	session, err := m.getConnection()
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"strings"
@@ -43,7 +44,7 @@ type cassandraConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *cassandraConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 
