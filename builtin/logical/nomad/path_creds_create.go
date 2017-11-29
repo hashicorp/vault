@@ -31,10 +31,10 @@ func (b *backend) pathTokenRead(
 
 	role, err := b.Role(req.Storage, name)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving role: %s", err)
+		return nil, fmt.Errorf("error retrieving role: %v", err)
 	}
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Role '%s' not found", name)), nil
+		return logical.ErrorResponse(fmt.Sprintf("Role '%q' not found", name)), nil
 	}
 
 	// Determine if we have a lease configuration
@@ -53,7 +53,7 @@ func (b *backend) pathTokenRead(
 	}
 
 	// Generate a name for the token
-	tokenName := fmt.Sprintf("Vault %s %s %d", name, req.DisplayName, time.Now().UnixNano())
+	tokenName := fmt.Sprintf("Vault-%s-%s-%d", name, req.DisplayName, time.Now().UnixNano())
 
 	// Create it
 	token, _, err := c.ACLTokens().Create(&api.ACLToken{
@@ -63,7 +63,7 @@ func (b *backend) pathTokenRead(
 		Global:   role.Global,
 	}, nil)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 
 	// Use the helper to create the secret
