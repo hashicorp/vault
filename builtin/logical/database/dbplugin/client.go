@@ -1,12 +1,16 @@
 package dbplugin
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/rpc"
 	"sync"
 	"time"
 
+	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin/pb"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	log "github.com/mgutz/logxi/v1"
 )
@@ -62,6 +66,106 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 		client:                  client,
 		databasePluginRPCClient: databaseRPC,
 	}, nil
+}
+
+// ---- gRPC client domain ----
+
+type gRPCClient struct {
+	client pb.DatabaseClient
+}
+
+func (c gRPCClient) Type() (string, error) {
+	resp, err := c.client.Type(context.Background(), &pb.Empty{})
+	if err != nil {
+		return "", err
+	}
+
+	return resp.Type, err
+}
+
+func (c gRPCClient) CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
+	s := &pb.Statements{
+		CreationStatements:   statements.CreationStatements,
+		RevocationStatements: statements.RevocationStatements,
+		RollbackStatements:   statements.RollbackStatements,
+		RenewStatements:      statements.RenewStatements,
+	}
+
+	u := &pb.UsernameConfig{
+		DisplayName: usernameConfig.DisplayName,
+		RoleName:    usernameConfig.RoleName,
+	}
+
+	t, err := ptypes.TimestampProto(expiration)
+	if err != nil {
+		return "", "", err
+	}
+
+	resp, err := c.client.CreateUser(context.Background(), &pb.CreateUserRequest{
+		Statements:     s,
+		UsernameConfig: u,
+		Expiration:     t,
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	return resp.Username, resp.Password, err
+}
+
+func (c *gRPCClient) RenewUser(statements Statements, username string, expiration time.Time) error {
+	s := &pb.Statements{
+		CreationStatements:   statements.CreationStatements,
+		RevocationStatements: statements.RevocationStatements,
+		RollbackStatements:   statements.RollbackStatements,
+		RenewStatements:      statements.RenewStatements,
+	}
+
+	t, err := ptypes.TimestampProto(expiration)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.client.RenewUser(context.Background(), &pb.RenewUserRequest{
+		Statements: s,
+		Expiration: t,
+	})
+
+	return err
+}
+
+func (c *gRPCClient) RevokeUser(statements Statements, username string) error {
+	s := &pb.Statements{
+		CreationStatements:   statements.CreationStatements,
+		RevocationStatements: statements.RevocationStatements,
+		RollbackStatements:   statements.RollbackStatements,
+		RenewStatements:      statements.RenewStatements,
+	}
+
+	_, err := c.client.RevokeUser(context.Background(), &pb.RevokeUserRequest{
+		Statements: s,
+	})
+
+	return err
+}
+
+func (c *gRPCClient) Initialize(config map[string]interface{}, verifyConnection bool) error {
+	configRaw, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.client.Initialize(context.Background(), &pb.InitializeRequest{
+		Config:           string(configRaw[:]),
+		VerifyConnection: verifyConnection,
+	})
+
+	return err
+}
+
+func (c *gRPCClient) Close() error {
+	_, err := c.client.Close(context.Background(), &pb.Empty{})
+	return err
 }
 
 // ---- RPC client domain ----
