@@ -1,6 +1,8 @@
 package nomad
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -45,6 +47,10 @@ func (b *backend) secretTokenRevoke(
 	}
 
 	accessorIDRaw := req.Secret.InternalData["accessor_id"]
+	if accessorIDRaw == nil {
+		return nil, fmt.Errorf("accessor id is missing on the lease")
+	}
+
 	_, err = c.ACLTokens().Delete(accessorIDRaw.(string), nil)
 	if err != nil {
 		return nil, err
