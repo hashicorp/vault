@@ -65,6 +65,24 @@ func (b *backend) pathLeaseRead(req *logical.Request, data *framework.FieldData)
 	}, nil
 }
 
+// Lease returns the lease information
+func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
+	entry, err := s.Get("config/lease")
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result configLease
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 // Lease configuration information for the secrets issued by this backend
 type configLease struct {
 	TTL    time.Duration `json:"ttl" mapstructure:"ttl"`

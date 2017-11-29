@@ -58,21 +58,3 @@ func (b *backend) client(s logical.Storage) (*api.Client, error) {
 	}
 	return client, nil
 }
-
-// Lease returns the lease information
-func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-
-	var result configLease
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
