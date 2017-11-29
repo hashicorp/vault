@@ -17,6 +17,12 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/access",
+			},
+		},
+
 		Paths: []*framework.Path{
 			pathConfigAccess(&b),
 			pathConfigLease(&b),
