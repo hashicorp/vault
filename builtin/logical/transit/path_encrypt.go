@@ -182,7 +182,7 @@ func (b *backend) pathEncryptWrite(
 
 		_, err := base64.StdEncoding.DecodeString(item.Plaintext)
 		if err != nil {
-			batchResponseItems[i].Error = "failed to base64-decode plaintext"
+			batchResponseItems[i].Error = err.Error()
 			continue
 		}
 

@@ -47,6 +47,16 @@ func (c *Core) Initialized() (bool, error) {
 		return false, fmt.Errorf("core: barrier reports initialized but no seal configuration found")
 	}
 
+	if c.seal.RecoveryKeySupported() {
+		sealConf, err = c.seal.RecoveryConfig()
+		if err != nil {
+			return false, err
+		}
+		if sealConf == nil {
+			return false, fmt.Errorf("core: barrier reports initialized but no recovery seal configuration found")
+		}
+	}
+
 	return true, nil
 }
 
@@ -251,6 +261,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	return results, nil
 }
 
+// UnsealWithStoredKeys performs auto-unseal using stored keys.
 func (c *Core) UnsealWithStoredKeys() error {
 	if !c.seal.StoredKeysSupported() {
 		return nil

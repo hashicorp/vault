@@ -40,7 +40,6 @@ type mysqlConn struct {
 	status           statusFlag
 	sequence         uint8
 	parseTime        bool
-	strict           bool
 
 	// for context support (Go 1.8+)
 	watching bool
@@ -404,6 +403,7 @@ func (mc *mysqlConn) query(query string, args []driver.Value) (*textRows, error)
 					return nil, err
 				}
 			}
+
 			// Columns
 			rows.rs.columns, err = mc.readColumns(resLen)
 			return rows, err

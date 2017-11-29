@@ -18,7 +18,7 @@ please update your API calls accordingly.
 
 ## Configure Backend
 
-Configures the connection parameters for Okta. This path honors the 
+Configures the connection parameters for Github. This path honors the 
 distinction between the `create` and `update` capabilities inside ACL policies.
 
 | Method   | Path                         | Produces               |
@@ -50,12 +50,12 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/githubokta/config
+    https://vault.rocks/v1/auth/github/config
 ```
 
 ## Read Configuration
 
-Reads the Okta configuration.
+Reads the Github configuration.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

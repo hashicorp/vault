@@ -148,35 +148,24 @@ entities attempting to login.
   inferred from service account used to issue metadata token for GCE instances. 
 
 **`iam`-only params**:
-
 - `max_jwt_exp` `(string: "")` - Optional, defaults to 900 (15min).
   Number of seconds past the time of authentication that the login param JWT
   must expire within. For example, if a user attempts to login with a token
   that expires within an hour and this is set to 15 minutes, Vault will return
   an error prompting the user to create a new signed JWT with a shorter `exp`. 
   The GCE metadata tokens currently do not allow the `exp` claim to be customized.
-  
 - `allow_gce_inference` `(bool: true)` - A flag to determine if this role should
    allow GCE instances to authenticate by inferring service accounts from the 
    GCE identity metadata token.
-
-- `service_accounts` `(array: [])` - Required for `iam` roles.
-  A comma-separated list of service account emails or ids.
-  Defines the service accounts that login is restricted to. If set to `*`, all
-  service accounts are allowed (role will still be bound by project).
-
+   
 **`gce`-only params**:
-
 - `bound_zone` `(string: "")`: If set, determines the zone that a GCE instance must belong to. 
    If bound_instance_group is provided, it is assumed to be a zonal group and the group must belong to this zone.
-
 - `bound_region` `(string: "")`: If set, determines the region that a GCE instance must belong to. 
    If bound_instance_group is provided, it is assumed to be a regional group and the group must belong to this region. 
    **If bound_zone is provided, region will be ignored.**
-
 - `bound_instance_group` `(string: "")`: If set, determines the instance group that an authorized instance must belong to.
    bound_zone or bound_region must also be set if bound_instance_group is set.
-
 - `bound_labels` `(array: [])`: A comma-separated list of Google Cloud Platform labels formatted as "$key:$value" strings that
    must be set on authorized GCE instances. Because GCP labels are not currently ACL'd, we recommend that this be used in 
    conjunction with other restrictions.

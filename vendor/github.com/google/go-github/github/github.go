@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	libraryVersion = "11"
+	libraryVersion = "14"
 	defaultBaseURL = "https://api.github.com/"
 	uploadBaseURL  = "https://uploads.github.com/"
 	userAgent      = "go-github/" + libraryVersion
@@ -102,6 +102,9 @@ const (
 
 	// https://developer.github.com/changes/2017-07-26-team-review-request-thor-preview/
 	mediaTypeTeamReviewPreview = "application/vnd.github.thor-preview+json"
+
+	// https://developer.github.com/changes/2017-08-30-preview-nested-teams/
+	mediaTypeNestedTeamsPreview = "application/vnd.github.hellcat-preview+json"
 )
 
 // A Client manages communication with the GitHub API.
@@ -235,6 +238,37 @@ func NewClient(httpClient *http.Client) *Client {
 	return c
 }
 
+// NewEnterpriseClient returns a new GitHub API client with provided
+// base URL and upload URL (often the same URL).
+// If either URL does not have a trailing slash, one is added automatically.
+// If a nil httpClient is provided, http.DefaultClient will be used.
+//
+// Note that NewEnterpriseClient is a convenience helper only;
+// its behavior is equivalent to using NewClient, followed by setting
+// the BaseURL and UploadURL fields.
+func NewEnterpriseClient(baseURL, uploadURL string, httpClient *http.Client) (*Client, error) {
+	baseEndpoint, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasSuffix(baseEndpoint.Path, "/") {
+		baseEndpoint.Path += "/"
+	}
+
+	uploadEndpoint, err := url.Parse(uploadURL)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasSuffix(uploadEndpoint.Path, "/") {
+		uploadEndpoint.Path += "/"
+	}
+
+	c := NewClient(httpClient)
+	c.BaseURL = baseEndpoint
+	c.UploadURL = uploadEndpoint
+	return c, nil
+}
+
 // NewRequest creates an API request. A relative URL can be provided in urlStr,
 // in which case it is resolved relative to the BaseURL of the Client.
 // Relative URLs should always be specified without a preceding slash. If
@@ -252,7 +286,9 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	var buf io.ReadWriter
 	if body != nil {
 		buf = new(bytes.Buffer)
-		err := json.NewEncoder(buf).Encode(body)
+		enc := json.NewEncoder(buf)
+		enc.SetEscapeHTML(false)
+		err := enc.Encode(body)
 		if err != nil {
 			return nil, err
 		}

@@ -30,7 +30,20 @@ func (c *Core) Capabilities(token, path string) ([]string, error) {
 
 	var policies []*Policy
 	for _, tePolicy := range te.Policies {
-		policy, err := c.policyStore.GetPolicy(tePolicy)
+		policy, err := c.policyStore.GetPolicy(tePolicy, PolicyTypeToken)
+		if err != nil {
+			return nil, err
+		}
+		policies = append(policies, policy)
+	}
+
+	_, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, item := range derivedPolicies {
+		policy, err := c.policyStore.GetPolicy(item, PolicyTypeToken)
 		if err != nil {
 			return nil, err
 		}

@@ -41,6 +41,11 @@ type RekeyBackup struct {
 	Keys  map[string][]string
 }
 
+// RekeyThreshold returns the secret threshold for the current seal
+// config. This threshold can either be the barrier key threshold or
+// the recovery key threshold, depending on whether rekey is being
+// performed on the recovery key, or whether the seal supports
+// recovery keys.
 func (c *Core) RekeyThreshold(recovery bool) (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -56,7 +61,10 @@ func (c *Core) RekeyThreshold(recovery bool) (int, error) {
 
 	var config *SealConfig
 	var err error
-	if recovery {
+	// If we are rekeying the recovery key, or if the seal supports
+	// recovery keys and we are rekeying the barrier key, we use the
+	// recovery config as the threshold instead.
+	if recovery || c.seal.RecoveryKeySupported() {
 		config, err = c.seal.RecoveryConfig()
 	} else {
 		config, err = c.seal.BarrierConfig()
@@ -68,7 +76,7 @@ func (c *Core) RekeyThreshold(recovery bool) (int, error) {
 	return config.SecretThreshold, nil
 }
 
-// RekeyProgress is used to return the rekey progress (num shares)
+// RekeyProgress is used to return the rekey progress (num shares).
 func (c *Core) RekeyProgress(recovery bool) (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -117,6 +125,8 @@ func (c *Core) RekeyConfig(recovery bool) (*SealConfig, error) {
 	return conf, nil
 }
 
+// RekeyInit will either initialize the rekey of barrier or recovery key.
+// recovery determines whether this is a rekey on the barrier or recovery key.
 func (c *Core) RekeyInit(config *SealConfig, recovery bool) error {
 	if recovery {
 		return c.RecoveryRekeyInit(config)
@@ -136,6 +146,10 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 		if config.Backup {
 			return fmt.Errorf("key backup not supported when using stored keys")
 		}
+	}
+
+	if c.seal.RecoveryKeySupported() && c.seal.RecoveryType() == config.Type {
+		c.logger.Debug("core: using recovery seal configuration to rekey barrier key")
 	}
 
 	// Check if the seal configuration is valid
@@ -228,6 +242,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 	return nil
 }
 
+// RekeyUpdate is used to provide a new key part for the barrier or recovery key.
 func (c *Core) RekeyUpdate(key []byte, nonce string, recovery bool) (*RekeyResult, error) {
 	if recovery {
 		return c.RecoveryRekeyUpdate(key, nonce)
@@ -235,7 +250,11 @@ func (c *Core) RekeyUpdate(key []byte, nonce string, recovery bool) (*RekeyResul
 	return c.BarrierRekeyUpdate(key, nonce)
 }
 
-// BarrierRekeyUpdate is used to provide a new key part
+// BarrierRekeyUpdate is used to provide a new key part. Barrier rekey can be done
+// with unseal keys, or recovery keys if that's supported and we are storing the barrier
+// key.
+//
+// N.B.: If recovery keys are used to rekey, the new barrier key shares are not returned.
 func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error) {
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
@@ -261,7 +280,15 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	defer c.rekeyLock.Unlock()
 
 	// Get the seal configuration
-	existingConfig, err := c.seal.BarrierConfig()
+	var existingConfig *SealConfig
+	var err error
+	var useRecovery bool // Determines whether recovery key is being used to rekey the master key
+	if c.seal.StoredKeysSupported() && c.seal.RecoveryKeySupported() {
+		existingConfig, err = c.seal.RecoveryConfig()
+		useRecovery = true
+	} else {
+		existingConfig, err = c.seal.BarrierConfig()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -298,22 +325,29 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		return nil, nil
 	}
 
-	// Recover the master key
-	var masterKey []byte
+	// Recover the master key or recovery key
+	var recoveredKey []byte
 	if existingConfig.SecretThreshold == 1 {
-		masterKey = c.barrierRekeyProgress[0]
+		recoveredKey = c.barrierRekeyProgress[0]
 		c.barrierRekeyProgress = nil
 	} else {
-		masterKey, err = shamir.Combine(c.barrierRekeyProgress)
+		recoveredKey, err = shamir.Combine(c.barrierRekeyProgress)
 		c.barrierRekeyProgress = nil
 		if err != nil {
 			return nil, fmt.Errorf("failed to compute master key: %v", err)
 		}
 	}
 
-	if err := c.barrier.VerifyMaster(masterKey); err != nil {
-		c.logger.Error("core: rekey aborted, master key verification failed", "error", err)
-		return nil, err
+	if useRecovery {
+		if err := c.seal.VerifyRecoveryKey(recoveredKey); err != nil {
+			c.logger.Error("core: rekey aborted, recovery key verification failed", "error", err)
+			return nil, err
+		}
+	} else {
+		if err := c.barrier.VerifyMaster(recoveredKey); err != nil {
+			c.logger.Error("core: rekey aborted, master key verification failed", "error", err)
+			return nil, err
+		}
 	}
 
 	// Generate a new master key
@@ -323,11 +357,11 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		return nil, fmt.Errorf("master key generation failed: %v", err)
 	}
 
-	// Return the master key if only a single key part is used
 	results := &RekeyResult{
 		Backup: c.barrierRekeyConfig.Backup,
 	}
-
+	// Set result.SecretShares to the master key if only a single key
+	// part is used -- no Shamir split required.
 	if c.barrierRekeyConfig.SecretShares == 1 {
 		results.SecretShares = append(results.SecretShares, newMasterKey)
 	} else {
@@ -343,13 +377,14 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	// If we are storing any shares, add them to the shares to store and remove
 	// from the returned keys
 	var keysToStore [][]byte
-	if c.barrierRekeyConfig.StoredShares > 0 {
+	if c.seal.StoredKeysSupported() && c.barrierRekeyConfig.StoredShares > 0 {
 		for i := 0; i < c.barrierRekeyConfig.StoredShares; i++ {
 			keysToStore = append(keysToStore, results.SecretShares[0])
 			results.SecretShares = results.SecretShares[1:]
 		}
 	}
 
+	// If PGP keys are passed in, encrypt shares with corresponding PGP keys.
 	if len(c.barrierRekeyConfig.PGPKeys) > 0 {
 		hexEncodedShares := make([][]byte, len(results.SecretShares))
 		for i, _ := range results.SecretShares {
@@ -360,6 +395,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 			return nil, err
 		}
 
+		// If backup is enabled, store backup info in vault.coreBarrierUnsealKeysBackupPath
 		if c.barrierRekeyConfig.Backup {
 			backupInfo := map[string][]string{}
 			for i := 0; i < len(results.PGPFingerprints); i++ {
@@ -453,19 +489,14 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 	defer c.rekeyLock.Unlock()
 
 	// Get the seal configuration
-	barrierConfig, err := c.seal.BarrierConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	// Ensure the barrier is initialized
-	if barrierConfig == nil {
-		return nil, ErrNotInit
-	}
-
 	existingConfig, err := c.seal.RecoveryConfig()
 	if err != nil {
 		return nil, err
+	}
+
+	// Ensure the seal is initialized
+	if existingConfig == nil {
+		return nil, ErrNotInit
 	}
 
 	// Ensure a rekey is in progress
@@ -496,12 +527,12 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 	}
 
 	// Recover the master key
-	var masterKey []byte
+	var recoveryKey []byte
 	if existingConfig.SecretThreshold == 1 {
-		masterKey = c.recoveryRekeyProgress[0]
+		recoveryKey = c.recoveryRekeyProgress[0]
 		c.recoveryRekeyProgress = nil
 	} else {
-		masterKey, err = shamir.Combine(c.recoveryRekeyProgress)
+		recoveryKey, err = shamir.Combine(c.recoveryRekeyProgress)
 		c.recoveryRekeyProgress = nil
 		if err != nil {
 			return nil, fmt.Errorf("failed to compute recovery key: %v", err)
@@ -509,7 +540,7 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 	}
 
 	// Verify the recovery key
-	if err := c.seal.VerifyRecoveryKey(masterKey); err != nil {
+	if err := c.seal.VerifyRecoveryKey(recoveryKey); err != nil {
 		c.logger.Error("core: rekey aborted, recovery key verification failed", "error", err)
 		return nil, err
 	}

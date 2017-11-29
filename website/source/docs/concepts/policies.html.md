@@ -113,9 +113,9 @@ path "secret/super-secret" {
   capabilities = ["deny"]
 }
 
-# Policies can also specify allowed and disallowed parameters. Here the key
-# "secret/restricted" can only contain "foo" (any value) and "bar" (one of "zip"
-# or "zap").
+# Policies can also specify allowed, disallowed, and required parameters. Here 
+# the key "secret/restricted" can only contain "foo" (any value) and "bar" (one 
+# of "zip" or "zap").
 path "secret/restricted" {
   capabilities = ["create"]
   allowed_parameters = {
@@ -217,13 +217,24 @@ In addition to the standard set of capabilities, Vault offers finer-grained
 control over permissions at a given path. The capabilities associated with a
 path take precedence over permissions on parameters.
 
-### Allowed and Denied Parameters
+### Parameter Constraints
 
 In Vault, data is represented as `key=value` pairs. Vault policies can
 optionally further restrict paths based on the keys and data at those keys when
 evaluating the permissions for a path. The optional finer-grained control
 options are:
 
+  * `required_parameters` - A list of parameters that must be specified.
+
+      ```ruby
+      # This requires the user to create "secret/foo" with a parameter named
+      # "bar" and "baz". 
+      path "secret/foo" {
+        capabilities = ["create"]
+        required_parameters = ["bar", "baz"]
+      }
+      ```
+  
   * `allowed_parameters` - Whitelists a list of keys and values that are
     permitted on the given path.
 
@@ -474,7 +485,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data 'path "..." {} \'
+  --data '{"rules":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-policy
 ```
 
@@ -498,7 +509,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data 'path "..." {} \'
+  --data '{"rules":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-existing-policy
 ```
 
@@ -539,7 +550,7 @@ $ vault write auth/userpass/users/sethvargo \
 ```
 
 This creates an authentication mapping to the policy such that, when the user
-authenticates successful to Vault, they will be given a token which has the list
+authenticates successfully to Vault, they will be given a token which has the list
 of policies attached.
 
 The user wishing to authenticate would run
@@ -555,10 +566,10 @@ authenticated user.
 
 ### Tokens
 
-Tokens are associated their policies at creation time. For example:
+Tokens are associated with their policies at creation time. For example:
 
 ```sh
-$ vault token-create -policy=dev-readonly,logs
+$ vault token-create -policy=dev-readonly -policy=logs
 ```
 
 Child tokens can be associated with a subset of a parent's policies. Root users
@@ -568,6 +579,6 @@ There is no way to modify the policies associated with a token once the token
 has been issued. The token must be revoked and a new one acquired to receive a
 new set of policies.
 
-However, the _contents_ of policies are parsed in real-time at every token use.
+However, the _contents_ of policies are parsed in real-time whenever the token is used.
 As a result, if a policy is modified, the modified rules will be in force the
-next time a token with that policy attached is used to make a call to Vault.
+next time a token, with that policy attached, is used to make a call to Vault.

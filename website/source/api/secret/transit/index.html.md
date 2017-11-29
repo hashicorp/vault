@@ -52,6 +52,8 @@ values set here cannot be changed after key creation.
       (symmetric, supports derivation)
     - `ecdsa-p256` – ECDSA using the P-256 elliptic curve (asymmetric)
     - `ed25519` – ED25519 (asymmetric, supports derivation)
+    - `rsa-2048` - RSA with bit size of 2048 (asymmetric)
+    - `rsa-4096` - RSA with bit size of 4096 (asymmetric)
 
 ### Sample Payload
 
@@ -295,13 +297,13 @@ $ curl \
 
 ## Encrypt Data
 
-This endpoint encrypts the provided plaintext using the named key. Currently,
-this only supports symmetric keys. This path supports the `create` and `update`
-policy capabilities as follows: if the user has the `create` capability for this
-endpoint in their policies, and the key does not exist, it will be upserted with
-default values (whether the key requires derivation depends on whether the
-context parameter is empty or not). If the user only has `update` capability and
-the key does not exist, an error will be returned.
+This endpoint encrypts the provided plaintext using the named key. This path
+supports the `create` and `update` policy capabilities as follows: if the user
+has the `create` capability for this endpoint in their policies, and the key
+does not exist, it will be upserted with default values (whether the key
+requires derivation depends on whether the context parameter is empty or not).
+If the user only has `update` capability and the key does not exist, an error
+will be returned.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -349,8 +351,7 @@ the key does not exist, an error will be returned.
 
 - `type` `(string: "aes256-gcm96")` –This parameter is required when encryption
   key is expected to be created. When performing an upsert operation, the type
-  of key to create. Currently, "aes256-gcm96" (symmetric) is the only type
-  supported.
+  of key to create.
 
 - `convergent_encryption` `(string: "")` – This parameter will only be used when
   a key is expected to be created.  Whether to support convergent encryption.
@@ -392,8 +393,7 @@ $ curl \
 
 ## Decrypt Data
 
-This endpoint decrypts the provided ciphertext using the named key. Currently,
-this only supports symmetric keys.
+This endpoint decrypts the provided ciphertext using the named key.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -556,7 +556,7 @@ then made available to trusted users.
   part of the URL.
 
 - `name` `(string: <required>)` – Specifies the name of the encryption key to
-  re-encrypt against. This is specified as part of the URL.
+  use to encrypt the datakey. This is specified as part of the URL.
 
 - `context` `(string: "")` – Specifies the key derivation context, provided as a
   base64-encoded string. This must be provided if derivation is enabled.
@@ -786,6 +786,15 @@ supports signing.
 
 - `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
 
+- `context` `(string: "")` - Base64 encoded context for key derivation.
+   Required if key derivation is enabled; currently only available with ed25519
+   keys.
+
+ - `prehashed` `(bool: false)` - Set to `true` when the input is already
+   hashed. If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used
+   to hash the input should be indicated by the `algorithm` parameter.
+
+
 ### Sample Payload
 
 ```json
@@ -845,6 +854,14 @@ data.
 - `hmac` `(string: "")` – Specifies the signature output from the
   `/transit/hmac` function. Either this must be supplied or `signature` must be
   supplied.
+
+ - `context` `(string: "")` - Base64 encoded context for key derivation.
+   Required if key derivation is enabled; currently only available with ed25519
+   keys.
+
+ - `prehashed` `(bool: false)` - Set to `true` when the input is already
+   hashed. If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used
+   to hash the input should be indicated by the `algorithm` parameter.
 
 ### Sample Payload
 

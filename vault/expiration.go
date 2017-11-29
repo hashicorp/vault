@@ -1104,6 +1104,9 @@ func (m *ExpirationManager) persistEntry(le *leaseEntry) error {
 		Key:   le.LeaseID,
 		Value: buf,
 	}
+	if le.Auth != nil && len(le.Auth.Policies) == 1 && le.Auth.Policies[0] == "root" {
+		ent.SealWrap = true
+	}
 	if err := m.idView.Put(&ent); err != nil {
 		return fmt.Errorf("failed to persist lease entry: %v", err)
 	}

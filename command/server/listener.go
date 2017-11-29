@@ -130,12 +130,14 @@ func listenerWrapTLS(
 		}
 		tlsConf.PreferServerCipherSuites = preferServer
 	}
+	var requireVerifyCerts bool
+	var err error
 	if v, ok := config["tls_require_and_verify_client_cert"]; ok {
-		requireClient, err := parseutil.ParseBool(v)
+		requireVerifyCerts, err = parseutil.ParseBool(v)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("invalid value for 'tls_require_and_verify_client_cert': %v", err)
 		}
-		if requireClient {
+		if requireVerifyCerts {
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 		}
 		if tlsClientCaFile, ok := config["tls_client_ca_file"]; ok {
@@ -150,6 +152,16 @@ func listenerWrapTLS(
 			}
 			tlsConf.ClientCAs = caPool
 		}
+	}
+	if v, ok := config["tls_disable_client_certs"]; ok {
+		disableClientCerts, err := parseutil.ParseBool(v)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("invalid value for 'tls_disable_client_certs': %v", err)
+		}
+		if disableClientCerts && requireVerifyCerts {
+			return nil, nil, nil, fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
+		}
+		tlsConf.ClientAuth = tls.NoClientCert
 	}
 
 	ln = tls.NewListener(ln, tlsConf)

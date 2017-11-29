@@ -352,14 +352,12 @@ func normalizeFileRef(ref *Ref, relativeBase string) *Ref {
 }
 
 func (r *schemaLoader) resolveRef(currentRef, ref *Ref, node, target interface{}) error {
-
 	tgt := reflect.ValueOf(target)
 	if tgt.Kind() != reflect.Ptr {
 		return fmt.Errorf("resolve ref: target needs to be a pointer")
 	}
 
 	oldRef := currentRef
-
 	if currentRef != nil {
 		debugLog("resolve ref current %s new %s", currentRef.String(), ref.String())
 		nextRef := nextRef(node, ref, currentRef.GetPointer())
@@ -466,8 +464,6 @@ func (r *schemaLoader) resolveRef(currentRef, ref *Ref, node, target interface{}
 	if err := swag.DynamicJSONToStruct(res, target); err != nil {
 		return err
 	}
-
-	r.currentRef = currentRef
 
 	return nil
 }
@@ -645,14 +641,18 @@ func expandSchema(target Schema, parentRefs []string, resolver *schemaLoader) (*
 		return resolver.root.(*Schema), nil
 	}
 
-	// t is the new expanded schema
 	var t *Schema
-
+	var basePath string
+	b, _ := json.Marshal(target)
+	debugLog("Target is: %s", string(b))
 	for target.Ref.String() != "" {
 		if swag.ContainsStringsCI(parentRefs, target.Ref.String()) {
 			return &target, nil
 		}
-
+		basePath = target.Ref.RemoteURI()
+		debugLog("\n\n\n\n\nbasePath: %s", basePath)
+		b, _ := json.Marshal(target)
+		debugLog("calling Resolve with target: %s", string(b))
 		if err := resolver.Resolve(&target.Ref, &t); shouldStopOnError(err, resolver.options) {
 			return &target, err
 		}
@@ -666,7 +666,13 @@ func expandSchema(target Schema, parentRefs []string, resolver *schemaLoader) (*
 			target = *t
 		}
 	}
-
+	if target.Ref.String() == "" {
+		b, _ := json.Marshal(target)
+		debugLog("before: %s", string(b))
+		modifyRefs(&target, basePath)
+		b, _ = json.Marshal(target)
+		debugLog("after: %s", string(b))
+	}
 	t, err := expandItems(target, parentRefs, resolver)
 	if shouldStopOnError(err, resolver.options) {
 		return &target, err
@@ -674,6 +680,8 @@ func expandSchema(target Schema, parentRefs []string, resolver *schemaLoader) (*
 	if t != nil {
 		target = *t
 	}
+
+	resolver.reset()
 
 	for i := range target.AllOf {
 		t, err := expandSchema(target.AllOf[i], parentRefs, resolver)

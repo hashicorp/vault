@@ -33,8 +33,6 @@ import (
 var (
 	// m is a map from name to balancer builder.
 	m = make(map[string]Builder)
-	// defaultBuilder is the default balancer to use.
-	defaultBuilder Builder // TODO(bar) install pickfirst as default.
 )
 
 // Register registers the balancer builder to the balancer map.
@@ -44,13 +42,12 @@ func Register(b Builder) {
 }
 
 // Get returns the resolver builder registered with the given name.
-// If no builder is register with the name, the default pickfirst will
-// be used.
+// If no builder is register with the name, nil will be returned.
 func Get(name string) Builder {
 	if b, ok := m[name]; ok {
 		return b
 	}
-	return defaultBuilder
+	return nil
 }
 
 // SubConn represents a gRPC sub connection.
@@ -182,6 +179,10 @@ type Picker interface {
 // the connectivity states.
 //
 // It also generates and updates the Picker used by gRPC to pick SubConns for RPCs.
+//
+// HandleSubConnectionStateChange, HandleResolvedAddrs and Close are guaranteed
+// to be called synchronously from the same goroutine.
+// There's no guarantee on picker.Pick, it may be called anytime.
 type Balancer interface {
 	// HandleSubConnStateChange is called by gRPC when the connectivity state
 	// of sc has changed.
@@ -196,6 +197,7 @@ type Balancer interface {
 	// An empty address slice and a non-nil error will be passed if the resolver returns
 	// non-nil error to gRPC.
 	HandleResolvedAddrs([]resolver.Address, error)
-	// Close closes the balancer.
+	// Close closes the balancer. The balancer is not required to call
+	// ClientConn.RemoveSubConn for its existing SubConns.
 	Close()
 }

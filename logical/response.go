@@ -110,3 +110,23 @@ func ListResponse(keys []string) *Response {
 	}
 	return resp
 }
+
+// ListResponseWithInfo is used to format a response to a list operation and
+// return the keys as well as a map with corresponding key info.
+func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Response {
+	resp := ListResponse(keys)
+
+	keyInfoData := make(map[string]interface{})
+	for _, key := range keys {
+		val, ok := keyInfo[key]
+		if ok {
+			keyInfoData[key] = val
+		}
+	}
+
+	if len(keyInfoData) > 0 {
+		resp.Data["key_info"] = keyInfoData
+	}
+
+	return resp
+}

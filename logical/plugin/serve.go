@@ -50,7 +50,7 @@ func Serve(opts *ServeOpts) error {
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  2,
+	ProtocolVersion:  3,
 	MagicCookieKey:   "VAULT_BACKEND_PLUGIN",
 	MagicCookieValue: "6669da05-b1c8-4f49-97d9-c8e5bed98e20",
 }

@@ -26,6 +26,12 @@ func Backend() *backend {
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/connection",
+			},
+		},
+
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
 			pathConfigLease(&b),

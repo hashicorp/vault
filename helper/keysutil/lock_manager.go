@@ -256,7 +256,13 @@ func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Polic
 		case KeyType_ED25519:
 			if req.Convergent {
 				lm.UnlockPolicy(lock, lockType)
-				return nil, nil, false, fmt.Errorf("convergent encryption not not supported for keys of type %v", req.KeyType)
+				return nil, nil, false, fmt.Errorf("convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
+		case KeyType_RSA2048, KeyType_RSA4096:
+			if req.Derived || req.Convergent {
+				lm.UnlockPolicy(lock, lockType)
+				return nil, nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
 			}
 
 		default:

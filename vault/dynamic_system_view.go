@@ -54,8 +54,8 @@ func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
 	req := new(logical.Request)
 	req.Operation = logical.ReadOperation
 	req.Path = path
-	_, rootPrivs := acl.AllowOperation(req)
-	return rootPrivs
+	authResults := acl.AllowOperation(req)
+	return authResults.RootPrivs
 }
 
 // TTLsByPath returns the default and max TTLs corresponding to a particular
@@ -109,7 +109,7 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 		resp.WrapInfo.Format = "jwt"
 	}
 
-	_, err := d.core.wrapInCubbyhole(req, resp)
+	_, err := d.core.wrapInCubbyhole(req, resp, nil)
 	if err != nil {
 		return nil, err
 	}

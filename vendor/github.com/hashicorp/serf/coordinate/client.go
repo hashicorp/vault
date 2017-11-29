@@ -205,6 +205,11 @@ func (c *Client) Update(node string, other *Coordinate, rtt time.Duration) (*Coo
 		return nil, err
 	}
 
+	const maxRTT = 10 * time.Second
+	if rtt <= 0 || rtt > maxRTT {
+		return nil, fmt.Errorf("round trip time not in valid range, duration %v is not a positive value less than %v ", rtt, maxRTT)
+	}
+
 	rttSeconds := c.latencyFilter(node, rtt.Seconds())
 	c.updateVivaldi(other, rttSeconds)
 	c.updateAdjustment(other, rttSeconds)

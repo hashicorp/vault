@@ -2,6 +2,7 @@ package vault
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -123,9 +124,11 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
 				"force_no_cache":    false,
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 		"sys/": map[string]interface{}{
 			"type":        "system",
@@ -134,9 +137,11 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
 				"force_no_cache":    false,
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -145,13 +150,28 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
 				"force_no_cache":    false,
 			},
-			"local": true,
+			"local":     true,
+			"seal_wrap": false,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"accessor":    resp.Data["identity/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("Got:\n%#v\nExpected:\n%#v", resp.Data, exp)
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", resp.Data, exp)
 	}
 }
 
@@ -160,6 +180,8 @@ func TestSystemBackend_mount(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
 	req.Data["type"] = "kv"
+	req.Data["local"] = true
+	req.Data["seal_wrap"] = true
 
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -168,6 +190,86 @@ func TestSystemBackend_mount(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// We can't know the pointer address ahead of time so simply
+	// copy what's given
+	exp := map[string]interface{}{
+		"secret/": map[string]interface{}{
+			"type":        "kv",
+			"description": "key/value secret storage",
+			"accessor":    resp.Data["secret/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+		},
+		"sys/": map[string]interface{}{
+			"type":        "system",
+			"description": "system endpoints used for control, policy and debugging",
+			"accessor":    resp.Data["sys/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
+			"accessor":    resp.Data["cubbyhole/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     true,
+			"seal_wrap": false,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"accessor":    resp.Data["identity/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+		},
+		"prod/secret/": map[string]interface{}{
+			"description": "",
+			"type":        "kv",
+			"accessor":    resp.Data["prod/secret/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     true,
+			"seal_wrap": true,
+		},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", resp.Data, exp)
+	}
+
 }
 
 func TestSystemBackend_mount_force_no_cache(t *testing.T) {
@@ -258,7 +360,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policy, _ := Parse(capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(capabilitiesPolicy)
 	err = core.policyStore.SetPolicy(policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -310,7 +412,7 @@ func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policy, _ := Parse(capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(capabilitiesPolicy)
 	err = core.policyStore.SetPolicy(policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1125,7 +1227,8 @@ func TestSystemBackend_authTable(t *testing.T) {
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -1141,6 +1244,8 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")
 	req.Data["type"] = "noop"
+	req.Data["local"] = true
+	req.Data["seal_wrap"] = true
 
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -1148,6 +1253,43 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 	}
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "auth")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("resp is nil")
+	}
+
+	exp := map[string]interface{}{
+		"foo/": map[string]interface{}{
+			"type":        "noop",
+			"description": "",
+			"accessor":    resp.Data["foo/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": int64(0),
+				"max_lease_ttl":     int64(0),
+			},
+			"local":     true,
+			"seal_wrap": true,
+		},
+		"token/": map[string]interface{}{
+			"type":        "token",
+			"description": "token based credentials",
+			"accessor":    resp.Data["token/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": int64(0),
+				"max_lease_ttl":     int64(0),
+			},
+			"local":     false,
+			"seal_wrap": false,
+		},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
 }
 
@@ -1214,7 +1356,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp)
 	}
-	if resp != nil {
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -1468,7 +1610,7 @@ func TestSystemBackend_rawWrite_Protected(t *testing.T) {
 }
 
 func TestSystemBackend_rawReadWrite(t *testing.T) {
-	c, b, _ := testCoreSystemBackendRaw(t)
+	_, b, _ := testCoreSystemBackendRaw(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "raw/sys/policy/test")
 	req.Data["value"] = `path "secret/" { policy = "read" }`
@@ -1490,17 +1632,8 @@ func TestSystemBackend_rawReadWrite(t *testing.T) {
 		t.Fatalf("bad: %v", resp)
 	}
 
-	// Read the policy!
-	p, err := c.policyStore.GetPolicy("test")
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if p == nil || len(p.Paths) == 0 {
-		t.Fatalf("missing policy %#v", p)
-	}
-	if p.Paths[0].Prefix != "secret/" || p.Paths[0].Policy != ReadCapability {
-		t.Fatalf("Bad: %#v", p)
-	}
+	// Note: since the upgrade code is gone that upgraded from 0.1, we can't
+	// simply parse this out directly via GetPolicy, so the test now ends here.
 }
 
 func TestSystemBackend_rawDelete_Protected(t *testing.T) {
@@ -1517,7 +1650,10 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 	c, b, _ := testCoreSystemBackendRaw(t)
 
 	// set the policy!
-	p := &Policy{Name: "test"}
+	p := &Policy{
+		Name: "test",
+		Type: PolicyTypeACL,
+	}
 	err := c.policyStore.SetPolicy(p)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1534,8 +1670,8 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 	}
 
 	// Policy should be gone
-	c.policyStore.lru.Purge()
-	out, err := c.policyStore.GetPolicy("test")
+	c.policyStore.tokenPoliciesLRU.Purge()
+	out, err := c.policyStore.GetPolicy("test", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1710,4 +1846,158 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
 	}
+}
+
+func TestSystemBackend_ToolsHash(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.UpdateOperation, "tools/hash")
+	req.Data = map[string]interface{}{
+		"input": "dGhlIHF1aWNrIGJyb3duIGZveA==",
+	}
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	doRequest := func(req *logical.Request, errExpected bool, expected string) {
+		t.Helper()
+		resp, err := b.HandleRequest(req)
+		if err != nil && !errExpected {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if errExpected {
+			if !resp.IsError() {
+				t.Fatalf("bad: got error response: %#v", *resp)
+			}
+			return
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: got error response: %#v", *resp)
+		}
+		sum, ok := resp.Data["sum"]
+		if !ok {
+			t.Fatal("no sum key found in returned data")
+		}
+		if sum.(string) != expected {
+			t.Fatal("mismatched hashes")
+		}
+	}
+
+	// Test defaults -- sha2-256
+	doRequest(req, false, "9ecb36561341d18eb65484e833efea61edc74b84cf5e6ae1b81c63533e25fc8f")
+
+	// Test algorithm selection in the path
+	req.Path = "tools/hash/sha2-224"
+	doRequest(req, false, "ea074a96cabc5a61f8298a2c470f019074642631a49e1c5e2f560865")
+
+	// Reset and test algorithm selection in the data
+	req.Path = "tools/hash"
+	req.Data["algorithm"] = "sha2-224"
+	doRequest(req, false, "ea074a96cabc5a61f8298a2c470f019074642631a49e1c5e2f560865")
+
+	req.Data["algorithm"] = "sha2-384"
+	doRequest(req, false, "15af9ec8be783f25c583626e9491dbf129dd6dd620466fdf05b3a1d0bb8381d30f4d3ec29f923ff1e09a0f6b337365a6")
+
+	req.Data["algorithm"] = "sha2-512"
+	doRequest(req, false, "d9d380f29b97ad6a1d92e987d83fa5a02653301e1006dd2bcd51afa59a9147e9caedaf89521abc0f0b682adcd47fb512b8343c834a32f326fe9bef00542ce887")
+
+	// Test returning as base64
+	req.Data["format"] = "base64"
+	doRequest(req, false, "2dOA8puXrWodkumH2D+loCZTMB4QBt0rzVGvpZqRR+nK7a+JUhq8DwtoKtzUf7USuDQ8g0oy8yb+m+8AVCzohw==")
+
+	// Test bad input/format/algorithm
+	req.Data["format"] = "base92"
+	doRequest(req, true, "")
+
+	req.Data["format"] = "hex"
+	req.Data["algorithm"] = "foobar"
+	doRequest(req, true, "")
+
+	req.Data["algorithm"] = "sha2-256"
+	req.Data["input"] = "foobar"
+	doRequest(req, true, "")
+}
+
+func TestSystemBackend_ToolsRandom(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.UpdateOperation, "tools/random")
+
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {
+		t.Helper()
+		getResponse := func() []byte {
+			resp, err := b.HandleRequest(req)
+			if err != nil && !errExpected {
+				t.Fatal(err)
+			}
+			if resp == nil {
+				t.Fatal("expected non-nil response")
+			}
+			if errExpected {
+				if !resp.IsError() {
+					t.Fatalf("bad: got error response: %#v", *resp)
+				}
+				return nil
+			}
+			if resp.IsError() {
+				t.Fatalf("bad: got error response: %#v", *resp)
+			}
+			if _, ok := resp.Data["random_bytes"]; !ok {
+				t.Fatal("no random_bytes found in response")
+			}
+
+			outputStr := resp.Data["random_bytes"].(string)
+			var outputBytes []byte
+			switch format {
+			case "base64":
+				outputBytes, err = base64.StdEncoding.DecodeString(outputStr)
+			case "hex":
+				outputBytes, err = hex.DecodeString(outputStr)
+			default:
+				t.Fatal("unknown format")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return outputBytes
+		}
+
+		rand1 := getResponse()
+		// Expected error
+		if rand1 == nil {
+			return
+		}
+		rand2 := getResponse()
+		if len(rand1) != numBytes || len(rand2) != numBytes {
+			t.Fatal("length of output random bytes not what is exepcted")
+		}
+		if reflect.DeepEqual(rand1, rand2) {
+			t.Fatal("found identical ouputs")
+		}
+	}
+
+	// Test defaults
+	doRequest(req, false, "base64", 32)
+
+	// Test size selection in the path
+	req.Path = "tools/random/24"
+	req.Data["format"] = "hex"
+	doRequest(req, false, "hex", 24)
+
+	// Test bad input/format
+	req.Path = "tools/random"
+	req.Data["format"] = "base92"
+	doRequest(req, true, "", 0)
+
+	req.Data["format"] = "hex"
+	req.Data["bytes"] = -1
+	doRequest(req, true, "", 0)
 }

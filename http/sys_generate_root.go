@@ -10,13 +10,13 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func handleSysGenerateRootAttempt(core *vault.Core) http.Handler {
+func handleSysGenerateRootAttempt(core *vault.Core, generateStrategy vault.GenerateRootStrategy) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
 			handleSysGenerateRootAttemptGet(core, w, r)
 		case "POST", "PUT":
-			handleSysGenerateRootAttemptPut(core, w, r)
+			handleSysGenerateRootAttemptPut(core, w, r, generateStrategy)
 		case "DELETE":
 			handleSysGenerateRootAttemptDelete(core, w, r)
 		default:
@@ -77,7 +77,7 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 	respondOk(w, status)
 }
 
-func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r *http.Request, generateStrategy vault.GenerateRootStrategy) {
 	// Parse the request
 	var req GenerateRootInitRequest
 	if err := parseRequest(r, w, &req); err != nil {
@@ -91,7 +91,7 @@ func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r 
 	}
 
 	// Attemptialize the generation
-	err := core.GenerateRootInit(req.OTP, req.PGPKey)
+	err := core.GenerateRootInit(req.OTP, req.PGPKey, generateStrategy)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
@@ -109,7 +109,7 @@ func handleSysGenerateRootAttemptDelete(core *vault.Core, w http.ResponseWriter,
 	respondOk(w, nil)
 }
 
-func handleSysGenerateRootUpdate(core *vault.Core) http.Handler {
+func handleSysGenerateRootUpdate(core *vault.Core, generateStrategy vault.GenerateRootStrategy) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse the request
 		var req GenerateRootUpdateRequest
@@ -141,20 +141,24 @@ func handleSysGenerateRootUpdate(core *vault.Core) http.Handler {
 		}
 
 		// Use the key to make progress on root generation
-		result, err := core.GenerateRootUpdate(key, req.Nonce)
+		result, err := core.GenerateRootUpdate(key, req.Nonce, generateStrategy)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
 
 		resp := &GenerateRootStatusResponse{
-			Complete:         result.Progress == result.Required,
-			Nonce:            req.Nonce,
-			Progress:         result.Progress,
-			Required:         result.Required,
-			Started:          true,
-			EncodedRootToken: result.EncodedRootToken,
-			PGPFingerprint:   result.PGPFingerprint,
+			Complete:       result.Progress == result.Required,
+			Nonce:          req.Nonce,
+			Progress:       result.Progress,
+			Required:       result.Required,
+			Started:        true,
+			EncodedToken:   result.EncodedToken,
+			PGPFingerprint: result.PGPFingerprint,
+		}
+
+		if generateStrategy == vault.GenerateStandardRootTokenStrategy {
+			resp.EncodedRootToken = result.EncodedToken
 		}
 
 		respondOk(w, resp)
@@ -172,6 +176,7 @@ type GenerateRootStatusResponse struct {
 	Progress         int    `json:"progress"`
 	Required         int    `json:"required"`
 	Complete         bool   `json:"complete"`
+	EncodedToken     string `json:"encoded_token"`
 	EncodedRootToken string `json:"encoded_root_token"`
 	PGPFingerprint   string `json:"pgp_fingerprint"`
 }

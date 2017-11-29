@@ -17,7 +17,8 @@
  */
 
 // Package transport defines and implements message oriented communication
-// channel to complete various transactions (e.g., an RPC).
+// channel to complete various transactions (e.g., an RPC).  It is meant for
+// grpc-internal usage and is not intended to be imported directly by users.
 package transport // import "google.golang.org/grpc/transport"
 
 import (
@@ -25,6 +26,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"golang.org/x/net/context"
 	"golang.org/x/net/http2"
@@ -67,20 +69,20 @@ func newRecvBuffer() *recvBuffer {
 
 func (b *recvBuffer) put(r recvMsg) {
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	if len(b.backlog) == 0 {
 		select {
 		case b.c <- r:
+			b.mu.Unlock()
 			return
 		default:
 		}
 	}
 	b.backlog = append(b.backlog, r)
+	b.mu.Unlock()
 }
 
 func (b *recvBuffer) load() {
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	if len(b.backlog) > 0 {
 		select {
 		case b.c <- b.backlog[0]:
@@ -89,6 +91,7 @@ func (b *recvBuffer) load() {
 		default:
 		}
 	}
+	b.mu.Unlock()
 }
 
 // get returns the channel that receives a recvMsg in the buffer.
@@ -131,7 +134,7 @@ func (r *recvBufferReader) read(p []byte) (n int, err error) {
 	case <-r.ctx.Done():
 		return 0, ContextErr(r.ctx.Err())
 	case <-r.goAway:
-		return 0, ErrStreamDrain
+		return 0, errStreamDrain
 	case m := <-r.recv.get():
 		r.recv.load()
 		if m.err != nil {
@@ -164,20 +167,20 @@ func newControlBuffer() *controlBuffer {
 
 func (b *controlBuffer) put(r item) {
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	if len(b.backlog) == 0 {
 		select {
 		case b.c <- r:
+			b.mu.Unlock()
 			return
 		default:
 		}
 	}
 	b.backlog = append(b.backlog, r)
+	b.mu.Unlock()
 }
 
 func (b *controlBuffer) load() {
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	if len(b.backlog) > 0 {
 		select {
 		case b.c <- b.backlog[0]:
@@ -186,6 +189,7 @@ func (b *controlBuffer) load() {
 		default:
 		}
 	}
+	b.mu.Unlock()
 }
 
 // get returns the channel that receives an item in the buffer.
@@ -207,61 +211,42 @@ const (
 
 // Stream represents an RPC in the transport layer.
 type Stream struct {
-	id uint32
-	// nil for client side Stream.
-	st ServerTransport
-	// ctx is the associated context of the stream.
-	ctx context.Context
-	// cancel is always nil for client side Stream.
-	cancel context.CancelFunc
-	// done is closed when the final status arrives.
-	done chan struct{}
-	// goAway is closed when the server sent GoAways signal before this stream was initiated.
-	goAway chan struct{}
-	// method records the associated RPC method of the stream.
-	method       string
+	id           uint32
+	st           ServerTransport    // nil for client side Stream
+	ctx          context.Context    // the associated context of the stream
+	cancel       context.CancelFunc // always nil for client side Stream
+	done         chan struct{}      // closed when the final status arrives
+	goAway       chan struct{}      // closed when a GOAWAY control message is received
+	method       string             // the associated RPC method of the stream
 	recvCompress string
 	sendCompress string
 	buf          *recvBuffer
 	trReader     io.Reader
 	fc           *inFlow
 	recvQuota    uint32
-
-	// TODO: Remote this unused variable.
-	// The accumulated inbound quota pending for window update.
-	updateQuota uint32
+	waiters      waiters
 
 	// Callback to state application's intentions to read data. This
-	// is used to adjust flow control, if need be.
+	// is used to adjust flow control, if needed.
 	requestRead func(int)
 
-	sendQuotaPool  *quotaPool
-	localSendQuota *quotaPool
-	// Close headerChan to indicate the end of reception of header metadata.
-	headerChan chan struct{}
-	// header caches the received header metadata.
-	header metadata.MD
-	// The key-value map of trailer metadata.
-	trailer metadata.MD
+	sendQuotaPool *quotaPool
+	headerChan    chan struct{} // closed to indicate the end of header metadata.
+	headerDone    bool          // set when headerChan is closed. Used to avoid closing headerChan multiple times.
+	header        metadata.MD   // the received header metadata.
+	trailer       metadata.MD   // the key-value map of trailer metadata.
 
-	mu sync.RWMutex // guard the following
-	// headerOK becomes true from the first header is about to send.
-	headerOk bool
+	mu       sync.RWMutex // guard the following
+	headerOk bool         // becomes true from the first header is about to send
 	state    streamState
-	// true iff headerChan is closed. Used to avoid closing headerChan
-	// multiple times.
-	headerDone bool
-	// the status error received from the server.
-	status *status.Status
-	// rstStream indicates whether a RST_STREAM frame needs to be sent
-	// to the server to signify that this stream is closing.
-	rstStream bool
-	// rstError is the error that needs to be sent along with the RST_STREAM frame.
-	rstError http2.ErrCode
-	// bytesSent and bytesReceived indicates whether any bytes have been sent or
-	// received on this stream.
-	bytesSent     bool
-	bytesReceived bool
+
+	status *status.Status // the status error received from the server
+
+	rstStream bool          // indicates whether a RST_STREAM frame needs to be sent
+	rstError  http2.ErrCode // the error that needs to be sent along with the RST_STREAM frame
+
+	bytesReceived bool // indicates whether any bytes have been received on this stream
+	unprocessed   bool // set if the server sends a refused stream or GOAWAY including this stream
 }
 
 // RecvCompress returns the compression algorithm applied to the inbound
@@ -296,7 +281,7 @@ func (s *Stream) Header() (metadata.MD, error) {
 	case <-s.ctx.Done():
 		err = ContextErr(s.ctx.Err())
 	case <-s.goAway:
-		err = ErrStreamDrain
+		err = errStreamDrain
 	case <-s.headerChan:
 		return s.header.Copy(), nil
 	}
@@ -314,8 +299,9 @@ func (s *Stream) Header() (metadata.MD, error) {
 // side only.
 func (s *Stream) Trailer() metadata.MD {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.trailer.Copy()
+	c := s.trailer.Copy()
+	s.mu.RUnlock()
+	return c
 }
 
 // ServerTransport returns the underlying ServerTransport for the stream.
@@ -343,14 +329,16 @@ func (s *Stream) Status() *status.Status {
 // Server side only.
 func (s *Stream) SetHeader(md metadata.MD) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.headerOk || s.state == streamDone {
+		s.mu.Unlock()
 		return ErrIllegalHeaderWrite
 	}
 	if md.Len() == 0 {
+		s.mu.Unlock()
 		return nil
 	}
 	s.header = metadata.Join(s.header, md)
+	s.mu.Unlock()
 	return nil
 }
 
@@ -361,8 +349,8 @@ func (s *Stream) SetTrailer(md metadata.MD) error {
 		return nil
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.trailer = metadata.Join(s.trailer, md)
+	s.mu.Unlock()
 	return nil
 }
 
@@ -410,18 +398,21 @@ func (s *Stream) finish(st *status.Status) {
 	close(s.done)
 }
 
-// BytesSent indicates whether any bytes have been sent on this stream.
-func (s *Stream) BytesSent() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.bytesSent
-}
-
 // BytesReceived indicates whether any bytes have been received on this stream.
 func (s *Stream) BytesReceived() bool {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.bytesReceived
+	br := s.bytesReceived
+	s.mu.Unlock()
+	return br
+}
+
+// Unprocessed indicates whether the server did not process this stream --
+// i.e. it sent a refused stream or GOAWAY including this stream ID.
+func (s *Stream) Unprocessed() bool {
+	s.mu.Lock()
+	br := s.unprocessed
+	s.mu.Unlock()
+	return br
 }
 
 // GoString is implemented by Stream so context.String() won't
@@ -450,7 +441,6 @@ type transportState int
 
 const (
 	reachable transportState = iota
-	unreachable
 	closing
 	draining
 )
@@ -465,6 +455,8 @@ type ServerConfig struct {
 	KeepalivePolicy       keepalive.EnforcementPolicy
 	InitialWindowSize     int32
 	InitialConnWindowSize int32
+	WriteBufferSize       int
+	ReadBufferSize        int
 }
 
 // NewServerTransport creates a ServerTransport with conn or non-nil error
@@ -492,22 +484,27 @@ type ConnectOptions struct {
 	KeepaliveParams keepalive.ClientParameters
 	// StatsHandler stores the handler for stats.
 	StatsHandler stats.Handler
-	// InitialWindowSize sets the intial window size for a stream.
+	// InitialWindowSize sets the initial window size for a stream.
 	InitialWindowSize int32
-	// InitialConnWindowSize sets the intial window size for a connection.
+	// InitialConnWindowSize sets the initial window size for a connection.
 	InitialConnWindowSize int32
+	// WriteBufferSize sets the size of write buffer which in turn determines how much data can be batched before it's written on the wire.
+	WriteBufferSize int
+	// ReadBufferSize sets the size of read buffer, which in turn determines how much data can be read at most for one read syscall.
+	ReadBufferSize int
 }
 
 // TargetInfo contains the information of the target such as network address and metadata.
 type TargetInfo struct {
-	Addr     string
-	Metadata interface{}
+	Addr      string
+	Metadata  interface{}
+	Authority string
 }
 
 // NewClientTransport establishes the transport with the required ConnectOptions
 // and returns it to the caller.
-func NewClientTransport(ctx context.Context, target TargetInfo, opts ConnectOptions) (ClientTransport, error) {
-	return newHTTP2Client(ctx, target, opts)
+func NewClientTransport(ctx context.Context, target TargetInfo, opts ConnectOptions, timeout time.Duration) (ClientTransport, error) {
+	return newHTTP2Client(ctx, target, opts, timeout)
 }
 
 // Options provides additional hints and information for message
@@ -519,7 +516,7 @@ type Options struct {
 
 	// Delay is a hint to the transport implementation for whether
 	// the data could be buffered for a batching write. The
-	// Transport implementation may ignore the hint.
+	// transport implementation may ignore the hint.
 	Delay bool
 }
 
@@ -672,9 +669,13 @@ func (e ConnectionError) Origin() error {
 var (
 	// ErrConnClosing indicates that the transport is closing.
 	ErrConnClosing = connectionErrorf(true, nil, "transport is closing")
-	// ErrStreamDrain indicates that the stream is rejected by the server because
+	// errStreamDrain indicates that the stream is rejected by the server because
 	// the server stops accepting new RPCs.
-	ErrStreamDrain = streamErrorf(codes.Unavailable, "the server stops accepting new RPCs")
+	// TODO: delete this error; it is no longer necessary.
+	errStreamDrain = streamErrorf(codes.Unavailable, "the server stops accepting new RPCs")
+	// StatusGoAway indicates that the server sent a GOAWAY that included this
+	// stream's ID in unprocessed RPCs.
+	statusGoAway = status.New(codes.Unavailable, "the server stopped accepting new RPCs")
 )
 
 // TODO: See if we can replace StreamError with status package errors.
@@ -689,52 +690,41 @@ func (e StreamError) Error() string {
 	return fmt.Sprintf("stream error: code = %s desc = %q", e.Code, e.Desc)
 }
 
-// wait blocks until it can receive from ctx.Done, closing, or proceed.
-// If it receives from ctx.Done, it returns 0, the StreamError for ctx.Err.
-// If it receives from done, it returns 0, io.EOF if ctx is not done; otherwise
-// it return the StreamError for ctx.Err.
-// If it receives from goAway, it returns 0, ErrStreamDrain.
-// If it receives from closing, it returns 0, ErrConnClosing.
-// If it receives from proceed, it returns the received integer, nil.
-func wait(ctx context.Context, done, goAway, closing <-chan struct{}, proceed <-chan int) (int, error) {
-	select {
-	case <-ctx.Done():
-		return 0, ContextErr(ctx.Err())
-	case <-done:
-		return 0, io.EOF
-	case <-goAway:
-		return 0, ErrStreamDrain
-	case <-closing:
-		return 0, ErrConnClosing
-	case i := <-proceed:
-		return i, nil
-	}
+// waiters are passed to quotaPool get methods to
+// wait on in addition to waiting on quota.
+type waiters struct {
+	ctx    context.Context
+	tctx   context.Context
+	done   chan struct{}
+	goAway chan struct{}
 }
 
 // GoAwayReason contains the reason for the GoAway frame received.
 type GoAwayReason uint8
 
 const (
-	// Invalid indicates that no GoAway frame is received.
-	Invalid GoAwayReason = 0
-	// NoReason is the default value when GoAway frame is received.
-	NoReason GoAwayReason = 1
-	// TooManyPings indicates that a GoAway frame with ErrCodeEnhanceYourCalm
-	// was recieved and that the debug data said "too_many_pings".
-	TooManyPings GoAwayReason = 2
+	// GoAwayInvalid indicates that no GoAway frame is received.
+	GoAwayInvalid GoAwayReason = 0
+	// GoAwayNoReason is the default value when GoAway frame is received.
+	GoAwayNoReason GoAwayReason = 1
+	// GoAwayTooManyPings indicates that a GoAway frame with
+	// ErrCodeEnhanceYourCalm was received and that the debug data said
+	// "too_many_pings".
+	GoAwayTooManyPings GoAwayReason = 2
 )
 
 // loopyWriter is run in a separate go routine. It is the single code path that will
 // write data on wire.
-func loopyWriter(cbuf *controlBuffer, done chan struct{}, handler func(item) error) {
+func loopyWriter(ctx context.Context, cbuf *controlBuffer, handler func(item) error) {
 	for {
 		select {
 		case i := <-cbuf.get():
 			cbuf.load()
 			if err := handler(i); err != nil {
+				errorf("transport: Error while handling item. Err: %v", err)
 				return
 			}
-		case <-done:
+		case <-ctx.Done():
 			return
 		}
 	hasData:
@@ -743,12 +733,14 @@ func loopyWriter(cbuf *controlBuffer, done chan struct{}, handler func(item) err
 			case i := <-cbuf.get():
 				cbuf.load()
 				if err := handler(i); err != nil {
+					errorf("transport: Error while handling item. Err: %v", err)
 					return
 				}
-			case <-done:
+			case <-ctx.Done():
 				return
 			default:
 				if err := handler(&flushIO{}); err != nil {
+					errorf("transport: Error while flushing. Err: %v", err)
 					return
 				}
 				break hasData

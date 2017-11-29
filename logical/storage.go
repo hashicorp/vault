@@ -23,8 +23,9 @@ type Storage interface {
 
 // StorageEntry is the entry for an item in a Storage implementation.
 type StorageEntry struct {
-	Key   string
-	Value []byte
+	Key      string
+	Value    []byte
+	SealWrap bool
 }
 
 // DecodeJSON decodes the 'Value' present in StorageEntry.
@@ -94,6 +95,10 @@ func CollectKeys(view ClearableView) ([]string, error) {
 
 // ClearView is used to delete all the keys in a view
 func ClearView(view ClearableView) error {
+	if view == nil {
+		return nil
+	}
+
 	// Collect all the keys
 	keys, err := CollectKeys(view)
 	if err != nil {
