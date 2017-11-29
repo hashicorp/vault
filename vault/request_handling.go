@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -42,6 +43,10 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 			req.Operation == logical.CreateOperation) {
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
+
+	var cancel context.CancelFunc
+	req.Context, cancel = context.WithTimeout(c.requestContext, 30*time.Second)
+	defer cancel()
 
 	var auth *logical.Auth
 	if c.router.LoginPath(req.Path) {

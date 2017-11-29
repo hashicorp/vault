@@ -35,6 +35,23 @@ func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *Hand
 		return ErrServerInMetadataMode
 	}
 
+	ctxConn, err := b.broker.Dial(args.ContextID)
+	if err != nil {
+		*reply = HandleRequestReply{
+			Error: wrapError(err),
+		}
+		return nil
+	}
+	ctxClient := rpc.NewClient(ctxConn)
+
+	ctx := &ContextClient{client: ctxClient}
+
+	go b.broker.AcceptAndServe(args.ContextCancelID, &ContextCancelServer{
+		ctx.CancelFunc(),
+	})
+
+	args.Request.Context = ctx
+
 	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
 

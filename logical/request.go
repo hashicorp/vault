@@ -1,6 +1,7 @@
 package logical
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -54,6 +55,10 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 type Request struct {
 	// Id is the uuid associated with each request
 	ID string `json:"id" structs:"id" mapstructure:"id" sentinel:""`
+
+	// Context provides the context interface for this request. It can be used
+	// to cancel a request early.
+	Context context.Context
 
 	// If set, the name given to the replication secondary where this request
 	// originated

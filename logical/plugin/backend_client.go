@@ -26,8 +26,10 @@ type backendPluginClient struct {
 
 // HandleRequestArgs is the args for HandleRequest method.
 type HandleRequestArgs struct {
-	StorageID uint32
-	Request   *logical.Request
+	StorageID       uint32
+	Request         *logical.Request
+	ContextCancelID uint32
+	ContextID       uint32
 }
 
 // HandleRequestReply is the reply for HandleRequest method.
@@ -96,8 +98,20 @@ func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Resp
 	// Do not send the storage, since go-plugin cannot serialize
 	// interfaces. The server will pick up the storage from the shim.
 	req.Storage = nil
+
+	contextID := b.broker.NextId()
+	go b.broker.AcceptAndServe(contextID, &ContextServer{
+		ctx: req.Context,
+	})
+
+	ctx := req.Context
+	req.Context = nil
+	cancelID := b.broker.NextId()
+
 	args := &HandleRequestArgs{
-		Request: req,
+		Request:         req,
+		ContextID:       contextID,
+		ContextCancelID: cancelID,
 	}
 	var reply HandleRequestReply
 
@@ -109,7 +123,30 @@ func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Resp
 		}()
 	}
 
-	err := b.client.Call("Plugin.HandleRequest", args, &reply)
+	c := make(chan error)
+	quit := make(chan struct{})
+	go func() {
+		c <- b.client.Call("Plugin.HandleRequest", args, &reply)
+	}()
+
+	ctxConn, err := b.broker.Dial(cancelID)
+	if err != nil {
+		return nil, err
+	}
+	defer ctxConn.Close()
+	ctxClient := rpc.NewClient(ctxConn)
+
+	canceler := &ContextCancelClient{client: ctxClient}
+	go func() {
+		select {
+		case <-ctx.Done():
+			canceler.Cancel()
+		case <-quit:
+		}
+	}()
+
+	err = <-c
+	close(quit)
 	if err != nil {
 		return nil, err
 	}
