@@ -26,7 +26,7 @@ func pathRoles(b *backend) *framework.Path {
 				Description: "Name of the role",
 			},
 
-			"policy": &framework.FieldSchema{
+			"policies": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma separated list of policies as previously created in Nomad. Required",
 			},
@@ -42,7 +42,7 @@ func pathRoles(b *backend) *framework.Path {
 				Default: "client",
 				Description: `Which type of token to create: 'client'
 or 'management'. If a 'management' token,
-the "policy" parameter is not required.
+the "policies" parameter is not required.
 Defaults to 'client'.`,
 			},
 		},
@@ -96,9 +96,9 @@ func (b *backend) pathRolesRead(
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"type":   role.TokenType,
-			"global": role.Global,
-			"policy": role.Policy,
+			"type":     role.TokenType,
+			"global":   role.Global,
+			"policies": role.Policies,
 		},
 	}
 	return resp, nil
@@ -109,18 +109,18 @@ func (b *backend) pathRolesWrite(
 	tokenType := d.Get("type").(string)
 	name := d.Get("name").(string)
 	global := d.Get("global").(bool)
-	policy := d.Get("policy").([]string)
+	policies := d.Get("policies").([]string)
 
 	switch tokenType {
 	case "client":
-		if len(policy) == 0 {
+		if len(policies) == 0 {
 			return logical.ErrorResponse(
-				"policy cannot be empty when using client tokens"), nil
+				"policies cannot be empty when using client tokens"), nil
 		}
 	case "management":
-		if len(policy) != 0 {
+		if len(policies) != 0 {
 			return logical.ErrorResponse(
-				"policy should be empty when using management tokens"), nil
+				"policies should be empty when using management tokens"), nil
 		}
 	default:
 		return logical.ErrorResponse(
@@ -128,7 +128,7 @@ func (b *backend) pathRolesWrite(
 	}
 
 	entry, err := logical.StorageEntryJSON("role/"+name, roleConfig{
-		Policy:    policy,
+		Policies:  policies,
 		TokenType: tokenType,
 		Global:    global,
 	})
@@ -153,7 +153,7 @@ func (b *backend) pathRolesDelete(
 }
 
 type roleConfig struct {
-	Policy    []string `json:"policy"`
+	Policies  []string `json:"policies"`
 	TokenType string   `json:"type"`
 	Global    bool     `json:"global"`
 }

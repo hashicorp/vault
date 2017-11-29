@@ -179,8 +179,8 @@ func TestBackend_renew_revoke(t *testing.T) {
 
 	req.Path = "role/test"
 	req.Data = map[string]interface{}{
-		"policy": []string{"policy"},
-		"lease":  "6h",
+		"policies": []string{"policy"},
+		"lease":    "6h",
 	}
 	resp, err = b.HandleRequest(req)
 	if err != nil {

@@ -46,9 +46,9 @@ func (b *backend) secretTokenRevoke(
 		return nil, err
 	}
 
-  if c == nil {
-    return nil, fmt.Errorf("Error connecting with Nomad")
-  }
+	if c == nil {
+		return nil, fmt.Errorf("Error connecting with Nomad")
+	}
 
 	accessorIDRaw, ok := req.Secret.InternalData["accessor_id"]
 	if !ok {

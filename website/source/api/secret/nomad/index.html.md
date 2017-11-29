@@ -103,9 +103,9 @@ updated attributes.
   as a string duration with a time suffix like `"30s"` or `"1h"`. If not
   provided, the default Vault lease is used.
 
-- `policy` `(string: "")` – Comma separated list of Nomad policies the token is going to be created against. These need to be created beforehand in Nomad.
+- `policies` `(string: "")` – Comma separated list of Nomad policies the token is going to be created against. These need to be created beforehand in Nomad.
 
-- `global` `(bool: "")` – Specifies if the token should be global, as defined in the [Nomad Documentation](https://www.nomadproject.io/guides/acl.html#acl-tokens).
+- `global` `(bool: "false")` – Specifies if the token should be global, as defined in the [Nomad Documentation](https://www.nomadproject.io/guides/acl.html#acl-tokens).
 ma
 
 - `type` `(string: "client")` - Specifies the type of token to create when
@@ -117,7 +117,7 @@ To create a client token with a custom policy:
 
 ```json
 {
-  "policy": "readonly"
+  "policies": "readonly"
 }
 ```
 
@@ -160,7 +160,7 @@ $ curl \
     "auth": null,
     "data": {
         "lease": "0s",
-        "policy": [
+        "policies": [
             "example"
         ],
         "token_type": "client"

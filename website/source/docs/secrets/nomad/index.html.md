@@ -76,7 +76,7 @@ to a set of policy names used to generate those credentials. For example, lets c
 an "monitoring" role that maps to a "readonly" policy:
 
 ```
-$ vault write nomad/role/monitoring policy=readonly
+$ vault write nomad/role/monitoring policies=readonly
 Success! Data written to: nomad/role/monitoring
 ```
 

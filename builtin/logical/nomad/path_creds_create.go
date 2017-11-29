@@ -59,7 +59,7 @@ func (b *backend) pathTokenRead(
 	token, _, err := c.ACLTokens().Create(&api.ACLToken{
 		Name:     tokenName,
 		Type:     role.TokenType,
-		Policies: role.Policy,
+		Policies: role.Policies,
 		Global:   role.Global,
 	}, nil)
 	if err != nil {
