@@ -34,7 +34,7 @@ func (b *backend) pathTokenRead(
 		return nil, fmt.Errorf("error retrieving role: %v", err)
 	}
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Role '%q' not found", name)), nil
+		return logical.ErrorResponse(fmt.Sprintf("Role %q not found", name)), nil
 	}
 
 	// Determine if we have a lease configuration
