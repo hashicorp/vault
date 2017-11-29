@@ -44,6 +44,10 @@ func (b *backend) client(s logical.Storage) (*api.Client, error) {
 		return nil, err
 	}
 
+	if conf == nil {
+		return nil, err
+	}
+
 	nomadConf := api.DefaultConfig()
 	nomadConf.Address = conf.Address
 	nomadConf.SecretID = conf.Token
