@@ -52,13 +52,39 @@ $ curl \
     https://vault.rocks/v1/nomad/config/access
 ```
 
+## Read Access Configuration
+
+This endpoint queries for information about the Nomad connection.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`    | `/nomad/config/access`       | `200 application/json` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://vault.rocks/v1/nomad/config/access
+```
+
+### Sample Response
+
+```json
+[...]
+    "data": {
+        "address": "http://localhost:4646/"
+    }
+[...]
+```
+
 ## Configure Lease
 
 This endpoint configures the lease settings for generated tokens.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/nomad/config/lease`     | `204 (empty body)` |
+| `POST`   | `/nomad/config/lease`        | `204 (empty body)` |
 
 ### Parameters
 
@@ -83,6 +109,33 @@ $ curl \
     --request POST \
     --data @payload.json \
     https://vault.rocks/v1/nomad/config/lease
+```
+
+## Read Lease Configuration
+
+This endpoint queries for information about the Lease TTL for the specified mount.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`    | `/nomad/config/lease`        | `200 application/json` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://vault.rocks/v1/nomad/config/lease
+```
+
+### Sample Response
+
+```json
+[...]
+    "data": {
+        "max_ttl": 86400,
+        "ttl": 86400
+    },
+[...]
 ```
 
 ## Create/Update Role
@@ -157,7 +210,7 @@ $ curl \
 
 ```json
 {
-    "auth": null,
+[...]
     "data": {
         "lease": "0s",
         "policies": [
@@ -165,12 +218,7 @@ $ curl \
         ],
         "token_type": "client"
     },
-    "lease_duration": 0,
-    "lease_id": "",
-    "renewable": false,
-    "request_id": "f4c7ee18-72aa-3b20-a910-93b6274a9dc0",
-    "warnings": null,
-    "wrap_info": null
+[...]
 }
 ```
 
@@ -196,18 +244,13 @@ $ curl \
 
 ```json
 {
-    "auth": null,
+[...]
     "data": {
         "keys": [
             "example"
         ]
     },
-    "lease_duration": 0,
-    "lease_id": "",
-    "renewable": false,
-    "request_id": "d7bb167b-81c5-9606-c214-b34fcda45634",
-    "warnings": null,
-    "wrap_info": null
+[...]
 }
 ```
 
@@ -260,16 +303,11 @@ $ curl \
 
 ```json
 {
-    "auth": null,
+[...]
     "data": {
         "accessor_id": "c834ba40-8d84-b0c1-c084-3a31d3383c03",
         "secret_id": "65af6f07-7f57-bb24-cdae-a27f86a894ce"
     },
-    "lease_duration": 2764800,
-    "lease_id": "nomad/creds/example/c2686da3-2431-b6d6-7bbf-c5b9496dd6d7",
-    "renewable": true,
-    "request_id": "37a06ca1-8a1d-7f17-bda8-4661289c392b",
-    "warnings": null,
-    "wrap_info": null
+[...]
 }
 ```
