@@ -142,7 +142,6 @@ func TestBackend_config_access(t *testing.T) {
 
 	expected := map[string]interface{}{
 		"address": connData["address"].(string),
-		"scheme":  "https",
 	}
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)

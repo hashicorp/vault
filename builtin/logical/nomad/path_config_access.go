@@ -16,13 +16,6 @@ func pathConfigAccess(b *backend) *framework.Path {
 				Description: "Nomad server address",
 			},
 
-			"scheme": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "URI scheme for the Nomad address",
-
-				Default: "https",
-			},
-
 			"token": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Token for API calls",
@@ -67,7 +60,6 @@ func (b *backend) pathConfigAccessRead(
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"address": conf.Address,
-			"scheme":  conf.Scheme,
 		},
 	}, nil
 }
@@ -76,7 +68,6 @@ func (b *backend) pathConfigAccessWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
 		Address: data.Get("address").(string),
-		Scheme:  data.Get("scheme").(string),
 		Token:   data.Get("token").(string),
 	})
 	if err != nil {
@@ -92,6 +83,5 @@ func (b *backend) pathConfigAccessWrite(
 
 type accessConfig struct {
 	Address string `json:"address"`
-	Scheme  string `json:"scheme"`
 	Token   string `json:"token"`
 }
