@@ -44,8 +44,8 @@ func (b *backend) secretTokenRevoke(
 		return nil, err
 	}
 
-	tokenRaw := req.Secret.InternalData["accessor_id"]
-	_, err = c.ACLTokens().Delete(tokenRaw.(string), nil)
+	accessorIDRaw := req.Secret.InternalData["accessor_id"]
+	_, err = c.ACLTokens().Delete(accessorIDRaw.(string), nil)
 	if err != nil {
 		return nil, err
 	}
