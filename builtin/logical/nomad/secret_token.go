@@ -46,9 +46,9 @@ func (b *backend) secretTokenRevoke(
 		return nil, err
 	}
 
-	accessorIDRaw := req.Secret.InternalData["accessor_id"]
-	if accessorIDRaw == nil {
-		return nil, fmt.Errorf("accessor id is missing on the lease")
+	accessorIDRaw, ok := req.Secret.InternalData["accessor_id"]
+	if !ok {
+		return nil, fmt.Errorf("accessor_id is missing on the lease")
 	}
 
 	_, err = c.ACLTokens().Delete(accessorIDRaw.(string), nil)
