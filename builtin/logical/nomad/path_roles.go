@@ -28,12 +28,13 @@ func pathRoles(b *backend) *framework.Path {
 
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: "Policy name as previously created in Nomad. Required",
+				Description: "Comma separated list of policies as previously created in Nomad. Required",
 			},
 
 			"global": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Description: "Policy name as previously created in Nomad. Required",
+				Default:     false,
+				Description: "Boolean value describing if the token should be global or not. Defaults to false",
 			},
 
 			"type": &framework.FieldSchema{
@@ -97,10 +98,8 @@ func (b *backend) pathRolesRead(
 		Data: map[string]interface{}{
 			"type":   role.TokenType,
 			"global": role.Global,
+			"policy": role.Policy,
 		},
-	}
-	if len(role.Policy) > 0 {
-		resp.Data["policy"] = role.Policy
 	}
 	return resp, nil
 }
