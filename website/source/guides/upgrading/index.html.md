@@ -72,3 +72,14 @@ takes over active duty.
 
 Be sure to also read and follow any instructions in the version-specific
 upgrade notes.
+
+## Performance Replication Installations
+
+Upgrading installations of Vault which participate in [Performance Replication](/docs/enterprise/replication/index.html#performance-replication-and-disaster-recovery-dr-replication) requires the following basic order of operations:
+
+- **Upgrade the replication secondary instances first** using appropriate guidance from the previous sections depending on whether each secondary instance is Non-HA or HA
+- Verify functionality of each secondary instance after upgrading
+- When satisfied with functionality of upgraded secondary instances, upgrade the primary instance
+
+Be sure to also read and follow any instructions in the version-specific
+upgrade notes.
