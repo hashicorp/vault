@@ -67,8 +67,8 @@ func (c *Cassandra) Type() (string, error) {
 	return cassandraTypeName, nil
 }
 
-func (c *Cassandra) getConnection() (*gocql.Session, error) {
-	session, err := c.Connection()
+func (c *Cassandra) getConnection(ctx context.Context) (*gocql.Session, error) {
+	session, err := c.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 	defer c.Unlock()
 
 	// Get the connection
-	session, err := c.getConnection()
+	session, err := c.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -152,7 +152,7 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 	c.Lock()
 	defer c.Unlock()
 
-	session, err := c.getConnection()
+	session, err := c.getConnection(ctx)
 	if err != nil {
 		return err
 	}

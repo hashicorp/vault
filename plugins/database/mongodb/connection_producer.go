@@ -48,7 +48,7 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 	c.Initialized = true
 
 	if verifyConnection {
-		if _, err := c.Connection(); err != nil {
+		if _, err := c.Connection(ctx); err != nil {
 			return fmt.Errorf("error verifying connection: %s", err)
 		}
 
@@ -61,7 +61,7 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 }
 
 // Connection creates a database connection.
-func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
+func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}

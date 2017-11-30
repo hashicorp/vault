@@ -205,9 +205,9 @@ func (r *Request) SetLastRemoteWAL(last uint64) {
 }
 
 // RenewRequest creates the structure of the renew request.
-func RenewRequest(
-	path string, secret *Secret, data map[string]interface{}) *Request {
+func RenewRequest(ctx context.Context, path string, secret *Secret, data map[string]interface{}) *Request {
 	return &Request{
+		Context:   ctx,
 		Operation: RenewOperation,
 		Path:      path,
 		Data:      data,
@@ -216,9 +216,9 @@ func RenewRequest(
 }
 
 // RenewAuthRequest creates the structure of the renew request for an auth.
-func RenewAuthRequest(
-	path string, auth *Auth, data map[string]interface{}) *Request {
+func RenewAuthRequest(ctx context.Context, path string, auth *Auth, data map[string]interface{}) *Request {
 	return &Request{
+		Context:   ctx,
 		Operation: RenewOperation,
 		Path:      path,
 		Data:      data,
@@ -227,9 +227,9 @@ func RenewAuthRequest(
 }
 
 // RevokeRequest creates the structure of the revoke request.
-func RevokeRequest(
-	path string, secret *Secret, data map[string]interface{}) *Request {
+func RevokeRequest(ctx context.Context, path string, secret *Secret, data map[string]interface{}) *Request {
 	return &Request{
+		Context:   ctx,
 		Operation: RevokeOperation,
 		Path:      path,
 		Data:      data,
@@ -238,8 +238,9 @@ func RevokeRequest(
 }
 
 // RollbackRequest creates the structure of the revoke request.
-func RollbackRequest(path string) *Request {
+func RollbackRequest(ctx context.Context, path string) *Request {
 	return &Request{
+		Context:   ctx,
 		Operation: RollbackOperation,
 		Path:      path,
 		Data:      make(map[string]interface{}),

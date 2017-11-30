@@ -66,8 +66,8 @@ func (m *MongoDB) Type() (string, error) {
 	return mongoDBTypeName, nil
 }
 
-func (m *MongoDB) getConnection() (*mgo.Session, error) {
-	session, err := m.Connection()
+func (m *MongoDB) getConnection(ctx context.Context) (*mgo.Session, error) {
+	session, err := m.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
-	session, err := m.getConnection()
+	session, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -136,7 +136,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		if err := m.ConnectionProducer.Close(); err != nil {
 			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
-		session, err := m.getConnection()
+		session, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
 		}
@@ -160,7 +160,7 @@ func (m *MongoDB) RenewUser(ctx context.Context, statements dbplugin.Statements,
 // RevokeUser drops the specified user from the authentication databse. If none is provided
 // in the revocation statement, the default "admin" authentication database will be assumed.
 func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	session, err := m.getConnection()
+	session, err := m.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 		if err := m.ConnectionProducer.Close(); err != nil {
 			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
-		session, err := m.getConnection()
+		session, err := m.getConnection(ctx)
 		if err != nil {
 			return err
 		}

@@ -63,8 +63,8 @@ func (m *MSSQL) Type() (string, error) {
 	return msSQLTypeName, nil
 }
 
-func (m *MSSQL) getConnection() (*sql.DB, error) {
-	db, err := m.Connection()
+func (m *MSSQL) getConnection(ctx context.Context) (*sql.DB, error) {
+	db, err := m.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	defer m.Unlock()
 
 	// Get the connection
-	db, err := m.getConnection()
+	db, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -151,11 +151,11 @@ func (m *MSSQL) RenewUser(ctx context.Context, statements dbplugin.Statements, u
 // database instance.
 func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	if statements.RevocationStatements == "" {
-		return m.revokeUserDefault(username)
+		return m.revokeUserDefault(ctx, username)
 	}
 
 	// Get connection
-	db, err := m.getConnection()
+	db, err := m.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -194,9 +194,9 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	return nil
 }
 
-func (m *MSSQL) revokeUserDefault(username string) error {
+func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// Get connection
-	db, err := m.getConnection()
+	db, err := m.getConnection(ctx)
 	if err != nil {
 		return err
 	}

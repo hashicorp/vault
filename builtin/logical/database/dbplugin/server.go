@@ -105,7 +105,7 @@ func (s *gRPCServer) RevokeUser(ctx context.Context, req *pb.RevokeUserRequest) 
 func (s *gRPCServer) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb.Empty, error) {
 	config := map[string]interface{}{}
 
-	err := json.Unmarshal(req.Config, config)
+	err := json.Unmarshal(req.Config, &config)
 	if err != nil {
 		return nil, err
 	}

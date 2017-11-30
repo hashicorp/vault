@@ -126,6 +126,7 @@ func (c *gRPCClient) RenewUser(ctx context.Context, statements Statements, usern
 
 	_, err = c.client.RenewUser(ctx, &pb.RenewUserRequest{
 		Statements: s,
+		Username:   username,
 		Expiration: t,
 	})
 
@@ -142,6 +143,7 @@ func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, user
 
 	_, err := c.client.RevokeUser(ctx, &pb.RevokeUserRequest{
 		Statements: s,
+		Username:   username,
 	})
 
 	return err

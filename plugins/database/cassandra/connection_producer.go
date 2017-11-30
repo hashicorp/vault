@@ -107,7 +107,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 	c.Initialized = true
 
 	if verifyConnection {
-		if _, err := c.Connection(); err != nil {
+		if _, err := c.Connection(ctx); err != nil {
 			return fmt.Errorf("error verifying connection: %s", err)
 		}
 	}
@@ -115,7 +115,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 	return nil
 }
 
-func (c *cassandraConnectionProducer) Connection() (interface{}, error) {
+func (c *cassandraConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}

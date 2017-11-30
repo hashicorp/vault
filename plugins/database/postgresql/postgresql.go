@@ -68,8 +68,8 @@ func (p *PostgreSQL) Type() (string, error) {
 	return postgreSQLTypeName, nil
 }
 
-func (p *PostgreSQL) getConnection() (*sql.DB, error) {
-	db, err := p.Connection()
+func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
+	db, err := p.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	}
 
 	// Get the connection
-	db, err := p.getConnection()
+	db, err := p.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 
@@ -160,7 +160,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 		renewStmts = defaultPostgresRenewSQL
 	}
 
-	db, err := p.getConnection()
+	db, err := p.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -210,14 +210,14 @@ func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Stateme
 	defer p.Unlock()
 
 	if statements.RevocationStatements == "" {
-		return p.defaultRevokeUser(username)
+		return p.defaultRevokeUser(ctx, username)
 	}
 
-	return p.customRevokeUser(username, statements.RevocationStatements)
+	return p.customRevokeUser(ctx, username, statements.RevocationStatements)
 }
 
-func (p *PostgreSQL) customRevokeUser(username, revocationStmts string) error {
-	db, err := p.getConnection()
+func (p *PostgreSQL) customRevokeUser(ctx context.Context, username, revocationStmts string) error {
+	db, err := p.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -256,8 +256,8 @@ func (p *PostgreSQL) customRevokeUser(username, revocationStmts string) error {
 	return nil
 }
 
-func (p *PostgreSQL) defaultRevokeUser(username string) error {
-	db, err := p.getConnection()
+func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) error {
+	db, err := p.getConnection(ctx)
 	if err != nil {
 		return err
 	}

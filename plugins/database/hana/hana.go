@@ -66,8 +66,8 @@ func (h *HANA) Type() (string, error) {
 	return hanaTypeName, nil
 }
 
-func (h *HANA) getConnection() (*sql.DB, error) {
-	db, err := h.Connection()
+func (h *HANA) getConnection(ctx context.Context) (*sql.DB, error) {
+	db, err := h.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 	defer h.Unlock()
 
 	// Get the connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -158,7 +158,7 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 // Renewing hana user just means altering user's valid until property
 func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// Get connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -199,11 +199,11 @@ func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, us
 func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// default revoke will be a soft drop on user
 	if statements.RevocationStatements == "" {
-		return h.revokeUserDefault(username)
+		return h.revokeUserDefault(ctx, username)
 	}
 
 	// Get connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -242,9 +242,9 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 	return nil
 }
 
-func (h *HANA) revokeUserDefault(username string) error {
+func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 	// Get connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return err
 	}

@@ -91,8 +91,8 @@ func (m *MySQL) Type() (string, error) {
 	return mySQLTypeName, nil
 }
 
-func (m *MySQL) getConnection() (*sql.DB, error) {
-	db, err := m.Connection()
+func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
+	db, err := m.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	defer m.Unlock()
 
 	// Get the connection
-	db, err := m.getConnection()
+	db, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -131,7 +131,7 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -149,7 +149,7 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 			"expiration": expirationStr,
 		})
 
-		stmt, err := tx.Prepare(query)
+		stmt, err := tx.PrepareContext(ctx, query)
 		if err != nil {
 			// If the error code we get back is Error 1295: This command is not
 			// supported in the prepared statement protocol yet, we will execute
@@ -158,7 +158,7 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 			// prepare supported commands. If there is no error when running we
 			// will continue to the next statement.
 			if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
-				_, err = tx.Exec(query)
+				_, err = tx.ExecContext(ctx, query)
 				if err != nil {
 					return "", "", err
 				}
@@ -168,7 +168,7 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 			return "", "", err
 		}
 		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return "", "", err
 		}
 	}
@@ -192,7 +192,7 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	defer m.Unlock()
 
 	// Get the connection
-	db, err := m.getConnection()
+	db, err := m.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 		// 1295: This command is not supported in the prepared statement protocol yet
 		// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
 		query = strings.Replace(query, "{{name}}", username, -1)
-		_, err = tx.Exec(query)
+		_, err = tx.ExecContext(ctx, query)
 		if err != nil {
 			return err
 		}
