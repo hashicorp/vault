@@ -201,6 +201,76 @@ func (lm *LockManager) GetPolicyUpsert(req PolicyRequest) (*Policy, *sync.RWMute
 	return p, lock, upserted, err
 }
 
+// RestorePolicy acquires an exclusive lock on the policy name and restores the
+// given policy along with the archive.
+func (lm *LockManager) RestorePolicy(storage logical.Storage, keyData KeyData) error {
+	var p *Policy
+	var err error
+
+	if keyData.Policy == nil {
+		return fmt.Errorf("missing policy in key data")
+	}
+	name := keyData.Policy.Name
+
+	lockType := exclusive
+	lock := lm.policyLock(name, lockType)
+	defer lm.UnlockPolicy(lock, lockType)
+
+	// If the policy is in cache, error out
+	if lm.CacheActive() {
+		lm.cacheMutex.RLock()
+		p = lm.cache[name]
+		if p != nil {
+			lm.cacheMutex.RUnlock()
+			return fmt.Errorf(fmt.Sprintf("policy %q already exists", name))
+		}
+		lm.cacheMutex.RUnlock()
+	}
+
+	// If the policy exists in storage, error out
+	p, err = lm.getStoredPolicy(storage, name)
+	if err != nil {
+		lm.UnlockPolicy(lock, lockType)
+		return err
+	}
+	if p != nil {
+		return fmt.Errorf(fmt.Sprintf("policy %q already exists", name))
+	}
+
+	// Restore the archived keys
+	if keyData.ArchivedKeys != nil {
+		err = keyData.Policy.storeArchive(keyData.ArchivedKeys, storage)
+		if err != nil {
+			return fmt.Errorf("failed to restore archived keys for policy %q: %v", name, err)
+		}
+	}
+
+	// Mark that policy as a restored key
+	keyData.Policy.Restored = true
+
+	// Restore the policy. This will also attempt to adjust the archive.
+	err = keyData.Policy.Persist(storage)
+	if err != nil {
+		return fmt.Errorf("failed to restore the policy %q: %v", name, err)
+	}
+
+	// Update the cache
+	if lm.CacheActive() {
+		lm.cacheMutex.Lock()
+		defer lm.cacheMutex.Unlock()
+
+		// Since an exclusive lock is held, cache should not have the policy
+		exp := lm.cache[name]
+		if exp != nil {
+			return fmt.Errorf(fmt.Sprintf("policy %q is already present in cache", name))
+		}
+
+		lm.cache[name] = p
+	}
+
+	return nil
+}
+
 // When the function returns, a lock will be held on the policy if err == nil.
 // It is the caller's responsibility to unlock.
 func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Policy, *sync.RWMutex, bool, error) {
@@ -395,7 +465,7 @@ func (lm *LockManager) getStoredPolicy(storage logical.Storage, name string) (*P
 
 	// Decode the policy
 	policy := &Policy{
-		Keys: keyEntryMap{},
+		Keys: KeyEntryMap{},
 	}
 	err = jsonutil.DecodeJSON(raw.Value, policy)
 	if err != nil {

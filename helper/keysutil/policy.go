@@ -119,6 +119,11 @@ func (kt KeyType) String() string {
 	return "[unknown]"
 }
 
+type KeyData struct {
+	Policy       *Policy       `json:"policy"`
+	ArchivedKeys *archivedKeys `json:"archived_keys"`
+}
+
 // KeyEntry stores the key and metadata
 type KeyEntry struct {
 	// AES or some other kind that is a pure byte slice like ED25519
@@ -144,11 +149,11 @@ type KeyEntry struct {
 	DeprecatedCreationTime int64 `json:"creation_time"`
 }
 
-// keyEntryMap is used to allow JSON marshal/unmarshal
-type keyEntryMap map[int]KeyEntry
+// KeyEntryMap is used to allow JSON marshal/unmarshal
+type KeyEntryMap map[int]KeyEntry
 
 // MarshalJSON implements JSON marshaling
-func (kem keyEntryMap) MarshalJSON() ([]byte, error) {
+func (kem KeyEntryMap) MarshalJSON() ([]byte, error) {
 	intermediate := map[string]KeyEntry{}
 	for k, v := range kem {
 		intermediate[strconv.Itoa(k)] = v
@@ -157,7 +162,7 @@ func (kem keyEntryMap) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalJSON implements JSON unmarshaling
-func (kem keyEntryMap) UnmarshalJSON(data []byte) error {
+func (kem KeyEntryMap) UnmarshalJSON(data []byte) error {
 	intermediate := map[string]KeyEntry{}
 	if err := jsonutil.DecodeJSON(data, &intermediate); err != nil {
 		return err
@@ -177,7 +182,7 @@ func (kem keyEntryMap) UnmarshalJSON(data []byte) error {
 type Policy struct {
 	Name string      `json:"name"`
 	Key  []byte      `json:"key,omitempty"` //DEPRECATED
-	Keys keyEntryMap `json:"keys"`
+	Keys KeyEntryMap `json:"keys"`
 
 	// Derived keys MUST provide a context and the master underlying key is
 	// never used. If convergent encryption is true, the context will be used
@@ -210,6 +215,10 @@ type Policy struct {
 
 	// The type of key
 	Type KeyType `json:"type"`
+
+	// Restored indicates whether or not this policy was restored from a backed
+	// up policy
+	Restored bool `json:"restored"`
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -932,7 +941,7 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 		// This is an initial key rotation when generating a new policy. We
 		// don't need to call migrate here because if we've called getPolicy to
 		// get the policy in the first place it will have been run.
-		p.Keys = keyEntryMap{}
+		p.Keys = KeyEntryMap{}
 	}
 
 	p.LatestVersion += 1
@@ -1013,7 +1022,7 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 
 func (p *Policy) MigrateKeyToKeysMap() {
 	now := time.Now()
-	p.Keys = keyEntryMap{
+	p.Keys = KeyEntryMap{
 		1: KeyEntry{
 			Key:                    p.Key,
 			CreationTime:           now,
@@ -1021,4 +1030,16 @@ func (p *Policy) MigrateKeyToKeysMap() {
 		},
 	}
 	p.Key = nil
+}
+
+func (p *Policy) Backup(storage logical.Storage) (*KeyData, error) {
+	archivedKeys, err := p.LoadArchive(storage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &KeyData{
+		Policy:       p,
+		ArchivedKeys: archivedKeys,
+	}, nil
 }
