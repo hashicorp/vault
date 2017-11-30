@@ -154,7 +154,7 @@ func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface
 	}
 
 	_, err = c.client.Initialize(ctx, &pb.InitializeRequest{
-		Config:           string(configRaw[:]),
+		Config:           configRaw,
 		VerifyConnection: verifyConnection,
 	})
 

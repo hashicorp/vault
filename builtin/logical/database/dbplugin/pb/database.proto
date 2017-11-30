@@ -4,7 +4,7 @@ package pb;
 import "google/protobuf/timestamp.proto";
 
 message InitializeRequest {
-	string config = 1;
+	bytes config = 1;
 	bool verify_connection = 2;
 }
 
