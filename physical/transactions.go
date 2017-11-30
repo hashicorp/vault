@@ -52,9 +52,8 @@ TxnWalk:
 			rollbackEntry := &TxnEntry{
 				Operation: PutOperation,
 				Entry: &Entry{
-					Key:      entry.Key,
-					Value:    entry.Value,
-					SealWrap: entry.SealWrap,
+					Key:   entry.Key,
+					Value: entry.Value,
 				},
 			}
 			err = t.DeleteInternal(txn.Entry.Key)
@@ -85,9 +84,8 @@ TxnWalk:
 				rollbackEntry = &TxnEntry{
 					Operation: PutOperation,
 					Entry: &Entry{
-						Key:      entry.Key,
-						Value:    entry.Value,
-						SealWrap: entry.SealWrap,
+						Key:   entry.Key,
+						Value: entry.Value,
 					},
 				}
 			}
