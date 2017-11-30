@@ -237,29 +237,62 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 }
 
 func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
+	return !b.checkForChainInCRLs(trustedChain) &&
+		b.matchesNames(clientCert, config) &&
+		b.matchesCertificateExtenions(clientCert, config)
+}
+
+// matchesNames verifies that the certificate matches at least one configured
+// allowed name
+func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert) bool {
 	// Default behavior (no names) is to allow all names
-	nameMatched := len(config.Entry.AllowedNames) == 0
+	if len(config.Entry.AllowedNames) == 0 {
+		return true
+	}
 	// At least one pattern must match at least one name if any patterns are specified
 	for _, allowedName := range config.Entry.AllowedNames {
 		if glob.Glob(allowedName, clientCert.Subject.CommonName) {
-			nameMatched = true
+			return true
 		}
 
 		for _, name := range clientCert.DNSNames {
 			if glob.Glob(allowedName, name) {
-				nameMatched = true
+				return true
 			}
 		}
 
 		for _, name := range clientCert.EmailAddresses {
 			if glob.Glob(allowedName, name) {
-				nameMatched = true
+				return true
 			}
 		}
 	}
-
-	return !b.checkForChainInCRLs(trustedChain) && nameMatched
+	return false
 }
+
+// matchesCertificateExtenions verifies that the certificate matches configured
+// required extensions
+func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// Build Client Extensions Map
+	clientExtMap := map[string]string{}
+	for _, ext := range clientCert.Extensions {
+		clientExtMap[ext.Id.String()] = strings.TrimLeftFunc(string(ext.Value[:]), b.isControlRune)
+	}
+
+	// If we match all of the expected extensions, the requirement is satisfied
+	matchedExts := 0
+	for _, requiredExt := range config.Entry.RequiredExtensions {
+		reqExt := strings.Split(requiredExt, ":")
+		clientExtValue, clientExtValueExists := clientExtMap[reqExt[0]]
+		if glob.Glob(reqExt[1], clientExtValue) && clientExtValueExists {
+			matchedExts++
+		}
+	}
+	return matchedExts == len(config.Entry.RequiredExtensions)
+}
+
+// isControlRune returns true for control charaters for trimming extension values
+func (b *backend) isControlRune(r rune) bool { return r <= 32 || r == 127 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
 func (b *backend) loadTrustedCerts(store logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
