@@ -1032,14 +1032,19 @@ func (p *Policy) MigrateKeyToKeysMap() {
 	p.Key = nil
 }
 
-func (p *Policy) Backup(storage logical.Storage) (*KeyData, error) {
+func (p *Policy) Backup(storage logical.Storage) (string, error) {
 	archivedKeys, err := p.LoadArchive(storage)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &KeyData{
+	encodedBackup, err := jsonutil.EncodeJSON(&KeyData{
 		Policy:       p,
 		ArchivedKeys: archivedKeys,
-	}, nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(encodedBackup), nil
 }

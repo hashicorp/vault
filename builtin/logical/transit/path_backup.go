@@ -28,6 +28,9 @@ func (b *backend) pathBackup() *framework.Path {
 
 func (b *backend) pathBackupRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("empty 'name'"), nil
+	}
 
 	p, lock, err := b.lm.GetPolicyExclusive(req.Storage, name)
 	if lock != nil {
@@ -40,14 +43,14 @@ func (b *backend) pathBackupRead(req *logical.Request, d *framework.FieldData) (
 		return logical.ErrorResponse(fmt.Sprintf("invalid key %q", name)), nil
 	}
 
-	keyBackup, err := p.Backup(req.Storage)
+	backup, err := p.Backup(req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"backup": keyBackup,
+			"backup": backup,
 		},
 	}, nil
 }
