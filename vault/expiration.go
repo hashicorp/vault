@@ -12,6 +12,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
+	context "golang.org/x/net/context"
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
@@ -51,13 +52,11 @@ const (
 // If a secret is not renewed in timely manner, it may be expired, and
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
-	core          *Core
-	router        *Router
-	idView        *BarrierView
-	tokenView     *BarrierView
-	tokenStore    *TokenStore
-	logger        log.Logger
-	coreStateLock *sync.RWMutex
+	router     *Router
+	idView     *BarrierView
+	tokenView  *BarrierView
+	tokenStore *TokenStore
+	logger     log.Logger
 
 	pending     map[string]*time.Timer
 	pendingLock sync.RWMutex
@@ -70,26 +69,30 @@ type ExpirationManager struct {
 	restoreLocks       []*locksutil.LockEntry
 	restoreLoaded      sync.Map
 	quitCh             chan struct{}
+
+	coreStateLock *sync.RWMutex
+	quitContext   context.Context
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView) *ExpirationManager {
 	exp := &ExpirationManager{
-		core:          c,
-		router:        c.router,
-		idView:        view.SubView(leaseViewPrefix),
-		tokenView:     view.SubView(tokenViewPrefix),
-		tokenStore:    c.tokenStore,
-		logger:        c.logger,
-		pending:       make(map[string]*time.Timer),
-		coreStateLock: &c.stateLock,
+		router:     c.router,
+		idView:     view.SubView(leaseViewPrefix),
+		tokenView:  view.SubView(tokenViewPrefix),
+		tokenStore: c.tokenStore,
+		logger:     c.logger,
+		pending:    make(map[string]*time.Timer),
 
 		// new instances of the expiration manager will go immediately into
 		// restore mode
 		restoreMode:  1,
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
+
+		coreStateLock: &c.stateLock,
+		quitContext:   c.requestContext,
 	}
 
 	if exp.logger == nil {
@@ -979,13 +982,8 @@ func (m *ExpirationManager) expireID(leaseID string) {
 		}
 
 		m.coreStateLock.RLock()
-		if m.core.sealed {
-			m.logger.Error("expiration: sealed, not attempting further revocation of lease", "lease_id", leaseID)
-			m.coreStateLock.RUnlock()
-			return
-		}
-		if m.core.standby {
-			m.logger.Error("expiration: standby, not attempting further revocation of lease", "lease_id", leaseID)
+		if m.quitContext.Err() == context.Canceled {
+			m.logger.Error("expiration: core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
 			m.coreStateLock.RUnlock()
 			return
 		}
