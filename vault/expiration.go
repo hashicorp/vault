@@ -51,11 +51,13 @@ const (
 // If a secret is not renewed in timely manner, it may be expired, and
 // the ExpirationManager will handle doing automatic revocation.
 type ExpirationManager struct {
-	router     *Router
-	idView     *BarrierView
-	tokenView  *BarrierView
-	tokenStore *TokenStore
-	logger     log.Logger
+	core          *Core
+	router        *Router
+	idView        *BarrierView
+	tokenView     *BarrierView
+	tokenStore    *TokenStore
+	logger        log.Logger
+	coreStateLock *sync.RWMutex
 
 	pending     map[string]*time.Timer
 	pendingLock sync.RWMutex
@@ -72,18 +74,16 @@ type ExpirationManager struct {
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
-func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, logger log.Logger) *ExpirationManager {
-	if logger == nil {
-		logger = log.New("expiration_manager")
-	}
-
+func NewExpirationManager(c *Core, view *BarrierView) *ExpirationManager {
 	exp := &ExpirationManager{
-		router:     router,
-		idView:     view.SubView(leaseViewPrefix),
-		tokenView:  view.SubView(tokenViewPrefix),
-		tokenStore: ts,
-		logger:     logger,
-		pending:    make(map[string]*time.Timer),
+		core:          c,
+		router:        c.router,
+		idView:        view.SubView(leaseViewPrefix),
+		tokenView:     view.SubView(tokenViewPrefix),
+		tokenStore:    c.tokenStore,
+		logger:        c.logger,
+		pending:       make(map[string]*time.Timer),
+		coreStateLock: &c.stateLock,
 
 		// new instances of the expiration manager will go immediately into
 		// restore mode
@@ -91,6 +91,11 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
 	}
+
+	if exp.logger == nil {
+		exp.logger = log.New("expiration_manager")
+	}
+
 	return exp
 }
 
@@ -103,7 +108,7 @@ func (c *Core) setupExpiration() error {
 	view := c.systemBarrierView.SubView(expirationSubPath)
 
 	// Create the manager
-	mgr := NewExpirationManager(c.router, view, c.tokenStore, c.logger)
+	mgr := NewExpirationManager(c, view)
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -430,6 +435,10 @@ func (m *ExpirationManager) Stop() error {
 	m.logger.Debug("expiration: stop triggered")
 	defer m.logger.Debug("expiration: finished stopping")
 
+	// Do this before stopping pending timers to avoid potential races with
+	// expiring timers
+	close(m.quitCh)
+
 	m.pendingLock.Lock()
 	for _, timer := range m.pending {
 		timer.Stop()
@@ -437,7 +446,6 @@ func (m *ExpirationManager) Stop() error {
 	m.pending = make(map[string]*time.Timer)
 	m.pendingLock.Unlock()
 
-	close(m.quitCh)
 	if m.inRestoreMode() {
 		for {
 			if !m.inRestoreMode() {
@@ -969,13 +977,29 @@ func (m *ExpirationManager) expireID(leaseID string) {
 			return
 		default:
 		}
+
+		m.coreStateLock.RLock()
+		if m.core.sealed {
+			m.logger.Error("expiration: sealed, not attempting further revocation of lease", "lease_id", leaseID)
+			m.coreStateLock.RUnlock()
+			return
+		}
+		if m.core.standby {
+			m.logger.Error("expiration: standby, not attempting further revocation of lease", "lease_id", leaseID)
+			m.coreStateLock.RUnlock()
+			return
+		}
+
 		err := m.Revoke(leaseID)
 		if err == nil {
 			if m.logger.IsInfo() {
 				m.logger.Info("expiration: revoked lease", "lease_id", leaseID)
 			}
+			m.coreStateLock.RUnlock()
 			return
 		}
+
+		m.coreStateLock.RUnlock()
 		m.logger.Error("expiration: failed to revoke lease", "lease_id", leaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
