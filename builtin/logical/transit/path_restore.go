@@ -11,11 +11,15 @@ import (
 
 func (b *backend) pathRestore() *framework.Path {
 	return &framework.Path{
-		Pattern: "restore/?$",
+		Pattern: "restore" + framework.OptionalParamRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"backup": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Backed up key data to be restored. This should be the output from the 'backup/' endpoint",
+			},
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name to be assigned to the restored key",
 			},
 		},
 
@@ -46,6 +50,11 @@ func (b *backend) pathRestoreUpdate(req *logical.Request, d *framework.FieldData
 	err = jsonutil.DecodeJSON(backupBytes, &keyData)
 	if err != nil {
 		return nil, err
+	}
+
+	name := d.Get("name").(string)
+	if name != "" {
+		keyData.Policy.Name = name
 	}
 
 	err = b.lm.RestorePolicy(req.Storage, keyData)
