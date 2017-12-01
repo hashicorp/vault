@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin/pb"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	log "github.com/mgutz/logxi/v1"
 )
@@ -22,21 +21,6 @@ type Database interface {
 
 	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error
 	Close() error
-}
-
-// Statements set in role creation and passed into the database type's functions.
-type Statements struct {
-	CreationStatements   string `json:"creation_statments" mapstructure:"creation_statements" structs:"creation_statments"`
-	RevocationStatements string `json:"revocation_statements" mapstructure:"revocation_statements" structs:"revocation_statements"`
-	RollbackStatements   string `json:"rollback_statements" mapstructure:"rollback_statements" structs:"rollback_statements"`
-	RenewStatements      string `json:"renew_statements" mapstructure:"renew_statements" structs:"renew_statements"`
-}
-
-// UsernameConfig is used to configure prefixes for the username to be
-// generated.
-type UsernameConfig struct {
-	DisplayName string
-	RoleName    string
 }
 
 // PluginFactory is used to build plugin database types. It wraps the database
@@ -112,10 +96,13 @@ type DatabasePlugin struct {
 }
 
 func (d DatabasePlugin) GRPCServer(s *grpc.Server) error {
-	pb.RegisterDatabaseServer(s, &gRPCServer{impl: d.impl})
+	RegisterDatabaseServer(s, &gRPCServer{impl: d.impl})
 	return nil
 }
 
 func (DatabasePlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error) {
-	return &gRPCClient{client: pb.NewDatabaseClient(c)}, nil
+	return &gRPCClient{
+		client:     NewDatabaseClient(c),
+		clientConn: c,
+	}, nil
 }

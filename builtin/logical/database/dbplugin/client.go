@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin/pb"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	log "github.com/mgutz/logxi/v1"
 )
@@ -69,11 +70,12 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 // ---- gRPC client domain ----
 
 type gRPCClient struct {
-	client pb.DatabaseClient
+	client     DatabaseClient
+	clientConn *grpc.ClientConn
 }
 
 func (c gRPCClient) Type() (string, error) {
-	resp, err := c.client.Type(context.Background(), &pb.Empty{})
+	resp, err := c.client.Type(context.Background(), &Empty{}, grpc.FailFast(true))
 	if err != nil {
 		return "", err
 	}
@@ -82,28 +84,16 @@ func (c gRPCClient) Type() (string, error) {
 }
 
 func (c gRPCClient) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	s := &pb.Statements{
-		CreationStatements:   statements.CreationStatements,
-		RevocationStatements: statements.RevocationStatements,
-		RollbackStatements:   statements.RollbackStatements,
-		RenewStatements:      statements.RenewStatements,
-	}
-
-	u := &pb.UsernameConfig{
-		DisplayName: usernameConfig.DisplayName,
-		RoleName:    usernameConfig.RoleName,
-	}
-
 	t, err := ptypes.TimestampProto(expiration)
 	if err != nil {
 		return "", "", err
 	}
 
-	resp, err := c.client.CreateUser(ctx, &pb.CreateUserRequest{
-		Statements:     s,
-		UsernameConfig: u,
+	resp, err := c.client.CreateUser(ctx, &CreateUserRequest{
+		Statements:     &statements,
+		UsernameConfig: &usernameConfig,
 		Expiration:     t,
-	})
+	}, grpc.FailFast(true))
 	if err != nil {
 		return "", "", err
 	}
@@ -112,39 +102,25 @@ func (c gRPCClient) CreateUser(ctx context.Context, statements Statements, usern
 }
 
 func (c *gRPCClient) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error {
-	s := &pb.Statements{
-		CreationStatements:   statements.CreationStatements,
-		RevocationStatements: statements.RevocationStatements,
-		RollbackStatements:   statements.RollbackStatements,
-		RenewStatements:      statements.RenewStatements,
-	}
-
 	t, err := ptypes.TimestampProto(expiration)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.client.RenewUser(ctx, &pb.RenewUserRequest{
-		Statements: s,
+	_, err = c.client.RenewUser(ctx, &RenewUserRequest{
+		Statements: &statements,
 		Username:   username,
 		Expiration: t,
-	})
+	}, grpc.FailFast(true))
 
 	return err
 }
 
 func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, username string) error {
-	s := &pb.Statements{
-		CreationStatements:   statements.CreationStatements,
-		RevocationStatements: statements.RevocationStatements,
-		RollbackStatements:   statements.RollbackStatements,
-		RenewStatements:      statements.RenewStatements,
-	}
-
-	_, err := c.client.RevokeUser(ctx, &pb.RevokeUserRequest{
-		Statements: s,
+	_, err := c.client.RevokeUser(ctx, &RevokeUserRequest{
+		Statements: &statements,
 		Username:   username,
-	})
+	}, grpc.FailFast(true))
 
 	return err
 }
@@ -155,15 +131,15 @@ func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface
 		return err
 	}
 
-	_, err = c.client.Initialize(ctx, &pb.InitializeRequest{
+	_, err = c.client.Initialize(ctx, &InitializeRequest{
 		Config:           configRaw,
 		VerifyConnection: verifyConnection,
-	})
+	}, grpc.FailFast(true))
 
 	return err
 }
 
 func (c *gRPCClient) Close() error {
-	_, err := c.client.Close(context.Background(), &pb.Empty{})
+	_, err := c.client.Close(context.Background(), &Empty{}, grpc.FailFast(true))
 	return err
 }

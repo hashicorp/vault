@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin/pb"
 )
 
 // Serve is called from within a plugin and wraps the provided
@@ -37,72 +36,46 @@ type gRPCServer struct {
 	impl Database
 }
 
-func (s *gRPCServer) Type(context.Context, *pb.Empty) (*pb.TypeResponse, error) {
+func (s *gRPCServer) Type(context.Context, *Empty) (*TypeResponse, error) {
 	t, err := s.impl.Type()
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.TypeResponse{
+	return &TypeResponse{
 		Type: t,
 	}, nil
 }
 
-func (s *gRPCServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
-	statements := Statements{
-		CreationStatements:   req.Statements.CreationStatements,
-		RevocationStatements: req.Statements.RevocationStatements,
-		RollbackStatements:   req.Statements.RollbackStatements,
-		RenewStatements:      req.Statements.RenewStatements,
-	}
-
-	usernameConfig := UsernameConfig{
-		DisplayName: req.UsernameConfig.DisplayName,
-		RoleName:    req.UsernameConfig.RoleName,
-	}
-
+func (s *gRPCServer) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
 	e, err := ptypes.Timestamp(req.Expiration)
 	if err != nil {
 		return nil, err
 	}
 
-	u, p, err := s.impl.CreateUser(ctx, statements, usernameConfig, e)
+	u, p, err := s.impl.CreateUser(ctx, *req.Statements, *req.UsernameConfig, e)
 
-	return &pb.CreateUserResponse{
+	return &CreateUserResponse{
 		Username: u,
 		Password: p,
 	}, err
 }
 
-func (s *gRPCServer) RenewUser(ctx context.Context, req *pb.RenewUserRequest) (*pb.Empty, error) {
-	statements := Statements{
-		CreationStatements:   req.Statements.CreationStatements,
-		RevocationStatements: req.Statements.RevocationStatements,
-		RollbackStatements:   req.Statements.RollbackStatements,
-		RenewStatements:      req.Statements.RenewStatements,
-	}
-
+func (s *gRPCServer) RenewUser(ctx context.Context, req *RenewUserRequest) (*Empty, error) {
 	e, err := ptypes.Timestamp(req.Expiration)
 	if err != nil {
 		return nil, err
 	}
-	err = s.impl.RenewUser(ctx, statements, req.Username, e)
-	return &pb.Empty{}, err
+	err = s.impl.RenewUser(ctx, *req.Statements, req.Username, e)
+	return &Empty{}, err
 }
 
-func (s *gRPCServer) RevokeUser(ctx context.Context, req *pb.RevokeUserRequest) (*pb.Empty, error) {
-	statements := Statements{
-		CreationStatements:   req.Statements.CreationStatements,
-		RevocationStatements: req.Statements.RevocationStatements,
-		RollbackStatements:   req.Statements.RollbackStatements,
-		RenewStatements:      req.Statements.RenewStatements,
-	}
-
-	err := s.impl.RevokeUser(ctx, statements, req.Username)
-	return &pb.Empty{}, err
+func (s *gRPCServer) RevokeUser(ctx context.Context, req *RevokeUserRequest) (*Empty, error) {
+	err := s.impl.RevokeUser(ctx, *req.Statements, req.Username)
+	return &Empty{}, err
 }
 
-func (s *gRPCServer) Initialize(ctx context.Context, req *pb.InitializeRequest) (*pb.Empty, error) {
+func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*Empty, error) {
 	config := map[string]interface{}{}
 
 	err := json.Unmarshal(req.Config, &config)
@@ -111,10 +84,10 @@ func (s *gRPCServer) Initialize(ctx context.Context, req *pb.InitializeRequest) 
 	}
 
 	err = s.impl.Initialize(ctx, config, req.VerifyConnection)
-	return &pb.Empty{}, err
+	return &Empty{}, err
 }
 
-func (s *gRPCServer) Close(_ context.Context, _ *pb.Empty) (*pb.Empty, error) {
+func (s *gRPCServer) Close(_ context.Context, _ *Empty) (*Empty, error) {
 	s.impl.Close()
-	return &pb.Empty{}, nil
+	return &Empty{}, nil
 }

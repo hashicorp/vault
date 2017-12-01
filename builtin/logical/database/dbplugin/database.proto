@@ -1,5 +1,5 @@
 syntax = "proto3";
-package pb;
+package dbplugin;
 
 import "google/protobuf/timestamp.proto";
 
