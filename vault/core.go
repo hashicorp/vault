@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/subtle"
@@ -18,7 +19,6 @@ import (
 	"github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/errwrap"
