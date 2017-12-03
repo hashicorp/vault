@@ -1,3 +1,26 @@
+## 0.9.1 (Unreleased)
+
+IMPROVEMENTS:
+
+BUG FIXES:
+
+ * database/mysql: Allow the creation statement to use commands that are not
+   yet supported by the prepare statement protocol [GH-3619]
+ * core: Fix potential panic that could occur using plugins when a node
+   transitioned from active to standby [GH-3638]
+
+## 0.9.0.1 (November 21st, 2017) (Enterprise Only)
+
+IMPROVEMENTS:
+
+ * auth/gcp: Support seal wrapping of configuration parameters
+ * auth/kubernetes: Support seal wrapping of configuration parameters
+
+BUG FIXES:
+
+ * Fix an upgrade issue with some physical backends when migrating from legacy
+   HSM stored key support to the new Seal Wrap mechanism
+
 ## 0.9.0 (November 14th, 2017)
 
 DEPRECATIONS/CHANGES:
@@ -37,7 +60,7 @@ DEPRECATIONS/CHANGES:
    optional and enables configuration of the seal type to use for additional
    data protection, such as using HSM or Cloud KMS solutions to encrypt and
    decrypt data.
-   
+ 
 FEATURES:
 
  * **RSA Support for Transit Backend**: Transit backend can now generate RSA

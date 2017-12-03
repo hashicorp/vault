@@ -16,7 +16,7 @@ type MountCommand struct {
 
 func (c *MountCommand) Run(args []string) int {
 	var description, path, defaultLeaseTTL, maxLeaseTTL, pluginName string
-	var local, forceNoCache bool
+	var local, forceNoCache, sealWrap bool
 	flags := c.Meta.FlagSet("mount", meta.FlagSetDefault)
 	flags.StringVar(&description, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
@@ -25,6 +25,7 @@ func (c *MountCommand) Run(args []string) int {
 	flags.StringVar(&pluginName, "plugin-name", "", "")
 	flags.BoolVar(&forceNoCache, "force-no-cache", false, "")
 	flags.BoolVar(&local, "local", false, "")
+	flags.BoolVar(&sealWrap, "seal-wrap", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -66,7 +67,8 @@ func (c *MountCommand) Run(args []string) int {
 			ForceNoCache:    forceNoCache,
 			PluginName:      pluginName,
 		},
-		Local: local,
+		Local:    local,
+		SealWrap: sealWrap,
 	}
 
 	if err := client.Sys().Mount(path, mountInfo); err != nil {
@@ -131,6 +133,8 @@ Mount Options:
   -local                         Mark the mount as a local mount. Local mounts
                                  are not replicated nor (if a secondary)
                                  removed by replication.
+
+  -seal-wrap                     Turn on seal wrapping for the mount.
 `
 	return strings.TrimSpace(helpText)
 }
@@ -160,5 +164,6 @@ func (c *MountCommand) AutocompleteFlags() complete.Flags {
 		"-force-no-cache":    complete.PredictNothing,
 		"-plugin-name":       complete.PredictNothing,
 		"-local":             complete.PredictNothing,
+		"-seal-wrap":         complete.PredictNothing,
 	}
 }
