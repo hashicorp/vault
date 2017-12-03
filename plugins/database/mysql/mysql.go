@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -140,13 +140,28 @@ func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplug
 		if len(query) == 0 {
 			continue
 		}
-
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		query = dbutil.QueryHelper(query, map[string]string{
 			"name":       username,
 			"password":   password,
 			"expiration": expirationStr,
-		}))
+		})
+
+		stmt, err := tx.Prepare(query)
 		if err != nil {
+			// If the error code we get back is Error 1295: This command is not
+			// supported in the prepared statement protocol yet, we will execute
+			// the statement without preparing it. This allows the caller to
+			// manually prepare statements, as well as run other not yet
+			// prepare supported commands. If there is no error when running we
+			// will continue to the next statement.
+			if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+				_, err = tx.Exec(query)
+				if err != nil {
+					return "", "", err
+				}
+				continue
+			}
+
 			return "", "", err
 		}
 		defer stmt.Close()
