@@ -218,6 +218,7 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, keyData KeyData) e
 	if keyData.Policy == nil {
 		return fmt.Errorf("missing policy in key data")
 	}
+
 	name := keyData.Policy.Name
 
 	lockType := exclusive
@@ -238,7 +239,6 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, keyData KeyData) e
 	// If the policy exists in storage, error out
 	p, err = lm.getStoredPolicy(storage, name)
 	if err != nil {
-		lm.UnlockPolicy(lock, lockType)
 		return err
 	}
 	if p != nil {
