@@ -17,13 +17,8 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
-
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
@@ -48,11 +43,6 @@ type clusterKeyParams struct {
 	X    *big.Int `json:"x" structs:"x" mapstructure:"x"`
 	Y    *big.Int `json:"y" structs:"y" mapstructure:"y"`
 	D    *big.Int `json:"d" structs:"d" mapstructure:"d"`
-}
-
-type activeConnection struct {
-	transport   *http2.Transport
-	clusterAddr string
 }
 
 // Structure representing the storage entry that holds cluster information
@@ -292,21 +282,11 @@ func (c *Core) setupCluster() error {
 	return nil
 }
 
-// SetClusterSetupFuncs sets the handler setup func
-func (c *Core) SetClusterSetupFuncs(handler func() (http.Handler, http.Handler)) {
-	c.clusterHandlerSetupFunc = handler
-}
-
 // startClusterListener starts cluster request listeners during postunseal. It
 // is assumed that the state lock is held while this is run. Right now this
 // only starts forwarding listeners; it's TBD whether other request types will
 // be built in the same mechanism or started independently.
 func (c *Core) startClusterListener() error {
-	if c.clusterHandlerSetupFunc == nil {
-		c.logger.Error("core: cluster handler setup function has not been set when trying to start listeners")
-		return fmt.Errorf("cluster handler setup function has not been set")
-	}
-
 	if c.clusterAddr == "" {
 		c.logger.Info("core: clustering disabled, not starting listeners")
 		return nil
@@ -418,7 +398,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 		//c.logger.Trace("core: performing server config lookup")
 		for _, v := range clientHello.SupportedProtos {
 			switch v {
-			case "h2", "req_fw_sb-act_v1":
+			case "h2", requestForwardingALPN:
 			default:
 				return nil, fmt.Errorf("unknown ALPN proto %s", v)
 			}
@@ -434,6 +414,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 			RootCAs:              caPool,
 			ClientCAs:            caPool,
 			NextProtos:           clientHello.SupportedProtos,
+			CipherSuites:         c.clusterCipherSuites,
 		}
 
 		switch {
@@ -458,6 +439,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 		GetClientCertificate: clientLookup,
 		GetConfigForClient:   serverConfigLookup,
 		MinVersion:           tls.VersionTLS12,
+		CipherSuites:         c.clusterCipherSuites,
 	}
 
 	var localCert bytes.Buffer
@@ -480,52 +462,11 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 
 func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 	c.clusterListenerAddrs = addrs
+	if c.clusterAddr == "" && len(addrs) == 1 {
+		c.clusterAddr = fmt.Sprintf("https://%s", addrs[0].String())
+	}
 }
 
-// WrapHandlerForClustering takes in Vault's HTTP handler and returns a setup
-// function that returns both the original handler and one wrapped with cluster
-// methods
-func WrapHandlerForClustering(handler http.Handler, logger log.Logger) func() (http.Handler, http.Handler) {
-	return func() (http.Handler, http.Handler) {
-		// This mux handles cluster functions (right now, only forwarded requests)
-		mux := http.NewServeMux()
-		mux.HandleFunc("/cluster/local/forwarded-request", func(w http.ResponseWriter, req *http.Request) {
-			//logger.Trace("forwarding: serving h2 forwarded request")
-			freq, err := forwarding.ParseForwardedHTTPRequest(req)
-			if err != nil {
-				if logger != nil {
-					logger.Error("http/forwarded-request-server: error parsing forwarded request", "error", err)
-				}
-
-				w.Header().Add("Content-Type", "application/json")
-
-				// The response writer here is different from
-				// the one set in Vault's HTTP handler.
-				// Hence, set the Cache-Control explicitly.
-				w.Header().Set("Cache-Control", "no-store")
-
-				w.WriteHeader(http.StatusInternalServerError)
-
-				type errorResponse struct {
-					Errors []string
-				}
-				resp := &errorResponse{
-					Errors: []string{
-						err.Error(),
-					},
-				}
-
-				enc := json.NewEncoder(w)
-				enc.Encode(resp)
-				return
-			}
-
-			// To avoid the risk of a forward loop in some pathological condition,
-			// set the no-forward header
-			freq.Header.Set(IntNoForwardingHeaderName, "true")
-			handler.ServeHTTP(w, freq)
-		})
-
-		return handler, mux
-	}
+func (c *Core) SetClusterHandler(handler http.Handler) {
+	c.clusterHandler = handler
 }

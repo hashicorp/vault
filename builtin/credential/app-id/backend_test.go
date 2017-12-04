@@ -9,8 +9,22 @@ import (
 )
 
 func TestBackend_basic(t *testing.T) {
+	var b *backend
+	var err error
+	var storage logical.Storage
+	factory := func(conf *logical.BackendConfig) (logical.Backend, error) {
+		b, err = Backend(conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		storage = conf.StorageView
+		if err := b.Setup(conf); err != nil {
+			return nil, err
+		}
+		return b, nil
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		Factory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepMapAppId(t),
 			testAccStepMapUserId(t),
@@ -21,6 +35,30 @@ func TestBackend_basic(t *testing.T) {
 			testAccLoginDeleted(t),
 		},
 	})
+
+	req := &logical.Request{
+		Path:      "map/app-id",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	}
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("nil response")
+	}
+	keys := resp.Data["keys"].([]string)
+	if len(keys) != 1 {
+		t.Fatalf("expected 1 key, got %d", len(keys))
+	}
+	salt, err := b.Salt()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if keys[0] != salt.SaltID("foo") {
+		t.Fatal("value was improperly salted")
+	}
 }
 
 func TestBackend_cidr(t *testing.T) {

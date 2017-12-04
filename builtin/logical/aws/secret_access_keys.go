@@ -53,7 +53,7 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 			normalizeDisplayName(policyName))
 		if len(midString) > 42 {
 			midString = midString[0:42]
-			warning = "the calling token display name/IAM policy name were truncated to find into IAM username length limits"
+			warning = "the calling token display name/IAM policy name were truncated to fit into IAM username length limits"
 		}
 	case "sts":
 		// Capped at 32 chars, which leaves only a couple of characters to play

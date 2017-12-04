@@ -16,6 +16,7 @@
 package internal
 
 import (
+	"errors"
 	"net/http"
 
 	"golang.org/x/oauth2"
@@ -25,13 +26,29 @@ import (
 // DialSettings holds information needed to establish a connection with a
 // Google API service.
 type DialSettings struct {
-	Endpoint                   string
-	Scopes                     []string
-	ServiceAccountJSONFilename string // if set, TokenSource is ignored.
-	TokenSource                oauth2.TokenSource
-	UserAgent                  string
-	APIKey                     string
-	HTTPClient                 *http.Client
-	GRPCDialOpts               []grpc.DialOption
-	GRPCConn                   *grpc.ClientConn
+	Endpoint        string
+	Scopes          []string
+	TokenSource     oauth2.TokenSource
+	CredentialsFile string // if set, Token Source is ignored.
+	UserAgent       string
+	APIKey          string
+	HTTPClient      *http.Client
+	GRPCDialOpts    []grpc.DialOption
+	GRPCConn        *grpc.ClientConn
+	NoAuth          bool
+}
+
+// Validate reports an error if ds is invalid.
+func (ds *DialSettings) Validate() error {
+	hasCreds := ds.APIKey != "" || ds.TokenSource != nil || ds.CredentialsFile != ""
+	if ds.NoAuth && hasCreds {
+		return errors.New("options.WithoutAuthentication is incompatible with any option that provides credentials")
+	}
+	if ds.HTTPClient != nil && ds.GRPCConn != nil {
+		return errors.New("WithHTTPClient is incompatible with WithGRPCConn")
+	}
+	if ds.HTTPClient != nil && ds.GRPCDialOpts != nil {
+		return errors.New("WithHTTPClient is incompatible with gRPC dial options")
+	}
+	return nil
 }

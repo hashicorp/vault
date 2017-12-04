@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Custom Database Plugins"
+page_title: "Custom Database Plugins - Database Secret Backend"
 sidebar_current: "docs-secrets-databases-custom"
 description: |-
   Creating custom database plugins for Vault's Database backend to generate credentials for a database.
@@ -12,7 +12,7 @@ The Database backend allows new functionality to be added through a plugin
 interface without needing to modify vault's core code. This allows you write
 your own code to generate credentials in any database you wish. It also allows
 databases that require dynamically linked libraries to be used as plugins while
-keeping Vault itself statically linked. 
+keeping Vault itself statically linked.
 
 ~> **Advanced topic!** Plugin development is a highly advanced
 topic in Vault, and is not required knowledge for day-to-day usage.
@@ -30,7 +30,7 @@ All plugins for the Database backend must implement the same simple interface.
 ```go
 type Database interface {
 	Type() (string, error)
-	CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error)
+	CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
 	RenewUser(statements Statements, username string, expiration time.Time) error
 	RevokeUser(statements Statements, username string) error
 
@@ -45,10 +45,10 @@ statements to the plugin on function call. The struct is defined as:
 
 ```go
 type Statements struct {
-	CreationStatements   string 
+	CreationStatements   string
 	RevocationStatements string
-	RollbackStatements   string 
-	RenewStatements      string 
+	RollbackStatements   string
+	RenewStatements      string
 }
 ```
 
@@ -89,16 +89,16 @@ config wont be used once the plugin unwraps its own TLS cert and key.
 
 The above main package, once built, will supply you with a binary of your
 plugin. We also recommend if you are planning on distributing your plugin to
-build with [gox](https://github.com/mitchellh/gox) for cross platform builds. 
+build with [gox](https://github.com/mitchellh/gox) for cross platform builds.
 
 To use your plugin with the Database backend you need to place the binary in the
-plugin directory as specified in the [plugin internals](/docs/internals/plugins.html) docs. 
+plugin directory as specified in the [plugin internals](/docs/internals/plugins.html) docs.
 
 You should now be able to register your plugin into the vault catalog. To do
-this your token will need sudo permissions. 
+this your token will need sudo permissions.
 
 ```
-$ vault write sys/plugins/catalog/myplugin-database-plugin \ 
+$ vault write sys/plugins/catalog/myplugin-database-plugin \
     sha_256=<expected SHA256 Hex value of the plugin binary> \
     command="myplugin"
 Success! Data written to: sys/plugins/catalog/myplugin-database-plugin
@@ -115,7 +115,3 @@ $ vault write database/config/myplugin \
 The following warnings were returned from the Vault server:
 * Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
 ```
-
-
-
-

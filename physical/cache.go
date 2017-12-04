@@ -1,7 +1,6 @@
 package physical
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/golang-lru"
@@ -19,11 +18,16 @@ const (
 // Vault are for policy objects so there is a large read reduction
 // by using a simple write-through cache.
 type Cache struct {
-	backend       Backend
-	transactional Transactional
-	lru           *lru.TwoQueueCache
-	locks         []*locksutil.LockEntry
-	logger        log.Logger
+	backend Backend
+	lru     *lru.TwoQueueCache
+	locks   []*locksutil.LockEntry
+	logger  log.Logger
+}
+
+// TransactionalCache is a Cache that wraps the physical that is transactional
+type TransactionalCache struct {
+	*Cache
+	Transactional
 }
 
 // NewCache returns a physical cache of the given size.
@@ -43,10 +47,14 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 		logger:  logger,
 	}
 
-	if txnl, ok := c.backend.(Transactional); ok {
-		c.transactional = txnl
-	}
+	return c
+}
 
+func NewTransactionalCache(b Backend, size int, logger log.Logger) *TransactionalCache {
+	c := &TransactionalCache{
+		Cache:         NewCache(b, size, logger),
+		Transactional: b.(Transactional),
+	}
 	return c
 }
 
@@ -128,18 +136,14 @@ func (c *Cache) List(prefix string) ([]string, error) {
 	return c.backend.List(prefix)
 }
 
-func (c *Cache) Transaction(txns []TxnEntry) error {
-	if c.transactional == nil {
-		return fmt.Errorf("physical/cache: underlying backend does not support transactions")
-	}
-
+func (c *TransactionalCache) Transaction(txns []*TxnEntry) error {
 	// Lock the world
 	for _, lock := range c.locks {
 		lock.Lock()
 		defer lock.Unlock()
 	}
 
-	if err := c.transactional.Transaction(txns); err != nil {
+	if err := c.Transactional.Transaction(txns); err != nil {
 		return err
 	}
 

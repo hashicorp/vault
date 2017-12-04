@@ -42,34 +42,36 @@ func (c *MountsCommand) Run(args []string) int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Default TTL | Max TTL | Force No Cache | Replication Behavior | Description"}
+	columns := []string{"Path | Type | Accessor | Plugin | Default TTL | Max TTL | Force No Cache | Replication Behavior | Seal Wrap | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
+		pluginName := "n/a"
+		if mount.Config.PluginName != "" {
+			pluginName = mount.Config.PluginName
+		}
 		defTTL := "system"
 		switch {
-		case mount.Type == "system":
-			defTTL = "n/a"
-		case mount.Type == "cubbyhole":
+		case mount.Type == "system", mount.Type == "cubbyhole", mount.Type == "identity":
 			defTTL = "n/a"
 		case mount.Config.DefaultLeaseTTL != 0:
 			defTTL = strconv.Itoa(mount.Config.DefaultLeaseTTL)
 		}
+
 		maxTTL := "system"
 		switch {
-		case mount.Type == "system":
-			maxTTL = "n/a"
-		case mount.Type == "cubbyhole":
+		case mount.Type == "system", mount.Type == "cubbyhole", mount.Type == "identity":
 			maxTTL = "n/a"
 		case mount.Config.MaxLeaseTTL != 0:
 			maxTTL = strconv.Itoa(mount.Config.MaxLeaseTTL)
 		}
+
 		replicatedBehavior := "replicated"
 		if mount.Local {
 			replicatedBehavior = "local"
 		}
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s | %v | %s | %s", path, mount.Type, defTTL, maxTTL,
-			mount.Config.ForceNoCache, replicatedBehavior, mount.Description))
+			"%s | %s | %s | %s | %s | %s | %v | %s | %t | %s", path, mount.Type, mount.Accessor, pluginName, defTTL, maxTTL,
+			mount.Config.ForceNoCache, replicatedBehavior, mount.SealWrap, mount.Description))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))

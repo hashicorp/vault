@@ -42,7 +42,7 @@ func (ds *databasePluginRPCServer) Type(_ struct{}, resp *string) error {
 
 func (ds *databasePluginRPCServer) CreateUser(args *CreateUserRequest, resp *CreateUserResponse) error {
 	var err error
-	resp.Username, resp.Password, err = ds.impl.CreateUser(args.Statements, args.UsernamePrefix, args.Expiration)
+	resp.Username, resp.Password, err = ds.impl.CreateUser(args.Statements, args.UsernameConfig, args.Expiration)
 
 	return err
 }

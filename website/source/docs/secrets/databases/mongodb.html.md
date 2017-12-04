@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "MongoDB Database Plugin"
+page_title: "MongoDB Database Plugin - Database Secret Backend"
 sidebar_current: "docs-secrets-databases-mongodb"
 description: |-
   The MongoDB plugin for Vault's Database backend generates database credentials to access MongoDB.
@@ -21,13 +21,13 @@ information about setting up the Database Backend.
 
 After the Database Backend is mounted you can configure a MongoDB connection
 by specifying this plugin as the `"plugin_name"` argument. Here is an example
-MongoDB configuration: 
+MongoDB configuration:
 
 ```
 $ vault write database/config/mongodb \
     plugin_name=mongodb-database-plugin \
     allowed_roles="readonly" \
-    connection_url="mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true" 
+    connection_url="mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true"
 
 The following warnings were returned from the Vault server:
 * Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
@@ -55,4 +55,3 @@ plugin API](/api/secret/databases/mongodb.html) page.
 
 For more information on the Database secret backend's HTTP API please see the [Database secret
 backend API](/api/secret/databases/index.html) page.
-

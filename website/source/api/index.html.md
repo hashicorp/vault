@@ -52,7 +52,7 @@ via the `X-Vault-Token` header for future requests.
 ## Reading, Writing, and Listing Secrets
 
 Different backends implement different APIs according to their functionality.
-The examples below are created with the `generic` backend, which acts like a
+The examples below are created with the `kv` backend, which acts like a
 Key/Value store. Read the documentation for a particular backend for detailed
 information on its API; this simply provides a general overview.
 
@@ -64,7 +64,7 @@ following URL:
 ```
 
 This maps to `secret/foo` where `foo` is the key in the `secret/` mount, which
-is mounted by default on a fresh Vault install and is of type `generic`.
+is mounted by default on a fresh Vault install and is of type `kv`.
 
 Here is an example of reading a secret using cURL:
 
@@ -76,7 +76,7 @@ $ curl \
 ```
 
 You can list secrets as well. To do this, either issue a GET with the query
-parameter `list=true`, or you can use the LIST HTTP verb. For the `generic`
+parameter `list=true`, or you can use the LIST HTTP verb. For the `kv`
 backend, listing is allowed on directories only, and returns the keys in the
 given directory:
 
@@ -154,10 +154,11 @@ The following HTTP status codes are used throughout the API.
 
 - `200` - Success with data.
 - `204` - Success, no data returned.
-- `400` - Invalid request, missing or invalid data. See the
-   "validation" section for more details on the error response.
+- `400` - Invalid request, missing or invalid data.
 - `403` - Forbidden, your authentication details are either
-   incorrect or you don't have access to this feature.
+   incorrect, you don't have access to this feature, or - if CORS is
+   enabled - you made a cross-origin request from an origin that is
+   not allowed to make such requests.
 - `404` - Invalid path. This can both mean that the path truly
    doesn't exist or that you don't have permission to view a
    specific path. We use 404 in some cases to avoid state leakage.

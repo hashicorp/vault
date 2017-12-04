@@ -70,7 +70,7 @@
           </li>
 
           <li<%= sidebar_current("docs-concepts-policies") %>>
-            <a href="/docs/concepts/policies.html">Access Control Policies</a>
+            <a href="/docs/concepts/policies.html">Policies</a>
           </li>
 
           <li<%= sidebar_current("docs-concepts-ha") %>>
@@ -94,14 +94,34 @@
               </li>
             </ul>
           </li>
+          <li<%= sidebar_current("docs-configuration-seal") %>>
+          <a href="/docs/configuration/seal/index.html"><tt>seal</tt></a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-configuration-seal-awskms") %>>
+              <a href="/docs/configuration/seal/awskms.html">AWS KMS <sup>ENT</sup></a>
+            </li>
+            <li<%= sidebar_current("docs-configuration-seal-gcpckms") %>>
+              <a href="/docs/configuration/seal/gcpckms.html">GCP Cloud KMS <sup>ENT</sup></a>
+            </li>
+            <li<%= sidebar_current("docs-configuration-seal-pkcs11") %>>
+              <a href="/docs/configuration/seal/pkcs11.html">HSM PKCS11 <sup>ENT</sup></a>
+            </li>
+          </ul>
+        </li>
           <li<%= sidebar_current("docs-configuration-storage") %>>
             <a href="/docs/configuration/storage/index.html"><tt>storage</tt></a>
             <ul class="nav">
               <li<%= sidebar_current("docs-configuration-storage-azure")%>>
                 <a href="/docs/configuration/storage/azure.html">Azure</a>
               </li>
+              <li<%= sidebar_current("docs-configuration-storage-cockroachdb")%>>
+                <a href="/docs/configuration/storage/cockroachdb.html">CockroachDB</a>
+              </li>
               <li<%= sidebar_current("docs-configuration-storage-consul")%>>
                 <a href="/docs/configuration/storage/consul.html">Consul</a>
+              </li>
+              <li<%= sidebar_current("docs-configuration-storage-couchdb")%>>
+                <a href="/docs/configuration/storage/couchdb.html">CouchDB</a>
               </li>
               <li<%= sidebar_current("docs-configuration-storage-dynamodb")%>>
                 <a href="/docs/configuration/storage/dynamodb.html">DynamoDB</a>
@@ -123,6 +143,9 @@
               </li>
               <li<%= sidebar_current("docs-configuration-storage-postgresql")%>>
                 <a href="/docs/configuration/storage/postgresql.html">PostgreSQL</a>
+              </li>
+              <li<%= sidebar_current("docs-configuration-storage-cassandra")%>>
+                <a href="/docs/configuration/storage/cassandra.html">Cassandra</a>
               </li>
               <li<%= sidebar_current("docs-configuration-storage-s3")%>>
                 <a href="/docs/configuration/storage/s3.html">S3</a>
@@ -154,46 +177,8 @@
           <li<%= sidebar_current("docs-commands-environment") %>>
             <a href="/docs/commands/environment.html">Environment Variables</a>
           </li>
-        </ul>
-      </li>
-
-      <li<%= sidebar_current("docs-guides") %>>
-        <a href="/docs/guides/index.html">Guides</a>
-        <ul class="nav">
-          <li<%= sidebar_current("docs-guides-generate-root") %>>
-            <a href="/docs/guides/generate-root.html">Root Token Generation</a>
-          </li>
-          <li<%= sidebar_current("docs-guides-replication") %>>
-            <a href="/docs/guides/replication.html">Replication Setup and Guidance</a>
-          </li>
-          <li<%= sidebar_current("docs-guides-upgrading")%>>
-            <a href="/docs/guides/upgrading/index.html">Upgrading</a>
-            <ul class="nav">
-              <li<%= sidebar_current("docs-guides-upgrading-to-0.5.0") %>>
-                <a href="/docs/guides/upgrading/upgrade-to-0.5.0.html">Upgrade to 0.5.0</a>
-              </li>
-              <li<%= sidebar_current("docs-guides-upgrading-to-0.5.1") %>>
-                <a href="/docs/guides/upgrading/upgrade-to-0.5.1.html">Upgrade to 0.5.1</a>
-              </li>
-              <li<%= sidebar_current("docs-guides-upgrading-to-0.6.0") %>>
-                <a href="/docs/guides/upgrading/upgrade-to-0.6.0.html">Upgrade to 0.6.0</a>
-              </li>
-              <li<%= sidebar_current("docs-guides-upgrading-to-0.6.1") %>>
-                <a href="/docs/guides/upgrading/upgrade-to-0.6.1.html">Upgrade to 0.6.1</a>
-              </li>
-              <li<%= sidebar_current("docs-guides-upgrading-to-0.6.2") %>>
-                <a href="/docs/guides/upgrading/upgrade-to-0.6.2.html">Upgrade to 0.6.2</a>
-              </li>
-              <li<%= sidebar_current("docs-guides-upgrading-to-0.6.3") %>>
-                <a href="/docs/guides/upgrading/upgrade-to-0.6.3.html">Upgrade to 0.6.3</a>
-              </li>
-              <li<%= sidebar_current("docs-guides-upgrading-to-0.6.4") %>>
-                <a href="/docs/guides/upgrading/upgrade-to-0.6.4.html">Upgrade to 0.6.4</a>
-              </li>
-              <li<%= sidebar_current("docs-guides-upgrading-to-0.7.0") %>>
-                <a href="/docs/guides/upgrading/upgrade-to-0.7.0.html">Upgrade to 0.7.0</a>
-              </li>
-            </ul>
+          <li<%= sidebar_current("docs-commands-token-helper") %>>
+            <a href="/docs/commands/token-helper.html">Token Helpers</a>
           </li>
         </ul>
       </li>
@@ -207,10 +192,6 @@
             <a href="/docs/secrets/aws/index.html">AWS</a>
           </li>
 
-          <li<%= sidebar_current("docs-secrets-cassandra") %>>
-            <a href="/docs/secrets/cassandra/index.html">Cassandra (Deprecated)</a>
-          </li>
-
           <li<%= sidebar_current("docs-secrets-consul") %>>
             <a href="/docs/secrets/consul/index.html">Consul</a>
           </li>
@@ -220,13 +201,16 @@
           </li>
 
           <li<%= sidebar_current("docs-secrets-databases") %>>
-            <a href="/docs/secrets/databases/index.html">Databases (Beta)</a>
+            <a href="/docs/secrets/databases/index.html">Databases</a>
             <ul class="nav">
               <li<%= sidebar_current("docs-secrets-databases-cassandra") %>>
                 <a href="/docs/secrets/databases/cassandra.html">Cassandra</a>
               </li>
+              <li<%= sidebar_current("docs-secrets-databases-hanadb") %>>
+                <a href="/docs/secrets/databases/hanadb.html">HanaDB</a>
+              </li>
               <li<%= sidebar_current("docs-secrets-databases-mongodb") %>>
-                <a href="/docs/secrets/databases/mysql-maria.html">MongoDB</a>
+                <a href="/docs/secrets/databases/mongodb.html">MongoDB</a>
               </li>
               <li<%= sidebar_current("docs-secrets-databases-mssql") %>>
                 <a href="/docs/secrets/databases/mssql.html">MSSQL</a>
@@ -237,34 +221,25 @@
               <li<%= sidebar_current("docs-secrets-databases-postgresql") %>>
                 <a href="/docs/secrets/databases/postgresql.html">PostgreSQL</a>
               </li>
+              <li<%= sidebar_current("docs-secrets-databases-oracle") %>>
+                <a href="/docs/secrets/databases/oracle.html">Oracle</a>
+              </li>
               <li<%= sidebar_current("docs-secrets-databases-custom") %>>
                 <a href="/docs/secrets/databases/custom.html">Custom</a>
               </li>
             </ul>
           </li>
 
-          <li<%= sidebar_current("docs-secrets-generic") %>>
-            <a href="/docs/secrets/generic/index.html">Generic</a>
+          <li<%= sidebar_current("docs-secrets-kv") %>>
+            <a href="/docs/secrets/kv/index.html">Key/Value</a>
           </li>
 
-          <li<%= sidebar_current("docs-secrets-mongodb") %>>
-            <a href="/docs/secrets/mongodb/index.html">MongoDB (Deprecated)</a>
-          </li>
-
-          <li<%= sidebar_current("docs-secrets-mssql") %>>
-            <a href="/docs/secrets/mssql/index.html">MSSQL (Deprecated)</a>
-          </li>
-
-          <li<%= sidebar_current("docs-secrets-mysql") %>>
-            <a href="/docs/secrets/mysql/index.html">MySQL (Deprecated)</a>
+          <li<%= sidebar_current("docs-secrets-identity") %>>
+            <a href="/docs/secrets/identity/index.html">Identity</a>
           </li>
 
           <li<%= sidebar_current("docs-secrets-pki") %>>
             <a href="/docs/secrets/pki/index.html">PKI (Certificates)</a>
-          </li>
-
-          <li<%= sidebar_current("docs-secrets-postgresql") %>>
-            <a href="/docs/secrets/postgresql/index.html">PostgreSQL (Deprecated)</a>
           </li>
 
           <li<%= sidebar_current("docs-secrets-rabbitmq") %>>
@@ -273,6 +248,17 @@
 
           <li<%= sidebar_current("docs-secrets-ssh") %>>
             <a href="/docs/secrets/ssh/index.html">SSH</a>
+            <ul class="nav">
+              <li<%= sidebar_current("docs-secrets-ssh-signed-ssh-certificates") %>>
+                <a href="/docs/secrets/ssh/signed-ssh-certificates.html">Signed Certificates</a>
+              </li>
+              <li<%= sidebar_current("docs-secrets-ssh-one-time-ssh-passwords") %>>
+                <a href="/docs/secrets/ssh/one-time-ssh-passwords.html">SSH OTP</a>
+              </li>
+              <li<%= sidebar_current("docs-secrets-ssh-dynamic-ssh-keys") %>>
+                <a href="/docs/secrets/ssh/dynamic-ssh-keys.html">Dynamic Key</a>
+              </li>
+            </ul>
           </li>
 
           <li<%= sidebar_current("docs-secrets-totp") %>>
@@ -283,8 +269,26 @@
             <a href="/docs/secrets/transit/index.html">Transit</a>
           </li>
 
-          <li<%= sidebar_current("docs-secrets-custom") %>>
-            <a href="/docs/secrets/custom.html">Custom</a>
+          <hr>
+
+          <li<%= sidebar_current("docs-secrets-cassandra") %>>
+            <a href="/docs/secrets/cassandra/index.html">Cassandra <sup>DEPRECATED</sup></a>
+          </li>
+
+          <li<%= sidebar_current("docs-secrets-mongodb") %>>
+            <a href="/docs/secrets/mongodb/index.html">MongoDB <sup>DEPRECATED</sup></a>
+          </li>
+
+          <li<%= sidebar_current("docs-secrets-mssql") %>>
+            <a href="/docs/secrets/mssql/index.html">MSSQL <sup>DEPRECATED</sup></a>
+          </li>
+
+          <li<%= sidebar_current("docs-secrets-mysql") %>>
+            <a href="/docs/secrets/mysql/index.html">MySQL <sup>DEPRECATED</sup></a>
+          </li>
+
+          <li<%= sidebar_current("docs-secrets-postgresql") %>>
+            <a href="/docs/secrets/postgresql/index.html">PostgreSQL <sup>DEPRECATED</sup></a>
           </li>
         </ul>
       </li>
@@ -292,16 +296,20 @@
       <li<%= sidebar_current("docs-auth") %>>
         <a href="/docs/auth/index.html">Auth Backends</a>
         <ul class="nav">
-          <li<%= sidebar_current("docs-auth-appid") %>>
-            <a href="/docs/auth/app-id.html">App ID</a>
-          </li>
-
           <li<%= sidebar_current("docs-auth-approle") %>>
             <a href="/docs/auth/approle.html">AppRole</a>
           </li>
 
           <li<%= sidebar_current("docs-auth-aws") %>>
             <a href="/docs/auth/aws.html">AWS</a>
+          </li>
+
+          <li<%= sidebar_current("docs-auth-gcp") %>>
+            <a href="/docs/auth/gcp.html">Google Cloud</a>
+          </li>
+
+          <li<%= sidebar_current("docs-auth-kubernetes") %>>
+            <a href="/docs/auth/kubernetes.html">Kubernetes</a>
           </li>
 
           <li<%= sidebar_current("docs-auth-github") %>>
@@ -335,6 +343,13 @@
           <li<%= sidebar_current("docs-auth-userpass") %>>
             <a href="/docs/auth/userpass.html">Username &amp; Password</a>
           </li>
+
+          <hr>
+
+          <li<%= sidebar_current("docs-auth-appid") %>>
+            <a href="/docs/auth/app-id.html">App ID <sup>DEPRECATED</sup></a>
+          </li>
+
         </ul>
       </li>
 
@@ -355,41 +370,71 @@
         </ul>
       </li>
 
+      <li<%= sidebar_current("docs-plugin") %>>
+        <a href="/docs/plugin/index.html">Plugin Backends</a>
+      </li>
+
       <hr>
 
       <li<%= sidebar_current("docs-vault-enterprise") %>>
-        <a href="/docs/vault-enterprise/index.html">Vault Enterprise</a>
+        <a href="/docs/enterprise/index.html">Vault Enterprise</a>
         <ul class="nav">
-          <li <%= sidebar_current("docs-vault-enterprise-replication")%> >
-            <a href="/docs/vault-enterprise/replication/index.html">Replication</a>
+          <li <%= sidebar_current("docs-vault-enterprise-replication")%>>
+            <a href="/docs/enterprise/replication/index.html">Replication</a>
           </li>
-          <li <%= sidebar_current("docs-vault-enterprise-vsi")%> >
-            <a href="/docs/vault-enterprise/vsi/index.html">Secure Introduction</a>
-            <ul class="nav">
-              <li <%= sidebar_current("docs-vault-enterprise-vsi-configuration")%> >
-                <a href="/docs/vault-enterprise/vsi/configuration.html">Configuration</a>
-              </li>
-              <li <%= sidebar_current("docs-vault-enterprise-vsi-security")%> >
-                <a href="/docs/vault-enterprise/vsi/security.html">Security</a>
-              </li>
-            </ul>
+          <li<%= sidebar_current("docs-vault-enterprise-auto-unseal") %>>
+            <a href="/docs/enterprise/auto-unseal/index.html">Auto Unseal</a>
           </li>
-          <li <%= sidebar_current("docs-vault-enterprise-hsm")%> >
-            <a href="/docs/vault-enterprise/hsm/index.html">HSM Support</a>
+          <li<%= sidebar_current("docs-vault-enterprise-hsm")%>>
+            <a href="/docs/enterprise/hsm/index.html">HSM Support</a>
             <ul class="nav">
               <li <%= sidebar_current("docs-vault-enterprise-hsm-behavior")%>>
-                <a href="/docs/vault-enterprise/hsm/behavior.html">Behavioral Changes</a>
-              </li>
-              <li <%= sidebar_current("docs-vault-enterprise-hsm-configuration")%>>
-                <a href="/docs/vault-enterprise/hsm/configuration.html">Configuration</a>
+                <a href="/docs/enterprise/hsm/behavior.html">Behavioral Changes</a>
               </li>
               <li <%= sidebar_current("docs-vault-enterprise-hsm-security")%>>
-                <a href="/docs/vault-enterprise/hsm/security.html">Security</a>
+                <a href="/docs/enterprise/hsm/security.html">Security</a>
               </li>
             </ul>
           </li>
+          <li<%= sidebar_current("docs-vault-enterprise-sealwrap")%>>
+            <a href="/docs/enterprise/sealwrap/index.html">Seal Wrap / FIPS 140-2</a>
+          </li>
           <li<%= sidebar_current("docs-vault-enterprise-ui") %>>
-            <a href="/docs/vault-enterprise/ui/index.html">UI (Web Interface)</a>
+            <a href="/docs/enterprise/ui/index.html">UI (Web Interface)</a>
+          </li>
+          <li<%= sidebar_current("docs-vault-enterprise-identity") %>>
+            <a href="/docs/enterprise/identity/index.html">Identity</a>
+          </li>
+          <li<%= sidebar_current("docs-vault-enterprise-control-groups") %>>
+            <a href="/docs/enterprise/control-groups/index.html">Control Groups</a>
+          </li>
+          <li<%= sidebar_current("docs-vault-enterprise-mfa")%>>
+            <a href="/docs/enterprise/mfa/index.html">MFA</a>
+            <ul class="nav">
+              <li <%= sidebar_current("docs-vault-enterprise-mfa-duo")%>>
+                <a href="/docs/enterprise/mfa/mfa-duo.html">Duo MFA</a>
+              </li>
+              <li <%= sidebar_current("docs-vault-enterprise-mfa-okta")%>>
+                <a href="/docs/enterprise/mfa/mfa-okta.html">Okta MFA</a>
+              </li>
+              <li <%= sidebar_current("docs-vault-enterprise-mfa-pingid")%>>
+                <a href="/docs/enterprise/mfa/mfa-pingid.html">PingID MFA</a>
+              </li>
+              <li <%= sidebar_current("docs-vault-enterprise-mfa-totp")%>>
+                <a href="/docs/enterprise/mfa/mfa-totp.html">TOTP MFA</a>
+              </li>
+            </ul>
+          </li>
+          <li <%= sidebar_current("docs-vault-enterprise-sentinel")%> >
+            <a href="/docs/enterprise/sentinel/index.html">Sentinel</a>
+            <ul class="nav">
+              <li <%= sidebar_current("docs-vault-enterprise-sentinel-examples")%>>
+                <a href="/docs/enterprise/sentinel/examples.html">Examples</a>
+              </li>
+              <li <%= sidebar_current("docs-vault-enterprise-sentinel-properties")%>>
+                <a href="/docs/enterprise/sentinel/properties.html">Properties</a>
+              </li>
+            </ul>
           </li>
         </ul>
       </li>

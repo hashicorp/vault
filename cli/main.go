@@ -36,9 +36,11 @@ func RunCustom(args []string, commands map[string]cli.CommandFactory) int {
 	}
 
 	cli := &cli.CLI{
-		Args:     args,
-		Commands: commands,
-		HelpFunc: cli.FilteredHelpFunc(commandsInclude, HelpFunc),
+		Args:         args,
+		Commands:     commands,
+		Name:         "vault",
+		Autocomplete: true,
+		HelpFunc:     cli.FilteredHelpFunc(commandsInclude, HelpFunc),
 	}
 
 	exitCode, err := cli.Run()

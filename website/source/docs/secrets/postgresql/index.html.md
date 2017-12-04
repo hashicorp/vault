@@ -10,6 +10,11 @@ description: |-
 
 Name: `postgresql`
 
+~> **Deprecation Note:** This backend is deprecated in favor of the
+combined databases backend added in v0.7.1. See the documentation for
+the new implementation of this backend at
+[PostgreSQL Database Plugin](/docs/secrets/databases/postgresql.html).
+
 The PostgreSQL secret backend for Vault generates database credentials
 dynamically based on configured roles. This means that services that need
 to access a database no longer need to hardcode credentials: they can request
@@ -30,7 +35,7 @@ on every path, use `vault path-help` after mounting the backend.
 ## Quick Start
 
 The first step to using the PostgreSQL backend is to mount it.
-Unlike the `generic` backend, the `postgresql` backend is not mounted by default.
+Unlike the `kv` backend, the `postgresql` backend is not mounted by default.
 
 ```text
 $ vault mount postgresql

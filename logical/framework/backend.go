@@ -82,6 +82,12 @@ type Backend struct {
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
 	AuthRenew OperationFunc
 
+	// LicenseRegistration is called to register the license for a backend.
+	LicenseRegistration LicenseRegistrationFunc
+
+	// Type is the logical.BackendType for the backend implementation
+	BackendType logical.BackendType
+
 	logger  log.Logger
 	system  logical.SystemView
 	once    sync.Once
@@ -107,6 +113,10 @@ type InitializeFunc func() error
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(string)
 
+// LicenseRegistrationFunc is the callback for backend license registration.
+type LicenseRegistrationFunc func(interface{}) error
+
+// HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(req *logical.Request) (checkFound bool, exists bool, err error) {
 	b.once.Do(b.init)
 
@@ -154,7 +164,7 @@ func (b *Backend) HandleExistenceCheck(req *logical.Request) (checkFound bool, e
 	return
 }
 
-// logical.Backend impl.
+// HandleRequest is the logical.Backend implementation.
 func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	b.once.Do(b.init)
 
@@ -221,16 +231,9 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 	return callback(req, &fd)
 }
 
-// logical.Backend impl.
+// SpecialPaths is the logical.Backend implementation.
 func (b *Backend) SpecialPaths() *logical.Paths {
 	return b.PathsSpecial
-}
-
-// Setup is used to initialize the backend with the initial backend configuration
-func (b *Backend) Setup(config *logical.BackendConfig) (logical.Backend, error) {
-	b.logger = config.Logger
-	b.system = config.System
-	return b, nil
 }
 
 // Cleanup is used to release resources and prepare to stop the backend
@@ -240,6 +243,7 @@ func (b *Backend) Cleanup() {
 	}
 }
 
+// Initialize calls the backend's Init func if set.
 func (b *Backend) Initialize() error {
 	if b.Init != nil {
 		return b.Init()
@@ -255,6 +259,13 @@ func (b *Backend) InvalidateKey(key string) {
 	}
 }
 
+// Setup is used to initialize the backend with the initial backend configuration
+func (b *Backend) Setup(config *logical.BackendConfig) error {
+	b.logger = config.Logger
+	b.system = config.System
+	return nil
+}
+
 // Logger can be used to get the logger. If no logger has been set,
 // the logs will be discarded.
 func (b *Backend) Logger() log.Logger {
@@ -265,11 +276,25 @@ func (b *Backend) Logger() log.Logger {
 	return logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.LevelOff)
 }
 
+// System returns the backend's system view.
 func (b *Backend) System() logical.SystemView {
 	return b.system
 }
 
-// This method takes in the TTL and MaxTTL values provided by the user,
+// Type returns the backend type
+func (b *Backend) Type() logical.BackendType {
+	return b.BackendType
+}
+
+// RegisterLicense performs backend license registration.
+func (b *Backend) RegisterLicense(license interface{}) error {
+	if b.LicenseRegistration == nil {
+		return nil
+	}
+	return b.LicenseRegistration(license)
+}
+
+// SanitizeTTLStr takes in the TTL and MaxTTL values provided by the user,
 // compares those with the SystemView values. If they are empty a value of 0 is
 // set, which will cause initial secret or LeaseExtend operations to use the
 // mount/system defaults.  If they are set, their boundaries are validated.
@@ -297,7 +322,8 @@ func (b *Backend) SanitizeTTLStr(ttlStr, maxTTLStr string) (ttl, maxTTL time.Dur
 	return
 }
 
-// Caps the boundaries of ttl and max_ttl values to the backend mount's max_ttl value.
+// SanitizeTTL caps the boundaries of ttl and max_ttl values to the
+// backend mount's max_ttl value.
 func (b *Backend) SanitizeTTL(ttl, maxTTL time.Duration) (time.Duration, time.Duration, error) {
 	sysMaxTTL := b.System().MaxLeaseTTL()
 	if ttl > sysMaxTTL {
@@ -575,8 +601,11 @@ func (s *FieldSchema) DefaultOrZero() interface{} {
 	return s.Type.Zero()
 }
 
+// Zero returns the correct zero-value for a specific FieldType
 func (t FieldType) Zero() interface{} {
 	switch t {
+	case TypeNameString:
+		return ""
 	case TypeString:
 		return ""
 	case TypeInt:
@@ -585,6 +614,8 @@ func (t FieldType) Zero() interface{} {
 		return false
 	case TypeMap:
 		return map[string]interface{}{}
+	case TypeKVPairs:
+		return map[string]string{}
 	case TypeDurationSecond:
 		return 0
 	case TypeSlice:

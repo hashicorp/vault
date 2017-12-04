@@ -107,24 +107,18 @@ description: |-
     </div>
 
     <div class="col-sm-12">
-      <div class="latest-item">
-        <h3>Vault v0.6.5 Released</h3>
-        <p>
-          We are pleased to announce the release of Vault v0.6.5. This release includes several new features, improvements, and bug fixes.
-        </p>
-        <div class="latest-footer">
-          <a class="button" href="https://www.hashicorp.com/blog/vault-v0-6-5/">Read more</a>
+      <% data.news.posts.each do |post| %>
+        <div class="latest-item">
+          <%= post.media_html %>
+          <h3><%= post.title %></h3>
+          <%= simple_format post.body %>
+          <% if post.link_url %>
+            <div class="latest-footer">
+              <a class="button" href="<%= post.link_url %>" target="_blank"><%= post.link_text || data.news.default_link_text %></a>
+            </div>
+          <% end %>
         </div>
-      </div>
-      <div class="latest-item">
-        <h3>Vault on the Changelog Podcast</h3>
-        <p>
-          Listen to the recording with Adam Stacoviak on the popular Changelog podcast to talk about modern secrets management.
-        </p>
-        <div class="latest-footer">
-          <a class="button" href="https://www.hashicorp.com/blog/vault-on-the-changelog-podcast/">Listen</a>
-        </div>
-      </div>
+      <% end %>
     </div>
   </div>
 </div>

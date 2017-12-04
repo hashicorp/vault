@@ -107,6 +107,11 @@ type ResponseLogHook func(*log.Logger, *http.Response)
 // response body before returning.
 type CheckRetry func(resp *http.Response, err error) (bool, error)
 
+// Backoff specifies a policy for how long to wait between retries.
+// It is called after a failing request to determine the amount of time
+// that should pass before trying again.
+type Backoff func(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration
+
 // Client is used to make HTTP requests. It adds additional functionality
 // like automatic retries to tolerate minor outages.
 type Client struct {
@@ -128,6 +133,9 @@ type Client struct {
 	// CheckRetry specifies the policy for handling retries, and is called
 	// after each request. The default policy is DefaultRetryPolicy.
 	CheckRetry CheckRetry
+
+	// Backoff specifies the policy for how long to wait between retries
+	Backoff Backoff
 }
 
 // NewClient creates a new Client with default settings.
@@ -139,6 +147,7 @@ func NewClient() *Client {
 		RetryWaitMax: defaultRetryWaitMax,
 		RetryMax:     defaultRetryMax,
 		CheckRetry:   DefaultRetryPolicy,
+		Backoff:      DefaultBackoff,
 	}
 }
 
@@ -157,6 +166,18 @@ func DefaultRetryPolicy(resp *http.Response, err error) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// DefaultBackoff provides a default callback for Client.Backoff which
+// will perform exponential backoff based on the attempt number and limited
+// by the provided minimum and maximum durations.
+func DefaultBackoff(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+	mult := math.Pow(2, float64(attemptNum)) * float64(min)
+	sleep := time.Duration(mult)
+	if float64(sleep) != mult || sleep > max {
+		sleep = max
+	}
+	return sleep
 }
 
 // Do wraps calling an HTTP method with retries.
@@ -211,7 +232,7 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		if remain == 0 {
 			break
 		}
-		wait := backoff(c.RetryWaitMin, c.RetryWaitMax, i)
+		wait := c.Backoff(c.RetryWaitMin, c.RetryWaitMax, i, resp)
 		desc := fmt.Sprintf("%s %s", req.Method, req.URL)
 		if code > 0 {
 			desc = fmt.Sprintf("%s (status: %d)", desc, code)
@@ -287,16 +308,4 @@ func PostForm(url string, data url.Values) (*http.Response, error) {
 // pre-filled url.Values form data.
 func (c *Client) PostForm(url string, data url.Values) (*http.Response, error) {
 	return c.Post(url, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
-}
-
-// backoff is used to calculate how long to sleep before retrying
-// after observing failures. It takes the minimum/maximum wait time and
-// iteration, and returns the duration to wait.
-func backoff(min, max time.Duration, iter int) time.Duration {
-	mult := math.Pow(2, float64(iter)) * float64(min)
-	sleep := time.Duration(mult)
-	if float64(sleep) != mult || sleep > max {
-		sleep = max
-	}
-	return sleep
 }

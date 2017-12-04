@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -12,8 +13,9 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func getRootConfig(s logical.Storage) (*aws.Config, error) {
+func getRootConfig(s logical.Storage, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
+	var endpoint string
 
 	entry, err := s.Get("config/root")
 	if err != nil {
@@ -28,10 +30,22 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
 		credsConfig.Region = config.Region
+		switch {
+		case clientType == "iam" && config.IAMEndpoint != "":
+			endpoint = *aws.String(config.IAMEndpoint)
+		case clientType == "sts" && config.STSEndpoint != "":
+			endpoint = *aws.String(config.STSEndpoint)
+		}
 	}
 
 	if credsConfig.Region == "" {
-		credsConfig.Region = "us-east-1"
+		credsConfig.Region = os.Getenv("AWS_REGION")
+		if credsConfig.Region == "" {
+			credsConfig.Region = os.Getenv("AWS_DEFAULT_REGION")
+			if credsConfig.Region == "" {
+				credsConfig.Region = "us-east-1"
+			}
+		}
 	}
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
@@ -44,16 +58,34 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 	return &aws.Config{
 		Credentials: creds,
 		Region:      aws.String(credsConfig.Region),
+		Endpoint:    &endpoint,
 		HTTPClient:  cleanhttp.DefaultClient(),
 	}, nil
 }
 
 func clientIAM(s logical.Storage) (*iam.IAM, error) {
-	awsConfig, _ := getRootConfig(s)
-	return iam.New(session.New(awsConfig)), nil
+	awsConfig, err := getRootConfig(s, "iam")
+	if err != nil {
+		return nil, err
+	}
+
+	client := iam.New(session.New(awsConfig))
+
+	if client == nil {
+		return nil, fmt.Errorf("could not obtain iam client")
+	}
+	return client, nil
 }
 
 func clientSTS(s logical.Storage) (*sts.STS, error) {
-	awsConfig, _ := getRootConfig(s)
-	return sts.New(session.New(awsConfig)), nil
+	awsConfig, err := getRootConfig(s, "sts")
+	if err != nil {
+		return nil, err
+	}
+	client := sts.New(session.New(awsConfig))
+
+	if client == nil {
+		return nil, fmt.Errorf("could not obtain sts client")
+	}
+	return client, nil
 }

@@ -10,6 +10,11 @@ description: |-
 
 The `/sys/rekey` endpoints are used to rekey the unseal keys for Vault.
 
+On seals that support stored keys (e.g. HSM PKCS11), the recovery key share(s)
+can be provided to rekey the master key since no unseal keys are available. The
+secret shares, secret threshold, and stored shares parameteres must be set to 1.
+Upon successful rekey, no split unseal key shares are returned.
+
 ## Read Rekey Progress
 
 This endpoint reads the configuration and progress of the current rekey attempt.
@@ -74,9 +79,9 @@ and starting a new rekey, which will also provide a new nonce.
   array must be the same as `secret_shares`.
 
 - `backup` `(bool: false)` – Specifies if using PGP-encrypted keys, whether
-  Vault should also back them up to `core/unseal-keys-backup` in the physical
-  storage backend. These can then be retrieved and removed via the
-  `sys/rekey/backup` endpoint.
+  Vault should also store a plaintext backup of the PGP-encrypted keys at
+  `core/unseal-keys-backup` in the physical storage backend. These can then
+  be retrieved and removed via the `sys/rekey/backup` endpoint.
 
 ### Sample Payload
 

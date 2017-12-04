@@ -23,7 +23,7 @@ type Deployment struct {
 	Description   *string         `json:"description,omitempty"`
 	Creator       *User           `json:"creator,omitempty"`
 	CreatedAt     *Timestamp      `json:"created_at,omitempty"`
-	UpdatedAt     *Timestamp      `json:"pushed_at,omitempty"`
+	UpdatedAt     *Timestamp      `json:"updated_at,omitempty"`
 	StatusesURL   *string         `json:"statuses_url,omitempty"`
 	RepositoryURL *string         `json:"repository_url,omitempty"`
 }
@@ -137,7 +137,7 @@ type DeploymentStatus struct {
 	Description   *string    `json:"description,omitempty"`
 	TargetURL     *string    `json:"target_url,omitempty"`
 	CreatedAt     *Timestamp `json:"created_at,omitempty"`
-	UpdatedAt     *Timestamp `json:"pushed_at,omitempty"`
+	UpdatedAt     *Timestamp `json:"updated_at,omitempty"`
 	DeploymentURL *string    `json:"deployment_url,omitempty"`
 	RepositoryURL *string    `json:"repository_url,omitempty"`
 }

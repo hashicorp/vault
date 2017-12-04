@@ -8,6 +8,11 @@ description: |-
 
 # Cassandra Secret Backend HTTP API
 
+~> **Deprecation Note:** This backend is deprecated in favor of the
+combined databases backend added in v0.7.1. See the API documentation for
+the new implementation of this backend at
+[Cassandra Database Plugin HTTP API](/api/secret/databases/cassandra.html).
+
 This is the API documentation for the Vault Cassandra secret backend. For
 general information about the usage and operation of the Cassandra backend,
 please see the
@@ -56,6 +61,11 @@ Cassandra.
 - `protocol_version` `(int: 2)` – Specifies the CQL protocol version to use.
 
 - `connect_timeout` `(string: "5s")` – Specifies the connection timeout to use.
+
+- `consistency` `(string: "")` – Specifies the consistency option to use.  See
+  the [gocql
+  definition](https://github.com/gocql/gocql/blob/master/frame.go#L203) for
+  valid options.
 
 TLS works as follows:
 

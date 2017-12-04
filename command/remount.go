@@ -65,7 +65,7 @@ Usage: vault remount [options] from to
   the data associated with the backend (such as configuration), will
   be preserved.
 
-  Example: vault remount secret/ generic/
+  Example: vault remount secret/ kv/
 
 General Options:
 ` + meta.GeneralOptionsUsage()

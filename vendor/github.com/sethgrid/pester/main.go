@@ -109,8 +109,8 @@ func NewExtendedClient(hc *http.Client) *Client {
 	return c
 }
 
-// PrintErrStrategy is used to log attempts as they happen.
-// You know, more visible
+// LogHook is used to log attempts as they happen. This function is never called,
+// however, if KeepLog is set to true.
 type LogHook func(e ErrEntry)
 
 // BackoffStrategy is used to determine how long a retry request should wait until attempted

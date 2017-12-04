@@ -44,6 +44,17 @@ func TestMSSQL_Initialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	// Test decoding a string value for max_open_connections
+	connectionDetails = map[string]interface{}{
+		"connection_url":       connURL,
+		"max_open_connections": "5",
+	}
+
+	err = db.Initialize(connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 }
 
 func TestMSSQL_CreateUser(t *testing.T) {
@@ -63,8 +74,13 @@ func TestMSSQL_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
 	// Test with no configured Creation Statememt
-	_, _, err = db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	_, _, err = db.CreateUser(dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
 	if err == nil {
 		t.Fatal("Expected error when no creation statement is provided")
 	}
@@ -73,7 +89,7 @@ func TestMSSQL_CreateUser(t *testing.T) {
 		CreationStatements: testMSSQLRole,
 	}
 
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -104,7 +120,12 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		CreationStatements: testMSSQLRole,
 	}
 
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(2*time.Second))
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(2*time.Second))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -123,7 +144,7 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		t.Fatal("Credentials were not revoked")
 	}
 
-	username, password, err = db.CreateUser(statements, "test", time.Now().Add(2*time.Second))
+	username, password, err = db.CreateUser(statements, usernameConfig, time.Now().Add(2*time.Second))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

@@ -39,7 +39,7 @@ storage "mssql" {
 - `username` `(string: "")` - enter the SQL Server Authentication user id or 
   the Windows Authentication user id in the DOMAIN\User format. 
   On Windows, if user id is empty or missing Single-Sign-On is used.
-  
+
 - `password` `(string: "")` – specifies the MSSQL password to connect to
   the database.
 
@@ -48,7 +48,7 @@ storage "mssql" {
 
 - `table` `(string: "Vault")` – Specifies the name of the table. If the table
   does not exist, Vault will attempt to create it.
-  
+
 - `schema` `(string: "dbo")` – Specifies the name of the schema. If the schema
   does not exist, Vault will attempt to create it.
 
@@ -57,6 +57,9 @@ storage "mssql" {
 - `connectionTimeout` `(int: 30)` – in seconds (default is 30).
 
 - `logLevel` `(int: 0)` – logging flags (default 0/no logging, 63 for full logging) .
+
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
+  requests to MSSQL.
 
 ## `mssql` Examples
 

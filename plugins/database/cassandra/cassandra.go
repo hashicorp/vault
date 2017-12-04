@@ -32,7 +32,12 @@ func New() (interface{}, error) {
 	connProducer := &cassandraConnectionProducer{}
 	connProducer.Type = cassandraTypeName
 
-	credsProducer := &cassandraCredentialsProducer{}
+	credsProducer := &credsutil.SQLCredentialsProducer{
+		DisplayNameLen: 15,
+		RoleNameLen:    15,
+		UsernameLen:    100,
+		Separator:      "_",
+	}
 
 	dbType := &Cassandra{
 		ConnectionProducer:  connProducer,
@@ -70,7 +75,7 @@ func (c *Cassandra) getConnection() (*gocql.Session, error) {
 
 // CreateUser generates the username/password on the underlying Cassandra secret backend as instructed by
 // the CreationStatement provided.
-func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	c.Lock()
 	defer c.Unlock()
@@ -90,10 +95,13 @@ func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernamePrefix st
 		rollbackCQL = defaultUserDeletionCQL
 	}
 
-	username, err = c.GenerateUsername(usernamePrefix)
+	username, err = c.GenerateUsername(usernameConfig)
+	username = strings.Replace(username, "-", "_", -1)
 	if err != nil {
 		return "", "", err
 	}
+	// Cassandra doesn't like the uppercase usernames
+	username = strings.ToLower(username)
 
 	password, err = c.GeneratePassword()
 	if err != nil {

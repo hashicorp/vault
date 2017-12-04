@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -73,8 +75,8 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		return fmt.Errorf("token credential backend cannot be instantiated")
 	}
 
-	if match := c.router.MatchingMount(credentialRoutePrefix + entry.Path); match != "" {
-		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
+	if conflict := c.router.MountConflict(credentialRoutePrefix + entry.Path); conflict != "" {
+		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", conflict))
 	}
 
 	// Generate a new UUID and view
@@ -85,18 +87,36 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		}
 		entry.UUID = entryUUID
 	}
-
+	if entry.Accessor == "" {
+		accessor, err := c.generateMountAccessor("auth_" + entry.Type)
+		if err != nil {
+			return err
+		}
+		entry.Accessor = accessor
+	}
 	viewPath := credentialBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
+	var err error
+	var backend logical.Backend
 	sysView := c.mountEntrySysView(entry)
+	conf := make(map[string]string)
+	if entry.Config.PluginName != "" {
+		conf["plugin_name"] = entry.Config.PluginName
+	}
 
 	// Create the new backend
-	backend, err := c.newCredentialBackend(entry.Type, sysView, view, nil)
+	backend, err = c.newCredentialBackend(entry.Type, sysView, view, conf)
 	if err != nil {
 		return err
 	}
 	if backend == nil {
 		return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+	}
+
+	// Check for the correct backend type
+	backendType := backend.Type()
+	if entry.Type == "plugin" && backendType != logical.TypeCredential {
+		return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 	}
 
 	if err := backend.Initialize(); err != nil {
@@ -125,7 +145,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 
 // disableCredential is used to disable an existing credential backend; the
 // boolean indicates if it existed
-func (c *Core) disableCredential(path string) (bool, error) {
+func (c *Core) disableCredential(path string) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -133,57 +153,64 @@ func (c *Core) disableCredential(path string) (bool, error) {
 
 	// Ensure the token backend is not affected
 	if path == "token/" {
-		return true, fmt.Errorf("token credential backend cannot be disabled")
+		return fmt.Errorf("token credential backend cannot be disabled")
 	}
 
 	// Store the view for this backend
 	fullPath := credentialRoutePrefix + path
-	view := c.router.MatchingStorageView(fullPath)
+	view := c.router.MatchingStorageByAPIPath(fullPath)
 	if view == nil {
-		return false, fmt.Errorf("no matching backend %s", fullPath)
+		return fmt.Errorf("no matching backend %s", fullPath)
 	}
+
+	// Get the backend/mount entry for this path, used to remove ignored
+	// replication prefixes
+	backend := c.router.MatchingBackend(fullPath)
+	entry := c.router.MatchingMountEntry(fullPath)
 
 	// Mark the entry as tainted
 	if err := c.taintCredEntry(path); err != nil {
-		return true, err
+		return err
 	}
 
 	// Taint the router path to prevent routing
 	if err := c.router.Taint(fullPath); err != nil {
-		return true, err
+		return err
 	}
 
-	// Revoke credentials from this path
-	if err := c.expiration.RevokePrefix(fullPath); err != nil {
-		return true, err
-	}
-
-	// Call cleanup function if it exists
-	backend := c.router.MatchingBackend(fullPath)
 	if backend != nil {
+		// Revoke credentials from this path
+		if err := c.expiration.RevokePrefix(fullPath); err != nil {
+			return err
+		}
+
+		// Call cleanup function if it exists
 		backend.Cleanup()
 	}
 
 	// Unmount the backend
 	if err := c.router.Unmount(fullPath); err != nil {
-		return true, err
+		return err
 	}
 
-	// Clear the data in the view
-	if view != nil {
+	switch {
+	case entry.Local, !c.replicationState.HasState(consts.ReplicationPerformanceSecondary):
+		// Have writable storage, remove the whole thing
 		if err := logical.ClearView(view); err != nil {
-			return true, err
+			c.logger.Error("core: failed to clear view for path being unmounted", "error", err, "path", path)
+			return err
 		}
+
 	}
 
 	// Remove the mount table entry
 	if err := c.removeCredEntry(path); err != nil {
-		return true, err
+		return err
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: disabled credential backend", "path", path)
 	}
-	return true, nil
+	return nil
 }
 
 // removeCredEntry is used to remove an entry in the auth table
@@ -207,6 +234,27 @@ func (c *Core) removeCredEntry(path string) error {
 	c.auth = newTable
 
 	return nil
+}
+
+// remountCredEntryForce takes a copy of the mount entry for the path and fully
+// unmounts and remounts the backend to pick up any changes, such as filtered
+// paths
+func (c *Core) remountCredEntryForce(path string) error {
+	fullPath := credentialRoutePrefix + path
+	me := c.router.MatchingMountEntry(fullPath)
+	if me == nil {
+		return fmt.Errorf("cannot find mount for path '%s'", path)
+	}
+
+	me, err := me.Clone()
+	if err != nil {
+		return err
+	}
+
+	if err := c.disableCredential(path); err != nil {
+		return err
+	}
+	return c.enableCredential(me)
 }
 
 // taintCredEntry is used to mark an entry in the auth table as tainted
@@ -259,37 +307,47 @@ func (c *Core) loadCredentials() error {
 		}
 		c.auth = authTable
 	}
+
+	var needPersist bool
+	if c.auth == nil {
+		c.auth = c.defaultAuthTable()
+		needPersist = true
+	}
+
 	if rawLocal != nil {
 		if err := jsonutil.DecodeJSON(rawLocal.Value, localAuthTable); err != nil {
 			c.logger.Error("core: failed to decode local auth table", "error", err)
 			return errLoadAuthFailed
 		}
-		c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
+		if localAuthTable != nil && len(localAuthTable.Entries) > 0 {
+			c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
+		}
 	}
 
-	// Done if we have restored the auth table
-	if c.auth != nil {
-		needPersist := false
+	// Upgrade to typed auth table
+	if c.auth.Type == "" {
+		c.auth.Type = credentialTableType
+		needPersist = true
+	}
 
-		// Upgrade to typed auth table
-		if c.auth.Type == "" {
-			c.auth.Type = credentialTableType
+	// Upgrade to table-scoped entries
+	for _, entry := range c.auth.Entries {
+		if entry.Table == "" {
+			entry.Table = c.auth.Type
 			needPersist = true
 		}
-
-		// Upgrade to table-scoped entries
-		for _, entry := range c.auth.Entries {
-			if entry.Table == "" {
-				entry.Table = c.auth.Type
-				needPersist = true
+		if entry.Accessor == "" {
+			accessor, err := c.generateMountAccessor("auth_" + entry.Type)
+			if err != nil {
+				return err
 			}
+			entry.Accessor = accessor
+			needPersist = true
 		}
+	}
 
-		if !needPersist {
-			return nil
-		}
-	} else {
-		c.auth = defaultAuthTable()
+	if !needPersist {
+		return nil
 	}
 
 	if err := c.persistAuth(c.auth, false); err != nil {
@@ -373,15 +431,16 @@ func (c *Core) persistAuth(table *MountTable, localOnly bool) error {
 // setupCredentials is invoked after we've loaded the auth table to
 // initialize the credential backends and setup the router
 func (c *Core) setupCredentials() error {
-	var backend logical.Backend
-	var view *BarrierView
 	var err error
 	var persistNeeded bool
+	var view *BarrierView
+	var backendType logical.BackendType
 
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
 	for _, entry := range c.auth.Entries {
+		var backend logical.Backend
 		// Work around some problematic code that existed in master for a while
 		if strings.HasPrefix(entry.Path, credentialRoutePrefix) {
 			entry.Path = strings.TrimPrefix(entry.Path, credentialRoutePrefix)
@@ -391,22 +450,38 @@ func (c *Core) setupCredentials() error {
 		// Create a barrier view using the UUID
 		viewPath := credentialBarrierPrefix + entry.UUID + "/"
 		view = NewBarrierView(c.barrier, viewPath)
-		sysView := c.mountEntrySysView(entry)
-
 		// Initialize the backend
-		backend, err = c.newCredentialBackend(entry.Type, sysView, view, nil)
+		sysView := c.mountEntrySysView(entry)
+		conf := make(map[string]string)
+		if entry.Config.PluginName != "" {
+			conf["plugin_name"] = entry.Config.PluginName
+		}
+
+		backend, err = c.newCredentialBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
+			if errwrap.Contains(err, ErrPluginNotFound.Error()) && entry.Type == "plugin" {
+				// If we encounter an error instantiating the backend due to it being missing from the catalog,
+				// skip backend initialization but register the entry to the mount table to preserve storage
+				// and path.
+				goto ROUTER_MOUNT
+			}
 			return errLoadAuthFailed
 		}
 		if backend == nil {
 			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
 		}
 
+		// Check for the correct backend type
+		backendType = backend.Type()
+		if entry.Type == "plugin" && backendType != logical.TypeCredential {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
+		}
+
 		if err := backend.Initialize(); err != nil {
 			return err
 		}
-
+	ROUTER_MOUNT:
 		// Mount the backend
 		path := credentialRoutePrefix + entry.Path
 		err = c.router.Mount(backend, path, entry, view)
@@ -425,7 +500,7 @@ func (c *Core) setupCredentials() error {
 			c.tokenStore = backend.(*TokenStore)
 
 			// this is loaded *after* the normal mounts, including cubbyhole
-			c.router.tokenStoreSalt = c.tokenStore.salt
+			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			c.tokenStore.cubbyholeBackend = c.router.MatchingBackend("cubbyhole/").(*CubbyholeBackend)
 		}
 	}
@@ -485,7 +560,7 @@ func (c *Core) newCredentialBackend(
 }
 
 // defaultAuthTable creates a default auth table
-func defaultAuthTable() *MountTable {
+func (c *Core) defaultAuthTable() *MountTable {
 	table := &MountTable{
 		Type: credentialTableType,
 	}
@@ -493,12 +568,17 @@ func defaultAuthTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate UUID for default auth table token entry: %v", err))
 	}
+	tokenAccessor, err := c.generateMountAccessor("auth_token")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate accessor for default auth table token entry: %v", err))
+	}
 	tokenAuth := &MountEntry{
 		Table:       credentialTableType,
 		Path:        "token/",
 		Type:        "token",
 		Description: "token based credentials",
 		UUID:        tokenUUID,
+		Accessor:    tokenAccessor,
 	}
 	table.Entries = append(table.Entries, tokenAuth)
 	return table

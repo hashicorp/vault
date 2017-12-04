@@ -3,12 +3,16 @@ layout: "api"
 page_title: "/sys/raw - HTTP API"
 sidebar_current: "docs-http-system-raw"
 description: |-
-  The `/sys/raw` endpoint is access the raw underlying store in Vault.
+  The `/sys/raw` endpoint is used to access the raw underlying store in Vault.
 ---
 
 # `/sys/raw`
 
-The `/sys/raw` endpoint is access the raw underlying store in Vault.
+The `/sys/raw` endpoint is used to access the raw underlying store in Vault.
+
+This endpoint is off by default.  See the 
+[Vault configuration documentation](/docs/configuration/index.html) to
+enable.
 
 ## Read Raw
 
@@ -74,6 +78,41 @@ $ curl \
     --request PUT \
     --data @payload.json \
     https://vault.rocks/v1/sys/raw/secret/foo
+```
+
+## List Raw
+
+This endpoint returns a list keys for a given path prefix.
+
+**This endpoint requires 'sudo' capability.**
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/raw/:prefix` | `200 application/json` |
+| `GET`   | `/sys/raw/:prefix?list=true` | `200 application/json` |
+
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    https://vault.rocks/v1/sys/raw/logical
+```
+
+### Sample Response
+
+```json
+{
+  "data":{
+    "keys":[
+      "abcd-1234...",
+      "efgh-1234...",
+      "ijkl-1234..."
+    ]
+  }
+}
 ```
 
 ## Delete Raw

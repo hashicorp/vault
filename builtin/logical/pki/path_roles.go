@@ -35,7 +35,7 @@ func pathRoles(b *backend) *framework.Path {
 			},
 
 			"ttl": &framework.FieldSchema{
-				Type:    framework.TypeString,
+				Type:    framework.TypeDurationSecond,
 				Default: "",
 				Description: `The lease duration if no specific lease duration is
 requested. The lease duration controls the expiration
@@ -362,6 +362,8 @@ func (b *backend) pathRoleRead(
 	delete(resp.Data, "lease")
 	delete(resp.Data, "lease_max")
 	delete(resp.Data, "allowed_base_domain")
+	delete(resp.Data, "allow_base_domain")
+	delete(resp.Data, "AllowExpirationPastCA")
 
 	return resp, nil
 }
@@ -383,7 +385,7 @@ func (b *backend) pathRoleCreate(
 
 	entry := &roleEntry{
 		MaxTTL:              data.Get("max_ttl").(string),
-		TTL:                 data.Get("ttl").(string),
+		TTL:                 (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		AllowLocalhost:      data.Get("allow_localhost").(bool),
 		AllowedDomains:      data.Get("allowed_domains").(string),
 		AllowBareDomains:    data.Get("allow_bare_domains").(bool),
@@ -532,6 +534,9 @@ type roleEntry struct {
 	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
 	GenerateLease         *bool  `json:"generate_lease,omitempty" structs:"generate_lease,omitempty"`
 	NoStore               bool   `json:"no_store" structs:"no_store" mapstructure:"no_store"`
+
+	// Used internally for signing intermediates
+	AllowExpirationPastCA bool
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`

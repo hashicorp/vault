@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/kv-builder"
 	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
+	"github.com/posener/complete"
 )
 
 // AuditEnableCommand is a Command that mounts a new mount.
@@ -72,7 +73,7 @@ func (c *AuditEnableCommand) Run(args []string) int {
 	}
 
 	err = client.Sys().EnableAuditWithOptions(path, &api.EnableAuditOptions{
-		Type:   auditType,
+		Type:        auditType,
 		Description: desc,
 		Options:     opts,
 		Local:       local,
@@ -126,4 +127,20 @@ Audit Enable Options:
                           removed by replication.
 `
 	return strings.TrimSpace(helpText)
+}
+
+func (c *AuditEnableCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictSet(
+		"file",
+		"syslog",
+		"socket",
+	)
+}
+
+func (c *AuditEnableCommand) AutocompleteFlags() complete.Flags {
+	return complete.Flags{
+		"-description": complete.PredictNothing,
+		"-path":        complete.PredictNothing,
+		"-local":       complete.PredictNothing,
+	}
 }

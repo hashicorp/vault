@@ -1,0 +1,23 @@
+default_link_text: "Read more"
+posts:
+  -
+    title: "Vault 0.8.1 released"
+    body: >-
+      We are proud to announce the release of HashiCorp Vault 0.8.1. This
+      version includes Google Cloud IAM authentication, Oracle database
+      backends, self-reloading plugins, and much more!
+    link_url: "https://www.hashicorp.com/blog/vault-0-8-1/"
+  -
+    title: "Vault 0.8.0 released"
+    body: >-
+      We are proud to announce the release of HashiCorp Vault 0.8. This version
+      of Vault brings secure plugins, disaster recovery, mount filters for
+      replication, and MFA on paths.
+    link_url: "https://www.hashicorp.com/blog/vault-0-8/"
+  -
+    title: "Why New Relic uses Vault for secrets management"
+    body: >-
+      As New Relic's systems and infrastructure grew, they faced challenges with
+      securely storing and managing credentials. Vault provides them with a
+      consistent approach to manage secrets and credentials.
+    link_url: "https://www.hashicorp.com/blog/hashicorp-vault-helps-new-relic-manage-secrets-for-their-digital-intelligence-platform/"

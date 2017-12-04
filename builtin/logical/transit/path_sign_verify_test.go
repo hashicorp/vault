@@ -1,12 +1,17 @@
 package transit
 
 import (
+	"encoding/base64"
+	"strings"
 	"testing"
 
+	"golang.org/x/crypto/ed25519"
+
 	"github.com/hashicorp/vault/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
-func TestTransit_SignVerify(t *testing.T) {
+func TestTransit_SignVerify_P256(t *testing.T) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -91,7 +96,7 @@ func TestTransit_SignVerify(t *testing.T) {
 		}
 		if errExpected {
 			if !resp.IsError() {
-				t.Fatalf("bad: got error response: %#v", *resp)
+				t.Fatalf("bad: should have gotten error response: %#v", *resp)
 			}
 			return ""
 		}
@@ -114,7 +119,7 @@ func TestTransit_SignVerify(t *testing.T) {
 		}
 		if errExpected {
 			if resp != nil && !resp.IsError() {
-				t.Fatalf("bad: got error response: %#v", *resp)
+				t.Fatalf("bad: should have gotten error response: %#v", *resp)
 			}
 			return
 		}
@@ -159,6 +164,11 @@ func TestTransit_SignVerify(t *testing.T) {
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
 
+	req.Data["prehashed"] = true
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+	delete(req.Data, "prehashed")
+
 	// Test 512 and save sig for later to ensure we can't validate once min
 	// decryption version is set
 	req.Data["algorithm"] = "sha2-512"
@@ -198,4 +208,211 @@ func TestTransit_SignVerify(t *testing.T) {
 	verifyRequest(req, false, "", sig)
 	// Now try the v1
 	verifyRequest(req, true, "", v1sig)
+}
+
+func TestTransit_SignVerify_ED25519(t *testing.T) {
+	var b *backend
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	b = Backend(&logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	})
+
+	// First create a key
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+		Data: map[string]interface{}{
+			"type": "ed25519",
+		},
+	}
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now create a derived key"
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/bar",
+		Data: map[string]interface{}{
+			"type":    "ed25519",
+			"derived": true,
+		},
+	}
+	_, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get the keys for later
+	fooP, lock, err := b.lm.GetPolicyShared(storage, "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We don't care as we're the only one using this
+	lock.RUnlock()
+
+	barP, lock, err := b.lm.GetPolicyShared(storage, "bar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock.RUnlock()
+
+	signRequest := func(req *logical.Request, errExpected bool, postpath string) string {
+		// Delete any key that exists in the request
+		delete(req.Data, "public_key")
+		req.Path = "sign/" + postpath
+		resp, err := b.HandleRequest(req)
+		if err != nil && !errExpected {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if errExpected {
+			if !resp.IsError() {
+				t.Fatalf("bad: got error response: %#v", *resp)
+			}
+			return ""
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: got error response: %#v", *resp)
+		}
+		value, ok := resp.Data["signature"]
+		if !ok {
+			t.Fatalf("no signature key found in returned data, got resp data %#v", resp.Data)
+		}
+		// memoize any pubic key
+		if key, ok := resp.Data["public_key"]; ok {
+			req.Data["public_key"] = key
+		}
+		return value.(string)
+	}
+
+	verifyRequest := func(req *logical.Request, errExpected bool, postpath, sig string) {
+		req.Path = "verify/" + postpath
+		req.Data["signature"] = sig
+		resp, err := b.HandleRequest(req)
+		if err != nil && !errExpected {
+			t.Fatalf("got error: %v, sig was %v", err, sig)
+		}
+		if errExpected {
+			if resp != nil && !resp.IsError() {
+				t.Fatalf("bad: got error response: %#v", *resp)
+			}
+			return
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: got error response: %#v", *resp)
+		}
+		value, ok := resp.Data["valid"]
+		if !ok {
+			t.Fatalf("no valid key found in returned data, got resp data %#v", resp.Data)
+		}
+		if !value.(bool) && !errExpected {
+			t.Fatalf("verification failed; req was %#v, resp is %#v", *req, *resp)
+		}
+
+		if pubKeyRaw, ok := req.Data["public_key"]; ok {
+			input, _ := base64.StdEncoding.DecodeString(req.Data["input"].(string))
+			splitSig := strings.Split(sig, ":")
+			signature, _ := base64.StdEncoding.DecodeString(splitSig[2])
+			if !ed25519.Verify(ed25519.PublicKey(pubKeyRaw.([]byte)), input, signature) && !errExpected {
+				t.Fatal("invalid signature")
+			}
+
+			keyReadReq := &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "keys/" + postpath,
+			}
+			keyReadResp, err := b.HandleRequest(keyReadReq)
+			if err != nil {
+				t.Fatal(err)
+			}
+			val := keyReadResp.Data["keys"].(map[string]map[string]interface{})[strings.TrimPrefix(splitSig[1], "v")]
+			var ak asymKey
+			if err := mapstructure.Decode(val, &ak); err != nil {
+				t.Fatal(err)
+			}
+			if ak.PublicKey != "" {
+				t.Fatal("got non-empty public key")
+			}
+			keyReadReq.Data = map[string]interface{}{
+				"context": "abcd",
+			}
+			keyReadResp, err = b.HandleRequest(keyReadReq)
+			if err != nil {
+				t.Fatal(err)
+			}
+			val = keyReadResp.Data["keys"].(map[string]map[string]interface{})[strings.TrimPrefix(splitSig[1], "v")]
+			if err := mapstructure.Decode(val, &ak); err != nil {
+				t.Fatal(err)
+			}
+			if ak.PublicKey != base64.StdEncoding.EncodeToString(pubKeyRaw.([]byte)) {
+				t.Fatalf("got incorrect public key; got %q, expected %q\nasymKey struct is\n%#v", ak.PublicKey, pubKeyRaw, ak)
+			}
+		}
+	}
+
+	req.Data = map[string]interface{}{
+		"input":   "dGhlIHF1aWNrIGJyb3duIGZveA==",
+		"context": "abcd",
+	}
+
+	// Test defaults
+	sig := signRequest(req, false, "foo")
+	verifyRequest(req, false, "foo", sig)
+
+	sig = signRequest(req, false, "bar")
+	verifyRequest(req, false, "bar", sig)
+
+	// Test a bad signature
+	verifyRequest(req, true, "foo", sig[0:len(sig)-2])
+	verifyRequest(req, true, "bar", sig[0:len(sig)-2])
+
+	v1sig := sig
+
+	// Rotate and set min decryption version
+	err = fooP.Rotate(storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = fooP.Rotate(storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fooP.MinDecryptionVersion = 2
+	if err = fooP.Persist(storage); err != nil {
+		t.Fatal(err)
+	}
+	err = barP.Rotate(storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = barP.Rotate(storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	barP.MinDecryptionVersion = 2
+	if err = barP.Persist(storage); err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure signing still works fine
+	sig = signRequest(req, false, "foo")
+	verifyRequest(req, false, "foo", sig)
+	// Now try the v1
+	verifyRequest(req, true, "foo", v1sig)
+	// Repeat with the other key
+	sig = signRequest(req, false, "bar")
+	verifyRequest(req, false, "bar", sig)
+	verifyRequest(req, true, "bar", v1sig)
 }

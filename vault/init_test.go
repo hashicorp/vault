@@ -8,29 +8,30 @@ import (
 
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 )
 
 func TestCore_Init(t *testing.T) {
 	c, conf := testCore_NewTestCore(t, nil)
 	testCore_Init_Common(t, c, conf, &SealConfig{SecretShares: 5, SecretThreshold: 3}, nil)
 
-	c, conf = testCore_NewTestCore(t, newTestSeal(t))
-	bc, rc := TestSealDefConfigs()
-	rc.SecretShares = 4
-	rc.SecretThreshold = 2
-	testCore_Init_Common(t, c, conf, bc, rc)
+	c, conf = testCore_NewTestCore(t, NewTestSeal(t, nil))
+	bc, _ := TestSealDefConfigs()
+	testCore_Init_Common(t, c, conf, bc, nil)
 }
 
 func testCore_NewTestCore(t *testing.T, seal Seal) (*Core, *CoreConfig) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
 	conf := &CoreConfig{
 		Physical:     inm,
 		DisableMlock: true,
 		LogicalBackends: map[string]logical.Factory{
-			"generic": LeasedPassthroughBackendFactory,
+			"kv": LeasedPassthroughBackendFactory,
 		},
 		Seal: seal,
 	}

@@ -20,7 +20,7 @@ on every path, use `vault path-help` after mounting the backend.
 ## Quick Start
 
 The first step to using the TOTP backend is to mount it.
-Unlike the `generic` backend, the `totp` backend is not mounted by default.
+Unlike the `kv` backend, the `totp` backend is not mounted by default.
 
 ```text
 $ vault mount totp

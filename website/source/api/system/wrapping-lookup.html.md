@@ -49,9 +49,12 @@ $ curl \
   "lease_duration": 0,
   "renewable": false,
   "data": {
+    "creation_path": "sys/wrapping/wrap",
     "creation_time": "2016-09-28T14:16:13.07103516-04:00",
     "creation_ttl": 300
   },
-  "warnings": null
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
 }
 ```

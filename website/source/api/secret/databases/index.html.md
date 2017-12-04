@@ -256,6 +256,7 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/database/roles`          | `200 application/json` |
+| `GET`   | `/database/roles?list=true` | `200 application/json` |
 
 ### Sample Request
 

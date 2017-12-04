@@ -31,11 +31,196 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	if b == nil {
 		t.Fatalf("failed to create backend")
 	}
-	_, err := b.Backend.Setup(config)
+	err := b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return b, config.StorageView
+}
+
+func TestTransit_RSA(t *testing.T) {
+	testTransit_RSA(t, "rsa-2048")
+	testTransit_RSA(t, "rsa-4096")
+}
+
+func testTransit_RSA(t *testing.T, keyType string) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	keyReq := &logical.Request{
+		Path:      "keys/rsa",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": keyType,
+		},
+		Storage: storage,
+	}
+
+	resp, err = b.HandleRequest(keyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
+
+	encryptReq := &logical.Request{
+		Path:      "encrypt/rsa",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"plaintext": plaintext,
+		},
+	}
+
+	resp, err = b.HandleRequest(encryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	ciphertext1 := resp.Data["ciphertext"].(string)
+
+	decryptReq := &logical.Request{
+		Path:      "decrypt/rsa",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"ciphertext": ciphertext1,
+		},
+	}
+
+	resp, err = b.HandleRequest(decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	decryptedPlaintext := resp.Data["plaintext"]
+
+	if plaintext != decryptedPlaintext {
+		t.Fatalf("bad: plaintext; expected: %q\nactual: %q", plaintext, decryptedPlaintext)
+	}
+
+	// Rotate the key
+	rotateReq := &logical.Request{
+		Path:      "keys/rsa/rotate",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+	}
+	resp, err = b.HandleRequest(rotateReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Encrypt again
+	resp, err = b.HandleRequest(encryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	ciphertext2 := resp.Data["ciphertext"].(string)
+
+	if ciphertext1 == ciphertext2 {
+		t.Fatalf("expected different ciphertexts")
+	}
+
+	// See if the older ciphertext can still be decrypted
+	resp, err = b.HandleRequest(decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Data["plaintext"].(string) != plaintext {
+		t.Fatal("failed to decrypt old ciphertext after rotating the key")
+	}
+
+	// Decrypt the new ciphertext
+	decryptReq.Data = map[string]interface{}{
+		"ciphertext": ciphertext2,
+	}
+	resp, err = b.HandleRequest(decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Data["plaintext"].(string) != plaintext {
+		t.Fatal("failed to decrypt ciphertext after rotating the key")
+	}
+
+	signReq := &logical.Request{
+		Path:      "sign/rsa",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"input": plaintext,
+		},
+	}
+	resp, err = b.HandleRequest(signReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	signature := resp.Data["signature"].(string)
+
+	verifyReq := &logical.Request{
+		Path:      "verify/rsa",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"input":     plaintext,
+			"signature": signature,
+		},
+	}
+
+	resp, err = b.HandleRequest(verifyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if !resp.Data["valid"].(bool) {
+		t.Fatalf("failed to verify the RSA signature")
+	}
+
+	signReq.Data = map[string]interface{}{
+		"input":     plaintext,
+		"algorithm": "invalid",
+	}
+	resp, err = b.HandleRequest(signReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatal("expected an error response")
+	}
+
+	signReq.Data = map[string]interface{}{
+		"input":     plaintext,
+		"algorithm": "sha2-512",
+	}
+	resp, err = b.HandleRequest(signReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	signature = resp.Data["signature"].(string)
+
+	verifyReq.Data = map[string]interface{}{
+		"input":     plaintext,
+		"signature": signature,
+	}
+	resp, err = b.HandleRequest(verifyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Data["valid"].(bool) {
+		t.Fatalf("expected validation to fail")
+	}
+
+	verifyReq.Data = map[string]interface{}{
+		"input":     plaintext,
+		"signature": signature,
+		"algorithm": "sha2-512",
+	}
+	resp, err = b.HandleRequest(verifyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if !resp.Data["valid"].(bool) {
+		t.Fatalf("failed to verify the RSA signature")
+	}
 }
 
 func TestBackend_basic(t *testing.T) {
@@ -129,7 +314,9 @@ func TestBackend_rotation(t *testing.T) {
 			testAccStepLoadVX(t, "test", decryptData, 4, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
-			testAccStepAdjustPolicy(t, "test", 3),
+			testAccStepAdjustPolicyMinDecryption(t, "test", 3),
+			testAccStepAdjustPolicyMinEncryption(t, "test", 4),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 3, 4),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecryptExpectFailure(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -140,7 +327,8 @@ func TestBackend_rotation(t *testing.T) {
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 4, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
-			testAccStepAdjustPolicy(t, "test", 1),
+			testAccStepAdjustPolicyMinDecryption(t, "test", 1),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 1, 4),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -221,12 +409,21 @@ func testAccStepListPolicy(t *testing.T, name string, expectNone bool) logicalte
 	}
 }
 
-func testAccStepAdjustPolicy(t *testing.T, name string, minVer int) logicaltest.TestStep {
+func testAccStepAdjustPolicyMinDecryption(t *testing.T, name string, minVer int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
 		Data: map[string]interface{}{
 			"min_decryption_version": minVer,
+		},
+	}
+}
+func testAccStepAdjustPolicyMinEncryption(t *testing.T, name string, minVer int) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/" + name + "/config",
+		Data: map[string]interface{}{
+			"min_encryption_version": minVer,
 		},
 	}
 }
@@ -276,6 +473,10 @@ func testAccStepDeleteNotDisabledPolicy(t *testing.T, name string) logicaltest.T
 }
 
 func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) logicaltest.TestStep {
+	return testAccStepReadPolicyWithVersions(t, name, expectNone, derived, 1, 0)
+}
+
+func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "keys/" + name,
@@ -297,6 +498,8 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				KDF                  string           `mapstructure:"kdf"`
 				DeletionAllowed      bool             `mapstructure:"deletion_allowed"`
 				ConvergentEncryption bool             `mapstructure:"convergent_encryption"`
+				MinDecryptionVersion int              `mapstructure:"min_decryption_version"`
+				MinEncryptionVersion int              `mapstructure:"min_encryption_version"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -313,6 +516,12 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.Keys == nil {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.MinDecryptionVersion != minDecryptionVersion {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.DeletionAllowed == true {
@@ -610,7 +819,7 @@ func TestKeyUpgrade(t *testing.T) {
 	if p.Key != nil ||
 		p.Keys == nil ||
 		len(p.Keys) != 1 ||
-		!reflect.DeepEqual(p.Keys[1].AESKey, key) {
+		!reflect.DeepEqual(p.Keys[1].Key, key) {
 		t.Errorf("bad key migration, result is %#v", p.Keys)
 	}
 }
@@ -730,6 +939,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 		}
 		resp, err = b.HandleRequest(req)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
 		}
@@ -755,6 +967,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -764,6 +979,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext1 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -789,6 +1007,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	}
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -798,6 +1019,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext3 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -820,6 +1044,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context":   "qV4h9iQyvn+raODOer4JNAsOhkXBwdT4HZ677Ql4KLqXSU+Jk4C/fXBWbv6xkSYT",
 	}
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -829,6 +1056,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext5 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -854,6 +1084,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context": "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -868,6 +1101,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -877,6 +1113,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext7 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -1036,4 +1275,39 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 	// Wait for them all to finish
 	wg.Wait()
+}
+
+func TestBadInput(t *testing.T) {
+	var b *backend
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	b = Backend(&logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	})
+
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test",
+	}
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil response")
+	}
+
+	req.Path = "decrypt/test"
+	req.Data = map[string]interface{}{
+		"ciphertext": "vault:v1:abcd",
+	}
+
+	_, err = b.HandleRequest(req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
 }

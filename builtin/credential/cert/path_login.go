@@ -34,9 +34,26 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLogin,
+			logical.UpdateOperation:         b.pathLogin,
+			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
 		},
 	}
+}
+
+func (b *backend) pathLoginAliasLookahead(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	clientCerts := req.Connection.ConnState.PeerCertificates
+	if len(clientCerts) == 0 {
+		return nil, fmt.Errorf("no client certificate found")
+	}
+
+	return &logical.Response{
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{
+				Name: clientCerts[0].Subject.CommonName,
+			},
+		},
+	}, nil
 }
 
 func (b *backend) pathLogin(
@@ -85,6 +102,9 @@ func (b *backend) pathLogin(
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       ttl,
+			},
+			Alias: &logical.Alias{
+				Name: clientCerts[0].SerialNumber.String(),
 			},
 		},
 	}
@@ -156,10 +176,21 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 	clientCert := connState.PeerCertificates[0]
 
 	// Allow constraining the login request to a single CertEntry
-	certName := d.Get("name").(string)
+	var certName string
+	if req.Auth != nil { // It's a renewal, use the saved certName
+		certName = req.Auth.Metadata["cert_name"]
+	} else {
+		certName = d.Get("name").(string)
+	}
 
 	// Load the trusted certificates
 	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage, certName)
+
+	// Get the list of full chains matching the connection
+	trustedChains, err := validateConnState(roots, connState)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
@@ -173,12 +204,6 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 				return trustedNonCA, nil, nil
 			}
 		}
-	}
-
-	// Get the list of full chains matching the connection
-	trustedChains, err := validateConnState(roots, connState)
-	if err != nil {
-		return nil, nil, err
 	}
 
 	// If no trusted chain was found, client is not authenticated

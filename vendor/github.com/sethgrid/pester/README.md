@@ -35,7 +35,7 @@ client.Backoff = func(retry int) time.Duration {
 For a complete and working example, see the sample directory.
 `pester` allows you to use a constructor to control:
 - backoff strategy
-- reties
+- retries
 - concurrency
 - keeping a log for debugging
 ```go

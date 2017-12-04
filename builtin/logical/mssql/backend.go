@@ -12,13 +12,23 @@ import (
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	b := Backend()
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
+
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/connection",
+			},
+		},
 
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
@@ -32,9 +42,9 @@ func Backend() *backend {
 			secretCreds(&b),
 		},
 
-		Invalidate: b.invalidate,
-
-		Clean: b.ResetDB,
+		Invalidate:  b.invalidate,
+		Clean:       b.ResetDB,
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b

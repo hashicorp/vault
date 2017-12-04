@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -83,10 +84,13 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	// Create an HA Vault
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
-	inmha := physical.NewInmemHA(logger)
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
 	conf := &vault.CoreConfig{
 		Physical:     inmha,
-		HAPhysical:   inmha,
+		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: addr1,
 		DisableMlock: true,
 	}
@@ -108,7 +112,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	// Create a second HA Vault
 	conf2 := &vault.CoreConfig{
 		Physical:     inmha,
-		HAPhysical:   inmha,
+		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: addr2,
 		DisableMlock: true,
 	}
@@ -153,6 +157,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"creation_ttl":     json.Number("0"),
 			"explicit_max_ttl": json.Number("0"),
 			"expire_time":      nil,
+			"entity_id":        "",
 		},
 		"warnings":  nilWarnings,
 		"wrap_info": nil,
@@ -202,6 +207,7 @@ func TestLogical_CreateToken(t *testing.T) {
 			"metadata":       nil,
 			"lease_duration": json.Number("0"),
 			"renewable":      false,
+			"entity_id":      "",
 		},
 		"warnings": nilWarnings,
 	}

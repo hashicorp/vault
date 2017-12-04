@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -136,8 +136,14 @@ func Test(tt TestT, c TestCase) {
 	// Create an in-memory Vault core
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
+	phys, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		tt.Fatal(err)
+		return
+	}
+
 	core, err := vault.NewCore(&vault.CoreConfig{
-		Physical: physical.NewInmem(logger),
+		Physical: phys,
 		LogicalBackends: map[string]logical.Factory{
 			"test": func(conf *logical.BackendConfig) (logical.Backend, error) {
 				if c.Backend != nil {

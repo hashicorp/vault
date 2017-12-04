@@ -184,7 +184,7 @@ func (t *tokenRing) String() string {
 		buf.WriteString("]")
 		buf.WriteString(t.tokens[i].String())
 		buf.WriteString(":")
-		buf.WriteString(t.hosts[i].Peer().String())
+		buf.WriteString(t.hosts[i].ConnectAddress().String())
 	}
 	buf.WriteString("\n}")
 	return string(buf.Bytes())

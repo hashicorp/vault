@@ -14,7 +14,7 @@ func TestPassthroughBackend_RootPaths(t *testing.T) {
 	b := testPassthroughBackend()
 	test := func(b logical.Backend) {
 		root := b.SpecialPaths()
-		if root != nil {
+		if len(root.Root) != 0 {
 			t.Fatalf("unexpected: %v", root)
 		}
 	}
@@ -197,10 +197,10 @@ func TestPassthroughBackend_List(t *testing.T) {
 
 func TestPassthroughBackend_Revoke(t *testing.T) {
 	test := func(b logical.Backend) {
-		req := logical.TestRequest(t, logical.RevokeOperation, "generic")
+		req := logical.TestRequest(t, logical.RevokeOperation, "kv")
 		req.Secret = &logical.Secret{
 			InternalData: map[string]interface{}{
-				"secret_type": "generic",
+				"secret_type": "kv",
 			},
 		}
 

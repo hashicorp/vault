@@ -1,13 +1,16 @@
 package awsauth
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/patrickmn/go-cache"
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -15,7 +18,10 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b.Setup(conf)
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 type backend struct {
@@ -54,16 +60,33 @@ type backend struct {
 	// When the credentials are modified or deleted, all the cached client objects
 	// will be flushed. The empty STS role signifies the master account
 	IAMClientsMap map[string]map[string]*iam.IAM
+
+	// Map of AWS unique IDs to the full ARN corresponding to that unique ID
+	// This avoids the overhead of an AWS API hit for every login request
+	// using the IAM auth method when bound_iam_principal_arn contains a wildcard
+	iamUserIdToArnCache *cache.Cache
+
+	// AWS Account ID of the "default" AWS credentials
+	// This cache avoids the need to call GetCallerIdentity repeatedly to learn it
+	// We can't store this because, in certain pathological cases, it could change
+	// out from under us, such as a standby and active Vault server in different AWS
+	// accounts using their IAM instance profile to get their credentials.
+	defaultAWSAccountID string
+
+	resolveArnToUniqueIDFunc func(logical.Storage, string) (string, error)
 }
 
 func Backend(conf *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
-		tidyCooldownPeriod: time.Hour,
-		EC2ClientsMap:      make(map[string]map[string]*ec2.EC2),
-		IAMClientsMap:      make(map[string]map[string]*iam.IAM),
+		tidyCooldownPeriod:  time.Hour,
+		EC2ClientsMap:       make(map[string]map[string]*ec2.EC2),
+		IAMClientsMap:       make(map[string]map[string]*iam.IAM),
+		iamUserIdToArnCache: cache.New(7*24*time.Hour, 24*time.Hour),
 	}
+
+	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
 
 	b.Backend = &framework.Backend{
 		PeriodicFunc: b.periodicFunc,
@@ -75,6 +98,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			},
 			LocalStorage: []string{
 				"whitelist/identity/",
+			},
+			SealWrapStorage: []string{
+				"config/client",
 			},
 		},
 		Paths: []*framework.Path{
@@ -97,8 +123,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathIdentityWhitelist(b),
 			pathTidyIdentityWhitelist(b),
 		},
-
-		Invalidate: b.invalidate,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeCredential,
 	}
 
 	return b, nil
@@ -171,7 +197,84 @@ func (b *backend) invalidate(key string) {
 		defer b.configMutex.Unlock()
 		b.flushCachedEC2Clients()
 		b.flushCachedIAMClients()
+		b.defaultAWSAccountID = ""
 	}
+}
+
+// Putting this here so we can inject a fake resolver into the backend for unit testing
+// purposes
+func (b *backend) resolveArnToRealUniqueId(s logical.Storage, arn string) (string, error) {
+	entity, err := parseIamArn(arn)
+	if err != nil {
+		return "", err
+	}
+	// This odd-looking code is here because IAM is an inherently global service. IAM and STS ARNs
+	// don't have regions in them, and there is only a single global endpoint for IAM; see
+	// http://docs.aws.amazon.com/general/latest/gr/rande.html#iam_region
+	// However, the ARNs do have a partition in them, because the GovCloud and China partitions DO
+	// have their own separate endpoints, and the partition is encoded in the ARN. If Amazon's Go SDK
+	// would allow us to pass a partition back to the IAM client, it would be much simpler. But it
+	// doesn't appear that's possible, so in order to properly support GovCloud and China, we do a
+	// circular dance of extracting the partition from the ARN, finding any arbitrary region in the
+	// partition, and passing that region back back to the SDK, so that the SDK can figure out the
+	// proper partition from the arbitrary region we passed in to look up the endpoint.
+	// Sigh
+	region := getAnyRegionForAwsPartition(entity.Partition)
+	if region == nil {
+		return "", fmt.Errorf("Unable to resolve partition %q to a region", entity.Partition)
+	}
+	iamClient, err := b.clientIAM(s, region.ID(), entity.AccountNumber)
+	if err != nil {
+		return "", err
+	}
+
+	switch entity.Type {
+	case "user":
+		userInfo, err := iamClient.GetUser(&iam.GetUserInput{UserName: &entity.FriendlyName})
+		if err != nil {
+			return "", err
+		}
+		if userInfo == nil {
+			return "", fmt.Errorf("got nil result from GetUser")
+		}
+		return *userInfo.User.UserId, nil
+	case "role":
+		roleInfo, err := iamClient.GetRole(&iam.GetRoleInput{RoleName: &entity.FriendlyName})
+		if err != nil {
+			return "", err
+		}
+		if roleInfo == nil {
+			return "", fmt.Errorf("got nil result from GetRole")
+		}
+		return *roleInfo.Role.RoleId, nil
+	case "instance-profile":
+		profileInfo, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
+		if err != nil {
+			return "", err
+		}
+		if profileInfo == nil {
+			return "", fmt.Errorf("got nil result from GetInstanceProfile")
+		}
+		return *profileInfo.InstanceProfile.InstanceProfileId, nil
+	default:
+		return "", fmt.Errorf("unrecognized error type %#v", entity.Type)
+	}
+}
+
+// Adapted from https://docs.aws.amazon.com/sdk-for-go/api/aws/endpoints/
+// the "Enumerating Regions and Endpoint Metadata" section
+func getAnyRegionForAwsPartition(partitionId string) *endpoints.Region {
+	resolver := endpoints.DefaultResolver()
+	partitions := resolver.(endpoints.EnumPartitions).Partitions()
+
+	for _, p := range partitions {
+		if p.ID() == partitionId {
+			for _, r := range p.Regions() {
+				return &r
+			}
+		}
+	}
+	return nil
 }
 
 const backendHelp = `

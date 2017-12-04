@@ -99,16 +99,18 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 		Type: credentialTableType,
 		Entries: []*MountEntry{
 			&MountEntry{
-				Table: credentialTableType,
-				Path:  "noop/",
-				Type:  "noop",
-				UUID:  "abcd",
+				Table:    credentialTableType,
+				Path:     "noop/",
+				Type:     "noop",
+				UUID:     "abcd",
+				Accessor: "noop-abcd",
 			},
 			&MountEntry{
-				Table: credentialTableType,
-				Path:  "noop2/",
-				Type:  "noop",
-				UUID:  "bcde",
+				Table:    credentialTableType,
+				Path:     "noop2/",
+				Type:     "noop",
+				UUID:     "bcde",
+				Accessor: "noop-bcde",
 			},
 		},
 	}
@@ -215,9 +217,9 @@ func TestCore_DisableCredential(t *testing.T) {
 		return &NoopBackend{}, nil
 	}
 
-	existed, err := c.disableCredential("foo")
-	if existed || (err != nil && !strings.HasPrefix(err.Error(), "no matching backend")) {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	err := c.disableCredential("foo")
+	if err != nil && !strings.HasPrefix(err.Error(), "no matching backend") {
+		t.Fatalf("err: %v", err)
 	}
 
 	me := &MountEntry{
@@ -230,9 +232,9 @@ func TestCore_DisableCredential(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	existed, err = c.disableCredential("foo")
-	if !existed || err != nil {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	err = c.disableCredential("foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
 	}
 
 	match := c.router.MatchingMount("auth/foo/bar")
@@ -266,9 +268,9 @@ func TestCore_DisableCredential(t *testing.T) {
 
 func TestCore_DisableCredential_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	existed, err := c.disableCredential("token")
-	if !existed || err.Error() != "token credential backend cannot be disabled" {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	err := c.disableCredential("token")
+	if err.Error() != "token credential backend cannot be disabled" {
+		t.Fatalf("err: %v", err)
 	}
 }
 
@@ -292,7 +294,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingStorageView("auth/foo/")
+	view := c.router.MatchingStorageByAPIPath("auth/foo/")
 
 	// Inject data
 	se := &logical.StorageEntry{
@@ -322,9 +324,9 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 	}
 
 	// Disable should cleanup
-	existed, err := c.disableCredential("foo")
-	if !existed || err != nil {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	err = c.disableCredential("foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
 	}
 
 	// Token should be revoked
@@ -347,7 +349,8 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 }
 
 func TestDefaultAuthTable(t *testing.T) {
-	table := defaultAuthTable()
+	c, _, _ := TestCoreUnsealed(t)
+	table := c.defaultAuthTable()
 	verifyDefaultAuthTable(t, table)
 }
 

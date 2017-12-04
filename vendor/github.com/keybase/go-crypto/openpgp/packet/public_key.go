@@ -64,7 +64,16 @@ type edDSAkey struct {
 	ecdsaKey
 }
 
+func copyFrontFill(dst, src []byte, length int) int {
+	if srcLen := len(src); srcLen < length {
+		return copy(dst[length-srcLen:], src[:])
+	} else {
+		return copy(dst[:], src[:])
+	}
+}
+
 func (e *edDSAkey) Verify(payload []byte, r parsedMPI, s parsedMPI) bool {
+	const halfSigSize = ed25519.SignatureSize / 2
 	var sig [ed25519.SignatureSize]byte
 
 	// NOTE: The first byte is 0x40 - MPI header
@@ -77,8 +86,8 @@ func (e *edDSAkey) Verify(payload []byte, r parsedMPI, s parsedMPI) bool {
 	// ed25519 expects, but because we copy it over to an array of exact size,
 	// we will always pass correctly sized slice to Verify. Slice too short
 	// would make ed25519 panic().
-	n := copy(sig[:], r.bytes)
-	copy(sig[n:], s.bytes)
+	copyFrontFill(sig[:halfSigSize], r.bytes, halfSigSize)
+	copyFrontFill(sig[halfSigSize:], s.bytes, halfSigSize)
 
 	return ed25519.Verify(key, payload, sig[:])
 }
@@ -787,8 +796,8 @@ func keyRevocationHash(pk signingKey, hashFunc crypto.Hash) (h hash.Hash, err er
 
 // VerifyRevocationSignature returns nil iff sig is a valid signature, made by this
 // public key.
-func (pk *PublicKey) VerifyRevocationSignature(sig *Signature) (err error) {
-	h, err := keyRevocationHash(pk, sig.Hash)
+func (pk *PublicKey) VerifyRevocationSignature(revokedKey *PublicKey, sig *Signature) (err error) {
+	h, err := keyRevocationHash(revokedKey, sig.Hash)
 	if err != nil {
 		return err
 	}

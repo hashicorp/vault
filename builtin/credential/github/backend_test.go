@@ -48,9 +48,8 @@ func TestBackend_Config(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testConfigWrite(t, config_data1),
 			testLoginWrite(t, login_data, expectedTTL1.Nanoseconds(), false),
@@ -105,9 +104,8 @@ func TestBackend_basic(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, false),
 			testAccMap(t, "default", "fakepol"),
@@ -131,15 +129,15 @@ func TestBackend_basic(t *testing.T) {
 
 func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("GITHUB_TOKEN"); v == "" {
-		t.Fatal("GITHUB_TOKEN must be set for acceptance tests")
+		t.Skip("GITHUB_TOKEN must be set for acceptance tests")
 	}
 
 	if v := os.Getenv("GITHUB_ORG"); v == "" {
-		t.Fatal("GITHUB_ORG must be set for acceptance tests")
+		t.Skip("GITHUB_ORG must be set for acceptance tests")
 	}
 
 	if v := os.Getenv("GITHUB_BASEURL"); v == "" {
-		t.Fatal("GITHUB_BASEURL must be set for acceptance tests (use 'https://api.github.com' if you don't know what you're doing)")
+		t.Skip("GITHUB_BASEURL must be set for acceptance tests (use 'https://api.github.com' if you don't know what you're doing)")
 	}
 }
 

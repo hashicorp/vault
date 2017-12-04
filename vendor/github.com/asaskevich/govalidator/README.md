@@ -1,7 +1,7 @@
 govalidator
 ===========
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/asaskevich/govalidator?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![GoDoc](https://godoc.org/github.com/asaskevich/govalidator?status.png)](https://godoc.org/github.com/asaskevich/govalidator) [![Coverage Status](https://img.shields.io/coveralls/asaskevich/govalidator.svg)](https://coveralls.io/r/asaskevich/govalidator?branch=master) [![wercker status](https://app.wercker.com/status/1ec990b09ea86c910d5f08b0e02c6043/s "wercker status")](https://app.wercker.com/project/bykey/1ec990b09ea86c910d5f08b0e02c6043)
-[![Build Status](https://travis-ci.org/asaskevich/govalidator.svg?branch=master)](https://travis-ci.org/asaskevich/govalidator)
+[![Build Status](https://travis-ci.org/asaskevich/govalidator.svg?branch=master)](https://travis-ci.org/asaskevich/govalidator) [![Go Report Card](https://goreportcard.com/badge/github.com/asaskevich/govalidator)](https://goreportcard.com/report/github.com/asaskevich/govalidator) [![GoSearch](http://go-search.org/badge?id=github.com%2Fasaskevich%2Fgovalidator)](http://go-search.org/view?id=github.com%2Fasaskevich%2Fgovalidator)
 
 A package of validators and sanitizers for strings, structs and collections. Based on [validator.js](https://github.com/chriso/validator.js).
 
@@ -96,28 +96,27 @@ govalidator.CustomTypeTagMap.Set("customByteArrayValidator", CustomTypeValidator
 func Abs(value float64) float64
 func BlackList(str, chars string) string
 func ByteLength(str string, params ...string) bool
-func StringLength(str string, params ...string) bool
-func StringMatches(s string, params ...string) bool
 func CamelCaseToUnderscore(str string) string
 func Contains(str, substring string) bool
 func Count(array []interface{}, iterator ConditionIterator) int
 func Each(array []interface{}, iterator Iterator)
 func ErrorByField(e error, field string) string
+func ErrorsByField(e error) map[string]string
 func Filter(array []interface{}, iterator ConditionIterator) []interface{}
 func Find(array []interface{}, iterator ConditionIterator) interface{}
 func GetLine(s string, index int) (string, error)
 func GetLines(s string) []string
-func IsHost(s string) bool
 func InRange(value, left, right float64) bool
 func IsASCII(str string) bool
 func IsAlpha(str string) bool
 func IsAlphanumeric(str string) bool
 func IsBase64(str string) bool
 func IsByteLength(str string, min, max int) bool
+func IsCIDR(str string) bool
 func IsCreditCard(str string) bool
+func IsDNSName(str string) bool
 func IsDataURI(str string) bool
 func IsDialString(str string) bool
-func IsDNSName(str string) bool
 func IsDivisibleBy(str, num string) bool
 func IsEmail(str string) bool
 func IsFilePath(str string) (bool, int)
@@ -126,6 +125,7 @@ func IsFullWidth(str string) bool
 func IsHalfWidth(str string) bool
 func IsHexadecimal(str string) bool
 func IsHexcolor(str string) bool
+func IsHost(str string) bool
 func IsIP(str string) bool
 func IsIPv4(str string) bool
 func IsIPv6(str string) bool
@@ -134,8 +134,11 @@ func IsISBN10(str string) bool
 func IsISBN13(str string) bool
 func IsISO3166Alpha2(str string) bool
 func IsISO3166Alpha3(str string) bool
-func IsInt(str string) bool
+func IsISO693Alpha2(str string) bool
+func IsISO693Alpha3b(str string) bool
+func IsISO4217(str string) bool
 func IsIn(str string, params ...string) bool
+func IsInt(str string) bool
 func IsJSON(str string) bool
 func IsLatitude(str string) bool
 func IsLongitude(str string) bool
@@ -152,11 +155,14 @@ func IsNumeric(str string) bool
 func IsPort(str string) bool
 func IsPositive(value float64) bool
 func IsPrintableASCII(str string) bool
+func IsRFC3339(str string) bool
+func IsRFC3339WithoutZone(str string) bool
 func IsRGBcolor(str string) bool
 func IsRequestURI(rawurl string) bool
 func IsRequestURL(rawurl string) bool
 func IsSSN(str string) bool
 func IsSemver(str string) bool
+func IsTime(str string, format string) bool
 func IsURL(str string) bool
 func IsUTFDigit(str string) bool
 func IsUTFLetter(str string) bool
@@ -174,14 +180,19 @@ func Map(array []interface{}, iterator ResultIterator) []interface{}
 func Matches(str, pattern string) bool
 func NormalizeEmail(str string) (string, error)
 func PadBoth(str string, padStr string, padLen int) string
-func PadLeft(str string, padStr string, padLen int)  string
+func PadLeft(str string, padStr string, padLen int) string
 func PadRight(str string, padStr string, padLen int) string
+func Range(str string, params ...string) bool
 func RemoveTags(s string) string
 func ReplacePattern(str, pattern, replace string) string
 func Reverse(s string) string
 func RightTrim(str, chars string) string
+func RuneLength(str string, params ...string) bool
 func SafeFileName(str string) string
+func SetFieldsRequiredByDefault(value bool)
 func Sign(value float64) float64
+func StringLength(str string, params ...string) bool
+func StringMatches(s string, params ...string) bool
 func StripLow(str string, keepNewLines bool) string
 func ToBoolean(str string) (bool, error)
 func ToFloat(str string) (float64, error)
@@ -194,10 +205,12 @@ func UnderscoreToCamelCase(s string) string
 func ValidateStruct(s interface{}) (bool, error)
 func WhiteList(str, chars string) string
 type ConditionIterator
+type CustomTypeValidator
 type Error
 func (e Error) Error() string
 type Errors
 func (es Errors) Error() string
+func (es Errors) Errors() []error
 type ISO3166Entry
 type Iterator
 type ParamValidator
@@ -257,62 +270,64 @@ For completely custom validators (interface-based), see below.
 
 Here is a list of available validators for struct fields (validator - used function):
 ```go
-"email":          IsEmail,
-"url":            IsURL,
-"dialstring":     IsDialString,
-"requrl":         IsRequestURL,
-"requri":         IsRequestURI,
-"alpha":          IsAlpha,
-"utfletter":      IsUTFLetter,
-"alphanum":       IsAlphanumeric,
-"utfletternum":   IsUTFLetterNumeric,
-"numeric":        IsNumeric,
-"utfnumeric":     IsUTFNumeric,
-"utfdigit":       IsUTFDigit,
-"hexadecimal":    IsHexadecimal,
-"hexcolor":       IsHexcolor,
-"rgbcolor":       IsRGBcolor,
-"lowercase":      IsLowerCase,
-"uppercase":      IsUpperCase,
-"int":            IsInt,
-"float":          IsFloat,
-"null":           IsNull,
-"uuid":           IsUUID,
-"uuidv3":         IsUUIDv3,
-"uuidv4":         IsUUIDv4,
-"uuidv5":         IsUUIDv5,
-"creditcard":     IsCreditCard,
-"isbn10":         IsISBN10,
-"isbn13":         IsISBN13,
-"json":           IsJSON,
-"multibyte":      IsMultibyte,
-"ascii":          IsASCII,
-"printableascii": IsPrintableASCII,
-"fullwidth":      IsFullWidth,
-"halfwidth":      IsHalfWidth,
-"variablewidth":  IsVariableWidth,
-"base64":         IsBase64,
-"datauri":        IsDataURI,
-"ip":             IsIP,
-"port":           IsPort,
-"ipv4":           IsIPv4,
-"ipv6":           IsIPv6,
-"dns":            IsDNSName,
-"host":           IsHost,
-"mac":            IsMAC,
-"latitude":       IsLatitude,
-"longitude":      IsLongitude,
-"ssn":            IsSSN,
-"semver":         IsSemver,
-"rfc3339":        IsRFC3339,
-"ISO3166Alpha2":  IsISO3166Alpha2,
-"ISO3166Alpha3":  IsISO3166Alpha3,
+"email":              IsEmail,
+"url":                IsURL,
+"dialstring":         IsDialString,
+"requrl":             IsRequestURL,
+"requri":             IsRequestURI,
+"alpha":              IsAlpha,
+"utfletter":          IsUTFLetter,
+"alphanum":           IsAlphanumeric,
+"utfletternum":       IsUTFLetterNumeric,
+"numeric":            IsNumeric,
+"utfnumeric":         IsUTFNumeric,
+"utfdigit":           IsUTFDigit,
+"hexadecimal":        IsHexadecimal,
+"hexcolor":           IsHexcolor,
+"rgbcolor":           IsRGBcolor,
+"lowercase":          IsLowerCase,
+"uppercase":          IsUpperCase,
+"int":                IsInt,
+"float":              IsFloat,
+"null":               IsNull,
+"uuid":               IsUUID,
+"uuidv3":             IsUUIDv3,
+"uuidv4":             IsUUIDv4,
+"uuidv5":             IsUUIDv5,
+"creditcard":         IsCreditCard,
+"isbn10":             IsISBN10,
+"isbn13":             IsISBN13,
+"json":               IsJSON,
+"multibyte":          IsMultibyte,
+"ascii":              IsASCII,
+"printableascii":     IsPrintableASCII,
+"fullwidth":          IsFullWidth,
+"halfwidth":          IsHalfWidth,
+"variablewidth":      IsVariableWidth,
+"base64":             IsBase64,
+"datauri":            IsDataURI,
+"ip":                 IsIP,
+"port":               IsPort,
+"ipv4":               IsIPv4,
+"ipv6":               IsIPv6,
+"dns":                IsDNSName,
+"host":               IsHost,
+"mac":                IsMAC,
+"latitude":           IsLatitude,
+"longitude":          IsLongitude,
+"ssn":                IsSSN,
+"semver":             IsSemver,
+"rfc3339":            IsRFC3339,
+"rfc3339WithoutZone": IsRFC3339WithoutZone,
+"ISO3166Alpha2":      IsISO3166Alpha2,
+"ISO3166Alpha3":      IsISO3166Alpha3,
 ```
 Validators with parameters
 
 ```go
+"range(min|max)": Range,
 "length(min|max)": ByteLength,
-"runelength(min|max)": RuneLegth,
+"runelength(min|max)": RuneLength,
 "matches(pattern)": StringMatches,
 "in(string1|string2|...|stringN)": IsIn,
 ```
@@ -396,7 +411,7 @@ Documentation is available here: [godoc.org](https://godoc.org/github.com/asaske
 Full information about code coverage is also available here: [govalidator on gocover.io](http://gocover.io/github.com/asaskevich/govalidator).
 
 #### Support
-If you do have a contribution for the package feel free to put up a Pull Request or open Issue.
+If you do have a contribution for the package, feel free to create a Pull Request or an Issue.
 
 #### Special thanks to [contributors](https://github.com/asaskevich/govalidator/graphs/contributors)
 * [Daniel Lohse](https://github.com/annismckenzie)

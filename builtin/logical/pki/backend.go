@@ -11,7 +11,11 @@ import (
 
 // Factory creates a new backend implementing the logical.Backend interface
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	b := Backend()
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // Backend returns a new Backend framework struct
@@ -35,15 +39,26 @@ func Backend() *backend {
 				"crl",
 				"certs/",
 			},
+
+			Root: []string{
+				"root",
+				"root/sign-self-issued",
+			},
+
+			SealWrapStorage: []string{
+				"config/ca_bundle",
+			},
 		},
 
 		Paths: []*framework.Path{
 			pathListRoles(&b),
 			pathRoles(&b),
 			pathGenerateRoot(&b),
+			pathSignIntermediate(&b),
+			pathSignSelfIssued(&b),
+			pathDeleteRoot(&b),
 			pathGenerateIntermediate(&b),
 			pathSetSignedIntermediate(&b),
-			pathSignIntermediate(&b),
 			pathConfigCA(&b),
 			pathConfigCRL(&b),
 			pathConfigURLs(&b),
@@ -64,6 +79,8 @@ func Backend() *backend {
 		Secrets: []*framework.Secret{
 			secretCerts(&b),
 		},
+
+		BackendType: logical.TypeLogical,
 	}
 
 	b.crlLifetime = time.Hour * 72

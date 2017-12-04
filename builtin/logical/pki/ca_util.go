@@ -1,6 +1,8 @@
 package pki
 
 import (
+	"time"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -15,19 +17,19 @@ func (b *backend) getGenerationParams(
 	case "internal":
 	default:
 		errorResp = logical.ErrorResponse(
-			`The "exported" path parameter must be "internal" or "exported"`)
+			`the "exported" path parameter must be "internal" or "exported"`)
 		return
 	}
 
 	format = getFormat(data)
 	if format == "" {
 		errorResp = logical.ErrorResponse(
-			`The "format" path parameter must be "pem", "der", or "pem_bundle"`)
+			`the "format" path parameter must be "pem", "der", "der_pkcs", or "pem_bundle"`)
 		return
 	}
 
 	role = &roleEntry{
-		TTL:              data.Get("ttl").(string),
+		TTL:              (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		KeyType:          data.Get("key_type").(string),
 		KeyBits:          data.Get("key_bits").(int),
 		AllowLocalhost:   true,

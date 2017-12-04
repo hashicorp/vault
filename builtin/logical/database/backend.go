@@ -16,7 +16,11 @@ import (
 const databaseConfigPath = "database/config/"
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend(conf).Setup(conf)
+	b := Backend(conf)
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend(conf *logical.BackendConfig) *databaseBackend {
@@ -24,7 +28,14 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/*",
+			},
+		},
+
 		Paths: []*framework.Path{
+			pathListPluginConnection(&b),
 			pathConfigurePluginConnection(&b),
 			pathListRoles(&b),
 			pathRoles(&b),
@@ -35,10 +46,9 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
-
-		Clean: b.closeAllDBs,
-
-		Invalidate: b.invalidate,
+		Clean:       b.closeAllDBs,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	b.logger = conf.Logger

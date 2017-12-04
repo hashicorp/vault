@@ -63,7 +63,7 @@ on every path, use `vault path-help` after mounting the backend.
 
 ## Quick Start
 
-The first step to using the transit backend is to mount it. Unlike the `generic`
+The first step to using the transit backend is to mount it. Unlike the `kv`
 backend, the `transit` backend is not mounted by default.
 
 ```

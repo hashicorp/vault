@@ -46,7 +46,7 @@ func CubbyholeBackendFactory(conf *logical.BackendConfig) (logical.Backend, erro
 
 // CubbyholeBackend is used for storing secrets directly into the physical
 // backend. The secrets are encrypted in the durable storage.
-// This differs from generic in that every token has its own private
+// This differs from kv in that every token has its own private
 // storage view. The view is removed when the token expires.
 type CubbyholeBackend struct {
 	*framework.Backend
@@ -129,6 +129,9 @@ func (b *CubbyholeBackend) handleWrite(
 		Key:   req.ClientToken + "/" + req.Path,
 		Value: buf,
 	}
+	if req.WrapInfo != nil && req.WrapInfo.SealWrap {
+		entry.SealWrap = true
+	}
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, fmt.Errorf("failed to write: %v", err)
 	}
@@ -185,7 +188,7 @@ The secrets are encrypted/decrypted by Vault: they are never stored
 unencrypted in the backend and the backend never has an opportunity to
 see the unencrypted value.
 
-This backend differs from the 'generic' backend in that it is namespaced
+This backend differs from the 'kv' backend in that it is namespaced
 per-token. Tokens can only read and write their own values, with no
 sharing possible (per-token cubbyholes). This can be useful for implementing
 certain authentication workflows, as well as "scratch" areas for individual

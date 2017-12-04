@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Databases"
+page_title: "Database Secret Backend"
 sidebar_current: "docs-secrets-databases"
 description: |-
   Top page for database secret backend information
@@ -42,7 +42,7 @@ Next, we must configure this backend to connect to a database. In this example
 we will connect to a MySQL database, but the configuration details needed for
 other plugin types can be found in their docs pages. This backend can configure
 multiple database connections, therefore a name for the connection must be
-provide; we'll call this one simply "mysql".
+provided; we'll call this one simply "mysql".
 
 ```
 $ vault write database/config/mysql \
@@ -90,8 +90,13 @@ password       	8cab931c-d62e-a73d-60d3-5ee85139cd66
 username       	v-root-e2978cd0-
 ```
 
+## Custom Plugins
+
+This backend allows custom database types to be run through the exposed plugin
+interface. Please see the [Custom database
+plugin](/docs/secrets/databases/custom.html) for more information.
+
 ## API
 
 The Database secret backend has a full HTTP API. Please see the [Database secret
 backend API](/api/secret/databases/index.html) for more details.
-

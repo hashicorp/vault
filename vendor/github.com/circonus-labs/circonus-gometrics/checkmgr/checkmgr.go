@@ -8,19 +8,21 @@ package checkmgr
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/circonus-labs/circonus-gometrics/api"
+	"github.com/pkg/errors"
+	"github.com/tv42/httpunix"
 )
 
 // Check management offers:
@@ -85,6 +87,10 @@ type CheckConfig struct {
 	// overrides the behavior and will re-activate the metric when it is
 	// encountered. "(true|false)", default "false"
 	ForceMetricActivation string
+	// Type of check to use (default: httptrap)
+	Type string
+	// Custom check config fields (default: none)
+	CustomConfigFields map[string]string
 }
 
 // BrokerConfig options for broker
@@ -97,6 +103,8 @@ type BrokerConfig struct {
 	// for a broker to be considered viable it must respond to a
 	// connection attempt within this amount of time e.g. 200ms, 2s, 1m
 	MaxResponseTime string
+	// TLS configuration to use when communicating wtih broker
+	TLSConfig *tls.Config
 }
 
 // Config options
@@ -151,6 +159,7 @@ type CheckManager struct {
 	checkSearchTag        api.TagType
 	checkSecret           CheckSecretType
 	checkTags             api.TagType
+	customConfigFields    map[string]string
 	checkSubmissionURL    api.URLType
 	checkDisplayName      CheckDisplayNameType
 	forceMetricActivation bool
@@ -164,6 +173,7 @@ type CheckManager struct {
 	brokerID              api.IDType
 	brokerSelectTag       api.TagType
 	brokerMaxResponseTime time.Duration
+	brokerTLS             *tls.Config
 
 	// state
 	checkBundle        *api.CheckBundle
@@ -176,12 +186,15 @@ type CheckManager struct {
 	trapMaxURLAge      time.Duration
 	trapmu             sync.Mutex
 	certPool           *x509.CertPool
+	sockRx             *regexp.Regexp
 }
 
 // Trap config
 type Trap struct {
-	URL *url.URL
-	TLS *tls.Config
+	URL           *url.URL
+	TLS           *tls.Config
+	IsSocket      bool
+	SockTransport *httpunix.Transport
 }
 
 // NewCheckManager returns a new check manager
@@ -208,6 +221,12 @@ func New(cfg *Config) (*CheckManager, error) {
 		cm.Log = log.New(ioutil.Discard, "", log.LstdFlags)
 	}
 
+	rx, err := regexp.Compile(`^http\+unix://(?P<sockfile>.+)/write/(?P<id>.+)$`)
+	if err != nil {
+		return nil, errors.Wrap(err, "compiling socket regex")
+	}
+	cm.sockRx = rx
+
 	if cfg.Check.SubmissionURL != "" {
 		cm.checkSubmissionURL = api.URLType(cfg.Check.SubmissionURL)
 	}
@@ -227,13 +246,17 @@ func New(cfg *Config) (*CheckManager, error) {
 		cfg.API.Log = cm.Log
 		apih, err := api.New(&cfg.API)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "initializing api client")
 		}
 		cm.apih = apih
 	}
 
 	// initialize check related data
-	cm.checkType = defaultCheckType
+	if cfg.Check.Type != "" {
+		cm.checkType = CheckTypeType(cfg.Check.Type)
+	} else {
+		cm.checkType = defaultCheckType
+	}
 
 	idSetting := "0"
 	if cfg.Check.ID != "" {
@@ -241,7 +264,7 @@ func New(cfg *Config) (*CheckManager, error) {
 	}
 	id, err := strconv.Atoi(idSetting)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "converting check id")
 	}
 	cm.checkID = api.IDType(id)
 
@@ -256,7 +279,7 @@ func New(cfg *Config) (*CheckManager, error) {
 	}
 	fm, err := strconv.ParseBool(fma)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "parsing force metric activation")
 	}
 	cm.forceMetricActivation = fm
 
@@ -285,13 +308,20 @@ func New(cfg *Config) (*CheckManager, error) {
 		cm.checkTags = strings.Split(strings.Replace(cfg.Check.Tags, " ", "", -1), ",")
 	}
 
+	cm.customConfigFields = make(map[string]string)
+	if len(cfg.Check.CustomConfigFields) > 0 {
+		for fld, val := range cfg.Check.CustomConfigFields {
+			cm.customConfigFields[fld] = val
+		}
+	}
+
 	dur := cfg.Check.MaxURLAge
 	if dur == "" {
 		dur = defaultTrapMaxURLAge
 	}
 	maxDur, err := time.ParseDuration(dur)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "parsing max url age")
 	}
 	cm.trapMaxURLAge = maxDur
 
@@ -302,7 +332,7 @@ func New(cfg *Config) (*CheckManager, error) {
 	}
 	id, err = strconv.Atoi(idSetting)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "parsing broker id")
 	}
 	cm.brokerID = api.IDType(id)
 
@@ -316,9 +346,12 @@ func New(cfg *Config) (*CheckManager, error) {
 	}
 	maxDur, err = time.ParseDuration(dur)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "parsing broker max response time")
 	}
 	cm.brokerMaxResponseTime = maxDur
+
+	// add user specified tls config for broker if provided
+	cm.brokerTLS = cfg.Broker.TLSConfig
 
 	// metrics
 	cm.availableMetrics = make(map[string]bool)
@@ -368,25 +401,64 @@ func (cm *CheckManager) IsReady() bool {
 // GetSubmissionURL returns submission url for circonus
 func (cm *CheckManager) GetSubmissionURL() (*Trap, error) {
 	if cm.trapURL == "" {
-		return nil, fmt.Errorf("[ERROR] no submission url currently available")
-		// if err := cm.initializeTrapURL(); err != nil {
-		// 	return nil, err
-		// }
+		return nil, errors.Errorf("get submission url - submission url unavailable")
 	}
 
 	trap := &Trap{}
 
 	u, err := url.Parse(string(cm.trapURL))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get submission url")
 	}
 
 	trap.URL = u
 
+	if u.Scheme == "http+unix" {
+		service := "circonus-agent"
+		sockPath := ""
+		metricID := ""
+
+		subNames := cm.sockRx.SubexpNames()
+		matches := cm.sockRx.FindAllStringSubmatch(string(cm.trapURL), -1)
+		for _, match := range matches {
+			for idx, val := range match {
+				switch subNames[idx] {
+				case "sockfile":
+					sockPath = val
+				case "id":
+					metricID = val
+				}
+			}
+		}
+
+		if sockPath == "" || metricID == "" {
+			return nil, errors.Errorf("get submission url - invalid socket url (%s)", cm.trapURL)
+		}
+
+		u, err := url.Parse(fmt.Sprintf("http+unix://%s/write/%s", service, metricID))
+		if err != nil {
+			return nil, errors.Wrap(err, "get submission url")
+		}
+		trap.URL = u
+		trap.SockTransport = &httpunix.Transport{
+			DialTimeout:           100 * time.Millisecond,
+			RequestTimeout:        1 * time.Second,
+			ResponseHeaderTimeout: 1 * time.Second,
+		}
+		trap.SockTransport.RegisterLocation(service, sockPath)
+		trap.IsSocket = true
+	}
+
 	if u.Scheme == "https" {
+		// preference user-supplied TLS configuration
+		if cm.brokerTLS != nil {
+			trap.TLS = cm.brokerTLS
+			return trap, nil
+		}
+
 		if cm.certPool == nil {
 			if err := cm.loadCACert(); err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "get submission url")
 			}
 		}
 		t := &tls.Config{
@@ -408,18 +480,19 @@ func (cm *CheckManager) ResetTrap() error {
 	}
 
 	cm.trapURL = ""
-	cm.certPool = nil
-	err := cm.initializeTrapURL()
-	return err
+	cm.certPool = nil // force re-fetching CA cert (if custom TLS config not supplied)
+	return cm.initializeTrapURL()
 }
 
 // RefreshTrap check when the last time the URL was reset, reset if needed
-func (cm *CheckManager) RefreshTrap() {
+func (cm *CheckManager) RefreshTrap() error {
 	if cm.trapURL == "" {
-		return
+		return nil
 	}
 
 	if time.Since(cm.trapLastUpdate) >= cm.trapMaxURLAge {
-		cm.ResetTrap()
+		return cm.ResetTrap()
 	}
+
+	return nil
 }

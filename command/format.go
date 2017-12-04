@@ -14,8 +14,11 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 	"github.com/ryanuber/columnize"
 )
+
+var predictFormat complete.Predictor = complete.PredictSet("json", "yaml")
 
 func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
 	return outputWithFormat(ui, format, secret, secret)
@@ -179,8 +182,10 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 	if s.WrapInfo != nil {
 		onceHeader.Do(headerFunc)
 		input = append(input, fmt.Sprintf("wrapping_token: %s %s", config.Delim, s.WrapInfo.Token))
+		input = append(input, fmt.Sprintf("wrapping_accessor: %s %s", config.Delim, s.WrapInfo.Accessor))
 		input = append(input, fmt.Sprintf("wrapping_token_ttl: %s %s", config.Delim, (time.Second*time.Duration(s.WrapInfo.TTL)).String()))
 		input = append(input, fmt.Sprintf("wrapping_token_creation_time: %s %s", config.Delim, s.WrapInfo.CreationTime.String()))
+		input = append(input, fmt.Sprintf("wrapping_token_creation_path: %s %s", config.Delim, s.WrapInfo.CreationPath))
 		if s.WrapInfo.WrappedAccessor != "" {
 			input = append(input, fmt.Sprintf("wrapped_accessor: %s %s", config.Delim, s.WrapInfo.WrappedAccessor))
 		}

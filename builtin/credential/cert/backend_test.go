@@ -1,14 +1,23 @@
 package cert
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"math/big"
+	"net"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -36,10 +45,10 @@ const (
 // But the client, presents the CA cert of the server to trust the server.
 // The client can present a cert and key which is completely independent of server's CA.
 // The connection state returned will contain the certificate presented by the client.
-func connectionState(t *testing.T, serverCAPath, serverCertPath, serverKeyPath, clientCertPath, clientKeyPath string) tls.ConnectionState {
+func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath, clientKeyPath string) (tls.ConnectionState, error) {
 	serverKeyPair, err := tls.LoadX509KeyPair(serverCertPath, serverKeyPath)
 	if err != nil {
-		t.Fatal(err)
+		return tls.ConnectionState{}, err
 	}
 	// Prepare the listener configuration with server's key pair
 	listenConf := &tls.Config{
@@ -49,7 +58,7 @@ func connectionState(t *testing.T, serverCAPath, serverCertPath, serverKeyPath, 
 
 	clientKeyPair, err := tls.LoadX509KeyPair(clientCertPath, clientKeyPath)
 	if err != nil {
-		t.Fatal(err)
+		return tls.ConnectionState{}, err
 	}
 	// Load the CA cert required by the client to authenticate the server.
 	rootConfig := &rootcerts.Config{
@@ -57,7 +66,7 @@ func connectionState(t *testing.T, serverCAPath, serverCertPath, serverKeyPath, 
 	}
 	serverCAs, err := rootcerts.LoadCACerts(rootConfig)
 	if err != nil {
-		t.Fatal(err)
+		return tls.ConnectionState{}, err
 	}
 	// Prepare the dial configuration that the client uses to establish the connection.
 	dialConf := &tls.Config{
@@ -68,37 +77,287 @@ func connectionState(t *testing.T, serverCAPath, serverCertPath, serverKeyPath, 
 	// Start the server.
 	list, err := tls.Listen("tcp", "127.0.0.1:0", listenConf)
 	if err != nil {
-		t.Fatal(err)
+		return tls.ConnectionState{}, err
 	}
 	defer list.Close()
 
+	// Accept connections.
+	serverErrors := make(chan error, 1)
+	connState := make(chan tls.ConnectionState)
+	go func() {
+		defer close(connState)
+		serverConn, err := list.Accept()
+		if err != nil {
+			serverErrors <- err
+			close(serverErrors)
+			return
+		}
+		defer serverConn.Close()
+
+		// Read the ping
+		buf := make([]byte, 4)
+		_, err = serverConn.Read(buf)
+		if (err != nil) && (err != io.EOF) {
+			serverErrors <- err
+			close(serverErrors)
+			return
+		}
+		close(serverErrors)
+		connState <- serverConn.(*tls.Conn).ConnectionState()
+	}()
+
 	// Establish a connection from the client side and write a few bytes.
+	clientErrors := make(chan error, 1)
 	go func() {
 		addr := list.Addr().String()
 		conn, err := tls.Dial("tcp", addr, dialConf)
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			clientErrors <- err
+			close(clientErrors)
+			return
 		}
 		defer conn.Close()
 
 		// Write ping
-		conn.Write([]byte("ping"))
+		_, err = conn.Write([]byte("ping"))
+		if err != nil {
+			clientErrors <- err
+		}
+		close(clientErrors)
 	}()
 
-	// Accept the connection on the server side.
-	serverConn, err := list.Accept()
+	for err = range clientErrors {
+		if err != nil {
+			return tls.ConnectionState{}, fmt.Errorf("error in client goroutine:%v", err)
+		}
+	}
+
+	for err = range serverErrors {
+		if err != nil {
+			return tls.ConnectionState{}, fmt.Errorf("error in server goroutine:%v", err)
+		}
+	}
+	// Grab the current state
+	return <-connState, nil
+}
+
+func TestBackend_NonCAExpiry(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	// Create a self-signed certificate and issue a leaf certificate using the
+	// CA cert
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1234),
+		Subject: pkix.Name{
+			CommonName:         "localhost",
+			Organization:       []string{"hashicorp"},
+			OrganizationalUnit: []string{"vault"},
+		},
+		BasicConstraintsValid: true,
+		NotBefore:             time.Now().Add(-30 * time.Second),
+		NotAfter:              time.Now().Add(50 * time.Second),
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
+	}
+
+	// Set IP SAN
+	parsedIP := net.ParseIP("127.0.0.1")
+	if parsedIP == nil {
+		t.Fatalf("failed to create parsed IP")
+	}
+	template.IPAddresses = []net.IP{parsedIP}
+
+	// Private key for CA cert
+	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer serverConn.Close()
 
-	// Read the ping
-	buf := make([]byte, 4)
-	serverConn.Read(buf)
+	// Marshalling to be able to create PEM file
+	caPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(caPrivateKey)
 
-	// Grab the current state
-	connState := serverConn.(*tls.Conn).ConnectionState()
-	return connState
+	caPublicKey := &caPrivateKey.PublicKey
+
+	template.IsCA = true
+
+	caCertBytes, err := x509.CreateCertificate(rand.Reader, template, template, caPublicKey, caPrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	caCert, err := x509.ParseCertificate(caCertBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parsedCaBundle := &certutil.ParsedCertBundle{
+		Certificate:      caCert,
+		CertificateBytes: caCertBytes,
+		PrivateKeyBytes:  caPrivateKeyBytes,
+		PrivateKeyType:   certutil.RSAPrivateKey,
+	}
+
+	caCertBundle, err := parsedCaBundle.ToCertBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	caCertFile, err := ioutil.TempFile("", "caCert")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(caCertFile.Name())
+
+	if _, err := caCertFile.Write([]byte(caCertBundle.Certificate)); err != nil {
+		t.Fatal(err)
+	}
+	if err := caCertFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	caKeyFile, err := ioutil.TempFile("", "caKey")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(caKeyFile.Name())
+
+	if _, err := caKeyFile.Write([]byte(caCertBundle.PrivateKey)); err != nil {
+		t.Fatal(err)
+	}
+	if err := caKeyFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare template for non-CA cert
+
+	template.IsCA = false
+	template.SerialNumber = big.NewInt(5678)
+
+	template.KeyUsage = x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign)
+	issuedPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	issuedPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(issuedPrivateKey)
+
+	issuedPublicKey := &issuedPrivateKey.PublicKey
+
+	// Keep a short certificate lifetime so logins can be tested both when
+	// cert is valid and when it gets expired
+	template.NotBefore = time.Now().Add(-2 * time.Second)
+	template.NotAfter = time.Now().Add(3 * time.Second)
+
+	issuedCertBytes, err := x509.CreateCertificate(rand.Reader, template, caCert, issuedPublicKey, caPrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	issuedCert, err := x509.ParseCertificate(issuedCertBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parsedIssuedBundle := &certutil.ParsedCertBundle{
+		Certificate:      issuedCert,
+		CertificateBytes: issuedCertBytes,
+		PrivateKeyBytes:  issuedPrivateKeyBytes,
+		PrivateKeyType:   certutil.RSAPrivateKey,
+	}
+
+	issuedCertBundle, err := parsedIssuedBundle.ToCertBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	issuedCertFile, err := ioutil.TempFile("", "issuedCert")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(issuedCertFile.Name())
+
+	if _, err := issuedCertFile.Write([]byte(issuedCertBundle.Certificate)); err != nil {
+		t.Fatal(err)
+	}
+	if err := issuedCertFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	issuedKeyFile, err := ioutil.TempFile("", "issuedKey")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(issuedKeyFile.Name())
+
+	if _, err := issuedKeyFile.Write([]byte(issuedCertBundle.PrivateKey)); err != nil {
+		t.Fatal(err)
+	}
+	if err := issuedKeyFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register the Non-CA certificate of the client key pair
+	certData := map[string]interface{}{
+		"certificate":  issuedCertBundle.Certificate,
+		"policies":     "abc",
+		"display_name": "cert1",
+		"ttl":          10000,
+	}
+	certReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "certs/cert1",
+		Storage:   storage,
+		Data:      certData,
+	}
+
+	resp, err = b.HandleRequest(certReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Create connection state using the certificates generated
+	connState, err := connectionState(caCertFile.Name(), caCertFile.Name(), caKeyFile.Name(), issuedCertFile.Name(), issuedKeyFile.Name())
+	if err != nil {
+		t.Fatalf("error testing connection state:%v", err)
+	}
+
+	loginReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "login",
+		Connection: &logical.Connection{
+			ConnState: &connState,
+		},
+	}
+
+	// Login when the certificate is still valid. Login should succeed.
+	resp, err = b.HandleRequest(loginReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Wait until the certificate expires
+	time.Sleep(5 * time.Second)
+
+	// Login attempt after certificate expiry should fail
+	resp, err = b.HandleRequest(loginReq)
+	if err == nil {
+		t.Fatalf("expected error due to expired certificate")
+	}
 }
 
 func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
@@ -137,7 +396,10 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 
 	// Connection state is presenting the client Non-CA cert and its key.
 	// This is exactly what is registered at the backend.
-	connState := connectionState(t, serverCAPath, serverCertPath, serverKeyPath, testCertPath1, testKeyPath1)
+	connState, err := connectionState(serverCAPath, serverCertPath, serverKeyPath, testCertPath1, testKeyPath1)
+	if err != nil {
+		t.Fatalf("error testing connection state:%v", err)
+	}
 	loginReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
@@ -217,7 +479,10 @@ func TestBackend_CRLs(t *testing.T) {
 
 	// Connection state is presenting the client CA cert and its key.
 	// This is exactly what is registered at the backend.
-	connState := connectionState(t, serverCAPath, serverCertPath, serverKeyPath, testRootCACertPath1, testRootCAKeyPath1)
+	connState, err := connectionState(serverCAPath, serverCertPath, serverKeyPath, testRootCACertPath1, testRootCAKeyPath1)
+	if err != nil {
+		t.Fatalf("error testing connection state:%v", err)
+	}
 	loginReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
@@ -233,7 +498,10 @@ func TestBackend_CRLs(t *testing.T) {
 
 	// Now, without changing the registered client CA cert, present from
 	// the client side, a cert issued using the registered CA.
-	connState = connectionState(t, serverCAPath, serverCertPath, serverKeyPath, testCertPath1, testKeyPath1)
+	connState, err = connectionState(serverCAPath, serverCertPath, serverKeyPath, testCertPath1, testKeyPath1)
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
 	loginReq.Connection.ConnState = &connState
 
 	// Attempt login with the updated connection
@@ -283,7 +551,10 @@ func TestBackend_CRLs(t *testing.T) {
 	}
 
 	// Test login using a different client CA cert pair.
-	connState = connectionState(t, serverCAPath, serverCertPath, serverKeyPath, testRootCACertPath2, testRootCAKeyPath2)
+	connState, err = connectionState(serverCAPath, serverCertPath, serverKeyPath, testRootCACertPath2, testRootCAKeyPath2)
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
 	loginReq.Connection.ConnState = &connState
 
 	// Attempt login with the updated connection
@@ -359,8 +630,11 @@ func TestBackend_CertWrites(t *testing.T) {
 
 // Test a client trusted by a CA
 func TestBackend_basic_CA(t *testing.T) {
-	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+	connState, err := testConnState("test-fixtures/keys/cert.pem",
 		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
 	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -385,8 +659,11 @@ func TestBackend_basic_CA(t *testing.T) {
 
 // Test CRL behavior
 func TestBackend_Basic_CRLs(t *testing.T) {
-	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+	connState, err := testConnState("test-fixtures/keys/cert.pem",
 		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
 	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -411,8 +688,11 @@ func TestBackend_Basic_CRLs(t *testing.T) {
 
 // Test a self-signed client (root CA) that is trusted
 func TestBackend_basic_singleCert(t *testing.T) {
-	connState := testConnState(t, "test-fixtures/root/rootcacert.pem",
+	connState, err := testConnState("test-fixtures/root/rootcacert.pem",
 		"test-fixtures/root/rootcakey.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
 	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -432,8 +712,11 @@ func TestBackend_basic_singleCert(t *testing.T) {
 
 // Test against a collection of matching and non-matching rules
 func TestBackend_mixed_constraints(t *testing.T) {
-	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+	connState, err := testConnState("test-fixtures/keys/cert.pem",
 		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
 	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -454,8 +737,11 @@ func TestBackend_mixed_constraints(t *testing.T) {
 
 // Test an untrusted client
 func TestBackend_untrusted(t *testing.T) {
-	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+	connState, err := testConnState("test-fixtures/keys/cert.pem",
 		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
@@ -682,17 +968,17 @@ func testAccStepCertNoLease(
 	}
 }
 
-func testConnState(t *testing.T, certPath, keyPath, rootCertPath string) tls.ConnectionState {
+func testConnState(certPath, keyPath, rootCertPath string) (tls.ConnectionState, error) {
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		return tls.ConnectionState{}, err
 	}
 	rootConfig := &rootcerts.Config{
 		CAFile: rootCertPath,
 	}
 	rootCAs, err := rootcerts.LoadCACerts(rootConfig)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		return tls.ConnectionState{}, err
 	}
 	listenConf := &tls.Config{
 		Certificates:       []tls.Certificate{cert},
@@ -702,37 +988,72 @@ func testConnState(t *testing.T, certPath, keyPath, rootCertPath string) tls.Con
 	}
 	dialConf := new(tls.Config)
 	*dialConf = *listenConf
+	// start a server
 	list, err := tls.Listen("tcp", "127.0.0.1:0", listenConf)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		return tls.ConnectionState{}, err
 	}
 	defer list.Close()
 
+	// Accept connections.
+	serverErrors := make(chan error, 1)
+	connState := make(chan tls.ConnectionState)
+	go func() {
+		defer close(connState)
+		serverConn, err := list.Accept()
+		serverErrors <- err
+		if err != nil {
+			close(serverErrors)
+			return
+		}
+		defer serverConn.Close()
+
+		// Read the ping
+		buf := make([]byte, 4)
+		_, err = serverConn.Read(buf)
+		if (err != nil) && (err != io.EOF) {
+			serverErrors <- err
+			close(serverErrors)
+			return
+		} else {
+			// EOF is a reasonable error condition, so swallow it.
+			serverErrors <- nil
+		}
+		close(serverErrors)
+		connState <- serverConn.(*tls.Conn).ConnectionState()
+	}()
+
+	// Establish a connection from the client side and write a few bytes.
+	clientErrors := make(chan error, 1)
 	go func() {
 		addr := list.Addr().String()
 		conn, err := tls.Dial("tcp", addr, dialConf)
+		clientErrors <- err
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			close(clientErrors)
+			return
 		}
 		defer conn.Close()
 
 		// Write ping
-		conn.Write([]byte("ping"))
+		_, err = conn.Write([]byte("ping"))
+		clientErrors <- err
+		close(clientErrors)
 	}()
 
-	serverConn, err := list.Accept()
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	for err = range clientErrors {
+		if err != nil {
+			return tls.ConnectionState{}, fmt.Errorf("error in client goroutine:%v", err)
+		}
 	}
-	defer serverConn.Close()
 
-	// Read the pign
-	buf := make([]byte, 4)
-	serverConn.Read(buf)
-
+	for err = range serverErrors {
+		if err != nil {
+			return tls.ConnectionState{}, fmt.Errorf("error in server goroutine:%v", err)
+		}
+	}
 	// Grab the current state
-	connState := serverConn.(*tls.Conn).ConnectionState()
-	return connState
+	return <-connState, nil
 }
 
 func Test_Renew(t *testing.T) {
@@ -750,8 +1071,11 @@ func Test_Renew(t *testing.T) {
 	}
 
 	b := lb.(*backend)
-	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+	connState, err := testConnState("test-fixtures/keys/cert.pem",
 		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
 	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatal(err)

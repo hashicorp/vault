@@ -12,8 +12,10 @@ import (
 func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
 	verifyExportsCorrectVersion(t, "encryption-key", "aes256-gcm96")
 	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p256")
+	verifyExportsCorrectVersion(t, "signing-key", "ed25519")
 	verifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96")
 	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p256")
+	verifyExportsCorrectVersion(t, "hmac-key", "ed25519")
 }
 
 func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
@@ -293,6 +295,11 @@ func TestTransit_Export_SigningDoesNotSupportSigning_ReturnsError(t *testing.T) 
 }
 
 func TestTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testing.T) {
+	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ecdsa-p256")
+	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ed25519")
+}
+
+func testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testing.T, keyType string) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -309,7 +316,7 @@ func TestTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testi
 	}
 	req.Data = map[string]interface{}{
 		"exportable": true,
-		"type":       "ecdsa-p256",
+		"type":       keyType,
 	}
 	_, err := b.HandleRequest(req)
 	if err != nil {

@@ -21,7 +21,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 		}
 
 		repState := core.ReplicationState()
-		if repState == consts.ReplicationSecondary {
+		if repState.HasState(consts.ReplicationPerformanceSecondary) {
 			respondError(w, http.StatusBadRequest,
 				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"))
 			return
@@ -113,12 +113,13 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 		return
 	}
 
-	// Right now we don't support this, but the rest of the code is ready for
-	// when we do, hence the check below for this to be false if
-	// StoredShares is greater than zero
-	if core.SealAccess().StoredKeysSupported() && !recovery {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("rekeying of barrier not supported when stored key support is available"))
-		return
+	// If the seal supports recovery keys and stored keys, then we allow rekeying the barrier key
+	// iff the secret shares, secret threshold, and stored shares are set to 1.
+	if !recovery && core.SealAccess().RecoveryKeySupported() && core.SealAccess().StoredKeysSupported() {
+		if req.SecretShares != 1 || req.SecretThreshold != 1 || req.StoredShares != 1 {
+			respondError(w, http.StatusBadRequest, fmt.Errorf("secret shares, secret threshold, and stored shares must be set to 1"))
+			return
+		}
 	}
 
 	if len(req.PGPKeys) > 0 && len(req.PGPKeys) != req.SecretShares-req.StoredShares {

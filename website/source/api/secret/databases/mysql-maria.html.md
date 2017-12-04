@@ -42,7 +42,7 @@ has a number of parameters to further configure a connection.
 {
   "plugin_name": "mysql-database-plugin",
   "allowed_roles": "readonly",
-  "connection_url": "root:mysql@tcp(127.0.0.1:3306)/"
+  "connection_url": "root:mysql@tcp(127.0.0.1:3306)/",
   "max_open_connections": 5,
   "max_connection_lifetime": "5s",
 }

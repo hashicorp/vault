@@ -88,7 +88,7 @@ at Consul's service discovery layer.
 
 - `token` `(string: "")` – Specifies the [Consul ACL token][consul-acl] with
   permission to read and write from the `path` in Consul's key-value store.
-  This is **not** a Vault token.
+  This is **not** a Vault token. See the ACL section below for help.
 
 The following settings apply when communicating with Consul via an encrypted
 connection. You can read more about encrypting Consul connections on the
@@ -116,22 +116,42 @@ connection. You can read more about encrypting Consul connections on the
 - `tls_skip_verify` `(bool: false)` – Specifies if the TLS host verification
   should be disabled. It is highly discouraged that you disable this option.
 
-This backend also supports the following high availability parameters. These are
-discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
+## ACLs
 
-- `cluster_addr` `(string: "")` – Specifies the address to advertise to other
-  Vault servers in the cluster for request forwarding. This can also be provided
-  via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
-  `redirect_addr`, but Vault will ignore the scheme (all cluster members always
-  use TLS with a private key/certificate).
+If using ACLs in Consul, you'll need appropriate permissions. For Consul 0.8,
+the following will work for most use-cases, assuming that your service name is
+`vault` and the prefix being used is `vault/`:
 
-- `disable_clustering` `(bool: false)` – Specifies whether clustering features
-  such as request forwarding are enabled. Setting this to true on one Vault node
-  will disable these features _only when that node is the active node_.
+```json
+{
+  "key": {
+    "vault/": {
+      "policy": "write"
+    }
+  },
+  "node": {
+    "": {
+      "policy": "write"
+    }
+  },
+  "service": {
+    "vault": {
+      "policy": "write"
+    }
+  },
+  "agent": {
+    "": {
+      "policy": "write"
+    }
 
-- `redirect_addr` `(string: <required>)` – Specifies the address (full URL) to
-  advertise to other Vault servers in the cluster for client redirection. This
-  can also be provided via the environment variable `VAULT_REDIRECT_ADDR`.
+  },
+  "session": {
+    "": {
+      "policy": "write"
+    }
+  }
+}
+```
 
 ## `consul` Examples
 

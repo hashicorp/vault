@@ -10,13 +10,13 @@ import (
 
 type CLIHandler struct{}
 
-func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
+func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	var data struct {
 		Mount string `mapstructure:"mount"`
 		Name  string `mapstructure:"name"`
 	}
 	if err := mapstructure.WeakDecode(m, &data); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if data.Mount == "" {
@@ -29,13 +29,13 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	path := fmt.Sprintf("auth/%s/login", data.Mount)
 	secret, err := c.Logical().Write(path, options)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if secret == nil {
-		return "", fmt.Errorf("empty response from credential provider")
+		return nil, fmt.Errorf("empty response from credential provider")
 	}
 
-	return secret.Auth.ClientToken, nil
+	return secret, nil
 }
 
 func (h *CLIHandler) Help() string {

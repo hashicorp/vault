@@ -24,3 +24,19 @@ with the `-h` argument.
 The help output is very comprehensive, so we defer you to that for documentation.
 We've included some guides to the left of common interactions with the
 CLI.
+
+## Autocompletion
+
+The `vault` command features opt-in subcommand autocompletion that you can
+enable for your shell with `vault -autocomplete-install`. After doing so,
+you can invoke a new shell and use the feature.
+
+For example, assume a tab is typed at the end of each prompt line:
+
+```
+$ vault au
+audit-disable  audit-enable  audit-list  auth  auth-disable  auth-enable
+
+$ vault s
+seal  server  ssh  status  step-down
+```

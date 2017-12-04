@@ -37,6 +37,7 @@ These libraries are provided by the community.
 
 ### Ansible
 
+* [ansible-vault](https://github.com/jhaals/ansible-vault) lookup plugin without third-party dependencies.
 * [Ansible Modules Hashivault](https://pypi.python.org/pypi/ansible-modules-hashivault)
 
 ```shell
@@ -84,7 +85,6 @@ $ cabal install vault-tool
 ### Java
 
 * [Spring Vault](https://github.com/spring-projects/spring-vault)
-* [vault-java](https://github.com/jhaals/vault-java)
 * [vault-java-driver](https://github.com/BetterCloud/vault-java-driver)
 
 ### Kotlin
@@ -117,6 +117,20 @@ $ composer require jippi/vault-php-sdk
 
 ```shell
 $ composer require violuke/vault-php-sdk
+```
+
+* [vault-php](https://github.com/CSharpRU/vault-php)
+
+```shell
+$ composer require csharpru/vault-php
+```
+
+### PowerShell
+
+* [Zyborg.Vault](https://github.com/zyborg/Zyborg.Vault)
+
+```PowerShell
+Install-Module Zyborg.Vault
 ```
 
 ### Python

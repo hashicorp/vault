@@ -2,18 +2,24 @@ package file
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
 
 func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
-	if conf.Salt == nil {
-		return nil, fmt.Errorf("nil salt")
+	if conf.SaltConfig == nil {
+		return nil, fmt.Errorf("nil salt config")
+	}
+	if conf.SaltView == nil {
+		return nil, fmt.Errorf("nil salt view")
 	}
 
 	path, ok := conf.Config["file_path"]
@@ -22,6 +28,14 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		if !ok {
 			return nil, fmt.Errorf("file_path is required")
 		}
+	}
+
+	// normalize path if configured for stdout
+	if strings.ToLower(path) == "stdout" {
+		path = "stdout"
+	}
+	if strings.ToLower(path) == "discard" {
+		path = "discard"
 	}
 
 	format, ok := conf.Config["format"]
@@ -65,11 +79,12 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	}
 
 	b := &Backend{
-		path: path,
-		mode: mode,
+		path:       path,
+		mode:       mode,
+		saltConfig: conf.SaltConfig,
+		saltView:   conf.SaltView,
 		formatConfig: audit.FormatterConfig{
 			Raw:          logRaw,
-			Salt:         conf.Salt,
 			HMACAccessor: hmacAccessor,
 		},
 	}
@@ -77,19 +92,26 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	switch format {
 	case "json":
 		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
-			Prefix: conf.Config["prefix"],
+			Prefix:   conf.Config["prefix"],
+			SaltFunc: b.Salt,
 		}
 	case "jsonx":
 		b.formatter.AuditFormatWriter = &audit.JSONxFormatWriter{
-			Prefix: conf.Config["prefix"],
+			Prefix:   conf.Config["prefix"],
+			SaltFunc: b.Salt,
 		}
 	}
 
-	// Ensure that the file can be successfully opened for writing;
-	// otherwise it will be too late to catch later without problems
-	// (ref: https://github.com/hashicorp/vault/issues/550)
-	if err := b.open(); err != nil {
-		return nil, fmt.Errorf("sanity check failed; unable to open %s for writing: %v", path, err)
+	switch path {
+	case "stdout", "discard":
+		// no need to test opening file if outputting to stdout or discarding
+	default:
+		// Ensure that the file can be successfully opened for writing;
+		// otherwise it will be too late to catch later without problems
+		// (ref: https://github.com/hashicorp/vault/issues/550)
+		if err := b.open(); err != nil {
+			return nil, fmt.Errorf("sanity check failed; unable to open %s for writing: %v", path, err)
+		}
 	}
 
 	return b, nil
@@ -109,15 +131,63 @@ type Backend struct {
 	fileLock sync.RWMutex
 	f        *os.File
 	mode     os.FileMode
+
+	saltMutex  sync.RWMutex
+	salt       *salt.Salt
+	saltConfig *salt.Config
+	saltView   logical.Storage
 }
 
-func (b *Backend) GetHash(data string) string {
-	return audit.HashString(b.formatConfig.Salt, data)
+func (b *Backend) Salt() (*salt.Salt, error) {
+	b.saltMutex.RLock()
+	if b.salt != nil {
+		defer b.saltMutex.RUnlock()
+		return b.salt, nil
+	}
+	b.saltMutex.RUnlock()
+	b.saltMutex.Lock()
+	defer b.saltMutex.Unlock()
+	if b.salt != nil {
+		return b.salt, nil
+	}
+	salt, err := salt.NewSalt(b.saltView, b.saltConfig)
+	if err != nil {
+		return nil, err
+	}
+	b.salt = salt
+	return salt, nil
+}
+
+func (b *Backend) GetHash(data string) (string, error) {
+	salt, err := b.Salt()
+	if err != nil {
+		return "", err
+	}
+	return audit.HashString(salt, data), nil
 }
 
 func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
+
+	switch b.path {
+	case "stdout":
+		return b.formatter.FormatRequest(os.Stdout, b.formatConfig, auth, req, outerErr)
+	case "discard":
+		return b.formatter.FormatRequest(ioutil.Discard, b.formatConfig, auth, req, outerErr)
+	}
+
+	if err := b.open(); err != nil {
+		return err
+	}
+
+	if err := b.formatter.FormatRequest(b.f, b.formatConfig, auth, req, outerErr); err == nil {
+		return nil
+	}
+
+	// Opportunistically try to re-open the FD, once per call
+	b.f.Close()
+	b.f = nil
 
 	if err := b.open(); err != nil {
 		return err
@@ -134,6 +204,25 @@ func (b *Backend) LogResponse(
 
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
+
+	switch b.path {
+	case "stdout":
+		return b.formatter.FormatResponse(os.Stdout, b.formatConfig, auth, req, resp, err)
+	case "discard":
+		return b.formatter.FormatResponse(ioutil.Discard, b.formatConfig, auth, req, resp, err)
+	}
+
+	if err := b.open(); err != nil {
+		return err
+	}
+
+	if err := b.formatter.FormatResponse(b.f, b.formatConfig, auth, req, resp, err); err == nil {
+		return nil
+	}
+
+	// Opportunistically try to re-open the FD, once per call
+	b.f.Close()
+	b.f = nil
 
 	if err := b.open(); err != nil {
 		return err
@@ -172,6 +261,11 @@ func (b *Backend) open() error {
 }
 
 func (b *Backend) Reload() error {
+	switch b.path {
+	case "stdout", "discard":
+		return nil
+	}
+
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
@@ -188,4 +282,10 @@ func (b *Backend) Reload() error {
 	}
 
 	return b.open()
+}
+
+func (b *Backend) Invalidate() {
+	b.saltMutex.Lock()
+	defer b.saltMutex.Unlock()
+	b.salt = nil
 }

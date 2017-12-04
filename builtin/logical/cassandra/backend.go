@@ -12,7 +12,11 @@ import (
 
 // Factory creates a new backend
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	b := Backend()
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // Backend contains the base information for the backend's functionality
@@ -20,6 +24,12 @@ func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
+
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"config/connection",
+			},
+		},
 
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
@@ -36,6 +46,7 @@ func Backend() *backend {
 		Clean: func() {
 			b.ResetDB(nil)
 		},
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b

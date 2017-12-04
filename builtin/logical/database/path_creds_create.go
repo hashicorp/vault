@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -48,7 +49,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		// If role name isn't in the database's allowed roles, send back a
 		// permission denied.
-		if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContains(dbConfig.AllowedRoles, name) {
+		if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContainsGlob(dbConfig.AllowedRoles, name) {
 			return nil, logical.ErrPermissionDenied
 		}
 
@@ -74,8 +75,13 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		expiration := time.Now().Add(role.DefaultTTL)
 
+		usernameConfig := dbplugin.UsernameConfig{
+			DisplayName: req.DisplayName,
+			RoleName:    name,
+		}
+
 		// Create the user
-		username, password, err := db.CreateUser(role.Statements, req.DisplayName, expiration)
+		username, password, err := db.CreateUser(role.Statements, usernameConfig, expiration)
 		// Unlock
 		unlockFunc()
 		if err != nil {

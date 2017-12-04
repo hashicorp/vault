@@ -115,6 +115,30 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 	}
 }
 
+func pathListPluginConnection(b *databaseBackend) *framework.Path {
+	return &framework.Path{
+		Pattern: fmt.Sprintf("config/?$"),
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.connectionListHandler(),
+		},
+
+		HelpSynopsis:    pathConfigConnectionHelpSyn,
+		HelpDescription: pathConfigConnectionHelpDesc,
+	}
+}
+
+func (b *databaseBackend) connectionListHandler() framework.OperationFunc {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		entries, err := req.Storage.List("config/")
+		if err != nil {
+			return nil, err
+		}
+
+		return logical.ListResponse(entries), nil
+	}
+}
+
 // connectionReadHandler reads out the connection configuration
 func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

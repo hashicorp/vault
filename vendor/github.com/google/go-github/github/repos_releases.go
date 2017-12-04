@@ -244,7 +244,7 @@ func (s *RepositoriesService) DownloadReleaseAsset(ctx context.Context, owner, r
 	}
 	defer func() { s.client.client.CheckRedirect = saveRedirect }()
 
-	ctx, req = withContext(ctx, req)
+	req = withContext(ctx, req)
 	resp, err := s.client.client.Do(req)
 	if err != nil {
 		if !strings.Contains(err.Error(), "disable redirect") {

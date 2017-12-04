@@ -14,7 +14,7 @@ type CLIHandler struct {
 	DefaultMount string
 }
 
-func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
+func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	var data struct {
 		Username string `mapstructure:"username"`
 		Password string `mapstructure:"password"`
@@ -23,18 +23,18 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		Passcode string `mapstructure:"passcode"`
 	}
 	if err := mapstructure.WeakDecode(m, &data); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if data.Username == "" {
-		return "", fmt.Errorf("'username' must be specified")
+		return nil, fmt.Errorf("'username' must be specified")
 	}
 	if data.Password == "" {
 		fmt.Printf("Password (will be hidden): ")
 		password, err := pwd.Read(os.Stdin)
 		fmt.Println()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		data.Password = password
 	}
@@ -55,13 +55,13 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	path := fmt.Sprintf("auth/%s/login/%s", data.Mount, data.Username)
 	secret, err := c.Logical().Write(path, options)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if secret == nil {
-		return "", fmt.Errorf("empty response from credential provider")
+		return nil, fmt.Errorf("empty response from credential provider")
 	}
 
-	return secret.Auth.ClientToken, nil
+	return secret, nil
 }
 
 func (h *CLIHandler) Help() string {

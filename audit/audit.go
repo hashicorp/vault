@@ -25,15 +25,21 @@ type Backend interface {
 	// GetHash is used to return the given data with the backend's hash,
 	// so that a caller can determine if a value in the audit log matches
 	// an expected plaintext value
-	GetHash(string) string
+	GetHash(string) (string, error)
 
 	// Reload is called on SIGHUP for supporting backends.
 	Reload() error
+
+	// Invalidate is called for path invalidation
+	Invalidate()
 }
 
 type BackendConfig struct {
-	// The salt that should be used for any secret obfuscation
-	Salt *salt.Salt
+	// The view to store the salt
+	SaltView logical.Storage
+
+	// The salt config that should be used for any secret obfuscation
+	SaltConfig *salt.Config
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string

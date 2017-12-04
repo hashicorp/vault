@@ -8,6 +8,11 @@ description: |-
 
 # MongoDB Secret Backend HTTP API
 
+~> **Deprecation Note:** This backend is deprecated in favor of the
+combined databases backend added in v0.7.1. See the API documentation for
+the new implementation of this backend at
+[MongoDB Database Plugin HTTP API](/api/secret/databases/mongodb.html).
+
 This is the API documentation for the Vault MongoDB secret backend. For general
 information about the usage and operation of the MongoDB backend, please see
 the [Vault MongoDB backend documentation](/docs/secrets/mongodb/index.html).

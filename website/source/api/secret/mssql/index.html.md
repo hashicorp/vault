@@ -8,6 +8,11 @@ description: |-
 
 # MSSQL Secret Backend HTTP API
 
+~> **Deprecation Note:** This backend is deprecated in favor of the
+combined databases backend added in v0.7.1. See the API documentation for
+the new implementation of this backend at
+[MSSQL Database Plugin HTTP API](/api/secret/databases/mssql.html).
+
 This is the API documentation for the Vault MSSQL secret backend. For general
 information about the usage and operation of the MSSQL backend, please see
 the [Vault MSSQL backend documentation](/docs/secrets/mssql/index.html).
@@ -164,6 +169,7 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/mssql/roles`               | `200 application/json` |
+| `GET`   | `/mssql/roles?list=true`      | `200 application/json` |
 
 ### Sample Request
 

@@ -1,6 +1,6 @@
 ---
 layout: "intro"
-page_title: "Authentication"
+page_title: "Authentication - Getting Started"
 sidebar_current: "gettingstarted-auth"
 description: |-
   Authentication to Vault gives a user access to use Vault. Vault can authenticate using multiple methods.
@@ -15,7 +15,7 @@ us in as the root user. In practice, you'll almost always have to manually authe
 
 On this page, we'll talk specifically about _authentication_. On the
 next page, we talk about
-[_authorization_](/intro/getting-started/acl.html). Authentication is the
+[_authorization_](/intro/getting-started/policies.html). Authentication is the
 mechanism of assigning an identity to a Vault user. The access control
 and permissions associated with an identity are authorization, and will
 not be covered on this page.
@@ -49,7 +49,7 @@ token_policies  [root]
 ```
 
 By default, this will create a child token of your current token that
-inherits all the same access control policies. The "child" concept here
+inherits all the same policies. The "child" concept here
 is important: tokens always have a parent, and when that parent token is
 revoked, children can also be revoked all in one operation. This makes it
 easy when removing access for a user, to remove access for all sub-tokens
@@ -165,4 +165,4 @@ The multiple authentication backends Vault provides let you choose the
 most appropriate authentication mechanism for your organization.
 
 In this next section, we'll learn about
-[authorization and access control policies](/intro/getting-started/acl.html).
+[authorization and policies](/intro/getting-started/policies.html).

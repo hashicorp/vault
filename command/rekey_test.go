@@ -182,7 +182,7 @@ func TestRekey_status(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	if !strings.Contains(string(ui.OutputWriter.Bytes()), "Started: true") {
+	if !strings.Contains(ui.OutputWriter.String(), "Started: true") {
 		t.Fatalf("bad: %s", ui.OutputWriter.String())
 	}
 }
@@ -199,7 +199,8 @@ func TestRekey_init_pgp(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	sysBackend, err := vault.NewSystemBackend(core, bc)
+	sysBackend := vault.NewSystemBackend(core)
+	err := sysBackend.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}

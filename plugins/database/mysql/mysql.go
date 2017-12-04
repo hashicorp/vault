@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -23,10 +24,10 @@ const (
 )
 
 var (
-	DisplayNameLen       int = 10
-	LegacyDisplayNameLen int = 4
-	UsernameLen          int = 32
-	LegacyUsernameLen    int = 16
+	MetadataLen       int = 10
+	LegacyMetadataLen int = 4
+	UsernameLen       int = 32
+	LegacyUsernameLen int = 16
 )
 
 type MySQL struct {
@@ -35,14 +36,16 @@ type MySQL struct {
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New(displayLen, usernameLen int) func() (interface{}, error) {
+func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		connProducer := &connutil.SQLConnectionProducer{}
 		connProducer.Type = mySQLTypeName
 
 		credsProducer := &credsutil.SQLCredentialsProducer{
-			DisplayNameLen: displayLen,
+			DisplayNameLen: displayNameLen,
+			RoleNameLen:    roleNameLen,
 			UsernameLen:    usernameLen,
+			Separator:      "-",
 		}
 
 		dbType := &MySQL{
@@ -56,7 +59,21 @@ func New(displayLen, usernameLen int) func() (interface{}, error) {
 
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
 func Run(apiTLSConfig *api.TLSConfig) error {
-	f := New(DisplayNameLen, UsernameLen)
+	return runCommon(false, apiTLSConfig)
+}
+
+// Run instantiates a MySQL object, and runs the RPC server for the plugin
+func RunLegacy(apiTLSConfig *api.TLSConfig) error {
+	return runCommon(true, apiTLSConfig)
+}
+
+func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
+	var f func() (interface{}, error)
+	if legacy {
+		f = New(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
+	} else {
+		f = New(MetadataLen, MetadataLen, UsernameLen)
+	}
 	dbType, err := f()
 	if err != nil {
 		return err
@@ -80,7 +97,7 @@ func (m *MySQL) getConnection() (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (m *MySQL) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -95,7 +112,7 @@ func (m *MySQL) CreateUser(statements dbplugin.Statements, usernamePrefix string
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
-	username, err = m.GenerateUsername(usernamePrefix)
+	username, err = m.GenerateUsername(usernameConfig)
 	if err != nil {
 		return "", "", err
 	}
@@ -123,13 +140,28 @@ func (m *MySQL) CreateUser(statements dbplugin.Statements, usernamePrefix string
 		if len(query) == 0 {
 			continue
 		}
-
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		query = dbutil.QueryHelper(query, map[string]string{
 			"name":       username,
 			"password":   password,
 			"expiration": expirationStr,
-		}))
+		})
+
+		stmt, err := tx.Prepare(query)
 		if err != nil {
+			// If the error code we get back is Error 1295: This command is not
+			// supported in the prepared statement protocol yet, we will execute
+			// the statement without preparing it. This allows the caller to
+			// manually prepare statements, as well as run other not yet
+			// prepare supported commands. If there is no error when running we
+			// will continue to the next statement.
+			if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+				_, err = tx.Exec(query)
+				if err != nil {
+					return "", "", err
+				}
+				continue
+			}
+
 			return "", "", err
 		}
 		defer stmt.Close()

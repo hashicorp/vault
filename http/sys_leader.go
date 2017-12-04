@@ -20,7 +20,7 @@ func handleSysLeader(core *vault.Core) http.Handler {
 
 func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	haEnabled := true
-	isLeader, address, err := core.Leader()
+	isLeader, address, clusterAddr, err := core.Leader()
 	if errwrap.Contains(err, vault.ErrHANotEnabled.Error()) {
 		haEnabled = false
 		err = nil
@@ -31,14 +31,16 @@ func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	}
 
 	respondOk(w, &LeaderResponse{
-		HAEnabled:     haEnabled,
-		IsSelf:        isLeader,
-		LeaderAddress: address,
+		HAEnabled:            haEnabled,
+		IsSelf:               isLeader,
+		LeaderAddress:        address,
+		LeaderClusterAddress: clusterAddr,
 	})
 }
 
 type LeaderResponse struct {
-	HAEnabled     bool   `json:"ha_enabled"`
-	IsSelf        bool   `json:"is_self"`
-	LeaderAddress string `json:"leader_address"`
+	HAEnabled            bool   `json:"ha_enabled"`
+	IsSelf               bool   `json:"is_self"`
+	LeaderAddress        string `json:"leader_address"`
+	LeaderClusterAddress string `json:"leader_cluster_address"`
 }

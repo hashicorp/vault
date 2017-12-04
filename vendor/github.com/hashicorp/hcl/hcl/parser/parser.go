@@ -3,6 +3,7 @@
 package parser
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -36,6 +37,11 @@ func newParser(src []byte) *Parser {
 
 // Parse returns the fully parsed source and returns the abstract syntax tree.
 func Parse(src []byte) (*ast.File, error) {
+	// normalize all line endings
+	// since the scanner and output only work with "\n" line endings, we may
+	// end up with dangling "\r" characters in the parsed data.
+	src = bytes.Replace(src, []byte("\r\n"), []byte("\n"), -1)
+
 	p := newParser(src)
 	return p.Parse()
 }
@@ -191,9 +197,12 @@ func (p *Parser) objectItem() (*ast.ObjectItem, error) {
 			keyStr = append(keyStr, k.Token.Text)
 		}
 
-		return nil, fmt.Errorf(
-			"key '%s' expected start of object ('{') or assignment ('=')",
-			strings.Join(keyStr, " "))
+		return nil, &PosError{
+			Pos: p.tok.Pos,
+			Err: fmt.Errorf(
+				"key '%s' expected start of object ('{') or assignment ('=')",
+				strings.Join(keyStr, " ")),
+		}
 	}
 
 	// do a look-ahead for line comment
@@ -313,7 +322,10 @@ func (p *Parser) objectType() (*ast.ObjectType, error) {
 
 	// No error, scan and expect the ending to be a brace
 	if tok := p.scan(); tok.Type != token.RBRACE {
-		return nil, fmt.Errorf("object expected closing RBRACE got: %s", tok.Type)
+		return nil, &PosError{
+			Pos: tok.Pos,
+			Err: fmt.Errorf("object expected closing RBRACE got: %s", tok.Type),
+		}
 	}
 
 	o.List = l

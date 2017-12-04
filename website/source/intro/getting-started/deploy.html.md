@@ -1,6 +1,6 @@
 ---
 layout: "intro"
-page_title: "Deploy Vault"
+page_title: "Deploy Vault - Getting Started"
 sidebar_current: "gettingstarted-deploy"
 description: |-
   Learn how to deploy Vault into production, how to initialize it, configure it, etc.
@@ -23,7 +23,7 @@ As a reminder, JSON files are also fully HCL-compatible; HCL is a superset of JS
 The configuration file for Vault is relatively simple. An example is shown below:
 
 ```javascript
-backend "consul" {
+storage "consul" {
   address = "127.0.0.1:8500"
   path = "vault"
 }
@@ -36,15 +36,15 @@ listener "tcp" {
 
 Within the configuration file, there are two primary configurations:
 
-  * `backend` - This is the physical backend that Vault uses for
-    storage. Up to this point the dev server has used "inmem" (in memory),
-    but in the example above we're using [Consul](https://www.consul.io),
-    a much more production-ready backend.
+  * `storage` - This is the physical backend that Vault uses for storage. Up to
+    this point the dev server has used "inmem" (in memory), but in the example
+    above we're using [Consul](https://www.consul.io), a much more
+    production-ready backend.
 
-  * `listener` - One or more listeners determine how Vault listens for
-    API requests. In the example above we're listening on localhost port
-    8200 without TLS. In your environment set `VAULT_ADDR=http://127.0.0.1:8200`
-    so the Vault client will connect without TLS.
+  * `listener` - One or more listeners determine how Vault listens for API
+    requests. In the example above we're listening on localhost port 8200
+    without TLS. In your environment set `VAULT_ADDR=http://127.0.0.1:8200` so
+    the Vault client will connect without TLS.
 
 For now, copy and paste the configuration above to a file called
 `example.hcl`. It will configure Vault to expect an instance of Consul
@@ -69,7 +69,7 @@ $ vault server -config=example.hcl
 ==> Vault server configuration:
 
          Log Level: info
-           Backend: consul
+           Storage: consul
         Listener 1: tcp (addr: "127.0.0.1:8200", tls: "disabled")
 
 ==> Vault server started! Log data will stream in below:

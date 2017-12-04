@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/meta"
+	"github.com/posener/complete"
 )
 
 // RekeyCommand is a Command that rekeys the vault.
@@ -29,7 +30,7 @@ type RekeyCommand struct {
 
 func (c *RekeyCommand) Run(args []string) int {
 	var init, cancel, status, delete, retrieve, backup, recoveryKey bool
-	var shares, threshold int
+	var shares, threshold, storedShares int
 	var nonce string
 	var pgpKeys pgpkeys.PubKeyFilesFlag
 	flags := c.Meta.FlagSet("rekey", meta.FlagSetDefault)
@@ -42,6 +43,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	flags.BoolVar(&recoveryKey, "recovery-key", c.RecoveryKey, "")
 	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
+	flags.IntVar(&storedShares, "stored-shares", 0, "")
 	flags.StringVar(&nonce, "nonce", "", "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -63,7 +65,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	// Check if we are running doing any restricted variants
 	switch {
 	case init:
-		return c.initRekey(client, shares, threshold, pgpKeys, backup, recoveryKey)
+		return c.initRekey(client, shares, threshold, storedShares, pgpKeys, backup, recoveryKey)
 	case cancel:
 		return c.cancelRekey(client, recoveryKey)
 	case status:
@@ -193,30 +195,37 @@ func (c *RekeyCommand) Run(args []string) int {
 
 	c.Ui.Output(fmt.Sprintf(
 		"\n"+
-			"Vault rekeyed with %d keys and a key threshold of %d. Please\n"+
-			"securely distribute the above keys. When the vault is re-sealed,\n"+
-			"restarted, or stopped, you must provide at least %d of these keys\n"+
-			"to unseal it again.\n\n"+
-			"Vault does not store the master key. Without at least %d keys,\n"+
-			"your vault will remain permanently sealed.",
+			"Vault rekeyed with %d keys and a key threshold of %d.\n",
 		shares,
 		threshold,
-		threshold,
-		threshold,
 	))
+
+	// Print this message if keys are returned
+	if len(result.Keys) > 0 {
+		c.Ui.Output(fmt.Sprintf(
+			"\n"+
+				"Please securely distribute the above keys. When the vault is re-sealed,\n"+
+				"restarted, or stopped, you must provide at least %d of these keys\n"+
+				"to unseal it again.\n\n"+
+				"Vault does not store the master key. Without at least %[1]d keys,\n"+
+				"your vault will remain permanently sealed.",
+			threshold,
+		))
+	}
 
 	return 0
 }
 
 // initRekey is used to start the rekey process
 func (c *RekeyCommand) initRekey(client *api.Client,
-	shares, threshold int,
+	shares, threshold, storedShares int,
 	pgpKeys pgpkeys.PubKeyFilesFlag,
 	backup, recoveryKey bool) int {
 	// Start the rekey
 	request := &api.RekeyInitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
+		StoredShares:    storedShares,
 		PGPKeys:         pgpKeys,
 		Backup:          backup,
 	}
@@ -417,4 +426,24 @@ Rekey Options:
                           barrier key. Only used with Vault HSM.
 `
 	return strings.TrimSpace(helpText)
+}
+
+func (c *RekeyCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *RekeyCommand) AutocompleteFlags() complete.Flags {
+	return complete.Flags{
+		"-init":          complete.PredictNothing,
+		"-cancel":        complete.PredictNothing,
+		"-status":        complete.PredictNothing,
+		"-retrieve":      complete.PredictNothing,
+		"-delete":        complete.PredictNothing,
+		"-key-shares":    complete.PredictNothing,
+		"-key-threshold": complete.PredictNothing,
+		"-nonce":         complete.PredictNothing,
+		"-pgp-keys":      complete.PredictNothing,
+		"-backup":        complete.PredictNothing,
+		"-recovery-key":  complete.PredictNothing,
+	}
 }

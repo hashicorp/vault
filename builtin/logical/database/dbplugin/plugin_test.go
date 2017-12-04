@@ -2,14 +2,13 @@ package dbplugin_test
 
 import (
 	"errors"
-	stdhttp "net/http"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/http"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/vault"
@@ -21,19 +20,19 @@ type mockPlugin struct {
 }
 
 func (m *mockPlugin) Type() (string, error) { return "mock", nil }
-func (m *mockPlugin) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (m *mockPlugin) CreateUser(statements dbplugin.Statements, usernameConf dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	err = errors.New("err")
-	if usernamePrefix == "" || expiration.IsZero() {
+	if usernameConf.DisplayName == "" || expiration.IsZero() {
 		return "", "", err
 	}
 
-	if _, ok := m.users[usernamePrefix]; ok {
+	if _, ok := m.users[usernameConf.DisplayName]; ok {
 		return "", "", err
 	}
 
-	m.users[usernamePrefix] = []string{password}
+	m.users[usernameConf.DisplayName] = []string{password}
 
-	return usernamePrefix, "test", nil
+	return usernameConf.DisplayName, "test", nil
 }
 func (m *mockPlugin) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
 	err := errors.New("err")
@@ -73,26 +72,17 @@ func (m *mockPlugin) Close() error {
 	return nil
 }
 
-func getCore(t *testing.T) ([]*vault.TestClusterCore, logical.SystemView) {
-	coreConfig := &vault.CoreConfig{}
+func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	cores := cluster.Cores
 
-	handler1 := stdhttp.NewServeMux()
-	handler2 := stdhttp.NewServeMux()
-	handler3 := stdhttp.NewServeMux()
+	sys := vault.TestDynamicSystemView(cores[0].Core)
+	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", "TestPlugin_Main")
 
-	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
-	// add routes chained to a Handler-created handler.
-	cores := vault.TestCluster(t, []stdhttp.Handler{handler1, handler2, handler3}, coreConfig, false)
-	handler1.Handle("/", http.Handler(cores[0].Core))
-	handler2.Handle("/", http.Handler(cores[1].Core))
-	handler3.Handle("/", http.Handler(cores[2].Core))
-
-	core := cores[0]
-
-	sys := vault.TestDynamicSystemView(core.Core)
-	vault.TestAddTestPlugin(t, core.Core, "test-plugin", "TestPlugin_Main")
-
-	return cores, sys
+	return cluster, sys
 }
 
 // This is not an actual test case, it's a helper function that will be executed
@@ -116,10 +106,8 @@ func TestPlugin_Main(t *testing.T) {
 }
 
 func TestPlugin_Initialize(t *testing.T) {
-	cores, sys := getCore(t)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
 
 	dbRaw, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
@@ -142,10 +130,8 @@ func TestPlugin_Initialize(t *testing.T) {
 }
 
 func TestPlugin_CreateUser(t *testing.T) {
-	cores, sys := getCore(t)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
 
 	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
@@ -162,7 +148,12 @@ func TestPlugin_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	us, pw, err := db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	usernameConf := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	us, pw, err := db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -172,17 +163,15 @@ func TestPlugin_CreateUser(t *testing.T) {
 
 	// try and save the same user again to verify it saved the first time, this
 	// should return an error
-	_, _, err = db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	_, _, err = db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err == nil {
 		t.Fatal("expected an error, user wasn't created correctly")
 	}
 }
 
 func TestPlugin_RenewUser(t *testing.T) {
-	cores, sys := getCore(t)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
 
 	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
@@ -198,7 +187,12 @@ func TestPlugin_RenewUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	us, _, err := db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	usernameConf := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	us, _, err := db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -210,10 +204,8 @@ func TestPlugin_RenewUser(t *testing.T) {
 }
 
 func TestPlugin_RevokeUser(t *testing.T) {
-	cores, sys := getCore(t)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
 
 	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
@@ -229,7 +221,12 @@ func TestPlugin_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	us, _, err := db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	usernameConf := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	us, _, err := db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -241,7 +238,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	}
 
 	// Try adding the same username back so we can verify it was removed
-	_, _, err = db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	_, _, err = db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

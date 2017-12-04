@@ -6,7 +6,20 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	glob "github.com/ryanuber/go-glob"
 )
+
+// StrListContainsGlob looks for a string in a list of strings and allows
+// globs.
+func StrListContainsGlob(haystack []string, needle string) bool {
+	for _, item := range haystack {
+		if glob.Glob(item, needle) {
+			return true
+		}
+	}
+	return false
+}
 
 // StrListContains looks for a string in a list of strings.
 func StrListContains(haystack []string, needle string) bool {
@@ -69,6 +82,10 @@ func ParseKeyValues(input string, out map[string]string, sep string) error {
 
 	for _, keyValue := range keyValues {
 		shards := strings.Split(keyValue, "=")
+		if len(shards) != 2 {
+			return fmt.Errorf("invalid <key,value> format")
+		}
+
 		key := strings.TrimSpace(shards[0])
 		value := strings.TrimSpace(shards[1])
 		if key == "" || value == "" {
@@ -298,4 +315,12 @@ func GlobbedStringsMatch(item, val string) bool {
 	}
 
 	return val == item
+}
+
+// AppendIfMissing adds a string to a slice if the given string is not present
+func AppendIfMissing(slice []string, i string) []string {
+	if StrListContains(slice, i) {
+		return slice
+	}
+	return append(slice, i)
 }

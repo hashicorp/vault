@@ -82,7 +82,7 @@ func TestGenerateRoot_status(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 
-	if !strings.Contains(string(ui.OutputWriter.Bytes()), "Started: true") {
+	if !strings.Contains(ui.OutputWriter.String(), "Started: true") {
 		t.Fatalf("bad: %s", ui.OutputWriter.String())
 	}
 }

@@ -6,14 +6,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/reload"
 )
 
-func tcpListenerFactory(config map[string]string, _ io.Writer) (net.Listener, map[string]string, vault.ReloadFunc, error) {
+func tcpListenerFactory(config map[string]interface{}, _ io.Writer) (net.Listener, map[string]string, reload.ReloadFunc, error) {
 	bind_proto := "tcp"
-	addr, ok := config["address"]
+	var addr string
+	addrRaw, ok := config["address"]
 	if !ok {
 		addr = "127.0.0.1:8200"
+	} else {
+		addr = addrRaw.(string)
 	}
 
 	// If they've passed 0.0.0.0, we only want to bind on IPv4
@@ -28,6 +31,12 @@ func tcpListenerFactory(config map[string]string, _ io.Writer) (net.Listener, ma
 	}
 
 	ln = tcpKeepAliveListener{ln.(*net.TCPListener)}
+
+	ln, err = listenerWrapProxy(ln, config)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	props := map[string]string{"addr": addr}
 	return listenerWrapTLS(ln, props, config)
 }

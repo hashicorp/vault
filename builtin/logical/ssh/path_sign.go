@@ -3,7 +3,6 @@ package ssh
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -44,7 +43,7 @@ func pathSign(b *backend) *framework.Path {
 				Description: `The desired role with configuration for this request.`,
 			},
 			"ttl": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeDurationSecond,
 				Description: `The requested Time To Live for the SSH certificate;
 sets the expiration date. If not specified
 the role default, backend default, or system
@@ -275,16 +274,22 @@ func (b *backend) calculateKeyId(data *framework.FieldData, req *logical.Request
 		return reqId, nil
 	}
 
-	keyHash := sha256.Sum256(pubKey.Marshal())
-	keyId := hex.EncodeToString(keyHash[:])
-
-	if req.DisplayName != "" {
-		keyId = fmt.Sprintf("%s-%s", req.DisplayName, keyId)
+	keyIDFormat := "vault-{{token_display_name}}-{{public_key_hash}}"
+	if req.DisplayName == "" {
+		keyIDFormat = "vault-{{public_key_hash}}"
 	}
 
-	keyId = fmt.Sprintf("vault-%s", keyId)
+	if role.KeyIDFormat != "" {
+		keyIDFormat = role.KeyIDFormat
+	}
 
-	return keyId, nil
+	keyID := substQuery(keyIDFormat, map[string]string{
+		"token_display_name": req.DisplayName,
+		"role_name":          data.Get("role").(string),
+		"public_key_hash":    fmt.Sprintf("%x", sha256.Sum256(pubKey.Marshal())),
+	})
+
+	return keyID, nil
 }
 
 func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshRole) (map[string]string, error) {
@@ -340,40 +345,34 @@ func (b *backend) calculateExtensions(data *framework.FieldData, role *sshRole) 
 }
 
 func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.Duration, error) {
-
 	var ttl, maxTTL time.Duration
-	var ttlField string
-	ttlFieldInt, ok := data.GetOk("ttl")
-	if !ok {
-		ttlField = role.TTL
-	} else {
-		ttlField = ttlFieldInt.(string)
-	}
+	var err error
 
-	if len(ttlField) == 0 {
+	ttlRaw, specifiedTTL := data.GetOk("ttl")
+	if specifiedTTL {
+		ttl = time.Duration(ttlRaw.(int)) * time.Second
+	} else {
+		ttl, err = parseutil.ParseDurationSecond(role.TTL)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if ttl == 0 {
 		ttl = b.System().DefaultLeaseTTL()
-	} else {
-		var err error
-		ttl, err = parseutil.ParseDurationSecond(ttlField)
-		if err != nil {
-			return 0, fmt.Errorf("invalid requested ttl: %s", err)
-		}
 	}
 
-	if len(role.MaxTTL) == 0 {
+	maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
+	if err != nil {
+		return 0, err
+	}
+	if maxTTL == 0 {
 		maxTTL = b.System().MaxLeaseTTL()
-	} else {
-		var err error
-		maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
-		if err != nil {
-			return 0, fmt.Errorf("invalid requested max ttl: %s", err)
-		}
 	}
 
 	if ttl > maxTTL {
 		// Don't error if they were using system defaults, only error if
 		// they specifically chose a bad TTL
-		if len(ttlField) == 0 {
+		if !specifiedTTL {
 			ttl = maxTTL
 		} else {
 			return 0, fmt.Errorf("ttl is larger than maximum allowed (%d)", maxTTL/time.Second)
@@ -383,7 +382,17 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 	return ttl, nil
 }
 
-func (b *creationBundle) sign() (*ssh.Certificate, error) {
+func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			errMsg, ok := r.(string)
+			if ok {
+				retCert = nil
+				retErr = errors.New(errMsg)
+			}
+		}
+	}()
+
 	serialNumber, err := certutil.GenerateSerialNumber()
 	if err != nil {
 		return nil, err

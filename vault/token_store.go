@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"sync/atomic"
 
 	"regexp"
@@ -84,7 +85,6 @@ type TokenStore struct {
 	*framework.Backend
 
 	view *BarrierView
-	salt *salt.Salt
 
 	expiration *ExpirationManager
 
@@ -97,6 +97,10 @@ type TokenStore struct {
 	cubbyholeDestroyer func(*TokenStore, string) error
 
 	logger log.Logger
+
+	saltLock   sync.RWMutex
+	salt       *salt.Salt
+	saltConfig *salt.Config
 
 	tidyLock int64
 }
@@ -113,10 +117,13 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		cubbyholeDestroyer: destroyCubbyhole,
 		logger:             c.logger,
 		tokenLocks:         locksutil.CreateLocks(),
+		saltLock:           sync.RWMutex{},
 	}
 
 	if c.policyStore != nil {
-		t.policyLookupFunc = c.policyStore.GetPolicy
+		t.policyLookupFunc = func(name string) (*Policy, error) {
+			return c.policyStore.GetPolicy(name, PolicyTypeToken)
+		}
 	}
 
 	// Setup the framework endpoints
@@ -478,29 +485,60 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 }
 
 func (ts *TokenStore) Initialize() error {
-	// Setup the salt
-	salt, err := salt.NewSalt(ts.view, &salt.Config{
+	ts.saltLock.Lock()
+
+	// Setup the salt config
+	ts.saltConfig = &salt.Config{
 		HashFunc: salt.SHA1Hash,
 		Location: salt.DefaultLocation,
-	})
-	if err != nil {
-		return err
 	}
-	ts.salt = salt
+	ts.salt = nil
+	ts.saltLock.Unlock()
 
 	return nil
+}
+
+func (ts *TokenStore) Invalidate(key string) {
+	//ts.logger.Trace("token: invalidating key", "key", key)
+
+	switch key {
+	case tokenSubPath + salt.DefaultLocation:
+		ts.saltLock.Lock()
+		ts.salt = nil
+		ts.saltLock.Unlock()
+	}
+}
+
+func (ts *TokenStore) Salt() (*salt.Salt, error) {
+	ts.saltLock.RLock()
+	if ts.salt != nil {
+		defer ts.saltLock.RUnlock()
+		return ts.salt, nil
+	}
+	ts.saltLock.RUnlock()
+	ts.saltLock.Lock()
+	defer ts.saltLock.Unlock()
+	if ts.salt != nil {
+		return ts.salt, nil
+	}
+	salt, err := salt.NewSalt(ts.view, ts.saltConfig)
+	if err != nil {
+		return nil, err
+	}
+	ts.salt = salt
+	return salt, nil
 }
 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
 	// ID of this entry, generally a random UUID
-	ID string `json:"id" mapstructure:"id" structs:"id"`
+	ID string `json:"id" mapstructure:"id" structs:"id" sentinel:""`
 
 	// Accessor for this token, a random UUID
-	Accessor string `json:"accessor" mapstructure:"accessor" structs:"accessor"`
+	Accessor string `json:"accessor" mapstructure:"accessor" structs:"accessor" sentinel:""`
 
 	// Parent token, used for revocation trees
-	Parent string `json:"parent" mapstructure:"parent" structs:"parent"`
+	Parent string `json:"parent" mapstructure:"parent" structs:"parent" sentinel:""`
 
 	// Which named policies should be used
 	Policies []string `json:"policies" mapstructure:"policies" structs:"policies"`
@@ -509,7 +547,7 @@ type TokenEntry struct {
 	Path string `json:"path" mapstructure:"path" structs:"path"`
 
 	// Used for auditing. This could include things like "source", "user", "ip"
-	Meta map[string]string `json:"meta" mapstructure:"meta" structs:"meta"`
+	Meta map[string]string `json:"meta" mapstructure:"meta" structs:"meta" sentinel:"meta"`
 
 	// Used for operators to be able to associate with the source
 	DisplayName string `json:"display_name" mapstructure:"display_name" structs:"display_name"`
@@ -524,13 +562,13 @@ type TokenEntry struct {
 	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`
 
 	// Time of token creation
-	CreationTime int64 `json:"creation_time" mapstructure:"creation_time" structs:"creation_time"`
+	CreationTime int64 `json:"creation_time" mapstructure:"creation_time" structs:"creation_time" sentinel:""`
 
 	// Duration set when token was created
-	TTL time.Duration `json:"ttl" mapstructure:"ttl" structs:"ttl"`
+	TTL time.Duration `json:"ttl" mapstructure:"ttl" structs:"ttl" sentinel:""`
 
 	// Explicit maximum TTL on the token
-	ExplicitMaxTTL time.Duration `json:"explicit_max_ttl" mapstructure:"explicit_max_ttl" structs:"explicit_max_ttl"`
+	ExplicitMaxTTL time.Duration `json:"explicit_max_ttl" mapstructure:"explicit_max_ttl" structs:"explicit_max_ttl" sentinel:""`
 
 	// If set, the role that was used for parameters at creation time
 	Role string `json:"role" mapstructure:"role" structs:"role"`
@@ -538,13 +576,66 @@ type TokenEntry struct {
 	// If set, the period of the token. This is only used when created directly
 	// through the create endpoint; periods managed by roles or other auth
 	// backends are subject to those renewal rules.
-	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
+	Period time.Duration `json:"period" mapstructure:"period" structs:"period" sentinel:""`
 
 	// These are the deprecated fields
-	DisplayNameDeprecated    string        `json:"DisplayName" mapstructure:"DisplayName" structs:"DisplayName"`
-	NumUsesDeprecated        int           `json:"NumUses" mapstructure:"NumUses" structs:"NumUses"`
-	CreationTimeDeprecated   int64         `json:"CreationTime" mapstructure:"CreationTime" structs:"CreationTime"`
-	ExplicitMaxTTLDeprecated time.Duration `json:"ExplicitMaxTTL" mapstructure:"ExplicitMaxTTL" structs:"ExplicitMaxTTL"`
+	DisplayNameDeprecated    string        `json:"DisplayName" mapstructure:"DisplayName" structs:"DisplayName" sentinel:""`
+	NumUsesDeprecated        int           `json:"NumUses" mapstructure:"NumUses" structs:"NumUses" sentinel:""`
+	CreationTimeDeprecated   int64         `json:"CreationTime" mapstructure:"CreationTime" structs:"CreationTime" sentinel:""`
+	ExplicitMaxTTLDeprecated time.Duration `json:"ExplicitMaxTTL" mapstructure:"ExplicitMaxTTL" structs:"ExplicitMaxTTL" sentinel:""`
+
+	EntityID string `json:"entity_id" mapstructure:"entity_id" structs:"entity_id"`
+}
+
+func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
+	if te == nil {
+		return nil, nil
+	}
+	switch key {
+	case "period":
+		return te.Period, nil
+
+	case "period_seconds":
+		return int64(te.Period.Seconds()), nil
+
+	case "explicit_max_ttl":
+		return te.ExplicitMaxTTL, nil
+
+	case "explicit_max_ttl_seconds":
+		return int64(te.ExplicitMaxTTL.Seconds()), nil
+
+	case "creation_ttl":
+		return te.TTL, nil
+
+	case "creation_ttl_seconds":
+		return int64(te.TTL.Seconds()), nil
+
+	case "creation_time":
+		return time.Unix(te.CreationTime, 0).Format(time.RFC3339Nano), nil
+
+	case "creation_time_unix":
+		return time.Unix(te.CreationTime, 0), nil
+
+	case "meta", "metadata":
+		return te.Meta, nil
+	}
+
+	return nil, nil
+}
+
+func (te *TokenEntry) SentinelKeys() []string {
+	return []string{
+		"period",
+		"period_seconds",
+		"explicit_max_ttl",
+		"explicit_max_ttl_seconds",
+		"creation_ttl",
+		"creation_ttl_seconds",
+		"creation_time",
+		"creation_time_unix",
+		"meta",
+		"metadata",
+	}
 }
 
 // tsRoleEntry contains token store role information
@@ -591,8 +682,13 @@ func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 }
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversible
-func (ts *TokenStore) SaltID(id string) string {
-	return ts.salt.SaltID(id)
+func (ts *TokenStore) SaltID(id string) (string, error) {
+	s, err := ts.Salt()
+	if err != nil {
+		return "", err
+	}
+
+	return s.SaltID(id), nil
 }
 
 // RootToken is used to generate a new token with root privileges and no parent
@@ -651,8 +747,12 @@ func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
 	entry.Accessor = accessorUUID
 
 	// Create index entry, mapping the accessor to the token ID
-	path := accessorPrefix + ts.SaltID(entry.Accessor)
+	saltID, err := ts.SaltID(entry.Accessor)
+	if err != nil {
+		return err
+	}
 
+	path := accessorPrefix + saltID
 	aEntry := &accessorEntry{
 		TokenID:    entry.ID,
 		AccessorID: entry.Accessor,
@@ -682,9 +782,18 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		entry.ID = entryUUID
 	}
 
+	saltedId, err := ts.SaltID(entry.ID)
+	if err != nil {
+		return err
+	}
+	exist, _ := ts.lookupSalted(saltedId, true)
+	if exist != nil {
+		return fmt.Errorf("cannot create a token with a duplicate ID")
+	}
+
 	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
 
-	err := ts.createAccessor(entry)
+	err = ts.createAccessor(entry)
 	if err != nil {
 		return err
 	}
@@ -702,7 +811,10 @@ func (ts *TokenStore) store(entry *TokenEntry) error {
 // storeCommon handles the actual storage of an entry, possibly generating
 // secondary indexes
 func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error {
-	saltedId := ts.SaltID(entry.ID)
+	saltedId, err := ts.SaltID(entry.ID)
+	if err != nil {
+		return err
+	}
 
 	// Marshal the entry
 	enc, err := json.Marshal(entry)
@@ -726,7 +838,11 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 			}
 
 			// Create the index entry
-			path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
+			parentSaltedID, err := ts.SaltID(entry.Parent)
+			if err != nil {
+				return err
+			}
+			path := parentPrefix + parentSaltedID + "/" + saltedId
 			le := &logical.StorageEntry{Key: path}
 			if err := ts.view.Put(le); err != nil {
 				return fmt.Errorf("failed to persist entry: %v", err)
@@ -737,6 +853,9 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 	// Write the primary ID
 	path := lookupPrefix + saltedId
 	le := &logical.StorageEntry{Key: path, Value: enc}
+	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+		le.SealWrap = true
+	}
 	if err := ts.view.Put(le); err != nil {
 		return fmt.Errorf("failed to persist entry: %v", err)
 	}
@@ -761,12 +880,23 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 		return te, nil
 	}
 
+	// If we are attempting to unwrap a control group request, don't use the token.
+	// It will be manually revoked by the handler.
+	if len(te.Policies) == 1 && te.Policies[0] == controlGroupPolicyName {
+		return te, nil
+	}
+
 	lock := locksutil.LockForKey(ts.tokenLocks, te.ID)
 	lock.Lock()
 	defer lock.Unlock()
 
 	// Call lookupSalted instead of Lookup to avoid deadlocking since Lookup grabs a read lock
-	te, err := ts.lookupSalted(ts.SaltID(te.ID), false)
+	saltedID, err := ts.SaltID(te.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	te, err = ts.lookupSalted(saltedID, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh entry: %v", err)
 	}
@@ -818,15 +948,38 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 	lock.RLock()
 	defer lock.RUnlock()
 
-	return ts.lookupSalted(ts.SaltID(id), false)
+	saltedID, err := ts.SaltID(id)
+	if err != nil {
+		return nil, err
+	}
+	return ts.lookupSalted(saltedID, false)
+}
+
+// lookupTainted is used to find a token that may or maynot be tainted given its
+// ID. It acquires a read lock, then calls lookupSalted.
+func (ts *TokenStore) lookupTainted(id string) (*TokenEntry, error) {
+	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
+	if id == "" {
+		return nil, fmt.Errorf("cannot lookup blank token")
+	}
+
+	lock := locksutil.LockForKey(ts.tokenLocks, id)
+	lock.RLock()
+	defer lock.RUnlock()
+
+	saltedID, err := ts.SaltID(id)
+	if err != nil {
+		return nil, err
+	}
+	return ts.lookupSalted(saltedID, true)
 }
 
 // lookupSalted is used to find a token given its salted ID. If tainted is
 // true, entries that are in some revocation state (currently, indicated by num
 // uses < 0), the entry will be returned anyways
-func (ts *TokenStore) lookupSalted(saltedId string, tainted bool) (*TokenEntry, error) {
+func (ts *TokenStore) lookupSalted(saltedID string, tainted bool) (*TokenEntry, error) {
 	// Lookup token
-	path := lookupPrefix + saltedId
+	path := lookupPrefix + saltedID
 	raw, err := ts.view.Get(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read entry: %v", err)
@@ -845,6 +998,19 @@ func (ts *TokenStore) lookupSalted(saltedId string, tainted bool) (*TokenEntry, 
 
 	// This is a token that is awaiting deferred revocation or tainted
 	if entry.NumUses < 0 && !tainted {
+		return nil, nil
+	}
+
+	// If we are still restoring the expiration manager, we want to ensure the
+	// token is not expired
+	if ts.expiration == nil {
+		return nil, nil
+	}
+	check, err := ts.expiration.RestoreSaltedTokenCheck(entry.Path, saltedID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check token in restore mode: %v", err)
+	}
+	if !check {
 		return nil, nil
 	}
 
@@ -901,7 +1067,11 @@ func (ts *TokenStore) Revoke(id string) error {
 		return fmt.Errorf("cannot revoke blank token")
 	}
 
-	return ts.revokeSalted(ts.SaltID(id))
+	saltedID, err := ts.SaltID(id)
+	if err != nil {
+		return err
+	}
+	return ts.revokeSalted(saltedID)
 }
 
 // revokeSalted is used to invalidate a given salted token,
@@ -991,7 +1161,12 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 
 	// Clear the secondary index if any
 	if entry.Parent != "" {
-		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
+		parentSaltedID, err := ts.SaltID(entry.Parent)
+		if err != nil {
+			return err
+		}
+
+		path := parentPrefix + parentSaltedID + "/" + saltedId
 		if err = ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
@@ -999,7 +1174,12 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 
 	// Clear the accessor index if any
 	if entry.Accessor != "" {
-		path := accessorPrefix + ts.SaltID(entry.Accessor)
+		accessorSaltedID, err := ts.SaltID(entry.Accessor)
+		if err != nil {
+			return err
+		}
+
+		path := accessorPrefix + accessorSaltedID
 		if err = ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
@@ -1024,7 +1204,10 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	}
 
 	// Get the salted ID
-	saltedId := ts.SaltID(id)
+	saltedId, err := ts.SaltID(id)
+	if err != nil {
+		return err
+	}
 
 	// Nuke the entire tree recursively
 	if err := ts.revokeTreeSalted(saltedId); err != nil {
@@ -1085,7 +1268,11 @@ func (ts *TokenStore) handleCreateAgainstRole(
 }
 
 func (ts *TokenStore) lookupByAccessor(accessor string, tainted bool) (accessorEntry, error) {
-	return ts.lookupBySaltedAccessor(ts.SaltID(accessor), tainted)
+	saltedID, err := ts.SaltID(accessor)
+	if err != nil {
+		return accessorEntry{}, err
+	}
+	return ts.lookupBySaltedAccessor(saltedID, tainted)
 }
 
 func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string, tainted bool) (accessorEntry, error) {
@@ -1102,7 +1289,12 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string, tainted bool
 	err = jsonutil.DecodeJSON(entry.Value, &aEntry)
 	// If we hit an error, assume it's a pre-struct straight token ID
 	if err != nil {
-		te, err := ts.lookupSalted(ts.SaltID(string(entry.Value)), tainted)
+		saltedID, err := ts.SaltID(string(entry.Value))
+		if err != nil {
+			return accessorEntry{}, err
+		}
+
+		te, err := ts.lookupSalted(saltedID, tainted)
 		if err != nil {
 			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %s", err)
 		}
@@ -1220,8 +1412,19 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 
 		// Look up tainted variants so we only find entries that truly don't
 		// exist
-		saltedId := ts.SaltID(accessorEntry.TokenID)
+		saltedId, err := ts.SaltID(accessorEntry.TokenID)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read salt id: %v", err))
+			lock.RUnlock()
+			continue
+		}
 		te, err := ts.lookupSalted(saltedId, true)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup tainted ID: %v", err))
+			lock.RUnlock()
+			continue
+		}
+
 		lock.RUnlock()
 
 		// If token entry is not found assume that the token is not valid any
@@ -1620,6 +1823,13 @@ func (ts *TokenStore) handleCreateCommon(
 		}
 	}
 
+	// At this point, it is clear whether the token is going to be an orphan or
+	// not. If the token is not going to be an orphan, inherit the parent's
+	// entity identifier into the child token.
+	if te.Parent != "" {
+		te.EntityID = parent.EntityID
+	}
+
 	if data.ExplicitMaxTTL != "" {
 		dur, err := parseutil.ParseDurationSecond(data.ExplicitMaxTTL)
 		if err != nil {
@@ -1762,6 +1972,7 @@ func (ts *TokenStore) handleCreateCommon(
 		},
 		ClientToken: te.ID,
 		Accessor:    te.Accessor,
+		EntityID:    te.EntityID,
 	}
 
 	if ts.policyLookupFunc != nil {
@@ -1896,9 +2107,11 @@ func (ts *TokenStore) handleLookup(
 	defer lock.RUnlock()
 
 	// Lookup the token
-	saltedId := ts.SaltID(id)
+	saltedId, err := ts.SaltID(id)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
 	out, err := ts.lookupSalted(saltedId, true)
-
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -1924,6 +2137,7 @@ func (ts *TokenStore) handleLookup(
 			"expire_time":      nil,
 			"ttl":              int64(0),
 			"explicit_max_ttl": int64(out.ExplicitMaxTTL.Seconds()),
+			"entity_id":        out.EntityID,
 		},
 	}
 

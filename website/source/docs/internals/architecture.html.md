@@ -34,7 +34,7 @@ clarify what is being discussed:
   in. Much like a bank vault, the barrier must be "unsealed" before anything inside can be accessed.
 
 * **Secret Backend** - A secret backend is responsible for managing secrets. Simple secret backends
-  like the "generic" backend simply return the same secret when queried. Some backends support
+  like the "kv" backend simply return the same secret when queried. Some backends support
   using policies to dynamically generate a secret each time they are queried. This allows for
   unique secrets to be used which allows Vault to do fine-grained revocation and policy updates.
   As an example, a MySQL backend could be configured with a "web" policy. When the "web" secret
@@ -95,7 +95,7 @@ as [Shamir's secret sharing algorithm](https://en.wikipedia.org/wiki/Shamir's_Se
 to split the master key into 5 shares, any 3 of which are required to reconstruct the master
 key.
 
-![Keys](/assets/images/keys.png)
+[![Vault Shamir Secret Sharing Algorithm](/assets/images/vault-shamir-secret-sharing.svg)](/assets/images/vault-shamir-secret-sharing.svg)
 
 The number of shares and the minimum threshold required can both be specified. Shamir's
 technique can be disabled, and the master key used directly for unsealing. Once Vault

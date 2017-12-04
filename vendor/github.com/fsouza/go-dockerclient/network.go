@@ -125,8 +125,9 @@ type CreateNetworkOptions struct {
 //
 // See https://goo.gl/T8kRVH for more details.
 type IPAMOptions struct {
-	Driver string       `json:"Driver" yaml:"Driver" toml:"Driver"`
-	Config []IPAMConfig `json:"Config" yaml:"Config" toml:"Config"`
+	Driver  string            `json:"Driver" yaml:"Driver" toml:"Driver"`
+	Config  []IPAMConfig      `json:"Config" yaml:"Config" toml:"Config"`
+	Options map[string]string `json:"Options" yaml:"Options" toml:"Options"`
 }
 
 // IPAMConfig represents IPAM configurations

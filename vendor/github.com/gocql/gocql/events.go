@@ -173,24 +173,30 @@ func (s *Session) handleNodeEvent(frames []frame) {
 	}
 }
 
+func (s *Session) addNewNode(host *HostInfo) {
+	if s.cfg.filterHost(host) {
+		return
+	}
+
+	host.setState(NodeUp)
+	s.pool.addHost(host)
+	s.policy.AddHost(host)
+}
+
 func (s *Session) handleNewNode(ip net.IP, port int, waitForBinary bool) {
-	var hostInfo *HostInfo
-	if s.control != nil && !s.cfg.IgnorePeerAddr {
-		var err error
-		hostInfo, err = s.control.fetchHostInfo(ip, port)
-		if err != nil {
-			Logger.Printf("gocql: events: unable to fetch host info for (%s:%d): %v\n", ip, port, err)
-			return
-		}
-	} else {
-		hostInfo = &HostInfo{peer: ip, port: port}
+	if gocqlDebug {
+		Logger.Printf("gocql: Session.handleNewNode: %s:%d\n", ip.String(), port)
 	}
 
-	if s.cfg.IgnorePeerAddr && hostInfo.Peer().Equal(ip) {
-		hostInfo.setPeer(ip)
-	}
+	ip, port = s.cfg.translateAddressPort(ip, port)
 
-	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(hostInfo) {
+	// Get host info and apply any filters to the host
+	hostInfo, err := s.hostSource.getHostInfo(ip, port)
+	if err != nil {
+		Logger.Printf("gocql: events: unable to fetch host info for (%s:%d): %v\n", ip, port, err)
+		return
+	} else if hostInfo == nil {
+		// If hostInfo is nil, this host was filtered out by cfg.HostFilter
 		return
 	}
 
@@ -199,24 +205,27 @@ func (s *Session) handleNewNode(ip net.IP, port int, waitForBinary bool) {
 	}
 
 	// should this handle token moving?
-	if existing, ok := s.ring.addHostIfMissing(hostInfo); ok {
-		existing.update(hostInfo)
-		hostInfo = existing
-	}
+	hostInfo = s.ring.addOrUpdate(hostInfo)
 
-	s.pool.addHost(hostInfo)
-	s.policy.AddHost(hostInfo)
-	hostInfo.setState(NodeUp)
+	s.addNewNode(hostInfo)
+
 	if s.control != nil && !s.cfg.IgnorePeerAddr {
+		// TODO(zariel): debounce ring refresh
 		s.hostSource.refreshRing()
 	}
 }
 
 func (s *Session) handleRemovedNode(ip net.IP, port int) {
+	if gocqlDebug {
+		Logger.Printf("gocql: Session.handleRemovedNode: %s:%d\n", ip.String(), port)
+	}
+
+	ip, port = s.cfg.translateAddressPort(ip, port)
+
 	// we remove all nodes but only add ones which pass the filter
 	host := s.ring.getHost(ip)
 	if host == nil {
-		host = &HostInfo{peer: ip, port: port}
+		host = &HostInfo{connectAddress: ip, port: port}
 	}
 
 	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {
@@ -233,33 +242,30 @@ func (s *Session) handleRemovedNode(ip net.IP, port int) {
 	}
 }
 
-func (s *Session) handleNodeUp(ip net.IP, port int, waitForBinary bool) {
+func (s *Session) handleNodeUp(eventIp net.IP, eventPort int, waitForBinary bool) {
 	if gocqlDebug {
-		Logger.Printf("gocql: Session.handleNodeUp: %s:%d\n", ip.String(), port)
+		Logger.Printf("gocql: Session.handleNodeUp: %s:%d\n", eventIp.String(), eventPort)
 	}
 
+	ip, _ := s.cfg.translateAddressPort(eventIp, eventPort)
+
 	host := s.ring.getHost(ip)
-	if host != nil {
-		if s.cfg.IgnorePeerAddr && host.Peer().Equal(ip) {
-			// TODO: how can this ever be true?
-			host.setPeer(ip)
-		}
-
-		if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {
-			return
-		}
-
-		if t := host.Version().nodeUpDelay(); t > 0 && waitForBinary {
-			time.Sleep(t)
-		}
-
-		s.pool.hostUp(host)
-		s.policy.HostUp(host)
-		host.setState(NodeUp)
+	if host == nil {
+		// TODO(zariel): avoid the need to translate twice in this
+		// case
+		s.handleNewNode(eventIp, eventPort, waitForBinary)
 		return
 	}
 
-	s.handleNewNode(ip, port, waitForBinary)
+	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {
+		return
+	}
+
+	if t := host.Version().nodeUpDelay(); t > 0 && waitForBinary {
+		time.Sleep(t)
+	}
+
+	s.addNewNode(host)
 }
 
 func (s *Session) handleNodeDown(ip net.IP, port int) {
@@ -269,7 +275,7 @@ func (s *Session) handleNodeDown(ip net.IP, port int) {
 
 	host := s.ring.getHost(ip)
 	if host == nil {
-		host = &HostInfo{peer: ip, port: port}
+		host = &HostInfo{connectAddress: ip, port: port}
 	}
 
 	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {

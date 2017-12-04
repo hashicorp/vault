@@ -65,7 +65,7 @@ type ClusterConfig struct {
 	// configuration of host selection and connection selection policies.
 	PoolConfig PoolConfig
 
-	// If not zero, gocql attempt to reconnect known DOWN nodes in every ReconnectSleep.
+	// If not zero, gocql attempt to reconnect known DOWN nodes in every ReconnectInterval.
 	ReconnectInterval time.Duration
 
 	// The maximum amount of time to wait for schema agreement in a cluster after
@@ -166,6 +166,10 @@ func (cfg *ClusterConfig) translateAddressPort(addr net.IP, port int) (net.IP, i
 		Logger.Printf("gocql: translating address '%v:%d' to '%v:%d'", addr, port, newAddr, newPort)
 	}
 	return newAddr, newPort
+}
+
+func (cfg *ClusterConfig) filterHost(host *HostInfo) bool {
+	return !(cfg.HostFilter == nil || cfg.HostFilter.Accept(host))
 }
 
 var (

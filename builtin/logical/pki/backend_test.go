@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -12,6 +13,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math"
+	"math/big"
 	mathrand "math/rand"
 	"net"
 	"os"
@@ -22,10 +24,13 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/strutil"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -398,8 +403,8 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		return nil, fmt.Errorf("Validity period not far enough in the past")
 	}
 
-	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 10 {
-		return nil, fmt.Errorf("Validity period of %d too large vs max of 10", cert.NotAfter.Unix())
+	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 20 {
+		return nil, fmt.Errorf("Certificate validity end: %s; expected within 20 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
 	}
 
 	return parsedCertBundle, nil
@@ -649,6 +654,11 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 
 		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "root",
+		},
+
+		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -866,6 +876,11 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 
 		// Test a bunch of generation stuff
 		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "root",
+		},
+
+		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -997,6 +1012,11 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 		},
 
 		// Do it all again, with EC keys and DER format
+		logicaltest.TestStep{
+			Operation: logical.DeleteOperation,
+			Path:      "root",
+		},
+
 		logicaltest.TestStep{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
@@ -1218,7 +1238,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1232,7 +1252,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1290,7 +1310,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1304,7 +1324,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
+				if resp != nil && resp.Data["error"] != nil && resp.Data["error"].(string) != "" {
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
@@ -1330,8 +1350,8 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] == nil || resp.Data["error"].(string) == "" {
-					return fmt.Errorf("didn't get an expected error")
+				if resp != nil {
+					return fmt.Errorf("expected no response")
 				}
 
 				serialUnderTest = "cert/" + reqdata["ec_int_serial_number"].(string)
@@ -1344,8 +1364,8 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.ReadOperation,
 			PreFlight: setSerialUnderTest,
 			Check: func(resp *logical.Response) error {
-				if resp.Data["error"] == nil || resp.Data["error"].(string) == "" {
-					return fmt.Errorf("didn't get an expected error")
+				if resp != nil {
+					return fmt.Errorf("expected no response")
 				}
 
 				serialUnderTest = "cert/" + reqdata["rsa_int_serial_number"].(string)
@@ -1827,6 +1847,8 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		addTests(nil)
 
 		roleTestStep.ErrorOk = false
+		roleVals.TTL = ""
+		roleVals.MaxTTL = "12h"
 	}
 
 	// Listing test
@@ -1870,7 +1892,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	_, err := b.Setup(config)
+	err := b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1997,7 +2019,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	_, err := b.Setup(config)
+	err := b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2108,11 +2130,30 @@ func TestBackend_SignVerbatim(t *testing.T) {
 			"ttl": "12h",
 		},
 	})
-	if resp != nil && !resp.IsError() {
-		t.Fatalf("sign-verbatim signed too-large-ttl'd CSR: %#v", *resp)
-	}
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf(resp.Error().Error())
+	}
+	if resp.Data == nil || resp.Data["certificate"] == nil {
+		t.Fatal("did not get expected data")
+	}
+	certString := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(certString))
+	if block == nil {
+		t.Fatal("nil pem block")
+	}
+	certs, err := x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(certs) != 1 {
+		t.Fatalf("expected a single cert, got %d", len(certs))
+	}
+	cert := certs[0]
+	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
+		t.Fatalf("sign-verbatim did not properly cap validiaty period on signed CSR")
 	}
 
 	// now check that if we set generate-lease it takes it from the role and the TTLs match
@@ -2153,6 +2194,522 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	}
 	if math.Abs(float64(resp.Secret.TTL-(5*time.Hour))) > float64(5*time.Hour) {
 		t.Fatalf("ttl not default; wanted %v, got %v", b.System().DefaultLeaseTTL(), resp.Secret.TTL)
+	}
+}
+
+func TestBackend_Root_Idempotentcy(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	if err != nil {
+		t.Fatalf("error reading ca_chain: %v", err)
+	}
+
+	r1Data := resp.Data
+
+	// Try again, make sure it's a 204 and same CA
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected no ca info")
+	}
+	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	if err != nil {
+		t.Fatalf("error reading ca_chain: %v", err)
+	}
+	r2Data := resp.Data
+	if !reflect.DeepEqual(r1Data, r2Data) {
+		t.Fatal("got different ca certs")
+	}
+
+	resp, err = client.Logical().Delete("pki/root")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil response")
+	}
+	// Make sure it behaves the same
+	resp, err = client.Logical().Delete("pki/root")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil response")
+	}
+
+	_, err = client.Logical().Read("pki/cert/ca_chain")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+
+	_, err = client.Logical().Read("pki/cert/ca_chain")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBackend_Permitted_DNS_Domains(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("root", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = client.Sys().Mount("int", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "4h",
+			MaxLeaseTTL:     "20h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("root/roles/example", map[string]interface{}{
+		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+		"max_ttl":            "2h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("int/roles/example", map[string]interface{}{
+		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
+		"allow_subdomains":   true,
+		"allow_bare_domains": true,
+		"max_ttl":            "2h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Direct issuing from root
+	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+		"ttl":                   "40h",
+		"common_name":           "myvault.com",
+		"permitted_dns_domains": []string{"foobar.com", ".zipzap.com"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clientKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	path := "root/"
+	checkIssue := func(valid bool, args ...interface{}) {
+		argMap := map[string]interface{}{}
+		var currString string
+		for i, arg := range args {
+			if i%2 == 0 {
+				currString = arg.(string)
+			} else {
+				argMap[currString] = arg
+			}
+		}
+		_, err = client.Logical().Write(path+"issue/example", argMap)
+		switch {
+		case valid && err != nil:
+			t.Fatal(err)
+		case !valid && err == nil:
+			t.Fatal("expected error")
+		}
+
+		csr, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+			Subject: pkix.Name{
+				CommonName: argMap["common_name"].(string),
+			},
+		}, clientKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		delete(argMap, "common_name")
+		argMap["csr"] = string(pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE REQUEST",
+			Bytes: csr,
+		}))
+
+		_, err = client.Logical().Write(path+"sign/example", argMap)
+		switch {
+		case valid && err != nil:
+			t.Fatal(err)
+		case !valid && err == nil:
+			t.Fatal("expected error")
+		}
+	}
+
+	// Check issuing and signing against root's permitted domains
+	checkIssue(false, "common_name", "zipzap.com")
+	checkIssue(false, "common_name", "host.foobar.com")
+	checkIssue(true, "common_name", "host.zipzap.com")
+	checkIssue(true, "common_name", "foobar.com")
+
+	// Verify that root also won't issue an intermediate outside of its permitted domains
+	resp, err := client.Logical().Write("int/intermediate/generate/internal", map[string]interface{}{
+		"common_name": "issuer.abc.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
+		"common_name": "issuer.abc.com",
+		"csr":         resp.Data["csr"],
+		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
+		"ttl": "5h",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	_, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
+		"use_csr_values": true,
+		"csr":            resp.Data["csr"],
+		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
+		"ttl": "5h",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Sign a valid intermediate
+	resp, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
+		"common_name": "issuer.zipzap.com",
+		"csr":         resp.Data["csr"],
+		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
+		"ttl": "5h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err = client.Logical().Write("int/intermediate/set-signed", map[string]interface{}{
+		"certificate": resp.Data["certificate"],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check enforcement with the intermediate's set values
+	path = "int/"
+	checkIssue(false, "common_name", "host.abc.com")
+	checkIssue(false, "common_name", "xyz.com")
+	checkIssue(true, "common_name", "abc.com")
+	checkIssue(true, "common_name", "host.xyz.com")
+}
+
+func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("root", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = client.Sys().Mount("int", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "4h",
+			MaxLeaseTTL:     "20h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Direct issuing from root
+	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("int/intermediate/generate/internal", map[string]interface{}{
+		"common_name": "myint.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	csr := resp.Data["csr"]
+
+	_, err = client.Logical().Write("root/sign/test", map[string]interface{}{
+		"common_name": "myint.com",
+		"csr":         csr,
+		"ttl":         "60h",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	_, err = client.Logical().Write("root/sign-verbatim/test", map[string]interface{}{
+		"common_name": "myint.com",
+		"csr":         csr,
+		"ttl":         "60h",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	resp, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
+		"common_name": "myint.com",
+		"csr":         csr,
+		"ttl":         "60h",
+	})
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if len(resp.Warnings) == 0 {
+		t.Fatalf("expected warnings, got %#v", *resp)
+	}
+}
+
+func TestBackend_SignSelfIssued(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend()
+	err := b.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name": "test.com",
+		"ttl":         "172800",
+	}
+
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	getSelfSigned := func(subject, issuer *x509.Certificate) (string, *x509.Certificate) {
+		selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cert, err := x509.ParseCertificate(selfSigned)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pemSS := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: selfSigned,
+		})
+		return string(pemSS), cert
+	}
+
+	template := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "foo.bar.com",
+		},
+		SerialNumber: big.NewInt(1234),
+		IsCA:         false,
+		BasicConstraintsValid: true,
+	}
+
+	ss, _ := getSelfSigned(template, template)
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error due to non-CA; got: %#v", *resp)
+	}
+
+	// Set CA to true, but leave issuer alone
+	template.IsCA = true
+
+	issuer := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "bar.foo.com",
+		},
+		SerialNumber: big.NewInt(2345),
+		IsCA:         true,
+		BasicConstraintsValid: true,
+	}
+	ss, ssCert := getSelfSigned(template, issuer)
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error due to different issuer; cert info is\nIssuer\n%#v\nSubject\n%#v\n", ssCert.Issuer, ssCert.Subject)
+	}
+
+	ss, ssCert = getSelfSigned(template, template)
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("error in response: %s", resp.Error().Error())
+	}
+
+	newCertString := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(newCertString))
+	newCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signingBundle, err := fetchCAInfo(&logical.Request{Storage: storage})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.DeepEqual(newCert.Subject, newCert.Issuer) {
+		t.Fatal("expected different subject/issuer")
+	}
+	if !reflect.DeepEqual(newCert.Issuer, signingBundle.Certificate.Subject) {
+		t.Fatalf("expected matching issuer/CA subject\n\nIssuer:\n%#v\nSubject:\n%#v\n", newCert.Issuer, signingBundle.Certificate.Subject)
+	}
+	if bytes.Equal(newCert.AuthorityKeyId, newCert.SubjectKeyId) {
+		t.Fatal("expected different authority/subject")
+	}
+	if !bytes.Equal(newCert.AuthorityKeyId, signingBundle.Certificate.SubjectKeyId) {
+		t.Fatal("expected authority on new cert to be same as signing subject")
+	}
+	if newCert.Subject.CommonName != "foo.bar.com" {
+		t.Fatalf("unexpected common name on new cert: %s", newCert.Subject.CommonName)
 	}
 }
 

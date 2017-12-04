@@ -104,6 +104,7 @@ func (cm *CheckManager) selectBroker() (*api.Broker, error) {
 	haveEnterprise := false
 
 	for _, broker := range *brokerList {
+		broker := broker
 		if cm.isValidBroker(&broker) {
 			validBrokers[broker.CID] = broker
 			if broker.Type == "enterprise" {
@@ -138,8 +139,20 @@ func (cm *CheckManager) selectBroker() (*api.Broker, error) {
 // Verify broker supports the check type to be used
 func (cm *CheckManager) brokerSupportsCheckType(checkType CheckTypeType, details *api.BrokerDetail) bool {
 
+	baseType := string(checkType)
+
 	for _, module := range details.Modules {
-		if CheckTypeType(module) == checkType {
+		if module == baseType {
+			return true
+		}
+	}
+
+	if idx := strings.Index(baseType, ":"); idx > 0 {
+		baseType = baseType[0:idx]
+	}
+
+	for _, module := range details.Modules {
+		if module == baseType {
 			return true
 		}
 	}
@@ -154,6 +167,7 @@ func (cm *CheckManager) isValidBroker(broker *api.Broker) bool {
 	var brokerPort string
 	valid := false
 	for _, detail := range broker.Details {
+		detail := detail
 
 		// broker must be active
 		if detail.Status != statusActive {

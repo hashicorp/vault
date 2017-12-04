@@ -166,9 +166,12 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 		"Content-Type":   []string{"json"},
 	}
 
-	hashFunc := func(s string) string { return "hashed" }
+	hashFunc := func(s string) (string, error) { return "hashed", nil }
 
-	result := conf.ApplyConfig(reqHeaders, hashFunc)
+	result, err := conf.ApplyConfig(reqHeaders, hashFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	expected := map[string][]string{
 		"x-test-header":  []string{"foo"},
@@ -214,7 +217,7 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	hashFunc := func(s string) string { return salter.GetIdentifiedHMAC(s) }
+	hashFunc := func(s string) (string, error) { return salter.GetIdentifiedHMAC(s), nil }
 
 	// Reset the timer since we did a lot above
 	b.ResetTimer()

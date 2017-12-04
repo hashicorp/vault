@@ -243,15 +243,30 @@ func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Polic
 		switch req.KeyType {
 		case KeyType_AES256_GCM96:
 			if req.Convergent && !req.Derived {
+				lm.UnlockPolicy(lock, lockType)
 				return nil, nil, false, fmt.Errorf("convergent encryption requires derivation to be enabled")
 			}
 
 		case KeyType_ECDSA_P256:
 			if req.Derived || req.Convergent {
-				return nil, nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", KeyType_ECDSA_P256)
+				lm.UnlockPolicy(lock, lockType)
+				return nil, nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
+		case KeyType_ED25519:
+			if req.Convergent {
+				lm.UnlockPolicy(lock, lockType)
+				return nil, nil, false, fmt.Errorf("convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
+		case KeyType_RSA2048, KeyType_RSA4096:
+			if req.Derived || req.Convergent {
+				lm.UnlockPolicy(lock, lockType)
+				return nil, nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
 			}
 
 		default:
+			lm.UnlockPolicy(lock, lockType)
 			return nil, nil, false, fmt.Errorf("unsupported key type %v", req.KeyType)
 		}
 

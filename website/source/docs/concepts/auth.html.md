@@ -8,30 +8,43 @@ description: |-
 
 # Authentication
 
-Before performing any operation with Vault, the connecting client must be
-_authenticated_. Authentication is the process of verifying a person or
-machine is who they say they are and assigning an identity to them. This
-identity is then used when making requests with Vault.
+Authentication in Vault is the process by which user or machine supplied
+information is verified against an internal or external system. Vault supports
+multiple [authentication backends](/docs/auth/index.html) including GitHub,
+LDAP, AppRole, and more. Each authentication backend has a specific use case.
 
-Authentication in Vault is pluggable via authentication backends. This
-allows you to authenticate with Vault using a method that works best for your
-organization. For example, you can authenticate using GitHub, certs, etc.
+Before a client can interact with Vault, it must _authenticate_ against an
+authentication backend. Upon authentication, a token is generated. This token is
+conceptually similar to a session ID on a website. The token may have attached
+policy, which is mapped at authentication time. This process is described in
+detail in the [policies concepts](/docs/concepts/policies.html) documentation.
 
 ## Authentication Backends
 
-There are many authentication backends available for Vault. They
-are enabled using `vault auth-enable`. After they're enabled, you can
-learn more about them using `vault path-help auth/<name>`. For example,
-if you enable GitHub, you can use `vault path-help auth/github` to learn more
-about how to configure it and login.
+Vault supports a number of authentication backends. Some backends are targeted
+toward users while others are targeted toward machines. Most authentication
+backends must be enabled before use. To enable an authentication backend:
 
-Multiple authentication backends can be enabled, but only one is required
-to gain authentication. It is not currently possible to force a user through
-multiple authentication backends to gain access.
+```sh
+$ vault write sys/auth/my-auth type=userpass
+```
 
-This allows you to enable human-friendly as well as machine-friendly
-backends at the same time. For example, for humans you might use the
-"github" auth backend, and for machines you might use the "approle" backend.
+This mounts the "userpass" authentication backend at the path "my-auth". This
+authentication will be accessible at the path "my-auth". Often you will see
+authentications at the same path as their name, but this is not a requirement.
+
+To learn more about this authentication, use the built-in `path-help` command:
+
+```sh
+$ vault path-help auth/my-auth
+# ...
+```
+
+Vault supports multiple authentication backends simultaneously, and you can even
+mount the same type of authentication backend at different paths. Only one
+authentication is required to gain access to Vault, and it is not currently
+possible to force a user through multiple authentication backends to gain
+access, although some backends do support MFA.
 
 ## Tokens
 
@@ -51,7 +64,7 @@ revoking tokens, and renewing tokens. This is all covered on the
 
 ## Authenticating
 
-#### Via the CLI
+### Via the CLI
 
 To authenticate with the CLI, `vault auth` is used. This supports many
 of the built-in authentication methods. For example, with GitHub:
@@ -73,7 +86,7 @@ will be shown.
 If you're using a method that isn't supported via the CLI, then the API
 must be used.
 
-#### Via the API
+### Via the API
 
 API authentication is generally used for machine authentication. Each
 auth backend implements its own login endpoint. Use the `vault path-help`

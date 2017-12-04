@@ -258,8 +258,10 @@ func TestBackend_keyCrudDefaultValues(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepValidateCode(t, "test", code, true),
-			testAccStepValidateCode(t, "test", invalidCode, false),
+			testAccStepValidateCode(t, "test", code, true, false),
+			// Next step should fail because it should be in the used cache
+			testAccStepValidateCode(t, "test", code, false, true),
+			testAccStepValidateCode(t, "test", invalidCode, false, false),
 			testAccStepDeleteKey(t, "test"),
 			testAccStepReadKey(t, "test", nil),
 		},
@@ -1091,13 +1093,14 @@ func testAccStepReadKey(t *testing.T, name string, expected map[string]interface
 	}
 }
 
-func testAccStepValidateCode(t *testing.T, name string, code string, valid bool) logicaltest.TestStep {
+func testAccStepValidateCode(t *testing.T, name string, code string, valid, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "code/" + name,
 		Data: map[string]interface{}{
 			"code": code,
 		},
+		ErrorOk: expectError,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
 				return fmt.Errorf("bad: %#v", resp)

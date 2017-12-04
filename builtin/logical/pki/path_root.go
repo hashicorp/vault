@@ -1,9 +1,15 @@
 package pki
 
 import (
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
+	"reflect"
+	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -24,6 +30,21 @@ func pathGenerateRoot(b *backend) *framework.Path {
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
+
+	return ret
+}
+
+func pathDeleteRoot(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "root",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.DeleteOperation: b.pathCADeleteRoot,
+		},
+
+		HelpSynopsis:    pathDeleteRootHelpSyn,
+		HelpDescription: pathDeleteRootHelpDesc,
+	}
 
 	return ret
 }
@@ -66,9 +87,44 @@ the non-repudiation flag.`,
 	return ret
 }
 
+func pathSignSelfIssued(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "root/sign-self-issued",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathCASignSelfIssued,
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"certificate": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `PEM-format self-issued certificate to be signed.`,
+			},
+		},
+
+		HelpSynopsis:    pathSignSelfIssuedHelpSyn,
+		HelpDescription: pathSignSelfIssuedHelpDesc,
+	}
+
+	return ret
+}
+
+func (b *backend) pathCADeleteRoot(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return nil, req.Storage.Delete("config/ca_bundle")
+}
+
 func (b *backend) pathCAGenerateRoot(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
+
+	entry, err := req.Storage.Get("config/ca_bundle")
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		return nil, nil
+	}
 
 	exported, format, role, errorResp := b.getGenerationParams(data)
 	if errorResp != nil {
@@ -93,7 +149,7 @@ func (b *backend) pathCAGenerateRoot(
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw cert bundle to cert bundle: {{err}}", err)
 	}
 
 	resp := &logical.Response{
@@ -132,8 +188,15 @@ func (b *backend) pathCAGenerateRoot(
 		}
 	}
 
+	if data.Get("private_key_format").(string) == "pkcs8" {
+		err = convertRespToPKCS8(resp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Store it as the CA bundle
-	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
+	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +212,7 @@ func (b *backend) pathCAGenerateRoot(
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
+		return nil, errwrap.Wrapf("unable to store certificate locally: {{err}}", err)
 	}
 
 	// For ease of later use, also store just the certificate at a known
@@ -186,12 +249,13 @@ func (b *backend) pathCASignIntermediate(
 	}
 
 	role := &roleEntry{
-		TTL:              data.Get("ttl").(string),
-		AllowLocalhost:   true,
-		AllowAnyName:     true,
-		AllowIPSANs:      true,
-		EnforceHostnames: false,
-		KeyType:          "any",
+		TTL:                   (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
+		AllowLocalhost:        true,
+		AllowAnyName:          true,
+		AllowIPSANs:           true,
+		EnforceHostnames:      false,
+		KeyType:               "any",
+		AllowExpirationPastCA: true,
 	}
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {
@@ -248,6 +312,10 @@ func (b *backend) pathCASignIntermediate(
 		},
 	}
 
+	if signingBundle.Certificate.NotAfter.Before(parsedBundle.Certificate.NotAfter) {
+		resp.AddWarning("The expiration time for the signed certificate is after the CA's expiration time. If the new certificate is not treated as a root, validation paths with the certificate past the issuing CA's expiration time will fail.")
+	}
+
 	switch format {
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
@@ -291,6 +359,75 @@ func (b *backend) pathCASignIntermediate(
 	return resp, nil
 }
 
+func (b *backend) pathCASignSelfIssued(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var err error
+
+	certPem := data.Get("certificate").(string)
+	block, _ := pem.Decode([]byte(certPem))
+	if block == nil || len(block.Bytes) == 0 {
+		return logical.ErrorResponse("certificate could not be PEM-decoded"), nil
+	}
+	certs, err := x509.ParseCertificates(block.Bytes)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error parsing certificate: %s", err)), nil
+	}
+	if len(certs) != 1 {
+		return logical.ErrorResponse(fmt.Sprintf("%d certificates found in PEM file, expected 1", len(certs))), nil
+	}
+
+	cert := certs[0]
+	if !cert.IsCA {
+		return logical.ErrorResponse("given certificate is not a CA certificate"), nil
+	}
+	if !reflect.DeepEqual(cert.Issuer, cert.Subject) {
+		return logical.ErrorResponse("given certificate is not self-issued"), nil
+	}
+
+	var caErr error
+	signingBundle, caErr := fetchCAInfo(req)
+	switch caErr.(type) {
+	case errutil.UserError:
+		return nil, errutil.UserError{Err: fmt.Sprintf(
+			"could not fetch the CA certificate (was one set?): %s", caErr)}
+	case errutil.InternalError:
+		return nil, errutil.InternalError{Err: fmt.Sprintf(
+			"error fetching CA certificate: %s", caErr)}
+	}
+
+	signingCB, err := signingBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting raw signing bundle to cert bundle: %s", err)
+	}
+
+	urls := &urlEntries{}
+	if signingBundle.URLs != nil {
+		urls = signingBundle.URLs
+	}
+	cert.IssuingCertificateURL = urls.IssuingCertificates
+	cert.CRLDistributionPoints = urls.CRLDistributionPoints
+	cert.OCSPServer = urls.OCSPServers
+
+	newCert, err := x509.CreateCertificate(rand.Reader, cert, signingBundle.Certificate, cert.PublicKey, signingBundle.PrivateKey)
+	if err != nil {
+		return nil, errwrap.Wrapf("error signing self-issued certificate: {{err}}", err)
+	}
+	if len(newCert) == 0 {
+		return nil, fmt.Errorf("nil cert was created when signing self-issued certificate")
+	}
+	pemCert := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: newCert,
+	})
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"certificate": string(pemCert),
+			"issuing_ca":  signingCB.Certificate,
+		},
+	}, nil
+}
+
 const pathGenerateRootHelpSyn = `
 Generate a new CA certificate and private key used for signing.
 `
@@ -299,10 +436,30 @@ const pathGenerateRootHelpDesc = `
 See the API documentation for more information.
 `
 
+const pathDeleteRootHelpSyn = `
+Deletes the root CA key to allow a new one to be generated.
+`
+
+const pathDeleteRootHelpDesc = `
+See the API documentation for more information.
+`
+
 const pathSignIntermediateHelpSyn = `
 Issue an intermediate CA certificate based on the provided CSR.
 `
 
 const pathSignIntermediateHelpDesc = `
-See the API documentation for more information.
+see the API documentation for more information.
+`
+
+const pathSignSelfIssuedHelpSyn = `
+Signs another CA's self-issued certificate.
+`
+
+const pathSignSelfIssuedHelpDesc = `
+Signs another CA's self-issued certificate. This is most often used for rolling roots; unless you know you need this you probably want to use sign-intermediate instead.
+
+Note that this is a very privileged operation and should be extremely restricted in terms of who is allowed to use it. All values will be taken directly from the incoming certificate and only verification that it is self-issued will be performed.
+
+Configured URLs for CRLs/OCSP/etc. will be copied over and the issuer will be this mount's CA cert. Other than that, all other values will be used verbatim.
 `

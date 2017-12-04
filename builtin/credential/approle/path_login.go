@@ -2,6 +2,7 @@ package approle
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -23,20 +24,39 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLoginUpdate,
+			logical.UpdateOperation:         b.pathLoginUpdate,
+			logical.AliasLookaheadOperation: b.pathLoginUpdateAliasLookahead,
 		},
 		HelpSynopsis:    pathLoginHelpSys,
 		HelpDescription: pathLoginHelpDesc,
 	}
 }
 
+func (b *backend) pathLoginUpdateAliasLookahead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleID := strings.TrimSpace(data.Get("role_id").(string))
+	if roleID == "" {
+		return nil, fmt.Errorf("missing role_id")
+	}
+
+	return &logical.Response{
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{
+				Name: roleID,
+			},
+		},
+	}, nil
+}
+
 // Returns the Auth object indicating the authentication and authorization information
 // if the credentials provided are validated by the backend.
 func (b *backend) pathLoginUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, roleName, metadata, err := b.validateCredentials(req, data)
+	role, roleName, metadata, _, err := b.validateCredentials(req, data)
 	if err != nil || role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to validate SecretID: %s", err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("failed to validate credentials: %v", err)), nil
 	}
+
+	// Always include the role name, for later filtering
+	metadata["role_name"] = roleName
 
 	auth := &logical.Auth{
 		NumUses: role.TokenNumUses,
@@ -48,6 +68,9 @@ func (b *backend) pathLoginUpdate(req *logical.Request, data *framework.FieldDat
 		Policies: role.Policies,
 		LeaseOptions: logical.LeaseOptions{
 			Renewable: true,
+		},
+		Alias: &logical.Alias{
+			Name: role.RoleID,
 		},
 	}
 
@@ -71,8 +94,12 @@ func (b *backend) pathLoginRenew(req *logical.Request, data *framework.FieldData
 		return nil, fmt.Errorf("failed to fetch role_name during renewal")
 	}
 
+	lock := b.roleLock(roleName)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	// Ensure that the Role still exists.
-	role, err := b.roleEntry(req.Storage, roleName)
+	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate role %s during renewal:%s", roleName, err)
 	}

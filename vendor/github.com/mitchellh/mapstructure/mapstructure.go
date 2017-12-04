@@ -1,5 +1,5 @@
-// The mapstructure package exposes functionality to convert an
-// arbitrary map[string]interface{} into a native Go structure.
+// Package mapstructure exposes functionality to convert an arbitrary
+// map[string]interface{} into a native Go structure.
 //
 // The Go structure can be arbitrarily complex, containing slices,
 // other structs, etc. and the decoder will properly decode nested
@@ -32,7 +32,12 @@ import (
 // both.
 type DecodeHookFunc interface{}
 
+// DecodeHookFuncType is a DecodeHookFunc which has complete information about
+// the source and target types.
 type DecodeHookFuncType func(reflect.Type, reflect.Type, interface{}) (interface{}, error)
+
+// DecodeHookFuncKind is a DecodeHookFunc which knows only the Kinds of the
+// source and target types.
 type DecodeHookFuncKind func(reflect.Kind, reflect.Kind, interface{}) (interface{}, error)
 
 // DecoderConfig is the configuration that is used to create a new decoder
@@ -436,7 +441,7 @@ func (d *Decoder) decodeFloat(name string, data interface{}, val reflect.Value) 
 	case dataKind == reflect.Uint:
 		val.SetFloat(float64(dataVal.Uint()))
 	case dataKind == reflect.Float32:
-		val.SetFloat(float64(dataVal.Float()))
+		val.SetFloat(dataVal.Float())
 	case dataKind == reflect.Bool && d.config.WeaklyTypedInput:
 		if dataVal.Bool() {
 			val.SetFloat(1)
@@ -681,7 +686,11 @@ func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value)
 
 	// Compile the list of all the fields that we're going to be decoding
 	// from all the structs.
-	fields := make(map[*reflect.StructField]reflect.Value)
+	type field struct {
+		field reflect.StructField
+		val   reflect.Value
+	}
+	fields := []field{}
 	for len(structs) > 0 {
 		structVal := structs[0]
 		structs = structs[1:]
@@ -713,14 +722,16 @@ func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value)
 			}
 
 			// Normal struct field, store it away
-			fields[&fieldType] = structVal.Field(i)
+			fields = append(fields, field{fieldType, structVal.Field(i)})
 		}
 	}
 
-	for fieldType, field := range fields {
-		fieldName := fieldType.Name
+	// for fieldType, field := range fields {
+	for _, f := range fields {
+		field, fieldValue := f.field, f.val
+		fieldName := field.Name
 
-		tagValue := fieldType.Tag.Get(d.config.TagName)
+		tagValue := field.Tag.Get(d.config.TagName)
 		tagValue = strings.SplitN(tagValue, ",", 2)[0]
 		if tagValue != "" {
 			fieldName = tagValue
@@ -755,14 +766,14 @@ func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value)
 		// Delete the key we're using from the unused map so we stop tracking
 		delete(dataValKeysUnused, rawMapKey.Interface())
 
-		if !field.IsValid() {
+		if !fieldValue.IsValid() {
 			// This should never happen
 			panic("field is not valid")
 		}
 
 		// If we can't set the field, then it is unexported or something,
 		// and we just continue onwards.
-		if !field.CanSet() {
+		if !fieldValue.CanSet() {
 			continue
 		}
 
@@ -772,7 +783,7 @@ func (d *Decoder) decodeStruct(name string, data interface{}, val reflect.Value)
 			fieldName = fmt.Sprintf("%s.%s", name, fieldName)
 		}
 
-		if err := d.decode(fieldName, rawMapVal.Interface(), field); err != nil {
+		if err := d.decode(fieldName, rawMapVal.Interface(), fieldValue); err != nil {
 			errors = appendErrors(errors, err)
 		}
 	}

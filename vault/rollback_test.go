@@ -29,7 +29,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := router.Mount(backend, "foo", &MountEntry{UUID: meUUID}, view); err != nil {
+	if err := router.Mount(backend, "foo", &MountEntry{UUID: meUUID, Accessor: "noopaccessor"}, view); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -81,11 +81,12 @@ func TestRollbackManager_Join(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(3)
 
+	errCh := make(chan error, 3)
 	go func() {
 		defer wg.Done()
 		err := m.Rollback("foo")
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			errCh <- err
 		}
 	}()
 
@@ -93,7 +94,7 @@ func TestRollbackManager_Join(t *testing.T) {
 		defer wg.Done()
 		err := m.Rollback("foo")
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			errCh <- err
 		}
 	}()
 
@@ -101,8 +102,13 @@ func TestRollbackManager_Join(t *testing.T) {
 		defer wg.Done()
 		err := m.Rollback("foo")
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			errCh <- err
 		}
 	}()
 	wg.Wait()
+	close(errCh)
+	err := <-errCh
+	if err != nil {
+		t.Fatalf("Error on rollback:%v", err)
+	}
 }

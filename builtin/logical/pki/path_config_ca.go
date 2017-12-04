@@ -16,9 +16,7 @@ func pathConfigCA(b *backend) *framework.Path {
 			"pem_bundle": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `PEM-format, concatenated unencrypted
-secret key and certificate, or, if a
-CSR was generated with the "generate"
-endpoint, just the signed certificate.`,
+secret key and certificate.`,
 			},
 		},
 

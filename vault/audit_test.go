@@ -3,6 +3,8 @@ package vault
 import (
 	"fmt"
 	"reflect"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/copystructure"
@@ -31,6 +34,9 @@ type NoopAudit struct {
 	RespReq  []*logical.Request
 	Resp     []*logical.Response
 	RespErrs []error
+
+	salt      *salt.Salt
+	saltMutex sync.RWMutex
 }
 
 func (n *NoopAudit) LogRequest(a *logical.Auth, r *logical.Request, err error) error {
@@ -49,12 +55,42 @@ func (n *NoopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical
 	return n.RespErr
 }
 
-func (n *NoopAudit) GetHash(data string) string {
-	return n.Config.Salt.GetIdentifiedHMAC(data)
+func (n *NoopAudit) Salt() (*salt.Salt, error) {
+	n.saltMutex.RLock()
+	if n.salt != nil {
+		defer n.saltMutex.RUnlock()
+		return n.salt, nil
+	}
+	n.saltMutex.RUnlock()
+	n.saltMutex.Lock()
+	defer n.saltMutex.Unlock()
+	if n.salt != nil {
+		return n.salt, nil
+	}
+	salt, err := salt.NewSalt(n.Config.SaltView, n.Config.SaltConfig)
+	if err != nil {
+		return nil, err
+	}
+	n.salt = salt
+	return salt, nil
+}
+
+func (n *NoopAudit) GetHash(data string) (string, error) {
+	salt, err := n.Salt()
+	if err != nil {
+		return "", err
+	}
+	return salt.GetIdentifiedHMAC(data), nil
 }
 
 func (n *NoopAudit) Reload() error {
 	return nil
+}
+
+func (n *NoopAudit) Invalidate() {
+	n.saltMutex.Lock()
+	defer n.saltMutex.Unlock()
+	n.salt = nil
 }
 
 func TestCore_EnableAudit(t *testing.T) {
@@ -184,16 +220,18 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 		Type: auditTableType,
 		Entries: []*MountEntry{
 			&MountEntry{
-				Table: auditTableType,
-				Path:  "noop/",
-				Type:  "noop",
-				UUID:  "abcd",
+				Table:    auditTableType,
+				Path:     "noop/",
+				Type:     "noop",
+				UUID:     "abcd",
+				Accessor: "noop-abcd",
 			},
 			&MountEntry{
-				Table: auditTableType,
-				Path:  "noop2/",
-				Type:  "noop",
-				UUID:  "bcde",
+				Table:    auditTableType,
+				Path:     "noop2/",
+				Type:     "noop",
+				UUID:     "bcde",
+				Accessor: "noop-bcde",
 			},
 		},
 	}
@@ -508,7 +546,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 			t.Fatalf("Bad: %#v", a.Resp[0])
 		}
 		if !reflect.DeepEqual(a.RespErrs[0], respErr) {
-			t.Fatalf("Bad: %#v", a.RespErrs[0])
+			t.Fatalf("Expected\n%v\nGot\n%#v", respErr, a.RespErrs[0])
 		}
 	}
 
@@ -522,7 +560,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	// Should FAIL work with both failing backends
 	a2.RespErr = fmt.Errorf("failed")
 	err = b.LogResponse(auth, req, resp, headersConf, respErr)
-	if err.Error() != "no audit backend succeeded in logging the response" {
+	if !strings.Contains(err.Error(), "no audit backend succeeded in logging the response") {
 		t.Fatalf("err: %v", err)
 	}
 }

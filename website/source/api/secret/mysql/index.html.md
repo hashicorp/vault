@@ -8,6 +8,11 @@ description: |-
 
 # MySQL Secret Backend HTTP API
 
+~> **Deprecation Note:** This backend is deprecated in favor of the
+combined databases backend added in v0.7.1. See the API documentation for
+the new implementation of this backend at
+[MySQL/MariaDB Database Plugin HTTP API](/api/secret/databases/mysql-maria.html).
+
 This is the API documentation for the Vault MySQL secret backend. For general
 information about the usage and operation of the MySQL backend, please see
 the [Vault MySQL backend documentation](/docs/secrets/mysql/index.html).
@@ -185,6 +190,7 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/mysql/roles`               | `200 application/json` |
+| `GET`    | `/mysql/roles?list=true`     | `200 application/json` |
 
 ### Sample Request
 

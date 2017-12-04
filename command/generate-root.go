@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/meta"
+	"github.com/posener/complete"
 )
 
 // GenerateRootCommand is a Command that generates a new root token.
@@ -28,11 +29,12 @@ type GenerateRootCommand struct {
 }
 
 func (c *GenerateRootCommand) Run(args []string) int {
-	var init, cancel, status, genotp bool
+	var init, cancel, status, genotp, drToken bool
 	var nonce, decode, otp, pgpKey string
 	var pgpKeyArr pgpkeys.PubKeyFilesFlag
 	flags := c.Meta.FlagSet("generate-root", meta.FlagSetDefault)
 	flags.BoolVar(&init, "init", false, "")
+	flags.BoolVar(&drToken, "dr-token", false, "")
 	flags.BoolVar(&cancel, "cancel", false, "")
 	flags.BoolVar(&status, "status", false, "")
 	flags.BoolVar(&genotp, "genotp", false, "")
@@ -76,7 +78,11 @@ func (c *GenerateRootCommand) Run(args []string) int {
 	}
 
 	// Check if the root generation is started
-	rootGenerationStatus, err := client.Sys().GenerateRootStatus()
+	f := client.Sys().GenerateRootStatus
+	if drToken {
+		f = client.Sys().GenerateDROperationTokenStatus
+	}
+	rootGenerationStatus, err := f()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error reading root generation status: %s", err))
 		return 1
@@ -132,16 +138,20 @@ func (c *GenerateRootCommand) Run(args []string) int {
 	// Check if we are running doing any restricted variants
 	switch {
 	case init:
-		return c.initGenerateRoot(client, otp, pgpKey)
+		return c.initGenerateRoot(client, otp, pgpKey, drToken)
 	case cancel:
-		return c.cancelGenerateRoot(client)
+		return c.cancelGenerateRoot(client, drToken)
 	case status:
-		return c.rootGenerationStatus(client)
+		return c.rootGenerationStatus(client, drToken)
 	}
 
 	// Start the root generation process if not started
 	if !rootGenerationStatus.Started {
-		rootGenerationStatus, err = client.Sys().GenerateRootInit(otp, pgpKey)
+		f := client.Sys().GenerateRootInit
+		if drToken {
+			f = client.Sys().GenerateDROperationTokenInit
+		}
+		rootGenerationStatus, err = f(otp, pgpKey)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error initializing root generation: %s", err))
 			return 1
@@ -178,14 +188,19 @@ func (c *GenerateRootCommand) Run(args []string) int {
 	}
 
 	// Provide the key, this may potentially complete the update
-	statusResp, err := client.Sys().GenerateRootUpdate(strings.TrimSpace(key), c.Nonce)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error attempting generate-root update: %s", err))
-		return 1
+	{
+		f := client.Sys().GenerateRootUpdate
+		if drToken {
+			f = client.Sys().GenerateDROperationTokenUpdate
+		}
+		statusResp, err := f(strings.TrimSpace(key), c.Nonce)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Error attempting generate-root update: %s", err))
+			return 1
+		}
+
+		c.dumpStatus(statusResp)
 	}
-
-	c.dumpStatus(statusResp)
-
 	return 0
 }
 
@@ -223,9 +238,14 @@ func (c *GenerateRootCommand) decode(encodedVal, otp string) int {
 }
 
 // initGenerateRoot is used to start the generation process
-func (c *GenerateRootCommand) initGenerateRoot(client *api.Client, otp string, pgpKey string) int {
+func (c *GenerateRootCommand) initGenerateRoot(client *api.Client, otp string, pgpKey string, drToken bool) int {
 	// Start the rekey
-	status, err := client.Sys().GenerateRootInit(otp, pgpKey)
+	f := client.Sys().GenerateRootInit
+	if drToken {
+		f = client.Sys().GenerateDROperationTokenInit
+	}
+
+	status, err := f(otp, pgpKey)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing root generation: %s", err))
 		return 1
@@ -237,8 +257,12 @@ func (c *GenerateRootCommand) initGenerateRoot(client *api.Client, otp string, p
 }
 
 // cancelGenerateRoot is used to abort the generation process
-func (c *GenerateRootCommand) cancelGenerateRoot(client *api.Client) int {
-	err := client.Sys().GenerateRootCancel()
+func (c *GenerateRootCommand) cancelGenerateRoot(client *api.Client, drToken bool) int {
+	f := client.Sys().GenerateRootCancel
+	if drToken {
+		f = client.Sys().GenerateDROperationTokenCancel
+	}
+	err := f()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to cancel root generation: %s", err))
 		return 1
@@ -248,9 +272,13 @@ func (c *GenerateRootCommand) cancelGenerateRoot(client *api.Client) int {
 }
 
 // rootGenerationStatus is used just to fetch and dump the status
-func (c *GenerateRootCommand) rootGenerationStatus(client *api.Client) int {
+func (c *GenerateRootCommand) rootGenerationStatus(client *api.Client, drToken bool) int {
 	// Check the status
-	status, err := client.Sys().GenerateRootStatus()
+	f := client.Sys().GenerateRootStatus
+	if drToken {
+		f = client.Sys().GenerateDROperationTokenStatus
+	}
+	status, err := f()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error reading root generation status: %s", err))
 		return 1
@@ -281,6 +309,8 @@ func (c *GenerateRootCommand) dumpStatus(status *api.GenerateRootStatusResponse)
 	}
 	if len(status.EncodedRootToken) > 0 {
 		statString = fmt.Sprintf("%s\n\nEncoded root token: %s", statString, status.EncodedRootToken)
+	} else if len(status.EncodedToken) > 0 {
+		statString = fmt.Sprintf("%s\n\nEncoded token: %s", statString, status.EncodedToken)
 	}
 	c.Ui.Output(statString)
 }
@@ -349,6 +379,27 @@ Generate Root Options:
                           the unseal key is not being passed in via the command
                           line the nonce parameter is not required, and will
                           instead be displayed with the key prompt.
+
+  -dr-token               Generate a Disaster Recovery operation token. This flag
+                          should be set on '-init', '-cancel', and every time a 
+                          key is provided to specify the type of token to generate.
 `
 	return strings.TrimSpace(helpText)
+}
+
+func (c *GenerateRootCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *GenerateRootCommand) AutocompleteFlags() complete.Flags {
+	return complete.Flags{
+		"-init":    complete.PredictNothing,
+		"-cancel":  complete.PredictNothing,
+		"-status":  complete.PredictNothing,
+		"-decode":  complete.PredictNothing,
+		"-genotp":  complete.PredictNothing,
+		"-otp":     complete.PredictNothing,
+		"-pgp-key": complete.PredictNothing,
+		"-nonce":   complete.PredictNothing,
+	}
 }

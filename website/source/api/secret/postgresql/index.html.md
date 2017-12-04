@@ -8,6 +8,11 @@ description: |-
 
 # PostgreSQL Secret Backend HTTP API
 
+~> **Deprecation Note:** This backend is deprecated in favor of the
+combined databases backend added in v0.7.1. See the API documentation for
+the new implementation of this backend at
+[PostgreSQL Database Plugin HTTP API](/api/secret/databases/postgresql.html).
+
 This is the API documentation for the Vault PostgreSQL secret backend. For
 general information about the usage and operation of the PostgreSQL backend,
 please see the
@@ -179,6 +184,7 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/postgresql/roles`          | `200 application/json` |
+| `GET`    | `/postgresql/roles?list=true` | `200 application/json` |
 
 ### Sample Request
 

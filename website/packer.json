@@ -8,17 +8,14 @@
   "builders": [
     {
       "type": "docker",
-      "image": "hashicorp/middleman-hashicorp:0.3.24",
+      "image": "hashicorp/middleman-hashicorp:0.3.28",
       "discard": "true",
-      "run_command": ["-d", "-i", "-t", "{{ .Image }}", "/bin/bash"]
+      "volumes": {
+        "{{ pwd }}": "/website"
+      }
     }
   ],
   "provisioners": [
-    {
-      "type": "file",
-      "source": ".",
-      "destination": "/website"
-    },
     {
       "type": "shell",
       "environment_vars": [

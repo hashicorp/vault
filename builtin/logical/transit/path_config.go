@@ -19,7 +19,16 @@ func (b *backend) pathConfig() *framework.Path {
 			"min_decryption_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `If set, the minimum version of the key allowed
-to be decrypted.`,
+to be decrypted. For signing keys, the minimum
+version allowed to be used for verification.`,
+			},
+
+			"min_encryption_version": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `If set, the minimum version of the key allowed
+to be used for encryption; or for signing keys,
+to be used for signing. If set to zero, only
+the latest version of the key is allowed.`,
 			},
 
 			"deletion_allowed": &framework.FieldSchema{
@@ -72,8 +81,7 @@ func (b *backend) pathConfigWrite(
 			resp.AddWarning("since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1")
 		}
 
-		if minDecryptionVersion > 0 &&
-			minDecryptionVersion != p.MinDecryptionVersion {
+		if minDecryptionVersion != p.MinDecryptionVersion {
 			if minDecryptionVersion > p.LatestVersion {
 				return logical.ErrorResponse(
 					fmt.Sprintf("cannot set min decryption version of %d, latest key version is %d", minDecryptionVersion, p.LatestVersion)), nil
@@ -81,6 +89,32 @@ func (b *backend) pathConfigWrite(
 			p.MinDecryptionVersion = minDecryptionVersion
 			persistNeeded = true
 		}
+	}
+
+	minEncryptionVersionRaw, ok := d.GetOk("min_encryption_version")
+	if ok {
+		minEncryptionVersion := minEncryptionVersionRaw.(int)
+
+		if minEncryptionVersion < 0 {
+			return logical.ErrorResponse("min encryption version cannot be negative"), nil
+		}
+
+		if minEncryptionVersion != p.MinEncryptionVersion {
+			if minEncryptionVersion > p.LatestVersion {
+				return logical.ErrorResponse(
+					fmt.Sprintf("cannot set min encryption version of %d, latest key version is %d", minEncryptionVersion, p.LatestVersion)), nil
+			}
+			p.MinEncryptionVersion = minEncryptionVersion
+			persistNeeded = true
+		}
+	}
+
+	// Check here to get the final picture after the logic on each
+	// individually. MinDecryptionVersion will always be 1 or above.
+	if p.MinEncryptionVersion > 0 &&
+		p.MinEncryptionVersion < p.MinDecryptionVersion {
+		return logical.ErrorResponse(
+			fmt.Sprintf("cannot set min encryption/decryption values; min encryption version of %d must be greater than or equal to min decryption version of %d", p.MinEncryptionVersion, p.MinDecryptionVersion)), nil
 	}
 
 	allowDeletionInt, ok := d.GetOk("deletion_allowed")
@@ -104,7 +138,7 @@ func (b *backend) pathConfigWrite(
 		return nil, nil
 	}
 
-	if len(resp.Warnings()) == 0 {
+	if len(resp.Warnings) == 0 {
 		return nil, p.Persist(req.Storage)
 	}
 

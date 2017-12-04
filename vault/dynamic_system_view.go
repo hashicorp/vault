@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
+
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -52,8 +54,8 @@ func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
 	req := new(logical.Request)
 	req.Operation = logical.ReadOperation
 	req.Path = path
-	_, rootPrivs := acl.AllowOperation(req)
-	return rootPrivs
+	authResults := acl.AllowOperation(req)
+	return authResults.RootPrivs
 }
 
 // TTLsByPath returns the default and max TTLs corresponding to a particular
@@ -82,13 +84,10 @@ func (d dynamicSystemView) CachingDisabled() bool {
 	return d.core.cachingDisabled || (d.mountEntry != nil && d.mountEntry.Config.ForceNoCache)
 }
 
-// Checks if this is a primary Vault instance.
+// Checks if this is a primary Vault instance. Caller should hold the stateLock
+// in read mode.
 func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
-	var state consts.ReplicationState
-	d.core.clusterParamsLock.RLock()
-	state = d.core.replicationState
-	d.core.clusterParamsLock.RUnlock()
-	return state
+	return d.core.replicationState
 }
 
 // ResponseWrapData wraps the given data in a cubbyhole and returns the
@@ -110,7 +109,7 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 		resp.WrapInfo.Format = "jwt"
 	}
 
-	_, err := d.core.wrapInCubbyhole(req, resp)
+	_, err := d.core.wrapInCubbyhole(req, resp, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -121,12 +120,18 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It
 // returns a PluginRunner or an error if no plugin was found.
 func (d dynamicSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.pluginCatalog == nil {
+		return nil, fmt.Errorf("system view core plugin catalog is nil")
+	}
 	r, err := d.core.pluginCatalog.Get(name)
 	if err != nil {
 		return nil, err
 	}
 	if r == nil {
-		return nil, fmt.Errorf("no plugin found with name: %s", name)
+		return nil, errwrap.Wrapf(fmt.Sprintf("{{err}}: %s", name), ErrPluginNotFound)
 	}
 
 	return r, nil

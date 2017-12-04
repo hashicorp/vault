@@ -2,6 +2,29 @@ package logical
 
 import log "github.com/mgutz/logxi/v1"
 
+// BackendType is the type of backend that is being implemented
+type BackendType uint32
+
+// The these are the types of backends that can be derived from
+// logical.Backend
+const (
+	TypeUnknown    BackendType = 0 // This is also the zero-value for BackendType
+	TypeLogical    BackendType = 1
+	TypeCredential BackendType = 2
+)
+
+// Stringer implementation
+func (b BackendType) String() string {
+	switch b {
+	case TypeLogical:
+		return "secret"
+	case TypeCredential:
+		return "auth"
+	}
+
+	return "unknown"
+}
+
 // Backend interface must be implemented to be "mountable" at
 // a given path. Requests flow through a router which has various mount
 // points that flow to a logical backend. The logic of each backend is flexible,
@@ -27,6 +50,11 @@ type Backend interface {
 	// information, such as globally configured default and max lease TTLs.
 	System() SystemView
 
+	// Logger provides an interface to access the underlying logger. This
+	// is useful when a struct embeds a Backend-implemented struct that
+	// contains a private instance of logger.
+	Logger() log.Logger
+
 	// HandleExistenceCheck is used to handle a request and generate a response
 	// indicating whether the given path exists or not; this is used to
 	// understand whether the request must have a Create or Update capability
@@ -47,6 +75,16 @@ type Backend interface {
 	// to the backend. The backend can use this to clear any caches or reset
 	// internal state as needed.
 	InvalidateKey(key string)
+
+	// Setup is used to set up the backend based on the provided backend
+	// configuration.
+	Setup(*BackendConfig) error
+
+	// Type returns the BackendType for the particular backend
+	Type() BackendType
+
+	// RegisterLicense performs backend license registration
+	RegisterLicense(interface{}) error
 }
 
 // BackendConfig is provided to the factory to initialize the backend
@@ -79,4 +117,9 @@ type Paths struct {
 	// LocalStorage are paths (prefixes) that are local to this instance; this
 	// indicates that these paths should not be replicated
 	LocalStorage []string
+
+	// SealWrapStorage are storage paths that, when using a capable seal,
+	// should be seal wrapped with extra encryption. It is exact matching
+	// unless it ends with '/' in which case it will be treated as a prefix.
+	SealWrapStorage []string
 }

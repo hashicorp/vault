@@ -2,13 +2,17 @@ package vault
 
 import (
 	"fmt"
+	"io/ioutil"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
+	log "github.com/mgutz/logxi/v1"
 )
 
 type NoopBackend struct {
@@ -62,7 +66,23 @@ func (n *NoopBackend) InvalidateKey(k string) {
 	n.Invalidations = append(n.Invalidations, k)
 }
 
+func (n *NoopBackend) Setup(config *logical.BackendConfig) error {
+	return nil
+}
+
+func (n *NoopBackend) Logger() log.Logger {
+	return logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.LevelOff)
+}
+
 func (n *NoopBackend) Initialize() error {
+	return nil
+}
+
+func (n *NoopBackend) Type() logical.BackendType {
+	return logical.TypeLogical
+}
+
+func (n *NoopBackend) RegisterLicense(license interface{}) error {
 	return nil
 }
 
@@ -75,8 +95,15 @@ func TestRouter_Mount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	mountEntry := &MountEntry{
+		Path:     "prod/aws/",
+		UUID:     meUUID,
+		Accessor: "awsaccessor",
+	}
+
 	n := &NoopBackend{}
-	err = r.Mount(n, "prod/aws/", &MountEntry{Path: "prod/aws/", UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", mountEntry, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -85,16 +112,22 @@ func TestRouter_Mount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 	if !strings.Contains(err.Error(), "cannot mount under existing mount") {
 		t.Fatalf("err: %v", err)
+	}
+
+	meUUID, err = uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if path := r.MatchingMount("prod/aws/foo"); path != "prod/aws/" {
 		t.Fatalf("bad: %s", path)
 	}
 
-	if v := r.MatchingStorageView("prod/aws/foo"); v != view {
+	if v := r.MatchingStorageByAPIPath("prod/aws/foo"); v.(*BarrierView) != view {
 		t.Fatalf("bad: %v", v)
 	}
 
@@ -102,11 +135,16 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("bad: %s", path)
 	}
 
-	if v := r.MatchingStorageView("stage/aws/foo"); v != nil {
+	if v := r.MatchingStorageByAPIPath("stage/aws/foo"); v != nil {
 		t.Fatalf("bad: %v", v)
 	}
 
-	mount, prefix, ok := r.MatchingStoragePrefix("logical/foo")
+	mountEntryFetched := r.MatchingMountByUUID(mountEntry.UUID)
+	if mountEntryFetched == nil || !reflect.DeepEqual(mountEntry, mountEntryFetched) {
+		t.Fatalf("failed to fetch mount entry using its ID; expected: %#v\n actual: %#v\n", mountEntry, mountEntryFetched)
+	}
+
+	mount, prefix, ok := r.MatchingStoragePrefixByStoragePath("logical/foo")
 	if !ok {
 		t.Fatalf("missing storage prefix")
 	}
@@ -116,6 +154,103 @@ func TestRouter_Mount(t *testing.T) {
 
 	req := &logical.Request{
 		Path: "prod/aws/foo",
+	}
+	resp, err := r.Route(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Verify the path
+	if len(n.Paths) != 1 || n.Paths[0] != "foo" {
+		t.Fatalf("bad: %v", n.Paths)
+	}
+
+	subMountEntry := &MountEntry{
+		Path:     "prod/",
+		UUID:     meUUID,
+		Accessor: "prodaccessor",
+	}
+
+	if r.MountConflict("prod/aws/") == "" {
+		t.Fatalf("bad: prod/aws/")
+	}
+
+	// No error is shown here because MountConflict is checked before Mount
+	err = r.Mount(n, "prod/", subMountEntry, view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if r.MountConflict("prod/test") == "" {
+		t.Fatalf("bad: prod/test/")
+	}
+}
+
+func TestRouter_MountCredential(t *testing.T) {
+	r := NewRouter()
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, credentialBarrierPrefix)
+
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mountEntry := &MountEntry{
+		Path:     "aws",
+		UUID:     meUUID,
+		Accessor: "awsaccessor",
+	}
+
+	n := &NoopBackend{}
+	err = r.Mount(n, "auth/aws/", mountEntry, view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	meUUID, err = uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = r.Mount(n, "auth/aws/", &MountEntry{UUID: meUUID}, view)
+	if !strings.Contains(err.Error(), "cannot mount under existing mount") {
+		t.Fatalf("err: %v", err)
+	}
+
+	if path := r.MatchingMount("auth/aws/foo"); path != "auth/aws/" {
+		t.Fatalf("bad: %s", path)
+	}
+
+	if v := r.MatchingStorageByAPIPath("auth/aws/foo"); v.(*BarrierView) != view {
+		t.Fatalf("bad: %v", v)
+	}
+
+	if path := r.MatchingMount("auth/stage/aws/foo"); path != "" {
+		t.Fatalf("bad: %s", path)
+	}
+
+	if v := r.MatchingStorageByAPIPath("auth/stage/aws/foo"); v != nil {
+		t.Fatalf("bad: %v", v)
+	}
+
+	mountEntryFetched := r.MatchingMountByUUID(mountEntry.UUID)
+	if mountEntryFetched == nil || !reflect.DeepEqual(mountEntry, mountEntryFetched) {
+		t.Fatalf("failed to fetch mount entry using its ID; expected: %#v\n actual: %#v\n", mountEntry, mountEntryFetched)
+	}
+
+	mount, prefix, ok := r.MatchingStoragePrefixByStoragePath("auth/foo")
+	if !ok {
+		t.Fatalf("missing storage prefix")
+	}
+	if mount != "auth/aws" || prefix != credentialBarrierPrefix {
+		t.Fatalf("Bad: %v - %v", mount, prefix)
+	}
+
+	req := &logical.Request{
+		Path: "auth/aws/foo",
 	}
 	resp, err := r.Route(req)
 	if err != nil {
@@ -141,7 +276,7 @@ func TestRouter_Unmount(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := &NoopBackend{}
-	err = r.Mount(n, "prod/aws/", &MountEntry{Path: "prod/aws/", UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", &MountEntry{Path: "prod/aws/", UUID: meUUID, Accessor: "awsaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -159,7 +294,7 @@ func TestRouter_Unmount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if _, _, ok := r.MatchingStoragePrefix("logical/foo"); ok {
+	if _, _, ok := r.MatchingStoragePrefixByStoragePath("logical/foo"); ok {
 		t.Fatalf("should not have matching storage prefix")
 	}
 }
@@ -174,7 +309,7 @@ func TestRouter_Remount(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := &NoopBackend{}
-	me := &MountEntry{Path: "prod/aws/", UUID: meUUID}
+	me := &MountEntry{Path: "prod/aws/", UUID: meUUID, Accessor: "awsaccessor"}
 	err = r.Mount(n, "prod/aws/", me, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -213,7 +348,7 @@ func TestRouter_Remount(t *testing.T) {
 	}
 
 	// Check the resolve from storage still works
-	mount, prefix, _ := r.MatchingStoragePrefix("logical/foobar")
+	mount, prefix, _ := r.MatchingStoragePrefixByStoragePath("logical/foobar")
 	if mount != "stage/aws/" {
 		t.Fatalf("bad mount: %s", mount)
 	}
@@ -237,7 +372,7 @@ func TestRouter_RootPath(t *testing.T) {
 			"policy/*",
 		},
 	}
-	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -279,7 +414,7 @@ func TestRouter_LoginPath(t *testing.T) {
 			"oauth/*",
 		},
 	}
-	err = r.Mount(n, "auth/foo/", &MountEntry{UUID: meUUID}, view)
+	err = r.Mount(n, "auth/foo/", &MountEntry{UUID: meUUID, Accessor: "authfooaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -314,7 +449,7 @@ func TestRouter_Taint(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := &NoopBackend{}
-	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -357,7 +492,7 @@ func TestRouter_Untaint(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := &NoopBackend{}
-	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

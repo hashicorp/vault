@@ -24,7 +24,7 @@ func TestRemount(t *testing.T) {
 
 	args := []string{
 		"-address", addr,
-		"secret/", "generic",
+		"secret/", "kv",
 	}
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
@@ -45,8 +45,8 @@ func TestRemount(t *testing.T) {
 		t.Fatal("should not have mount")
 	}
 
-	_, ok = mounts["generic/"]
+	_, ok = mounts["kv/"]
 	if !ok {
-		t.Fatal("should have generic")
+		t.Fatal("should have kv")
 	}
 }

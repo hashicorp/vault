@@ -6,9 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/defaults"
 )
 
 type CredentialsConfig struct {
@@ -65,14 +63,16 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 		Profile:  c.Profile,
 	})
 
-	// Add the instance metadata role provider
-	providers = append(providers, &ec2rolecreds.EC2RoleProvider{
-		Client: ec2metadata.New(session.New(&aws.Config{
-			Region:     aws.String(c.Region),
-			HTTPClient: c.HTTPClient,
-		})),
-		ExpiryWindow: 15,
-	})
+	// Add the remote provider
+	def := defaults.Get()
+	if c.Region != "" {
+		def.Config.Region = aws.String(c.Region)
+	}
+	if c.HTTPClient != nil {
+		def.Config.HTTPClient = c.HTTPClient
+	}
+
+	providers = append(providers, defaults.RemoteCredProvider(*def.Config, def.Handlers))
 
 	// Create the credentials required to access the API.
 	creds := credentials.NewChainCredentials(providers)

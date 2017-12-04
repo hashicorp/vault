@@ -35,7 +35,7 @@ If set, the created tag can only be used by the instance with the given ID.`,
 			},
 
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeCommaStringSlice,
 				Description: "Policies to be associated with the tag. If set, must be a subset of the role's policies. If set, but set to an empty value, only the 'default' policy will be given to issued tokens.",
 			},
 
@@ -107,9 +107,9 @@ func (b *backend) pathRoleTagUpdate(
 	// should be inherited. So, by leaving the policies var unset to anything when it is not
 	// supplied, we ensure that it inherits all the policies on the role.
 	var policies []string
-	policiesStr, ok := data.GetOk("policies")
+	policiesRaw, ok := data.GetOk("policies")
 	if ok {
-		policies = policyutil.ParsePolicies(policiesStr.(string))
+		policies = policyutil.ParsePolicies(policiesRaw)
 	}
 	if !strutil.StrListSubset(roleEntry.Policies, policies) {
 		resp.AddWarning("Policies on the tag are not a subset of the policies set on the role. Login will not be allowed with this tag unless the role policies are updated.")
@@ -122,6 +122,10 @@ func (b *backend) pathRoleTagUpdate(
 	allowInstanceMigration := data.Get("allow_instance_migration").(bool)
 	if allowInstanceMigration && !roleEntry.AllowInstanceMigration {
 		resp.AddWarning("Role does not allow instance migration. Login will not be allowed with this tag unless the role value is updated.")
+	}
+
+	if disallowReauthentication && allowInstanceMigration {
+		return logical.ErrorResponse("cannot set both disallow_reauthentication and allow_instance_migration"), nil
 	}
 
 	// max_ttl for the role tag should be less than the max_ttl set on the role.

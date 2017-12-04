@@ -2,6 +2,7 @@ package pluginutil
 
 import (
 	"crypto/sha256"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/wrapping"
+	log "github.com/mgutz/logxi/v1"
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
@@ -21,6 +23,7 @@ type Looker interface {
 // Wrapper interface defines the functions needed by the runner to wrap the
 // metadata needed to run a plugin process. This includes looking up Mlock
 // configuration and wrapping data in a respose wrapped token.
+// logical.SystemView implementataions satisfy this interface.
 type RunnerUtil interface {
 	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
@@ -35,43 +38,73 @@ type LookRunnerUtil interface {
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
-	Name           string                      `json:"name"`
-	Command        string                      `json:"command"`
-	Args           []string                    `json:"args"`
-	Sha256         []byte                      `json:"sha256"`
-	Builtin        bool                        `json:"builtin"`
-	BuiltinFactory func() (interface{}, error) `json:"-"`
+	Name           string                      `json:"name" structs:"name"`
+	Command        string                      `json:"command" structs:"command"`
+	Args           []string                    `json:"args" structs:"args"`
+	Sha256         []byte                      `json:"sha256" structs:"sha256"`
+	Builtin        bool                        `json:"builtin" structs:"builtin"`
+	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 }
 
-// Run takes a wrapper instance, and the go-plugin paramaters and executes a
-// plugin.
-func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string) (*plugin.Client, error) {
-	// Get a CA TLS Certificate
-	certBytes, key, err := generateCert()
-	if err != nil {
-		return nil, err
-	}
+// Run takes a wrapper RunnerUtil instance along with the go-plugin paramaters and
+// returns a configured plugin.Client with TLS Configured and a wrapping token set
+// on PluginUnwrapTokenEnv for plugin process consumption.
+func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	return r.runCommon(wrapper, pluginMap, hs, env, logger, false)
+}
 
-	// Use CA to sign a client cert and return a configured TLS config
-	clientTLSConfig, err := createClientTLSConfig(certBytes, key)
-	if err != nil {
-		return nil, err
-	}
+// RunMetadataMode returns a configured plugin.Client that will dispense a plugin
+// in metadata mode. The PluginMetadaModeEnv is passed in as part of the Cmd to
+// plugin.Client, and consumed by the plugin process on pluginutil.VaultPluginTLSProvider.
+func (r *PluginRunner) RunMetadataMode(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	return r.runCommon(wrapper, pluginMap, hs, env, logger, true)
 
-	// Use CA to sign a server cert and wrap the values in a response wrapped
-	// token.
-	wrapToken, err := wrapServerConfig(wrapper, certBytes, key)
-	if err != nil {
-		return nil, err
-	}
+}
 
+func (r *PluginRunner) runCommon(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger, isMetadataMode bool) (*plugin.Client, error) {
 	cmd := exec.Command(r.Command, r.Args...)
 	cmd.Env = append(cmd.Env, env...)
-	// Add the response wrap token to the ENV of the plugin
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
+
 	// Add the mlock setting to the ENV of the plugin
 	if wrapper.MlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
+	}
+
+	// Create logger for the plugin client
+	clogger := &hclogFaker{
+		logger: logger,
+	}
+	namedLogger := clogger.ResetNamed("plugin")
+
+	var clientTLSConfig *tls.Config
+	if !isMetadataMode {
+		// Add the metadata mode ENV and set it to false
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "false"))
+
+		// Get a CA TLS Certificate
+		certBytes, key, err := generateCert()
+		if err != nil {
+			return nil, err
+		}
+
+		// Use CA to sign a client cert and return a configured TLS config
+		clientTLSConfig, err = createClientTLSConfig(certBytes, key)
+		if err != nil {
+			return nil, err
+		}
+
+		// Use CA to sign a server cert and wrap the values in a response wrapped
+		// token.
+		wrapToken, err := wrapServerConfig(wrapper, certBytes, key)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add the response wrap token to the ENV of the plugin
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
+	} else {
+		namedLogger = clogger.ResetNamed("plugin.metadata")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "true"))
 	}
 
 	secureConfig := &plugin.SecureConfig{
@@ -79,13 +112,16 @@ func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugi
 		Hash:     sha256.New(),
 	}
 
-	client := plugin.NewClient(&plugin.ClientConfig{
+	clientConfig := &plugin.ClientConfig{
 		HandshakeConfig: hs,
 		Plugins:         pluginMap,
 		Cmd:             cmd,
-		TLSConfig:       clientTLSConfig,
 		SecureConfig:    secureConfig,
-	})
+		TLSConfig:       clientTLSConfig,
+		Logger:          namedLogger,
+	}
+
+	client := plugin.NewClient(clientConfig)
 
 	return client, nil
 }
@@ -100,7 +136,7 @@ type APIClientMeta struct {
 }
 
 func (f *APIClientMeta) FlagSet() *flag.FlagSet {
-	fs := flag.NewFlagSet("tls settings", flag.ContinueOnError)
+	fs := flag.NewFlagSet("vault plugin settings", flag.ContinueOnError)
 
 	fs.StringVar(&f.flagCACert, "ca-cert", "", "")
 	fs.StringVar(&f.flagCAPath, "ca-path", "", "")

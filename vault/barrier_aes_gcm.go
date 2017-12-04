@@ -13,6 +13,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -79,16 +80,16 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 // and has a master key set.
 func (b *AESGCMBarrier) Initialized() (bool, error) {
 	// Read the keyring file
-	out, err := b.backend.Get(keyringPath)
+	keys, err := b.backend.List(keyringPrefix)
 	if err != nil {
 		return false, fmt.Errorf("failed to check for initialization: %v", err)
 	}
-	if out != nil {
+	if strutil.StrListContains(keys, "keyring") {
 		return true, nil
 	}
 
 	// Fallback, check for the old sentinel file
-	out, err = b.backend.Get(barrierInitPath)
+	out, err := b.backend.Get(barrierInitPath)
 	if err != nil {
 		return false, fmt.Errorf("failed to check for initialization: %v", err)
 	}
@@ -642,8 +643,9 @@ func (b *AESGCMBarrier) Put(entry *Entry) error {
 	}
 
 	pe := &physical.Entry{
-		Key:   entry.Key,
-		Value: b.encrypt(entry.Key, term, primary, entry.Value),
+		Key:      entry.Key,
+		Value:    b.encrypt(entry.Key, term, primary, entry.Value),
+		SealWrap: entry.SealWrap,
 	}
 	return b.backend.Put(pe)
 }
@@ -673,8 +675,9 @@ func (b *AESGCMBarrier) Get(key string) (*Entry, error) {
 
 	// Wrap in a logical entry
 	entry := &Entry{
-		Key:   key,
-		Value: plain,
+		Key:      key,
+		Value:    plain,
+		SealWrap: pe.SealWrap,
 	}
 	return entry, nil
 }

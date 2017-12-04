@@ -26,6 +26,9 @@ has a number of parameters to further configure a connection.
 - `hosts` `(string: <required>)` – Specifies a set of comma-delineated Cassandra
   hosts to connect to.
 
+- `port` `(int: 9042)` – Specifies the default port to use if none is provided
+  as part of the host URI. Defaults to Cassandra's default transport port, 9042.
+
 - `username` `(string: <required>)` – Specifies the username to use for
   superuser access.
 

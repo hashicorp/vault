@@ -63,19 +63,38 @@ See the oauth2 docs for complete instructions on using that library.
 For API methods that require HTTP Basic Authentication, use the
 BasicAuthTransport.
 
+GitHub Apps authentication can be provided by the
+https://github.com/bradleyfalzon/ghinstallation package.
+
+	import "github.com/bradleyfalzon/ghinstallation"
+
+	func main() {
+		// Wrap the shared transport for use with the integration ID 1 authenticating with installation ID 99.
+		itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, 1, 99, "2016-10-19.private-key.pem")
+		if err != nil {
+			// Handle error.
+		}
+
+		// Use installation transport with client
+		client := github.NewClient(&http.Client{Transport: itr})
+
+		// Use client...
+	}
+
 Rate Limiting
 
 GitHub imposes a rate limit on all API clients. Unauthenticated clients are
 limited to 60 requests per hour, while authenticated clients can make up to
-5,000 requests per hour. To receive the higher rate limit when making calls
-that are not issued on behalf of a user, use the
-UnauthenticatedRateLimitedTransport.
+5,000 requests per hour. The Search API has a custom rate limit. Unauthenticated
+clients are limited to 10 requests per minute, while authenticated clients
+can make up to 30 requests per minute. To receive the higher rate limit when
+making calls that are not issued on behalf of a user,
+use UnauthenticatedRateLimitedTransport.
 
-The Rate method on a client returns the rate limit information based on the most
-recent API call. This is updated on every call, but may be out of date if it's
-been some time since the last API call and other clients have made subsequent
-requests since then. You can always call RateLimits() directly to get the most
-up-to-date rate limit data for the client.
+The returned Response.Rate value contains the rate limit information
+from the most recent API call. If a recent enough response isn't
+available, you can use RateLimits to fetch the most up-to-date rate
+limit data for the client.
 
 To detect an API rate limit error, you can check if its type is *github.RateLimitError:
 
@@ -154,7 +173,7 @@ github.Response struct.
 		if resp.NextPage == 0 {
 			break
 		}
-		opt.ListOptions.Page = resp.NextPage
+		opt.Page = resp.NextPage
 	}
 
 Google App Engine
@@ -164,7 +183,7 @@ the "context" import and still relies on "golang.org/x/net/context".
 As a result, if you wish to continue to use "go-github" on App Engine Classic,
 you will need to rewrite all the "context" imports using the following command:
 
-    gofmt -w -r '"context" -> "golang.org/x/net/context"' *.go
+	gofmt -w -r '"context" -> "golang.org/x/net/context"' *.go
 
 See "with_appengine.go" for more details.
 

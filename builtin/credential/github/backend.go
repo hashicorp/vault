@@ -1,6 +1,8 @@
 package github
 
 import (
+	"context"
+
 	"github.com/google/go-github/github"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
@@ -9,7 +11,11 @@ import (
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	b := Backend()
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend() *backend {
@@ -44,7 +50,8 @@ func Backend() *backend {
 			pathLogin(&b),
 		}, allPaths...),
 
-		AuthRenew: b.pathLoginRenew,
+		AuthRenew:   b.pathLoginRenew,
+		BackendType: logical.TypeCredential,
 	}
 
 	return &b
@@ -63,7 +70,8 @@ type backend struct {
 func (b *backend) Client(token string) (*github.Client, error) {
 	tc := cleanhttp.DefaultClient()
 	if token != "" {
-		tc = oauth2.NewClient(oauth2.NoContext, &tokenSource{Value: token})
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, tc)
+		tc = oauth2.NewClient(ctx, &tokenSource{Value: token})
 	}
 
 	return github.NewClient(tc), nil

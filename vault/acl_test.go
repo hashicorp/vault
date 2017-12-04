@@ -2,6 +2,7 @@ package vault
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,7 +23,7 @@ func TestACL_Capabilities(t *testing.T) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policies, err := Parse(aclPolicy)
+	policies, err := ParseACLPolicy(aclPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -63,17 +64,17 @@ func TestACL_Root(t *testing.T) {
 	request := new(logical.Request)
 	request.Operation = logical.UpdateOperation
 	request.Path = "sys/mount/foo"
-	allowed, rootPrivs := acl.AllowOperation(request)
-	if !rootPrivs {
+	authResults := acl.AllowOperation(request)
+	if !authResults.RootPrivs {
 		t.Fatalf("expected root")
 	}
-	if !allowed {
+	if !authResults.Allowed {
 		t.Fatalf("expected permissions")
 	}
 }
 
 func TestACL_Single(t *testing.T) {
-	policy, err := Parse(aclPolicy)
+	policy, err := ParseACLPolicy(aclPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -88,8 +89,8 @@ func TestACL_Single(t *testing.T) {
 	request := new(logical.Request)
 	request.Operation = logical.ReadOperation
 	request.Path = "sys/mount/foo"
-	_, rootPrivs := acl.AllowOperation(request)
-	if rootPrivs {
+	authResults := acl.AllowOperation(request)
+	if authResults.RootPrivs {
 		t.Fatalf("unexpected root")
 	}
 
@@ -127,23 +128,23 @@ func TestACL_Single(t *testing.T) {
 		request := new(logical.Request)
 		request.Operation = tc.op
 		request.Path = tc.path
-		allowed, rootPrivs := acl.AllowOperation(request)
-		if allowed != tc.allowed {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		authResults := acl.AllowOperation(request)
+		if authResults.Allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
-		if rootPrivs != tc.rootPrivs {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		if authResults.RootPrivs != tc.rootPrivs {
+			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
 	}
 }
 
 func TestACL_Layered(t *testing.T) {
-	policy1, err := Parse(aclPolicy)
+	policy1, err := ParseACLPolicy(aclPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	policy2, err := Parse(aclPolicy2)
+	policy2, err := ParseACLPolicy(aclPolicy2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -161,8 +162,8 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 	request := new(logical.Request)
 	request.Operation = logical.ReadOperation
 	request.Path = "sys/mount/foo"
-	_, rootPrivs := acl.AllowOperation(request)
-	if rootPrivs {
+	authResults := acl.AllowOperation(request)
+	if authResults.RootPrivs {
 		t.Fatalf("unexpected root")
 	}
 
@@ -205,18 +206,18 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 		request := new(logical.Request)
 		request.Operation = tc.op
 		request.Path = tc.path
-		allowed, rootPrivs := acl.AllowOperation(request)
-		if allowed != tc.allowed {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		authResults := acl.AllowOperation(request)
+		if authResults.Allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
-		if rootPrivs != tc.rootPrivs {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		if authResults.RootPrivs != tc.rootPrivs {
+			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
 	}
 }
 
 func TestACL_PolicyMerge(t *testing.T) {
-	policy, err := Parse(mergingPolicies)
+	policy, err := ParseACLPolicy(mergingPolicies)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -231,6 +232,7 @@ func TestACL_PolicyMerge(t *testing.T) {
 		maxWrappingTTL *time.Duration
 		allowed        map[string][]interface{}
 		denied         map[string][]interface{}
+		required       []string
 	}
 
 	createDuration := func(seconds int) *time.Duration {
@@ -239,14 +241,14 @@ func TestACL_PolicyMerge(t *testing.T) {
 	}
 
 	tcases := []tcase{
-		{"foo/bar", nil, nil, nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}},
-		{"hello/universe", createDuration(50), createDuration(200), map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil},
-		{"allow/all", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
-		{"allow/all1", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
-		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
-		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
-		{"value/merge", nil, nil, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}},
-		{"value/empty", nil, nil, map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}},
+		{"foo/bar", nil, nil, nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}, []string{"baz"}},
+		{"hello/universe", createDuration(50), createDuration(200), map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil, []string{"foo", "bar"}},
+		{"allow/all", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil, nil},
+		{"allow/all1", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil, nil},
+		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}, nil},
+		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}, nil},
+		{"value/merge", nil, nil, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}, nil},
+		{"value/empty", nil, nil, map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}, nil},
 	}
 
 	for _, tc := range tcases {
@@ -255,12 +257,15 @@ func TestACL_PolicyMerge(t *testing.T) {
 			t.Fatalf("Could not find acl entry for path %s", tc.path)
 		}
 
-		p := raw.(*Permissions)
+		p := raw.(*ACLPermissions)
 		if !reflect.DeepEqual(tc.allowed, p.AllowedParameters) {
 			t.Fatalf("Allowed paramaters did not match, Expected: %#v, Got: %#v", tc.allowed, p.AllowedParameters)
 		}
 		if !reflect.DeepEqual(tc.denied, p.DeniedParameters) {
 			t.Fatalf("Denied paramaters did not match, Expected: %#v, Got: %#v", tc.denied, p.DeniedParameters)
+		}
+		if !reflect.DeepEqual(tc.required, p.RequiredParameters) {
+			t.Fatalf("Required paramaters did not match, Expected: %#v, Got: %#v", tc.required, p.RequiredParameters)
 		}
 		if tc.minWrappingTTL != nil && *tc.minWrappingTTL != p.MinWrappingTTL {
 			t.Fatalf("Min wrapping TTL did not match, Expected: %#v, Got: %#v", tc.minWrappingTTL, p.MinWrappingTTL)
@@ -272,7 +277,7 @@ func TestACL_PolicyMerge(t *testing.T) {
 }
 
 func TestACL_AllowOperation(t *testing.T) {
-	policy, err := Parse(permissionsPolicy)
+	policy, err := ParseACLPolicy(permissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -318,6 +323,8 @@ func TestACL_AllowOperation(t *testing.T) {
 		{"fruit/apple", nil, []string{"one"}, false},
 		{"cold/weather", nil, []string{"four"}, true},
 		{"var/aws", nil, []string{"cold", "warm", "kitty"}, false},
+		{"var/req", nil, []string{"cold", "warm", "kitty"}, false},
+		{"var/req", nil, []string{"cold", "warm", "kitty", "foo"}, true},
 	}
 
 	for _, tc := range tcases {
@@ -332,16 +339,16 @@ func TestACL_AllowOperation(t *testing.T) {
 		}
 		for _, op := range toperations {
 			request.Operation = op
-			allowed, _ := acl.AllowOperation(&request)
-			if allowed != tc.allowed {
-				t.Fatalf("bad: case %#v: %v", tc, allowed)
+			authResults := acl.AllowOperation(&request)
+			if authResults.Allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
 			}
 		}
 	}
 }
 
 func TestACL_ValuePermissions(t *testing.T) {
-	policy, err := Parse(valuePermissionsPolicy)
+	policy, err := ParseACLPolicy(valuePermissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -407,12 +414,41 @@ func TestACL_ValuePermissions(t *testing.T) {
 		}
 		for _, op := range toperations {
 			request.Operation = op
-			allowed, _ := acl.AllowOperation(&request)
-			if allowed != tc.allowed {
-				t.Fatalf("bad: case %#v: %v", tc, allowed)
+			authResults := acl.AllowOperation(&request)
+			if authResults.Allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
 			}
 		}
 	}
+}
+
+// NOTE: this test doesn't catch any races ATM
+func TestACL_CreationRace(t *testing.T) {
+	policy, err := ParseACLPolicy(valuePermissionsPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	stopTime := time.Now().Add(20 * time.Second)
+
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				if time.Now().After(stopTime) {
+					return
+				}
+				_, err := NewACL([]*Policy{policy})
+				if err != nil {
+					t.Fatalf("err: %v", err)
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
 }
 
 var tokenCreationPolicy = `
@@ -423,7 +459,7 @@ path "auth/token/create*" {
 `
 
 var aclPolicy = `
-name = "dev"
+name = "DeV"
 path "dev/*" {
 	policy = "sudo"
 }
@@ -452,7 +488,7 @@ path "foo/bar" {
 `
 
 var aclPolicy2 = `
-name = "ops"
+name = "OpS"
 path "dev/hide/*" {
 	policy = "deny"
 }
@@ -480,6 +516,7 @@ path "foo/bar" {
 	denied_parameters = {
 		"baz" = []
 	}
+	required_parameters = ["baz"]
 }
 path "foo/bar" {
 	policy = "write"
@@ -492,6 +529,7 @@ path "hello/universe" {
 	allowed_parameters = {
 		"foo" = []
 	}
+	required_parameters = ["foo"]
 	max_wrapping_ttl = 300
 	min_wrapping_ttl = 100
 }
@@ -500,6 +538,7 @@ path "hello/universe" {
 	allowed_parameters = {
 		"bar" = []
 	}
+	required_parameters = ["bar"]
 	max_wrapping_ttl = 200
 	min_wrapping_ttl = 50
 }
@@ -674,6 +713,10 @@ path "var/aws" {
 		"warm" = []
 		"kitty" = []
 	}
+}
+path "var/req" {
+	policy = "write"
+	required_parameters = ["foo"]
 }
 `
 

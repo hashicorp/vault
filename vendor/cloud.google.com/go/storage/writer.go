@@ -36,6 +36,8 @@ type Writer struct {
 	// SendCRC specifies whether to transmit a CRC32C field. It should be set
 	// to true in addition to setting the Writer's CRC32C field, because zero
 	// is a valid CRC and normally a zero would not be transmitted.
+	// If a CRC32C is sent, and the data written does not match the checksum,
+	// the write will be rejected.
 	SendCRC32C bool
 
 	// ChunkSize controls the maximum number of bytes of the object that the
@@ -48,6 +50,16 @@ type Writer struct {
 	// ChunkSize will default to a reasonable value. Any custom configuration
 	// must be done before the first Write call.
 	ChunkSize int
+
+	// ProgressFunc can be used to monitor the progress of a large write.
+	// operation. If ProgressFunc is not nil and writing requires multiple
+	// calls to the underlying service (see
+	// https://cloud.google.com/storage/docs/json_api/v1/how-tos/resumable-upload),
+	// then ProgressFunc will be invoked after each call with the number of bytes of
+	// content copied so far.
+	//
+	// ProgressFunc should return quickly without blocking.
+	ProgressFunc func(int64)
 
 	ctx context.Context
 	o   *ObjectHandle
@@ -75,7 +87,7 @@ func (w *Writer) open() error {
 	w.opened = true
 
 	if w.ChunkSize < 0 {
-		return errors.New("storage: Writer.ChunkSize must non-negative")
+		return errors.New("storage: Writer.ChunkSize must be non-negative")
 	}
 	mediaOpts := []googleapi.MediaOption{
 		googleapi.ChunkSize(w.ChunkSize),
@@ -98,6 +110,9 @@ func (w *Writer) open() error {
 			Media(pr, mediaOpts...).
 			Projection("full").
 			Context(w.ctx)
+		if w.ProgressFunc != nil {
+			call.ProgressUpdater(func(n, _ int64) { w.ProgressFunc(n) })
+		}
 		if err := setEncryptionHeaders(call.Header(), w.o.encryptionKey, false); err != nil {
 			w.err = err
 			pr.CloseWithError(w.err)
@@ -106,8 +121,25 @@ func (w *Writer) open() error {
 		var resp *raw.Object
 		err := applyConds("NewWriter", w.o.gen, w.o.conds, call)
 		if err == nil {
+			if w.o.userProject != "" {
+				call.UserProject(w.o.userProject)
+			}
 			setClientHeader(call.Header())
-			resp, err = call.Do()
+			// If the chunk size is zero, then no chunking is done on the Reader,
+			// which means we cannot retry: the first call will read the data, and if
+			// it fails, there is no way to re-read.
+			if w.ChunkSize == 0 {
+				resp, err = call.Do()
+			} else {
+				// We will only retry here if the initial POST, which obtains a URI for
+				// the resumable upload, fails with a retryable error. The upload itself
+				// has its own retry logic.
+				err = runWithRetry(w.ctx, func() error {
+					var err2 error
+					resp, err2 = call.Do()
+					return err2
+				})
+			}
 		}
 		if err != nil {
 			w.err = err
@@ -120,6 +152,11 @@ func (w *Writer) open() error {
 }
 
 // Write appends to w. It implements the io.Writer interface.
+//
+// Since writes happen asynchronously, Write may return a nil
+// error even though the write failed (or will fail). Always
+// use the error returned from Writer.Close to determine if
+// the upload was successful.
 func (w *Writer) Write(p []byte) (n int, err error) {
 	if w.err != nil {
 		return 0, w.err

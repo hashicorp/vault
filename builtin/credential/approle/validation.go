@@ -75,49 +75,54 @@ func (b *backend) validateRoleID(s logical.Storage, roleID string) (*roleStorage
 		return nil, "", err
 	}
 	if roleIDIndex == nil {
-		return nil, "", fmt.Errorf("failed to find secondary index for role_id %q\n", roleID)
+		return nil, "", fmt.Errorf("invalid role_id %q\n", roleID)
 	}
+
+	lock := b.roleLock(roleIDIndex.Name)
+	lock.RLock()
+	defer lock.RUnlock()
 
 	role, err := b.roleEntry(s, roleIDIndex.Name)
 	if err != nil {
 		return nil, "", err
 	}
 	if role == nil {
-		return nil, "", fmt.Errorf("role %q referred by the SecretID does not exist", roleIDIndex.Name)
+		return nil, "", fmt.Errorf("role %q referred by the role_id %q does not exist anymore", roleIDIndex.Name, roleID)
 	}
 
 	return role, roleIDIndex.Name, nil
 }
 
 // Validates the supplied RoleID and SecretID
-func (b *backend) validateCredentials(req *logical.Request, data *framework.FieldData) (*roleStorageEntry, string, map[string]string, error) {
-	var metadata map[string]string
+func (b *backend) validateCredentials(req *logical.Request, data *framework.FieldData) (*roleStorageEntry, string, map[string]string, string, error) {
+	metadata := make(map[string]string)
 	// RoleID must be supplied during every login
 	roleID := strings.TrimSpace(data.Get("role_id").(string))
 	if roleID == "" {
-		return nil, "", metadata, fmt.Errorf("missing role_id")
+		return nil, "", metadata, "", fmt.Errorf("missing role_id")
 	}
 
 	// Validate the RoleID and get the Role entry
 	role, roleName, err := b.validateRoleID(req.Storage, roleID)
 	if err != nil {
-		return nil, "", metadata, err
+		return nil, "", metadata, "", err
 	}
 	if role == nil || roleName == "" {
-		return nil, "", metadata, fmt.Errorf("failed to validate role_id")
+		return nil, "", metadata, "", fmt.Errorf("failed to validate role_id")
 	}
 
 	// Calculate the TTL boundaries since this reflects the properties of the token issued
 	if role.TokenTTL, role.TokenMaxTTL, err = b.SanitizeTTL(role.TokenTTL, role.TokenMaxTTL); err != nil {
-		return nil, "", metadata, err
+		return nil, "", metadata, "", err
 	}
 
+	var secretID string
 	if role.BindSecretID {
 		// If 'bind_secret_id' was set on role, look for the field 'secret_id'
 		// to be specified and validate it.
-		secretID := strings.TrimSpace(data.Get("secret_id").(string))
+		secretID = strings.TrimSpace(data.Get("secret_id").(string))
 		if secretID == "" {
-			return nil, "", metadata, fmt.Errorf("missing secret_id")
+			return nil, "", metadata, "", fmt.Errorf("missing secret_id")
 		}
 
 		// Check if the SecretID supplied is valid. If use limit was specified
@@ -125,29 +130,29 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 		var valid bool
 		valid, metadata, err = b.validateBindSecretID(req, roleName, secretID, role.HMACKey, role.BoundCIDRList)
 		if err != nil {
-			return nil, "", metadata, err
+			return nil, "", metadata, "", err
 		}
 		if !valid {
-			return nil, "", metadata, fmt.Errorf("invalid secret_id %q", secretID)
+			return nil, "", metadata, "", fmt.Errorf("invalid secret_id %q", secretID)
 		}
 	}
 
 	if role.BoundCIDRList != "" {
 		// If 'bound_cidr_list' was set, verify the CIDR restrictions
 		if req.Connection == nil || req.Connection.RemoteAddr == "" {
-			return nil, "", metadata, fmt.Errorf("failed to get connection information")
+			return nil, "", metadata, "", fmt.Errorf("failed to get connection information")
 		}
 
 		belongs, err := cidrutil.IPBelongsToCIDRBlocksString(req.Connection.RemoteAddr, role.BoundCIDRList, ",")
 		if err != nil {
-			return nil, "", metadata, fmt.Errorf("failed to verify the CIDR restrictions set on the role: %v", err)
+			return nil, "", metadata, "", fmt.Errorf("failed to verify the CIDR restrictions set on the role: %v", err)
 		}
 		if !belongs {
-			return nil, "", metadata, fmt.Errorf("source address %q unauthorized through CIDR restrictions on the role", req.Connection.RemoteAddr)
+			return nil, "", metadata, "", fmt.Errorf("source address %q unauthorized through CIDR restrictions on the role", req.Connection.RemoteAddr)
 		}
 	}
 
-	return role, roleName, metadata, nil
+	return role, roleName, metadata, secretID, nil
 }
 
 // validateBindSecretID is used to determine if the given SecretID is a valid one.

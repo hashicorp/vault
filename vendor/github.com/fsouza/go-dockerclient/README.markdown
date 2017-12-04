@@ -6,7 +6,6 @@
 
 This package presents a client for the Docker remote API. It also provides
 support for the extensions in the [Swarm API](https://docs.docker.com/swarm/swarm-api/).
-It currently supports the Docker API up to version 1.23.
 
 This package also provides support for docker's network API, which is a simple
 passthrough to the libnetwork remote API.  Note that docker's network API is
@@ -103,10 +102,32 @@ All development commands can be seen in the [Makefile](Makefile).
 Commited code must pass:
 
 * [golint](https://github.com/golang/lint) (with some exceptions, see the Makefile).
-* [go vet](https://godoc.org/golang.org/x/tools/cmd/vet)
+* [go vet](https://golang.org/cmd/vet/)
 * [gofmt](https://golang.org/cmd/gofmt)
 * [go test](https://golang.org/cmd/go/#hdr-Test_packages)
 
 Running `make test` will check all of these. If your editor does not
 automatically call ``gofmt -s``, `make fmt` will format all go files in this
 repository.
+
+## Vendoring
+
+go-dockerclient uses [dep](https://github.com/golang/dep/) for vendoring. If
+you're using dep, you should be able to pick go-dockerclient releases and get
+the proper dependencies.
+
+With other vendoring tools, users might need to specify go-dockerclient's
+dependencies manually.
+
+## Using with Docker 1.9 and Go 1.4
+
+There's a tag for using go-dockerclient with Docker 1.9 (which requires
+compiling go-dockerclient with Go 1.4), the tag name is ``docker-1.9/go-1.4``.
+
+The instructions below can be used to get a version of go-dockerclient that compiles with Go 1.4:
+
+```
+% git clone -b docker-1.9/go-1.4 https://github.com/fsouza/go-dockerclient.git $GOPATH/src/github.com/fsouza/go-dockerclient
+% git clone -b v1.9.1 https://github.com/docker/docker.git $GOPATH/src/github.com/docker/docker
+% go get github.com/fsouza/go-dockerclient
+```

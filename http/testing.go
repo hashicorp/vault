@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -37,9 +35,6 @@ func TestServerWithListener(t *testing.T, ln net.Listener, addr string, core *va
 	server := &http.Server{
 		Addr:    ln.Addr().String(),
 		Handler: mux,
-	}
-	if err := http2.ConfigureServer(server, nil); err != nil {
-		t.Fatal(err)
 	}
 	go server.Serve(ln)
 }
