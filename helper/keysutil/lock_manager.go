@@ -1,6 +1,7 @@
 package keysutil
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"sync"
@@ -211,15 +212,31 @@ func (lm *LockManager) GetPolicyUpsert(req PolicyRequest) (*Policy, *sync.RWMute
 
 // RestorePolicy acquires an exclusive lock on the policy name and restores the
 // given policy along with the archive.
-func (lm *LockManager) RestorePolicy(storage logical.Storage, keyData KeyData) error {
+func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup string) error {
 	var p *Policy
 	var err error
 
-	if keyData.Policy == nil {
-		return fmt.Errorf("missing policy in key data")
+	backupBytes, err := base64.StdEncoding.DecodeString(backup)
+	if err != nil {
+		return err
 	}
 
-	name := keyData.Policy.Name
+	var keyData KeyData
+	keyData.Policy = &Policy{
+		Keys: keyEntryMap{},
+	}
+
+	err = jsonutil.DecodeJSON(backupBytes, &keyData)
+	if err != nil {
+		return err
+	}
+
+	// Set a different name if desired
+	if name != "" {
+		keyData.Policy.Name = name
+	}
+
+	name = keyData.Policy.Name
 
 	lockType := exclusive
 	lock := lm.policyLock(name, lockType)
@@ -485,7 +502,7 @@ func (lm *LockManager) getStoredPolicy(storage logical.Storage, name string) (*P
 
 	// Decode the policy
 	policy := &Policy{
-		Keys: KeyEntryMap{},
+		Keys: keyEntryMap{},
 	}
 	err = jsonutil.DecodeJSON(raw.Value, policy)
 	if err != nil {

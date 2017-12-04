@@ -200,6 +200,7 @@ func (b *backend) pathPolicyRead(
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
 			"backup_info":            p.BackupInfo,
+			"restored":               p.Restored,
 		},
 	}
 

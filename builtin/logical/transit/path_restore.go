@@ -1,10 +1,6 @@
 package transit
 
 import (
-	"encoding/base64"
-
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -38,31 +34,7 @@ func (b *backend) pathRestoreUpdate(req *logical.Request, d *framework.FieldData
 		return logical.ErrorResponse("'backup' must be supplied"), nil
 	}
 
-	backupBytes, err := base64.StdEncoding.DecodeString(backupB64)
-	if err != nil {
-		return nil, err
-	}
-
-	var keyData keysutil.KeyData
-	keyData.Policy = &keysutil.Policy{
-		Keys: keysutil.KeyEntryMap{},
-	}
-	err = jsonutil.DecodeJSON(backupBytes, &keyData)
-	if err != nil {
-		return nil, err
-	}
-
-	name := d.Get("name").(string)
-	if name != "" {
-		keyData.Policy.Name = name
-	}
-
-	err = b.lm.RestorePolicy(req.Storage, keyData)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return nil, b.lm.RestorePolicy(req.Storage, d.Get("name").(string), backupB64)
 }
 
 const pathRestoreHelpSyn = `Restore the named key`
