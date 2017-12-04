@@ -153,7 +153,7 @@ func TestRouter_Mount(t *testing.T) {
 	}
 
 	r.passthroughHeaders = &PassthroughHeadersConfig{
-		Headers: map[string]*passthroughHeaderSettings {
+		Headers: map[string]*passthroughHeaderSettings{
 			"should-passthrough": &passthroughHeaderSettings{
 				Backends: []string{
 					"prod/aws/foo",
@@ -166,7 +166,7 @@ func TestRouter_Mount(t *testing.T) {
 		Path: "prod/aws/foo",
 		Headers: map[string][]string{
 			"Should-Not-Passthrough": {"foo"},
-			"Should-Passthrough": {"bar"},
+			"Should-Passthrough":     {"bar"},
 		},
 	}
 

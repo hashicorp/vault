@@ -175,7 +175,7 @@ func TestPassthroughHeadersConfig_ApplyConfig(t *testing.T) {
 	}
 
 	expected := map[string][]string{
-		"x-test-header":  []string{"foo"},
+		"x-test-header": []string{"foo"},
 	}
 
 	if !reflect.DeepEqual(result, expected) {
@@ -201,7 +201,7 @@ func BenchmarkPassthroughHeaderConfig_ApplyConfig(b *testing.B) {
 			"X-Test-Header":  &passthroughHeaderSettings{[]string{"foo", "bar"}},
 			"X-Vault-Header": &passthroughHeaderSettings{[]string{"foo", "bar"}},
 		},
-		view:    nil,
+		view: nil,
 	}
 
 	reqHeaders := map[string][]string{
