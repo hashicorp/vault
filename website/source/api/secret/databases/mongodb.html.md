@@ -39,7 +39,7 @@ has a number of parameters to further configure a connection.
   "plugin_name": "mongodb-database-plugin",
   "allowed_roles": "readonly",
   "connection_url": "mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true",
-  "write_concern": "{ \"w\": \"majority\", \"wtimeout\": 5000 }"
+  "write_concern": "{ \"wmode\": \"majority\", \"wtimeout\": 5000 }"
 }
 ```
 

@@ -16,7 +16,7 @@ import (
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 
-const testMongoDBWriteConcern = `{ "w": "majority", "wtimeout": 5000 }`
+const testMongoDBWriteConcern = `{ "wmode": "majority", "wtimeout": 5000 }`
 
 func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	if os.Getenv("MONGODB_URL") != "" {

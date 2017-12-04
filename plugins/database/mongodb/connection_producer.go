@@ -93,7 +93,10 @@ func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
 		}
 
 		var concern writeConcern
-		json.Unmarshal([]byte(input), &concern)
+		err = json.Unmarshal([]byte(input), &concern)
+		if err != nil {
+			return nil, err
+		}
 
 		c.session.SetSafe(&mgo.Safe{
 			W:        concern.W,
