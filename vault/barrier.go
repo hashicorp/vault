@@ -30,7 +30,8 @@ const (
 
 	// keyringPath is the location of the keyring data. This is encrypted
 	// by the master key.
-	keyringPath = "core/keyring"
+	keyringPath   = "core/keyring"
+	keyringPrefix = "core/"
 
 	// keyringUpgradePrefix is the path used to store keyring update entries.
 	// When running in HA mode, the active instance will install the new key

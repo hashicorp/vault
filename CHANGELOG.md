@@ -6,6 +6,8 @@ BUG FIXES:
 
  * database/mysql: Allow the creation statement to use commands that are not
    yet supported by the prepare statement protocol [GH-3619]
+ * core: Fix potential panic that could occur using plugins when a node
+   transitioned from active to standby [GH-3638]
 
 ## 0.9.0.1 (November 21st, 2017) (Enterprise Only)
 

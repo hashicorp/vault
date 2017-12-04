@@ -15,8 +15,7 @@ Some secret backends, such as "kv", simply store and read
 secrets verbatim. Other secret backends, such as "aws", create _dynamic
 secrets_: secrets that are made on demand.
 
-Secret backends are part of the
-[mount system](#)
+Secret backends are part of the mount system
 in Vault. They behave very similarly to a virtual filesystem:
 any read/write/delete is sent to the secret backend, and the secret
 backend can choose to react to that operation however it sees fit.
