@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/subtle"
@@ -18,7 +19,6 @@ import (
 	"github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/errwrap"
@@ -1498,8 +1498,6 @@ func (c *Core) sealInternal() error {
 		// Signal the standby goroutine to shutdown, wait for completion
 		close(c.standbyStopCh)
 
-		c.requestContext = nil
-
 		// Release the lock while we wait to avoid deadlocking
 		c.stateLock.Unlock()
 		<-c.standbyDoneCh
@@ -1536,9 +1534,8 @@ func (c *Core) postUnseal() (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 	defer func() {
 		if retErr != nil {
+			c.requestContextCancelFunc()
 			c.preSeal()
-		} else {
-			c.requestContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
 		}
 	}()
 	c.logger.Info("core: post-unseal setup starting")
@@ -1558,6 +1555,8 @@ func (c *Core) postUnseal() (retErr error) {
 	if c.seal.RecoveryKeySupported() {
 		c.seal.SetRecoveryConfig(nil)
 	}
+
+	c.requestContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
 
 	if err := enterprisePostUnseal(c); err != nil {
 		return err

@@ -1,11 +1,23 @@
 ## 0.9.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * Token Auth Backend Roles parameter types: For `allowed_policies` and
+   `disallowed_policies` in role definitions in the token auth backend, input
+   can now be a comma-separated string or an array of strings. Reading a role
+   will now return arrays for these parameters. 
+
 IMPROVEMENTS:
+
+ * auth/token: `allowed_policies` and `disallowed_policies` can now be
+   specified as a comma-separated string or an array of strings
 
 BUG FIXES:
 
  * database/mysql: Allow the creation statement to use commands that are not
    yet supported by the prepare statement protocol [GH-3619]
+ * core: Fix potential panic that could occur using plugins when a node
+   transitioned from active to standby [GH-3638]
 
 ## 0.9.0.1 (November 21st, 2017) (Enterprise Only)
 
