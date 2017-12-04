@@ -33,7 +33,9 @@ unwrapped, it provides the plugin with a uniquely generated TLS certificate and
 private key for it to use to talk to the original vault process.
 
 The [`api_addr`][api_addr] must be set in order for the plugin process establish
-communication with the Vault server during mount time.
+communication with the Vault server during mount time. If the storage backend
+has HA enabled and supports automatic host address detection (e.g. Consul),
+Vault will automatically attempt to determine the `api_addr` as well.
 
 ~> Note: Reading the original connection's TLS connection state is not supported
 in plugins.
