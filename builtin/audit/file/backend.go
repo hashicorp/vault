@@ -75,7 +75,9 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		if err != nil {
 			return nil, err
 		}
-		mode = os.FileMode(m)
+		if m != 0 {
+			mode = os.FileMode(m)
+		}
 	}
 
 	b := &Backend{
