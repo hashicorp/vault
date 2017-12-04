@@ -9,17 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	"net/textproto"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
@@ -78,7 +75,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				"rotate",
 				"config/cors",
 				"config/auditing/*",
-				"config/api/*",
+				"config/requests/*",
 				"plugins/catalog/*",
 				"revoke-prefix/*",
 				"revoke-force/*",
@@ -143,35 +140,6 @@ func NewSystemBackend(core *Core) *SystemBackend {
 
 				HelpDescription: strings.TrimSpace(sysHelp["config/cors"][0]),
 				HelpSynopsis:    strings.TrimSpace(sysHelp["config/cors"][1]),
-			},
-
-			&framework.Path{
-				Pattern: "config/requests/passthrough-headers/(?P<header>.+)",
-
-				Fields: map[string]*framework.FieldSchema{
-					"header": &framework.FieldSchema{
-						Type: framework.TypeString,
-					},
-				},
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleRequestPassthroughHeaderUpdateDelete(false),
-					logical.DeleteOperation: b.handleRequestPassthroughHeaderUpdateDelete(true),
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["request-passthrough-header-name"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["request-passthrough-header-name"][1]),
-			},
-
-			&framework.Path{
-				Pattern: "config/requests/passthrough-headers/?$",
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ListOperation: b.handleRequestPassthroughHeaderList,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["request-passthrough-headers-list"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["request-passthrough-headers-list"][1]),
 			},
 
 			&framework.Path{
@@ -860,6 +828,39 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			&framework.Path{
+				Pattern: "config/requests/passthrough-headers/(?P<header>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"header": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"backends": &framework.FieldSchema{
+						Type: framework.TypeStringSlice,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handlePassthroughHeaderUpdate,
+					logical.DeleteOperation: b.handlePassthroughHeaderDelete,
+					logical.ReadOperation:   b.handlePassthroughHeaderRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["passthrough-headers-name"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["passthrough-headers-name"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "config/requests/passthrough-headers$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handlePassthroughHeadersRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["passthrough-headers"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["passthrough-headers"][1]),
+			},
+
+			&framework.Path{
 				Pattern: "plugins/catalog/?$",
 
 				Fields: map[string]*framework.FieldSchema{},
@@ -1203,91 +1204,6 @@ func (b *SystemBackend) handlePluginReloadUpdate(req *logical.Request, d *framew
 	return nil, nil
 }
 
-// handleRequestPassthroughHeaderRead reads the config
-func (b *SystemBackend) handleRequestPassthroughHeaderList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var currHeaders []string
-	currHeadersRaw := b.Core.passthroughRequestHeaders.Load()
-	if currHeadersRaw == nil {
-		return nil, nil
-	} else {
-		currHeaders = currHeadersRaw.([]string)
-	}
-
-	// Check for a nil slice to have been stored
-	if currHeaders == nil {
-		return nil, nil
-	}
-
-	return logical.ListResponse(currHeaders), nil
-}
-
-// handleRequestPassthroughHeaderUpdateDelete creates or overwrites a header to include, or deletes
-func (b *SystemBackend) handleRequestPassthroughHeaderUpdateDelete(delete bool) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
-	return func(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		header := d.Get("header").(string)
-		if header == "" {
-			return logical.ErrorResponse("missing header name"), nil
-		}
-
-		header = textproto.CanonicalMIMEHeaderKey(header)
-
-		b.Core.passthroughRequestHeadersLock.Lock()
-		defer b.Core.passthroughRequestHeadersLock.Unlock()
-
-		var currHeaders []string
-		currHeadersRaw := b.Core.passthroughRequestHeaders.Load()
-		if currHeadersRaw != nil {
-			var ok bool
-			currHeaders, ok = currHeadersRaw.([]string)
-			if !ok {
-				return nil, fmt.Errorf("could not decode the passthrough headers")
-			}
-		}
-
-		foundIndex := -1
-
-		for i, v := range currHeaders {
-			if v == header {
-				foundIndex = i
-				break
-			}
-		}
-
-		var persist bool
-		var newHeaders []string
-		switch {
-		case delete && (foundIndex >= 0):
-			persist = true
-			newHeaders = append(currHeaders[:foundIndex], currHeaders[foundIndex+1:]...)
-		case !delete && foundIndex < 0:
-			persist = true
-			newHeaders = append(currHeaders, header)
-		}
-
-		if persist {
-			// Store it
-			config := &PassthroughRequestHeaders{Headers: newHeaders}
-			enc, err := jsonutil.EncodeJSON(config)
-			if err != nil {
-				return nil, errwrap.Wrapf("failed to serialize passthrough request headers configuration: {{err}}", err)
-			}
-
-			entry := &Entry{
-				Key:   passthroughRequestHeadersStoragePath,
-				Value: enc,
-			}
-			if err := b.Core.barrier.Put(entry); err != nil {
-				return nil, errwrap.Wrapf("failed to persist passthrough request headers configuration: {{err}}", err)
-			}
-
-			// Update in memory
-			b.Core.passthroughRequestHeaders.Store(newHeaders)
-		}
-
-		return nil, nil
-	}
-}
-
 // handleAuditedHeaderUpdate creates or overwrites a header entry
 func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
@@ -1344,6 +1260,74 @@ func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framewo
 // handleAuditedHeadersRead returns the whole audited headers config
 func (b *SystemBackend) handleAuditedHeadersRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	headerConfig := b.Core.AuditedHeadersConfig()
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"headers": headerConfig.Headers,
+		},
+	}, nil
+}
+
+// handlePassthroughHeaderUpdate creates or overwrites a header entry
+func (b *SystemBackend) handlePassthroughHeaderUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	backends, ok := d.Get("backends").([]string)
+	if !ok || len(backends) == 0 {
+		return logical.ErrorResponse("missing or invalid backends list"), nil
+	}
+
+	headerConfig := b.Core.PassthroughHeadersConfig()
+	err := headerConfig.add(header, backends)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// handlePassthroughHeaderDelete deletes the header with the given name
+func (b *SystemBackend) handlePassthroughHeaderDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	headerConfig := b.Core.PassthroughHeadersConfig()
+	err := headerConfig.remove(header)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// handlePassthroughHeaderRead returns the header configuration for the given header name
+func (b *SystemBackend) handlePassthroughHeaderRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	headerConfig := b.Core.PassthroughHeadersConfig()
+	settings, ok := headerConfig.Headers[header]
+	if !ok {
+		return logical.ErrorResponse("could not find header in config"), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			header: settings,
+		},
+	}, nil
+}
+
+// handlePassthroughHeadersRead returns the whole audited headers config
+func (b *SystemBackend) handlePassthroughHeadersRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	headerConfig := b.Core.PassthroughHeadersConfig()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -3459,6 +3443,25 @@ This path responds to the following HTTP methods.
 	"audited-headers": {
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
+	},
+	"passthrough-headers-name": {
+		"Configures the headers sent to the specified backends.",
+		`
+This path responds to the following HTTP methods.
+
+	GET /<name>
+		Returns the setting for the header with the given name.
+
+	POST /<name>
+		Enable passthrough of the given header for the specified backends.
+
+	DELETE /<path>
+		Disable passthrough of the given header.
+		`,
+	},
+	"passthrough-headers": {
+		"Lists the headers configured to be passed through to backends.",
+		`Returns a list of headers that have been configured to be passed through to backends.`,
 	},
 	"plugin-catalog": {
 		"Configures the plugins known to vault",

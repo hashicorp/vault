@@ -6,14 +6,6 @@ import (
 	"time"
 )
 
-const (
-	passthroughRequestHeadersStoragePath = "sys/config/requests/passthrough-headers"
-)
-
-type PassthroughRequestHeaders struct {
-	Headers []string `json:"headers"`
-}
-
 // tuneMount is used to set config on a mount point
 func (b *SystemBackend) tuneMountTTLs(path string, me *MountEntry, newDefault, newMax time.Duration) error {
 	zero := time.Duration(0)
