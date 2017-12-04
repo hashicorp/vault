@@ -1,8 +1,6 @@
 package transit
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -27,23 +25,7 @@ func (b *backend) pathBackup() *framework.Path {
 }
 
 func (b *backend) pathBackupRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := d.Get("name").(string)
-	if name == "" {
-		return logical.ErrorResponse("empty 'name'"), nil
-	}
-
-	p, lock, err := b.lm.GetPolicyExclusive(req.Storage, name)
-	if lock != nil {
-		defer lock.Unlock()
-	}
-	if err != nil {
-		return nil, err
-	}
-	if p == nil {
-		return logical.ErrorResponse(fmt.Sprintf("invalid key %q", name)), nil
-	}
-
-	backup, err := p.Backup(req.Storage)
+	backup, err := b.lm.BackupPolicy(req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}

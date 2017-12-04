@@ -135,6 +135,14 @@ func (lm *LockManager) UnlockPolicy(lock *sync.RWMutex, lockType bool) {
 	}
 }
 
+func (lm *LockManager) UpdateCache(name string, policy *Policy) {
+	if lm.CacheActive() {
+		lm.cacheMutex.Lock()
+		defer lm.cacheMutex.Unlock()
+		lm.cache[name] = policy
+	}
+}
+
 // Get the policy with a read lock. If we get an error saying an exclusive lock
 // is needed (for instance, for an upgrade/migration), give up the read lock,
 // call again with an exclusive lock, then swap back out for a read lock.
@@ -254,21 +262,33 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, keyData KeyData) e
 		return fmt.Errorf("failed to restore the policy %q: %v", name, err)
 	}
 
-	// Update the cache
-	if lm.CacheActive() {
-		lm.cacheMutex.Lock()
-		defer lm.cacheMutex.Unlock()
-
-		// Since an exclusive lock is held, cache should not have the policy
-		exp := lm.cache[name]
-		if exp != nil {
-			return fmt.Errorf(fmt.Sprintf("policy %q is already present in cache", name))
-		}
-
-		lm.cache[name] = p
-	}
+	// Update the cache to contain the restored policy
+	lm.UpdateCache(name, p)
 
 	return nil
+}
+
+func (lm *LockManager) BackupPolicy(storage logical.Storage, name string) (string, error) {
+	p, lock, err := lm.GetPolicyExclusive(storage, name)
+	if lock != nil {
+		defer lock.Unlock()
+	}
+	if err != nil {
+		return "", err
+	}
+	if p == nil {
+		return "", fmt.Errorf("invalid key %q", name)
+	}
+
+	backup, err := p.Backup(storage)
+	if err != nil {
+		return "", err
+	}
+
+	// Update the cache since the policy would now have the backup information
+	lm.UpdateCache(name, p)
+
+	return backup, nil
 }
 
 // When the function returns, a lock will be held on the policy if err == nil.

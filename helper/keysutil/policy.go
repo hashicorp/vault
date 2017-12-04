@@ -51,6 +51,11 @@ const (
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
 
+type BackupInfo struct {
+	Time    time.Time `json:"time"`
+	Version int       `json:"version"`
+}
+
 type SigningResult struct {
 	Signature string
 	PublicKey []byte
@@ -219,6 +224,10 @@ type Policy struct {
 	// Restored indicates whether or not this policy was restored from a backed
 	// up policy
 	Restored bool `json:"restored"`
+
+	// BackupInfo indicates the information about the backup action taken on
+	// this policy
+	BackupInfo *BackupInfo `json:"backup_info"`
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -1032,16 +1041,31 @@ func (p *Policy) MigrateKeyToKeysMap() {
 	p.Key = nil
 }
 
+// Backup should be called with an exclusive lock held on the policy
 func (p *Policy) Backup(storage logical.Storage) (string, error) {
+	// Create a record of this backup operation in the policy
+	p.BackupInfo = &BackupInfo{
+		Time:    time.Now(),
+		Version: p.LatestVersion,
+	}
+	err := p.Persist(storage)
+	if err != nil {
+		return "", fmt.Errorf("failed to persist policy with backup info: %v", err)
+	}
+
+	// Load the archive only after persisting the policy as the archive can get
+	// adjusted while persisting the policy
 	archivedKeys, err := p.LoadArchive(storage)
 	if err != nil {
 		return "", err
 	}
 
-	encodedBackup, err := jsonutil.EncodeJSON(&KeyData{
+	keyData := &KeyData{
 		Policy:       p,
 		ArchivedKeys: archivedKeys,
-	})
+	}
+
+	encodedBackup, err := jsonutil.EncodeJSON(keyData)
 	if err != nil {
 		return "", err
 	}
