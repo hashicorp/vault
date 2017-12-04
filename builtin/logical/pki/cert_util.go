@@ -122,7 +122,6 @@ func validateKeyTypeLength(keyType string, keyBits int) *logical.Response {
 		case 2048:
 		case 4096:
 		case 8192:
-		case 16384:
 		default:
 			return logical.ErrorResponse(fmt.Sprintf(
 				"unsupported bit length for RSA key: %d", keyBits))
