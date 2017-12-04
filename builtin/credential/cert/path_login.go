@@ -276,23 +276,25 @@ func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, conf
 	// Build Client Extensions Map
 	clientExtMap := map[string]string{}
 	for _, ext := range clientCert.Extensions {
+		// Trim prefix control characters from the Custom Extension Value for human readable configs
 		clientExtMap[ext.Id.String()] = strings.TrimLeftFunc(string(ext.Value[:]), b.isControlRune)
 	}
 
-	// If we match all of the expected extensions, the requirement is satisfied
-	matchedExts := 0
+	// If any of the required extensions don't match the constraint fails
 	for _, requiredExt := range config.Entry.RequiredExtensions {
-		reqExt := strings.Split(requiredExt, ":")
+		reqExt := strings.SplitN(requiredExt, ":", 2)
 		clientExtValue, clientExtValueExists := clientExtMap[reqExt[0]]
-		if glob.Glob(reqExt[1], clientExtValue) && clientExtValueExists {
-			matchedExts++
+		if !clientExtValueExists || !glob.Glob(reqExt[1], clientExtValue) {
+			return false
 		}
 	}
-	return matchedExts == len(config.Entry.RequiredExtensions)
+	return true
 }
 
 // isControlRune returns true for control charaters for trimming extension values
-func (b *backend) isControlRune(r rune) bool { return r <= 32 || r == 127 }
+func (b *backend) isControlRune(r rune) bool {
+	return r <= 32 || r == 127
+}
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
 func (b *backend) loadTrustedCerts(store logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
