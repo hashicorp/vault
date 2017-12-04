@@ -46,6 +46,7 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
+	// Configure the key to allow its deletion
 	configReq := &logical.Request{
 		Path:      "keys/test/config",
 		Operation: logical.UpdateOperation,
@@ -59,6 +60,7 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
+	// Take a backup of the key
 	backupReq := &logical.Request{
 		Path:      "backup/test",
 		Operation: logical.ReadOperation,
@@ -70,6 +72,8 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 	}
 	backup := resp.Data["backup"]
 
+	// Try to restore the key without deleting it. Expect error due to
+	// conflicting key names.
 	restoreReq := &logical.Request{
 		Path:      "restore",
 		Operation: logical.UpdateOperation,
@@ -88,6 +92,7 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 
 	plaintextB64 := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
 
+	// Perform encryption, signing or hmac-ing based on the set 'feature'
 	var encryptReq, signReq, hmacReq *logical.Request
 	var ciphertext, signature, hmac string
 	switch feature {
@@ -105,6 +110,7 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 			t.Fatalf("resp: %#v\nerr: %v", resp, err)
 		}
 		ciphertext = resp.Data["ciphertext"].(string)
+
 	case "sign-verify":
 		signReq = &logical.Request{
 			Path:      "sign/test",
@@ -136,17 +142,21 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 		hmac = resp.Data["hmac"].(string)
 	}
 
+	// Delete the key
 	keyReq.Operation = logical.DeleteOperation
 	resp, err = b.HandleRequest(keyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
+	// Restore the key from the backup
 	resp, err = b.HandleRequest(restoreReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
+	// validationFunc verifies the ciphertext, signature or hmac based on the
+	// set 'feature'
 	validationFunc := func(keyName string) {
 		var decryptReq *logical.Request
 		var verifyReq *logical.Request
@@ -206,18 +216,22 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 		}
 	}
 
+	// Ensure that the restored key is functional
 	validationFunc("test")
 
+	// Delete the key again
 	resp, err = b.HandleRequest(keyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
+	// Restore the key under a different name
 	restoreReq.Path = "restore/test1"
 	resp, err = b.HandleRequest(restoreReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v\nerr: %v", resp, err)
 	}
 
+	// Ensure that the restored key is functional
 	validationFunc("test1")
 }
