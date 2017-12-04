@@ -1236,49 +1236,32 @@ func (b *SystemBackend) handleRequestPassthroughHeaderUpdateDelete(delete bool) 
 
 		var currHeaders []string
 		currHeadersRaw := b.Core.passthroughRequestHeaders.Load()
-		if currHeadersRaw == nil {
-			if delete {
-				return nil, nil
-			}
-		} else {
-			currHeaders = currHeadersRaw.([]string)
-		}
-
-		// Check for a nil or empty slice to have been stored
-		if len(currHeaders) == 0 {
-			if delete {
-				return nil, nil
+		if currHeadersRaw != nil {
+			var ok bool
+			currHeaders, ok = currHeadersRaw.([]string)
+			if !ok {
+				return nil, fmt.Errorf("could not decode the passthrough headers")
 			}
 		}
 
-		var found bool
-		for _, v := range currHeaders {
+		foundIndex := -1
+
+		for i, v := range currHeaders {
 			if v == header {
-				found = true
+				foundIndex = i
 				break
 			}
 		}
 
 		var persist bool
 		var newHeaders []string
-
 		switch {
-		case delete && found:
+		case delete && (foundIndex >= 0):
 			persist = true
-			newHeaders = make([]string, 0, len(currHeaders)-1)
-			for _, v := range currHeaders {
-				if v != header {
-					newHeaders = append(newHeaders, v)
-				}
-			}
-
-		case !delete && !found:
+			newHeaders = append(currHeaders[:foundIndex], currHeaders[foundIndex+1:]...)
+		case !delete && foundIndex < 0:
 			persist = true
-			newHeaders = make([]string, 0, len(currHeaders)+1)
-			for _, v := range currHeaders {
-				newHeaders = append(newHeaders, v)
-			}
-			newHeaders = append(newHeaders, header)
+			newHeaders = append(currHeaders, header)
 		}
 
 		if persist {
@@ -1296,10 +1279,10 @@ func (b *SystemBackend) handleRequestPassthroughHeaderUpdateDelete(delete bool) 
 			if err := b.Core.barrier.Put(entry); err != nil {
 				return nil, errwrap.Wrapf("failed to persist passthrough request headers configuration: {{err}}", err)
 			}
-		}
 
-		// Update in memory
-		b.Core.passthroughRequestHeaders.Store(newHeaders)
+			// Update in memory
+			b.Core.passthroughRequestHeaders.Store(newHeaders)
+		}
 
 		return nil, nil
 	}
