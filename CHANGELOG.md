@@ -1,6 +1,16 @@
 ## 0.9.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * Token Auth Backend Roles parameter types: For `allowed_policies` and
+   `disallowed_policies` in role definitions in the token auth backend, input
+   can now be a comma-separated string or an array of strings. Reading a role
+   will now return arrays for these parameters. 
+
 IMPROVEMENTS:
+
+ * auth/token: `allowed_policies` and `disallowed_policies` can now be
+   specified as a comma-separated string or an array of strings
 
 BUG FIXES:
 
