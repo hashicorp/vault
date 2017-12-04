@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -82,8 +83,17 @@ func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
 	}
 
 	if c.WriteConcern != "" {
+		input := c.WriteConcern
+
+		// Try to base64 decode the input. If successful, consider the decoded
+		// value as input.
+		inputBytes, err := base64.StdEncoding.DecodeString(input)
+		if err == nil {
+			input = string(inputBytes)
+		}
+
 		var concern writeConcern
-		json.Unmarshal([]byte(c.WriteConcern), &concern)
+		json.Unmarshal([]byte(input), &concern)
 
 		c.session.SetSafe(&mgo.Safe{
 			W:        concern.W,
