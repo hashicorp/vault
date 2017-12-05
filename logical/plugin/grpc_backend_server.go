@@ -125,6 +125,15 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Empty) (
 	return nil, err
 }
 
+func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.InvalidateKeyArgs) (*pb.Empty, error) {
+	if inMetadataMode() {
+		return nil, ErrServerInMetadataMode
+	}
+
+	b.backend.InvalidateKey(args.Key)
+	return nil, nil
+}
+
 func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.TypeReply, error) {
 	return &pb.TypeReply{
 		Type: uint32(b.backend.Type()),
