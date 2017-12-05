@@ -51,6 +51,11 @@ const (
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
 
+type RestoreInfo struct {
+	Time    time.Time `json:"time"`
+	Version int       `json:"version"`
+}
+
 type BackupInfo struct {
 	Time    time.Time `json:"time"`
 	Version int       `json:"version"`
@@ -221,13 +226,13 @@ type Policy struct {
 	// The type of key
 	Type KeyType `json:"type"`
 
-	// Restored indicates whether or not this policy was restored from a backed
-	// up policy
-	Restored bool `json:"restored"`
-
 	// BackupInfo indicates the information about the backup action taken on
 	// this policy
 	BackupInfo *BackupInfo `json:"backup_info"`
+
+	// RestoreInfo indicates the information about the restore action taken on
+	// this policy
+	RestoreInfo *RestoreInfo `json:"restore_info"`
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane

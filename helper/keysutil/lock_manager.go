@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
@@ -271,7 +272,10 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup strin
 	}
 
 	// Mark that policy as a restored key
-	keyData.Policy.Restored = true
+	keyData.Policy.RestoreInfo = &RestoreInfo{
+		Time:    time.Now(),
+		Version: keyData.Policy.LatestVersion,
+	}
 
 	// Restore the policy. This will also attempt to adjust the archive.
 	err = keyData.Policy.Persist(storage)
@@ -280,7 +284,7 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup strin
 	}
 
 	// Update the cache to contain the restored policy
-	lm.UpdateCache(name, p)
+	lm.UpdateCache(name, keyData.Policy)
 
 	return nil
 }
