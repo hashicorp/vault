@@ -43,12 +43,6 @@ type SpecialPathsReply struct {
 	Paths *logical.Paths
 }
 
-// SystemReply is the reply for System method.
-type SystemReply struct {
-	SystemView logical.SystemView
-	Error      error
-}
-
 // HandleExistenceCheckArgs is the args for HandleExistenceCheck method.
 type HandleExistenceCheckArgs struct {
 	StorageID uint32
@@ -99,19 +93,8 @@ func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Resp
 	// interfaces. The server will pick up the storage from the shim.
 	req.Storage = nil
 
-	contextID := b.broker.NextId()
-	go b.broker.AcceptAndServe(contextID, &ContextServer{
-		ctx: req.Context,
-	})
-
-	ctx := req.Context
-	req.Context = nil
-	cancelID := b.broker.NextId()
-
 	args := &HandleRequestArgs{
-		Request:         req,
-		ContextID:       contextID,
-		ContextCancelID: cancelID,
+		Request: req,
 	}
 	var reply HandleRequestReply
 
@@ -123,30 +106,7 @@ func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Resp
 		}()
 	}
 
-	c := make(chan error)
-	quit := make(chan struct{})
-	go func() {
-		c <- b.client.Call("Plugin.HandleRequest", args, &reply)
-	}()
-
-	ctxConn, err := b.broker.Dial(cancelID)
-	if err != nil {
-		return nil, err
-	}
-	defer ctxConn.Close()
-	ctxClient := rpc.NewClient(ctxConn)
-
-	canceler := &ContextCancelClient{client: ctxClient}
-	go func() {
-		select {
-		case <-ctx.Done():
-			canceler.Cancel()
-		case <-quit:
-		}
-	}()
-
-	err = <-c
-	close(quit)
+	err := b.client.Call("Plugin.HandleRequest", args, &reply)
 	if err != nil {
 		return nil, err
 	}
