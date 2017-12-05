@@ -146,7 +146,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 
 		addrRaw := wt.Claims().Get("addr")
 		if addrRaw == nil {
-			return nil, errors.New("decoded token does not contain the active node's api_address")
+			return nil, errors.New("decoded token does not contain the active node's api_addr")
 		}
 		vaultAddr, ok := addrRaw.(string)
 		if !ok {
