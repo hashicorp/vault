@@ -144,6 +144,35 @@ type KeyEntry struct {
 	DeprecatedCreationTime int64 `json:"creation_time"`
 }
 
+// deprecatedKeyEntryMap is used to allow JSON marshal/unmarshal
+type deprecatedKeyEntryMap map[int]KeyEntry
+
+// MarshalJSON implements JSON marshaling
+func (kem deprecatedKeyEntryMap) MarshalJSON() ([]byte, error) {
+	intermediate := map[string]KeyEntry{}
+	for k, v := range kem {
+		intermediate[strconv.Itoa(k)] = v
+	}
+	return json.Marshal(&intermediate)
+}
+
+// MarshalJSON implements JSON unmarshaling
+func (kem deprecatedKeyEntryMap) UnmarshalJSON(data []byte) error {
+	intermediate := map[string]KeyEntry{}
+	if err := jsonutil.DecodeJSON(data, &intermediate); err != nil {
+		return err
+	}
+	for k, v := range intermediate {
+		keyval, err := strconv.Atoi(k)
+		if err != nil {
+			return err
+		}
+		kem[keyval] = v
+	}
+
+	return nil
+}
+
 // keyEntryMap is used to allow JSON marshal/unmarshal
 type keyEntryMap map[string]KeyEntry
 
