@@ -61,7 +61,8 @@ name in a request`,
 				Description: `If set, clients can request certificates for
 subdomains directly beneath these domains, including
 the wildcard subdomains. See the documentation for more
-information.`,
+information. This parameter accepts a comma-separated 
+string or list of domains.`,
 			},
 
 			"allow_bare_domains": &framework.FieldSchema{
@@ -158,7 +159,7 @@ the key_type.`,
 			"key_usage": &framework.FieldSchema{
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
-				Description: `A list of key usages (not extended
+				Description: `A comma-separate string or list of key usages (not extended
 key usages). Valid values can be found at
 https://golang.org/pkg/crypto/x509/#KeyUsage
 -- simply drop the "KeyUsage" part of the name.
@@ -308,7 +309,10 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 			return nil, err
 		}
 		if err := s.Put(jsonEntry); err != nil {
-			return nil, err
+			// Only perform upgrades on replication primary
+			if err != logical.ErrReadOnly {
+				return nil, err
+			}
 		}
 	}
 
