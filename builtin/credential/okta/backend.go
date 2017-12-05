@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/chrismalek/oktasdk-go/okta"
+	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -22,6 +23,8 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
+			Root: mfa.MFARootPaths(),
+
 			Unauthenticated: []string{
 				"login/*",
 			},
@@ -33,8 +36,9 @@ func Backend() *backend {
 			pathGroups(&b),
 			pathUsersList(&b),
 			pathGroupsList(&b),
-			pathLogin(&b),
-		}),
+		},
+			mfa.MFAPaths(b.Backend, pathLogin(&b))...,
+		),
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
