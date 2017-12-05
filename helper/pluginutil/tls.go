@@ -150,15 +150,15 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 		}
 		vaultAddr, ok := addrRaw.(string)
 		if !ok {
-			return nil, errors.New("decoded token's api_address not valid")
+			return nil, errors.New("decoded token's api_addr not valid")
 		}
 		if vaultAddr == "" {
-			return nil, errors.New(`no vault api_address found`)
+			return nil, errors.New(`no vault api_addr found`)
 		}
 
 		// Sanity check the value
 		if _, err := url.Parse(vaultAddr); err != nil {
-			return nil, fmt.Errorf("error parsing the vault api_address: %s", err)
+			return nil, fmt.Errorf("error parsing the vault api_addr: %s", err)
 		}
 
 		// Unwrap the token
