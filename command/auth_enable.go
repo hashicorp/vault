@@ -16,12 +16,13 @@ type AuthEnableCommand struct {
 
 func (c *AuthEnableCommand) Run(args []string) int {
 	var description, path, pluginName string
-	var local bool
+	var local, sealWrap bool
 	flags := c.Meta.FlagSet("auth-enable", meta.FlagSetDefault)
 	flags.StringVar(&description, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
 	flags.StringVar(&pluginName, "plugin-name", "", "")
 	flags.BoolVar(&local, "local", false, "")
+	flags.BoolVar(&sealWrap, "seal-wrap", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -60,7 +61,8 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		Config: api.AuthConfigInput{
 			PluginName: pluginName,
 		},
-		Local: local,
+		Local:    local,
+		SealWrap: sealWrap,
 	}); err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error: %s", err))
@@ -110,6 +112,8 @@ Auth Enable Options:
   -local                  Mark the mount as a local mount. Local mounts
                           are not replicated nor (if a secondary)
                           removed by replication.
+
+  -seal-wrap              Turn on seal wrapping for the mount.
 `
 	return strings.TrimSpace(helpText)
 }
@@ -137,5 +141,6 @@ func (c *AuthEnableCommand) AutocompleteFlags() complete.Flags {
 		"-path":        complete.PredictNothing,
 		"-plugin-name": complete.PredictNothing,
 		"-local":       complete.PredictNothing,
+		"-seal-wrap":   complete.PredictNothing,
 	}
 }

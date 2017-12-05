@@ -760,6 +760,29 @@ func (c *TestCluster) ensureCoresSealed() error {
 	return nil
 }
 
+func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
+	for _, core := range c.Cores {
+		if err := core.UnsealWithStoredKeys(); err != nil {
+			return err
+		}
+		timeout := time.Now().Add(60 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				return fmt.Errorf("timeout waiting for core to unseal")
+			}
+			sealed, err := core.Sealed()
+			if err != nil {
+				return err
+			}
+			if !sealed {
+				break
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+	return nil
+}
+
 type TestListener struct {
 	net.Listener
 	Address *net.TCPAddr

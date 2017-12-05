@@ -42,7 +42,7 @@ func (c *MountsCommand) Run(args []string) int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Accessor | Plugin | Default TTL | Max TTL | Force No Cache | Replication Behavior | Description"}
+	columns := []string{"Path | Type | Accessor | Plugin | Default TTL | Max TTL | Force No Cache | Replication Behavior | Seal Wrap | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
 		pluginName := "n/a"
@@ -70,8 +70,8 @@ func (c *MountsCommand) Run(args []string) int {
 			replicatedBehavior = "local"
 		}
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s | %s | %s | %v | %s | %s", path, mount.Type, mount.Accessor, pluginName, defTTL, maxTTL,
-			mount.Config.ForceNoCache, replicatedBehavior, mount.Description))
+			"%s | %s | %s | %s | %s | %s | %v | %s | %t | %s", path, mount.Type, mount.Accessor, pluginName, defTTL, maxTTL,
+			mount.Config.ForceNoCache, replicatedBehavior, mount.SealWrap, mount.Description))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))
