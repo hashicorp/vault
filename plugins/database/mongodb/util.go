@@ -17,16 +17,6 @@ type mongoDBStatement struct {
 	Roles mongodbRoles `json:"roles"`
 }
 
-// writeConcern is the mgo.Safe struct with JSON tags
-// More info: https://godoc.org/gopkg.in/mgo.v2#Safe
-type writeConcern struct {
-	W        int    `json:"w"`        // Min # of servers to ack before success
-	WMode    string `json:"w_mode"`   // Write mode for MongoDB 2.0+ (e.g. "majority")
-	WTimeout int    `json:"wtimeout"` // Milliseconds to wait for W before timing out
-	FSync    bool   `json:"fsync"`    // Sync via the journal if present, or via data files sync otherwise
-	J        bool   `json:"j"`        // Sync via the journal if present
-}
-
 // Convert array of role documents like:
 //
 // [ { "role": "readWrite" }, { "role": "readWrite", "db": "test" } ]

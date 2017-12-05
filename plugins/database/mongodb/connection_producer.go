@@ -28,6 +28,7 @@ type mongoDBConnectionProducer struct {
 	Initialized bool
 	Type        string
 	session     *mgo.Session
+	safe        *mgo.Safe
 	sync.Mutex
 }
 
@@ -43,6 +44,29 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 
 	if len(c.ConnectionURL) == 0 {
 		return fmt.Errorf("connection_url cannot be empty")
+	}
+
+	if c.WriteConcern != "" {
+		input := c.WriteConcern
+
+		// Try to base64 decode the input. If successful, consider the decoded
+		// value as input.
+		inputBytes, err := base64.StdEncoding.DecodeString(input)
+		if err == nil {
+			input = string(inputBytes)
+		}
+
+		concern := &mgo.Safe{}
+		err = json.Unmarshal([]byte(input), concern)
+		if err != nil {
+			return fmt.Errorf("error mashalling write concern: %s", err)
+		}
+
+		// Only set c.safe if anything got marshaled into concern. We don't want to
+		// pass an empty, non-nil mgo.Safe object into mgo.SetSafe in Connection().
+		if (mgo.Safe{} != *concern) {
+			c.safe = concern
+		}
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -82,29 +106,8 @@ func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
 		return nil, err
 	}
 
-	if c.WriteConcern != "" {
-		input := c.WriteConcern
-
-		// Try to base64 decode the input. If successful, consider the decoded
-		// value as input.
-		inputBytes, err := base64.StdEncoding.DecodeString(input)
-		if err == nil {
-			input = string(inputBytes)
-		}
-
-		var concern writeConcern
-		err = json.Unmarshal([]byte(input), &concern)
-		if err != nil {
-			return nil, err
-		}
-
-		c.session.SetSafe(&mgo.Safe{
-			W:        concern.W,
-			WMode:    concern.WMode,
-			WTimeout: concern.WTimeout,
-			FSync:    concern.FSync,
-			J:        concern.J,
-		})
+	if c.safe != nil {
+		c.session.SetSafe(c.safe)
 	}
 
 	c.session.SetSyncTimeout(1 * time.Minute)
