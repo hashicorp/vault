@@ -59,14 +59,15 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 		concern := &mgo.Safe{}
 		err = json.Unmarshal([]byte(input), concern)
 		if err != nil {
-			return fmt.Errorf("error mashalling write concern: %s", err)
+			return fmt.Errorf("error mashalling write_concern: %s", err)
 		}
 
-		// Only set c.safe if anything got marshaled into concern. We don't want to
-		// pass an empty, non-nil mgo.Safe object into mgo.SetSafe in Connection().
-		if (mgo.Safe{} != *concern) {
-			c.safe = concern
+		// Guard against empty, non-nil mgo.Safe object; we don't want to pass that
+		// into mgo.SetSafe in Connection().
+		if (mgo.Safe{} == *concern) {
+			return fmt.Errorf("provided write_concern values did not map to any mgo.Safe fields")
 		}
+		c.safe = concern
 	}
 
 	// Set initialized to true at this point since all fields are set,
