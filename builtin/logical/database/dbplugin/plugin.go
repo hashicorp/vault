@@ -3,6 +3,7 @@ package dbplugin
 import (
 	"context"
 	"fmt"
+	"net/rpc"
 	"time"
 
 	"google.golang.org/grpc"
@@ -83,7 +84,7 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  4,
+	ProtocolVersion:  3,
 	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
@@ -91,16 +92,23 @@ var handshakeConfig = plugin.HandshakeConfig{
 // DatabasePlugin implements go-plugin's Plugin interface. It has methods for
 // retrieving a server and a client instance of the plugin.
 type DatabasePlugin struct {
-	plugin.NetRPCUnsupportedPlugin
 	impl Database
 }
 
-func (d DatabasePlugin) GRPCServer(s *grpc.Server) error {
+func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
+	return &databasePluginRPCServer{impl: d.impl}, nil
+}
+
+func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
+	return &databasePluginRPCClient{client: c}, nil
+}
+
+func (d DatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
 	RegisterDatabaseServer(s, &gRPCServer{impl: d.impl})
 	return nil
 }
 
-func (DatabasePlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error) {
+func (DatabasePlugin) GRPCClient(_ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &gRPCClient{
 		client:     NewDatabaseClient(c),
 		clientConn: c,
