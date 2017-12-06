@@ -2,7 +2,6 @@ package pki
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/fatih/structs"
@@ -15,19 +14,19 @@ func pathConfigURLs(b *backend) *framework.Path {
 		Pattern: "config/urls",
 		Fields: map[string]*framework.FieldSchema{
 			"issuing_certificates": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the issuing certificate attribute`,
 			},
 
 			"crl_distribution_points": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the CRL distribution points attribute`,
 			},
 
 			"ocsp_servers": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
 for the OCSP servers attribute`,
 			},
@@ -119,24 +118,21 @@ func (b *backend) pathWriteURL(
 	}
 
 	if urlsInt, ok := data.GetOk("issuing_certificates"); ok {
-		splitURLs := strings.Split(urlsInt.(string), ",")
-		entries.IssuingCertificates = splitURLs
+		entries.IssuingCertificates = urlsInt.([]string)
 		if badURL := validateURLs(entries.IssuingCertificates); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in issuing certificates: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
-		splitURLs := strings.Split(urlsInt.(string), ",")
-		entries.CRLDistributionPoints = splitURLs
+		entries.CRLDistributionPoints = urlsInt.([]string)
 		if badURL := validateURLs(entries.CRLDistributionPoints); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in CRL distribution points: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
-		splitURLs := strings.Split(urlsInt.(string), ",")
-		entries.OCSPServers = splitURLs
+		entries.OCSPServers = urlsInt.([]string)
 		if badURL := validateURLs(entries.OCSPServers); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid URL found in OCSP servers: %s", badURL)), nil

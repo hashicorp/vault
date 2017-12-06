@@ -294,7 +294,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingStorageView("auth/foo/")
+	view := c.router.MatchingStorageByAPIPath("auth/foo/")
 
 	// Inject data
 	se := &logical.StorageEntry{

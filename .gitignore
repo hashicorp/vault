@@ -64,6 +64,7 @@ tags
 # compiled output
 ui/dist
 ui/tmp
+ui/root
 
 # dependencies
 ui/node_modules
@@ -77,3 +78,7 @@ ui/coverage/*
 ui/libpeerconnection.log
 ui/npm-debug.log
 ui/testem.log
+
+# used for JS acceptance tests
+ui/tests/helpers/vault-keys.js
+ui/vault-ui-integration-server.pid

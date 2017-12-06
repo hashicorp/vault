@@ -12,11 +12,11 @@ import (
 	"strings"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	authv1 "k8s.io/api/authentication/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	authv1 "k8s.io/client-go/pkg/apis/authentication/v1"
 )
 
 // This is the result from the token review
@@ -78,8 +78,16 @@ func (t *tokenReviewAPI) Review(jwt string) (*tokenReviewResult, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// If we have a configured TokenReviewer JWT use it as the bearer, otherwise
+	// try to use the passed in JWT.
+	bearer := fmt.Sprintf("Bearer %s", jwt)
+	if len(t.config.TokenReviewerJWT) > 0 {
+		bearer = fmt.Sprintf("Bearer %s", t.config.TokenReviewerJWT)
+	}
+
 	// Set the JWT as the Bearer token
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", jwt))
+	req.Header.Set("Authorization", bearer)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -104,10 +112,15 @@ func (t *tokenReviewAPI) Review(jwt string) (*tokenReviewResult, error) {
 		return nil, errors.New("lookup failed: service account jwt not valid")
 	}
 
-	// the username is of format: system:serviceaccount:(NAMESPACE):(SERVICEACCOUNT)
+	// The username is of format: system:serviceaccount:(NAMESPACE):(SERVICEACCOUNT)
 	parts := strings.Split(r.Status.User.Username, ":")
 	if len(parts) != 4 {
 		return nil, errors.New("lookup failed: unexpected username format")
+	}
+
+	// Validate the user that comes back from token review is a service account
+	if parts[0] != "system" || parts[1] != "serviceaccount" {
+		return nil, errors.New("lookup failed: username returned is not a service account")
 	}
 
 	return &tokenReviewResult{

@@ -233,7 +233,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingStorageView("test/")
+	view := c.router.MatchingStorageByAPIPath("test/")
 
 	// Inject data
 	se := &logical.StorageEntry{
@@ -353,7 +353,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Store the view
-	view := c.router.MatchingStorageView("test/")
+	view := c.router.MatchingStorageByAPIPath("test/")
 
 	// Inject data
 	se := &logical.StorageEntry{
@@ -592,31 +592,26 @@ func testCore_MountTable_UpgradeToTyped_Common(
 }
 
 func verifyDefaultTable(t *testing.T, table *MountTable) {
-	if len(table.Entries) != 3 {
+	if len(table.Entries) != 4 {
 		t.Fatalf("bad: %v", table.Entries)
 	}
 	table.sortEntriesByPath()
-	for idx, entry := range table.Entries {
-		switch idx {
-		case 0:
-			if entry.Path != "cubbyhole/" {
-				t.Fatalf("bad: %v", entry)
-			}
+	for _, entry := range table.Entries {
+		switch entry.Path {
+		case "cubbyhole/":
 			if entry.Type != "cubbyhole" {
 				t.Fatalf("bad: %v", entry)
 			}
-		case 1:
-			if entry.Path != "secret/" {
-				t.Fatalf("bad: %v", entry)
-			}
+		case "secret/":
 			if entry.Type != "kv" {
 				t.Fatalf("bad: %v", entry)
 			}
-		case 2:
-			if entry.Path != "sys/" {
+		case "sys/":
+			if entry.Type != "system" {
 				t.Fatalf("bad: %v", entry)
 			}
-			if entry.Type != "system" {
+		case "identity/":
+			if entry.Type != "identity" {
 				t.Fatalf("bad: %v", entry)
 			}
 		}
@@ -637,12 +632,14 @@ func TestSingletonMountTableFunc(t *testing.T) {
 
 	mounts, auth := c.singletonMountTables()
 
-	if len(mounts.Entries) != 1 {
-		t.Fatal("length of mounts is wrong")
+	if len(mounts.Entries) != 2 {
+		t.Fatalf("length of mounts is wrong; expected 2, got %d", len(mounts.Entries))
 	}
+
 	for _, entry := range mounts.Entries {
 		switch entry.Type {
 		case "system":
+		case "identity":
 		default:
 			t.Fatalf("unknown type %s", entry.Type)
 		}

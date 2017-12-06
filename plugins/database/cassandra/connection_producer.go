@@ -228,7 +228,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	}
 
 	// Verify the info
-	err = session.Query(`LIST USERS`).Exec()
+	err = session.Query(`LIST ALL`).Exec()
 	if err != nil {
 		return nil, fmt.Errorf("error validating connection info: %s", err)
 	}

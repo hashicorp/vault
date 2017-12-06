@@ -36,12 +36,14 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 
 	outStr := fmt.Sprintf(
-		"Sealed: %v\n"+
+		"Seal Type: %s\n"+
+			"Sealed: %v\n"+
 			"Key Shares: %d\n"+
 			"Key Threshold: %d\n"+
 			"Unseal Progress: %d\n"+
 			"Unseal Nonce: %v\n"+
 			"Version: %s",
+		sealStatus.Type,
 		sealStatus.Sealed,
 		sealStatus.N,
 		sealStatus.T,

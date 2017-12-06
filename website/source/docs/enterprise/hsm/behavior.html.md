@@ -73,7 +73,7 @@ and their API equivalents in the
 
 Additionally, Vault will refuse to initialize if the option has not been set to
 generate a key but no key is found. See
-[Configuration](/docs/vault-enterprise/hsm/configuration.html) for more details.
+[Configuration](/docs/configuration/seal/pkcs11.html) for more details.
 
 ### Rekeying
 

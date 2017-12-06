@@ -2,6 +2,7 @@ package approle
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,87 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
 )
+
+func TestAppRole_RoleReadSetIndex(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, storage := createBackendWithStorage(t)
+
+	roleReq := &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"bind_secret_id": true,
+		},
+	}
+
+	// Create a role
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+
+	roleIDReq := &logical.Request{
+		Path:      "role/testrole/role-id",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	}
+
+	// Get the role ID
+	resp, err = b.HandleRequest(roleIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+	roleID := resp.Data["role_id"].(string)
+
+	// Delete the role ID index
+	err = b.roleIDEntryDelete(storage, roleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the role again. This should add the index and return a warning
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+
+	// Check if the warning is being returned
+	if !strings.Contains(resp.Warnings[0], "Role identifier was missing an index back to role name.") {
+		t.Fatalf("bad: expected a warning in the response")
+	}
+
+	roleIDIndex, err := b.roleIDEntry(storage, roleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check if the index has been successfully created
+	if roleIDIndex == nil || roleIDIndex.Name != "testrole" {
+		t.Fatalf("bad: expected role to have an index")
+	}
+
+	roleReq.Operation = logical.UpdateOperation
+	roleReq.Data = map[string]interface{}{
+		"bind_secret_id": true,
+		"policies":       "default",
+	}
+
+	// Check if updating and reading of roles work and that there are no lock
+	// contentions dangling due to previous operation
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+}
 
 func TestAppRole_CIDRSubset(t *testing.T) {
 	var resp *logical.Response

@@ -4,7 +4,7 @@ Purell is a tiny Go library to normalize URLs. It returns a pure URL. Pure-ell. 
 
 Based on the [wikipedia paper][wiki] and the [RFC 3986 document][rfc].
 
-[![build status](https://secure.travis-ci.org/PuerkitoBio/purell.png)](http://travis-ci.org/PuerkitoBio/purell)
+[![build status](https://travis-ci.org/PuerkitoBio/purell.svg?branch=master)](http://travis-ci.org/PuerkitoBio/purell)
 
 ## Install
 

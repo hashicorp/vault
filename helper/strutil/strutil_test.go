@@ -57,6 +57,38 @@ func TestStrutil_EquivalentSlices(t *testing.T) {
 	}
 }
 
+func TestStrutil_ListContainsGlob(t *testing.T) {
+	haystack := []string{
+		"dev",
+		"ops*",
+		"root/*",
+		"*-dev",
+		"_*_",
+	}
+	if StrListContainsGlob(haystack, "tubez") {
+		t.Fatalf("Value shouldn't exist")
+	}
+	if !StrListContainsGlob(haystack, "root/test") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "ops_test") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "ops") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "dev") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "test-dev") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "_test_") {
+		t.Fatalf("Value should exist")
+	}
+
+}
+
 func TestStrutil_ListContains(t *testing.T) {
 	haystack := []string{
 		"dev",

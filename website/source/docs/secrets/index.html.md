@@ -15,8 +15,7 @@ Some secret backends, such as "kv", simply store and read
 secrets verbatim. Other secret backends, such as "aws", create _dynamic
 secrets_: secrets that are made on demand.
 
-Secret backends are part of the
-[mount system](#)
+Secret backends are part of the mount system
 in Vault. They behave very similarly to a virtual filesystem:
 any read/write/delete is sent to the secret backend, and the secret
 backend can choose to react to that operation however it sees fit.
@@ -59,6 +58,13 @@ Once a secret backend is mounted, you can interact with it directly
 at its mount point according to its own API. You can use the `vault path-help`
 system to determine the paths it responds to.
 
+Note that mount points cannot conflict with each other in Vault. There are
+two broad implications of this fact. The first is that you cannot have
+a mount which is prefixed with an existing mount. The second is that you
+cannot create a mount point that is named as a prefix of an existing mount.
+As an example, the mounts `foo/bar` and `foo/baz` can peacefully coexist
+with each other whereas `foo` and `foo/baz` cannot
+    
 ## Barrier View
 
 An important concept around secret backends is that they receive a

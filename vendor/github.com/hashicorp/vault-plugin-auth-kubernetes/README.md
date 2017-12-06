@@ -1,7 +1,7 @@
 # Vault Plugin: Kubernetes Auth Backend
 
 This is a standalone backend plugin for use with [Hashicorp Vault](https://www.github.com/hashicorp/vault).
-This plugin allows for Kubernets Service Accounts to authenticate with Vault.
+This plugin allows for Kubernetes Service Accounts to authenticate with Vault.
 
 **Please note**: We take Vault's security and our users' trust very seriously. If you believe you have found a security issue in Vault, _please responsibly disclose_ by contacting us at [security@hashicorp.com](mailto:security@hashicorp.com).
 
@@ -21,7 +21,13 @@ Otherwise, first read this guide on how to [get started with Vault](https://www.
 
 To learn specifically about how plugins work, see documentation on [Vault plugins](https://www.vaultproject.io/docs/internals/plugins.html).
 
-### Usage
+## Security Model
+
+The current authentication model requires providing Vault with a Service Account token, which can be used to make authenticated calls to Kubernetes. This token should not typically be shared, but in order for Kubernetes to be treated as a trusted third party, Vault must validate something that Kubernetes has cryptographically signed and that conveys the identity of the token holder.
+
+We expect Kubernetes to support less sensitive mechanisms in the future, and the Vault integration will be updated to use those mechanisms when available.
+
+## Usage
 
 Please see [documentation for the plugin](https://www.vaultproject.io/docs/auth/kubernetes.html)
 on the Vault website.

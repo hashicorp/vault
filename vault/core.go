@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/subtle"
@@ -12,12 +13,12 @@ import (
 	"net/url"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/errwrap"
@@ -26,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
@@ -49,6 +51,10 @@ const (
 	// coreLeaderPrefix is the prefix used for the UUID that contains
 	// the currently elected leader.
 	coreLeaderPrefix = "core/leader/"
+
+	// knownPrimaryAddrsPrefix is used to store last-known cluster address
+	// information for primaries
+	knownPrimaryAddrsPrefix = "core/primary-addrs/"
 
 	// lockRetryInterval is the interval we re-attempt to acquire the
 	// HA lock if an error is encountered
@@ -103,6 +109,9 @@ var (
 	startReplication     = startReplicationImpl
 	stopReplication      = stopReplicationImpl
 	LastRemoteWAL        = lastRemoteWALImpl
+	// A package-available logger function, mainly to have access in ACL for
+	// error conditions
+	vlogger log.Logger
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -240,6 +249,9 @@ type Core struct {
 	// can be output in the audit logs
 	auditedHeaders *AuditedHeadersConfig
 
+	// systemBackend is the backend which is used to manage internal operations
+	systemBackend *SystemBackend
+
 	// systemBarrierView is the barrier view for the system backend
 	systemBarrierView *BarrierView
 
@@ -255,6 +267,9 @@ type Core struct {
 
 	// token store is used to manage authentication tokens
 	tokenStore *TokenStore
+
+	// identityStore is used to manage client entities
+	identityStore *IdentityStore
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
@@ -337,6 +352,11 @@ type Core struct {
 	// CORS Information
 	corsConfig *CORSConfig
 
+	// The active set of upstream cluster addresses; stored via the Echo
+	// mechanism, loaded by the balancer
+	atomicPrimaryClusterAddrs *atomic.Value
+
+	atomicPrimaryFailoverAddrs *atomic.Value
 	// replicationState keeps the current replication state cached for quick
 	// lookup
 	replicationState consts.ReplicationState
@@ -448,6 +468,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.Logger == nil {
 		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
+	vlogger = conf.Logger
 
 	// Setup the core
 	c := &Core{
@@ -469,6 +490,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 		rawEnabled:                       conf.EnableRaw,
+		atomicPrimaryClusterAddrs:        new(atomic.Value),
+		atomicPrimaryFailoverAddrs:       new(atomic.Value),
 	}
 
 	if conf.ClusterCipherSuites != "" {
@@ -479,16 +502,24 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.clusterCipherSuites = suites
 	}
 
-	c.corsConfig = &CORSConfig{core: c}
 	// Load CORS config and provide a value for the core field.
+	c.corsConfig = &CORSConfig{core: c}
 
+	phys := conf.Physical
 	_, txnOK := conf.Physical.(physical.Transactional)
-	// Wrap the physical backend in a cache layer if enabled and not already wrapped
-	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
+	if c.seal == nil {
+		c.seal = &DefaultSeal{}
+	}
+	c.seal.SetCore(c)
+
+	var ok bool
+
+	// Wrap the physical backend in a cache layer if enabled
+	if !conf.DisableCache {
 		if txnOK {
-			c.physical = physical.NewTransactionalCache(conf.Physical, conf.CacheSize, conf.Logger)
+			c.physical = physical.NewTransactionalCache(phys, conf.CacheSize, nil, conf.Logger)
 		} else {
-			c.physical = physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
+			c.physical = physical.NewCache(phys, conf.CacheSize, nil, conf.Logger)
 		}
 	}
 
@@ -539,7 +570,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
 	}
-	_, ok := logicalBackends["kv"]
+	_, ok = logicalBackends["kv"]
 	if !ok {
 		logicalBackends["kv"] = PassthroughBackendFactory
 	}
@@ -551,6 +582,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 		return b, nil
 	}
+
+	logicalBackends["identity"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+		return NewIdentityStore(c, config)
+	}
+
 	c.logicalBackends = logicalBackends
 
 	credentialBackends := make(map[string]logical.Factory)
@@ -568,16 +604,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.auditBackends = auditBackends
 
-	if c.seal == nil {
-		c.seal = &DefaultSeal{}
-	}
-	c.seal.SetCore(c)
-
-	// Attempt unsealing with stored keys; if there are no stored keys this
-	// returns nil, otherwise returns nil or an error
-	storedKeyErr := c.UnsealWithStoredKeys()
-
-	return c, storedKeyErr
+	return c, nil
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -634,51 +661,128 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 	return c.tokenStore.Lookup(token)
 }
 
-func (c *Core) fetchACLandTokenEntry(req *logical.Request) (*ACL, *TokenEntry, error) {
+// fetchEntityAndDerivedPolicies returns the entity object for the given entity
+// ID. If the entity is merged into a different entity object, the entity into
+// which the given entity ID is merged into will be returned. This function
+// also returns the cumulative list of policies that the entity is entitled to.
+// This list includes the policies from the entity itself and from all the
+// groups in which the given entity ID is a member of.
+func (c *Core) fetchEntityAndDerivedPolicies(entityID string) (*identity.Entity, []string, error) {
+	if entityID == "" {
+		return nil, nil, nil
+	}
+
+	//c.logger.Debug("core: entity set on the token", "entity_id", te.EntityID)
+
+	// Fetch the entity
+	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
+	if err != nil {
+		c.logger.Error("core: failed to lookup entity using its ID", "error", err)
+		return nil, nil, err
+	}
+
+	if entity == nil {
+		// If there was no corresponding entity object found, it is
+		// possible that the entity got merged into another entity. Try
+		// finding entity based on the merged entity index.
+		entity, err = c.identityStore.MemDBEntityByMergedEntityID(entityID, false)
+		if err != nil {
+			c.logger.Error("core: failed to lookup entity in merged entity ID index", "error", err)
+			return nil, nil, err
+		}
+	}
+
+	var policies []string
+	if entity != nil {
+		//c.logger.Debug("core: entity successfully fetched; adding entity policies to token's policies to create ACL")
+
+		// Attach the policies on the entity
+		policies = append(policies, entity.Policies...)
+
+		groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
+		if err != nil {
+			c.logger.Error("core: failed to fetch group policies", "error", err)
+			return nil, nil, err
+		}
+
+		// Attach the policies from all the groups
+		policies = append(policies, groupPolicies...)
+	}
+
+	return entity, policies, err
+}
+
+func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntry, *identity.Entity, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
 	// Ensure there is a client token
-	if req.ClientToken == "" {
-		return nil, nil, fmt.Errorf("missing client token")
+	if clientToken == "" {
+		return nil, nil, nil, fmt.Errorf("missing client token")
 	}
 
 	if c.tokenStore == nil {
 		c.logger.Error("core: token store is unavailable")
-		return nil, nil, ErrInternalError
+		return nil, nil, nil, ErrInternalError
 	}
 
 	// Resolve the token policy
-	te, err := c.tokenStore.Lookup(req.ClientToken)
+	te, err := c.tokenStore.Lookup(clientToken)
 	if err != nil {
 		c.logger.Error("core: failed to lookup token", "error", err)
-		return nil, nil, ErrInternalError
+		return nil, nil, nil, ErrInternalError
 	}
 
 	// Ensure the token is valid
 	if te == nil {
-		return nil, nil, logical.ErrPermissionDenied
+		return nil, nil, nil, logical.ErrPermissionDenied
 	}
+
+	tokenPolicies := te.Policies
+
+	entity, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
+	if err != nil {
+		return nil, nil, nil, ErrInternalError
+	}
+
+	tokenPolicies = append(tokenPolicies, derivedPolicies...)
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(te.Policies...)
+	acl, err := c.policyStore.ACL(tokenPolicies...)
 	if err != nil {
 		c.logger.Error("core: failed to construct ACL", "error", err)
-		return nil, nil, ErrInternalError
+		return nil, nil, nil, ErrInternalError
 	}
 
-	return acl, te, nil
+	return acl, te, entity, nil
 }
 
-func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, error) {
+func (c *Core) checkToken(req *logical.Request, unauth bool) (*logical.Auth, *TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
-	acl, te, err := c.fetchACLandTokenEntry(req)
-	if err != nil {
-		return nil, te, err
+	var acl *ACL
+	var te *TokenEntry
+	var entity *identity.Entity
+	var err error
+
+	// Even if unauth, if a token is provided, there's little reason not to
+	// gather as much info as possible for the audit log and to e.g. control
+	// trace mode for EGPs.
+	if !unauth || (unauth && req.ClientToken != "") {
+		acl, te, entity, err = c.fetchACLTokenEntryAndEntity(req.ClientToken)
+		// In the unauth case we don't want to fail the command, since it's
+		// unauth, we just have no information to attach to the request, so
+		// ignore errors...this was best-effort anyways
+		if err != nil && !unauth {
+			return nil, te, err
+		}
 	}
 
 	// Check if this is a root protected path
 	rootPath := c.router.RootPath(req.Path)
+
+	if rootPath && unauth {
+		return nil, nil, errors.New("cannot access root path in unauthenticated request")
+	}
 
 	// When we receive a write of either type, rather than require clients to
 	// PUT/POST and trust the operation, we ask the backend to give us the real
@@ -720,19 +824,27 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
 		Accessor:    req.ClientTokenAccessor,
-		Policies:    te.Policies,
-		Metadata:    te.Meta,
-		DisplayName: te.DisplayName,
+	}
+
+	if te != nil {
+		auth.Policies = te.Policies
+		auth.Metadata = te.Meta
+		auth.DisplayName = te.DisplayName
+		auth.EntityID = te.EntityID
+		// Store the entity ID in the request object
+		req.EntityID = te.EntityID
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
-	allowed, rootPrivs := acl.AllowOperation(req)
-	if !allowed {
-		// Return auth for audit logging even if not allowed
-		return auth, te, logical.ErrPermissionDenied
+	authResults := c.performPolicyChecks(acl, te, req, entity, &PolicyCheckOpts{
+		Unauth:            unauth,
+		RootPrivsRequired: rootPath,
+	})
+	if authResults.Error.ErrorOrNil() != nil {
+		return auth, te, authResults.Error
 	}
-	if rootPath && !rootPrivs {
+	if !authResults.Allowed {
 		// Return auth for audit logging even if not allowed
 		return auth, te, logical.ErrPermissionDenied
 	}
@@ -888,6 +1000,19 @@ func (c *Core) ResetUnsealProcess() {
 func (c *Core) Unseal(key []byte) (bool, error) {
 	defer metrics.MeasureSince([]string{"core", "unseal"}, time.Now())
 
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
+	// Explicitly check for init status. This also checks if the seal
+	// configuration is valid (i.e. non-nil).
+	init, err := c.Initialized()
+	if err != nil {
+		return false, err
+	}
+	if !init {
+		return false, ErrNotInit
+	}
+
 	// Verify the key length
 	min, max := c.barrier.KeyLength()
 	max += shamir.ShareOverhead
@@ -898,26 +1023,18 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		return false, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
 	}
 
-	// Get the seal configuration
+	// Get the barrier seal configuration
 	config, err := c.seal.BarrierConfig()
 	if err != nil {
 		return false, err
 	}
-
-	// Ensure the barrier is initialized
-	if config == nil {
-		return false, ErrNotInit
-	}
-
-	c.stateLock.Lock()
-	defer c.stateLock.Unlock()
 
 	// Check if already unsealed
 	if !c.sealed {
 		return true, nil
 	}
 
-	masterKey, err := c.unsealPart(config, key)
+	masterKey, err := c.unsealPart(config, key, false)
 	if err != nil {
 		return false, err
 	}
@@ -928,7 +1045,51 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	return false, nil
 }
 
-func (c *Core) unsealPart(config *SealConfig, key []byte) ([]byte, error) {
+// UnsealWithRecoveryKeys is used to provide one of the recovery key shares to
+// unseal the Vault.
+func (c *Core) UnsealWithRecoveryKeys(key []byte) (bool, error) {
+	defer metrics.MeasureSince([]string{"core", "unseal_with_recovery_keys"}, time.Now())
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
+	// Explicitly check for init status
+	init, err := c.Initialized()
+	if err != nil {
+		return false, err
+	}
+	if !init {
+		return false, ErrNotInit
+	}
+
+	var config *SealConfig
+	// If recovery keys are supported then use recovery seal config to unseal
+	if c.seal.RecoveryKeySupported() {
+		config, err = c.seal.RecoveryConfig()
+		if err != nil {
+			return false, err
+		}
+	}
+
+	// Check if already unsealed
+	if !c.sealed {
+		return true, nil
+	}
+
+	masterKey, err := c.unsealPart(config, key, true)
+	if err != nil {
+		return false, err
+	}
+	if masterKey != nil {
+		return c.unsealInternal(masterKey)
+	}
+
+	return false, nil
+}
+
+// unsealPart takes in a key share, and returns the master key if the threshold
+// is met. If recovery keys are supported, recovery key shares may be provided.
+func (c *Core) unsealPart(config *SealConfig, key []byte, useRecoveryKeys bool) ([]byte, error) {
 	// Check if we already have this piece
 	if c.unlockInfo != nil {
 		for _, existing := range c.unlockInfo.Parts {
@@ -949,7 +1110,8 @@ func (c *Core) unsealPart(config *SealConfig, key []byte) ([]byte, error) {
 	// Store this key
 	c.unlockInfo.Parts = append(c.unlockInfo.Parts, key)
 
-	// Check if we don't have enough keys to unlock
+	// Check if we don't have enough keys to unlock, proceed through the rest of
+	// the call only if we have met the threshold
 	if len(c.unlockInfo.Parts) < config.SecretThreshold {
 		if c.logger.IsDebug() {
 			c.logger.Debug("core: cannot unseal, not enough keys", "keys", len(c.unlockInfo.Parts), "threshold", config.SecretThreshold, "nonce", c.unlockInfo.Nonce)
@@ -959,29 +1121,63 @@ func (c *Core) unsealPart(config *SealConfig, key []byte) ([]byte, error) {
 
 	// Best-effort memzero of unlock parts once we're done with them
 	defer func() {
-		for i, _ := range c.unlockInfo.Parts {
+		for i := range c.unlockInfo.Parts {
 			memzero(c.unlockInfo.Parts[i])
 		}
 		c.unlockInfo = nil
 	}()
 
-	// Recover the master key
-	var masterKey []byte
+	// Recover the split key. recoveredKey is the shamir combined
+	// key, or the single provided key if the threshold is 1.
+	var recoveredKey []byte
 	var err error
 	if config.SecretThreshold == 1 {
-		masterKey = make([]byte, len(c.unlockInfo.Parts[0]))
-		copy(masterKey, c.unlockInfo.Parts[0])
+		recoveredKey = make([]byte, len(c.unlockInfo.Parts[0]))
+		copy(recoveredKey, c.unlockInfo.Parts[0])
 	} else {
-		masterKey, err = shamir.Combine(c.unlockInfo.Parts)
+		recoveredKey, err = shamir.Combine(c.unlockInfo.Parts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compute master key: %v", err)
 		}
 	}
 
-	return masterKey, nil
+	if c.seal.RecoveryKeySupported() && useRecoveryKeys {
+		// Verify recovery key
+		if err := c.seal.VerifyRecoveryKey(recoveredKey); err != nil {
+			return nil, err
+		}
+
+		// Get stored keys and shamir combine into single master key. Unsealing with
+		// recovery keys currently does not support: 1) mixed stored and non-stored
+		// keys setup, nor 2) seals that support recovery keys but not stored keys.
+		// If insuffiencient shares are provided, shamir.Combine will error, and if
+		// no stored keys are found it will return masterKey as nil.
+		var masterKey []byte
+		if c.seal.StoredKeysSupported() {
+			masterKeyShares, err := c.seal.GetStoredKeys()
+			if err != nil {
+				return nil, fmt.Errorf("unable to retrieve stored keys: %v", err)
+			}
+
+			if len(masterKeyShares) == 1 {
+				return masterKeyShares[0], nil
+			}
+
+			masterKey, err = shamir.Combine(masterKeyShares)
+			if err != nil {
+				return nil, fmt.Errorf("failed to compute master key: %v", err)
+			}
+		}
+		return masterKey, nil
+	}
+
+	// If this is not a recovery key-supported seal, then the recovered key is
+	// the master key to be returned.
+	return recoveredKey, nil
 }
 
-// This must be called with the state write lock held
+// unsealInternal takes in the master key and attempts to unseal the barrier.
+// N.B.: This must be called with the state write lock held.
 func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	defer memzero(masterKey)
 
@@ -1086,7 +1282,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	}
 
 	// Validate the token is a root token
-	acl, te, err := c.fetchACLandTokenEntry(req)
+	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
 		// Since there is no token store in standby nodes, sealing cannot
 		// be done. Ideally, the request has to be forwarded to leader node
@@ -1110,6 +1306,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
+		EntityID:    te.EntityID,
 	}
 
 	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
@@ -1135,31 +1332,31 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 			c.stateLock.RUnlock()
 			return retErr
 		}
-		if te.NumUses == -1 {
-			// Token needs to be revoked
-			defer func(id string) {
-				err = c.tokenStore.Revoke(id)
-				if err != nil {
-					c.logger.Error("core: token needed revocation after seal but failed to revoke", "error", err)
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-			}(te.ID)
-		}
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req)
-	if !allowed {
+	authResults := c.performPolicyChecks(acl, te, req, entity, &PolicyCheckOpts{
+		RootPrivsRequired: true,
+	})
+	if authResults.Error.ErrorOrNil() != nil {
+		retErr = multierror.Append(retErr, authResults.Error)
+		c.stateLock.RUnlock()
+		return retErr
+	}
+	if !authResults.Allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		c.stateLock.RUnlock()
 		return retErr
 	}
 
-	// We always require root privileges for this operation
-	if !rootPrivs {
-		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		c.stateLock.RUnlock()
-		return retErr
+	if te != nil && te.NumUses == -1 {
+		// Token needs to be revoked. We do this immediately here because
+		// we won't have a token store after sealing.
+		err = c.tokenStore.Revoke(te.ID)
+		if err != nil {
+			c.logger.Error("core: token needed revocation before seal but failed to revoke", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+		}
 	}
 
 	// Tell any requests that know about this to stop
@@ -1204,7 +1401,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		return nil
 	}
 
-	acl, te, err := c.fetchACLandTokenEntry(req)
+	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
 		return retErr
@@ -1216,6 +1413,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
+		EntityID:    te.EntityID,
 	}
 
 	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
@@ -1237,29 +1435,29 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 			return retErr
 		}
-		if te.NumUses == -1 {
-			// Token needs to be revoked
-			defer func(id string) {
-				err = c.tokenStore.Revoke(id)
-				if err != nil {
-					c.logger.Error("core: token needed revocation after step-down but failed to revoke", "error", err)
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-			}(te.ID)
-		}
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req)
-	if !allowed {
+	authResults := c.performPolicyChecks(acl, te, req, entity, &PolicyCheckOpts{
+		RootPrivsRequired: true,
+	})
+	if authResults.Error.ErrorOrNil() != nil {
+		retErr = multierror.Append(retErr, authResults.Error)
+		return retErr
+	}
+	if !authResults.Allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr
 	}
 
-	// We always require root privileges for this operation
-	if !rootPrivs {
-		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		return retErr
+	if te != nil && te.NumUses == -1 {
+		// Token needs to be revoked. We do this immediately here because
+		// we won't have a token store after sealing.
+		err = c.tokenStore.Revoke(te.ID)
+		if err != nil {
+			c.logger.Error("core: token needed revocation before step-down but failed to revoke", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+		}
 	}
 
 	select {
@@ -1300,8 +1498,6 @@ func (c *Core) sealInternal() error {
 		// Signal the standby goroutine to shutdown, wait for completion
 		close(c.standbyStopCh)
 
-		c.requestContext = nil
-
 		// Release the lock while we wait to avoid deadlocking
 		c.stateLock.Unlock()
 		<-c.standbyDoneCh
@@ -1338,9 +1534,8 @@ func (c *Core) postUnseal() (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 	defer func() {
 		if retErr != nil {
+			c.requestContextCancelFunc()
 			c.preSeal()
-		} else {
-			c.requestContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
 		}
 	}()
 	c.logger.Info("core: post-unseal setup starting")
@@ -1360,6 +1555,8 @@ func (c *Core) postUnseal() (retErr error) {
 	if c.seal.RecoveryKeySupported() {
 		c.seal.SetRecoveryConfig(nil)
 	}
+
+	c.requestContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
 
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
@@ -1398,6 +1595,9 @@ func (c *Core) postUnseal() (retErr error) {
 		return err
 	}
 	if err := c.setupAudits(); err != nil {
+		return err
+	}
+	if err := c.loadIdentityStoreArtifacts(); err != nil {
 		return err
 	}
 	if err := c.setupAuditedHeadersConfig(); err != nil {
@@ -1904,9 +2104,7 @@ func (c *Core) ReplicationState() consts.ReplicationState {
 }
 
 func (c *Core) SealAccess() *SealAccess {
-	sa := &SealAccess{}
-	sa.SetSeal(c.seal)
-	return sa
+	return NewSealAccess(c.seal)
 }
 
 func (c *Core) Logger() log.Logger {
@@ -1925,4 +2123,16 @@ func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 
 func lastRemoteWALImpl(c *Core) uint64 {
 	return 0
+}
+
+func (c *Core) BarrierEncryptorAccess() *BarrierEncryptorAccess {
+	return NewBarrierEncryptorAccess(c.barrier)
+}
+
+func (c *Core) PhysicalAccess() *physical.PhysicalAccess {
+	return physical.NewPhysicalAccess(c.physical)
+}
+
+func (c *Core) RouterAccess() *RouterAccess {
+	return NewRouterAccess(c)
 }

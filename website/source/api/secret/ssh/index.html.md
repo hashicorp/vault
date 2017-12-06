@@ -143,7 +143,7 @@ This endpoint creates or updates a named role.
   credentials can be created for any domain. See also `allow_bare_domains` and
   `allow_subdomains`.
 
-- `key_option_specs` `(string: "")` – Specifies a aomma separated option
+- `key_option_specs` `(string: "")` – Specifies a comma separated option
   specification which will be prefixed to RSA keys in the remote host's
   authorized_keys file. N.B.: Vault does not check this string for validity.
 
@@ -197,7 +197,7 @@ This endpoint creates or updates a named role.
 
 - `key_id_format` `(string: "")` – When supplied, this value specifies a custom
   format for the key id of a signed certificate. The following variables are
-  availble for use: '{{token_display_name}}' - The display name of the token used
+  available for use: '{{token_display_name}}' - The display name of the token used
   to make the request. '{{role_name}}' - The name of the role signing the request.
   '{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
   e.g. "custom-keyid-{{token_display_name}}",
@@ -310,7 +310,15 @@ $ curl \
 {
   "auth": null,
   "data": {
-    "keys": ["dev", "prod"]
+    "keys": ["dev", "prod"],
+    "key_info": {
+      "dev": {
+        "key_type": "ca"
+      },
+      "prod": {
+        "key_type": "dynamic"
+      }
+    }
   },
   "lease_duration": 2764800,
   "lease_id": "",
@@ -608,8 +616,8 @@ This endpoint allows submitting the CA information for the backend via an SSH
 key pair. _If you have already set a certificate and key, they will be
 overridden._
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         | Produces                   |
+| :------- | :--------------------------- | :------------------------- |
 | `POST`   | `/ssh/config/ca`             | `200/204 application/json` |
 
 ### Parameters
@@ -658,6 +666,23 @@ This will return a `200` response if `generate_signing_key` was true:
   },
   "warnings": null
 }
+```
+
+## Delete CA Information
+
+This endpoint deletes the CA information for the backend via an SSH key pair.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `DELETE` | `/ssh/config/ca`             | `204 (empty body)`     |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://vault.rocks/v1/ssh/config/ca
 ```
 
 ## Read Public Key (Unauthenticated)

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/forwarding"
-	"golang.org/x/net/context"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -122,13 +122,19 @@ func (c *Core) startForwarding() error {
 
 				// Accept the connection
 				conn, err := tlsLn.Accept()
-				if conn != nil {
-					// Always defer although it may be closed ahead of time
-					defer conn.Close()
-				}
 				if err != nil {
+					if err, ok := err.(net.Error); ok && !err.Timeout() {
+						c.logger.Debug("core: non-timeout error accepting on cluster port", "error", err)
+					}
+					if conn != nil {
+						conn.Close()
+					}
 					continue
 				}
+				if conn == nil {
+					continue
+				}
+				defer conn.Close()
 
 				// Type assert to TLS connection and handshake to populate the
 				// connection state
@@ -138,27 +144,31 @@ func (c *Core) startForwarding() error {
 					if c.logger.IsDebug() {
 						c.logger.Debug("core: error handshaking cluster connection", "error", err)
 					}
-					if conn != nil {
-						conn.Close()
-					}
+					tlsConn.Close()
 					continue
 				}
 
 				switch tlsConn.ConnectionState().NegotiatedProtocol {
 				case requestForwardingALPN:
 					if !ha {
-						conn.Close()
+						tlsConn.Close()
 						continue
 					}
 
 					c.logger.Trace("core: got request forwarding connection")
-					go fws.ServeConn(conn, &http2.ServeConnOpts{
-						Handler: c.rpcServer,
-					})
+					c.clusterParamsLock.RLock()
+					rpcServer := c.rpcServer
+					c.clusterParamsLock.RUnlock()
+					go func() {
+						fws.ServeConn(tlsConn, &http2.ServeConnOpts{
+							Handler: rpcServer,
+						})
+						tlsConn.Close()
+					}()
 
 				default:
 					c.logger.Debug("core: unknown negotiated protocol on cluster port")
-					conn.Close()
+					tlsConn.Close()
 					continue
 				}
 			}
@@ -297,9 +307,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	if resp.HeaderEntries != nil {
 		header = make(http.Header)
 		for k, v := range resp.HeaderEntries {
-			for _, j := range v.Values {
-				header.Add(k, j)
-			}
+			header[k] = v.Values
 		}
 	}
 

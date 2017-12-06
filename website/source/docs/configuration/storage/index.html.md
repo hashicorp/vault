@@ -3,19 +3,21 @@ layout: "docs"
 page_title: "Storage Backends - Configuration"
 sidebar_current: "docs-configuration-storage"
 description: |-
-  A storage backend represents the location for the durable storage of Vault's
-  information. Each backend has pros, cons, advantages, and trade-offs. For
-  example, some backends support high availability while others provide a more
-  robust backup and restoration process.
+  The storage stanza configures the storage backend, which represents the
+  location for the durable storage of Vault's information. Each backend has
+  pros, cons, advantages, and trade-offs. For example, some backends support
+  high availability while others provide a more robust backup and restoration
+  process.
 ---
 
-# Storage Backends
+# `storage` Stanza
 
-A storage backend represents the location for the durable storage of Vault's
-information. Each backend has pros, cons, advantages, and trade-offs. For
-example, some backends support high availability while others provide a more
-robust backup and restoration process. For information about a specific backend,
-choose one from the navigation on the left.
+The `storage` stanza configures the storage backend, which represents the
+location for the durable storage of Vault's information. Each backend has pros,
+cons, advantages, and trade-offs. For example, some backends support high
+availability while others provide a more robust backup and restoration process.
+For information about a specific backend, choose one from the navigation on the
+left.
 
 ## Configuration
 

@@ -94,7 +94,7 @@ func pathConfigCertificate(b *backend) *framework.Path {
 			},
 			"aws_public_cert": {
 				Type:        framework.TypeString,
-				Description: "AWS Public cert required to verify PKCS7 signature of the EC2 instance metadata.",
+				Description: "Base64 encoded AWS Public cert required to verify PKCS7 signature of the EC2 instance metadata.",
 			},
 			"type": {
 				Type:    framework.TypeString,

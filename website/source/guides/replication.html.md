@@ -1,9 +1,9 @@
 ---
 layout: "guides"
-page_title: "Setting up Vault Enterprise Replication - Guides"
+page_title: "Setting up Vault Enterprise Performance Replication - Guides"
 sidebar_current: "guides-replication"
 description: |-
-  Learn how to set up and manage Vault Enterprise Replication.
+  Learn how to set up and manage Vault Enterprise Performance Replication.
 ---
 
 # Replication Setup &amp; Guidance
@@ -17,7 +17,7 @@ Vault replication also includes a complete API. For more information, please see
 the [Vault Replication API documentation](/api/system/replication.html)
 
 
-## Activating Replication
+## Activating Performance Replication
 
 ### Activating the Primary
 
@@ -91,11 +91,13 @@ as policies and auth backend configuration are replicated.
 The generate-root command can also be used to generate a root token local to
 the secondary cluster.
 
-## Managing Vault Replication
+## Managing Vault Performance Replication
 
-Vault’s replication model is intended to allow horizontally scaling Vault’s
-functions rather than to act in a strict Disaster Recovery (DR) capacity. As a
-result, Vault replication acts on static items within Vault, meaning
+Vault’s performance replication model is intended to allow horizontally scaling Vault’s
+functions rather than to act in a strict Disaster Recovery (DR) capacity. For more information on Vault's disaster recovery replication, look at the
+[general information page](/docs/vault-enterprise/replication/index.html).
+
+As a result, Vault performance replication acts on static items within Vault, meaning
 information that is not part of Vault’s lease-tracking system. In a practical
 sense, this means that all Vault information is replicated from the primary to
 secondaries except for tokens and secret leases.
@@ -111,9 +113,7 @@ because tracking large numbers of leases is memory-intensive and tracking all
 leases in a replicated fashion could dramatically increase the memory
 requirements across all Vault nodes.
 
-We believe that this replication model provides significant utility and the
-benefits of horizontally scaling Vault’s functionality dramatically outweigh
-the drawbacks of not providing a full DR-ready system.  However, it does mean
+We believe that this performance replication model provides significant utility for horizontally scaling Vault’s functionality.  However, it does mean
 that certain principles must be kept in mind.
 
 ### Always Use the Local Cluster
@@ -172,11 +172,11 @@ secondaries are ever reconnected.
 
 ### Disaster Recovery
 
-At the moment, because leases and tokens are not replicated, if you need true
-DR, you will need a DR solution per cluster (similar to non-replicated Vault).
-
 Local backend mounts are not replicated and their use will require existing DR
 mechanisms if DR is necessary in your implementation.
 
-We may pursue a dedicated Disaster Recovery-focused Replication Mode at a
-future time.
+If you need true DR, look at the
+[general information page](/docs/vault-enterprise/replication/index.html) for information on Vault's disaster recovery replication.
+
+
+

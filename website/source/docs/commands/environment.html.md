@@ -56,7 +56,7 @@ The following table describes them:
     <td>The maximum number of retries when a `5xx` error code is encountered. Default is `2`, for three total tries; set to `0` or less to disable retrying.</td>
   </tr>
   <tr>
-    <td><tt>VAULT_REDIRECT_ADDR</tt></td>
+    <td><tt>VAULT_API_ADDR</tt></td>
     <td>The address that should be used when clients are redirected to this node when in High Availability mode.</td>
   </tr>
   <tr>
@@ -71,5 +71,4 @@ The following table describes them:
     <td><tt>VAULT_MFA</tt></td>
     <td>(Enterprise Only) MFA credentials in the format **mfa_method_name[:key[=value]]** (items in `[]` are optional). Note that when using the environment variable, only one credential can be supplied. If a MFA method expects multiple credential values, or if there are multiple MFA methods specified on a path, then the CLI flag `-mfa` should be used.</td>
   </tr>
-
 </table>

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -68,21 +69,20 @@ type ExpirationManager struct {
 	restoreLocks       []*locksutil.LockEntry
 	restoreLoaded      sync.Map
 	quitCh             chan struct{}
+
+	coreStateLock *sync.RWMutex
+	quitContext   context.Context
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
-func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, logger log.Logger) *ExpirationManager {
-	if logger == nil {
-		logger = log.New("expiration_manager")
-	}
-
+func NewExpirationManager(c *Core, view *BarrierView) *ExpirationManager {
 	exp := &ExpirationManager{
-		router:     router,
+		router:     c.router,
 		idView:     view.SubView(leaseViewPrefix),
 		tokenView:  view.SubView(tokenViewPrefix),
-		tokenStore: ts,
-		logger:     logger,
+		tokenStore: c.tokenStore,
+		logger:     c.logger,
 		pending:    make(map[string]*time.Timer),
 
 		// new instances of the expiration manager will go immediately into
@@ -90,7 +90,15 @@ func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, log
 		restoreMode:  1,
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
+
+		coreStateLock: &c.stateLock,
+		quitContext:   c.requestContext,
 	}
+
+	if exp.logger == nil {
+		exp.logger = log.New("expiration_manager")
+	}
+
 	return exp
 }
 
@@ -103,7 +111,7 @@ func (c *Core) setupExpiration() error {
 	view := c.systemBarrierView.SubView(expirationSubPath)
 
 	// Create the manager
-	mgr := NewExpirationManager(c.router, view, c.tokenStore, c.logger)
+	mgr := NewExpirationManager(c, view)
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -430,6 +438,10 @@ func (m *ExpirationManager) Stop() error {
 	m.logger.Debug("expiration: stop triggered")
 	defer m.logger.Debug("expiration: finished stopping")
 
+	// Do this before stopping pending timers to avoid potential races with
+	// expiring timers
+	close(m.quitCh)
+
 	m.pendingLock.Lock()
 	for _, timer := range m.pending {
 		timer.Stop()
@@ -437,7 +449,6 @@ func (m *ExpirationManager) Stop() error {
 	m.pending = make(map[string]*time.Timer)
 	m.pendingLock.Unlock()
 
-	close(m.quitCh)
 	if m.inRestoreMode() {
 		for {
 			if !m.inRestoreMode() {
@@ -969,13 +980,24 @@ func (m *ExpirationManager) expireID(leaseID string) {
 			return
 		default:
 		}
+
+		m.coreStateLock.RLock()
+		if m.quitContext.Err() == context.Canceled {
+			m.logger.Error("expiration: core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
+			m.coreStateLock.RUnlock()
+			return
+		}
+
 		err := m.Revoke(leaseID)
 		if err == nil {
 			if m.logger.IsInfo() {
 				m.logger.Info("expiration: revoked lease", "lease_id", leaseID)
 			}
+			m.coreStateLock.RUnlock()
 			return
 		}
+
+		m.coreStateLock.RUnlock()
 		m.logger.Error("expiration: failed to revoke lease", "lease_id", leaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
@@ -1103,6 +1125,9 @@ func (m *ExpirationManager) persistEntry(le *leaseEntry) error {
 	ent := logical.StorageEntry{
 		Key:   le.LeaseID,
 		Value: buf,
+	}
+	if le.Auth != nil && len(le.Auth.Policies) == 1 && le.Auth.Policies[0] == "root" {
+		ent.SealWrap = true
 	}
 	if err := m.idView.Put(&ent); err != nil {
 		return fmt.Errorf("failed to persist lease entry: %v", err)

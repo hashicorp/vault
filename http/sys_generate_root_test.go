@@ -32,6 +32,7 @@ func TestSysGenerateRootAttempt_Status(t *testing.T) {
 		"progress":           json.Number("0"),
 		"required":           json.Number("3"),
 		"complete":           false,
+		"encoded_token":      "",
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
 		"nonce":              "",
@@ -66,6 +67,7 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 		"progress":           json.Number("0"),
 		"required":           json.Number("3"),
 		"complete":           false,
+		"encoded_token":      "",
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
 	}
@@ -87,6 +89,7 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 		"progress":           json.Number("0"),
 		"required":           json.Number("3"),
 		"complete":           false,
+		"encoded_token":      "",
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
 	}
@@ -120,6 +123,7 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 		"progress":           json.Number("0"),
 		"required":           json.Number("3"),
 		"complete":           false,
+		"encoded_token":      "",
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "816938b8a29146fbe245dd29e7cbaf8e011db793",
 	}
@@ -156,6 +160,7 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 		"progress":           json.Number("0"),
 		"required":           json.Number("3"),
 		"complete":           false,
+		"encoded_token":      "",
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
 	}
@@ -183,6 +188,7 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 		"progress":           json.Number("0"),
 		"required":           json.Number("3"),
 		"complete":           false,
+		"encoded_token":      "",
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
 		"nonce":              "",
@@ -282,9 +288,13 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 		testResponseBody(t, resp, &actual)
 	}
 
-	if actual["encoded_root_token"] == nil {
+	if actual["encoded_token"] == nil || actual["encoded_token"] == "" {
+		t.Fatalf("no encoded token found in response")
+	}
+	if actual["encoded_root_token"] == nil || actual["encoded_root-token"] == "" {
 		t.Fatalf("no encoded root token found in response")
 	}
+	expected["encoded_token"] = actual["encoded_token"]
 	expected["encoded_root_token"] = actual["encoded_root_token"]
 
 	if !reflect.DeepEqual(actual, expected) {
@@ -313,6 +323,7 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 		"path":             "auth/token/root",
 		"explicit_max_ttl": json.Number("0"),
 		"expire_time":      nil,
+		"entity_id":        "",
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
@@ -371,9 +382,13 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 		testResponseBody(t, resp, &actual)
 	}
 
-	if actual["encoded_root_token"] == nil {
+	if actual["encoded_token"] == nil || actual["encoded_token"] == "" {
+		t.Fatalf("no encoded token found in response")
+	}
+	if actual["encoded_root_token"] == nil || actual["encoded_root-token"] == "" {
 		t.Fatalf("no encoded root token found in response")
 	}
+	expected["encoded_token"] = actual["encoded_token"]
 	expected["encoded_root_token"] = actual["encoded_root_token"]
 
 	if !reflect.DeepEqual(actual, expected) {
@@ -403,6 +418,7 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 		"path":             "auth/token/root",
 		"explicit_max_ttl": json.Number("0"),
 		"expire_time":      nil,
+		"entity_id":        "",
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")

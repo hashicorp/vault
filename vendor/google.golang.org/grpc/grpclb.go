@@ -461,6 +461,7 @@ func (b *grpclbBalancer) Start(target string, config BalancerConfig) error {
 				// WithDialer takes a different type of function, so we instead use a special DialOption here.
 				dopts = append(dopts, func(o *dialOptions) { o.copts.Dialer = dialer })
 			}
+			dopts = append(dopts, WithBlock())
 			ccError = make(chan struct{})
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			cc, err = DialContext(ctx, rb.addr, dopts...)

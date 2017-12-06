@@ -57,6 +57,11 @@ including ed25519.`,
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
 			},
+
+			"prehashed": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -115,6 +120,11 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 Defaults to "sha2-256". Not valid for all key types.`,
 			},
+
+			"prehashed": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -135,6 +145,7 @@ func (b *backend) pathSignWrite(
 	if algorithm == "" {
 		algorithm = d.Get("algorithm").(string)
 	}
+	prehashed := d.Get("prehashed").(bool)
 
 	input, err := base64.StdEncoding.DecodeString(inputB64)
 	if err != nil {
@@ -166,7 +177,7 @@ func (b *backend) pathSignWrite(
 		}
 	}
 
-	if p.Type.HashSignatureInput() {
+	if p.Type.HashSignatureInput() && !prehashed {
 		var hf hash.Hash
 		switch algorithm {
 		case "sha2-224":
@@ -184,7 +195,7 @@ func (b *backend) pathSignWrite(
 		input = hf.Sum(nil)
 	}
 
-	sig, err := p.Sign(ver, context, input)
+	sig, err := p.Sign(ver, context, input, algorithm)
 	if err != nil {
 		return nil, err
 	}
@@ -228,6 +239,7 @@ func (b *backend) pathVerifyWrite(
 	if algorithm == "" {
 		algorithm = d.Get("algorithm").(string)
 	}
+	prehashed := d.Get("prehashed").(bool)
 
 	input, err := base64.StdEncoding.DecodeString(inputB64)
 	if err != nil {
@@ -259,7 +271,7 @@ func (b *backend) pathVerifyWrite(
 		}
 	}
 
-	if p.Type.HashSignatureInput() {
+	if p.Type.HashSignatureInput() && !prehashed {
 		var hf hash.Hash
 		switch algorithm {
 		case "sha2-224":
@@ -277,7 +289,7 @@ func (b *backend) pathVerifyWrite(
 		input = hf.Sum(nil)
 	}
 
-	valid, err := p.VerifySignature(context, input, sig)
+	valid, err := p.VerifySignature(context, input, sig, algorithm)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

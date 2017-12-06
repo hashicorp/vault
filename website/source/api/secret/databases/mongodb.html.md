@@ -20,10 +20,17 @@ has a number of parameters to further configure a connection.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)` |
+| `POST`   | `/database/config/:name`     | `204 (empty body)`     |
 
 ### Parameters
-- `connection_url` `(string: <required>)` – Specifies the MongoDB standard connection string (URI).
+
+- `connection_url` `(string: <required>)` – Specifies the MongoDB standard
+  connection string (URI).
+- `write_concern` `(string: "")` - Specifies the MongoDB [write
+  concern][mongodb-write-concern]. This is set for the entirety of the session,
+  maintained for the lifecycle of the plugin process. Must be a serialized JSON
+  object, or a base64-encoded serialized JSON object. The JSON payload values
+  map to the values in the [Safe][mgo-safe] struct from the mgo driver.
 
 ### Sample Payload
 
@@ -31,7 +38,8 @@ has a number of parameters to further configure a connection.
 {
   "plugin_name": "mongodb-database-plugin",
   "allowed_roles": "readonly",
-  "connection_url": "mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true"
+  "connection_url": "mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true",
+  "write_concern": "{ \"wmode\": \"majority\", \"wtimeout\": 5000 }"
 }
 ```
 
@@ -68,7 +76,7 @@ list the plugin does not support that statement type.
   [MongoDB's documentation](https://docs.mongodb.com/manual/reference/method/db.createUser/).
 
 - `revocation_statements` `(string: "")` – Specifies the database statements to
-  be executed to revoke a user. Must be a serialized JSON object, or a base64-encoded 
+  be executed to revoke a user. Must be a serialized JSON object, or a base64-encoded
   serialized JSON object. The object can optionally contain a "db" string. If no
   "db" value is provided, it defaults to the "admin" database.
 
@@ -85,3 +93,6 @@ list the plugin does not support that statement type.
   ]
 }
 ```
+
+[mongodb-write-concern]: https://docs.mongodb.com/manual/reference/write-concern/
+[mgo-safe]: https://godoc.org/gopkg.in/mgo.v2#Safe

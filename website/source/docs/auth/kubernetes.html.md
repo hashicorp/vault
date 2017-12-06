@@ -4,7 +4,7 @@ page_title: "Auth Plugin Backend: Kubernetes"
 sidebar_current: "docs-auth-kubernetes"
 description: |-
   The Kubernetes auth backend allows automated authentication of Kubernetes
-  Service Accouts.
+  Service Accounts.
 ---
 
 # Auth Backend: Kubernetes
@@ -99,7 +99,7 @@ configure it, use the `/config` endpoint.
 
 ```
 $ vault write auth/kubernetes/config \
-    pem_keys=@signingkey.crt \
+    token_reviewer_jwt="reviewer_service_account_jwt" \
     kubernetes_host=https://192.168.99.100:8443 \
     kubernetes_ca_cert=@ca.crt
 ```
@@ -111,7 +111,7 @@ login it first must be configured in a role.
 
 ```
 vault write auth/kubernetes/role/demo \
-    bound_service_account_names=vault-auth \ 
+    bound_service_account_names=vault-auth \
     bound_service_account_namespaces=default \
     policies=default \
     ttl=1h
@@ -122,6 +122,7 @@ it gives it the default policy.
 
 ## Configuring Kubernetes
 
+### Token Review Lookup
 This backend accesses the [Kubernetes TokenReview
 API](https://kubernetes.io/docs/api-reference/v1.7/#tokenreview-v1-authentication)
 to validate the provided JWT is still valid. Kubernetes should be running with
@@ -130,10 +131,13 @@ versions prior should ensure the Kubernetes API server is started with with this
 setting. Otherwise deleted tokens in Kubernetes will not be properly revoked and
 will be able to authenticate to this backend. 
 
-Service Accounts used in this backend will need to have access to the
-TokenReview API. If Kubernetes is configured to use RBAC roles the Service
-Account should be granted permissions to access this API. The following
-example ClusterRoleBinding could be used to grant these permissions:
+### RBAC Configuration
+
+The Service Account used to lookup Tokens in this backend will need to have
+access to the TokenReview API. If Kubernetes is configured to use Role Based
+Access Control the Service Account should be granted permissions to access this
+API. The following example ClusterRoleBinding could be used to grant these
+permissions:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1beta1
