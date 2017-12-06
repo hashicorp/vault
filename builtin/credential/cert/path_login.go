@@ -110,7 +110,7 @@ func (b *backend) pathLogin(
 		},
 	}
 
-	if matched.Entry.Period == 0 {
+	if matched.Entry.Period > time.Duration(0) {
 		resp.Auth.TTL = matched.Entry.Period
 	} else {
 		shortestTTL := b.System().DefaultLeaseTTL()
