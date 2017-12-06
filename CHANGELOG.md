@@ -22,6 +22,7 @@ BUG FIXES:
    supported by the prepare statement protocol [GH-3619]
  * core: Fix potential panic that could occur using plugins when a node
    transitioned from active to standby [GH-3638]
+ * core/pkcs11 (enterprise): Fix panic when PKCS#11 library is not readable
 
 ## 0.9.0.1 (November 21st, 2017) (Enterprise Only)
 
