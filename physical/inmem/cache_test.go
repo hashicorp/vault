@@ -219,7 +219,7 @@ func TestCache_ExcludeCoreTransactional(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(entry.Value) != "foobar" {
-		t.Fatal("expected cached value")
+		t.Fatal("expected uncached value")
 	}
 }
 
@@ -301,7 +301,7 @@ func TestCache_CoreExceptions(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(ent.Value) != "foobar" {
-		t.Fatal("expected cached value")
+		t.Fatal("expected uncached value")
 	}
 
 	// another one
