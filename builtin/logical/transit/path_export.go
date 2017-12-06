@@ -98,7 +98,7 @@ func (b *backend) pathPolicyExportRead(
 			if err != nil {
 				return nil, err
 			}
-			retKeys[strconv.Itoa(k)] = exportKey
+			retKeys[k] = exportKey
 		}
 
 	default:
@@ -116,7 +116,7 @@ func (b *backend) pathPolicyExportRead(
 		if versionValue < p.MinDecryptionVersion {
 			return logical.ErrorResponse("version for export is below minimun decryption version"), logical.ErrInvalidRequest
 		}
-		key, ok := p.Keys[versionValue]
+		key, ok := p.Keys[strconv.Itoa(versionValue)]
 		if !ok {
 			return logical.ErrorResponse("version does not exist or cannot be found"), logical.ErrInvalidRequest
 		}
