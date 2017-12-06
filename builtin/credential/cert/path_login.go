@@ -78,11 +78,6 @@ func (b *backend) pathLogin(
 		ttl = b.System().DefaultLeaseTTL()
 	}
 
-	maxTTL := matched.Entry.MaxTTL
-	if maxTTL == 0 {
-		maxTTL = b.System().MaxLeaseTTL()
-	}
-
 	clientCerts := req.Connection.ConnState.PeerCertificates
 	if len(clientCerts) == 0 {
 		return nil, fmt.Errorf("no client certificate found")
@@ -115,10 +110,25 @@ func (b *backend) pathLogin(
 		},
 	}
 
-	// Adjust ttl value if it exceeds max_ttl, ignore check if period is non-zero
-	if ttl > maxTTL && matched.Entry.Period == 0 {
-		resp.AddWarning(fmt.Sprintf("Effective TTL of %d exceeded the effective max_ttl of %d; TTL value is capped accordingly", (ttl / time.Second), (maxTTL / time.Second)))
-		resp.Auth.TTL = maxTTL
+	if matched.Entry.Period == 0 {
+		resp.Auth.TTL = matched.Entry.Period
+	} else {
+		shortestTTL := b.System().DefaultLeaseTTL()
+		if matched.Entry.TTL > time.Duration(0) && matched.Entry.TTL < shortestTTL {
+			shortestTTL = matched.Entry.TTL
+		}
+
+		maxTTL := b.System().MaxLeaseTTL()
+		if matched.Entry.MaxTTL > time.Duration(0) && matched.Entry.MaxTTL < maxTTL {
+			maxTTL = matched.Entry.MaxTTL
+		}
+
+		if shortestTTL > maxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of %d exceeded the effective max_ttl of %d; TTL value is capped accordingly", (ttl / time.Second), (maxTTL / time.Second)))
+			shortestTTL = maxTTL
+		}
+
+		resp.Auth.TTL = shortestTTL
 	}
 
 	// Generate a response

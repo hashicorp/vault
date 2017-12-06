@@ -169,6 +169,8 @@ func (b *backend) pathCertWrite(
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
 
+	var resp logical.Response
+
 	// Parse the ttl (or lease duration)
 	systemDefaultTTL := b.System().DefaultLeaseTTL()
 	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
@@ -176,38 +178,28 @@ func (b *backend) pathCertWrite(
 		ttl = time.Second * time.Duration(d.Get("lease").(int))
 	}
 	if ttl > systemDefaultTTL {
-		return logical.ErrorResponse(fmt.Sprintf("Given ttl of %d seconds is greater than current mount/system default of %d seconds", ttl/time.Second, systemDefaultTTL/time.Second)), nil
+		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds is greater than current mount/system default of %d seconds", ttl/time.Second, systemDefaultTTL/time.Second))
 	}
 
 	// Parse max_ttl
 	systemMaxTTL := b.System().MaxLeaseTTL()
 	maxTTL := time.Duration(d.Get("max_ttl").(int)) * time.Second
 	if maxTTL > systemMaxTTL {
-		return logical.ErrorResponse(fmt.Sprintf("Given max_ttl of %d seconds is greater than current mount/system default of %d seconds", maxTTL/time.Second, systemMaxTTL/time.Second)), nil
+		resp.AddWarning(fmt.Sprintf("Given max_ttl of %d seconds is greater than current mount/system default of %d seconds", maxTTL/time.Second, systemMaxTTL/time.Second))
 	}
 
-	// Logic pertaining to interaction between ttl and max_ttl
-	if maxTTL != 0 {
-		// If ttl is 0, set the ttl as the max ttl
-		if ttl == 0 {
-			ttl = maxTTL
-		}
+	if maxTTL < time.Duration(0) {
+		return logical.ErrorResponse("max_ttl cannot be negative"), nil
+	}
 
-		// Error if ttl is larger than maxTTL
-		if ttl > maxTTL {
-			return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
-		}
+	if maxTTL != 0 && ttl > maxTTL {
+		return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
 	}
 
 	// Parse period
 	period := time.Duration(d.Get("period").(int)) * time.Second
 	if period > systemMaxTTL {
 		return logical.ErrorResponse(fmt.Sprintf("Given period of %d seconds is greater than the backend's maximum TTL of %d seconds", period/time.Second, systemMaxTTL/time.Second)), nil
-	}
-
-	// If a period is provided, use that as the ttl instead, ignoring previously set ttl
-	if period > 0 {
-		ttl = period
 	}
 
 	// Default the display name to the certificate name if not given
@@ -253,7 +245,12 @@ func (b *backend) pathCertWrite(
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, err
 	}
-	return nil, nil
+
+	if len(resp.Warnings) == 0 {
+		return nil, nil
+	}
+
+	return &resp, nil
 }
 
 type CertEntry struct {
