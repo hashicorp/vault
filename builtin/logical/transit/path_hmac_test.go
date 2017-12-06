@@ -37,9 +37,10 @@ func TestTransit_HMAC(t *testing.T) {
 	}
 	// We don't care as we're the only one using this
 	lock.RUnlock()
-	keyEntry := p.Keys[strconv.Itoa(p.LatestVersion)]
+	latestVersion := strconv.Itoa(p.LatestVersion)
+	keyEntry := p.Keys[latestVersion]
 	keyEntry.HMACKey = []byte("01234567890123456789012345678901")
-	p.Keys[strconv.Itoa(p.LatestVersion)] = keyEntry
+	p.Keys[latestVersion] = keyEntry
 	if err = p.Persist(storage); err != nil {
 		t.Fatal(err)
 	}
