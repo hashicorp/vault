@@ -18,11 +18,12 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
- * database/mysql: Allow the creation statement to use commands that are not yet
-   supported by the prepare statement protocol [GH-3619]
+ * auth/cert: Return `allowed_names` on role read [GH-3654]
  * core: Fix potential panic that could occur using plugins when a node
    transitioned from active to standby [GH-3638]
  * core/pkcs11 (enterprise): Fix panic when PKCS#11 library is not readable
+ * database/mysql: Allow the creation statement to use commands that are not yet
+   supported by the prepare statement protocol [GH-3619]
 
 ## 0.9.0.1 (November 21st, 2017) (Enterprise Only)
 
