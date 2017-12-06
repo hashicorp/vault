@@ -2,6 +2,8 @@ package mongodb
 
 import (
 	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -21,10 +23,12 @@ import (
 // interface for databases to make connections.
 type mongoDBConnectionProducer struct {
 	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
+	WriteConcern  string `json:"write_concern" structs:"write_concern" mapstructure:"write_concern"`
 
 	Initialized bool
 	Type        string
 	session     *mgo.Session
+	safe        *mgo.Safe
 	sync.Mutex
 }
 
@@ -40,6 +44,30 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 
 	if len(c.ConnectionURL) == 0 {
 		return fmt.Errorf("connection_url cannot be empty")
+	}
+
+	if c.WriteConcern != "" {
+		input := c.WriteConcern
+
+		// Try to base64 decode the input. If successful, consider the decoded
+		// value as input.
+		inputBytes, err := base64.StdEncoding.DecodeString(input)
+		if err == nil {
+			input = string(inputBytes)
+		}
+
+		concern := &mgo.Safe{}
+		err = json.Unmarshal([]byte(input), concern)
+		if err != nil {
+			return fmt.Errorf("error mashalling write_concern: %s", err)
+		}
+
+		// Guard against empty, non-nil mgo.Safe object; we don't want to pass that
+		// into mgo.SetSafe in Connection().
+		if (mgo.Safe{} == *concern) {
+			return fmt.Errorf("provided write_concern values did not map to any mgo.Safe fields")
+		}
+		c.safe = concern
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -78,6 +106,11 @@ func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if c.safe != nil {
+		c.session.SetSafe(c.safe)
+	}
+
 	c.session.SetSyncTimeout(1 * time.Minute)
 	c.session.SetSocketTimeout(1 * time.Minute)
 
