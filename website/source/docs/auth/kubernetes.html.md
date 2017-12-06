@@ -155,12 +155,6 @@ subjects:
   namespace: default
 ```
 
-### GKE 
-
-Currently the Token Review API endpoint is only available in alpha clusters on
-Google Container Engine. This means on GKE this backend can only be used with an
-alpha cluster.
-
 ## API
 
 The Kubernetes Auth Plugin has a full HTTP API. Please see the
