@@ -9,6 +9,10 @@ DEPRECATIONS/CHANGES:
 
 IMPROVEMENTS:
 
+ * audit/file: Setting a file mode of `0000` will now disable Vault from
+   automatically `chmod`ing the log file [GH-3649]
+ * auth/okta: The legacy MFA system can now be used with the Okta auth backend
+   [GH-3653]
  * auth/token: `allowed_policies` and `disallowed_policies` can now be specified
    as a comma-separated string or an array of strings [GH-3641]
  * database/mongodb: Add optional `write_concern` parameter, which can be set
