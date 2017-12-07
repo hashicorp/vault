@@ -159,7 +159,7 @@ the key_type.`,
 			"key_usage": &framework.FieldSchema{
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
-				Description: `A comma-separate string or list of key usages (not extended
+				Description: `A comma-separated string or list of key usages (not extended
 key usages). Valid values can be found at
 https://golang.org/pkg/crypto/x509/#KeyUsage
 -- simply drop the "KeyUsage" part of the name.
