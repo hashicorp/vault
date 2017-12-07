@@ -310,7 +310,7 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		}
 		if err := s.Put(jsonEntry); err != nil {
 			// Only perform upgrades on replication primary
-			if !errwrap.Contains(err, logical.ErrReadOnly) {
+			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 				return nil, err
 			}
 		}
