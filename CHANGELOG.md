@@ -1,11 +1,33 @@
 ## 0.9.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * Token Auth Backend Roles parameter types: For `allowed_policies` and
+   `disallowed_policies` in role definitions in the token auth backend, input
+   can now be a comma-separated string or an array of strings. Reading a role
+   will now return arrays for these parameters.
+
 IMPROVEMENTS:
+
+ * audit/file: Setting a file mode of `0000` will now disable Vault from
+   automatically `chmod`ing the log file [GH-3649]
+ * auth/okta: The legacy MFA system can now be used with the Okta auth backend
+   [GH-3653]
+ * auth/token: `allowed_policies` and `disallowed_policies` can now be specified
+   as a comma-separated string or an array of strings [GH-3641]
+ * database/mongodb: Add optional `write_concern` parameter, which can be set
+   during database configuration. This establishes a session-wide [write
+   concern](https://docs.mongodb.com/manual/reference/write-concern/) for the
+   lifecycle of the mount [GH-3646]
 
 BUG FIXES:
 
- * database/mysql: Allow the creation statement to use commands that are not
-   yet supported by the prepare statement protocol [GH-3619]
+ * auth/cert: Return `allowed_names` on role read [GH-3654]
+ * core: Fix potential panic that could occur using plugins when a node
+   transitioned from active to standby [GH-3638]
+ * core/pkcs11 (enterprise): Fix panic when PKCS#11 library is not readable
+ * database/mysql: Allow the creation statement to use commands that are not yet
+   supported by the prepare statement protocol [GH-3619]
 
 ## 0.9.0.1 (November 21st, 2017) (Enterprise Only)
 

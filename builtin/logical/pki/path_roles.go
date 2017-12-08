@@ -217,8 +217,8 @@ leases adversely affect the startup time of Vault.`,
 				Default: false,
 				Description: `
 If set, certificates issued/signed against this role will not be stored in the
-in the storage backend. This can improve performance when issuing large numbers
-of certificates. However, certificates issued in this way cannot be enumerated
+storage backend. This can improve performance when issuing large numbers of 
+certificates. However, certificates issued in this way cannot be enumerated
 or revoked, so this option is recommended only for certificates that are
 non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,

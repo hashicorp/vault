@@ -144,6 +144,9 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	// Sleep to make sure we haven't expired if granularity is only down to the second
+	time.Sleep(2 * time.Second)
+
 	if err = testCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}

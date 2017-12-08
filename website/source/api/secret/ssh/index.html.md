@@ -143,7 +143,7 @@ This endpoint creates or updates a named role.
   credentials can be created for any domain. See also `allow_bare_domains` and
   `allow_subdomains`.
 
-- `key_option_specs` `(string: "")` – Specifies a aomma separated option
+- `key_option_specs` `(string: "")` – Specifies a comma separated option
   specification which will be prefixed to RSA keys in the remote host's
   authorized_keys file. N.B.: Vault does not check this string for validity.
 
