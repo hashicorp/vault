@@ -495,10 +495,6 @@ func TestBackend_roleCrud(t *testing.T) {
 		RenewStatements:      resp.Data["renew_statements"].(string),
 	}
 
-	if err := mapstructure.Decode(resp.Data, &actual); err != nil {
-		t.Fatal(err)
-	}
-
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("Statements did not match, exepected %#v, got %#v", expected, actual)
 	}
