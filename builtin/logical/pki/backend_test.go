@@ -1463,7 +1463,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		//t.Logf("test step %d\nrole vals: %#v\n", stepCount, roleVals)
 		stepCount++
 		//t.Logf("test step %d\nissue vals: %#v\n", stepCount, issueTestStep)
-		roleTestStep.Data = structs.New(roleVals).Map()
+		roleTestStep.Data = roleVals.ToResponseData()
 		roleTestStep.Data["generate_lease"] = false
 		ret = append(ret, roleTestStep)
 		issueTestStep.Data = structs.New(issueVals).Map()
