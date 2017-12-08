@@ -3,11 +3,17 @@ package dbplugin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 
 	"github.com/golang/protobuf/ptypes"
+)
+
+var (
+	ErrPluginShutdown = errors.New("plugin shutdown")
 )
 
 // ---- gRPC Server domain ----
@@ -80,7 +86,17 @@ type gRPCClient struct {
 }
 
 func (c gRPCClient) Type() (string, error) {
-	resp, err := c.client.Type(context.Background(), &Empty{}, grpc.FailFast(true))
+	// If the plugin has already shutdown, this will hang forever so we give it
+	// a one second timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	switch c.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return "", ErrPluginShutdown
+	}
+	resp, err := c.client.Type(ctx, &Empty{}, grpc.FailFast(true))
 	if err != nil {
 		return "", err
 	}
@@ -92,6 +108,12 @@ func (c gRPCClient) CreateUser(ctx context.Context, statements Statements, usern
 	t, err := ptypes.TimestampProto(expiration)
 	if err != nil {
 		return "", "", err
+	}
+
+	switch c.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return "", "", ErrPluginShutdown
 	}
 
 	resp, err := c.client.CreateUser(ctx, &CreateUserRequest{
@@ -112,6 +134,12 @@ func (c *gRPCClient) RenewUser(ctx context.Context, statements Statements, usern
 		return err
 	}
 
+	switch c.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return ErrPluginShutdown
+	}
+
 	_, err = c.client.RenewUser(ctx, &RenewUserRequest{
 		Statements: &statements,
 		Username:   username,
@@ -122,6 +150,11 @@ func (c *gRPCClient) RenewUser(ctx context.Context, statements Statements, usern
 }
 
 func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, username string) error {
+	switch c.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return ErrPluginShutdown
+	}
 	_, err := c.client.RevokeUser(ctx, &RevokeUserRequest{
 		Statements: &statements,
 		Username:   username,
@@ -136,6 +169,12 @@ func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface
 		return err
 	}
 
+	switch c.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return ErrPluginShutdown
+	}
+
 	_, err = c.client.Initialize(ctx, &InitializeRequest{
 		Config:           configRaw,
 		VerifyConnection: verifyConnection,
@@ -145,6 +184,15 @@ func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface
 }
 
 func (c *gRPCClient) Close() error {
-	_, err := c.client.Close(context.Background(), &Empty{}, grpc.FailFast(true))
-	return err
+	// If the plugin has already shutdown, this will hang forever so we give it
+	// a one second timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	switch c.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+		_, err := c.client.Close(ctx, &Empty{}, grpc.FailFast(true))
+		return err
+	}
+
+	return nil
 }
