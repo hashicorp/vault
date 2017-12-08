@@ -77,7 +77,7 @@ Following are the configuration options available for the backend.
         <span class="param-flags">optional</span>
             A string containing an octal number representing the bit pattern
             for the file mode, similar to `chmod`. This option defaults to
-            `0600`.
+            `0600`. Specifying mode of `0000` will disable Vault's setting any mode on the file.
       </li>
       <li>
         <span class="param">format</span>

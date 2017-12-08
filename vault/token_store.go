@@ -178,14 +178,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 					},
 
 					"allowed_policies": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Default:     "",
+						Type:        framework.TypeCommaStringSlice,
 						Description: tokenAllowedPoliciesHelp,
 					},
 
 					"disallowed_policies": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Default:     "",
+						Type:        framework.TypeCommaStringSlice,
 						Description: tokenDisallowedPoliciesHelp,
 					},
 
@@ -2465,18 +2463,18 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("error registering path suffix: %s", consts.ErrPathContainsParentReferences)), nil
 	}
 
-	allowedPoliciesStr, ok := data.GetOk("allowed_policies")
+	allowedPoliciesRaw, ok := data.GetOk("allowed_policies")
 	if ok {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(allowedPoliciesStr.(string), ","), policyutil.DoNotAddDefaultPolicy)
+		entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPoliciesRaw.([]string), policyutil.DoNotAddDefaultPolicy)
 	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("allowed_policies").(string), ","), policyutil.DoNotAddDefaultPolicy)
+		entry.AllowedPolicies = policyutil.SanitizePolicies(data.Get("allowed_policies").([]string), policyutil.DoNotAddDefaultPolicy)
 	}
 
-	disallowedPoliciesStr, ok := data.GetOk("disallowed_policies")
+	disallowedPoliciesRaw, ok := data.GetOk("disallowed_policies")
 	if ok {
-		entry.DisallowedPolicies = strutil.ParseDedupLowercaseAndSortStrings(disallowedPoliciesStr.(string), ",")
+		entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
 	} else if req.Operation == logical.CreateOperation {
-		entry.DisallowedPolicies = strutil.ParseDedupLowercaseAndSortStrings(data.Get("disallowed_policies").(string), ",")
+		entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
 	}
 
 	// Store it
