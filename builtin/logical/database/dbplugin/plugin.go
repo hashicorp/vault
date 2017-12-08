@@ -33,6 +33,7 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 		return nil, err
 	}
 
+	var transport string
 	var db Database
 	if pluginRunner.Builtin {
 		// Plugin is builtin so we can retrieve an instance of the interface
@@ -48,12 +49,24 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 			return nil, fmt.Errorf("unsuported database type: %s", pluginName)
 		}
 
+		transport = "builtin"
+
 	} else {
 		// create a DatabasePluginClient instance
 		db, err = newPluginClient(sys, pluginRunner, logger)
 		if err != nil {
 			return nil, err
 		}
+
+		// Switch on the underlying database client type to get the transport
+		// method.
+		switch db.(*DatabasePluginClient).Database.(type) {
+		case *gRPCClient:
+			transport = "gRPC"
+		case *databasePluginRPCClient:
+			transport = "netRPC"
+		}
+
 	}
 
 	typeStr, err := db.Type()
@@ -70,9 +83,10 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 	// Wrap with tracing middleware
 	if logger.IsTrace() {
 		db = &databaseTracingMiddleware{
-			next:    db,
-			typeStr: typeStr,
-			logger:  logger,
+			transport: transport,
+			next:      db,
+			typeStr:   typeStr,
+			logger:    logger,
 		}
 	}
 
@@ -103,12 +117,12 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 	return &databasePluginRPCClient{client: c}, nil
 }
 
-func (d DatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
+func (d DatabasePlugin) GRPCServer(s *grpc.Server) error {
 	RegisterDatabaseServer(s, &gRPCServer{impl: d.impl})
 	return nil
 }
 
-func (DatabasePlugin) GRPCClient(_ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (DatabasePlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error) {
 	return &gRPCClient{
 		client:     NewDatabaseClient(c),
 		clientConn: c,
