@@ -2,8 +2,11 @@ package keysutil
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
+	"time"
 
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -13,6 +16,44 @@ var (
 
 func resetKeysArchive() {
 	keysArchive = []KeyEntry{KeyEntry{}}
+}
+
+func TestPolicy_KeyEntryMapUpgrade(t *testing.T) {
+	now := time.Now()
+	old := map[int]KeyEntry{
+		1: {
+			Key:                []byte("samplekey"),
+			HMACKey:            []byte("samplehmackey"),
+			CreationTime:       now,
+			FormattedPublicKey: "sampleformattedpublickey",
+		},
+		2: {
+			Key:                []byte("samplekey2"),
+			HMACKey:            []byte("samplehmackey2"),
+			CreationTime:       now.Add(10 * time.Second),
+			FormattedPublicKey: "sampleformattedpublickey2",
+		},
+	}
+
+	oldEncoded, err := jsonutil.EncodeJSON(old)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var new keyEntryMap
+	err = jsonutil.DecodeJSON(oldEncoded, &new)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newEncoded, err := jsonutil.EncodeJSON(&new)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(oldEncoded) != string(newEncoded) {
+		t.Fatalf("failed to upgrade key entry map;\nold: %q\nnew: %q", string(oldEncoded), string(newEncoded))
+	}
 }
 
 func Test_KeyUpgrade(t *testing.T) {
@@ -40,10 +81,10 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 		t.Fatal("expected an upsert")
 	}
 
-	testBytes := make([]byte, len(p.Keys[1].Key))
-	copy(testBytes, p.Keys[1].Key)
+	testBytes := make([]byte, len(p.Keys["1"].Key))
+	copy(testBytes, p.Keys["1"].Key)
 
-	p.Key = p.Keys[1].Key
+	p.Key = p.Keys["1"].Key
 	p.Keys = nil
 	p.MigrateKeyToKeysMap()
 	if p.Key != nil {
@@ -52,7 +93,7 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	if len(p.Keys) != 1 {
 		t.Fatal("policy.Keys is the wrong size")
 	}
-	if !reflect.DeepEqual(testBytes, p.Keys[1].Key) {
+	if !reflect.DeepEqual(testBytes, p.Keys["1"].Key) {
 		t.Fatal("key mismatch")
 	}
 }
@@ -85,7 +126,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	lock.RUnlock()
 
 	// Store the initial key in the archive
-	keysArchive = append(keysArchive, p.Keys[1])
+	keysArchive = append(keysArchive, p.Keys["1"])
 	checkKeys(t, p, storage, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
@@ -93,7 +134,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		keysArchive = append(keysArchive, p.Keys[i])
+		keysArchive = append(keysArchive, p.Keys[strconv.Itoa(i)])
 		checkKeys(t, p, storage, "rotate", i, i, i)
 	}
 
@@ -220,7 +261,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// Store the initial key in the archive
-	keysArchive = append(keysArchive, p.Keys[1])
+	keysArchive = append(keysArchive, p.Keys["1"])
 	checkKeys(t, p, storage, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
@@ -228,7 +269,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		keysArchive = append(keysArchive, p.Keys[i])
+		keysArchive = append(keysArchive, p.Keys[strconv.Itoa(i)])
 		checkKeys(t, p, storage, "rotate", i, i, i)
 	}
 
@@ -323,7 +364,7 @@ func checkKeys(t *testing.T,
 	}
 
 	for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
-		if _, ok := p.Keys[i]; !ok {
+		if _, ok := p.Keys[strconv.Itoa(i)]; !ok {
 			t.Fatalf(
 				"expected key %d, did not find it in policy keys", i,
 			)
@@ -331,15 +372,16 @@ func checkKeys(t *testing.T,
 	}
 
 	for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
+		ver := strconv.Itoa(i)
 		// Travis has weird time zone issues and gets super unhappy
-		if !p.Keys[i].CreationTime.Equal(keysArchive[i].CreationTime) {
-			t.Fatalf("key %d not equivalent between policy keys and test keys archive; policy keys:\n%#v\ntest keys archive:\n%#v\n", i, p.Keys[i], keysArchive[i])
+		if !p.Keys[ver].CreationTime.Equal(keysArchive[i].CreationTime) {
+			t.Fatalf("key %d not equivalent between policy keys and test keys archive; policy keys:\n%#v\ntest keys archive:\n%#v\n", i, p.Keys[ver], keysArchive[i])
 		}
-		polKey := p.Keys[i]
+		polKey := p.Keys[ver]
 		polKey.CreationTime = keysArchive[i].CreationTime
-		p.Keys[i] = polKey
-		if !reflect.DeepEqual(p.Keys[i], keysArchive[i]) {
-			t.Fatalf("key %d not equivalent between policy keys and test keys archive; policy keys:\n%#v\ntest keys archive:\n%#v\n", i, p.Keys[i], keysArchive[i])
+		p.Keys[ver] = polKey
+		if !reflect.DeepEqual(p.Keys[ver], keysArchive[i]) {
+			t.Fatalf("key %d not equivalent between policy keys and test keys archive; policy keys:\n%#v\ntest keys archive:\n%#v\n", i, p.Keys[ver], keysArchive[i])
 		}
 	}
 

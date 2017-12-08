@@ -505,13 +505,11 @@ func (lm *LockManager) getStoredPolicy(storage logical.Storage, name string) (*P
 	}
 
 	// Decode the policy
-	policy := &Policy{
-		Keys: keyEntryMap{},
-	}
-	err = jsonutil.DecodeJSON(raw.Value, policy)
+	var policy Policy
+	err = jsonutil.DecodeJSON(raw.Value, &policy)
 	if err != nil {
 		return nil, err
 	}
 
-	return policy, nil
+	return &policy, nil
 }

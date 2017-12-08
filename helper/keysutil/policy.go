@@ -159,11 +159,11 @@ type KeyEntry struct {
 	DeprecatedCreationTime int64 `json:"creation_time"`
 }
 
-// keyEntryMap is used to allow JSON marshal/unmarshal
-type keyEntryMap map[int]KeyEntry
+// deprecatedKeyEntryMap is used to allow JSON marshal/unmarshal
+type deprecatedKeyEntryMap map[int]KeyEntry
 
 // MarshalJSON implements JSON marshaling
-func (kem keyEntryMap) MarshalJSON() ([]byte, error) {
+func (kem deprecatedKeyEntryMap) MarshalJSON() ([]byte, error) {
 	intermediate := map[string]KeyEntry{}
 	for k, v := range kem {
 		intermediate[strconv.Itoa(k)] = v
@@ -172,7 +172,7 @@ func (kem keyEntryMap) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalJSON implements JSON unmarshaling
-func (kem keyEntryMap) UnmarshalJSON(data []byte) error {
+func (kem deprecatedKeyEntryMap) UnmarshalJSON(data []byte) error {
 	intermediate := map[string]KeyEntry{}
 	if err := jsonutil.DecodeJSON(data, &intermediate); err != nil {
 		return err
@@ -187,6 +187,9 @@ func (kem keyEntryMap) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+// keyEntryMap is used to allow JSON marshal/unmarshal
+type keyEntryMap map[string]KeyEntry
 
 // Policy is the struct used to store metadata
 type Policy struct {
@@ -290,7 +293,7 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	// keys from the archive even when we move them back.
 
 	// Check if we have the latest minimum version in the current set of keys
-	_, keysContainsMinimum := p.Keys[p.MinDecryptionVersion]
+	_, keysContainsMinimum := p.Keys[strconv.Itoa(p.MinDecryptionVersion)]
 
 	// Sanity checks
 	switch {
@@ -320,7 +323,7 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 		// Need to move keys *from* archive
 
 		for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
-			p.Keys[i] = archive.Keys[i]
+			p.Keys[strconv.Itoa(i)] = archive.Keys[i]
 		}
 
 		return nil
@@ -341,7 +344,7 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	// We are storing all keys in the archive, so we ensure that it is up to
 	// date up to p.LatestVersion
 	for i := p.ArchiveVersion + 1; i <= p.LatestVersion; i++ {
-		archive.Keys[i] = p.Keys[i]
+		archive.Keys[i] = p.Keys[strconv.Itoa(i)]
 		p.ArchiveVersion = i
 	}
 
@@ -353,7 +356,7 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	// Perform deletion afterwards so that if there is an error saving we
 	// haven't messed with the current policy
 	for i := p.LatestVersion - len(p.Keys) + 1; i < p.MinDecryptionVersion; i++ {
-		delete(p.Keys, i)
+		delete(p.Keys, strconv.Itoa(i))
 	}
 
 	return nil
@@ -415,7 +418,7 @@ func (p *Policy) NeedsUpgrade() bool {
 		return true
 	}
 
-	if p.Keys[p.LatestVersion].HMACKey == nil || len(p.Keys[p.LatestVersion].HMACKey) == 0 {
+	if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
 		return true
 	}
 
@@ -454,14 +457,14 @@ func (p *Policy) Upgrade(storage logical.Storage) error {
 		persistNeeded = true
 	}
 
-	if p.Keys[p.LatestVersion].HMACKey == nil || len(p.Keys[p.LatestVersion].HMACKey) == 0 {
-		entry := p.Keys[p.LatestVersion]
+	if p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey == nil || len(p.Keys[strconv.Itoa(p.LatestVersion)].HMACKey) == 0 {
+		entry := p.Keys[strconv.Itoa(p.LatestVersion)]
 		hmacKey, err := uuid.GenerateRandomBytes(32)
 		if err != nil {
 			return err
 		}
 		entry.HMACKey = hmacKey
-		p.Keys[p.LatestVersion] = entry
+		p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 		persistNeeded = true
 	}
 
@@ -494,7 +497,7 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 
 	// Fast-path non-derived keys
 	if !p.Derived {
-		return p.Keys[ver].Key, nil
+		return p.Keys[strconv.Itoa(ver)].Key, nil
 	}
 
 	// Ensure a context is provided
@@ -506,10 +509,10 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	case Kdf_hmac_sha256_counter:
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
-		return kdf.CounterMode(prf, prfLen, p.Keys[ver].Key, context, 256)
+		return kdf.CounterMode(prf, prfLen, p.Keys[strconv.Itoa(ver)].Key, context, 256)
 
 	case Kdf_hkdf_sha256:
-		reader := hkdf.New(sha256.New, p.Keys[ver].Key, nil, context)
+		reader := hkdf.New(sha256.New, p.Keys[strconv.Itoa(ver)].Key, nil, context)
 		derBytes := bytes.NewBuffer(nil)
 		derBytes.Grow(32)
 		limReader := &io.LimitedReader{
@@ -619,7 +622,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 		}
 
 	case KeyType_RSA2048, KeyType_RSA4096:
-		key := p.Keys[ver].RSAKey
+		key := p.Keys[strconv.Itoa(ver)].RSAKey
 		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
@@ -723,7 +726,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		}
 
 	case KeyType_RSA2048, KeyType_RSA4096:
-		key := p.Keys[ver].RSAKey
+		key := p.Keys[strconv.Itoa(ver)].RSAKey
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
@@ -744,11 +747,11 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 		return nil, fmt.Errorf("key version does not exist; latest key version is %d", p.LatestVersion)
 	}
 
-	if p.Keys[version].HMACKey == nil {
+	if p.Keys[strconv.Itoa(version)].HMACKey == nil {
 		return nil, fmt.Errorf("no HMAC key exists for that key version")
 	}
 
-	return p.Keys[version].HMACKey, nil
+	return p.Keys[strconv.Itoa(version)].HMACKey, nil
 }
 
 func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*SigningResult, error) {
@@ -772,7 +775,7 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 	var err error
 	switch p.Type {
 	case KeyType_ECDSA_P256:
-		keyParams := p.Keys[ver]
+		keyParams := p.Keys[strconv.Itoa(ver)]
 		key := &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
 				Curve: elliptic.P256(),
@@ -806,7 +809,7 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 			}
 			pubKey = key.Public().(ed25519.PublicKey)
 		} else {
-			key = ed25519.PrivateKey(p.Keys[ver].Key)
+			key = ed25519.PrivateKey(p.Keys[strconv.Itoa(ver)].Key)
 		}
 
 		// Per docs, do not pre-hash ed25519; it does two passes and performs
@@ -817,7 +820,7 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 		}
 
 	case KeyType_RSA2048, KeyType_RSA4096:
-		key := p.Keys[ver].RSAKey
+		key := p.Keys[strconv.Itoa(ver)].RSAKey
 
 		var algo crypto.Hash
 		switch algorithm {
@@ -897,7 +900,7 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 			return false, errutil.UserError{Err: "supplied signature contains extra data"}
 		}
 
-		keyParams := p.Keys[ver]
+		keyParams := p.Keys[strconv.Itoa(ver)]
 		key := &ecdsa.PublicKey{
 			Curve: elliptic.P256(),
 			X:     keyParams.EC_X,
@@ -917,13 +920,13 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
 		} else {
-			key = ed25519.PrivateKey(p.Keys[ver].Key)
+			key = ed25519.PrivateKey(p.Keys[strconv.Itoa(ver)].Key)
 		}
 
 		return ed25519.Verify(key.Public().(ed25519.PublicKey), input, sigBytes), nil
 
 	case KeyType_RSA2048, KeyType_RSA4096:
-		key := p.Keys[ver].RSAKey
+		key := p.Keys[strconv.Itoa(ver)].RSAKey
 
 		var algo crypto.Hash
 		switch algorithm {
@@ -1022,7 +1025,7 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 		}
 	}
 
-	p.Keys[p.LatestVersion] = entry
+	p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 
 	// This ensures that with new key creations min decryption version is set
 	// to 1 rather than the int default of 0, since keys start at 1 (either
@@ -1037,7 +1040,7 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 func (p *Policy) MigrateKeyToKeysMap() {
 	now := time.Now()
 	p.Keys = keyEntryMap{
-		1: KeyEntry{
+		"1": KeyEntry{
 			Key:                    p.Key,
 			CreationTime:           now,
 			DeprecatedCreationTime: now.Unix(),

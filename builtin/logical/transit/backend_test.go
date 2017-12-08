@@ -819,7 +819,7 @@ func TestKeyUpgrade(t *testing.T) {
 	if p.Key != nil ||
 		p.Keys == nil ||
 		len(p.Keys) != 1 ||
-		!reflect.DeepEqual(p.Keys[1].Key, key) {
+		!reflect.DeepEqual(p.Keys[strconv.Itoa(1)].Key, key) {
 		t.Errorf("bad key migration, result is %#v", p.Keys)
 	}
 }

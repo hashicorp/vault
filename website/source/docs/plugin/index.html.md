@@ -11,6 +11,11 @@ description: |-
 Plugin backends are the components in Vault that can be implemented separately from Vault's
 builtin backends. These backends can be either authentication or secret backends.
 
+The [`api_addr`][api_addr] must be set in order for the plugin process establish
+communication with the Vault server during mount time. If the storage backend
+has HA enabled and supports automatic host address detection (e.g. Consul),
+Vault will automatically attempt to determine the `api_addr` as well.
+
 Detailed information regarding the plugin system can be found in the
 [internals documentation](https://www.vaultproject.io/docs/internals/plugins.html).
 
@@ -40,3 +45,5 @@ Unmounting a plugin backend is the identical to unmounting internal backends:
 ```
 $ vault unmount my-secrets
 ```
+
+[api_addr]: /docs/configuration/index.html#api_addr
