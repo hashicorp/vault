@@ -38,7 +38,8 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 		Operation: logical.UpdateOperation,
 		Storage:   s,
 		Data: map[string]interface{}{
-			"type": keyType,
+			"type":       keyType,
+			"exportable": true,
 		},
 	}
 	resp, err = b.HandleRequest(keyReq)
@@ -52,7 +53,8 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 		Operation: logical.UpdateOperation,
 		Storage:   s,
 		Data: map[string]interface{}{
-			"deletion_allowed": true,
+			"deletion_allowed":       true,
+			"allow_plaintext_backup": true,
 		},
 	}
 	resp, err = b.HandleRequest(configReq)

@@ -236,6 +236,9 @@ type Policy struct {
 	// RestoreInfo indicates the information about the restore action taken on
 	// this policy
 	RestoreInfo *RestoreInfo `json:"restore_info"`
+
+	// AllowPlaintextBackup allows taking backup of the policy in plaintext
+	AllowPlaintextBackup bool `json:"allow_plaintext_backup"`
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -1051,6 +1054,14 @@ func (p *Policy) MigrateKeyToKeysMap() {
 
 // Backup should be called with an exclusive lock held on the policy
 func (p *Policy) Backup(storage logical.Storage) (string, error) {
+	if !p.Exportable {
+		return "", fmt.Errorf("exporting is disallowed on the policy")
+	}
+
+	if !p.AllowPlaintextBackup {
+		return "", fmt.Errorf("plaintext backup is disallowed on the policy")
+	}
+
 	// Create a record of this backup operation in the policy
 	p.BackupInfo = &BackupInfo{
 		Time:    time.Now(),
