@@ -11,11 +11,11 @@ func (b *backend) pathRestore() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"backup": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Backed up key data to be restored. This should be the output from the 'backup/' endpoint",
+				Description: "Backed up key data to be restored. This should be the output from the 'backup/' endpoint.",
 			},
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name to be assigned to the restored key",
+				Description: "If set, this will be the name of the restored key.",
 			},
 		},
 
