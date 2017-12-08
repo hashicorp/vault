@@ -1014,7 +1014,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatal(err)
 		}
-		certGetter := reload.NewCertificateGetter(certFile, keyFile)
+		certGetter := reload.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},
