@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -52,6 +53,7 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 	if err = pool.Retry(func() error {
 		// This will cause a validation to run
 		resp, err := b.HandleRequest(&logical.Request{
+			Context:   context.Background(),
 			Storage:   s,
 			Operation: logical.UpdateOperation,
 			Path:      "config/postgresql",
@@ -140,6 +142,7 @@ func TestBackend_config_connection(t *testing.T) {
 	}
 
 	configReq := &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -206,6 +209,7 @@ func TestBackend_basic(t *testing.T) {
 		"allowed_roles":  []string{"plugin-role-test"},
 	}
 	req := &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -224,6 +228,7 @@ func TestBackend_basic(t *testing.T) {
 		"max_ttl":             "10m",
 	}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "roles/plugin-role-test",
 		Storage:   config.StorageView,
@@ -237,6 +242,7 @@ func TestBackend_basic(t *testing.T) {
 	// Get creds
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.ReadOperation,
 		Path:      "creds/plugin-role-test",
 		Storage:   config.StorageView,
@@ -253,6 +259,7 @@ func TestBackend_basic(t *testing.T) {
 
 	// Revoke creds
 	resp, err = b.HandleRequest(&logical.Request{
+		Context:   context.Background(),
 		Operation: logical.RevokeOperation,
 		Storage:   config.StorageView,
 		Secret: &logical.Secret{
@@ -297,6 +304,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"verify_connection": false,
 	}
 	req := &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -316,6 +324,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"max_ttl":               "10m",
 	}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "roles/plugin-role-test",
 		Storage:   config.StorageView,
@@ -333,6 +342,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"allowed_roles":  []string{"plugin-role-test"},
 	}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -365,6 +375,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	// Reset Connection
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "reset/plugin-test",
 		Storage:   config.StorageView,
@@ -378,6 +389,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	// Get creds
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.ReadOperation,
 		Path:      "creds/plugin-role-test",
 		Storage:   config.StorageView,
@@ -395,6 +407,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	// Delete Connection
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.DeleteOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -441,6 +454,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		"plugin_name":    "postgresql-database-plugin",
 	}
 	req := &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -460,6 +474,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		"max_ttl":               "10m",
 	}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "roles/plugin-role-test",
 		Storage:   config.StorageView,
@@ -473,6 +488,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	// Read the role
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.ReadOperation,
 		Path:      "roles/plugin-role-test",
 		Storage:   config.StorageView,
@@ -500,6 +516,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	// Delete the role
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.DeleteOperation,
 		Path:      "roles/plugin-role-test",
 		Storage:   config.StorageView,
@@ -513,6 +530,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	// Read the role
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.ReadOperation,
 		Path:      "roles/plugin-role-test",
 		Storage:   config.StorageView,
@@ -551,6 +569,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		"plugin_name":    "postgresql-database-plugin",
 	}
 	req := &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -569,6 +588,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		"max_ttl":             "10m",
 	}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "roles/denied",
 		Storage:   config.StorageView,
@@ -586,6 +606,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		"max_ttl":             "10m",
 	}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "roles/allowed",
 		Storage:   config.StorageView,
@@ -599,6 +620,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	// Get creds from denied role, should fail
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.ReadOperation,
 		Path:      "creds/denied",
 		Storage:   config.StorageView,
@@ -616,6 +638,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		"allowed_roles":  "allow*",
 	}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -629,6 +652,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	// Get creds, should work.
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.ReadOperation,
 		Path:      "creds/allowed",
 		Storage:   config.StorageView,
@@ -650,6 +674,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		"allowed_roles":  "*",
 	}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -663,6 +688,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	// Get creds, should work.
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.ReadOperation,
 		Path:      "creds/allowed",
 		Storage:   config.StorageView,
@@ -684,6 +710,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 		"allowed_roles":  "allow, allowed",
 	}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.UpdateOperation,
 		Path:      "config/plugin-test",
 		Storage:   config.StorageView,
@@ -697,6 +724,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	// Get creds from denied role, should fail
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.ReadOperation,
 		Path:      "creds/denied",
 		Storage:   config.StorageView,
@@ -710,6 +738,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	// Get creds from allowed role, should work.
 	data = map[string]interface{}{}
 	req = &logical.Request{
+		Context:   context.Background(),
 		Operation: logical.ReadOperation,
 		Path:      "creds/allowed",
 		Storage:   config.StorageView,

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"reflect"
 	"sync/atomic"
 	"testing"
@@ -192,8 +193,7 @@ func TestBackendHandleRequest_helpRoot(t *testing.T) {
 func TestBackendHandleRequest_renewAuth(t *testing.T) {
 	b := &Backend{}
 
-	resp, err := b.HandleRequest(logical.RenewAuthRequest(
-		"/foo", &logical.Auth{}, nil))
+	resp, err := b.HandleRequest(logical.RenewAuthRequest(context.Background(), "/foo", &logical.Auth{}, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -213,8 +213,7 @@ func TestBackendHandleRequest_renewAuthCallback(t *testing.T) {
 		AuthRenew: callback,
 	}
 
-	_, err := b.HandleRequest(logical.RenewAuthRequest(
-		"/foo", &logical.Auth{}, nil))
+	_, err := b.HandleRequest(logical.RenewAuthRequest(context.Background(), "/foo", &logical.Auth{}, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -237,8 +236,7 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 		Secrets: []*Secret{secret},
 	}
 
-	_, err := b.HandleRequest(logical.RenewRequest(
-		"/foo", secret.Response(nil, nil).Secret, nil))
+	_, err := b.HandleRequest(logical.RenewRequest(context.Background(), "/foo", secret.Response(nil, nil).Secret, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -262,7 +260,7 @@ func TestBackendHandleRequest_renewExtend(t *testing.T) {
 		Secrets: []*Secret{secret},
 	}
 
-	req := logical.RenewRequest("/foo", secret.Response(nil, nil).Secret, nil)
+	req := logical.RenewRequest(context.Background(), "/foo", secret.Response(nil, nil).Secret, nil)
 	req.Secret.IssueTime = time.Now()
 	req.Secret.Increment = 1 * time.Hour
 	resp, err := b.HandleRequest(req)
@@ -293,8 +291,7 @@ func TestBackendHandleRequest_revoke(t *testing.T) {
 		Secrets: []*Secret{secret},
 	}
 
-	_, err := b.HandleRequest(logical.RevokeRequest(
-		"/foo", secret.Response(nil, nil).Secret, nil))
+	_, err := b.HandleRequest(logical.RevokeRequest(context.Background(), "/foo", secret.Response(nil, nil).Secret, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
