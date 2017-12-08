@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"context"
 	"errors"
 	"net/rpc"
 	"os"
@@ -38,7 +37,6 @@ func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *Hand
 
 	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
-	args.Request.Context = context.Background()
 
 	resp, err := b.backend.HandleRequest(args.Request)
 	*reply = HandleRequestReply{
@@ -63,7 +61,6 @@ func (b *backendPluginServer) HandleExistenceCheck(args *HandleExistenceCheckArg
 
 	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
-	args.Request.Context = context.Background()
 
 	checkFound, exists, err := b.backend.HandleExistenceCheck(args.Request)
 	*reply = HandleExistenceCheckReply{

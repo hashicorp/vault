@@ -803,7 +803,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		// want to revoke a generated secret (since an error means we may not
 		// be successfully tracking it), remove indexes, and delete the entry.
 		if retErr != nil {
-			revResp, err := m.router.Route(logical.RevokeRequest(context.TODO(), req.Path, resp.Secret, resp.Data))
+			revResp, err := m.router.Route(logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
 			if err != nil {
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional internal error was encountered revoking the newly-generated secret: {{err}}", err))
 			} else if revResp != nil && revResp.IsError() {
@@ -1017,7 +1017,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	}
 
 	// Handle standard revocation via backends
-	resp, err := m.router.Route(logical.RevokeRequest(context.TODO(), le.Path, le.Secret, le.Data))
+	resp, err := m.router.Route(logical.RevokeRequest(le.Path, le.Secret, le.Data))
 	if err != nil || (resp != nil && resp.IsError()) {
 		return fmt.Errorf("failed to revoke entry: resp:%#v err:%s", resp, err)
 	}
@@ -1031,7 +1031,7 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 	secret.Increment = increment
 	secret.LeaseID = ""
 
-	req := logical.RenewRequest(context.TODO(), le.Path, &secret, le.Data)
+	req := logical.RenewRequest(le.Path, &secret, le.Data)
 	resp, err := m.router.Route(req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		return nil, fmt.Errorf("failed to renew entry: resp:%#v err:%s", resp, err)
@@ -1051,7 +1051,7 @@ func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry,
 		auth.ClientToken = ""
 	}
 
-	authReq := logical.RenewAuthRequest(context.TODO(), le.Path, &auth, nil)
+	authReq := logical.RenewAuthRequest(le.Path, &auth, nil)
 	authReq.Connection = req.Connection
 	resp, err := m.router.Route(authReq)
 	if err != nil {

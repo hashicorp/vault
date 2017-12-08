@@ -1,7 +1,6 @@
 package testing
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"os"
@@ -312,7 +311,7 @@ func Test(tt TestT, c TestCase) {
 	// We set the "immediate" flag here that any backend can pick up on
 	// to do all rollbacks immediately even if the WAL entries are new.
 	log.Warn("Requesting RollbackOperation")
-	req := logical.RollbackRequest(context.Background(), prefix+"/")
+	req := logical.RollbackRequest(prefix + "/")
 	req.Data["immediate"] = true
 	req.ClientToken = client.Token()
 	resp, err := core.HandleRequest(req)
