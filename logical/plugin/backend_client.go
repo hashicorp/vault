@@ -26,10 +26,8 @@ type backendPluginClient struct {
 
 // HandleRequestArgs is the args for HandleRequest method.
 type HandleRequestArgs struct {
-	StorageID       uint32
-	Request         *logical.Request
-	ContextCancelID uint32
-	ContextID       uint32
+	StorageID uint32
+	Request   *logical.Request
 }
 
 // HandleRequestReply is the reply for HandleRequest method.
@@ -41,6 +39,12 @@ type HandleRequestReply struct {
 // SpecialPathsReply is the reply for SpecialPaths method.
 type SpecialPathsReply struct {
 	Paths *logical.Paths
+}
+
+// SystemReply is the reply for System method.
+type SystemReply struct {
+	SystemView logical.SystemView
+	Error      error
 }
 
 // HandleExistenceCheckArgs is the args for HandleExistenceCheck method.
@@ -92,7 +96,6 @@ func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Resp
 	// Do not send the storage, since go-plugin cannot serialize
 	// interfaces. The server will pick up the storage from the shim.
 	req.Storage = nil
-
 	args := &HandleRequestArgs{
 		Request: req,
 	}

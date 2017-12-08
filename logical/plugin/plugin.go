@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"time"
 
@@ -45,13 +44,13 @@ type BackendPluginClient struct {
 	client *plugin.Client
 	sync.Mutex
 
-	logical.Backend
+	*backendPluginClient
 }
 
 // Cleanup calls the RPC client's Cleanup() func and also calls
 // the go-plugin's client Kill() func
 func (b *BackendPluginClient) Cleanup() {
-	b.Backend.Cleanup()
+	b.backendPluginClient.Cleanup()
 	b.client.Kill()
 }
 
@@ -123,21 +122,13 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 		return nil, err
 	}
 
-	var backend logical.Backend
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	switch raw.(type) {
-	case *backendPluginClient:
-		backend = raw.(*backendPluginClient)
-	case *backendGRPCPluginClient:
-		backend = raw.(*backendGRPCPluginClient)
-	default:
-		return nil, errors.New("Unsupported plugin client type")
-	}
+	backendRPC := raw.(*backendPluginClient)
 
 	return &BackendPluginClient{
-		client:  client,
-		Backend: backend,
+		client:              client,
+		backendPluginClient: backendRPC,
 	}, nil
 }
 

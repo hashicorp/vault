@@ -40,9 +40,6 @@ func Serve(opts *ServeOpts) error {
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		TLSProvider:     opts.TLSProviderFunc,
-
-		// A non-nil value here enables gRPC serving for this plugin...
-		GRPCServer: plugin.DefaultGRPCServer,
 	})
 
 	return nil
