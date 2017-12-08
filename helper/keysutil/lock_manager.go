@@ -223,10 +223,6 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup strin
 	}
 
 	var keyData KeyData
-	keyData.Policy = &Policy{
-		Keys: keyEntryMap{},
-	}
-
 	err = jsonutil.DecodeJSON(backupBytes, &keyData)
 	if err != nil {
 		return err
