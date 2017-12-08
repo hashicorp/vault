@@ -10,6 +10,10 @@ import (
 // Database implementation in a databasePluginRPCServer object and starts a
 // RPC server.
 func Serve(db Database, tlsProvider func() (*tls.Config, error)) {
+	plugin.Serve(ServeConfig(db, tlsProvider))
+}
+
+func ServeConfig(db Database, tlsProvider func() (*tls.Config, error)) *plugin.ServeConfig {
 	dbPlugin := &DatabasePlugin{
 		impl: db,
 	}
@@ -19,10 +23,10 @@ func Serve(db Database, tlsProvider func() (*tls.Config, error)) {
 		"database": dbPlugin,
 	}
 
-	plugin.Serve(&plugin.ServeConfig{
+	return &plugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		TLSProvider:     tlsProvider,
 		GRPCServer:      plugin.DefaultGRPCServer,
-	})
+	}
 }
