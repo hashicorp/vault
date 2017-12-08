@@ -202,8 +202,14 @@ are returned during a read operation on the named key.)
   Must be `0` (which will use the latest version) or a value greater or equal
   to `min_decryption_version`.
 
-- `deletion_allowed` `(bool: false)`- Specifies if the key is allowed to be
+- `deletion_allowed` `(bool: false)` - Specifies if the key is allowed to be
   deleted.
+
+- `exportable` `(bool: false)` -  Enables keys to be exportable. This
+  allows for all the valid keys in the key ring to be exported.
+
+- `allow_plaintext_backup` `(bool: false)` - If set, enables taking backup of
+  named key in the plaintext format.
 
 ### Sample Payload
 
