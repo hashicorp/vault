@@ -40,7 +40,7 @@ func (l *Conn) Del(delRequest *DelRequest) error {
 	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
 	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))
 	packet.AppendChild(delRequest.encode())
-	if delRequest.Controls != nil {
+	if len(delRequest.Controls) > 0 {
 		packet.AppendChild(encodeControls(delRequest.Controls))
 	}
 
