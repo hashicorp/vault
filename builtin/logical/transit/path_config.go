@@ -37,14 +37,13 @@ the latest version of the key is allowed.`,
 			},
 
 			"exportable": &framework.FieldSchema{
-				Type: framework.TypeBool,
-				Description: `Enables keys to be exportable. This allows for all the valid keys in the key
-ring to be exported.`,
+				Type:        framework.TypeBool,
+				Description: `Enables export of the key. Once set, this cannot be disabled.`,
 			},
 
 			"allow_plaintext_backup": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Description: `If set, enables taking backup of named key in the plaintext format.`,
+				Description: `Enables taking a backup of the named key in plaintext format. Once set, this cannot be disabled.`,
 			},
 		},
 
@@ -151,6 +150,7 @@ func (b *backend) pathConfigWrite(
 		// Don't unset the already set value
 		if exportable && !p.Exportable {
 			p.Exportable = exportable
+			persistNeeded = true
 		}
 	}
 
@@ -160,6 +160,7 @@ func (b *backend) pathConfigWrite(
 		// Don't unset the already set value
 		if allowPlaintextBackup && !p.AllowPlaintextBackup {
 			p.AllowPlaintextBackup = allowPlaintextBackup
+			persistNeeded = true
 		}
 	}
 
