@@ -273,27 +273,23 @@ func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert)
 // matchesCertificateExtenions verifies that the certificate matches configured
 // required extensions
 func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, config *ParsedCert) bool {
-	// Build Client Extensions Map
-	clientExtMap := map[string]string{}
+	// Build Client Extensions Map for Constraint Matching
+	// x509 Writes Extensions in ASN1 with a bitstring tag, which results in the field
+	// including its ASN.1 type tag bytes. For the sake of simplicity, assume string type
+	// and drop the tag bytes. And get the number of bytes from the tag.
+	clientExtMap := make(map[string]string, len(clientCert.Extensions))
 	for _, ext := range clientCert.Extensions {
-		// Trim prefix control characters from the Custom Extension Value for human readable configs
-		clientExtMap[ext.Id.String()] = strings.TrimLeftFunc(string(ext.Value[:]), b.isControlRune)
+		clientExtMap[ext.Id.String()] = string(ext.Value[2 : 2+ext.Value[1]])
 	}
-
 	// If any of the required extensions don't match the constraint fails
 	for _, requiredExt := range config.Entry.RequiredExtensions {
 		reqExt := strings.SplitN(requiredExt, ":", 2)
-		clientExtValue, clientExtValueExists := clientExtMap[reqExt[0]]
-		if !clientExtValueExists || !glob.Glob(reqExt[1], clientExtValue) {
+		clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
+		if !clientExtValueOk || !glob.Glob(reqExt[1], clientExtValue) {
 			return false
 		}
 	}
 	return true
-}
-
-// isControlRune returns true for control charaters for trimming extension values
-func (b *backend) isControlRune(r rune) bool {
-	return r <= 32 || r == 127
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
