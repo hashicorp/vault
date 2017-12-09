@@ -23,6 +23,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * auth/cert: Return `allowed_names` on role read [GH-3654]
+ * auth/ldap: Fix incorrect control information being sent [GH-3402] [GH-3625]
+   [GH-3656]
  * core: Fix potential panic that could occur using plugins when a node
    transitioned from active to standby [GH-3638]
  * core/pkcs11 (enterprise): Fix panic when PKCS#11 library is not readable
