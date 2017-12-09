@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -587,7 +588,7 @@ func (n *noopAudit) Salt() (*salt.Salt, error) {
 
 type rawHTTP struct{}
 
-func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (n *rawHTTP) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	return &logical.Response{
 		Data: map[string]interface{}{
 			logical.HTTPStatusCode:  200,
@@ -597,7 +598,7 @@ func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error)
 	}, nil
 }
 
-func (n *rawHTTP) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+func (n *rawHTTP) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	return false, false, nil
 }
 

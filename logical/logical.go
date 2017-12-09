@@ -1,6 +1,10 @@
 package logical
 
-import log "github.com/mgutz/logxi/v1"
+import (
+	"context"
+
+	log "github.com/mgutz/logxi/v1"
+)
 
 // BackendType is the type of backend that is being implemented
 type BackendType uint32
@@ -36,7 +40,7 @@ func (b BackendType) String() string {
 type Backend interface {
 	// HandleRequest is used to handle a request and generate a response.
 	// The backends must check the operation type and handle appropriately.
-	HandleRequest(*Request) (*Response, error)
+	HandleRequest(context.Context, *Request) (*Response, error)
 
 	// SpecialPaths is a list of paths that are special in some way.
 	// See PathType for the types of special paths. The key is the type
@@ -61,7 +65,7 @@ type Backend interface {
 	// ACL applied. The first bool indicates whether an existence check
 	// function was found for the backend; the second indicates whether, if an
 	// existence check function was found, the item exists or not.
-	HandleExistenceCheck(*Request) (bool, bool, error)
+	HandleExistenceCheck(context.Context, *Request) (bool, bool, error)
 
 	// Cleanup is invoked during an unmount of a backend to allow it to
 	// handle any cleanup like connection closing or releasing of file handles.

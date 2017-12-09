@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"strings"
 	"sync"
 	"time"
@@ -140,12 +141,12 @@ func (m *RollbackManager) startRollback(path string) *rollbackState {
 	m.inflightLock.Lock()
 	m.inflight[path] = rs
 	m.inflightLock.Unlock()
-	go m.attemptRollback(path, rs)
+	go m.attemptRollback(context.TODO(), path, rs)
 	return rs
 }
 
 // attemptRollback invokes a RollbackOperation for the given path
-func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err error) {
+func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *rollbackState) (err error) {
 	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(path, "/", "-", -1)}, time.Now())
 	if m.logger.IsTrace() {
 		m.logger.Trace("rollback: attempting rollback", "path", path)
@@ -165,7 +166,7 @@ func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err e
 		Operation: logical.RollbackOperation,
 		Path:      path,
 	}
-	_, err = m.router.Route(req)
+	_, err = m.router.Route(ctx, req)
 
 	// If the error is an unsupported operation, then it doesn't
 	// matter, the backend doesn't support it.

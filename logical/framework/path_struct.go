@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -65,12 +66,12 @@ func (p *PathStruct) Paths() []*Path {
 		Fields:  p.Schema,
 
 		Callbacks: map[logical.Operation]OperationFunc{
-			logical.CreateOperation: p.pathWrite,
-			logical.UpdateOperation: p.pathWrite,
-			logical.DeleteOperation: p.pathDelete,
+			logical.CreateOperation: p.pathWrite(),
+			logical.UpdateOperation: p.pathWrite(),
+			logical.DeleteOperation: p.pathDelete(),
 		},
 
-		ExistenceCheck: p.pathExistenceCheck,
+		ExistenceCheck: p.pathExistenceCheck(),
 
 		HelpSynopsis:    p.HelpSynopsis,
 		HelpDescription: p.HelpDescription,
@@ -78,42 +79,46 @@ func (p *PathStruct) Paths() []*Path {
 
 	// If we support reads, add that
 	if p.Read {
-		path.Callbacks[logical.ReadOperation] = p.pathRead
+		path.Callbacks[logical.ReadOperation] = p.pathRead()
 	}
 
 	return []*Path{path}
 }
 
-func (p *PathStruct) pathRead(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	v, err := p.Get(req.Storage)
-	if err != nil {
+func (p *PathStruct) pathRead() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		v, err := p.Get(req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: v,
+		}, nil
+	}
+}
+
+func (p *PathStruct) pathWrite() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		err := p.Put(req.Storage, d.Raw)
 		return nil, err
 	}
-
-	return &logical.Response{
-		Data: v,
-	}, nil
 }
 
-func (p *PathStruct) pathWrite(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	err := p.Put(req.Storage, d.Raw)
-	return nil, err
-}
-
-func (p *PathStruct) pathDelete(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	err := p.Delete(req.Storage)
-	return nil, err
-}
-
-func (p *PathStruct) pathExistenceCheck(
-	req *logical.Request, d *FieldData) (bool, error) {
-	v, err := p.Get(req.Storage)
-	if err != nil {
-		return false, err
+func (p *PathStruct) pathDelete() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		err := p.Delete(req.Storage)
+		return nil, err
 	}
+}
 
-	return v != nil, nil
+func (p *PathStruct) pathExistenceCheck() ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (bool, error) {
+		v, err := p.Get(req.Storage)
+		if err != nil {
+			return false, err
+		}
+
+		return v != nil, nil
+	}
 }
