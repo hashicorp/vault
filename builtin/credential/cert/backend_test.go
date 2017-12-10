@@ -713,7 +713,7 @@ func TestBackend_basic_singleCert(t *testing.T) {
 }
 
 // Test a self-signed client with custom extensions (root CA) that is trusted
-func TestBackend_extensions_signleCert(t *testing.T) {
+func TestBackend_extensions_singleCert(t *testing.T) {
 	connState, err := testConnState(
 		"test-fixtures/root/rootcawextcert.pem",
 		"test-fixtures/root/rootcawextkey.pem",
