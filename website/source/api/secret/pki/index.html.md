@@ -50,8 +50,8 @@ update your API calls accordingly.
 
 This endpoint retrieves the CA certificate *in raw DER-encoded form*. This is a
 bare endpoint that does not return a standard Vault data structure and cannot
-be read by the Vault CLI. If `/pem` is added to the endpoint, the CA
-certificate is returned in PEM format.
+be read by the Vault CLI; use `/pki/cert` for that. If `/pem` is added to the
+endpoint, the CA certificate is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
@@ -76,7 +76,7 @@ $ curl \
 
 This endpoint retrieves the CA certificate chain, including the CA _in PEM
 format_. This is a bare endpoint that does not return a standard Vault data
-structure and cannot be read by the Vault CLI.
+structure and cannot be read by the Vault CLI; use `/pki/cert` for that.
 
 This is an unauthenticated endpoint.
 
@@ -100,7 +100,7 @@ $ curl \
 ## Read Certificate
 
 This endpoint retrieves one of a selection of certificates. This endpoint returns the certificate in PEM formatting in the
-`certificate` key of the JSON object.
+`certificate` key of the JSON object, which is a standard Vault response that is readable by the Vault CLI.
 
 This is an unauthenticated endpoint.
 
@@ -111,8 +111,9 @@ This is an unauthenticated endpoint.
 ### Parameters
 
 - `serial` `(string: <required>)` – Specifies the serial of the key to read.
-  This is part of the request URL. Valid values: are:
+  This is part of the request URL. Valid values for `serial` are:
 
+    - `<serial>` for the certificate with the given serial number
     - `ca` for the CA certificate
     - `crl` for the current CRL
     - `ca_chain` for the CA trust chain or a serial number in either hyphen-separated or colon-separated octal format
@@ -350,8 +351,8 @@ $ curl \
 This endpoint retrieves the current CRL **in raw DER-encoded form**. This
 endpoint is suitable for usage in the CRL Distribution Points extension in a CA
 certificate. This is a bare endpoint that does not return a standard Vault data
-structure. If `/pem` is added to the endpoint, the CRL is returned in PEM
-format.
+structure and cannot be parsed by the Vault CLI; use `/pki/cert/crl` in that case.
+If `/pem` is added to the endpoint, the CRL is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
