@@ -684,9 +684,8 @@ request is denied.
   certificates for `localhost` as one of the requested common names. This is
   useful for testing and to allow clients on a single host to talk securely.
 
-- `allowed_domains` `(string: "")` – Specifies the domains of the role, provided
-  as a comma-separated list. This is used with the `allow_bare_domains` and
-  `allow_subdomains` options.
+- `allowed_domains` `(list: [])` – Specifies the domains of the role. This is 
+  used with the `allow_bare_domains` and `allow_subdomains` options.
 
 - `allow_bare_domains` `(bool: false)` – Specifies if clients can request
   certificates matching the value of the actual domains themselves; e.g. if a
@@ -738,12 +737,11 @@ request is denied.
   https://golang.org/pkg/crypto/elliptic/#Curve for an overview of allowed bit
   lengths for `ec`.
 
-- `key_usage` `(string: "DigitalSignature,KeyAgreement,KeyEncipherment")` –
-  Specifies the allowed key usage constraint on issued certificates. This is a
-  comma-separated string; valid values can be found at
-  https://golang.org/pkg/crypto/x509/#KeyUsage - simply drop the `KeyUsage` part
-  of the value. Values are not case-sensitive. To specify no key usage
-  constraints, set this to an empty string.
+- `key_usage` `(list: ["DigitalSignature", "KeyAgreement", "KeyEncipherment"])` –
+  Specifies the allowed key usage constraint on issued certificates. Valid 
+  values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage - simply 
+  drop the `KeyUsage` part of the value. Values are not case-sensitive. To 
+  specify no key usage constraints, set this to an empty list.
 
 - `use_csr_common_name` `(bool: true)` – When used with the CSR signing
   endpoint, the common name in the CSR will be used instead of taken from the
@@ -782,7 +780,7 @@ This option implies a value of `false` for `generate_lease`.
 
 ```json
 {
-  "allowed_domains": "example.com",
+  "allowed_domains": ["example.com"],
   "allow_subdomains": true
 }
 ```
@@ -827,7 +825,7 @@ $ curl \
     "allow_ip_sans": true,
     "allow_localhost": true,
     "allow_subdomains": false,
-    "allowed_domains": "example.com,foobar.com",
+    "allowed_domains": ["example.com", "foobar.com"],
     "client_flag": true,
     "code_signing_flag": false,
     "key_bits": 2048,
