@@ -31,7 +31,7 @@ the key are listed at the end of this document.
 The following software packages are required for Vault Enterprise HSM:
 
 - PKCS#11 compatible HSM integration library
-- `libtldl` library
+- The [GNU libltdl library](https://www.gnu.org/software/libtool/manual/html_node/Using-libltdl.html) — ensure that it is installed for the correct architecture of your servers
 
 ## `pkcs11` Example
 
