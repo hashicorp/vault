@@ -75,6 +75,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				"rotate",
 				"config/cors",
 				"config/auditing/*",
+				"config/requests/*",
 				"plugins/catalog/*",
 				"revoke-prefix/*",
 				"revoke-force/*",
@@ -827,6 +828,39 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			&framework.Path{
+				Pattern: "config/requests/passthrough-headers/(?P<header>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"header": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"backends": &framework.FieldSchema{
+						Type: framework.TypeStringSlice,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handlePassthroughHeaderUpdate,
+					logical.DeleteOperation: b.handlePassthroughHeaderDelete,
+					logical.ReadOperation:   b.handlePassthroughHeaderRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["passthrough-headers-name"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["passthrough-headers-name"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "config/requests/passthrough-headers$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handlePassthroughHeadersRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["passthrough-headers"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["passthrough-headers"][1]),
+			},
+
+			&framework.Path{
 				Pattern: "plugins/catalog/?$",
 
 				Fields: map[string]*framework.FieldSchema{},
@@ -1226,6 +1260,74 @@ func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framewo
 // handleAuditedHeadersRead returns the whole audited headers config
 func (b *SystemBackend) handleAuditedHeadersRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	headerConfig := b.Core.AuditedHeadersConfig()
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"headers": headerConfig.Headers,
+		},
+	}, nil
+}
+
+// handlePassthroughHeaderUpdate creates or overwrites a header entry
+func (b *SystemBackend) handlePassthroughHeaderUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	backends, ok := d.Get("backends").([]string)
+	if !ok || len(backends) == 0 {
+		return logical.ErrorResponse("missing or invalid backends list"), nil
+	}
+
+	headerConfig := b.Core.PassthroughHeadersConfig()
+	err := headerConfig.add(header, backends)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// handlePassthroughHeaderDelete deletes the header with the given name
+func (b *SystemBackend) handlePassthroughHeaderDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	headerConfig := b.Core.PassthroughHeadersConfig()
+	err := headerConfig.remove(header)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// handlePassthroughHeaderRead returns the header configuration for the given header name
+func (b *SystemBackend) handlePassthroughHeaderRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	headerConfig := b.Core.PassthroughHeadersConfig()
+	settings, ok := headerConfig.Headers[header]
+	if !ok {
+		return logical.ErrorResponse("could not find header in config"), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			header: settings,
+		},
+	}, nil
+}
+
+// handlePassthroughHeadersRead returns the whole audited headers config
+func (b *SystemBackend) handlePassthroughHeadersRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	headerConfig := b.Core.PassthroughHeadersConfig()
 
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -3341,6 +3443,25 @@ This path responds to the following HTTP methods.
 	"audited-headers": {
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
+	},
+	"passthrough-headers-name": {
+		"Configures the headers sent to the specified backends.",
+		`
+This path responds to the following HTTP methods.
+
+	GET /<name>
+		Returns the setting for the header with the given name.
+
+	POST /<name>
+		Enable passthrough of the given header for the specified backends.
+
+	DELETE /<path>
+		Disable passthrough of the given header.
+		`,
+	},
+	"passthrough-headers": {
+		"Lists the headers configured to be passed through to backends.",
+		`Returns a list of headers that have been configured to be passed through to backends.`,
 	},
 	"plugin-catalog": {
 		"Configures the plugins known to vault",

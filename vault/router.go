@@ -23,6 +23,8 @@ type Router struct {
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
 	storagePrefix *radix.Tree
+
+	passthroughHeaders *PassthroughHeadersConfig
 }
 
 // NewRouter returns a new router
@@ -465,9 +467,16 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	originalClientTokenRemainingUses := req.ClientTokenRemainingUses
 	req.ClientTokenRemainingUses = 0
 
-	// Cache the headers and hide them from backends
+	// Cache the headers
 	headers := req.Headers
-	req.Headers = nil
+
+	// Add in the passthrough headers configured for this path
+	passthroughHeaders, err := r.passthroughHeaders.ApplyConfig(req.Headers, originalPath)
+	if err != nil {
+		return nil, false, false, err
+	}
+
+	req.Headers = passthroughHeaders
 
 	// Cache the wrap info of the request
 	var wrapInfo *logical.RequestWrapInfo

@@ -152,9 +152,24 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("Bad: %v - %v", mount, prefix)
 	}
 
+	r.passthroughHeaders = &PassthroughHeadersConfig{
+		Headers: map[string]*passthroughHeaderSettings{
+			"should-passthrough": &passthroughHeaderSettings{
+				Backends: []string{
+					"prod/aws/foo",
+				},
+			},
+		},
+	}
+
 	req := &logical.Request{
 		Path: "prod/aws/foo",
+		Headers: map[string][]string{
+			"Should-Not-Passthrough": {"foo"},
+			"Should-Passthrough":     {"bar"},
+		},
 	}
+
 	resp, err := r.Route(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -166,6 +181,25 @@ func TestRouter_Mount(t *testing.T) {
 	// Verify the path
 	if len(n.Paths) != 1 || n.Paths[0] != "foo" {
 		t.Fatalf("bad: %v", n.Paths)
+	}
+
+	// Verify the passthrough headers
+	if len(n.Requests) < 1 {
+		t.Fatalf("bad: %v", n.Requests)
+	}
+
+	lastReq := n.Requests[len(n.Requests)-1]
+
+	if len(lastReq.Headers) != 1 {
+		t.Fatalf("bad: %v", lastReq.Headers)
+	}
+
+	if v, ok := lastReq.Headers["should-passthrough"]; !ok || len(v) != 1 || v[0] != "bar" {
+		t.Fatalf("bad: %v", lastReq.Headers)
+	}
+
+	if _, ok := lastReq.Headers["should-not-passthrough"]; ok {
+		t.Fatalf("bad: %v", lastReq.Headers)
 	}
 
 	subMountEntry := &MountEntry{

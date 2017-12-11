@@ -249,6 +249,10 @@ type Core struct {
 	// can be output in the audit logs
 	auditedHeaders *AuditedHeadersConfig
 
+	// passthroughHeaders is used to configure which http headers
+	// can be passed to which backends
+	passthroughHeaders *PassthroughHeadersConfig
+
 	// systemBackend is the backend which is used to manage internal operations
 	systemBackend *SystemBackend
 
@@ -1603,6 +1607,9 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupAuditedHeadersConfig(); err != nil {
 		return err
 	}
+	if err := c.setupPassthroughHeadersConfig(); err != nil {
+		return err
+	}
 
 	if c.ha != nil {
 		if err := c.startClusterListener(); err != nil {
@@ -2119,6 +2126,10 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 
 func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 	return c.auditedHeaders
+}
+
+func (c *Core) PassthroughHeadersConfig() *PassthroughHeadersConfig {
+	return c.passthroughHeaders
 }
 
 func lastRemoteWALImpl(c *Core) uint64 {
