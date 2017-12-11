@@ -10,6 +10,9 @@ DEPRECATIONS/CHANGES:
    `key_usage` in role definitions in the PKI secret backend, input
    can now be a comma-separated string or an array of strings. Reading a role
    will now return arrays for these parameters.
+ * SSH Dynamic Keys Method Defaults to 2048-bit Keys: When using the dynamic
+   key method in the SSH backend, the default is now to use 2048-bit keys if no
+   specific key bit size is specified.
 
 IMPROVEMENTS:
 
@@ -25,6 +28,7 @@ IMPROVEMENTS:
    lifecycle of the mount [GH-3646]
  * secret/pki: `allowed_domains` and `key_usage` can now be specified
    as a comma-separated string or an array of strings [GH-3642]
+ * secret/ssh: Allow 4096-bit keys to be used in dynamic key method [GH-3593]
 
 BUG FIXES:
 
