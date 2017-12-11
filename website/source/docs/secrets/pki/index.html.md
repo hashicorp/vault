@@ -213,11 +213,10 @@ safely stored in the backend mount.
 #### Set URL configuration
 
 Generated certificates can have the CRL location and the location of the
-issuing certificate encoded. These values must be set manually, but can be
-changed at any time.
+issuing certificate encoded. These values must be set manually and typically to FQDN associated to the Vault server, but can be changed at any time.
 
 ```text
-$ vault write pki/config/urls issuing_certificates="http://127.0.0.1:8200/v1/pki/ca" crl_distribution_points="http://127.0.0.1:8200/v1/pki/crl"
+$ vault write pki/config/urls issuing_certificates="http://vault.example.com:8200/v1/pki/ca" crl_distribution_points="http://vault.example.com:8200/v1/pki/crl"
 Success! Data written to: pki/ca/urls
 ```
 
