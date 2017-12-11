@@ -43,7 +43,12 @@ values set here cannot be changed after key creation.
   enabled, all encrypt/decrypt requests to this named key must provide a context
   which is used for key derivation.
 
-- `exportable` `(bool: false)` – Specifies if the raw key is exportable.
+- `exportable` `(bool: false)` -  Enables keys to be exportable. This
+  allows for all the valid keys in the key ring to be exported. Once set, this
+  cannot be disabled.
+
+- `allow_plaintext_backup` `(bool: false)` - If set, enables taking backup of
+  named key in the plaintext format. Once set, this cannot be disabled.
 
 - `type` `(string: "aes256-gcm96")` – Specifies the type of key to create. The
   currently-supported types are:
@@ -108,6 +113,7 @@ $ curl \
     "deletion_allowed": false,
     "derived": false,
     "exportable": false,
+    "allow_plaintext_backup": false,
     "keys": {
       "1": 1442851412
     },
@@ -206,10 +212,11 @@ are returned during a read operation on the named key.)
   deleted.
 
 - `exportable` `(bool: false)` -  Enables keys to be exportable. This
-  allows for all the valid keys in the key ring to be exported.
+  allows for all the valid keys in the key ring to be exported. Once set, this
+  cannot be disabled.
 
 - `allow_plaintext_backup` `(bool: false)` - If set, enables taking backup of
-  named key in the plaintext format.
+  named key in the plaintext format. Once set, this cannot be disabled.
 
 ### Sample Payload
 
