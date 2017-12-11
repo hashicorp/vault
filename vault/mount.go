@@ -1,8 +1,6 @@
 package vault
 
 import (
-	"crypto/sha1"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -123,16 +121,6 @@ func (t *MountTable) shallowClone() *MountTable {
 		mt.Entries[i] = e
 	}
 	return mt
-}
-
-// Hash is used to generate a hash value for the mount table
-func (t *MountTable) Hash() ([]byte, error) {
-	buf, err := json.Marshal(t)
-	if err != nil {
-		return nil, err
-	}
-	hash := sha1.Sum(buf)
-	return hash[:], nil
 }
 
 // setTaint is used to set the taint on given entry

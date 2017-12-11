@@ -6,18 +6,12 @@ description: |-
   The `/sys/policies/` endpoints are used to manage ACL, RGP, and EGP policies in Vault.
 ---
 
-# NOTE: Only in 0.9 Betas
-
-Please note that this endpoint is only available in 0.9 beta releases of Vault
-at this time.
-
 # `/sys/policies/`
 
 The `/sys/policies` endpoints are used to manage ACL, RGP, and EGP policies in Vault.
 
-Note: RGPs and EGPs are Vault Enterprise Premium features, and the associated endpoints are not available in Vault Open Source or Vault Enterprise Pro.
 
-In addition, `/sys/policies/acl` will be available in an upcoming Vault Open Source/Vault Enterprise Pro release, but not until Sentinel exits beta.
+~> **NOTE**: This endpoint is only available in Vault version 0.9+. Please also note that RGPs and EGPs are Vault Enterprise Premium features and the associated endpoints are not available in Vault Open Source or Vault Enterprise Pro.
 
 ## List ACL Policies
 

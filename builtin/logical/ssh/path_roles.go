@@ -83,7 +83,7 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Required for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
 				Admin user at remote host. The shared key being registered should be
-				for this user and should have root privileges. Everytime a dynamic 
+				for this user and should have root privileges. Everytime a dynamic
 				credential is being generated for other users, Vault uses this admin
 				username to login to remote host and install the generated credential
 				for the other user.`,
@@ -386,15 +386,15 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			return logical.ErrorResponse("missing admin username"), nil
 		}
 
-		// This defaults to 1024 and it can also be 2048.
+		// This defaults to 1024 and it can also be 2048 and 4096.
 		keyBits := d.Get("key_bits").(int)
-		if keyBits != 0 && keyBits != 1024 && keyBits != 2048 {
+		if keyBits != 0 && keyBits != 1024 && keyBits != 2048 && keyBits != 4096 {
 			return logical.ErrorResponse("invalid key_bits field"), nil
 		}
 
-		// If user has not set this field, default it to 1024
+		// If user has not set this field, default it to 2048
 		if keyBits == 0 {
-			keyBits = 1024
+			keyBits = 2048
 		}
 
 		// Store all the fields required by dynamic key type

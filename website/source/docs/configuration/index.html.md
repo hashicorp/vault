@@ -88,6 +88,8 @@ to specify where the configuration is.
     sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
     ```
 
+    If you use a Linux distribution with systemd, you can also add the above `setcap` command as an [ExecStartPre](https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecStartPre=) additional command in your Vault unit file to ensure that `mlock()` capability is added to the `vault` binary before executing.
+
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins.
@@ -119,9 +121,10 @@ to specify where the configuration is.
 
 The following parameters are used on backends that support [high availability][high-availability].
 
-- `api_addr` `(string: "")` - Specifies the address (full URL) to
-  advertise to other Vault servers in the cluster for client redirection. This
-  can also be provided via the environment variable `VAULT_API_ADDR`.
+- `api_addr` `(string: "")` - Specifies the address (full URL) to advertise to
+  other Vault servers in the cluster for client redirection. This value is also
+  used for [plugin backends][plugins]. This can also be provided via the
+  environment variable `VAULT_API_ADDR`.
 
 - `cluster_addr` `(string: "")` -  – Specifies the address to advertise to other
   Vault servers in the cluster for request forwarding. This can also be provided
@@ -139,3 +142,4 @@ The following parameters are used on backends that support [high availability][h
 [sealwrap]: /docs/enterprise/sealwrap/index.html
 [telemetry]: /docs/configuration/telemetry.html
 [high-availability]: /docs/concepts/ha.html
+[plugins]: /docs/plugin/index.html

@@ -1463,7 +1463,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		//t.Logf("test step %d\nrole vals: %#v\n", stepCount, roleVals)
 		stepCount++
 		//t.Logf("test step %d\nissue vals: %#v\n", stepCount, issueTestStep)
-		roleTestStep.Data = structs.New(roleVals).Map()
+		roleTestStep.Data = roleVals.ToResponseData()
 		roleTestStep.Data["generate_lease"] = false
 		ret = append(ret, roleTestStep)
 		issueTestStep.Data = structs.New(issueVals).Map()
@@ -1594,38 +1594,38 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			roleVals.CodeSigningFlag = false
 			roleVals.EmailProtectionFlag = false
 
-			var usage string
+			var usage []string
 			if mathRand.Int()%2 == 1 {
-				usage = usage + ",DigitalSignature"
+				usage = append(usage, "DigitalSignature")
 			}
 			if mathRand.Int()%2 == 1 {
-				usage = usage + ",ContentCoMmitment"
+				usage = append(usage, "ContentCoMmitment")
 			}
 			if mathRand.Int()%2 == 1 {
-				usage = usage + ",KeyEncipherment"
+				usage = append(usage, "KeyEncipherment")
 			}
 			if mathRand.Int()%2 == 1 {
-				usage = usage + ",DataEncipherment"
+				usage = append(usage, "DataEncipherment")
 			}
 			if mathRand.Int()%2 == 1 {
-				usage = usage + ",KeyAgreemEnt"
+				usage = append(usage, "KeyAgreemEnt")
 			}
 			if mathRand.Int()%2 == 1 {
-				usage = usage + ",CertSign"
+				usage = append(usage, "CertSign")
 			}
 			if mathRand.Int()%2 == 1 {
-				usage = usage + ",CRLSign"
+				usage = append(usage, "CRLSign")
 			}
 			if mathRand.Int()%2 == 1 {
-				usage = usage + ",EncipherOnly"
+				usage = append(usage, "EncipherOnly")
 			}
 			if mathRand.Int()%2 == 1 {
-				usage = usage + ",DecipherOnly"
+				usage = append(usage, "DecipherOnly")
 			}
 
 			roleVals.KeyUsage = usage
 			parsedKeyUsage := parseKeyUsages(roleVals.KeyUsage)
-			if parsedKeyUsage == 0 && usage != "" {
+			if parsedKeyUsage == 0 && len(usage) != 0 {
 				panic("parsed key usages was zero")
 			}
 			parsedKeyUsageUnderTest = parsedKeyUsage
@@ -1759,10 +1759,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		commonNames.Localhost = true
 		addCnTests()
 
-		roleVals.AllowedDomains = "foobar.com"
+		roleVals.AllowedDomains = []string{"foobar.com"}
 		addCnTests()
 
-		roleVals.AllowedDomains = "example.com"
+		roleVals.AllowedDomains = []string{"example.com"}
 		roleVals.AllowSubdomains = true
 		commonNames.SubDomain = true
 		commonNames.Wildcard = true
@@ -1770,13 +1770,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		commonNames.SubSubdomainWildcard = true
 		addCnTests()
 
-		roleVals.AllowedDomains = "foobar.com,example.com"
+		roleVals.AllowedDomains = []string{"foobar.com", "example.com"}
 		commonNames.SecondDomain = true
 		roleVals.AllowBareDomains = true
 		commonNames.BareDomain = true
 		addCnTests()
 
-		roleVals.AllowedDomains = "foobar.com,*example.com"
+		roleVals.AllowedDomains = []string{"foobar.com", "*example.com"}
 		roleVals.AllowGlobDomains = true
 		commonNames.GlobDomain = true
 		addCnTests()

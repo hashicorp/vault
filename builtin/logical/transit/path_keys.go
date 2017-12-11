@@ -229,7 +229,7 @@ func (b *backend) pathPolicyRead(
 	case keysutil.KeyType_AES256_GCM96:
 		retKeys := map[string]int64{}
 		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = v.DeprecatedCreationTime
+			retKeys[k] = v.DeprecatedCreationTime
 		}
 		resp.Data["keys"] = retKeys
 
@@ -252,7 +252,11 @@ func (b *backend) pathPolicyRead(
 					if len(context) == 0 {
 						key.PublicKey = ""
 					} else {
-						derived, err := p.DeriveKey(context, k)
+						ver, err := strconv.Atoi(k)
+						if err != nil {
+							return nil, fmt.Errorf("invalid version %q: %v", k, err)
+						}
+						derived, err := p.DeriveKey(context, ver)
 						if err != nil {
 							return nil, fmt.Errorf("failed to derive key to return public component")
 						}
@@ -284,7 +288,7 @@ func (b *backend) pathPolicyRead(
 				key.PublicKey = string(pemBytes)
 			}
 
-			retKeys[strconv.Itoa(k)] = structs.New(key).Map()
+			retKeys[k] = structs.New(key).Map()
 		}
 		resp.Data["keys"] = retKeys
 	}

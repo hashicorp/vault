@@ -125,6 +125,10 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 			return nil, "", metadata, "", fmt.Errorf("missing secret_id")
 		}
 
+		if role.LowerCaseRoleName {
+			roleName = strings.ToLower(roleName)
+		}
+
 		// Check if the SecretID supplied is valid. If use limit was specified
 		// on the SecretID, it will be decremented in this call.
 		var valid bool

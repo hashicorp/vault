@@ -40,7 +40,9 @@ func (bindRequest *SimpleBindRequest) encode() *ber.Packet {
 	request.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, bindRequest.Username, "User Name"))
 	request.AppendChild(ber.NewString(ber.ClassContext, ber.TypePrimitive, 0, bindRequest.Password, "Password"))
 
-	request.AppendChild(encodeControls(bindRequest.Controls))
+	if len(bindRequest.Controls) > 0 {
+		request.AppendChild(encodeControls(bindRequest.Controls))
+	}
 
 	return request
 }
