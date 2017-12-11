@@ -6,6 +6,10 @@ DEPRECATIONS/CHANGES:
    `disallowed_policies` in role definitions in the token auth backend, input
    can now be a comma-separated string or an array of strings. Reading a role
    will now return arrays for these parameters.
+ * PKI Secret Backend Roles parameter types: For `allowed_domains` and
+   `key_usage` in role definitions in the PKI secret backend, input
+   can now be a comma-separated string or an array of strings. Reading a role
+   will now return arrays for these parameters.
 
 IMPROVEMENTS:
 
@@ -19,6 +23,8 @@ IMPROVEMENTS:
    during database configuration. This establishes a session-wide [write
    concern](https://docs.mongodb.com/manual/reference/write-concern/) for the
    lifecycle of the mount [GH-3646]
+ * secret/pki: `allowed_domains` and `key_usage` can now be specified
+   as a comma-separated string or an array of strings [GH-3642]
 
 BUG FIXES:
 
