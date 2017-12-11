@@ -2,6 +2,12 @@
 
 DEPRECATIONS/CHANGES:
 
+ * AppRole Case Sensitivity: In prior versions of Vault, `list` operations
+   against AppRole roles would require preserving case in the role name, even
+   though most other operations within AppRole are case-insensitive with
+   respect to the role name. This has been fixed; existing roles will behave as
+   they have in the past, but new roles will act case-insensitively in these
+   cases.
  * Token Auth Backend Roles parameter types: For `allowed_policies` and
    `disallowed_policies` in role definitions in the token auth backend, input
    can now be a comma-separated string or an array of strings. Reading a role
@@ -32,6 +38,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * auth/approle: Fix case-sensitive/insensitive comparison issue [GH-3665]
  * auth/cert: Return `allowed_names` on role read [GH-3654]
  * auth/ldap: Fix incorrect control information being sent [GH-3402] [GH-3496]
    [GH-3625] [GH-3656]
