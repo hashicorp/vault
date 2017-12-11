@@ -31,7 +31,6 @@ update your API calls accordingly.
 * [Rotate CRLs](#rotate-crls)
 * [Generate Intermediate](#generate-intermediate)
 * [Set Signed Intermediate](#set-signed-intermediate)
-* [Read Certificate](#read-certificate)
 * [Generate Certificate](#generate-certificate)
 * [Revoke Certificate](#revoke-certificate)
 * [Create/Update Role](#create-update-role)
