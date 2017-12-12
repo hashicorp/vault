@@ -813,6 +813,7 @@ type TestClusterOptions struct {
 	NumCores           int
 	SealFunc           func() Seal
 	RawLogger          interface{}
+	TempDir            string
 }
 
 var DefaultNumCores = 3
@@ -856,11 +857,20 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	var testCluster TestCluster
-	tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
-	if err != nil {
-		t.Fatal(err)
+	if opts != nil && opts.TempDir != "" {
+		if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(opts.TempDir, 0700); err != nil {
+				t.Fatal(err)
+			}
+		}
+		testCluster.TempDir = opts.TempDir
+	} else {
+		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		testCluster.TempDir = tempDir
 	}
-	testCluster.TempDir = tempDir
 
 	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

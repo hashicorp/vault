@@ -817,10 +817,10 @@
 			"revisionTime": "2017-10-26T18:46:43Z"
 		},
 		{
-			"checksumSHA1": "1AP23CNIbIxDH/auM59029H0CGY=",
+			"checksumSHA1": "3qxR+iktZ/aLpuq9by7pel2YM7w=",
 			"path": "github.com/go-ldap/ldap",
-			"revision": "0ae9f2495c4a9e5d436bc9a2b13a71a2fb06ddf3",
-			"revisionTime": "2017-09-29T19:17:40Z"
+			"revision": "23c4ee25d1434f2231f92afaeebfbfa7900ebbb0",
+			"revisionTime": "2017-12-09T13:38:01Z"
 		},
 		{
 			"checksumSHA1": "6dTGC5A1Y1xnv+JSi9z8S6JfnH0=",
