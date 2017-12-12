@@ -3,7 +3,6 @@ package consul
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,7 +17,6 @@ import (
 	log "github.com/mgutz/logxi/v1"
 
 	"crypto/tls"
-	"crypto/x509"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
@@ -181,7 +179,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	}
 
 	if consulConf.Scheme == "https" {
-		tlsClientConfig, err := setupTLSConfig(conf)
+		tlsClientConfig, err := setupTLSConfig(conf, &consulConf.TLSConfig, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -240,24 +238,70 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	return c, nil
 }
 
-func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
-	serverName, _, err := net.SplitHostPort(conf["address"])
-	switch {
-	case err == nil:
-	case strings.Contains(err.Error(), "missing port"):
-		serverName = conf["address"]
-	default:
-		return nil, err
+func setupTLSConfig(conf map[string]string, tlsConfig *api.TLSConfig, logger log.Logger) (*tls.Config, error) {
+	address, ok := conf["address"]
+	if ok {
+		tlsConfig.Address = address
 	}
 
-	insecureSkipVerify := false
-	if _, ok := conf["tls_skip_verify"]; ok {
-		insecureSkipVerify = true
+	serverName, ok := conf["tls_server_name"]
+	if ok {
+		tlsConfig.Address = serverName
+	}
+
+	caFile, ok := conf["tls_ca_file"]
+	if ok {
+		tlsConfig.CAFile = caFile
+	}
+
+	caPath, ok := conf["tls_ca_path"]
+	if ok {
+		tlsConfig.CAPath = caPath
+	}
+
+	certFile, haveCertFile := conf["tls_cert_file"]
+	if haveCertFile {
+		tlsConfig.CertFile = certFile
+	}
+
+	keyFile, haveKeyFile := conf["tls_key_file"]
+	if haveKeyFile {
+		tlsConfig.KeyFile = keyFile
+	}
+
+	if haveCertFile != haveKeyFile {
+		if haveCertFile {
+			logger.Warn("physical/consul: config tls - missing 'tls_key_file'?")
+		} else {
+			logger.Warn("physical/consul: config tls - missing 'tls_cert_file'?")
+		}
+	}
+
+	insecureSkipVerifyStr, ok := conf["tls_skip_verify"]
+	if ok {
+		insecureSkipVerify, err := strconv.ParseBool(insecureSkipVerifyStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid 'tls_skip_verify'")
+		}
+		tlsConfig.InsecureSkipVerify = insecureSkipVerify
+	}
+
+	logger.Debug("physical/consul: config tls",
+		"Address", tlsConfig.Address,
+		"CAFile", tlsConfig.CAFile,
+		"CAPath", tlsConfig.CAPath,
+		"CertFile", tlsConfig.CertFile,
+		"KeyFile", tlsConfig.KeyFile,
+		"InsecureSkipVerify", tlsConfig.InsecureSkipVerify,
+	)
+
+	tlsClientConfig, err := api.SetupTLSConfig(tlsConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	tlsMinVersionStr, ok := conf["tls_min_version"]
 	if !ok {
-		// Set the default value
 		tlsMinVersionStr = "tls12"
 	}
 
@@ -266,38 +310,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 		return nil, fmt.Errorf("invalid 'tls_min_version'")
 	}
 
-	tlsClientConfig := &tls.Config{
-		MinVersion:         tlsMinVersion,
-		InsecureSkipVerify: insecureSkipVerify,
-		ServerName:         serverName,
-	}
-
-	_, okCert := conf["tls_cert_file"]
-	_, okKey := conf["tls_key_file"]
-
-	if okCert && okKey {
-		tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
-		if err != nil {
-			return nil, fmt.Errorf("client tls setup failed: %v", err)
-		}
-
-		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
-	}
-
-	if tlsCaFile, ok := conf["tls_ca_file"]; ok {
-		caPool := x509.NewCertPool()
-
-		data, err := ioutil.ReadFile(tlsCaFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read CA file: %v", err)
-		}
-
-		if !caPool.AppendCertsFromPEM(data) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
-		}
-
-		tlsClientConfig.RootCAs = caPool
-	}
+	tlsClientConfig.MinVersion = tlsMinVersion
 
 	return tlsClientConfig, nil
 }
