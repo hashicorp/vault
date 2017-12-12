@@ -782,13 +782,8 @@ func TestExpiration_RenewToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "auth/token/renew",
-	}
-
 	// Renew the token
-	out, err := exp.RenewToken(req, "auth/token/login", root.ID, 0)
+	out, err := exp.RenewToken(&logical.Request{}, "auth/token/login", root.ID, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -818,13 +813,8 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "auth/token/renew",
-	}
-
 	// Attempt to renew the token
-	resp, err := exp.RenewToken(req, "auth/github/login", root.ID, 0)
+	resp, err := exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
 	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "lease is not renewable")) {
 		t.Fatalf("bad: err:%v resp:%#v", err, resp)
 	}

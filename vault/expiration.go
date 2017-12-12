@@ -750,7 +750,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		}, nil
 	}
 
-	sysView := m.router.MatchingSystemView(req.Path)
+	sysView := m.router.MatchingSystemView(le.Path)
 	if sysView == nil {
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
