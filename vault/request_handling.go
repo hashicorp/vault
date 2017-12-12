@@ -531,6 +531,11 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 		auth.Accessor = te.Accessor
 		auth.Policies = te.Policies
 
+		// Set auth.TTL if not set, used below in RegisterAuth
+		if auth.TTL == 0 {
+			auth.TTL = tokenTTL
+		}
+
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
 			c.tokenStore.Revoke(te.ID)
