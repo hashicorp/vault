@@ -526,15 +526,10 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			return nil, auth, ErrInternalError
 		}
 
-		// Populate the client token and accessor
+		// Populate the client token, accessor, and TTL
 		auth.ClientToken = te.ID
 		auth.Accessor = te.Accessor
-		auth.Policies = te.Policies
-
-		// Set auth.TTL if not set, used below in RegisterAuth
-		if auth.TTL == 0 {
-			auth.TTL = tokenTTL
-		}
+		auth.TTL = te.TTL
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {

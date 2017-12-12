@@ -750,10 +750,23 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		}, nil
 	}
 
+	sysView := m.router.MatchingSystemView(req.Path)
+	if sysView == nil {
+		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
+	}
+
+	// Cap TTL value to the sys/mount max value
+	if resp.Auth.TTL > sysView.MaxLeaseTTL() {
+		resp.Auth.TTL = sysView.MaxLeaseTTL()
+	}
+
 	// If it resp.Period is non-zero, use that as the TTL and override backend's
-	// call on TTL modification, such as the TTL determined by
+	// call on TTL modification, such as a TTL value determined by
 	// framework.LeaseExtend call against the request.
 	if resp.Auth.Period > time.Duration(0) {
+		if resp.Auth.Period > sysView.MaxLeaseTTL() {
+			resp.Auth.Period = sysView.MaxLeaseTTL()
+		}
 		resp.Auth.TTL = resp.Auth.Period
 	}
 
