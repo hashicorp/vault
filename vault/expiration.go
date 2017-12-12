@@ -750,6 +750,13 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		}, nil
 	}
 
+	// If it resp.Period is non-zero, use that as the TTL and override backend's
+	// call on TTL modification, such as the TTL determined by
+	// framework.LeaseExtend call against the request.
+	if resp.Auth.Period > time.Duration(0) {
+		resp.Auth.TTL = resp.Auth.Period
+	}
+
 	// Attach the ClientToken
 	resp.Auth.ClientToken = token
 	resp.Auth.Increment = 0
@@ -864,6 +871,12 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	saltedID, err := m.tokenStore.SaltID(auth.ClientToken)
 	if err != nil {
 		return err
+	}
+
+	// If it resp.Period is non-zero, override the TTL value determined
+	// by the backend.
+	if auth.Period > time.Duration(0) {
+		auth.TTL = auth.Period
 	}
 
 	// Create a lease entry

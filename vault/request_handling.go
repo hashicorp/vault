@@ -477,14 +477,27 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			return nil, nil, ErrInternalError
 		}
 
-		// Set the default lease if not provided
-		if auth.TTL == 0 {
-			auth.TTL = sysView.DefaultLeaseTTL()
-		}
+		// Start off with the sys default value, and update according to period/TTL
+		// from resp.Auth
+		tokenTTL := sysView.DefaultLeaseTTL()
 
-		// Limit the lease duration
-		if auth.TTL > sysView.MaxLeaseTTL() {
-			auth.TTL = sysView.MaxLeaseTTL()
+		switch {
+		case auth.Period > time.Duration(0):
+			// Cap the period value to the sys max_ttl value. The auth backend should
+			// have checked for it on its login path, but we check here again for
+			// sanity.
+			if auth.Period > sysView.MaxLeaseTTL() {
+				auth.Period = sysView.MaxLeaseTTL()
+			}
+			tokenTTL = auth.Period
+		case auth.TTL > time.Duration(0):
+			// Cap the TTL value. The auth backend should have checked for it on its
+			// login path (e.g. a call to b.SanitizeTTL), but we check here again for
+			// sanity.
+			if auth.TTL > sysView.MaxLeaseTTL() {
+				auth.TTL = sysView.MaxLeaseTTL()
+			}
+			tokenTTL = auth.TTL
 		}
 
 		// Generate a token
@@ -494,7 +507,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			Meta:         auth.Metadata,
 			DisplayName:  auth.DisplayName,
 			CreationTime: time.Now().Unix(),
-			TTL:          auth.TTL,
+			TTL:          tokenTTL,
 			NumUses:      auth.NumUses,
 			EntityID:     auth.EntityID,
 		}
