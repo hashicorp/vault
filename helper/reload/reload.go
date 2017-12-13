@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"sync"
 
 	"github.com/hashicorp/errwrap"
@@ -52,11 +51,13 @@ func (cg *CertificateGetter) Reload(_ map[string]interface{}) error {
 	if keyBlock == nil {
 		return errors.New("Decoded PEM is blank")
 	}
+
 	if x509.IsEncryptedPEMBlock(keyBlock) {
-		keyPEMBlock, err = x509.DecryptPEMBlock(keyBlock, []byte(strings.TrimRight(cg.passphrase, "\n")))
+		keyBlock.Bytes, err = x509.DecryptPEMBlock(keyBlock, []byte(cg.passphrase))
 		if err != nil {
 			return errwrap.Wrapf("Decrypting PEM block failed {{err}}", err)
 		}
+		keyPEMBlock = pem.EncodeToMemory(keyBlock)
 	}
 
 	cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
