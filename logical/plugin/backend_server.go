@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"errors"
 	"net/rpc"
 	"os"
@@ -34,6 +35,8 @@ func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *Hand
 	if inMetadataMode() {
 		return ErrServerInMetadataMode
 	}
+
+	args.Request.Context = context.Background()
 
 	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
