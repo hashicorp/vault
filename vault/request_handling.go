@@ -529,6 +529,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 		// Populate the client token, accessor, and TTL
 		auth.ClientToken = te.ID
 		auth.Accessor = te.Accessor
+		auth.Policies = te.Policies
 		auth.TTL = te.TTL
 
 		// Register with the expiration manager
