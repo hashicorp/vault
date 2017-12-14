@@ -2,7 +2,6 @@ package dbplugin
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/hashicorp/go-plugin"
@@ -59,7 +58,7 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 	case *gRPCClient:
 		db = raw.(*gRPCClient)
 	case *databasePluginRPCClient:
-		logger.Warn(fmt.Sprintf("Plugin '%s' is using deprecated net RPC transport. Recompile plugin to upgrade to gRPC.", pluginRunner.Name))
+		logger.Warn("database: plugin is using deprecated net RPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
 		db = raw.(*databasePluginRPCClient)
 	default:
 		return nil, errors.New("unsupported client type")

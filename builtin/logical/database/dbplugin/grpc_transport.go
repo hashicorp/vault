@@ -96,7 +96,7 @@ func (c gRPCClient) Type() (string, error) {
 	default:
 		return "", ErrPluginShutdown
 	}
-	resp, err := c.client.Type(ctx, &Empty{}, grpc.FailFast(true))
+	resp, err := c.client.Type(ctx, &Empty{})
 	if err != nil {
 		return "", err
 	}
@@ -120,7 +120,7 @@ func (c gRPCClient) CreateUser(ctx context.Context, statements Statements, usern
 		Statements:     &statements,
 		UsernameConfig: &usernameConfig,
 		Expiration:     t,
-	}, grpc.FailFast(true))
+	})
 	if err != nil {
 		return "", "", err
 	}
@@ -144,7 +144,7 @@ func (c *gRPCClient) RenewUser(ctx context.Context, statements Statements, usern
 		Statements: &statements,
 		Username:   username,
 		Expiration: t,
-	}, grpc.FailFast(true))
+	})
 
 	return err
 }
@@ -158,7 +158,7 @@ func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, user
 	_, err := c.client.RevokeUser(ctx, &RevokeUserRequest{
 		Statements: &statements,
 		Username:   username,
-	}, grpc.FailFast(true))
+	})
 
 	return err
 }
@@ -178,7 +178,7 @@ func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface
 	_, err = c.client.Initialize(ctx, &InitializeRequest{
 		Config:           configRaw,
 		VerifyConnection: verifyConnection,
-	}, grpc.FailFast(true))
+	})
 
 	return err
 }
@@ -190,7 +190,7 @@ func (c *gRPCClient) Close() error {
 	defer cancel()
 	switch c.clientConn.GetState() {
 	case connectivity.Ready, connectivity.Idle:
-		_, err := c.client.Close(ctx, &Empty{}, grpc.FailFast(true))
+		_, err := c.client.Close(ctx, &Empty{})
 		return err
 	}
 

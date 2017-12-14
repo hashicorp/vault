@@ -24,25 +24,21 @@ func (ds *databasePluginRPCServer) Type(_ struct{}, resp *string) error {
 func (ds *databasePluginRPCServer) CreateUser(args *CreateUserRequestRPC, resp *CreateUserResponse) error {
 	var err error
 	resp.Username, resp.Password, err = ds.impl.CreateUser(context.Background(), args.Statements, args.UsernameConfig, args.Expiration)
-
 	return err
 }
 
 func (ds *databasePluginRPCServer) RenewUser(args *RenewUserRequestRPC, _ *struct{}) error {
 	err := ds.impl.RenewUser(context.Background(), args.Statements, args.Username, args.Expiration)
-
 	return err
 }
 
 func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequestRPC, _ *struct{}) error {
 	err := ds.impl.RevokeUser(context.Background(), args.Statements, args.Username)
-
 	return err
 }
 
 func (ds *databasePluginRPCServer) Initialize(args *InitializeRequestRPC, _ *struct{}) error {
 	err := ds.impl.Initialize(context.Background(), args.Config, args.VerifyConnection)
-
 	return err
 }
 
