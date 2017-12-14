@@ -89,7 +89,7 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 }
 
 // Connection creates a database connection.
-func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
+func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
