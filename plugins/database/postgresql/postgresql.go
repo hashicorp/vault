@@ -109,7 +109,7 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", "", err
 
@@ -126,7 +126,7 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 			continue
 		}
 
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
 			"name":       username,
 			"password":   password,
 			"expiration": expirationStr,
@@ -136,7 +136,7 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 
 		}
 		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return "", "", err
 
 		}
@@ -165,7 +165,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 		return err
 	}
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 		if len(query) == 0 {
 			continue
 		}
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
 			"name":       username,
 			"expiration": expirationStr,
 		}))
@@ -192,7 +192,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 		}
 
 		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return err
 		}
 	}
@@ -222,7 +222,7 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username, revocationS
 		return err
 	}
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username, revocationS
 			continue
 		}
 
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
 			"name": username,
 		}))
 		if err != nil {
@@ -244,7 +244,7 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username, revocationS
 		}
 		defer stmt.Close()
 
-		if _, err := stmt.Exec(); err != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return err
 		}
 	}
@@ -264,7 +264,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 
 	// Check if the role exists
 	var exists bool
-	err = db.QueryRow("SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
+	err = db.QueryRowContext(ctx, "SELECT exists (SELECT rolname FROM pg_roles WHERE rolname=$1);", username).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
@@ -277,13 +277,13 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	// the role
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	stmt, err := db.Prepare("SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee=$1;")
+	stmt, err := db.PrepareContext(ctx, "SELECT DISTINCT table_schema FROM information_schema.role_column_grants WHERE grantee=$1;")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(username)
+	rows, err := stmt.QueryContext(ctx, username)
 	if err != nil {
 		return err
 	}
@@ -325,7 +325,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	// get the current database name so we can issue a REVOKE CONNECT for
 	// this username
 	var dbname sql.NullString
-	if err := db.QueryRow("SELECT current_database();").Scan(&dbname); err != nil {
+	if err := db.QueryRowContext(ctx, "SELECT current_database();").Scan(&dbname); err != nil {
 		return err
 	}
 
@@ -340,13 +340,13 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revocationStmts {
-		stmt, err := db.Prepare(query)
+		stmt, err := db.PrepareContext(ctx, query)
 		if err != nil {
 			lastStmtError = err
 			continue
 		}
 		defer stmt.Close()
-		_, err = stmt.Exec()
+		_, err = stmt.ExecContext(ctx)
 		if err != nil {
 			lastStmtError = err
 		}
@@ -361,13 +361,13 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	}
 
 	// Drop this user
-	stmt, err = db.Prepare(fmt.Sprintf(
+	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
 		`DROP ROLE IF EXISTS %s;`, pq.QuoteIdentifier(username)))
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
+	if _, err := stmt.ExecContext(ctx); err != nil {
 		return err
 	}
 
