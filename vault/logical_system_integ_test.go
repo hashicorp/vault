@@ -249,15 +249,12 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 	}
 
 	// Trigger a sha256 mistmatch or missing plugin error
-	var reqData map[string]interface{}
 	if mismatch {
-		reqData = map[string]interface{}{
+		req = logical.TestRequest(t, logical.UpdateOperation, "sys/plugins/catalog/mock-plugin")
+		req.Data = map[string]interface{}{
 			"sha256":  "d17bd7334758e53e6fbab15745d2520765c06e296f2ce8e25b7919effa0ac216",
 			"command": filepath.Base(command),
 		}
-
-		req = logical.TestRequest(t, logical.UpdateOperation, "sys/plugins/catalog/mock-plugin")
-		req.Data = reqData
 		req.ClientToken = core.Client.Token()
 		resp, err = core.HandleRequest(req)
 		if err != nil || (resp != nil && resp.IsError()) {
