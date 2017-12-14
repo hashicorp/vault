@@ -755,8 +755,10 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
+	retResp := &logical.Response{}
 	// Cap TTL value to the sys/mount max value
 	if resp.Auth.TTL > sysView.MaxLeaseTTL() {
+		retResp.AddWarning(fmt.Sprintf("TTL of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", resp.Auth.TTL, sysView.MaxLeaseTTL()))
 		resp.Auth.TTL = sysView.MaxLeaseTTL()
 	}
 
@@ -765,6 +767,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	// framework.LeaseExtend call against the request.
 	if resp.Auth.Period > time.Duration(0) {
 		if resp.Auth.Period > sysView.MaxLeaseTTL() {
+			retResp.AddWarning(fmt.Sprintf("Period of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", resp.Auth.TTL, sysView.MaxLeaseTTL()))
 			resp.Auth.Period = sysView.MaxLeaseTTL()
 		}
 		resp.Auth.TTL = resp.Auth.Period
@@ -784,9 +787,9 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 
 	// Update the expiration time
 	m.updatePending(le, resp.Auth.LeaseTotal())
-	return &logical.Response{
-		Auth: resp.Auth,
-	}, nil
+
+	retResp.Auth = resp.Auth
+	return retResp, nil
 }
 
 // Register is used to take a request and response with an associated
