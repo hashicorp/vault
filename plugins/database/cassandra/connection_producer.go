@@ -115,7 +115,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 	return nil
 }
 
-func (c *cassandraConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
+func (c *cassandraConnectionProducer) Connection(_ context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
