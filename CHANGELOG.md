@@ -2,6 +2,12 @@
 
 DEPRECATIONS/CHANGES:
 
+ * AppRole Case Sensitivity: In prior versions of Vault, `list` operations
+   against AppRole roles would require preserving case in the role name, even
+   though most other operations within AppRole are case-insensitive with
+   respect to the role name. This has been fixed; existing roles will behave as
+   they have in the past, but new roles will act case-insensitively in these
+   cases.
  * Token Auth Backend Roles parameter types: For `allowed_policies` and
    `disallowed_policies` in role definitions in the token auth backend, input
    can now be a comma-separated string or an array of strings. Reading a role
@@ -9,6 +15,13 @@ DEPRECATIONS/CHANGES:
  * Transit key exporting: You can now mark a key in the `transit` backend as
    `exportable` at any time, rather than just at creation time; however, once
    this value is set, it still cannot be unset.
+ * PKI Secret Backend Roles parameter types: For `allowed_domains` and
+   `key_usage` in role definitions in the PKI secret backend, input
+   can now be a comma-separated string or an array of strings. Reading a role
+   will now return arrays for these parameters.
+ * SSH Dynamic Keys Method Defaults to 2048-bit Keys: When using the dynamic
+   key method in the SSH backend, the default is now to use 2048-bit keys if no
+   specific key bit size is specified.
 
 IMPROVEMENTS:
 
@@ -22,15 +35,24 @@ IMPROVEMENTS:
    during database configuration. This establishes a session-wide [write
    concern](https://docs.mongodb.com/manual/reference/write-concern/) for the
    lifecycle of the mount [GH-3646]
+ * secret/pki: `allowed_domains` and `key_usage` can now be specified
+   as a comma-separated string or an array of strings [GH-3642]
+ * secret/ssh: Allow 4096-bit keys to be used in dynamic key method [GH-3593]
 
 BUG FIXES:
 
+ * auth/approle: Fix case-sensitive/insensitive comparison issue [GH-3665]
  * auth/cert: Return `allowed_names` on role read [GH-3654]
+ * auth/ldap: Fix incorrect control information being sent [GH-3402] [GH-3496]
+   [GH-3625] [GH-3656]
  * core: Fix potential panic that could occur using plugins when a node
    transitioned from active to standby [GH-3638]
+ * core: Replace recursive token revocation logic with depth-first logic, which
+   can avoid hitting stack depth limits in extreme cases [GH-2348]
  * core/pkcs11 (enterprise): Fix panic when PKCS#11 library is not readable
  * database/mysql: Allow the creation statement to use commands that are not yet
    supported by the prepare statement protocol [GH-3619]
+ * plugin/auth-gcp: Fix IAM roles when using `allow_gce_inference` [VPAG-19]
 
 ## 0.9.0.1 (November 21st, 2017) (Enterprise Only)
 

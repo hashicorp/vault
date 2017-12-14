@@ -31,7 +31,6 @@ update your API calls accordingly.
 * [Rotate CRLs](#rotate-crls)
 * [Generate Intermediate](#generate-intermediate)
 * [Set Signed Intermediate](#set-signed-intermediate)
-* [Read Certificate](#read-certificate)
 * [Generate Certificate](#generate-certificate)
 * [Revoke Certificate](#revoke-certificate)
 * [Create/Update Role](#create-update-role)
@@ -50,8 +49,8 @@ update your API calls accordingly.
 
 This endpoint retrieves the CA certificate *in raw DER-encoded form*. This is a
 bare endpoint that does not return a standard Vault data structure and cannot
-be read by the Vault CLI. If `/pem` is added to the endpoint, the CA
-certificate is returned in PEM format.
+be read by the Vault CLI; use `/pki/cert` for that. If `/pem` is added to the
+endpoint, the CA certificate is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
@@ -76,7 +75,7 @@ $ curl \
 
 This endpoint retrieves the CA certificate chain, including the CA _in PEM
 format_. This is a bare endpoint that does not return a standard Vault data
-structure and cannot be read by the Vault CLI.
+structure and cannot be read by the Vault CLI; use `/pki/cert` for that.
 
 This is an unauthenticated endpoint.
 
@@ -100,7 +99,7 @@ $ curl \
 ## Read Certificate
 
 This endpoint retrieves one of a selection of certificates. This endpoint returns the certificate in PEM formatting in the
-`certificate` key of the JSON object.
+`certificate` key of the JSON object, which is a standard Vault response that is readable by the Vault CLI.
 
 This is an unauthenticated endpoint.
 
@@ -111,8 +110,9 @@ This is an unauthenticated endpoint.
 ### Parameters
 
 - `serial` `(string: <required>)` – Specifies the serial of the key to read.
-  This is part of the request URL. Valid values: are:
+  This is part of the request URL. Valid values for `serial` are:
 
+    - `<serial>` for the certificate with the given serial number
     - `ca` for the CA certificate
     - `crl` for the current CRL
     - `ca_chain` for the CA trust chain or a serial number in either hyphen-separated or colon-separated octal format
@@ -350,8 +350,8 @@ $ curl \
 This endpoint retrieves the current CRL **in raw DER-encoded form**. This
 endpoint is suitable for usage in the CRL Distribution Points extension in a CA
 certificate. This is a bare endpoint that does not return a standard Vault data
-structure. If `/pem` is added to the endpoint, the CRL is returned in PEM
-format.
+structure and cannot be parsed by the Vault CLI; use `/pki/cert/crl` in that case.
+If `/pem` is added to the endpoint, the CRL is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
@@ -684,9 +684,8 @@ request is denied.
   certificates for `localhost` as one of the requested common names. This is
   useful for testing and to allow clients on a single host to talk securely.
 
-- `allowed_domains` `(string: "")` – Specifies the domains of the role, provided
-  as a comma-separated list. This is used with the `allow_bare_domains` and
-  `allow_subdomains` options.
+- `allowed_domains` `(list: [])` – Specifies the domains of the role. This is 
+  used with the `allow_bare_domains` and `allow_subdomains` options.
 
 - `allow_bare_domains` `(bool: false)` – Specifies if clients can request
   certificates matching the value of the actual domains themselves; e.g. if a
@@ -738,12 +737,11 @@ request is denied.
   https://golang.org/pkg/crypto/elliptic/#Curve for an overview of allowed bit
   lengths for `ec`.
 
-- `key_usage` `(string: "DigitalSignature,KeyAgreement,KeyEncipherment")` –
-  Specifies the allowed key usage constraint on issued certificates. This is a
-  comma-separated string; valid values can be found at
-  https://golang.org/pkg/crypto/x509/#KeyUsage - simply drop the `KeyUsage` part
-  of the value. Values are not case-sensitive. To specify no key usage
-  constraints, set this to an empty string.
+- `key_usage` `(list: ["DigitalSignature", "KeyAgreement", "KeyEncipherment"])` –
+  Specifies the allowed key usage constraint on issued certificates. Valid 
+  values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage - simply 
+  drop the `KeyUsage` part of the value. Values are not case-sensitive. To 
+  specify no key usage constraints, set this to an empty list.
 
 - `use_csr_common_name` `(bool: true)` – When used with the CSR signing
   endpoint, the common name in the CSR will be used instead of taken from the
@@ -782,7 +780,7 @@ This option implies a value of `false` for `generate_lease`.
 
 ```json
 {
-  "allowed_domains": "example.com",
+  "allowed_domains": ["example.com"],
   "allow_subdomains": true
 }
 ```
@@ -827,7 +825,7 @@ $ curl \
     "allow_ip_sans": true,
     "allow_localhost": true,
     "allow_subdomains": false,
-    "allowed_domains": "example.com,foobar.com",
+    "allowed_domains": ["example.com", "foobar.com"],
     "client_flag": true,
     "code_signing_flag": false,
     "key_bits": 2048,
