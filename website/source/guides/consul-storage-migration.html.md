@@ -66,7 +66,7 @@ On the **source** Consul server cluster that contains the Vault data to be saved
  Saved and verified snapshot to index 362428
 ```
 
-### Destinatation Consul Server Cluster
+### Destination Consul Server Cluster
 
 On the **destination** Consul server cluster that will contain the Vault data to be restored from snapshot:
 
