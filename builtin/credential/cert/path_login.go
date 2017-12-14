@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
@@ -279,7 +280,9 @@ func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, conf
 	// and drop the tag bytes. And get the number of bytes from the tag.
 	clientExtMap := make(map[string]string, len(clientCert.Extensions))
 	for _, ext := range clientCert.Extensions {
-		clientExtMap[ext.Id.String()] = string(ext.Value[2 : 2+ext.Value[1]])
+		var parsedValue string
+		asn1.Unmarshal(ext.Value, &parsedValue)
+		clientExtMap[ext.Id.String()] = parsedValue
 	}
 	// If any of the required extensions don't match the constraint fails
 	for _, requiredExt := range config.Entry.RequiredExtensions {
