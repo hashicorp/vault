@@ -93,13 +93,11 @@ Before using this method, you should be familiar with our replication documentat
 - [Replication Setup & Guidance][vault-replication-guide]
 - [Vault Replication API][vault-replication-api]
 
--> **IMPORTANT**: Please see the **Post Restoration** section for details on what to do after restoring Vault data.
-
 ## Post Restoration
 
 This section contains important notes which you should familiarize yourself with prior to performing any migration or backup/restore of Vault data in Consul.
 
-Please be aware of the following caveats and conditions around restoring Vault data before you proceed with a backup and restoration.
+Please be aware of the following caveats and conditions around restoring Vault data before you proceed with backup and restoration that is not based on DR mode replication.
 
 ### High Availability Mode Lock
 
