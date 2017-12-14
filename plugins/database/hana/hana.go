@@ -1,6 +1,7 @@
 package hana
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -25,6 +26,8 @@ type HANA struct {
 	connutil.ConnectionProducer
 	credsutil.CredentialsProducer
 }
+
+var _ dbplugin.Database = &HANA{}
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
@@ -63,8 +66,8 @@ func (h *HANA) Type() (string, error) {
 	return hanaTypeName, nil
 }
 
-func (h *HANA) getConnection() (*sql.DB, error) {
-	db, err := h.Connection()
+func (h *HANA) getConnection(ctx context.Context) (*sql.DB, error) {
+	db, err := h.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -74,13 +77,13 @@ func (h *HANA) getConnection() (*sql.DB, error) {
 
 // CreateUser generates the username/password on the underlying HANA secret backend
 // as instructed by the CreationStatement provided.
-func (h *HANA) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	h.Lock()
 	defer h.Unlock()
 
 	// Get the connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -153,9 +156,9 @@ func (h *HANA) CreateUser(statements dbplugin.Statements, usernameConfig dbplugi
 }
 
 // Renewing hana user just means altering user's valid until property
-func (h *HANA) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// Get connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -193,14 +196,14 @@ func (h *HANA) RenewUser(statements dbplugin.Statements, username string, expira
 }
 
 // Revoking hana user will deactivate user and try to perform a soft drop
-func (h *HANA) RevokeUser(statements dbplugin.Statements, username string) error {
+func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// default revoke will be a soft drop on user
 	if statements.RevocationStatements == "" {
-		return h.revokeUserDefault(username)
+		return h.revokeUserDefault(ctx, username)
 	}
 
 	// Get connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -239,9 +242,9 @@ func (h *HANA) RevokeUser(statements dbplugin.Statements, username string) error
 	return nil
 }
 
-func (h *HANA) revokeUserDefault(username string) error {
+func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 	// Get connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return err
 	}

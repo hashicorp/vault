@@ -1,6 +1,7 @@
 package dbplugin
 
 import (
+	"context"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -15,55 +16,56 @@ type databaseTracingMiddleware struct {
 	next   Database
 	logger log.Logger
 
-	typeStr string
+	typeStr   string
+	transport string
 }
 
 func (mw *databaseTracingMiddleware) Type() (string, error) {
 	return mw.next.Type()
 }
 
-func (mw *databaseTracingMiddleware) CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (mw *databaseTracingMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "CreateUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		mw.logger.Trace("database", "operation", "CreateUser", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "CreateUser", "status", "started", "type", mw.typeStr)
-	return mw.next.CreateUser(statements, usernameConfig, expiration)
+	mw.logger.Trace("database", "operation", "CreateUser", "status", "started", "type", mw.typeStr, "transport", mw.transport)
+	return mw.next.CreateUser(ctx, statements, usernameConfig, expiration)
 }
 
-func (mw *databaseTracingMiddleware) RenewUser(statements Statements, username string, expiration time.Time) (err error) {
+func (mw *databaseTracingMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "RenewUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		mw.logger.Trace("database", "operation", "RenewUser", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "RenewUser", "status", "started", mw.typeStr)
-	return mw.next.RenewUser(statements, username, expiration)
+	mw.logger.Trace("database", "operation", "RenewUser", "status", "started", mw.typeStr, "transport", mw.transport)
+	return mw.next.RenewUser(ctx, statements, username, expiration)
 }
 
-func (mw *databaseTracingMiddleware) RevokeUser(statements Statements, username string) (err error) {
+func (mw *databaseTracingMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "RevokeUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		mw.logger.Trace("database", "operation", "RevokeUser", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "RevokeUser", "status", "started", "type", mw.typeStr)
-	return mw.next.RevokeUser(statements, username)
+	mw.logger.Trace("database", "operation", "RevokeUser", "status", "started", "type", mw.typeStr, "transport", mw.transport)
+	return mw.next.RevokeUser(ctx, statements, username)
 }
 
-func (mw *databaseTracingMiddleware) Initialize(conf map[string]interface{}, verifyConnection bool) (err error) {
+func (mw *databaseTracingMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "Initialize", "status", "finished", "type", mw.typeStr, "verify", verifyConnection, "err", err, "took", time.Since(then))
+		mw.logger.Trace("database", "operation", "Initialize", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "verify", verifyConnection, "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "Initialize", "status", "started", "type", mw.typeStr)
-	return mw.next.Initialize(conf, verifyConnection)
+	mw.logger.Trace("database", "operation", "Initialize", "status", "started", "type", mw.typeStr, "transport", mw.transport)
+	return mw.next.Initialize(ctx, conf, verifyConnection)
 }
 
 func (mw *databaseTracingMiddleware) Close() (err error) {
 	defer func(then time.Time) {
-		mw.logger.Trace("database", "operation", "Close", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		mw.logger.Trace("database", "operation", "Close", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Trace("database", "operation", "Close", "status", "started", "type", mw.typeStr)
+	mw.logger.Trace("database", "operation", "Close", "status", "started", "type", mw.typeStr, "transport", mw.transport)
 	return mw.next.Close()
 }
 
@@ -81,7 +83,7 @@ func (mw *databaseMetricsMiddleware) Type() (string, error) {
 	return mw.next.Type()
 }
 
-func (mw *databaseMetricsMiddleware) CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (mw *databaseMetricsMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "CreateUser"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "CreateUser"}, now)
@@ -94,10 +96,10 @@ func (mw *databaseMetricsMiddleware) CreateUser(statements Statements, usernameC
 
 	metrics.IncrCounter([]string{"database", "CreateUser"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "CreateUser"}, 1)
-	return mw.next.CreateUser(statements, usernameConfig, expiration)
+	return mw.next.CreateUser(ctx, statements, usernameConfig, expiration)
 }
 
-func (mw *databaseMetricsMiddleware) RenewUser(statements Statements, username string, expiration time.Time) (err error) {
+func (mw *databaseMetricsMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "RenewUser"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "RenewUser"}, now)
@@ -110,10 +112,10 @@ func (mw *databaseMetricsMiddleware) RenewUser(statements Statements, username s
 
 	metrics.IncrCounter([]string{"database", "RenewUser"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "RenewUser"}, 1)
-	return mw.next.RenewUser(statements, username, expiration)
+	return mw.next.RenewUser(ctx, statements, username, expiration)
 }
 
-func (mw *databaseMetricsMiddleware) RevokeUser(statements Statements, username string) (err error) {
+func (mw *databaseMetricsMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "RevokeUser"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "RevokeUser"}, now)
@@ -126,10 +128,10 @@ func (mw *databaseMetricsMiddleware) RevokeUser(statements Statements, username 
 
 	metrics.IncrCounter([]string{"database", "RevokeUser"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "RevokeUser"}, 1)
-	return mw.next.RevokeUser(statements, username)
+	return mw.next.RevokeUser(ctx, statements, username)
 }
 
-func (mw *databaseMetricsMiddleware) Initialize(conf map[string]interface{}, verifyConnection bool) (err error) {
+func (mw *databaseMetricsMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "Initialize"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "Initialize"}, now)
@@ -142,7 +144,7 @@ func (mw *databaseMetricsMiddleware) Initialize(conf map[string]interface{}, ver
 
 	metrics.IncrCounter([]string{"database", "Initialize"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "Initialize"}, 1)
-	return mw.next.Initialize(conf, verifyConnection)
+	return mw.next.Initialize(ctx, conf, verifyConnection)
 }
 
 func (mw *databaseMetricsMiddleware) Close() (err error) {
