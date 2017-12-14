@@ -760,6 +760,29 @@ func (c *TestCluster) ensureCoresSealed() error {
 	return nil
 }
 
+func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
+	for _, core := range c.Cores {
+		if err := core.UnsealWithStoredKeys(); err != nil {
+			return err
+		}
+		timeout := time.Now().Add(60 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				return fmt.Errorf("timeout waiting for core to unseal")
+			}
+			sealed, err := core.Sealed()
+			if err != nil {
+				return err
+			}
+			if !sealed {
+				break
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+	return nil
+}
+
 type TestListener struct {
 	net.Listener
 	Address *net.TCPAddr
@@ -790,6 +813,7 @@ type TestClusterOptions struct {
 	NumCores           int
 	SealFunc           func() Seal
 	RawLogger          interface{}
+	TempDir            string
 }
 
 var DefaultNumCores = 3
@@ -833,11 +857,20 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	var testCluster TestCluster
-	tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
-	if err != nil {
-		t.Fatal(err)
+	if opts != nil && opts.TempDir != "" {
+		if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(opts.TempDir, 0700); err != nil {
+				t.Fatal(err)
+			}
+		}
+		testCluster.TempDir = opts.TempDir
+	} else {
+		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		testCluster.TempDir = tempDir
 	}
-	testCluster.TempDir = tempDir
 
 	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

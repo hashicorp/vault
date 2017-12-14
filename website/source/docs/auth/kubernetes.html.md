@@ -111,7 +111,7 @@ login it first must be configured in a role.
 
 ```
 vault write auth/kubernetes/role/demo \
-    bound_service_account_names=vault-auth \ 
+    bound_service_account_names=vault-auth \
     bound_service_account_namespaces=default \
     policies=default \
     ttl=1h
@@ -154,12 +154,6 @@ subjects:
   name: vault-auth
   namespace: default
 ```
-
-### GKE 
-
-Currently the Token Review API endpoint is only available in alpha clusters on
-Google Container Engine. This means on GKE this backend can only be used with an
-alpha cluster.
 
 ## API
 

@@ -131,10 +131,11 @@ func (b *backend) pathCertRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"certificate":  cert.Certificate,
-			"display_name": cert.DisplayName,
-			"policies":     cert.Policies,
-			"ttl":          duration / time.Second,
+			"certificate":   cert.Certificate,
+			"display_name":  cert.DisplayName,
+			"policies":      cert.Policies,
+			"ttl":           duration / time.Second,
+			"allowed_names": cert.AllowedNames,
 		},
 	}, nil
 }
