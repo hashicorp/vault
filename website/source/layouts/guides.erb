@@ -1,6 +1,11 @@
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
     <ul class="nav docs-sidenav">
+
+      <li<%= sidebar_current("guides-consul-storage-migration") %>>
+        <a href="/guides/consul-storage-migration.html">Consul Storage Migration</a>
+      </li>
+
       <li<%= sidebar_current("guides-production-hardening") %>>
         <a href="/guides/production.html">Production Hardening</a>
       </li>
