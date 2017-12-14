@@ -22,6 +22,17 @@ DEPRECATIONS/CHANGES:
  * SSH Dynamic Keys Method Defaults to 2048-bit Keys: When using the dynamic
    key method in the SSH backend, the default is now to use 2048-bit keys if no
    specific key bit size is specified.
+ * Consul Secret Backend lease handling: The `consul` secret backend can now
+   accept both strings and integer numbers of seconds for its lease value. The
+   value returned on a role read will be an integer number of seconds instead
+   of a human-friendly string.
+
+FEATURES:
+
+ * **Transit Backup/Restore**: The `transit` backend now supports a backup
+   operation that can export a given key, including all key versions and
+   configuration, as well as a restore operation allowing import into another
+   Vault.
 
 IMPROVEMENTS:
 
@@ -38,6 +49,8 @@ IMPROVEMENTS:
  * secret/pki: `allowed_domains` and `key_usage` can now be specified
    as a comma-separated string or an array of strings [GH-3642]
  * secret/ssh: Allow 4096-bit keys to be used in dynamic key method [GH-3593]
+ * secret/consul: The Consul secret backend now uses the value of `lease` set
+   on the role, if set, when renewing a secret. [GH-3796]
 
 BUG FIXES:
 
