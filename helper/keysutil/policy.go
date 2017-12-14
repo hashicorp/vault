@@ -51,6 +51,16 @@ const (
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
 
+type RestoreInfo struct {
+	Time    time.Time `json:"time"`
+	Version int       `json:"version"`
+}
+
+type BackupInfo struct {
+	Time    time.Time `json:"time"`
+	Version int       `json:"version"`
+}
+
 type SigningResult struct {
 	Signature string
 	PublicKey []byte
@@ -117,6 +127,11 @@ func (kt KeyType) String() string {
 	}
 
 	return "[unknown]"
+}
+
+type KeyData struct {
+	Policy       *Policy       `json:"policy"`
+	ArchivedKeys *archivedKeys `json:"archived_keys"`
 }
 
 // KeyEntry stores the key and metadata
@@ -213,6 +228,17 @@ type Policy struct {
 
 	// The type of key
 	Type KeyType `json:"type"`
+
+	// BackupInfo indicates the information about the backup action taken on
+	// this policy
+	BackupInfo *BackupInfo `json:"backup_info"`
+
+	// RestoreInfo indicates the information about the restore action taken on
+	// this policy
+	RestoreInfo *RestoreInfo `json:"restore_info"`
+
+	// AllowPlaintextBackup allows taking backup of the policy in plaintext
+	AllowPlaintextBackup bool `json:"allow_plaintext_backup"`
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -1024,4 +1050,44 @@ func (p *Policy) MigrateKeyToKeysMap() {
 		},
 	}
 	p.Key = nil
+}
+
+// Backup should be called with an exclusive lock held on the policy
+func (p *Policy) Backup(storage logical.Storage) (string, error) {
+	if !p.Exportable {
+		return "", fmt.Errorf("exporting is disallowed on the policy")
+	}
+
+	if !p.AllowPlaintextBackup {
+		return "", fmt.Errorf("plaintext backup is disallowed on the policy")
+	}
+
+	// Create a record of this backup operation in the policy
+	p.BackupInfo = &BackupInfo{
+		Time:    time.Now(),
+		Version: p.LatestVersion,
+	}
+	err := p.Persist(storage)
+	if err != nil {
+		return "", fmt.Errorf("failed to persist policy with backup info: %v", err)
+	}
+
+	// Load the archive only after persisting the policy as the archive can get
+	// adjusted while persisting the policy
+	archivedKeys, err := p.LoadArchive(storage)
+	if err != nil {
+		return "", err
+	}
+
+	keyData := &KeyData{
+		Policy:       p,
+		ArchivedKeys: archivedKeys,
+	}
+
+	encodedBackup, err := jsonutil.EncodeJSON(keyData)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(encodedBackup), nil
 }

@@ -79,6 +79,13 @@ This allows for all the valid keys
 in the key ring to be exported.`,
 			},
 
+			"allow_plaintext_backup": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `Enables taking a backup of the named
+key in plaintext format. Once set,
+this cannot be disabled.`,
+			},
+
 			"context": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Base64 encoded context for key derivation.
@@ -116,17 +123,19 @@ func (b *backend) pathPolicyWrite(
 	convergent := d.Get("convergent_encryption").(bool)
 	keyType := d.Get("type").(string)
 	exportable := d.Get("exportable").(bool)
+	allowPlaintextBackup := d.Get("allow_plaintext_backup").(bool)
 
 	if !derived && convergent {
 		return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
 	}
 
 	polReq := keysutil.PolicyRequest{
-		Storage:    req.Storage,
-		Name:       name,
-		Derived:    derived,
-		Convergent: convergent,
-		Exportable: exportable,
+		Storage:              req.Storage,
+		Name:                 name,
+		Derived:              derived,
+		Convergent:           convergent,
+		Exportable:           exportable,
+		AllowPlaintextBackup: allowPlaintextBackup,
 	}
 	switch keyType {
 	case "aes256-gcm96":
@@ -195,10 +204,13 @@ func (b *backend) pathPolicyRead(
 			"min_encryption_version": p.MinEncryptionVersion,
 			"latest_version":         p.LatestVersion,
 			"exportable":             p.Exportable,
+			"allow_plaintext_backup": p.AllowPlaintextBackup,
 			"supports_encryption":    p.Type.EncryptionSupported(),
 			"supports_decryption":    p.Type.DecryptionSupported(),
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
+			"backup_info":            p.BackupInfo,
+			"restore_info":           p.RestoreInfo,
 		},
 	}
 
