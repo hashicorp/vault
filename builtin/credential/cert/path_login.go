@@ -112,7 +112,7 @@ func (b *backend) pathLogin(
 
 	// Cap TTL value to CertEntry's MaxTTL if that's set and under sys/mount's MaxLeaseTTL
 	if matched.Entry.MaxTTL > time.Duration(0) && matched.Entry.MaxTTL < b.System().MaxLeaseTTL() && resp.Auth.TTL > matched.Entry.MaxTTL {
-		resp.AddWarning(fmt.Sprintf("Entry's ttl of %d exceeded the entry's max_ttl of %d; TTL value is capped accordingly", (ttl / time.Second), (matched.Entry.MaxTTL / time.Second)))
+		resp.AddWarning(fmt.Sprintf("Entry's ttl of %d exceeded the entry's max_ttl of %d; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (matched.Entry.MaxTTL / time.Second)))
 		resp.Auth.TTL = matched.Entry.MaxTTL
 	}
 
