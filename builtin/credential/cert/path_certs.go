@@ -47,8 +47,9 @@ At least one must exist in either the Common Name or SANs. Supports globbing.`,
 
 			"required_extensions": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
-				Description: `A comma-separated list of extensions
-formatted as "$oid:value". All values much match. Supports globbing on $value.`,
+				Description: `A comma-separated string or array of extensions
+formatted as "oid:value". Expects the extension value to be some type of ASN1 encoded string.
+All values much match. Supports globbing on "value".`,
 			},
 
 			"display_name": &framework.FieldSchema{
