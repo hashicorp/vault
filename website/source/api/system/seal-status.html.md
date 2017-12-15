@@ -32,10 +32,12 @@ The "t" parameter is the threshold, and "n" is the number of shares.
 
 ```json
 {
+  "type": "shamir",
   "sealed": true,
   "t": 3,
   "n": 5,
   "progress": 2,
+  "nonce": "",
   "version": "0.9.0"
 }
 ```
