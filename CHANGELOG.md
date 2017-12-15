@@ -50,6 +50,8 @@ IMPROVEMENTS:
    lifecycle of the mount [GH-3646]
  * mfa/okta: Filter a given email address as a login filter, allowing operation
    when login email and account email are different
+ * plugins: Make Vault more resilient when unsealing when plugins are
+   unavailable [GH-3686]
  * secret/pki: `allowed_domains` and `key_usage` can now be specified
    as a comma-separated string or an array of strings [GH-3642]
  * secret/ssh: Allow 4096-bit keys to be used in dynamic key method [GH-3593]
