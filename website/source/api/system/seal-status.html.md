@@ -46,6 +46,7 @@ Sample response when Vault is unsealed.
 
 ```json
 {
+  "type": "shamir",
   "sealed": false,
   "t": 3,
   "n": 5,
