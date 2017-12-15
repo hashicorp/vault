@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -79,7 +80,7 @@ func TestMongoDB_Initialize(t *testing.T) {
 	db := dbRaw.(*MongoDB)
 	connProducer := db.ConnectionProducer.(*mongoDBConnectionProducer)
 
-	err = db.Initialize(connectionDetails, true)
+	err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -107,7 +108,7 @@ func TestMongoDB_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	db := dbRaw.(*MongoDB)
-	err = db.Initialize(connectionDetails, true)
+	err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -121,7 +122,7 @@ func TestMongoDB_CreateUser(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -145,7 +146,7 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	db := dbRaw.(*MongoDB)
-	err = db.Initialize(connectionDetails, true)
+	err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -159,7 +160,7 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -182,7 +183,7 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	db := dbRaw.(*MongoDB)
-	err = db.Initialize(connectionDetails, true)
+	err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -196,7 +197,7 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -206,7 +207,7 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 	}
 
 	// Test default revocation statememt
-	err = db.RevokeUser(statements, username)
+	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

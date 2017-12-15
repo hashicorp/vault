@@ -379,6 +379,8 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 	return &dynamicSystemView{c, me}
 }
 
+// TestAddTestPlugin registers the testFunc as part of the plugin command to the
+// plugin catalog.
 func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
@@ -413,11 +415,74 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 	}
 }
 
+// TestAddTestPluginTempDir registers the testFunc as part of the plugin command to the
+// plugin catalog. It uses tmpDir as the plugin directory.
+func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir string) {
+	file, err := os.Open(os.Args[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	fi, err := file.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Copy over the file to the temp dir
+	dst := filepath.Join(tempDir, filepath.Base(os.Args[0]))
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer out.Close()
+
+	if _, err = io.Copy(out, file); err != nil {
+		t.Fatal(err)
+	}
+	err = out.Sync()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Determine plugin directory full path
+	fullPath, err := filepath.EvalSymlinks(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	reader, err := os.Open(filepath.Join(fullPath, filepath.Base(os.Args[0])))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+
+	// Find out the sha256
+	hash := sha256.New()
+
+	_, err = io.Copy(hash, reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sum := hash.Sum(nil)
+
+	// Set core's plugin directory and plugin catalog directory
+	c.pluginDirectory = fullPath
+	c.pluginCatalog.directory = fullPath
+
+	command := fmt.Sprintf("%s --test.run=%s", filepath.Base(os.Args[0]), testFunc)
+	err = c.pluginCatalog.Set(name, command, sum)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 var testLogicalBackends = map[string]logical.Factory{}
 var testCredentialBackends = map[string]logical.Factory{}
 
-// Starts the test server which responds to SSH authentication.
-// Used to test the SSH secret backend.
+// StartSSHHostTestServer starts the test server which responds to SSH
+// authentication. Used to test the SSH secret backend.
 func StartSSHHostTestServer() (string, error) {
 	pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(testSharedPublicKey))
 	if err != nil {
@@ -760,6 +825,7 @@ func (c *TestCluster) ensureCoresSealed() error {
 	return nil
 }
 
+// UnsealWithStoredKeys uses stored keys to unseal the test cluster cores
 func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
 	for _, core := range c.Cores {
 		if err := core.UnsealWithStoredKeys(); err != nil {

@@ -1,6 +1,7 @@
 package hana
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -25,6 +26,8 @@ type HANA struct {
 	connutil.ConnectionProducer
 	credsutil.CredentialsProducer
 }
+
+var _ dbplugin.Database = &HANA{}
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
@@ -63,8 +66,8 @@ func (h *HANA) Type() (string, error) {
 	return hanaTypeName, nil
 }
 
-func (h *HANA) getConnection() (*sql.DB, error) {
-	db, err := h.Connection()
+func (h *HANA) getConnection(ctx context.Context) (*sql.DB, error) {
+	db, err := h.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -74,13 +77,13 @@ func (h *HANA) getConnection() (*sql.DB, error) {
 
 // CreateUser generates the username/password on the underlying HANA secret backend
 // as instructed by the CreationStatement provided.
-func (h *HANA) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	h.Lock()
 	defer h.Unlock()
 
 	// Get the connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -117,7 +120,7 @@ func (h *HANA) CreateUser(statements dbplugin.Statements, usernameConfig dbplugi
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -130,7 +133,7 @@ func (h *HANA) CreateUser(statements dbplugin.Statements, usernameConfig dbplugi
 			continue
 		}
 
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
 			"name":       username,
 			"password":   password,
 			"expiration": expirationStr,
@@ -139,7 +142,7 @@ func (h *HANA) CreateUser(statements dbplugin.Statements, usernameConfig dbplugi
 			return "", "", err
 		}
 		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return "", "", err
 		}
 	}
@@ -153,15 +156,15 @@ func (h *HANA) CreateUser(statements dbplugin.Statements, usernameConfig dbplugi
 }
 
 // Renewing hana user just means altering user's valid until property
-func (h *HANA) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// Get connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -175,12 +178,12 @@ func (h *HANA) RenewUser(statements dbplugin.Statements, username string, expira
 	}
 
 	// Renew user's valid until property field
-	stmt, err := tx.Prepare("ALTER USER " + username + " VALID UNTIL " + "'" + expirationStr + "'")
+	stmt, err := tx.PrepareContext(ctx, "ALTER USER "+username+" VALID UNTIL "+"'"+expirationStr+"'")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
+	if _, err := stmt.ExecContext(ctx); err != nil {
 		return err
 	}
 
@@ -193,20 +196,20 @@ func (h *HANA) RenewUser(statements dbplugin.Statements, username string, expira
 }
 
 // Revoking hana user will deactivate user and try to perform a soft drop
-func (h *HANA) RevokeUser(statements dbplugin.Statements, username string) error {
+func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// default revoke will be a soft drop on user
 	if statements.RevocationStatements == "" {
-		return h.revokeUserDefault(username)
+		return h.revokeUserDefault(ctx, username)
 	}
 
 	// Get connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -219,14 +222,14 @@ func (h *HANA) RevokeUser(statements dbplugin.Statements, username string) error
 			continue
 		}
 
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
 			"name": username,
 		}))
 		if err != nil {
 			return err
 		}
 		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return err
 		}
 	}
@@ -239,38 +242,38 @@ func (h *HANA) RevokeUser(statements dbplugin.Statements, username string) error
 	return nil
 }
 
-func (h *HANA) revokeUserDefault(username string) error {
+func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 	// Get connection
-	db, err := h.getConnection()
+	db, err := h.getConnection(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
 	// Disable server login for user
-	disableStmt, err := tx.Prepare(fmt.Sprintf("ALTER USER %s DEACTIVATE USER NOW", username))
+	disableStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("ALTER USER %s DEACTIVATE USER NOW", username))
 	if err != nil {
 		return err
 	}
 	defer disableStmt.Close()
-	if _, err := disableStmt.Exec(); err != nil {
+	if _, err := disableStmt.ExecContext(ctx); err != nil {
 		return err
 	}
 
 	// Invalidates current sessions and performs soft drop (drop if no dependencies)
 	// if hard drop is desired, custom revoke statements should be written for role
-	dropStmt, err := tx.Prepare(fmt.Sprintf("DROP USER %s RESTRICT", username))
+	dropStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("DROP USER %s RESTRICT", username))
 	if err != nil {
 		return err
 	}
 	defer dropStmt.Close()
-	if _, err := dropStmt.Exec(); err != nil {
+	if _, err := dropStmt.ExecContext(ctx); err != nil {
 		return err
 	}
 

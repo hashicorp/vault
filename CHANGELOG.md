@@ -33,6 +33,8 @@ FEATURES:
    operation that can export a given key, including all key versions and
    configuration, as well as a restore operation allowing import into another
    Vault.
+ * **gRPC Database Plugins**: Database plugins now use gRPC for transport,
+   allowing them to be written in other languages.
 
 IMPROVEMENTS:
 
@@ -46,6 +48,10 @@ IMPROVEMENTS:
    during database configuration. This establishes a session-wide [write
    concern](https://docs.mongodb.com/manual/reference/write-concern/) for the
    lifecycle of the mount [GH-3646]
+ * mfa/okta: Filter a given email address as a login filter, allowing operation
+   when login email and account email are different
+ * plugins: Make Vault more resilient when unsealing when plugins are
+   unavailable [GH-3686]
  * secret/pki: `allowed_domains` and `key_usage` can now be specified
    as a comma-separated string or an array of strings [GH-3642]
  * secret/ssh: Allow 4096-bit keys to be used in dynamic key method [GH-3593]
@@ -58,8 +64,12 @@ BUG FIXES:
  * auth/cert: Return `allowed_names` on role read [GH-3654]
  * auth/ldap: Fix incorrect control information being sent [GH-3402] [GH-3496]
    [GH-3625] [GH-3656]
+ * core: Fix seal status reporting when using an autoseal
+ * core: Add creation path to wrap info for a control group token
  * core: Fix potential panic that could occur using plugins when a node
    transitioned from active to standby [GH-3638]
+ * core: Fix memory ballooning when a connection would connect to the cluster
+   port and then go away -- redux! [GH-3680]
  * core: Replace recursive token revocation logic with depth-first logic, which
    can avoid hitting stack depth limits in extreme cases [GH-2348]
  * core/pkcs11 (enterprise): Fix panic when PKCS#11 library is not readable
