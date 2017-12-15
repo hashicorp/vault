@@ -110,25 +110,10 @@ func (b *backend) pathLogin(
 		},
 	}
 
-	if matched.Entry.Period > time.Duration(0) {
-		resp.Auth.TTL = matched.Entry.Period
-	} else {
-		shortestTTL := b.System().DefaultLeaseTTL()
-		if matched.Entry.TTL > time.Duration(0) && matched.Entry.TTL < shortestTTL {
-			shortestTTL = matched.Entry.TTL
-		}
-
-		maxTTL := b.System().MaxLeaseTTL()
-		if matched.Entry.MaxTTL > time.Duration(0) && matched.Entry.MaxTTL < maxTTL {
-			maxTTL = matched.Entry.MaxTTL
-		}
-
-		if shortestTTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of %d exceeded the effective max_ttl of %d; TTL value is capped accordingly", (ttl / time.Second), (maxTTL / time.Second)))
-			shortestTTL = maxTTL
-		}
-
-		resp.Auth.TTL = shortestTTL
+	// Cap TTL value to CertEntry's MaxTTL if that's set and under sys/mount's MaxLeaseTTL
+	if matched.Entry.MaxTTL > time.Duration(0) && matched.Entry.MaxTTL < b.System().MaxLeaseTTL() && resp.Auth.TTL > matched.Entry.MaxTTL {
+		resp.AddWarning(fmt.Sprintf("Entry's ttl of %d exceeded the entry's max_ttl of %d; TTL value is capped accordingly", (ttl / time.Second), (matched.Entry.MaxTTL / time.Second)))
+		resp.Auth.TTL = matched.Entry.MaxTTL
 	}
 
 	// Generate a response
@@ -184,16 +169,12 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	// If 'Period' is set on the Role, the token should never expire.
-	// Replenish the TTL with 'Period's value.
-	if cert.Period > time.Duration(0) {
-		// If 'Period' was updated after the token was issued,
-		// token will bear the updated 'Period' value as its TTL.
-		req.Auth.TTL = cert.Period
-		return &logical.Response{Auth: req.Auth}, nil
+	resp, err := framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(req, d)
+	if err != nil {
+		return nil, err
 	}
-
-	return framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(req, d)
+	resp.Auth.Period = cert.Period
+	return resp, nil
 }
 
 func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
