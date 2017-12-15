@@ -983,13 +983,12 @@ func (b *backend) pathLoginRenewIam(
 		}
 	}
 
-	// If 'Period' is set on the role, then the token should never expire.
-	if roleEntry.Period > time.Duration(0) {
-		req.Auth.TTL = roleEntry.Period
-		return &logical.Response{Auth: req.Auth}, nil
-	} else {
-		return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+	resp, err := framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+	if err != nil {
+		return nil, err
 	}
+	resp.Auth.Period = roleEntry.Period
+	return resp, nil
 }
 
 func (b *backend) pathLoginRenewEc2(
@@ -1070,24 +1069,12 @@ func (b *backend) pathLoginRenewEc2(
 		return nil, err
 	}
 
-	// If 'Period' is set on the role, then the token should never expire. Role
-	// tag does not have a 'Period' field. So, regarless of whether the token
-	// was issued using a role login or a role tag login, the period set on the
-	// role should take effect.
-	if roleEntry.Period > time.Duration(0) {
-		req.Auth.TTL = roleEntry.Period
-		return &logical.Response{Auth: req.Auth}, nil
-	} else {
-		// Cap the TTL value
-		shortestTTL := b.System().DefaultLeaseTTL()
-		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-			shortestTTL = roleEntry.TTL
-		}
-		if shortestMaxTTL < shortestTTL {
-			shortestTTL = shortestMaxTTL
-		}
-		return framework.LeaseExtend(shortestTTL, shortestMaxTTL, b.System())(req, data)
+	resp, err := framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+	if err != nil {
+		return nil, err
 	}
+	resp.Auth.Period = roleEntry.Period
+	return resp, nil
 }
 
 func (b *backend) pathLoginUpdateIam(
