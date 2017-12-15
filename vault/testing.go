@@ -415,6 +415,8 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 	}
 }
 
+// TestAddTestPluginTempDir registers the testFunc as part of the plugin command to the
+// plugin catalog. It uses tmpDir as the plugin directory.
 func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
@@ -443,6 +445,7 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir stri
 		t.Fatal(err)
 	}
 
+	// Determine plugin directory full path
 	fullPath, err := filepath.EvalSymlinks(tempDir)
 	if err != nil {
 		t.Fatal(err)
@@ -452,6 +455,7 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir stri
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer reader.Close()
 
 	// Find out the sha256
 	hash := sha256.New()
@@ -477,8 +481,8 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir stri
 var testLogicalBackends = map[string]logical.Factory{}
 var testCredentialBackends = map[string]logical.Factory{}
 
-// Starts the test server which responds to SSH authentication.
-// Used to test the SSH secret backend.
+// StartSSHHostTestServer starts the test server which responds to SSH
+// authentication. Used to test the SSH secret backend.
 func StartSSHHostTestServer() (string, error) {
 	pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(testSharedPublicKey))
 	if err != nil {
@@ -821,6 +825,7 @@ func (c *TestCluster) ensureCoresSealed() error {
 	return nil
 }
 
+// UnsealWithStoredKeys uses stored keys to unseal the test cluster cores
 func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
 	for _, core := range c.Cores {
 		if err := core.UnsealWithStoredKeys(); err != nil {
