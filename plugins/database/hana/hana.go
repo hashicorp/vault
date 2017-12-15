@@ -120,7 +120,7 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -133,7 +133,7 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 			continue
 		}
 
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
 			"name":       username,
 			"password":   password,
 			"expiration": expirationStr,
@@ -142,7 +142,7 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 			return "", "", err
 		}
 		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return "", "", err
 		}
 	}
@@ -164,7 +164,7 @@ func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, us
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -178,12 +178,12 @@ func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, us
 	}
 
 	// Renew user's valid until property field
-	stmt, err := tx.Prepare("ALTER USER " + username + " VALID UNTIL " + "'" + expirationStr + "'")
+	stmt, err := tx.PrepareContext(ctx, "ALTER USER "+username+" VALID UNTIL "+"'"+expirationStr+"'")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
+	if _, err := stmt.ExecContext(ctx); err != nil {
 		return err
 	}
 
@@ -209,7 +209,7 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -222,14 +222,14 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 			continue
 		}
 
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
 			"name": username,
 		}))
 		if err != nil {
 			return err
 		}
 		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return err
 		}
 	}
@@ -250,30 +250,30 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
 	// Disable server login for user
-	disableStmt, err := tx.Prepare(fmt.Sprintf("ALTER USER %s DEACTIVATE USER NOW", username))
+	disableStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("ALTER USER %s DEACTIVATE USER NOW", username))
 	if err != nil {
 		return err
 	}
 	defer disableStmt.Close()
-	if _, err := disableStmt.Exec(); err != nil {
+	if _, err := disableStmt.ExecContext(ctx); err != nil {
 		return err
 	}
 
 	// Invalidates current sessions and performs soft drop (drop if no dependencies)
 	// if hard drop is desired, custom revoke statements should be written for role
-	dropStmt, err := tx.Prepare(fmt.Sprintf("DROP USER %s RESTRICT", username))
+	dropStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("DROP USER %s RESTRICT", username))
 	if err != nil {
 		return err
 	}
 	defer dropStmt.Close()
-	if _, err := dropStmt.Exec(); err != nil {
+	if _, err := dropStmt.ExecContext(ctx); err != nil {
 		return err
 	}
 
