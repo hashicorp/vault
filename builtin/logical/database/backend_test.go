@@ -488,9 +488,11 @@ func TestBackend_roleCrud(t *testing.T) {
 		RevocationStatements: defaultRevocationSQL,
 	}
 
-	var actual dbplugin.Statements
-	if err := mapstructure.Decode(resp.Data, &actual); err != nil {
-		t.Fatal(err)
+	actual := dbplugin.Statements{
+		CreationStatements:   resp.Data["creation_statements"].(string),
+		RevocationStatements: resp.Data["revocation_statements"].(string),
+		RollbackStatements:   resp.Data["rollback_statements"].(string),
+		RenewStatements:      resp.Data["renew_statements"].(string),
 	}
 
 	if !reflect.DeepEqual(expected, actual) {

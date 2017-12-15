@@ -43,7 +43,12 @@ values set here cannot be changed after key creation.
   enabled, all encrypt/decrypt requests to this named key must provide a context
   which is used for key derivation.
 
-- `exportable` `(bool: false)` – Specifies if the raw key is exportable.
+- `exportable` `(bool: false)` -  Enables keys to be exportable. This
+  allows for all the valid keys in the key ring to be exported. Once set, this
+  cannot be disabled.
+
+- `allow_plaintext_backup` `(bool: false)` - If set, enables taking backup of
+  named key in the plaintext format. Once set, this cannot be disabled.
 
 - `type` `(string: "aes256-gcm96")` – Specifies the type of key to create. The
   currently-supported types are:
@@ -108,6 +113,7 @@ $ curl \
     "deletion_allowed": false,
     "derived": false,
     "exportable": false,
+    "allow_plaintext_backup": false,
     "keys": {
       "1": 1442851412
     },
@@ -202,8 +208,15 @@ are returned during a read operation on the named key.)
   Must be `0` (which will use the latest version) or a value greater or equal
   to `min_decryption_version`.
 
-- `deletion_allowed` `(bool: false)`- Specifies if the key is allowed to be
+- `deletion_allowed` `(bool: false)` - Specifies if the key is allowed to be
   deleted.
+
+- `exportable` `(bool: false)` -  Enables keys to be exportable. This
+  allows for all the valid keys in the key ring to be exported. Once set, this
+  cannot be disabled.
+
+- `allow_plaintext_backup` `(bool: false)` - If set, enables taking backup of
+  named key in the plaintext format. Once set, this cannot be disabled.
 
 ### Sample Payload
 
@@ -890,4 +903,71 @@ $ curl \
     "valid": true
   }
 }
+```
+
+## Backup Key
+
+This endpoint returns a plaintext backup of a named key. The backup contains all
+the configuration data and keys of all the versions along with the HMAC key.
+The response from this endpoint can be used with the `/restore` endpoint to
+restore the key.
+
+| Method  | Path                    | Produces               |
+| :------ | :---------------------- | :--------------------- |
+| `GET`   | `/transit/backup/:name` | `200 application/json` |
+
+### Parameters
+
+ - `name` `(string: <required>)` - Name of the key.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://vault.rocks/v1/transit/backup/aes
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "backup": "eyJwb2xpY3kiOnsibmFtZSI6ImFlcyIsImtleXMiOnsiMSI6eyJrZXkiOiJXK3k4Z0dOMHdiTDJLOU95NXFPN1laMGtjdzMvR0ZiNWM4STBzdlNMMnFNPSIsImhtYWNfa2V5IjoiUDBTcjh1YTJaZERNUTdPd2h4RGp1Z0U5d0JSR3Q2QXl6K0t4TzN5Z2M5ST0iLCJ0aW1lIjoiMjAxNy0xMi0wOFQxMTo1MDowOC42MTM4MzctMDU6MDAiLCJlY194IjpudWxsLCJlY195IjpudWxsLCJlY19kIjpudWxsLCJyc2Ffa2V5IjpudWxsLCJwdWJsaWNfa2V5IjoiIiwiY3JlYXRpb25fdGltZSI6MTUxMjc1MTgwOH19LCJkZXJpdmVkIjpmYWxzZSwia2RmIjowLCJjb252ZXJnZW50X2VuY3J5cHRpb24iOmZhbHNlLCJleHBvcnRhYmxlIjpmYWxzZSwibWluX2RlY3J5cHRpb25fdmVyc2lvbiI6MSwibWluX2VuY3J5cHRpb25fdmVyc2lvbiI6MCwibGF0ZXN0X3ZlcnNpb24iOjEsImFyY2hpdmVfdmVyc2lvbiI6MSwiZGVsZXRpb25fYWxsb3dlZCI6ZmFsc2UsImNvbnZlcmdlbnRfdmVyc2lvbiI6MCwidHlwZSI6MCwiYmFja3VwX2luZm8iOnsidGltZSI6IjIwMTctMTItMDhUMTE6NTA6MjkuMjI4MTU3LTA1OjAwIiwidmVyc2lvbiI6MX0sInJlc3RvcmVfaW5mbyI6bnVsbH0sImFyY2hpdmVkX2tleXMiOnsia2V5cyI6W3sia2V5IjpudWxsLCJobWFjX2tleSI6bnVsbCwidGltZSI6IjAwMDEtMDEtMDFUMDA6MDA6MDBaIiwiZWNfeCI6bnVsbCwiZWNfeSI6bnVsbCwiZWNfZCI6bnVsbCwicnNhX2tleSI6bnVsbCwicHVibGljX2tleSI6IiIsImNyZWF0aW9uX3RpbWUiOjB9LHsia2V5IjoiVyt5OGdHTjB3YkwySzlPeTVxTzdZWjBrY3czL0dGYjVjOEkwc3ZTTDJxTT0iLCJobWFjX2tleSI6IlAwU3I4dWEyWmRETVE3T3doeERqdWdFOXdCUkd0NkF5eitLeE8zeWdjOUk9IiwidGltZSI6IjIwMTctMTItMDhUMTE6NTA6MDguNjEzODM3LTA1OjAwIiwiZWNfeCI6bnVsbCwiZWNfeSI6bnVsbCwiZWNfZCI6bnVsbCwicnNhX2tleSI6bnVsbCwicHVibGljX2tleSI6IiIsImNyZWF0aW9uX3RpbWUiOjE1MTI3NTE4MDh9XX19Cg=="
+  }
+}
+```
+
+## Restore Key
+
+This endpoint restores the backup as a named key. This will restore the key
+configurations and all the versions of the named key along with HMAC keys. The
+input to this endpoint should be the output of `/backup` endpoint.
+
+| Method   | Path                        | Produces               |
+| :------- | :-------------------------- | :--------------------- |
+| `POST`   | `/transit/restore(/:name)`  | `204 (empty body)`     |
+
+### Parameters
+
+ - `backup` `(string: <required>)` - Backed up key data to be restored. This
+   should be the output from the `/backup` endpoint.
+
+ - `name` `(string: <optional>)` - If set, this will be the name of the
+   restored key.
+
+### Sample Payload
+
+```json
+  "backup": "eyJwb2xpY3kiOnsibmFtZSI6ImFlcyIsImtleXMiOnsiMSI6eyJrZXkiOiJXK3k4Z0dOMHdiTDJLOU95NXFPN1laMGtjdzMvR0ZiNWM4STBzdlNMMnFNPSIsImhtYWNfa2V5IjoiUDBTcjh1YTJaZERNUTdPd2h4RGp1Z0U5d0JSR3Q2QXl6K0t4TzN5Z2M5ST0iLCJ0aW1lIjoiMjAxNy0xMi0wOFQxMTo1MDowOC42MTM4MzctMDU6MDAiLCJlY194IjpudWxsLCJlY195IjpudWxsLCJlY19kIjpudWxsLCJyc2Ffa2V5IjpudWxsLCJwdWJsaWNfa2V5IjoiIiwiY3JlYXRpb25fdGltZSI6MTUxMjc1MTgwOH19LCJkZXJpdmVkIjpmYWxzZSwia2RmIjowLCJjb252ZXJnZW50X2VuY3J5cHRpb24iOmZhbHNlLCJleHBvcnRhYmxlIjpmYWxzZSwibWluX2RlY3J5cHRpb25fdmVyc2lvbiI6MSwibWluX2VuY3J5cHRpb25fdmVyc2lvbiI6MCwibGF0ZXN0X3ZlcnNpb24iOjEsImFyY2hpdmVfdmVyc2lvbiI6MSwiZGVsZXRpb25fYWxsb3dlZCI6ZmFsc2UsImNvbnZlcmdlbnRfdmVyc2lvbiI6MCwidHlwZSI6MCwiYmFja3VwX2luZm8iOnsidGltZSI6IjIwMTctMTItMDhUMTE6NTA6MjkuMjI4MTU3LTA1OjAwIiwidmVyc2lvbiI6MX0sInJlc3RvcmVfaW5mbyI6bnVsbH0sImFyY2hpdmVkX2tleXMiOnsia2V5cyI6W3sia2V5IjpudWxsLCJobWFjX2tleSI6bnVsbCwidGltZSI6IjAwMDEtMDEtMDFUMDA6MDA6MDBaIiwiZWNfeCI6bnVsbCwiZWNfeSI6bnVsbCwiZWNfZCI6bnVsbCwicnNhX2tleSI6bnVsbCwicHVibGljX2tleSI6IiIsImNyZWF0aW9uX3RpbWUiOjB9LHsia2V5IjoiVyt5OGdHTjB3YkwySzlPeTVxTzdZWjBrY3czL0dGYjVjOEkwc3ZTTDJxTT0iLCJobWFjX2tleSI6IlAwU3I4dWEyWmRETVE3T3doeERqdWdFOXdCUkd0NkF5eitLeE8zeWdjOUk9IiwidGltZSI6IjIwMTctMTItMDhUMTE6NTA6MDguNjEzODM3LTA1OjAwIiwiZWNfeCI6bnVsbCwiZWNfeSI6bnVsbCwiZWNfZCI6bnVsbCwicnNhX2tleSI6bnVsbCwicHVibGljX2tleSI6IiIsImNyZWF0aW9uX3RpbWUiOjE1MTI3NTE4MDh9XX19Cg=="
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/transit/restore
 ```

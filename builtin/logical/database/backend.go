@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"net/rpc"
 	"strings"
@@ -87,7 +88,7 @@ func (b *databaseBackend) getDBObj(name string) (dbplugin.Database, bool) {
 // This function creates a new db object from the stored configuration and
 // caches it in the connections map. The caller of this function needs to hold
 // the backend's write lock
-func (b *databaseBackend) createDBObj(s logical.Storage, name string) (dbplugin.Database, error) {
+func (b *databaseBackend) createDBObj(ctx context.Context, s logical.Storage, name string) (dbplugin.Database, error) {
 	db, ok := b.connections[name]
 	if ok {
 		return db, nil
@@ -103,7 +104,7 @@ func (b *databaseBackend) createDBObj(s logical.Storage, name string) (dbplugin.
 		return nil, err
 	}
 
-	err = db.Initialize(config.ConnectionDetails, true)
+	err = db.Initialize(ctx, config.ConnectionDetails, true)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +171,8 @@ func (b *databaseBackend) clearConnection(name string) {
 
 func (b *databaseBackend) closeIfShutdown(name string, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
-	if err == rpc.ErrShutdown {
+	switch err {
+	case rpc.ErrShutdown, dbplugin.ErrPluginShutdown:
 		b.Lock()
 		b.clearConnection(name)
 		b.Unlock()
