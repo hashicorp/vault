@@ -1,9 +1,12 @@
 package dbplugin
 
 import (
+	"context"
 	"fmt"
 	"net/rpc"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -13,27 +16,12 @@ import (
 // Database is the interface that all database objects must implement.
 type Database interface {
 	Type() (string, error)
-	CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
-	RenewUser(statements Statements, username string, expiration time.Time) error
-	RevokeUser(statements Statements, username string) error
+	CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
+	RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error
+	RevokeUser(ctx context.Context, statements Statements, username string) error
 
-	Initialize(config map[string]interface{}, verifyConnection bool) error
+	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error
 	Close() error
-}
-
-// Statements set in role creation and passed into the database type's functions.
-type Statements struct {
-	CreationStatements   string `json:"creation_statments" mapstructure:"creation_statements" structs:"creation_statments"`
-	RevocationStatements string `json:"revocation_statements" mapstructure:"revocation_statements" structs:"revocation_statements"`
-	RollbackStatements   string `json:"rollback_statements" mapstructure:"rollback_statements" structs:"rollback_statements"`
-	RenewStatements      string `json:"renew_statements" mapstructure:"renew_statements" structs:"renew_statements"`
-}
-
-// UsernameConfig is used to configure prefixes for the username to be
-// generated.
-type UsernameConfig struct {
-	DisplayName string
-	RoleName    string
 }
 
 // PluginFactory is used to build plugin database types. It wraps the database
@@ -45,6 +33,7 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 		return nil, err
 	}
 
+	var transport string
 	var db Database
 	if pluginRunner.Builtin {
 		// Plugin is builtin so we can retrieve an instance of the interface
@@ -60,12 +49,24 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 			return nil, fmt.Errorf("unsuported database type: %s", pluginName)
 		}
 
+		transport = "builtin"
+
 	} else {
 		// create a DatabasePluginClient instance
 		db, err = newPluginClient(sys, pluginRunner, logger)
 		if err != nil {
 			return nil, err
 		}
+
+		// Switch on the underlying database client type to get the transport
+		// method.
+		switch db.(*DatabasePluginClient).Database.(type) {
+		case *gRPCClient:
+			transport = "gRPC"
+		case *databasePluginRPCClient:
+			transport = "netRPC"
+		}
+
 	}
 
 	typeStr, err := db.Type()
@@ -82,9 +83,10 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 	// Wrap with tracing middleware
 	if logger.IsTrace() {
 		db = &databaseTracingMiddleware{
-			next:    db,
-			typeStr: typeStr,
-			logger:  logger,
+			transport: transport,
+			next:      db,
+			typeStr:   typeStr,
+			logger:    logger,
 		}
 	}
 
@@ -115,33 +117,14 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 	return &databasePluginRPCClient{client: c}, nil
 }
 
-// ---- RPC Request Args Domain ----
-
-type InitializeRequest struct {
-	Config           map[string]interface{}
-	VerifyConnection bool
+func (d DatabasePlugin) GRPCServer(s *grpc.Server) error {
+	RegisterDatabaseServer(s, &gRPCServer{impl: d.impl})
+	return nil
 }
 
-type CreateUserRequest struct {
-	Statements     Statements
-	UsernameConfig UsernameConfig
-	Expiration     time.Time
-}
-
-type RenewUserRequest struct {
-	Statements Statements
-	Username   string
-	Expiration time.Time
-}
-
-type RevokeUserRequest struct {
-	Statements Statements
-	Username   string
-}
-
-// ---- RPC Response Args Domain ----
-
-type CreateUserResponse struct {
-	Username string
-	Password string
+func (DatabasePlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error) {
+	return &gRPCClient{
+		client:     NewDatabaseClient(c),
+		clientConn: c,
+	}, nil
 }

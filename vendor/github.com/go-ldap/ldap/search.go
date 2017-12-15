@@ -375,7 +375,7 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 	}
 	packet.AppendChild(encodedSearchRequest)
 	// encode search controls
-	if searchRequest.Controls != nil {
+	if len(searchRequest.Controls) > 0 {
 		packet.AppendChild(encodeControls(searchRequest.Controls))
 	}
 

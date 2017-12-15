@@ -293,7 +293,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if devThreeNode {
-		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, devListenAddress)
+		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, devListenAddress, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	var disableClustering bool
@@ -857,11 +857,12 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	return init, nil
 }
 
-func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress string) int {
+func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
 	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: devListenAddress,
 		RawLogger:         c.logger,
+		TempDir:           tempDir,
 	})
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
 

@@ -517,9 +517,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// Wrap the physical backend in a cache layer if enabled
 	if !conf.DisableCache {
 		if txnOK {
-			c.physical = physical.NewTransactionalCache(phys, conf.CacheSize, conf.Logger)
+			c.physical = physical.NewTransactionalCache(phys, conf.CacheSize, nil, conf.Logger)
 		} else {
-			c.physical = physical.NewCache(phys, conf.CacheSize, conf.Logger)
+			c.physical = physical.NewCache(phys, conf.CacheSize, nil, conf.Logger)
 		}
 	}
 

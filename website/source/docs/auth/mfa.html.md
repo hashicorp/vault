@@ -12,7 +12,7 @@ Several authentication backends support multi-factor authentication (MFA). Once 
 a backend, users are required to provide additional verification, like a one-time passcode,
 before being authenticated.
 
-Currently, the "ldap", "radius" and "userpass" backends support MFA.
+Currently, the "ldap", "okta", "radius", and "userpass" backends support MFA.
 
 ## Authentication
 

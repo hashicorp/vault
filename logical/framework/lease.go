@@ -8,7 +8,8 @@ import (
 )
 
 // LeaseExtend returns an OperationFunc that can be used to simply extend the
-// lease of the auth/secret for the duration that was requested.
+// lease of the auth/secret for the duration that was requested. The parameters
+// provided are used to determine the lease's new TTL value.
 //
 // backendIncrement is the backend's requested increment -- perhaps from a user
 // request, perhaps from a role/config value. If not set, uses the mount/system
