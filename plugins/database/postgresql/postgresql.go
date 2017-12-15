@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -23,6 +24,8 @@ const (
 ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
 `
 )
+
+var _ dbplugin.Database = &PostgreSQL{}
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
@@ -65,8 +68,8 @@ func (p *PostgreSQL) Type() (string, error) {
 	return postgreSQLTypeName, nil
 }
 
-func (p *PostgreSQL) getConnection() (*sql.DB, error) {
-	db, err := p.Connection()
+func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
+	db, err := p.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +77,7 @@ func (p *PostgreSQL) getConnection() (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (p *PostgreSQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	if statements.CreationStatements == "" {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
@@ -99,7 +102,7 @@ func (p *PostgreSQL) CreateUser(statements dbplugin.Statements, usernameConfig d
 	}
 
 	// Get the connection
-	db, err := p.getConnection()
+	db, err := p.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 
@@ -148,7 +151,7 @@ func (p *PostgreSQL) CreateUser(statements dbplugin.Statements, usernameConfig d
 	return username, password, nil
 }
 
-func (p *PostgreSQL) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -157,7 +160,7 @@ func (p *PostgreSQL) RenewUser(statements dbplugin.Statements, username string, 
 		renewStmts = defaultPostgresRenewSQL
 	}
 
-	db, err := p.getConnection()
+	db, err := p.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -201,20 +204,20 @@ func (p *PostgreSQL) RenewUser(statements dbplugin.Statements, username string, 
 	return nil
 }
 
-func (p *PostgreSQL) RevokeUser(statements dbplugin.Statements, username string) error {
+func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
 
 	if statements.RevocationStatements == "" {
-		return p.defaultRevokeUser(username)
+		return p.defaultRevokeUser(ctx, username)
 	}
 
-	return p.customRevokeUser(username, statements.RevocationStatements)
+	return p.customRevokeUser(ctx, username, statements.RevocationStatements)
 }
 
-func (p *PostgreSQL) customRevokeUser(username, revocationStmts string) error {
-	db, err := p.getConnection()
+func (p *PostgreSQL) customRevokeUser(ctx context.Context, username, revocationStmts string) error {
+	db, err := p.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -253,8 +256,8 @@ func (p *PostgreSQL) customRevokeUser(username, revocationStmts string) error {
 	return nil
 }
 
-func (p *PostgreSQL) defaultRevokeUser(username string) error {
-	db, err := p.getConnection()
+func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) error {
+	db, err := p.getConnection(ctx)
 	if err != nil {
 		return err
 	}

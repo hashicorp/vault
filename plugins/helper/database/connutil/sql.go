@@ -1,6 +1,7 @@
 package connutil
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -25,7 +26,7 @@ type SQLConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *SQLConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -62,11 +63,11 @@ func (c *SQLConnectionProducer) Initialize(conf map[string]interface{}, verifyCo
 	c.Initialized = true
 
 	if verifyConnection {
-		if _, err := c.Connection(); err != nil {
+		if _, err := c.Connection(ctx); err != nil {
 			return fmt.Errorf("error verifying connection: %s", err)
 		}
 
-		if err := c.db.Ping(); err != nil {
+		if err := c.db.PingContext(ctx); err != nil {
 			return fmt.Errorf("error verifying connection: %s", err)
 		}
 	}
@@ -74,14 +75,14 @@ func (c *SQLConnectionProducer) Initialize(conf map[string]interface{}, verifyCo
 	return nil
 }
 
-func (c *SQLConnectionProducer) Connection() (interface{}, error) {
+func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, ErrNotInitialized
 	}
 
 	// If we already have a DB, test it and return
 	if c.db != nil {
-		if err := c.db.Ping(); err == nil {
+		if err := c.db.PingContext(ctx); err == nil {
 			return c.db, nil
 		}
 		// If the ping was unsuccessful, close it and ignore errors as we'll be

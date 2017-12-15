@@ -192,8 +192,7 @@ func TestBackendHandleRequest_helpRoot(t *testing.T) {
 func TestBackendHandleRequest_renewAuth(t *testing.T) {
 	b := &Backend{}
 
-	resp, err := b.HandleRequest(logical.RenewAuthRequest(
-		"/foo", &logical.Auth{}, nil))
+	resp, err := b.HandleRequest(logical.RenewAuthRequest("/foo", &logical.Auth{}, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -213,8 +212,7 @@ func TestBackendHandleRequest_renewAuthCallback(t *testing.T) {
 		AuthRenew: callback,
 	}
 
-	_, err := b.HandleRequest(logical.RenewAuthRequest(
-		"/foo", &logical.Auth{}, nil))
+	_, err := b.HandleRequest(logical.RenewAuthRequest("/foo", &logical.Auth{}, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -237,8 +235,7 @@ func TestBackendHandleRequest_renew(t *testing.T) {
 		Secrets: []*Secret{secret},
 	}
 
-	_, err := b.HandleRequest(logical.RenewRequest(
-		"/foo", secret.Response(nil, nil).Secret, nil))
+	_, err := b.HandleRequest(logical.RenewRequest("/foo", secret.Response(nil, nil).Secret, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -293,8 +290,7 @@ func TestBackendHandleRequest_revoke(t *testing.T) {
 		Secrets: []*Secret{secret},
 	}
 
-	_, err := b.HandleRequest(logical.RevokeRequest(
-		"/foo", secret.Response(nil, nil).Secret, nil))
+	_, err := b.HandleRequest(logical.RevokeRequest("/foo", secret.Response(nil, nil).Secret, nil))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

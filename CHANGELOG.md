@@ -12,6 +12,9 @@ DEPRECATIONS/CHANGES:
    `disallowed_policies` in role definitions in the token auth backend, input
    can now be a comma-separated string or an array of strings. Reading a role
    will now return arrays for these parameters.
+ * Transit key exporting: You can now mark a key in the `transit` backend as
+   `exportable` at any time, rather than just at creation time; however, once
+   this value is set, it still cannot be unset.
  * PKI Secret Backend Roles parameter types: For `allowed_domains` and
    `key_usage` in role definitions in the PKI secret backend, input
    can now be a comma-separated string or an array of strings. Reading a role
@@ -19,6 +22,19 @@ DEPRECATIONS/CHANGES:
  * SSH Dynamic Keys Method Defaults to 2048-bit Keys: When using the dynamic
    key method in the SSH backend, the default is now to use 2048-bit keys if no
    specific key bit size is specified.
+ * Consul Secret Backend lease handling: The `consul` secret backend can now
+   accept both strings and integer numbers of seconds for its lease value. The
+   value returned on a role read will be an integer number of seconds instead
+   of a human-friendly string.
+
+FEATURES:
+
+ * **Transit Backup/Restore**: The `transit` backend now supports a backup
+   operation that can export a given key, including all key versions and
+   configuration, as well as a restore operation allowing import into another
+   Vault.
+ * **gRPC Database Plugins**: Database plugins now use gRPC for transport,
+   allowing them to be written in other languages.
 
 IMPROVEMENTS:
 
@@ -32,9 +48,13 @@ IMPROVEMENTS:
    during database configuration. This establishes a session-wide [write
    concern](https://docs.mongodb.com/manual/reference/write-concern/) for the
    lifecycle of the mount [GH-3646]
+ * mfa/okta: Filter a given email address as a login filter, allowing operation
+   when login email and account email are different
  * secret/pki: `allowed_domains` and `key_usage` can now be specified
    as a comma-separated string or an array of strings [GH-3642]
  * secret/ssh: Allow 4096-bit keys to be used in dynamic key method [GH-3593]
+ * secret/consul: The Consul secret backend now uses the value of `lease` set
+   on the role, if set, when renewing a secret. [GH-3796]
 
 BUG FIXES:
 
@@ -42,8 +62,12 @@ BUG FIXES:
  * auth/cert: Return `allowed_names` on role read [GH-3654]
  * auth/ldap: Fix incorrect control information being sent [GH-3402] [GH-3496]
    [GH-3625] [GH-3656]
+ * core: Fix seal status reporting when using an autoseal
+ * core: Add creation path to wrap info for a control group token
  * core: Fix potential panic that could occur using plugins when a node
    transitioned from active to standby [GH-3638]
+ * core: Fix memory ballooning when a connection would connect to the cluster
+   port and then go away -- redux! [GH-3680]
  * core: Replace recursive token revocation logic with depth-first logic, which
    can avoid hitting stack depth limits in extreme cases [GH-2348]
  * core/pkcs11 (enterprise): Fix panic when PKCS#11 library is not readable

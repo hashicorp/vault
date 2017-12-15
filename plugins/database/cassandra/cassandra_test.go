@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"os"
 	"strconv"
 	"testing"
@@ -89,7 +90,7 @@ func TestCassandra_Initialize(t *testing.T) {
 	db := dbRaw.(*Cassandra)
 	connProducer := db.ConnectionProducer.(*cassandraConnectionProducer)
 
-	err := db.Initialize(connectionDetails, true)
+	err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -112,7 +113,7 @@ func TestCassandra_Initialize(t *testing.T) {
 		"protocol_version": "4",
 	}
 
-	err = db.Initialize(connectionDetails, true)
+	err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -135,7 +136,7 @@ func TestCassandra_CreateUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	err := db.Initialize(connectionDetails, true)
+	err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -149,7 +150,7 @@ func TestCassandra_CreateUser(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -176,7 +177,7 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	err := db.Initialize(connectionDetails, true)
+	err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -190,7 +191,7 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -199,7 +200,7 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	err = db.RenewUser(statements, username, time.Now().Add(time.Minute))
+	err = db.RenewUser(context.Background(), statements, username, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -222,7 +223,7 @@ func TestCassandra_RevokeUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	err := db.Initialize(connectionDetails, true)
+	err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -236,7 +237,7 @@ func TestCassandra_RevokeUser(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -246,7 +247,7 @@ func TestCassandra_RevokeUser(t *testing.T) {
 	}
 
 	// Test default revoke statememts
-	err = db.RevokeUser(statements, username)
+	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
