@@ -102,7 +102,9 @@ func listenerWrapTLS(
 		// We try the key without a passphrase first and if we get an incorrect
 		// passphrase response, try again after prompting for a passphrase
 		if errwrap.Contains(err, x509.IncorrectPasswordError.Error()) {
-			if passphrase, err := ui.AskSecret(fmt.Sprintf("Enter passphrase for %s:", keyFile)); err == nil {
+			var passphrase string
+			passphrase, err = ui.AskSecret(fmt.Sprintf("Enter passphrase for %s:", keyFile))
+			if err == nil {
 				cg = reload.NewCertificateGetter(certFile, keyFile, passphrase)
 				if err = cg.Reload(config); err == nil {
 					goto PASSPHRASECORRECT
