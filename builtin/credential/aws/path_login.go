@@ -786,23 +786,21 @@ func (b *backend) pathLoginUpdateEc2(
 		resp.Auth.Metadata["nonce"] = clientNonce
 	}
 
-	if roleEntry.Period > time.Duration(0) {
-		resp.Auth.TTL = roleEntry.Period
-	} else {
-		// Cap the TTL value.
-		shortestTTL := b.System().DefaultLeaseTTL()
-		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-			shortestTTL = roleEntry.TTL
+	if roleEntry.MaxTTL > time.Duration(0) {
+		// Cap maxTTL to the sysview's max TTL
+		maxTTL := b.System().MaxLeaseTTL()
+		if roleEntry.MaxTTL < maxTTL {
+			maxTTL = b.System().MaxLeaseTTL()
 		}
-		if shortestMaxTTL < shortestTTL {
-			resp.AddWarning(fmt.Sprintf("Effective ttl of %q exceeded the effective max_ttl of %q; ttl value is capped appropriately", (shortestTTL / time.Second).String(), (shortestMaxTTL / time.Second).String()))
-			shortestTTL = shortestMaxTTL
+
+		// Cap TTL to MaxTTL
+		if resp.Auth.TTL > maxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
+			resp.Auth.TTL = roleEntry.MaxTTL
 		}
-		resp.Auth.TTL = shortestTTL
 	}
 
 	return resp, nil
-
 }
 
 // handleRoleTagLogin is used to fetch the role tag of the instance and
@@ -1238,7 +1236,7 @@ func (b *backend) pathLoginUpdateIam(
 	policies := roleEntry.Policies
 
 	inferredEntityType := ""
-	inferredEntityId := ""
+	inferredEntityID := ""
 	if roleEntry.InferredEntityType == ec2EntityType {
 		instance, err := b.validateInstance(req.Storage, entity.SessionInfo, roleEntry.InferredAWSRegion, callerID.Account)
 		if err != nil {
@@ -1264,7 +1262,7 @@ func (b *backend) pathLoginUpdateIam(
 		}
 
 		inferredEntityType = ec2EntityType
-		inferredEntityId = entity.SessionInfo
+		inferredEntityID = entity.SessionInfo
 	}
 
 	resp := &logical.Response{
@@ -1277,7 +1275,7 @@ func (b *backend) pathLoginUpdateIam(
 				"client_user_id":       callerUniqueId,
 				"auth_type":            iamAuthType,
 				"inferred_entity_type": inferredEntityType,
-				"inferred_entity_id":   inferredEntityId,
+				"inferred_entity_id":   inferredEntityID,
 				"inferred_aws_region":  roleEntry.InferredAWSRegion,
 				"account_id":           entity.AccountNumber,
 			},
@@ -1295,25 +1293,18 @@ func (b *backend) pathLoginUpdateIam(
 		},
 	}
 
-	if roleEntry.Period > time.Duration(0) {
-		resp.Auth.TTL = roleEntry.Period
-	} else {
-		shortestTTL := b.System().DefaultLeaseTTL()
-		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-			shortestTTL = roleEntry.TTL
-		}
-
+	if roleEntry.MaxTTL > time.Duration(0) {
+		// Cap maxTTL to the sysview's max TTL
 		maxTTL := b.System().MaxLeaseTTL()
-		if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < maxTTL {
-			maxTTL = roleEntry.MaxTTL
+		if roleEntry.MaxTTL < maxTTL {
+			maxTTL = b.System().MaxLeaseTTL()
 		}
 
-		if shortestTTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", (shortestTTL / time.Second).String(), (maxTTL / time.Second).String()))
-			shortestTTL = maxTTL
+		// Cap TTL to MaxTTL
+		if resp.Auth.TTL > maxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
+			resp.Auth.TTL = roleEntry.MaxTTL
 		}
-
-		resp.Auth.TTL = shortestTTL
 	}
 
 	return resp, nil
@@ -1333,11 +1324,11 @@ func hasValuesForEc2Auth(data *framework.FieldData) (bool, bool) {
 
 func hasValuesForIamAuth(data *framework.FieldData) (bool, bool) {
 	_, hasRequestMethod := data.GetOk("iam_http_request_method")
-	_, hasRequestUrl := data.GetOk("iam_request_url")
+	_, hasRequestURL := data.GetOk("iam_request_url")
 	_, hasRequestBody := data.GetOk("iam_request_body")
 	_, hasRequestHeaders := data.GetOk("iam_request_headers")
-	return (hasRequestMethod && hasRequestUrl && hasRequestBody && hasRequestHeaders),
-		(hasRequestMethod || hasRequestUrl || hasRequestBody || hasRequestHeaders)
+	return (hasRequestMethod && hasRequestURL && hasRequestBody && hasRequestHeaders),
+		(hasRequestMethod || hasRequestURL || hasRequestBody || hasRequestHeaders)
 }
 
 func parseIamArn(iamArn string) (*iamEntity, error) {
