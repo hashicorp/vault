@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -47,15 +48,18 @@ func (b *backend) secretTokenRevoke(
 	}
 
 	if c == nil {
-		return nil, fmt.Errorf("Error connecting with Nomad")
+		return nil, fmt.Errorf("error getting Nomad client")
 	}
 
 	accessorIDRaw, ok := req.Secret.InternalData["accessor_id"]
 	if !ok {
 		return nil, fmt.Errorf("accessor_id is missing on the lease")
 	}
-
-	_, err = c.ACLTokens().Delete(accessorIDRaw.(string), nil)
+	accessorID, ok := accessorIDRaw.(string)
+	if !ok {
+		return nil, errors.New("unable to convert accessor_id")
+	}
+	_, err = c.ACLTokens().Delete(accessorID, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -1,8 +1,7 @@
 package nomad
 
 import (
-	"fmt"
-
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -28,13 +27,13 @@ func pathRoles(b *backend) *framework.Path {
 
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: "Comma separated list of policies as previously created in Nomad. Required",
+				Description: "Comma-separated string or list of policies as previously created in Nomad. Required for 'client' token.",
 			},
 
 			"global": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "Boolean value describing if the token should be global or not. Defaults to false",
+				Description: "Boolean value describing if the token should be global or not. Defaults to false.",
 			},
 
 			"type": &framework.FieldSchema{
@@ -58,7 +57,7 @@ Defaults to 'client'.`,
 func (b *backend) Role(storage logical.Storage, name string) (*roleConfig, error) {
 	entry, err := storage.Get("role/" + name)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving role: %s", err)
+		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
 	if entry == nil {
 		return nil, nil
@@ -124,7 +123,7 @@ func (b *backend) pathRolesWrite(
 		}
 	default:
 		return logical.ErrorResponse(
-			"type must be \"client\" or \"management\""), nil
+			`type must be "client" or "management"`), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("role/"+name, roleConfig{

@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const leaseConfigKey = "config/lease"
+
 func pathConfigLease(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/lease",
@@ -24,6 +26,7 @@ func pathConfigLease(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathLeaseRead,
 			logical.UpdateOperation: b.pathLeaseUpdate,
+			logical.DeleteOperation: b.pathLeaseDelete,
 		},
 
 		HelpSynopsis:    pathConfigLeaseHelpSyn,
@@ -47,6 +50,14 @@ func (b *backend) pathLeaseUpdate(req *logical.Request, d *framework.FieldData) 
 	return nil, nil
 }
 
+func (b *backend) pathLeaseDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if err := req.Storage.Delete(leaseConfigKey); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // Returns the lease configuration parameters
 func (b *backend) pathLeaseRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	lease, err := b.LeaseConfig(req.Storage)
@@ -59,15 +70,15 @@ func (b *backend) pathLeaseRead(req *logical.Request, data *framework.FieldData)
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"ttl":     lease.TTL.Seconds(),
-			"max_ttl": lease.MaxTTL.Seconds(),
+			"ttl":     int64(lease.TTL.Seconds()),
+			"max_ttl": int64(lease.MaxTTL.Seconds()),
 		},
 	}, nil
 }
 
 // Lease returns the lease information
 func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+	entry, err := s.Get(leaseConfigKey)
 	if err != nil {
 		return nil, err
 	}

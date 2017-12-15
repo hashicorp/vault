@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -31,10 +32,10 @@ func (b *backend) pathTokenRead(
 
 	role, err := b.Role(req.Storage, name)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving role: %v", err)
+		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Role %q not found", name)), nil
+		return logical.ErrorResponse(fmt.Sprintf("role %q not found", name)), nil
 	}
 
 	// Determine if we have a lease configuration
@@ -53,7 +54,7 @@ func (b *backend) pathTokenRead(
 	}
 
 	// Generate a name for the token
-	tokenName := fmt.Sprintf("Vault-%s-%s-%d", name, req.DisplayName, time.Now().UnixNano())
+	tokenName := fmt.Sprintf("vault-%s-%s-%d", name, req.DisplayName, time.Now().UnixNano())
 
 	// Create it
 	token, _, err := c.ACLTokens().Create(&api.ACLToken{

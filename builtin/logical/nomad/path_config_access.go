@@ -1,8 +1,7 @@
 package nomad
 
 import (
-	"fmt"
-
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -40,7 +39,7 @@ func (b *backend) readConfigAccess(storage logical.Storage) (*accessConfig, erro
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, fmt.Errorf("error reading nomad access configuration: %s", err)
+		return nil, errwrap.Wrapf("error reading nomad access configuration: {{err}}", err)
 	}
 
 	return conf, nil

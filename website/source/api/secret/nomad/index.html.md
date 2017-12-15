@@ -88,9 +88,13 @@ This endpoint configures the lease settings for generated tokens.
 
 ### Parameters
 
-- `ttl` `(int: 0)` – Specifies the lease ttl provided in seconds.
+- `ttl` `(string: "")` – Specifies the ttl for the lease. This is provided
+  as a string duration with a time suffix like `"30s"` or `"1h"` or as total 
+  seconds.
 
-- `max_ttl` `(int: 0)` – Specifies the maximum ttl provided in seconds.
+- `max_ttl` `(string: "")` – Specifies the max ttl for the lease. This is 
+  provided as a string duration with a time suffix like `"30s"` or `"1h"` or as 
+  total seconds.
 
 ### Sample Payload
 
@@ -138,6 +142,23 @@ $ curl \
 [...]
 ```
 
+## Delete Lease Configuration
+
+This endpoint deletes the lease configuration.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `DELETE` | `/nomad/config/lease`         | `204 (empty body)`     |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://vault.rocks/v1/nomad/config/lease
+```
+
 ## Create/Update Role
 
 This endpoint creates or updates the Nomad role definition in Vault. If the role does not exist, it will be created. If the role already exists, it will receive
@@ -153,8 +174,8 @@ updated attributes.
   which to create this Nomad tokens. This is part of the request URL.
 
 - `lease` `(string: "")` – Specifies the lease for this role. This is provided
-  as a string duration with a time suffix like `"30s"` or `"1h"`. If not
-  provided, the default Vault lease is used.
+  as a string duration with a time suffix like `"30s"` or `"1h"` or as total 
+  seconds. If not provided, the default Vault lease is used.
 
 - `policies` `(string: "")` – Comma separated list of Nomad policies the token is going to be created against. These need to be created beforehand in Nomad.
 
