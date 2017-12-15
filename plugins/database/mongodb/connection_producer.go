@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -33,7 +34,7 @@ type mongoDBConnectionProducer struct {
 }
 
 // Initialize parses connection configuration.
-func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -75,7 +76,7 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 	c.Initialized = true
 
 	if verifyConnection {
-		if _, err := c.Connection(); err != nil {
+		if _, err := c.Connection(ctx); err != nil {
 			return fmt.Errorf("error verifying connection: %s", err)
 		}
 
@@ -88,7 +89,7 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 }
 
 // Connection creates a database connection.
-func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
+func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}

@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"strings"
@@ -43,7 +44,7 @@ type cassandraConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *cassandraConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -106,7 +107,7 @@ func (c *cassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 	c.Initialized = true
 
 	if verifyConnection {
-		if _, err := c.Connection(); err != nil {
+		if _, err := c.Connection(ctx); err != nil {
 			return fmt.Errorf("error verifying connection: %s", err)
 		}
 	}
@@ -114,7 +115,7 @@ func (c *cassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 	return nil
 }
 
-func (c *cassandraConnectionProducer) Connection() (interface{}, error) {
+func (c *cassandraConnectionProducer) Connection(_ context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
