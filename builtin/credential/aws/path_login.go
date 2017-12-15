@@ -787,16 +787,10 @@ func (b *backend) pathLoginUpdateEc2(
 	}
 
 	if roleEntry.MaxTTL > time.Duration(0) {
-		// Cap maxTTL to the sysview's max TTL
-		maxTTL := roleEntry.MaxTTL
-		if maxTTL > b.System().MaxLeaseTTL() {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-
-		// Cap TTL to MaxTTL
-		if resp.Auth.TTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
-			resp.Auth.TTL = maxTTL
+		// Cap TTL to shortestMaxTTL
+		if resp.Auth.TTL > shortestMaxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (shortestMaxTTL / time.Second)))
+			resp.Auth.TTL = shortestMaxTTL
 		}
 	}
 
@@ -1069,7 +1063,7 @@ func (b *backend) pathLoginRenewEc2(
 		return nil, err
 	}
 
-	resp, err := framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+	resp, err := framework.LeaseExtend(roleEntry.TTL, shortestMaxTTL, b.System())(req, data)
 	if err != nil {
 		return nil, err
 	}
