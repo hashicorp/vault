@@ -788,15 +788,15 @@ func (b *backend) pathLoginUpdateEc2(
 
 	if roleEntry.MaxTTL > time.Duration(0) {
 		// Cap maxTTL to the sysview's max TTL
-		maxTTL := b.System().MaxLeaseTTL()
-		if roleEntry.MaxTTL < maxTTL {
+		maxTTL := roleEntry.MaxTTL
+		if maxTTL > b.System().MaxLeaseTTL() {
 			maxTTL = b.System().MaxLeaseTTL()
 		}
 
 		// Cap TTL to MaxTTL
 		if resp.Auth.TTL > maxTTL {
 			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
-			resp.Auth.TTL = roleEntry.MaxTTL
+			resp.Auth.TTL = maxTTL
 		}
 	}
 
@@ -1295,15 +1295,15 @@ func (b *backend) pathLoginUpdateIam(
 
 	if roleEntry.MaxTTL > time.Duration(0) {
 		// Cap maxTTL to the sysview's max TTL
-		maxTTL := b.System().MaxLeaseTTL()
-		if roleEntry.MaxTTL < maxTTL {
+		maxTTL := roleEntry.MaxTTL
+		if maxTTL > b.System().MaxLeaseTTL() {
 			maxTTL = b.System().MaxLeaseTTL()
 		}
 
 		// Cap TTL to MaxTTL
 		if resp.Auth.TTL > maxTTL {
 			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
-			resp.Auth.TTL = roleEntry.MaxTTL
+			resp.Auth.TTL = maxTTL
 		}
 	}
 
