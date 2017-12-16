@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const configAccessKey = "config/access"
+
 func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
@@ -23,13 +25,26 @@ func pathConfigAccess(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathConfigAccessRead,
+			logical.CreateOperation: b.pathConfigAccessWrite,
 			logical.UpdateOperation: b.pathConfigAccessWrite,
+			logical.DeleteOperation: b.pathConfigAccessDelete,
 		},
+
+		ExistenceCheck: b.configExistenceCheck,
 	}
 }
 
+func (b *backend) configExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+	entry, err := b.readConfigAccess(req.Storage)
+	if err != nil {
+		return false, err
+	}
+
+	return entry != nil, nil
+}
+
 func (b *backend) readConfigAccess(storage logical.Storage) (*accessConfig, error) {
-	entry, err := storage.Get("config/access")
+	entry, err := storage.Get(configAccessKey)
 	if err != nil {
 		return nil, err
 	}
@@ -64,26 +79,47 @@ func (b *backend) pathConfigAccessRead(
 
 func (b *backend) pathConfigAccessWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	address := data.Get("address").(string)
-	if address == "" {
-		return logical.ErrorResponse("missing nomad server address"), nil
-	}
-	token := data.Get("token").(string)
-	if token == "" {
-		return logical.ErrorResponse("missing nomad management token"), nil
-	}
-	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
-		Address: address,
-		Token:   token,
-	})
+	conf, err := b.readConfigAccess(req.Storage)
 	if err != nil {
 		return nil, err
 	}
+	if conf == nil {
+		conf = &accessConfig{}
+	}
 
+	address, ok := data.GetOk("address")
+	if ok {
+		conf.Address = address.(string)
+	} else {
+		if req.Operation == logical.CreateOperation {
+			return logical.ErrorResponse("missing nomad server address"), nil
+		}
+	}
+	token, ok := data.GetOk("token")
+	if ok {
+		conf.Token = token.(string)
+	} else {
+		if req.Operation == logical.CreateOperation {
+			return logical.ErrorResponse("missing nomad management token"), nil
+		}
+	}
+
+	entry, err := logical.StorageEntryJSON("config/access", conf)
+	if err != nil {
+		return nil, err
+	}
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, err
 	}
 
+	return nil, nil
+}
+
+func (b *backend) pathConfigAccessDelete(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if err := req.Storage.Delete(configAccessKey); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
