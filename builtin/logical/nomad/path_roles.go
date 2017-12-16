@@ -1,6 +1,8 @@
 package nomad
 
 import (
+	"errors"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -32,7 +34,6 @@ func pathRoles(b *backend) *framework.Path {
 
 			"global": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Default:     false,
 				Description: "Boolean value describing if the token should be global or not. Defaults to false.",
 			},
 
@@ -48,13 +49,31 @@ Defaults to 'client'.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRolesRead,
+			logical.CreateOperation: b.pathRolesWrite,
 			logical.UpdateOperation: b.pathRolesWrite,
 			logical.DeleteOperation: b.pathRolesDelete,
 		},
+
+		ExistenceCheck: b.rolesExistenceCheck,
 	}
 }
 
+// Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
+// Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
+func (b *backend) rolesExistenceCheck(req *logical.Request, d *framework.FieldData) (bool, error) {
+	name := d.Get("name").(string)
+	entry, err := b.Role(req.Storage, name)
+	if err != nil {
+		return false, err
+	}
+	return entry != nil, nil
+}
+
 func (b *backend) Role(storage logical.Storage, name string) (*roleConfig, error) {
+	if name == "" {
+		return nil, errors.New("invalid role name")
+	}
+
 	entry, err := storage.Get("role/" + name)
 	if err != nil {
 		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
@@ -105,19 +124,30 @@ func (b *backend) pathRolesRead(
 
 func (b *backend) pathRolesWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	tokenType := d.Get("type").(string)
 	name := d.Get("name").(string)
-	global := d.Get("global").(bool)
-	policies := d.Get("policies").([]string)
 
-	switch tokenType {
+	role, err := b.Role(req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		role = new(roleConfig)
+	}
+
+	policies, ok := d.GetOk("policies")
+	if ok {
+		role.Policies = policies.([]string)
+	}
+
+	role.TokenType = d.Get("type").(string)
+	switch role.TokenType {
 	case "client":
-		if len(policies) == 0 {
+		if len(role.Policies) == 0 {
 			return logical.ErrorResponse(
 				"policies cannot be empty when using client tokens"), nil
 		}
 	case "management":
-		if len(policies) != 0 {
+		if len(role.Policies) != 0 {
 			return logical.ErrorResponse(
 				"policies should be empty when using management tokens"), nil
 		}
@@ -126,11 +156,12 @@ func (b *backend) pathRolesWrite(
 			`type must be "client" or "management"`), nil
 	}
 
-	entry, err := logical.StorageEntryJSON("role/"+name, roleConfig{
-		Policies:  policies,
-		TokenType: tokenType,
-		Global:    global,
-	})
+	global, ok := d.GetOk("global")
+	if ok {
+		role.Global = global.(bool)
+	}
+
+	entry, err := logical.StorageEntryJSON("role/"+name, role)
 	if err != nil {
 		return nil, err
 	}

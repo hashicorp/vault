@@ -63,7 +63,7 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 			t.Fatalf("err: %v", err)
 		}
 		nomadToken = aclbootstrap.SecretID
-		t.Log("[WARN] Generated Master token: %s", nomadToken)
+		t.Logf("[WARN] Generated Master token: %s", nomadToken)
 		policy := &nomadapi.ACLPolicy{
 			Name:        "test",
 			Description: "test",
@@ -211,7 +211,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Log("[WARN] Generated token: %s with accesor %s", d.Token, d.Accessor)
+	t.Logf("[WARN] Generated token: %s with accesor %s", d.Token, d.Accessor)
 
 	// Build a client and verify that the credentials work
 	nomadapiConfig := nomadapi.DefaultConfig()
