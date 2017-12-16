@@ -54,6 +54,6 @@ Sample response when Vault is unsealed.
   "version": "0.9.0",
   "cluster_name": "vault-cluster-d6ec3c7f",
   "cluster_id": "3e8b3fec-3749-e056-ba41-b62a63b997e8",
-  "nonce": "nonce_value"
+  "nonce": "ef05d55d-4d2c-c594-a5e8-55bc88604c24"
 }
 ```
