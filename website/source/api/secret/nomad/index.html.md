@@ -28,10 +28,14 @@ Nomad tokens.
 
 ### Parameters
 
-- `address` `(string: <required>)` – Specifies the address of the Nomad
+- `address` `(string: "")` – Specifies the address of the Nomad
   instance, provided as `"protocol://host:port"` like `"http://127.0.0.1:4646"`.
+  This value can also be provided on individual calls with the NOMAD_ADDR 
+  environment variable.
 
-- `token` `(string: <required>)` – Specifies the Nomad Management token to use.
+- `token` `(string: "")` – Specifies the Nomad Management token to use.
+  This value can also be provided on individual calls with the NOMAD_TOKEN 
+  environment variable.
 
 ### Sample Payload
 
@@ -71,11 +75,9 @@ $ curl \
 ### Sample Response
 
 ```json
-[...]
-    "data": {
-        "address": "http://localhost:4646/"
-    }
-[...]
+  "data": {
+    "address": "http://localhost:4646/"
+  }
 ```
 
 ## Configure Lease
@@ -134,12 +136,10 @@ $ curl \
 ### Sample Response
 
 ```json
-[...]
-    "data": {
-        "max_ttl": 86400,
-        "ttl": 86400
-    },
-[...]
+  "data": {
+    "max_ttl": 86400,
+    "ttl": 86400
+  }
 ```
 
 ## Delete Lease Configuration
@@ -231,15 +231,13 @@ $ curl \
 
 ```json
 {
-[...]
-    "data": {
-        "lease": "0s",
-        "policies": [
-            "example"
-        ],
-        "token_type": "client"
-    },
-[...]
+  "data": {
+    "lease": "0s",
+    "policies": [
+      "example"
+    ],
+    "token_type": "client"
+  }
 }
 ```
 
@@ -265,13 +263,11 @@ $ curl \
 
 ```json
 {
-[...]
-    "data": {
-        "keys": [
-            "example"
-        ]
-    },
-[...]
+  "data": {
+    "keys": [
+      "example"
+    ]
+  }
 }
 ```
 
@@ -324,11 +320,9 @@ $ curl \
 
 ```json
 {
-[...]
-    "data": {
-        "accessor_id": "c834ba40-8d84-b0c1-c084-3a31d3383c03",
-        "secret_id": "65af6f07-7f57-bb24-cdae-a27f86a894ce"
-    },
-[...]
+  "data": {
+    "accessor_id": "c834ba40-8d84-b0c1-c084-3a31d3383c03",
+    "secret_id": "65af6f07-7f57-bb24-cdae-a27f86a894ce"
+  }
 }
 ```

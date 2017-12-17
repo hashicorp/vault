@@ -90,18 +90,10 @@ func (b *backend) pathConfigAccessWrite(
 	address, ok := data.GetOk("address")
 	if ok {
 		conf.Address = address.(string)
-	} else {
-		if req.Operation == logical.CreateOperation {
-			return logical.ErrorResponse("missing nomad server address"), nil
-		}
 	}
 	token, ok := data.GetOk("token")
 	if ok {
 		conf.Token = token.(string)
-	} else {
-		if req.Operation == logical.CreateOperation {
-			return logical.ErrorResponse("missing nomad management token"), nil
-		}
 	}
 
 	entry, err := logical.StorageEntryJSON("config/access", conf)
