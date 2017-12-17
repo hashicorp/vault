@@ -81,8 +81,14 @@ type RenewerInput struct {
 	// dispatched.
 	RenewBuffer int
 
-	//Increment specifies the number of seconds that the lease TTL is pushed into the future.
-	//If not set, then the lease TTL may be pushed into the future by what the system default TTL is set to.
+	//Increment specifies the new TTL that should be set on the lease,
+	//where the TTL starts when the renew operation completes successfully.
+	//The TTL set here may or may not be honored by the vault server,
+	//depending on the max TTLs associated with the lease. If the new TTL,
+	//specified here exceeds a max TTL, then the vault server may set the lease TTL
+	//to a value less than the max TTL.
+	//There can be multiple max ttls associated with a lease: role, mount, and system.
+	//To avoid unexpected expiration times, ensure the increment does not exceed any of those max ttls.
 	Increment int
 }
 
@@ -128,7 +134,7 @@ func (c *Client) NewRenewer(i *RenewerInput) (*Renewer, error) {
 		client:    c,
 		secret:    secret,
 		grace:     grace,
-		increment: int,
+		increment: i.Increment,
 		random:    random,
 		doneCh:    make(chan error, 1),
 		renewCh:   make(chan *RenewOutput, renewBuffer),
