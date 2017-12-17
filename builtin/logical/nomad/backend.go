@@ -50,7 +50,7 @@ func (b *backend) client(s logical.Storage) (*api.Client, error) {
 		return nil, err
 	}
 
-	nomadConf := new(api.Config)
+	nomadConf := api.DefaultConfig()
 	if conf != nil {
 		if conf.Address != "" {
 			nomadConf.Address = conf.Address

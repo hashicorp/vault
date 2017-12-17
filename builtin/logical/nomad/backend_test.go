@@ -260,3 +260,43 @@ func TestBackend_renew_revoke(t *testing.T) {
 		t.Fatal("err: expected error")
 	}
 }
+
+func TestBackend_CredsCreateEnvVar(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, connURL, connToken := prepareTestContainer(t)
+	defer cleanup()
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "role/test")
+	req.Data = map[string]interface{}{
+		"policies": []string{"policy"},
+		"lease":    "6h",
+	}
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("NOMAD_TOKEN", connToken)
+	defer os.Unsetenv("NOMAD_TOKEN")
+	os.Setenv("NOMAD_ADDR", connURL)
+	defer os.Unsetenv("NOMAD_ADDR")
+
+	req.Operation = logical.ReadOperation
+	req.Path = "creds/test"
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("resp nil")
+	}
+	if resp.IsError() {
+		t.Fatalf("resp is error: %v", resp.Error())
+	}
+}
