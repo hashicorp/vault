@@ -985,10 +985,10 @@
 			"revisionTime": "2014-10-28T05:47:10Z"
 		},
 		{
-			"checksumSHA1": "b3Y4wgMvMco62K4DfX0Sdoug4+k=",
+			"checksumSHA1": "R0vdmL1vTvFNRqXIR6drJThQE+s=",
 			"path": "github.com/hashicorp/go-cleanhttp",
-			"revision": "33f138d01ac027decb9a5bd76ad6e7c7c701b0c4",
-			"revisionTime": "2017-12-16T01:18:02Z"
+			"revision": "ddbb4a28f25f22bfbad9ca9f3e10c7b81c07d270",
+			"revisionTime": "2017-12-18T14:39:43Z"
 		},
 		{
 			"checksumSHA1": "AA0aYmdg4pb5gPCUSXg8iPzxLag=",
