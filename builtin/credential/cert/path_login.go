@@ -274,6 +274,15 @@ func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert)
 // matchesCertificateExtenions verifies that the certificate matches configured
 // required extensions
 func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// If no required extensions, nothing to check here
+	if len(config.Entry.RequiredExtensions) == 0 {
+		return true
+	}
+	// Fail fast if we have required extensions but no extensions on the cert
+	if len(clientCert.Extensions) == 0 {
+		return false
+	}
+
 	// Build Client Extensions Map for Constraint Matching
 	// x509 Writes Extensions in ASN1 with a bitstring tag, which results in the field
 	// including its ASN.1 type tag bytes. For the sake of simplicity, assume string type
