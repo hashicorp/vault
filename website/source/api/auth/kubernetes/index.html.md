@@ -191,8 +191,8 @@ Lists all the roles that are registered with the backend.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/kubernetes/roles`            | `200 application/json` |
-| `GET`   | `/auth/kubernetes/roles?list=true`   | `200 application/json` |
+| `LIST`   | `/auth/kubernetes/role`            | `200 application/json` |
+| `GET`   | `/auth/kubernetes/role?list=true`   | `200 application/json` |
 
 ### Sample Request
 
@@ -200,7 +200,7 @@ Lists all the roles that are registered with the backend.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/kubernetes/roles
+    https://vault.rocks/v1/auth/kubernetes/role
 ```
 
 ### Sample Response
