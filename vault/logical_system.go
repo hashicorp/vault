@@ -1211,7 +1211,7 @@ func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framewo
 	}
 
 	headerConfig := b.Core.AuditedHeadersConfig()
-	settings, ok := headerConfig.Headers[header]
+	settings, ok := headerConfig.Headers[strings.ToLower(header)]
 	if !ok {
 		return logical.ErrorResponse("Could not find header in config"), nil
 	}
