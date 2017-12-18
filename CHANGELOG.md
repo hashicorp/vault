@@ -62,6 +62,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * api/status (enterprise): Fix status reporting when using an auto seal
  * auth/approle: Fix case-sensitive/insensitive comparison issue [GH-3665]
  * auth/cert: Return `allowed_names` on role read [GH-3654]
  * auth/ldap: Fix incorrect control information being sent [GH-3402] [GH-3496]
