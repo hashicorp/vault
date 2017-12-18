@@ -50,12 +50,13 @@ var (
 type Renewer struct {
 	l sync.Mutex
 
-	client  *Client
-	secret  *Secret
-	grace   time.Duration
-	random  *rand.Rand
-	doneCh  chan error
-	renewCh chan *RenewOutput
+	client    *Client
+	secret    *Secret
+	grace     time.Duration
+	random    *rand.Rand
+	increment int
+	doneCh    chan error
+	renewCh   chan *RenewOutput
 
 	stopped bool
 	stopCh  chan struct{}
@@ -79,6 +80,16 @@ type RenewerInput struct {
 	// RenewBuffer is the size of the buffered channel where renew messages are
 	// dispatched.
 	RenewBuffer int
+
+	//Increment specifies the new TTL that should be set on the lease,
+	//where the TTL starts when the renew operation completes successfully.
+	//The TTL set here may or may not be honored by the vault server,
+	//depending on the max TTLs associated with the lease. If the new TTL,
+	//specified here exceeds a max TTL, then the vault server may set the lease TTL
+	//to a value less than the max TTL.
+	//There can be multiple max ttls associated with a lease: role, mount, and system.
+	//To avoid unexpected expiration times, ensure the increment does not exceed any of those max ttls.
+	Increment int
 }
 
 // RenewOutput is the metadata returned to the client (if it's listening) to
@@ -120,12 +131,13 @@ func (c *Client) NewRenewer(i *RenewerInput) (*Renewer, error) {
 	}
 
 	return &Renewer{
-		client:  c,
-		secret:  secret,
-		grace:   grace,
-		random:  random,
-		doneCh:  make(chan error, 1),
-		renewCh: make(chan *RenewOutput, renewBuffer),
+		client:    c,
+		secret:    secret,
+		grace:     grace,
+		increment: i.Increment,
+		random:    random,
+		doneCh:    make(chan error, 1),
+		renewCh:   make(chan *RenewOutput, renewBuffer),
 
 		stopped: false,
 		stopCh:  make(chan struct{}),
@@ -245,7 +257,7 @@ func (r *Renewer) renewLease() error {
 		}
 
 		// Renew the lease.
-		renewal, err := client.Sys().Renew(leaseID, 0)
+		renewal, err := client.Sys().Renew(leaseID, r.increment)
 		if err != nil {
 			return err
 		}
