@@ -40,6 +40,8 @@ IMPROVEMENTS:
 
  * audit/file: Setting a file mode of `0000` will now disable Vault from
    automatically `chmod`ing the log file [GH-3649]
+ * auth/github: The legacy MFA system can now be used with the GitHub auth
+   backend [GH-3696]
  * auth/okta: The legacy MFA system can now be used with the Okta auth backend
    [GH-3653]
  * auth/token: `allowed_policies` and `disallowed_policies` can now be specified
