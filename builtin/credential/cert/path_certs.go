@@ -171,7 +171,7 @@ func (b *backend) pathCertWrite(
 	systemDefaultTTL := b.System().DefaultLeaseTTL()
 	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
 	if ttl == 0 {
-		ttl = time.Second * time.Duration(d.Get("lease").(int))
+		ttl = time.Duration(d.Get("lease").(int)) * time.Second
 	}
 	if ttl > systemDefaultTTL {
 		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds is greater than current mount/system default of %d seconds", ttl/time.Second, systemDefaultTTL/time.Second))

@@ -44,18 +44,16 @@ Sets a CA cert and associated parameters in a role name.
 - `display_name` `(string: "")` - The `display_name` to set on tokens issued
   when authenticating against this CA certificate. If not set, defaults to the
   name of the role.
-- `ttl` `(string: "")` - The TTL period of the token, provided as a number of
-  seconds. If not provided, the token is valid for the the mount or system
-  default TTL time, in that order.
-- `max_ttl` `(string: "")` - Duration in either an integer number of seconds
-  (`3600`) or an integer time unit (`60m`) after which the issued token can no
-  longer be renewed.
-- `period` `(string: "")` - Duration in either an integer number of seconds
-  (3600) or an integer time unit (60m). If set, the generated token is a
-  periodic token; so long as it is renewed it never expires unless `max_ttl` is
-  also set, but the TTL set on the token at each renewal is fixed to the value
-  specified here. If this value is modified, the token will pick up the new
-  value at its next renewal.
+- `ttl` `(string: "")` - The TTL of the token, provided in either number of
+  seconds (`3600`) or a time duration (`1h`). If not provided, the token is
+  valid for the the mount or system default TTL time, in that order.
+- `max_ttl` `(string: "")` - Duration in either number of seconds (`3600`) or a
+  time duration (`1h`) after which the issued token can no longer be renewed.
+- `period` `(string: "")` - Duration in either number of seconds (`3600`) or a
+  time duration (`1h`). If set, the generated token is a periodic token; so long
+  as it is renewed it never expires unless `max_ttl` is also set, but the TTL
+  set on the token at each renewal is fixed to the value specified here. If this
+  value is modified, the token will pick up the new value at its next renewal.
 
 
 ### Sample Payload
