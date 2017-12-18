@@ -52,6 +52,8 @@ IMPROVEMENTS:
    during database configuration. This establishes a session-wide [write
    concern](https://docs.mongodb.com/manual/reference/write-concern/) for the
    lifecycle of the mount [GH-3646]
+ * http: Request path containing non-printable characters will return 400 - Bad
+   Request [GH-3697]
  * mfa/okta: Filter a given email address as a login filter, allowing operation
    when login email and account email are different
  * plugins: Make Vault more resilient when unsealing when plugins are
