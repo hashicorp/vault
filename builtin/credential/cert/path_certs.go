@@ -137,26 +137,14 @@ func (b *backend) pathCertRead(
 		return nil, nil
 	}
 
-	ttl := cert.TTL
-	if ttl == 0 {
-		ttl = b.System().DefaultLeaseTTL()
-	}
-
-	maxTTL := cert.MaxTTL
-	if maxTTL == 0 {
-		maxTTL = b.System().MaxLeaseTTL()
-	}
-
-	period := cert.Period
-
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"certificate":  cert.Certificate,
 			"display_name": cert.DisplayName,
 			"policies":     cert.Policies,
-			"ttl":          ttl / time.Second,
-			"max_ttl":      maxTTL / time.Second,
-			"period":       period / time.Second,
+			"ttl":          cert.TTL / time.Second,
+			"max_ttl":      cert.MaxTTL / time.Second,
+			"period":       cert.Period / time.Second,
 		},
 	}, nil
 }
@@ -181,6 +169,10 @@ func (b *backend) pathCertWrite(
 		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds is greater than current mount/system default of %d seconds", ttl/time.Second, systemDefaultTTL/time.Second))
 	}
 
+	if ttl < time.Duration(0) {
+		return logical.ErrorResponse("ttl cannot be negative"), nil
+	}
+
 	// Parse max_ttl
 	systemMaxTTL := b.System().MaxLeaseTTL()
 	maxTTL := time.Duration(d.Get("max_ttl").(int)) * time.Second
@@ -199,7 +191,7 @@ func (b *backend) pathCertWrite(
 	// Parse period
 	period := time.Duration(d.Get("period").(int)) * time.Second
 	if period > systemMaxTTL {
-		return logical.ErrorResponse(fmt.Sprintf("Given period of %d seconds is greater than the backend's maximum TTL of %d seconds", period/time.Second, systemMaxTTL/time.Second)), nil
+		resp.AddWarning(fmt.Sprintf("Given period of %d seconds is greater than the backend's maximum TTL of %d seconds", period/time.Second, systemMaxTTL/time.Second))
 	}
 
 	// Default the display name to the certificate name if not given
