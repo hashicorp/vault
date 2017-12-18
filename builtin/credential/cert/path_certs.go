@@ -74,6 +74,19 @@ seconds. Defaults to system/backend default TTL.`,
 				Description: `TTL for tokens issued by this backend.
 Defaults to system/backend default TTL time.`,
 			},
+			"max_ttl": &framework.FieldSchema{
+				Type: framework.TypeDurationSecond,
+				Description: `Duration in either an integer number of seconds (3600) or
+an integer time unit (60m) after which the 
+issued token can no longer be renewed.`,
+			},
+			"period": &framework.FieldSchema{
+				Type: framework.TypeDurationSecond,
+				Description: `If set, indicates that the token generated using this role
+should never expire. The token should be renewed within the
+duration specified by this value. At each renewal, the token's
+TTL will be set to the value of this parameter.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -131,18 +144,14 @@ func (b *backend) pathCertRead(
 		return nil, nil
 	}
 
-	duration := cert.TTL
-	if duration == 0 {
-		duration = b.System().DefaultLeaseTTL()
-	}
-
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"certificate":   cert.Certificate,
-			"display_name":  cert.DisplayName,
-			"policies":      cert.Policies,
-			"ttl":           duration / time.Second,
-			"allowed_names": cert.AllowedNames,
+			"certificate":  cert.Certificate,
+			"display_name": cert.DisplayName,
+			"policies":     cert.Policies,
+			"ttl":          cert.TTL / time.Second,
+			"max_ttl":      cert.MaxTTL / time.Second,
+			"period":       cert.Period / time.Second,
 		},
 	}, nil
 }
@@ -155,6 +164,47 @@ func (b *backend) pathCertWrite(
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
 	requiredExtensions := d.Get("required_extensions").([]string)
+
+	var resp logical.Response
+
+	// Parse the ttl (or lease duration)
+	systemDefaultTTL := b.System().DefaultLeaseTTL()
+	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
+	if ttl == 0 {
+		ttl = time.Duration(d.Get("lease").(int)) * time.Second
+	}
+	if ttl > systemDefaultTTL {
+		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds is greater than current mount/system default of %d seconds", ttl/time.Second, systemDefaultTTL/time.Second))
+	}
+
+	if ttl < time.Duration(0) {
+		return logical.ErrorResponse("ttl cannot be negative"), nil
+	}
+
+	// Parse max_ttl
+	systemMaxTTL := b.System().MaxLeaseTTL()
+	maxTTL := time.Duration(d.Get("max_ttl").(int)) * time.Second
+	if maxTTL > systemMaxTTL {
+		resp.AddWarning(fmt.Sprintf("Given max_ttl of %d seconds is greater than current mount/system default of %d seconds", maxTTL/time.Second, systemMaxTTL/time.Second))
+	}
+
+	if maxTTL < time.Duration(0) {
+		return logical.ErrorResponse("max_ttl cannot be negative"), nil
+	}
+
+	if maxTTL != 0 && ttl > maxTTL {
+		return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
+	}
+
+	// Parse period
+	period := time.Duration(d.Get("period").(int)) * time.Second
+	if period > systemMaxTTL {
+		resp.AddWarning(fmt.Sprintf("Given period of %d seconds is greater than the backend's maximum TTL of %d seconds", period/time.Second, systemMaxTTL/time.Second))
+	}
+
+	if period < time.Duration(0) {
+		return logical.ErrorResponse("period cannot be negative"), nil
+	}
 
 	// Default the display name to the certificate name if not given
 	if displayName == "" {
@@ -187,19 +237,9 @@ func (b *backend) pathCertWrite(
 		Policies:           policies,
 		AllowedNames:       allowedNames,
 		RequiredExtensions: requiredExtensions,
-	}
-
-	// Parse the lease duration or default to backend/system default
-	maxTTL := b.System().MaxLeaseTTL()
-	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
-	if ttl == time.Duration(0) {
-		ttl = time.Second * time.Duration(d.Get("lease").(int))
-	}
-	if ttl > maxTTL {
-		return logical.ErrorResponse(fmt.Sprintf("Given TTL of %d seconds greater than current mount/system default of %d seconds", ttl/time.Second, maxTTL/time.Second)), nil
-	}
-	if ttl > time.Duration(0) {
-		certEntry.TTL = ttl
+		TTL:                ttl,
+		MaxTTL:             maxTTL,
+		Period:             period,
 	}
 
 	// Store it
@@ -210,7 +250,12 @@ func (b *backend) pathCertWrite(
 	if err := req.Storage.Put(entry); err != nil {
 		return nil, err
 	}
-	return nil, nil
+
+	if len(resp.Warnings) == 0 {
+		return nil, nil
+	}
+
+	return &resp, nil
 }
 
 type CertEntry struct {
@@ -219,6 +264,8 @@ type CertEntry struct {
 	DisplayName        string
 	Policies           []string
 	TTL                time.Duration
+	MaxTTL             time.Duration
+	Period             time.Duration
 	AllowedNames       []string
 	RequiredExtensions []string
 }

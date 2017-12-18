@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -85,9 +86,9 @@ func (b *backend) pathLogin(
 	skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 	akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
 
-	// Generate a response
 	resp := &logical.Response{
 		Auth: &logical.Auth{
+			Period: matched.Entry.Period,
 			InternalData: map[string]interface{}{
 				"subject_key_id":   skid,
 				"authority_key_id": akid,
@@ -109,6 +110,22 @@ func (b *backend) pathLogin(
 			},
 		},
 	}
+
+	if matched.Entry.MaxTTL > time.Duration(0) {
+		// Cap maxTTL to the sysview's max TTL
+		maxTTL := matched.Entry.MaxTTL
+		if maxTTL > b.System().MaxLeaseTTL() {
+			maxTTL = b.System().MaxLeaseTTL()
+		}
+
+		// Cap TTL to MaxTTL
+		if resp.Auth.TTL > maxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
+			resp.Auth.TTL = maxTTL
+		}
+	}
+
+	// Generate a response
 	return resp, nil
 }
 
@@ -135,7 +152,7 @@ func (b *backend) pathLoginRenew(
 
 		clientCerts := req.Connection.ConnState.PeerCertificates
 		if len(clientCerts) == 0 {
-			return nil, fmt.Errorf("no client certificate found")
+			return logical.ErrorResponse("no client certificate found"), nil
 		}
 		skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 		akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
@@ -161,7 +178,12 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	return framework.LeaseExtend(cert.TTL, 0, b.System())(req, d)
+	resp, err := framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(req, d)
+	if err != nil {
+		return nil, err
+	}
+	resp.Auth.Period = cert.Period
+	return resp, nil
 }
 
 func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
