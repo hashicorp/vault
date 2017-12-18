@@ -202,6 +202,10 @@ func (b *backend) pathCertWrite(
 		resp.AddWarning(fmt.Sprintf("Given period of %d seconds is greater than the backend's maximum TTL of %d seconds", period/time.Second, systemMaxTTL/time.Second))
 	}
 
+	if period < time.Duration(0) {
+		return logical.ErrorResponse("period cannot be negative"), nil
+	}
+
 	// Default the display name to the certificate name if not given
 	if displayName == "" {
 		displayName = name
