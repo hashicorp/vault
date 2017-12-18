@@ -35,6 +35,10 @@ FEATURES:
    Vault.
  * **gRPC Database Plugins**: Database plugins now use gRPC for transport,
    allowing them to be written in other languages.
+ * **Nomad Secret Backend**: Nomad ACL tokens can now be generated and revoked
+   using Vault.
+ * **Custom Certificate Constraints on Auth**: The `cert` auth backend can now
+   match against custom certificate extensions via exact or glob matching.
 
 IMPROVEMENTS:
 
