@@ -39,9 +39,9 @@ see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
   endpoint. This can also be provided via the environment variable
   `AWS_DYNAMODB_ENDPOINT`.
 
-- `ha_enabled` `(bool: false)` – Specifies whether this backend should be used
-  to run Vault in high availability mode. This can also be provided via the
-  environment variable `DYNAMODB_HA_ENABLED`.
+- `ha_enabled` `(string: "false")` – Specifies whether this backend should be used
+  to run Vault in high availability mode. Valid values are "true" or "false". This
+  can also be provided via the environment variable `DYNAMODB_HA_ENABLED`.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests.
