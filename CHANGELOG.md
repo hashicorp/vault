@@ -26,6 +26,10 @@ DEPRECATIONS/CHANGES:
    accept both strings and integer numbers of seconds for its lease value. The
    value returned on a role read will be an integer number of seconds instead
    of a human-friendly string.
+ * Unprintable characters not allowed in API names: Unprintable characters are
+   no longer allowed in names in the API (paths and path parameters), with an
+   extra restriction on whitespace characters. Allowed characters are those
+   that are considered printable by Unicode plus spaces.
 
 FEATURES:
 
