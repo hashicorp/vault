@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
@@ -237,28 +238,61 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 }
 
 func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
+	return !b.checkForChainInCRLs(trustedChain) &&
+		b.matchesNames(clientCert, config) &&
+		b.matchesCertificateExtenions(clientCert, config)
+}
+
+// matchesNames verifies that the certificate matches at least one configured
+// allowed name
+func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert) bool {
 	// Default behavior (no names) is to allow all names
-	nameMatched := len(config.Entry.AllowedNames) == 0
+	if len(config.Entry.AllowedNames) == 0 {
+		return true
+	}
 	// At least one pattern must match at least one name if any patterns are specified
 	for _, allowedName := range config.Entry.AllowedNames {
 		if glob.Glob(allowedName, clientCert.Subject.CommonName) {
-			nameMatched = true
+			return true
 		}
 
 		for _, name := range clientCert.DNSNames {
 			if glob.Glob(allowedName, name) {
-				nameMatched = true
+				return true
 			}
 		}
 
 		for _, name := range clientCert.EmailAddresses {
 			if glob.Glob(allowedName, name) {
-				nameMatched = true
+				return true
 			}
 		}
 	}
+	return false
+}
 
-	return !b.checkForChainInCRLs(trustedChain) && nameMatched
+// matchesCertificateExtenions verifies that the certificate matches configured
+// required extensions
+func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// Build Client Extensions Map for Constraint Matching
+	// x509 Writes Extensions in ASN1 with a bitstring tag, which results in the field
+	// including its ASN.1 type tag bytes. For the sake of simplicity, assume string type
+	// and drop the tag bytes. And get the number of bytes from the tag.
+	clientExtMap := make(map[string]string, len(clientCert.Extensions))
+	for _, ext := range clientCert.Extensions {
+		var parsedValue string
+		asn1.Unmarshal(ext.Value, &parsedValue)
+		clientExtMap[ext.Id.String()] = parsedValue
+	}
+	// If any of the required extensions don't match the constraint fails
+	for _, requiredExt := range config.Entry.RequiredExtensions {
+		reqExt := strings.SplitN(requiredExt, ":", 2)
+		clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
+		if !clientExtValueOk || !glob.Glob(reqExt[1], clientExtValue) {
+			return false
+		}
+	}
+	return true
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend

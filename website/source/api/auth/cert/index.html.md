@@ -33,6 +33,9 @@ Sets a CA cert and associated parameters in a role name.
   the client certificate with a [globbed pattern]
   (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is 
   a comma-separated list of patterns.  Authentication requires at least one Name matching at least one pattern.  If not set, defaults to allowing all names.
+- `required_extensions` `(string: "" or array:[])` - Require specific Custom Extension OIDs to exist and match the pattern. 
+   Value is a comma separated string or array of `oid:value`. Expects the extension value to be some type of ASN1 encoded string.
+   All conditions _must_ be met. Supports globbing on `value`.
 - `policies` `(string: "")` - A comma-separated list of policies to set on tokens 
   issued when authenticating against this CA certificate.
 - `display_name` `(string: "")` -   The `display_name` to set on tokens issued 
@@ -93,6 +96,7 @@ $ curl \
     "display_name": "test",
     "policies": "",
     "allowed_names": "",
+    "required_extensions": "",
     "ttl": 2764800
   },
   "warnings": null,
