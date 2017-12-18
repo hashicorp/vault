@@ -81,14 +81,9 @@ type RenewerInput struct {
 	// dispatched.
 	RenewBuffer int
 
-	//Increment specifies the new TTL that should be set on the lease,
-	//where the TTL starts when the renew operation completes successfully.
-	//The TTL set here may or may not be honored by the vault server,
-	//depending on the max TTLs associated with the lease. If the new TTL,
-	//specified here exceeds a max TTL, then the vault server may set the lease TTL
-	//to a value less than the max TTL.
-	//There can be multiple max ttls associated with a lease: role, mount, and system.
-	//To avoid unexpected expiration times, ensure the increment does not exceed any of those max ttls.
+	// The new TTL, in seconds, that should be set on the lease. The TTL set
+	// here may or may not be honored by the vault server, based on Vault
+	// configuration or any associated max TTL values.
 	Increment int
 }
 
