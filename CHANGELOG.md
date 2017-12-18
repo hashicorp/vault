@@ -74,6 +74,8 @@ BUG FIXES:
    port and then go away -- redux! [GH-3680]
  * core: Replace recursive token revocation logic with depth-first logic, which
    can avoid hitting stack depth limits in extreme cases [GH-2348]
+ * core: When doing a read on configured audited-headers, properly handle case
+   insensitivity [GH-3701]
  * core/pkcs11 (enterprise): Fix panic when PKCS#11 library is not readable
  * database/mysql: Allow the creation statement to use commands that are not yet
    supported by the prepare statement protocol [GH-3619]
