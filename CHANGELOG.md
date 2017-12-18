@@ -41,11 +41,14 @@ FEATURES:
    allowing them to be written in other languages.
  * **Nomad Secret Backend**: Nomad ACL tokens can now be generated and revoked
    using Vault.
- * **Custom Certificate Constraints on Auth**: The `cert` auth backend can now
-   match against custom certificate extensions via exact or glob matching.
+ * **TLS Cert Auth Backend Improvements**: The `cert` auth backend can now
+   match against custom certificate extensions via exact or glob matching, and
+   additionally supports max_ttl and periodic token toggles.
 
 IMPROVEMENTS:
 
+ * auth/cert: Support custom certificate constraints [GH-3634]
+ * auth/cert: Support setting `max_ttl` and `period` [GH-3642]
  * audit/file: Setting a file mode of `0000` will now disable Vault from
    automatically `chmod`ing the log file [GH-3649]
  * auth/github: The legacy MFA system can now be used with the GitHub auth
