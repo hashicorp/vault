@@ -80,7 +80,7 @@ func (b *backend) pathLogin(
 
 	clientCerts := req.Connection.ConnState.PeerCertificates
 	if len(clientCerts) == 0 {
-		return nil, fmt.Errorf("no client certificate found")
+		return logical.ErrorResponse("no client certificate found"), nil
 	}
 	skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 	akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
