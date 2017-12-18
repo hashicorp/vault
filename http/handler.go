@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -90,7 +91,11 @@ func Handler(core *vault.Core) http.Handler {
 	// handler
 	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler)
 
-	return genericWrappedHandler
+	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
+	// characters in the request path.
+	printablePathCheckHandler := cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
+
+	return printablePathCheckHandler
 }
 
 // wrapGenericHandler wraps the handler with an extra layer of handler where

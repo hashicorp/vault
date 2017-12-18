@@ -88,7 +88,12 @@ to specify where the configuration is.
     sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
     ```
 
-    If you use a Linux distribution with systemd, you can also add the above `setcap` command as an [ExecStartPre](https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecStartPre=) additional command in your Vault unit file to ensure that `mlock()` capability is added to the `vault` binary before executing.
+    If you use a Linux distribution with a modern version of systemd, you can add
+    the following directive to the "[Service]" configuration section:
+
+    ```ini
+    LimitMEMLOCK=infinity
+    ```
 
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
@@ -105,9 +110,9 @@ to specify where the configuration is.
   duration for tokens and secrets. This is specified using a label
   suffix like `"30s"` or `"1h"`.
 
-- `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which 
-  allows the decryption/encryption of raw data into and out of the security 
-  barrier. This is a highly privileged endpoint. 
+- `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which
+  allows the decryption/encryption of raw data into and out of the security
+  barrier. This is a highly privileged endpoint.
 
 - `ui` `(bool: false, Enterprise-only)` – Enables the built-in web UI, which is
   available on all listeners (address + port) at the `/ui` path. Browsers accessing

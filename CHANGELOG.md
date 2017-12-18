@@ -40,14 +40,20 @@ IMPROVEMENTS:
 
  * audit/file: Setting a file mode of `0000` will now disable Vault from
    automatically `chmod`ing the log file [GH-3649]
+ * auth/github: The legacy MFA system can now be used with the GitHub auth
+   backend [GH-3696]
  * auth/okta: The legacy MFA system can now be used with the Okta auth backend
    [GH-3653]
  * auth/token: `allowed_policies` and `disallowed_policies` can now be specified
    as a comma-separated string or an array of strings [GH-3641]
+ * core: Period values from auth backends will now be checked and applied to the
+   TTL value directly by core on login and renewal requests [GH-3677]
  * database/mongodb: Add optional `write_concern` parameter, which can be set
    during database configuration. This establishes a session-wide [write
    concern](https://docs.mongodb.com/manual/reference/write-concern/) for the
    lifecycle of the mount [GH-3646]
+ * http: Request path containing non-printable characters will return 400 - Bad
+   Request [GH-3697]
  * mfa/okta: Filter a given email address as a login filter, allowing operation
    when login email and account email are different
  * plugins: Make Vault more resilient when unsealing when plugins are
@@ -60,6 +66,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * api/status (enterprise): Fix status reporting when using an auto seal
  * auth/approle: Fix case-sensitive/insensitive comparison issue [GH-3665]
  * auth/cert: Return `allowed_names` on role read [GH-3654]
  * auth/ldap: Fix incorrect control information being sent [GH-3402] [GH-3496]
@@ -72,6 +79,8 @@ BUG FIXES:
    port and then go away -- redux! [GH-3680]
  * core: Replace recursive token revocation logic with depth-first logic, which
    can avoid hitting stack depth limits in extreme cases [GH-2348]
+ * core: When doing a read on configured audited-headers, properly handle case
+   insensitivity [GH-3701]
  * core/pkcs11 (enterprise): Fix panic when PKCS#11 library is not readable
  * database/mysql: Allow the creation statement to use commands that are not yet
    supported by the prepare statement protocol [GH-3619]
