@@ -76,9 +76,6 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 }
 
 func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
-	c.Lock()
-	defer c.Unlock()
-
 	if !c.Initialized {
 		return nil, ErrNotInitialized
 	}

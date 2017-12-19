@@ -116,9 +116,6 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 }
 
 func (c *cassandraConnectionProducer) Connection(_ context.Context) (interface{}, error) {
-	c.Lock()
-	defer c.Unlock()
-
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
