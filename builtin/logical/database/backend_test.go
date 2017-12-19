@@ -116,6 +116,55 @@ func TestBackend_PluginMain(t *testing.T) {
 	postgresql.Run(apiClientMeta.GetTLSConfig())
 }
 
+func TestBackend_RoleUpgrade(t *testing.T) {
+
+	storage := &logical.InmemStorage{}
+	backend := &databaseBackend{}
+
+	roleEnt := &roleEntry{
+		Statements: dbplugin.Statements{
+			CreationStatements: "test",
+		},
+	}
+
+	entry, err := logical.StorageEntryJSON("role/test", roleEnt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Put(entry); err != nil {
+		t.Fatal(err)
+	}
+
+	role, err := backend.Role(storage, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(role, roleEnt) {
+		t.Fatal("bad role %#v", role)
+	}
+
+	// Upgrade case
+	badJSON := `{"statments":{"creation_statments":"test","revocation_statements":"","rollback_statements":"","renew_statements":""}}`
+	entry = &logical.StorageEntry{
+		Key:   "role/test",
+		Value: []byte(badJSON),
+	}
+	if err := storage.Put(entry); err != nil {
+		t.Fatal(err)
+	}
+
+	role, err = backend.Role(storage, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(role, roleEnt) {
+		t.Fatal("bad role %#v", role)
+	}
+
+}
+
 func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
 	var err error
