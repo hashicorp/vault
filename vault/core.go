@@ -1218,6 +1218,12 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 
 	// Success!
 	c.sealed = false
+
+	// Force a cache bust here, which will also run migration code
+	if c.seal.RecoveryKeySupported() {
+		c.seal.SetRecoveryConfig(nil)
+	}
+
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
 		if ok {
