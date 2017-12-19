@@ -255,7 +255,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	tlsSkipVerify, ok := conf["tls_skip_verify"]
 
 	if ok && tlsSkipVerify != "" {
-		b, err := strconv.ParseBool(tlsSkipVerify)
+		b, err := parseutil.ParseBool(tlsSkipVerify)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed parsing tls_skip_verify parameter: {{err}}", err)
 		}
