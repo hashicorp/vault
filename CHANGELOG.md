@@ -57,6 +57,8 @@ IMPROVEMENTS:
    [GH-3653]
  * auth/token: `allowed_policies` and `disallowed_policies` can now be specified
    as a comma-separated string or an array of strings [GH-3641]
+ * command/server: The log level can now be specified with `VAULT_LOG_LEVEL`
+   [GH-3721]
  * core: Period values from auth backends will now be checked and applied to the
    TTL value directly by core on login and renewal requests [GH-3677]
  * database/mongodb: Add optional `write_concern` parameter, which can be set
