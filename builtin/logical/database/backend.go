@@ -131,6 +131,21 @@ func (b *databaseBackend) DatabaseConfig(s logical.Storage, name string) (*Datab
 	return &config, nil
 }
 
+type upgradeStatements struct {
+	// This json tag has a typo in it, the new version does not. This
+	// necessitates this upgrade logic.
+	CreationStatements   string `json:"creation_statments"`
+	RevocationStatements string `json:"revocation_statements"`
+	RollbackStatements   string `json:"rollback_statements"`
+	RenewStatements      string `json:"renew_statements"`
+}
+
+type upgradeCheck struct {
+	// This json tag has a typo in it, the new version does not. This
+	// necessitates this upgrade logic.
+	Statements upgradeStatements `json:"statments"`
+}
+
 func (b *databaseBackend) Role(s logical.Storage, roleName string) (*roleEntry, error) {
 	entry, err := s.Get("role/" + roleName)
 	if err != nil {
@@ -140,9 +155,22 @@ func (b *databaseBackend) Role(s logical.Storage, roleName string) (*roleEntry, 
 		return nil, nil
 	}
 
+	var upgradeCh upgradeCheck
+	if err := entry.DecodeJSON(&upgradeCh); err != nil {
+		return nil, err
+	}
+
 	var result roleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	empty := upgradeCheck{}
+	if upgradeCh != empty {
+		result.Statements.CreationStatements = upgradeCh.Statements.CreationStatements
+		result.Statements.RevocationStatements = upgradeCh.Statements.RevocationStatements
+		result.Statements.RollbackStatements = upgradeCh.Statements.RollbackStatements
+		result.Statements.RenewStatements = upgradeCh.Statements.RenewStatements
 	}
 
 	return &result, nil

@@ -181,7 +181,7 @@ func (b *databaseBackend) pathRoleCreate() framework.OperationFunc {
 
 type roleEntry struct {
 	DBName     string              `json:"db_name" mapstructure:"db_name" structs:"db_name"`
-	Statements dbplugin.Statements `json:"statments" mapstructure:"statements" structs:"statments"`
+	Statements dbplugin.Statements `json:"statements" mapstructure:"statements" structs:"statements"`
 	DefaultTTL time.Duration       `json:"default_ttl" mapstructure:"default_ttl" structs:"default_ttl"`
 	MaxTTL     time.Duration       `json:"max_ttl" mapstructure:"max_ttl" structs:"max_ttl"`
 }
