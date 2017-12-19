@@ -100,16 +100,39 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	db.SetMaxOpenConns(maxParInt)
 
+	// Check schema exists
+	var schemaExist bool
+	schemaRows, err := db.Query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?", database)
+	defer schemaRows.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to check mysql schema exist: %v", err)
+	}
+	schemaExist = schemaRows.Next()
+
+	// Check table exists
+	var tableExist bool
+	tableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ?", table)
+	defer tableRows.Close()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to check mysql table exist: %v", err)
+	}
+	tableExist = tableRows.Next()
+
 	// Create the required database if it doesn't exists.
-	if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + database); err != nil {
-		return nil, fmt.Errorf("failed to create mysql database: %v", err)
+	if !schemaExist {
+		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + database); err != nil {
+			return nil, fmt.Errorf("failed to create mysql database: %v", err)
+		}
 	}
 
 	// Create the required table if it doesn't exists.
-	create_query := "CREATE TABLE IF NOT EXISTS " + dbTable +
-		" (vault_key varbinary(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
-	if _, err := db.Exec(create_query); err != nil {
-		return nil, fmt.Errorf("failed to create mysql table: %v", err)
+	if !tableExist {
+		create_query := "CREATE TABLE IF NOT EXISTS " + dbTable +
+			" (vault_key varbinary(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
+		if _, err := db.Exec(create_query); err != nil {
+			return nil, fmt.Errorf("failed to create mysql table: %v", err)
+		}
 	}
 
 	// Setup the backend.
