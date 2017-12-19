@@ -103,20 +103,20 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Check schema exists
 	var schemaExist bool
 	schemaRows, err := db.Query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?", database)
-	defer schemaRows.Close()
 	if err != nil {
 		return nil, fmt.Errorf("failed to check mysql schema exist: %v", err)
 	}
+	defer schemaRows.Close()
 	schemaExist = schemaRows.Next()
 
 	// Check table exists
 	var tableExist bool
-	tableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ?", table)
-	defer tableRows.Close()
+	tableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", table, database)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to check mysql table exist: %v", err)
 	}
+	defer tableRows.Close()
 	tableExist = tableRows.Next()
 
 	// Create the required database if it doesn't exists.
