@@ -74,6 +74,8 @@ IMPROVEMENTS:
  * secret/ssh: Allow 4096-bit keys to be used in dynamic key method [GH-3593]
  * secret/consul: The Consul secret backend now uses the value of `lease` set
    on the role, if set, when renewing a secret. [GH-3796]
+ * storage/mysql: Don't attempt database creation if it exists, which can help
+   under certain permissions constraints [GH-3716]
 
 BUG FIXES:
 
