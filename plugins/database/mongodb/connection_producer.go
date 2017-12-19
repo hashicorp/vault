@@ -90,12 +90,18 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 
 // Connection creates a database connection.
 func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, error) {
+	c.Lock()
+	defer c.Unlock()
+
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
 
 	if c.session != nil {
-		return c.session, nil
+		if err := c.session.Ping(); err == nil {
+			return c.session, nil
+		}
+		c.session.Close()
 	}
 
 	dialInfo, err := parseMongoURL(c.ConnectionURL)
