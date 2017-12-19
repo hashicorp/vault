@@ -251,8 +251,14 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	}
 
 	insecureSkipVerify := false
-	if _, ok := conf["tls_skip_verify"]; ok {
-		insecureSkipVerify = true
+	tlsSkipVerify, ok := conf["tls_skip_verify"]
+
+	if ok && tlsSkipVerify != "" {
+		b, err := strconv.ParseBool(tlsSkipVerify)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing tls_skip_verify parameter: {{err}}", err)
+		}
+		insecureSkipVerify = b
 	}
 
 	tlsMinVersionStr, ok := conf["tls_min_version"]
