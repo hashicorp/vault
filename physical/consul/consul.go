@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/physical"
@@ -113,7 +114,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	disableReg, ok := conf["disable_registration"]
 	var disableRegistration bool
 	if ok && disableReg != "" {
-		b, err := strconv.ParseBool(disableReg)
+		b, err := parseutil.ParseBool(disableReg)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed parsing disable_registration parameter: {{err}}", err)
 		}
