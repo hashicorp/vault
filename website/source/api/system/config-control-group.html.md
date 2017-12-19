@@ -8,6 +8,8 @@ description: |-
 
 # `/sys/config/control-group`
 
+~> **Enterprise Only** – These endpoints require Vault Enterprise.
+
 The `/sys/config/control-group` endpoint is used to configure Control Group 
 settings.
 

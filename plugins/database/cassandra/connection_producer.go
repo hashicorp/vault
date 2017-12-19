@@ -121,7 +121,7 @@ func (c *cassandraConnectionProducer) Connection(_ context.Context) (interface{}
 	}
 
 	// If we already have a DB, return it
-	if c.session != nil {
+	if c.session != nil && !c.session.Closed() {
 		return c.session, nil
 	}
 

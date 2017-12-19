@@ -95,7 +95,10 @@ func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, 
 	}
 
 	if c.session != nil {
-		return c.session, nil
+		if err := c.session.Ping(); err == nil {
+			return c.session, nil
+		}
+		c.session.Close()
 	}
 
 	dialInfo, err := parseMongoURL(c.ConnectionURL)
