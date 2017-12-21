@@ -34,6 +34,15 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		}
 	}
 
+	mfa_method, ok := m["method"]
+	if ok {
+		data["method"] = mfa_method
+	}
+	mfa_passcode, ok := m["passcode"]
+	if ok {
+		data["passcode"] = mfa_passcode
+	}
+
 	data := map[string]interface{}{
 		"password": password,
 	}
