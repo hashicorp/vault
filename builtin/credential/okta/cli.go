@@ -34,6 +34,10 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		}
 	}
 
+	data := map[string]interface{}{
+		"password": password,
+	}
+
 	mfa_method, ok := m["method"]
 	if ok {
 		data["method"] = mfa_method
@@ -41,10 +45,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	mfa_passcode, ok := m["passcode"]
 	if ok {
 		data["passcode"] = mfa_passcode
-	}
-
-	data := map[string]interface{}{
-		"password": password,
 	}
 
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
