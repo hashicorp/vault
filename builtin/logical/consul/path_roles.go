@@ -44,7 +44,7 @@ Defaults to 'client'.`,
 			},
 
 			"lease": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeDurationSecond,
 				Description: "Lease time of the role.",
 			},
 		},
@@ -91,7 +91,7 @@ func pathRolesRead(
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"lease":      result.Lease.String(),
+			"lease":      int64(result.Lease.Seconds()),
 			"token_type": result.TokenType,
 		},
 	}
@@ -130,13 +130,9 @@ func pathRolesWrite(
 	}
 
 	var lease time.Duration
-	leaseParam := d.Get("lease").(string)
-	if leaseParam != "" {
-		lease, err = time.ParseDuration(leaseParam)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"error parsing given lease of %s: %s", leaseParam, err)), nil
-		}
+	leaseParamRaw, ok := d.GetOk("lease")
+	if ok {
+		lease = time.Second * time.Duration(leaseParamRaw.(int))
 	}
 
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{

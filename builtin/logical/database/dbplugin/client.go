@@ -1,10 +1,8 @@
 package dbplugin
 
 import (
-	"fmt"
-	"net/rpc"
+	"errors"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -17,11 +15,11 @@ type DatabasePluginClient struct {
 	client *plugin.Client
 	sync.Mutex
 
-	*databasePluginRPCClient
+	Database
 }
 
 func (dc *DatabasePluginClient) Close() error {
-	err := dc.databasePluginRPCClient.Close()
+	err := dc.Database.Close()
 	dc.client.Kill()
 
 	return err
@@ -55,79 +53,20 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 
 	// We should have a database type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	databaseRPC := raw.(*databasePluginRPCClient)
+	var db Database
+	switch raw.(type) {
+	case *gRPCClient:
+		db = raw.(*gRPCClient)
+	case *databasePluginRPCClient:
+		logger.Warn("database: plugin is using deprecated net RPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
+		db = raw.(*databasePluginRPCClient)
+	default:
+		return nil, errors.New("unsupported client type")
+	}
 
 	// Wrap RPC implimentation in DatabasePluginClient
 	return &DatabasePluginClient{
-		client:                  client,
-		databasePluginRPCClient: databaseRPC,
+		client:   client,
+		Database: db,
 	}, nil
-}
-
-// ---- RPC client domain ----
-
-// databasePluginRPCClient implements Database and is used on the client to
-// make RPC calls to a plugin.
-type databasePluginRPCClient struct {
-	client *rpc.Client
-}
-
-func (dr *databasePluginRPCClient) Type() (string, error) {
-	var dbType string
-	err := dr.client.Call("Plugin.Type", struct{}{}, &dbType)
-
-	return fmt.Sprintf("plugin-%s", dbType), err
-}
-
-func (dr *databasePluginRPCClient) CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	req := CreateUserRequest{
-		Statements:     statements,
-		UsernameConfig: usernameConfig,
-		Expiration:     expiration,
-	}
-
-	var resp CreateUserResponse
-	err = dr.client.Call("Plugin.CreateUser", req, &resp)
-
-	return resp.Username, resp.Password, err
-}
-
-func (dr *databasePluginRPCClient) RenewUser(statements Statements, username string, expiration time.Time) error {
-	req := RenewUserRequest{
-		Statements: statements,
-		Username:   username,
-		Expiration: expiration,
-	}
-
-	err := dr.client.Call("Plugin.RenewUser", req, &struct{}{})
-
-	return err
-}
-
-func (dr *databasePluginRPCClient) RevokeUser(statements Statements, username string) error {
-	req := RevokeUserRequest{
-		Statements: statements,
-		Username:   username,
-	}
-
-	err := dr.client.Call("Plugin.RevokeUser", req, &struct{}{})
-
-	return err
-}
-
-func (dr *databasePluginRPCClient) Initialize(conf map[string]interface{}, verifyConnection bool) error {
-	req := InitializeRequest{
-		Config:           conf,
-		VerifyConnection: verifyConnection,
-	}
-
-	err := dr.client.Call("Plugin.Initialize", req, &struct{}{})
-
-	return err
-}
-
-func (dr *databasePluginRPCClient) Close() error {
-	err := dr.client.Call("Plugin.Close", struct{}{}, &struct{}{})
-
-	return err
 }

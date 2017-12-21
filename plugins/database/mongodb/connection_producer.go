@@ -1,7 +1,10 @@
 package mongodb
 
 import (
+	"context"
 	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -21,15 +24,17 @@ import (
 // interface for databases to make connections.
 type mongoDBConnectionProducer struct {
 	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
+	WriteConcern  string `json:"write_concern" structs:"write_concern" mapstructure:"write_concern"`
 
 	Initialized bool
 	Type        string
 	session     *mgo.Session
+	safe        *mgo.Safe
 	sync.Mutex
 }
 
 // Initialize parses connection configuration.
-func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -42,12 +47,36 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 		return fmt.Errorf("connection_url cannot be empty")
 	}
 
+	if c.WriteConcern != "" {
+		input := c.WriteConcern
+
+		// Try to base64 decode the input. If successful, consider the decoded
+		// value as input.
+		inputBytes, err := base64.StdEncoding.DecodeString(input)
+		if err == nil {
+			input = string(inputBytes)
+		}
+
+		concern := &mgo.Safe{}
+		err = json.Unmarshal([]byte(input), concern)
+		if err != nil {
+			return fmt.Errorf("error mashalling write_concern: %s", err)
+		}
+
+		// Guard against empty, non-nil mgo.Safe object; we don't want to pass that
+		// into mgo.SetSafe in Connection().
+		if (mgo.Safe{} == *concern) {
+			return fmt.Errorf("provided write_concern values did not map to any mgo.Safe fields")
+		}
+		c.safe = concern
+	}
+
 	// Set initialized to true at this point since all fields are set,
 	// and the connection can be established at a later time.
 	c.Initialized = true
 
 	if verifyConnection {
-		if _, err := c.Connection(); err != nil {
+		if _, err := c.Connection(ctx); err != nil {
 			return fmt.Errorf("error verifying connection: %s", err)
 		}
 
@@ -60,13 +89,16 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 }
 
 // Connection creates a database connection.
-func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
+func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
 
 	if c.session != nil {
-		return c.session, nil
+		if err := c.session.Ping(); err == nil {
+			return c.session, nil
+		}
+		c.session.Close()
 	}
 
 	dialInfo, err := parseMongoURL(c.ConnectionURL)
@@ -78,6 +110,11 @@ func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if c.safe != nil {
+		c.session.SetSafe(c.safe)
+	}
+
 	c.session.SetSyncTimeout(1 * time.Minute)
 	c.session.SetSocketTimeout(1 * time.Minute)
 

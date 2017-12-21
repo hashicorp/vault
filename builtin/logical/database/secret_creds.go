@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -60,7 +61,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			unlockFunc = b.Unlock
 
 			// Create a new DB object
-			db, err = b.createDBObj(req.Storage, role.DBName)
+			db, err = b.createDBObj(context.TODO(), req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
 				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
@@ -69,7 +70,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
 		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
-			err := db.RenewUser(role.Statements, username, expireTime)
+			err := db.RenewUser(context.TODO(), role.Statements, username, expireTime)
 			// Unlock
 			unlockFunc()
 			if err != nil {
@@ -119,14 +120,14 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			unlockFunc = b.Unlock
 
 			// Create a new DB object
-			db, err = b.createDBObj(req.Storage, role.DBName)
+			db, err = b.createDBObj(context.TODO(), req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
 				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
 			}
 		}
 
-		err = db.RevokeUser(role.Statements, username)
+		err = db.RevokeUser(context.TODO(), role.Statements, username)
 		// Unlock
 		unlockFunc()
 		if err != nil {

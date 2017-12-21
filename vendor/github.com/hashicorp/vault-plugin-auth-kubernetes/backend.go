@@ -47,6 +47,9 @@ func Backend() *kubeAuthBackend {
 			Unauthenticated: []string{
 				"login",
 			},
+			SealWrapStorage: []string{
+				configPath,
+			},
 		},
 		Paths: framework.PathAppend(
 			[]*framework.Path{

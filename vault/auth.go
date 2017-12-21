@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -460,10 +459,11 @@ func (c *Core) setupCredentials() error {
 		backend, err = c.newCredentialBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
-			if errwrap.Contains(err, ErrPluginNotFound.Error()) && entry.Type == "plugin" {
-				// If we encounter an error instantiating the backend due to it being missing from the catalog,
-				// skip backend initialization but register the entry to the mount table to preserve storage
-				// and path.
+			if entry.Type == "plugin" {
+				// If we encounter an error instantiating the backend due to an error,
+				// skip backend initialization but register the entry to the mount table
+				// to preserve storage and path.
+				c.logger.Warn("core: skipping plugin-based credential entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
 			return errLoadAuthFailed

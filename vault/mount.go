@@ -1,15 +1,12 @@
 package vault
 
 import (
-	"crypto/sha1"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -123,16 +120,6 @@ func (t *MountTable) shallowClone() *MountTable {
 		mt.Entries[i] = e
 	}
 	return mt
-}
-
-// Hash is used to generate a hash value for the mount table
-func (t *MountTable) Hash() ([]byte, error) {
-	buf, err := json.Marshal(t)
-	if err != nil {
-		return nil, err
-	}
-	hash := sha1.Sum(buf)
-	return hash[:], nil
 }
 
 // setTaint is used to set the taint on given entry
@@ -765,10 +752,11 @@ func (c *Core) setupMounts() error {
 		backend, err = c.newLogicalBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
-			if errwrap.Contains(err, ErrPluginNotFound.Error()) && entry.Type == "plugin" {
-				// If we encounter an error instantiating the backend due to it being missing from the catalog,
-				// skip backend initialization but register the entry to the mount table to preserve storage
-				// and path.
+			if entry.Type == "plugin" {
+				// If we encounter an error instantiating the backend due to an error,
+				// skip backend initialization but register the entry to the mount table
+				// to preserve storage and path.
+				c.logger.Warn("core: skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
 			return errLoadMountsFailed

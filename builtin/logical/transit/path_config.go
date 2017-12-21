@@ -35,6 +35,16 @@ the latest version of the key is allowed.`,
 				Type:        framework.TypeBool,
 				Description: "Whether to allow deletion of the key",
 			},
+
+			"exportable": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `Enables export of the key. Once set, this cannot be disabled.`,
+			},
+
+			"allow_plaintext_backup": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `Enables taking a backup of the named key in plaintext format. Once set, this cannot be disabled.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -132,6 +142,26 @@ func (b *backend) pathConfigWrite(
 	if p.MinDecryptionVersion == 0 {
 		p.MinDecryptionVersion = 1
 		persistNeeded = true
+	}
+
+	exportableRaw, ok := d.GetOk("exportable")
+	if ok {
+		exportable := exportableRaw.(bool)
+		// Don't unset the already set value
+		if exportable && !p.Exportable {
+			p.Exportable = exportable
+			persistNeeded = true
+		}
+	}
+
+	allowPlaintextBackupRaw, ok := d.GetOk("allow_plaintext_backup")
+	if ok {
+		allowPlaintextBackup := allowPlaintextBackupRaw.(bool)
+		// Don't unset the already set value
+		if allowPlaintextBackup && !p.AllowPlaintextBackup {
+			p.AllowPlaintextBackup = allowPlaintextBackup
+			persistNeeded = true
+		}
 	}
 
 	if !persistNeeded {
