@@ -38,6 +38,8 @@ evaluated by the auditors.
 
 * Root tokens
 * Replication secondary activation tokens
+* Client authentication information for the GCP Auth Backend
+* Client authentication information for the Kubernetes Auth Backend
 
 ## Activating Seal Wrapping
 
