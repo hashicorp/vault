@@ -72,6 +72,14 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			}
 		}
 	}
+	s3ForceStylePath, ok := conf['s3_force_style_path']
+	if !ok {
+		s3ForceStylePath = false
+	}
+	disableSSL, ok := conf['disable_ssl']
+	if !ok {
+		disableSSL = false
+	}
 
 	credsConfig := &awsutil.CredentialsConfig{
 		AccessKey:    accessKey,
@@ -91,8 +99,10 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		HTTPClient: &http.Client{
 			Transport: pooledTransport,
 		},
-		Endpoint: aws.String(endpoint),
-		Region:   aws.String(region),
+		Endpoint:         aws.String(endpoint),
+		Region:           aws.String(region),
+		S3ForcePathStyle: aws.Bool(s3ForceStylePath),
+		DisableSSL:       aws.Bool(disableSSL),
 	}))
 
 	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
