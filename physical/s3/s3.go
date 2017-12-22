@@ -72,13 +72,21 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			}
 		}
 	}
-	s3ForceStylePath, ok := conf['s3_force_style_path']
+	s3ForceStylePathStr, ok := conf["s3_force_style_path"]
 	if !ok {
-		s3ForceStylePath = false
+		s3ForceStylePathStr = "false"
 	}
-	disableSSL, ok := conf['disable_ssl']
+	s3ForceStylePathBool, err := strconv.ParseBool(s3ForceStylePathStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid boolean set for s3_force_style_path: '%s'", s3ForceStylePathStr)
+	}
+	disableSSLStr, ok := conf["disable_ssl"]
 	if !ok {
-		disableSSL = false
+		disableSSLStr = "false"
+	}
+	disableSSLBool, err := strconv.ParseBool(disableSSLStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid boolean set for disable_ssl: '%s'", disableSSLStr)
 	}
 
 	credsConfig := &awsutil.CredentialsConfig{
@@ -101,8 +109,8 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		},
 		Endpoint:         aws.String(endpoint),
 		Region:           aws.String(region),
-		S3ForcePathStyle: aws.Bool(s3ForceStylePath),
-		DisableSSL:       aws.Bool(disableSSL),
+		S3ForcePathStyle: aws.Bool(s3ForceStylePathBool),
+		DisableSSL:       aws.Bool(disableSSLBool),
 	}))
 
 	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
