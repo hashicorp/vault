@@ -152,6 +152,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, oktaResponse, nil, nil
 	}
 
+	oktaResponse.Data["uid"] = result.Embedded.User.ID
 	return policies, oktaResponse, allGroups, nil
 }
 
