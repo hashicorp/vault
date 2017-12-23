@@ -58,6 +58,7 @@ func (b *backend) pathLogin(
 	password := d.Get("password").(string)
 
 	policies, resp, groupNames, err := b.Login(req, username, password)
+	backup_resp := resp
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -95,6 +96,7 @@ func (b *backend) pathLogin(
 		Alias: &logical.Alias{
 			Name: username,
 		},
+		EntityID: backup_resp.Data["uid"].(string),
 	}
 
 	for _, groupName := range groupNames {
