@@ -151,8 +151,15 @@ func (d *DefaultSeal) BarrierConfig() (*SealConfig, error) {
 
 	var conf SealConfig
 
+	// Try to base64 decode the seal configuration. If successful, use that
+	// for JSON decoding.
+	confBytes, err := base64.StdEncoding.DecodeString(string(pe.Value))
+	if err != nil {
+		confBytes = pe.Value
+	}
+
 	// Decode the barrier entry
-	if err := jsonutil.DecodeJSON(pe.Value, &conf); err != nil {
+	if err := jsonutil.DecodeJSON(confBytes, &conf); err != nil {
 		d.core.logger.Error("core: failed to decode seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to decode seal configuration: %v", err)
 	}
