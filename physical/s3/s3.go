@@ -22,6 +22,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -72,19 +73,19 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			}
 		}
 	}
-	s3ForceStylePathStr, ok := conf["s3_force_style_path"]
+	s3ForcePathStyleStr, ok := conf["s3_force_path_style"]
 	if !ok {
-		s3ForceStylePathStr = "false"
+		s3ForcePathStyleStr = "false"
 	}
-	s3ForceStylePathBool, err := strconv.ParseBool(s3ForceStylePathStr)
+	s3ForcePathStyleBool, err := parseutil.ParseBool(s3ForcePathStyleStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid boolean set for s3_force_style_path: '%s'", s3ForceStylePathStr)
+		return nil, fmt.Errorf("invalid boolean set for s3_force_path_style: '%s'", s3ForcePathStyleStr)
 	}
 	disableSSLStr, ok := conf["disable_ssl"]
 	if !ok {
 		disableSSLStr = "false"
 	}
-	disableSSLBool, err := strconv.ParseBool(disableSSLStr)
+	disableSSLBool, err := parseutil.ParseBool(disableSSLStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid boolean set for disable_ssl: '%s'", disableSSLStr)
 	}
@@ -109,7 +110,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		},
 		Endpoint:         aws.String(endpoint),
 		Region:           aws.String(region),
-		S3ForcePathStyle: aws.Bool(s3ForceStylePathBool),
+		S3ForcePathStyle: aws.Bool(s3ForcePathStyleBool),
 		DisableSSL:       aws.Bool(disableSSLBool),
 	}))
 
