@@ -90,7 +90,7 @@ will automatically reconcile with the primary.
 
 Lastly, clients can speak to any Vault server without a thick client. If a
 client is communicating with a standby instance, the request is automatically
-forwarded to a active instance. Secondary clusters will service reads locally
+forwarded to an active instance. Secondary clusters will service reads locally
 and forward any write requests to the primary cluster. The primary cluster is
 able to service all request types.
 
