@@ -2130,7 +2130,7 @@ role registered here will have access to the role. If a SecretID is desired
 to be generated against only this specific role, it can be done via
 'role/<role_name>/secret-id' and 'role/<role_name>/custom-secret-id' endpoints.
 The properties of the SecretID created against the role and the properties
-of the token issued with the SecretID generated againt the role, can be
+of the token issued with the SecretID generated against the role, can be
 configured using the parameters of this endpoint.`,
 	},
 	"role-bind-secret-id": {

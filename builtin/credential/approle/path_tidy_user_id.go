@@ -94,6 +94,6 @@ func (b *backend) pathTidySecretIDUpdate(
 }
 
 const pathTidySecretIDSyn = "Trigger the clean-up of expired SecretID entries."
-const pathTidySecretIDDesc = `SecretIDs will have expiratin time attached to them. The periodic function
+const pathTidySecretIDDesc = `SecretIDs will have expiration time attached to them. The periodic function
 of the backend will look for expired entries and delete them. This happens once in a minute. Invoking
 this endpoint will trigger the clean-up action, without waiting for the backend's periodic function.`
