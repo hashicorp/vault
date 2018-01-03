@@ -1218,6 +1218,12 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 
 	// Success!
 	c.sealed = false
+
+	// Force a cache bust here, which will also run migration code
+	if c.seal.RecoveryKeySupported() {
+		c.seal.SetRecoveryConfig(nil)
+	}
+
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
 		if ok {
@@ -2135,4 +2141,9 @@ func (c *Core) PhysicalAccess() *physical.PhysicalAccess {
 
 func (c *Core) RouterAccess() *RouterAccess {
 	return NewRouterAccess(c)
+}
+
+// IsDRSecondary returns if the current cluster state is a DR secondary.
+func (c *Core) IsDRSecondary() bool {
+	return c.ReplicationState().HasState(consts.ReplicationDRSecondary)
 }

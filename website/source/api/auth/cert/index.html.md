@@ -29,18 +29,32 @@ Sets a CA cert and associated parameters in a role name.
 
 - `name` `(string: <required>)` - The name of the certificate role.
 - `certificate` `(string: <required>)` - The PEM-format CA certificate.
-- `allowed_names` `(string: "")` - Constrain the Common and Alternative Names in 
+- `allowed_names` `(string: "")` - Constrain the Common and Alternative Names in
   the client certificate with a [globbed pattern]
-  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is 
-  a comma-separated list of patterns.  Authentication requires at least one Name matching at least one pattern.  If not set, defaults to allowing all names.
-- `policies` `(string: "")` - A comma-separated list of policies to set on tokens 
-  issued when authenticating against this CA certificate.
-- `display_name` `(string: "")` -   The `display_name` to set on tokens issued 
-  when authenticating against this CA certificate. If not set, defaults to the 
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of patterns. Authentication requires at least one Name
+  matching at least one pattern. If not set, defaults to allowing all names.
+- `required_extensions` `(string: "" or array:[])` - Require specific Custom
+   Extension OIDs to exist and match the pattern. Value is a comma separated
+   string or array of `oid:value`. Expects the extension value to be some type
+   of ASN1 encoded string. All conditions _must_ be met. Supports globbing on
+   `value`.
+- `policies` `(string: "")` - A comma-separated list of policies to set on
+  tokens issued when authenticating against this CA certificate.
+- `display_name` `(string: "")` - The `display_name` to set on tokens issued
+  when authenticating against this CA certificate. If not set, defaults to the
   name of the role.
-- `ttl` `(string: "")` - The TTL period of the token, provided as a number of 
-  seconds. If not provided, the token is valid for the the mount or system 
-  default TTL time, in that order.
+- `ttl` `(string: "")` - The TTL of the token, provided in either number of
+  seconds (`3600`) or a time duration (`1h`). If not provided, the token is
+  valid for the the mount or system default TTL time, in that order.
+- `max_ttl` `(string: "")` - Duration in either number of seconds (`3600`) or a
+  time duration (`1h`) after which the issued token can no longer be renewed.
+- `period` `(string: "")` - Duration in either number of seconds (`3600`) or a
+  time duration (`1h`). If set, the generated token is a periodic token; so long
+  as it is renewed it never expires unless `max_ttl` is also set, but the TTL
+  set on the token at each renewal is fixed to the value specified here. If this
+  value is modified, the token will pick up the new value at its next renewal.
+
 
 ### Sample Payload
 
@@ -93,7 +107,10 @@ $ curl \
     "display_name": "test",
     "policies": "",
     "allowed_names": "",
-    "ttl": 2764800
+    "required_extensions": "",
+    "ttl": 2764800,
+    "max_ttl": 2764800,
+    "period": 0
   },
   "warnings": null,
   "auth": null

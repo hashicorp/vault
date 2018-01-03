@@ -817,10 +817,10 @@
 			"revisionTime": "2017-10-26T18:46:43Z"
 		},
 		{
-			"checksumSHA1": "1AP23CNIbIxDH/auM59029H0CGY=",
+			"checksumSHA1": "3qxR+iktZ/aLpuq9by7pel2YM7w=",
 			"path": "github.com/go-ldap/ldap",
-			"revision": "0ae9f2495c4a9e5d436bc9a2b13a71a2fb06ddf3",
-			"revisionTime": "2017-09-29T19:17:40Z"
+			"revision": "23c4ee25d1434f2231f92afaeebfbfa7900ebbb0",
+			"revisionTime": "2017-12-09T13:38:01Z"
 		},
 		{
 			"checksumSHA1": "6dTGC5A1Y1xnv+JSi9z8S6JfnH0=",
@@ -961,6 +961,12 @@
 			"revisionTime": "2017-09-15T02:47:31Z"
 		},
 		{
+			"checksumSHA1": "5DBIm/bJOKLR3CbQH6wIELQDLlQ=",
+			"path": "github.com/gorhill/cronexpr",
+			"revision": "d520615e531a6bf3fb69406b9eba718261285ec8",
+			"revisionTime": "2016-12-05T14:13:22Z"
+		},
+		{
 			"checksumSHA1": "O0r0hj4YL+jSRNjnshkeH4GY+4s=",
 			"path": "github.com/hailocab/go-hostpool",
 			"revision": "e80d13ce29ede4452c43dea11e79b9bc8a15b478",
@@ -985,10 +991,10 @@
 			"revisionTime": "2014-10-28T05:47:10Z"
 		},
 		{
-			"checksumSHA1": "b8F628srIitj5p7Y130xc9k0QWs=",
+			"checksumSHA1": "R0vdmL1vTvFNRqXIR6drJThQE+s=",
 			"path": "github.com/hashicorp/go-cleanhttp",
-			"revision": "3573b8b52aa7b37b9358d966a898feb387f62437",
-			"revisionTime": "2017-02-11T01:34:15Z"
+			"revision": "ddbb4a28f25f22bfbad9ca9f3e10c7b81c07d270",
+			"revisionTime": "2017-12-18T14:39:43Z"
 		},
 		{
 			"checksumSHA1": "AA0aYmdg4pb5gPCUSXg8iPzxLag=",
@@ -1117,28 +1123,60 @@
 			"revisionTime": "2017-10-17T18:19:29Z"
 		},
 		{
+			"checksumSHA1": "euodRTxiXS6udU7N9xRCQL6YDCg=",
+			"path": "github.com/hashicorp/nomad/api",
+			"revision": "ebc79fba332501f71f272ade9382d67a47c5b4e1",
+			"revisionTime": "2017-09-29T21:44:31Z"
+		},
+		{
+			"checksumSHA1": "Is7OvHxCEEkKpdQnW8olCxL0444=",
+			"path": "github.com/hashicorp/nomad/api/contexts",
+			"revision": "ebc79fba332501f71f272ade9382d67a47c5b4e1",
+			"revisionTime": "2017-09-29T21:44:31Z"
+		},
+		{
+			"checksumSHA1": "DE+4s/X+r987Ia93s9633mGekzg=",
+			"path": "github.com/hashicorp/nomad/helper",
+			"revision": "ebc79fba332501f71f272ade9382d67a47c5b4e1",
+			"revisionTime": "2017-09-29T21:44:31Z"
+		},
+		{
+			"checksumSHA1": "mSCo/iZUEOSpeX5NsGZZzFMJqto=",
+			"path": "github.com/hashicorp/nomad/helper/uuid",
+			"revision": "ebc79fba332501f71f272ade9382d67a47c5b4e1",
+			"revisionTime": "2017-09-29T21:44:31Z"
+		},
+		{
 			"checksumSHA1": "mS15CkImPzXYsgNwl3Mt9Gh3Vb0=",
 			"path": "github.com/hashicorp/serf/coordinate",
 			"revision": "c20a0b1b1ea9eb8168bcdec0116688fa9254e449",
 			"revisionTime": "2017-10-22T02:00:50Z"
 		},
 		{
-			"checksumSHA1": "of/8Lz7af5X3b1tdoVQSzOpmxMo=",
+			"checksumSHA1": "sdZKlxQSisX2x4nCshF8wZYoFcs=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "4febf0d5513b41e1a3b46036e8e2d03469235205",
-			"revisionTime": "2017-10-09T12:38:52Z"
+			"revision": "f45fc9303c8075b5fb0ec5c8dda32e6dac5859ed",
+			"revisionTime": "2017-12-21T13:29:36Z"
 		},
 		{
 			"checksumSHA1": "ffJQvzbQvmCG/PdaElGSfGnDgNM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/util",
-			"revision": "4febf0d5513b41e1a3b46036e8e2d03469235205",
-			"revisionTime": "2017-10-09T12:38:52Z"
+			"revision": "f45fc9303c8075b5fb0ec5c8dda32e6dac5859ed",
+			"revisionTime": "2017-12-21T13:29:36Z"
 		},
 		{
-			"checksumSHA1": "aCikfziXS2RwsOLI3GRBxulDpbQ=",
+			"checksumSHA1": "B/pF8a80lWLgqfMZ4JYY2kKY0fs=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "642384e9341a4b859f64c7c32cc0bdbc51523fb6",
-			"revisionTime": "2017-10-30T19:15:46Z"
+			"revision": "9d1bbbd0106e1e3c4ebe16cf104cfe855874133e",
+			"revisionTime": "2017-11-15T23:43:07Z"
+		},
+		{
+			"path": "github.com/hashicorp/vault-plugin/auth-gcp/plugin",
+			"revision": ""
+		},
+		{
+			"path": "github.com/hashicorp/vault-pluginauth-gcp/plugin",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",

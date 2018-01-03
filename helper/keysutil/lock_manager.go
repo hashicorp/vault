@@ -1,9 +1,11 @@
 package keysutil
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
@@ -41,6 +43,9 @@ type PolicyRequest struct {
 
 	// Whether to upsert
 	Upsert bool
+
+	// Whether to allow plaintext backup
+	AllowPlaintextBackup bool
 }
 
 type LockManager struct {
@@ -135,6 +140,14 @@ func (lm *LockManager) UnlockPolicy(lock *sync.RWMutex, lockType bool) {
 	}
 }
 
+func (lm *LockManager) UpdateCache(name string, policy *Policy) {
+	if lm.CacheActive() {
+		lm.cacheMutex.Lock()
+		defer lm.cacheMutex.Unlock()
+		lm.cache[name] = policy
+	}
+}
+
 // Get the policy with a read lock. If we get an error saying an exclusive lock
 // is needed (for instance, for an upgrade/migration), give up the read lock,
 // call again with an exclusive lock, then swap back out for a read lock.
@@ -199,6 +212,103 @@ func (lm *LockManager) GetPolicyUpsert(req PolicyRequest) (*Policy, *sync.RWMute
 	p, lock, _, err = lm.getPolicyCommon(req, shared)
 
 	return p, lock, upserted, err
+}
+
+// RestorePolicy acquires an exclusive lock on the policy name and restores the
+// given policy along with the archive.
+func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup string) error {
+	var p *Policy
+	var err error
+
+	backupBytes, err := base64.StdEncoding.DecodeString(backup)
+	if err != nil {
+		return err
+	}
+
+	var keyData KeyData
+	err = jsonutil.DecodeJSON(backupBytes, &keyData)
+	if err != nil {
+		return err
+	}
+
+	// Set a different name if desired
+	if name != "" {
+		keyData.Policy.Name = name
+	}
+
+	name = keyData.Policy.Name
+
+	lockType := exclusive
+	lock := lm.policyLock(name, lockType)
+	defer lm.UnlockPolicy(lock, lockType)
+
+	// If the policy is in cache, error out
+	if lm.CacheActive() {
+		lm.cacheMutex.RLock()
+		p = lm.cache[name]
+		if p != nil {
+			lm.cacheMutex.RUnlock()
+			return fmt.Errorf(fmt.Sprintf("policy %q already exists", name))
+		}
+		lm.cacheMutex.RUnlock()
+	}
+
+	// If the policy exists in storage, error out
+	p, err = lm.getStoredPolicy(storage, name)
+	if err != nil {
+		return err
+	}
+	if p != nil {
+		return fmt.Errorf(fmt.Sprintf("policy %q already exists", name))
+	}
+
+	// Restore the archived keys
+	if keyData.ArchivedKeys != nil {
+		err = keyData.Policy.storeArchive(keyData.ArchivedKeys, storage)
+		if err != nil {
+			return fmt.Errorf("failed to restore archived keys for policy %q: %v", name, err)
+		}
+	}
+
+	// Mark that policy as a restored key
+	keyData.Policy.RestoreInfo = &RestoreInfo{
+		Time:    time.Now(),
+		Version: keyData.Policy.LatestVersion,
+	}
+
+	// Restore the policy. This will also attempt to adjust the archive.
+	err = keyData.Policy.Persist(storage)
+	if err != nil {
+		return fmt.Errorf("failed to restore the policy %q: %v", name, err)
+	}
+
+	// Update the cache to contain the restored policy
+	lm.UpdateCache(name, keyData.Policy)
+
+	return nil
+}
+
+func (lm *LockManager) BackupPolicy(storage logical.Storage, name string) (string, error) {
+	p, lock, err := lm.GetPolicyExclusive(storage, name)
+	if lock != nil {
+		defer lock.Unlock()
+	}
+	if err != nil {
+		return "", err
+	}
+	if p == nil {
+		return "", fmt.Errorf("invalid key %q", name)
+	}
+
+	backup, err := p.Backup(storage)
+	if err != nil {
+		return "", err
+	}
+
+	// Update the cache since the policy would now have the backup information
+	lm.UpdateCache(name, p)
+
+	return backup, nil
 }
 
 // When the function returns, a lock will be held on the policy if err == nil.
@@ -271,10 +381,11 @@ func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Polic
 		}
 
 		p = &Policy{
-			Name:       req.Name,
-			Type:       req.KeyType,
-			Derived:    req.Derived,
-			Exportable: req.Exportable,
+			Name:                 req.Name,
+			Type:                 req.KeyType,
+			Derived:              req.Derived,
+			Exportable:           req.Exportable,
+			AllowPlaintextBackup: req.AllowPlaintextBackup,
 		}
 		if req.Derived {
 			p.KDF = Kdf_hkdf_sha256

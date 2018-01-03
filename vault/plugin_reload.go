@@ -79,15 +79,23 @@ func (c *Core) reloadMatchingPlugin(pluginName string) error {
 func (c *Core) reloadPluginCommon(entry *MountEntry, isAuth bool) error {
 	path := entry.Path
 
+	if isAuth {
+		path = credentialRoutePrefix + path
+	}
+
 	// Fast-path out if the backend doesn't exist
 	raw, ok := c.router.root.Get(path)
 	if !ok {
 		return nil
 	}
 
-	// Call backend's Cleanup routine
 	re := raw.(*routeEntry)
-	re.backend.Cleanup()
+
+	// Only call Cleanup if backend is initialized
+	if re.backend != nil {
+		// Call backend's Cleanup routine
+		re.backend.Cleanup()
+	}
 
 	view := re.storageView
 

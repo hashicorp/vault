@@ -74,14 +74,14 @@ type ServerCommand struct {
 func (c *ServerCommand) Run(args []string) int {
 	var dev, verifyOnly, devHA, devTransactional, devLeasedKV, devThreeNode, devSkipInit bool
 	var configPath []string
-	var logLevel, devRootTokenID, devListenAddress, devPluginDir string
+	var logLevelFlag, devRootTokenID, devListenAddress, devPluginDir string
 	var devLatency, devLatencyJitter int
 	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
 	flags.BoolVar(&dev, "dev", false, "")
 	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
 	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
 	flags.StringVar(&devPluginDir, "dev-plugin-dir", "", "")
-	flags.StringVar(&logLevel, "log-level", "info", "")
+	flags.StringVar(&logLevelFlag, "log-level", "", "")
 	flags.IntVar(&devLatency, "dev-latency", 0, "")
 	flags.IntVar(&devLatencyJitter, "dev-latency-jitter", 20, "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
@@ -100,19 +100,25 @@ func (c *ServerCommand) Run(args []string) int {
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
 	var level int
-	logLevel = strings.ToLower(strings.TrimSpace(logLevel))
+	var logLevel string
+	if os.Getenv("VAULT_LOG_LEVEL") != "" {
+		logLevel = os.Getenv("VAULT_LOG_LEVEL")
+	}
+	if logLevelFlag != "" {
+		logLevel = strings.ToLower(strings.TrimSpace(logLevelFlag))
+	}
 	switch logLevel {
 	case "trace":
 		level = log.LevelTrace
 	case "debug":
 		level = log.LevelDebug
-	case "info":
+	case "info", "":
 		level = log.LevelInfo
 	case "notice":
 		level = log.LevelNotice
-	case "warn":
+	case "warn", "warning":
 		level = log.LevelWarn
-	case "err":
+	case "err", "error":
 		level = log.LevelError
 	default:
 		c.Ui.Output(fmt.Sprintf("Unknown log level %s", logLevel))
@@ -293,7 +299,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if devThreeNode {
-		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, devListenAddress)
+		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, devListenAddress, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	var disableClustering bool
@@ -475,7 +481,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.reloadFuncsLock.Lock()
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logGate)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logGate, c.Ui)
 		if err != nil {
 			c.Ui.Output(fmt.Sprintf(
 				"Error initializing listener of type %s: %s",
@@ -857,11 +863,12 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	return init, nil
 }
 
-func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress string) int {
+func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
 	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: devListenAddress,
 		RawLogger:         c.logger,
+		TempDir:           tempDir,
 	})
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
 
@@ -1277,7 +1284,8 @@ General Options:
 
   -log-level=info         Log verbosity. Defaults to "info", will be output to
                           stderr. Supported values: "trace", "debug", "info",
-                          "warn", "err"
+                          "warn", "err". Can also be specified with  the
+                          VAULT_LOG_LEVEL environment variable.
 `
 	return strings.TrimSpace(helpText)
 }

@@ -200,8 +200,7 @@ func (r *Request) SetLastRemoteWAL(last uint64) {
 }
 
 // RenewRequest creates the structure of the renew request.
-func RenewRequest(
-	path string, secret *Secret, data map[string]interface{}) *Request {
+func RenewRequest(path string, secret *Secret, data map[string]interface{}) *Request {
 	return &Request{
 		Operation: RenewOperation,
 		Path:      path,
@@ -211,8 +210,7 @@ func RenewRequest(
 }
 
 // RenewAuthRequest creates the structure of the renew request for an auth.
-func RenewAuthRequest(
-	path string, auth *Auth, data map[string]interface{}) *Request {
+func RenewAuthRequest(path string, auth *Auth, data map[string]interface{}) *Request {
 	return &Request{
 		Operation: RenewOperation,
 		Path:      path,
@@ -222,8 +220,7 @@ func RenewAuthRequest(
 }
 
 // RevokeRequest creates the structure of the revoke request.
-func RevokeRequest(
-	path string, secret *Secret, data map[string]interface{}) *Request {
+func RevokeRequest(path string, secret *Secret, data map[string]interface{}) *Request {
 	return &Request{
 		Operation: RevokeOperation,
 		Path:      path,

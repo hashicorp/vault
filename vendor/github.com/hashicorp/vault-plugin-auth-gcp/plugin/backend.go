@@ -58,6 +58,9 @@ func Backend() *GcpAuthBackend {
 			Unauthenticated: []string{
 				"login",
 			},
+			SealWrapStorage: []string{
+				"config",
+			},
 		},
 		Paths: framework.PathAppend(
 			[]*framework.Path{

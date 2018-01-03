@@ -57,6 +57,10 @@ type roleStorageEntry struct {
 	// value is not modified on the role. If the `Period` in the role is modified,
 	// a token will pick up the new value during its next renewal.
 	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
+
+	// LowerCaseRoleName enforces the lower casing of role names for all the
+	// roles that get created since this field was introduced.
+	LowerCaseRoleName bool `json:"lower_case_role_name" mapstructure:"lower_case_role_name" structs:"lower_case_role_name"`
 }
 
 // roleIDStorageEntry represents the reverse mapping from RoleID to Role
@@ -560,6 +564,10 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 		return logical.ErrorResponse(fmt.Sprintf("role %q does not exist", roleName)), nil
 	}
 
+	if role.LowerCaseRoleName {
+		roleName = strings.ToLower(roleName)
+	}
+
 	// Guard the list operation with an outer lock
 	b.secretIDListingLock.RLock()
 	defer b.secretIDListingLock.RUnlock()
@@ -737,7 +745,8 @@ func (b *backend) pathRoleCreateUpdate(req *logical.Request, data *framework.Fie
 			return nil, fmt.Errorf("failed to create role_id: %v\n", err)
 		}
 		role = &roleStorageEntry{
-			HMACKey: hmacKey,
+			HMACKey:           hmacKey,
+			LowerCaseRoleName: true,
 		}
 	} else if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid role name")), nil
@@ -989,6 +998,10 @@ func (b *backend) pathRoleSecretIDLookupUpdate(req *logical.Request, data *frame
 	}
 	if role == nil {
 		return nil, fmt.Errorf("role %q does not exist", roleName)
+	}
+
+	if role.LowerCaseRoleName {
+		roleName = strings.ToLower(roleName)
 	}
 
 	// Create the HMAC of the secret ID using the per-role HMAC key
@@ -2008,6 +2021,10 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
 	}
 
+	if role.LowerCaseRoleName {
+		roleName = strings.ToLower(roleName)
+	}
+
 	if secretIDStorage, err = b.registerSecretIDEntry(req.Storage, roleName, secretID, role.HMACKey, secretIDStorage); err != nil {
 		return nil, fmt.Errorf("failed to store secret_id: %v", err)
 	}
@@ -2113,7 +2130,7 @@ role registered here will have access to the role. If a SecretID is desired
 to be generated against only this specific role, it can be done via
 'role/<role_name>/secret-id' and 'role/<role_name>/custom-secret-id' endpoints.
 The properties of the SecretID created against the role and the properties
-of the token issued with the SecretID generated againt the role, can be
+of the token issued with the SecretID generated against the role, can be
 configured using the parameters of this endpoint.`,
 	},
 	"role-bind-secret-id": {
