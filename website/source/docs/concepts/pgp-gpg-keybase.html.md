@@ -17,11 +17,11 @@ performing certain operations.  This page details the various PGP integrations,
 their use, and operation.
 
 Keybase.io support is available only in the command-line tool and not via the
-Vault HTTP API, tools that help with initialization should use the Kebase.io
+Vault HTTP API, tools that help with initialization should use the Keybase.io
 API in order to obtain the GPG keys needed for a secure initialization if you
 want them to use Keybase for keys.
 
-Once the Vault has been initialized, it is possible to use keybase to decrypt
+Once the Vault has been initialized, it is possible to use Keybase to decrypt
 the shards and unseal normally.
 
 ## Initializing with PGP
