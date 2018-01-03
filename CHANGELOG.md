@@ -1,3 +1,10 @@
+## 0.9.2 (Unreleased)
+
+IMPROVEMENTS:
+
+ * physical/s3: Allow using paths with S3 for non-AWS deployments [GH-3730]
+ * physical/s3: Add ability to disable SSL for non-AWS deployments [GH-3730]
+
 ## 0.9.1 (December 21st, 2017)
 
 DEPRECATIONS/CHANGES:
