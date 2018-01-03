@@ -2142,3 +2142,8 @@ func (c *Core) PhysicalAccess() *physical.PhysicalAccess {
 func (c *Core) RouterAccess() *RouterAccess {
 	return NewRouterAccess(c)
 }
+
+// IsDRSecondary returns if the current cluster state is a DR secondary.
+func (c *Core) IsDRSecondary() bool {
+	return c.ReplicationState().HasState(consts.ReplicationDRSecondary)
+}
