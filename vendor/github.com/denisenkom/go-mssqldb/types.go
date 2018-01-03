@@ -874,6 +874,10 @@ func decodeUdt(ti typeInfo, buf []byte) []byte {
 // column type "bigint" this should return "reflect.TypeOf(int64(0))".
 func makeGoLangScanType(ti typeInfo) reflect.Type {
 	switch ti.TypeId {
+	case typeInt1:
+		return reflect.TypeOf(int64(0))
+	case typeInt2:
+		return reflect.TypeOf(int64(0))
 	case typeInt4:
 		return reflect.TypeOf(int64(0))
 	case typeInt8:
@@ -1086,6 +1090,10 @@ func makeDecl(ti typeInfo) string {
 // "TIMESTAMP".
 func makeGoLangTypeName(ti typeInfo) string {
 	switch ti.TypeId {
+	case typeInt1:
+		return "TINYINT"
+	case typeInt2:
+		return "SMALLINT"
 	case typeInt4:
 		return "INT"
 	case typeInt8:
@@ -1189,6 +1197,10 @@ func makeGoLangTypeName(ti typeInfo) string {
 //   bytea(30)     (30, true)
 func makeGoLangTypeLength(ti typeInfo) (int64, bool) {
 	switch ti.TypeId {
+	case typeInt1:
+		return 0, false
+	case typeInt2:
+		return 0, false
 	case typeInt4:
 		return 0, false
 	case typeInt8:
@@ -1304,6 +1316,10 @@ func makeGoLangTypeLength(ti typeInfo) (int64, bool) {
 //   bytea(30)     (30, true)
 func makeGoLangTypePrecisionScale(ti typeInfo) (int64, int64, bool) {
 	switch ti.TypeId {
+	case typeInt1:
+		return 0, 0, false
+	case typeInt2:
+		return 0, 0, false
 	case typeInt4:
 		return 0, 0, false
 	case typeInt8:

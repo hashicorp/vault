@@ -78,6 +78,7 @@ list of available configuration options, please see the API documentation.
 
     ```text
     $ vault write auth/kubernetes/config \
+        token_reviewer_jwt="reviewer_service_account_jwt" \
         kubernetes_host=https://192.168.99.100:8443 \
         kubernetes_ca_cert=@ca.crt
     ```
@@ -127,12 +128,6 @@ subjects:
   name: vault-auth
   namespace: default
 ```
-
-### GKE
-
-Currently the Token Review API endpoint is only available in alpha clusters on
-Google Container Engine. This means on GKE this backend can only be used with an
-alpha cluster.
 
 ## API
 

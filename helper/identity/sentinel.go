@@ -28,6 +28,20 @@ func (e *Entity) SentinelGet(key string) (interface{}, error) {
 	return nil, nil
 }
 
+func (e *Entity) SentinelKeys() []string {
+	return []string{
+		"id",
+		"aliases",
+		"metadata",
+		"meta",
+		"name",
+		"creation_time",
+		"last_update_time",
+		"merged_entity_ids",
+		"policies",
+	}
+}
+
 func (p *Alias) SentinelGet(key string) (interface{}, error) {
 	if p == nil {
 		return nil, nil
@@ -50,10 +64,24 @@ func (p *Alias) SentinelGet(key string) (interface{}, error) {
 	case "last_update_time":
 		return ptypes.TimestampString(p.LastUpdateTime), nil
 	case "merged_from_entity_ids":
-		return p.MergedFromEntityIDs, nil
+		return p.MergedFromCanonicalIDs, nil
 	}
 
 	return nil, nil
+}
+
+func (a *Alias) SentinelKeys() []string {
+	return []string{
+		"id",
+		"mount_type",
+		"mount_path",
+		"meta",
+		"metadata",
+		"name",
+		"creation_time",
+		"last_update_time",
+		"merged_from_entity_ids",
+	}
 }
 
 func (g *Group) SentinelGet(key string) (interface{}, error) {
@@ -80,4 +108,18 @@ func (g *Group) SentinelGet(key string) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+func (g *Group) SentinelKeys() []string {
+	return []string{
+		"id",
+		"name",
+		"policies",
+		"parent_group_ids",
+		"member_entity_ids",
+		"metadata",
+		"meta",
+		"creation_time",
+		"last_update_time",
+	}
 }

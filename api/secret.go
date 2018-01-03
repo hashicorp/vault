@@ -224,6 +224,7 @@ func (s *Secret) TokenTTL() (time.Duration, error) {
 // available in WrappedAccessor.
 type SecretWrapInfo struct {
 	Token           string    `json:"token"`
+	Accessor        string    `json:"accessor"`
 	TTL             int       `json:"ttl"`
 	CreationTime    time.Time `json:"creation_time"`
 	CreationPath    string    `json:"creation_path"`

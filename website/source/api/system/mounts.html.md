@@ -36,7 +36,9 @@ $ curl \
     "config": {
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
-      "force_no_cache": false
+      "force_no_cache": false,
+      "plugin_name": "",
+      "seal_wrap": false
     }
   },
   "sys": {
@@ -45,7 +47,9 @@ $ curl \
     "config": {
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
-      "force_no_cache": false
+      "force_no_cache": false,
+      "plugin_name": "",
+      "seal_wrap": false
     }
   }
 }
@@ -92,6 +96,11 @@ This endpoint enables a new secrets engine at the given path.
     respectively. The first three options override the global defaults if
     set on a specific mount. The plugin_name can be provided in the config
     map or as a top-level option, with the former taking precedence.
+    
+    When used with supported seals (`pkcs11`, `awskms`, etc.), `seal_wrap`
+    causes key material for supporting mounts to be wrapped by the seal's
+    encryption capability. This is currently only supported for `transit` and
+    `pki` backends. This is only available in Vault Enterprise.
 
 - `plugin_name` `(string: "")` – Specifies the name of the plugin to
   use based from the name in the plugin catalog. Applies only to plugin
@@ -103,6 +112,8 @@ relevant functionality is only supported in Vault Enterprise:
 - `local` `(bool: false)` – Specifies if the secrets engine is a local mount
   only. Local mounts are not replicated nor (if a secondary) removed by
   replication.
+
+- `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount.
 
 ### Sample Payload
 

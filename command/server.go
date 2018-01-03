@@ -16,8 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/http2"
-
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/cli"
@@ -30,10 +28,12 @@ import (
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/hashicorp/errwrap"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -140,7 +140,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Name:       "log-level",
 		Target:     &c.flagLogLevel,
 		Default:    "info",
-		EnvVar:     "VAULT_LOG",
+		EnvVar:     "VAULT_LOG_LEVEL",
 		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
 			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
@@ -275,13 +275,13 @@ func (c *ServerCommand) Run(args []string) int {
 		level = log.LevelTrace
 	case "debug":
 		level = log.LevelDebug
-	case "info":
+	case "info", "":
 		level = log.LevelInfo
 	case "notice":
 		level = log.LevelNotice
-	case "warn":
+	case "warn", "warning":
 		level = log.LevelWarn
-	case "err":
+	case "err", "error":
 		level = log.LevelError
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
@@ -294,7 +294,14 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
-		c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
+		if c.flagDevThreeNode {
+			c.logger = logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+				Mutex:  &sync.Mutex{},
+				Output: c.logGate,
+			})).LogxiLogger()
+		} else {
+			c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
+		}
 	default:
 		c.logger = log.NewLogger(c.logGate, "vault")
 		c.logger.SetLevel(level)
@@ -391,6 +398,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
+	info["log level"] = c.flagLogLevel
+	infoKeys = append(infoKeys, "log level")
 
 	var seal vault.Seal = &vault.DefaultSeal{}
 
@@ -446,7 +455,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if c.flagDevThreeNode {
-		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys)
+		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	var disableClustering bool
@@ -493,7 +502,9 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
+	if envRA := os.Getenv("VAULT_API_ADDR"); envRA != "" {
+		coreConfig.RedirectAddr = envRA
+	} else if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
 		coreConfig.RedirectAddr = envRA
 	} else if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
 		coreConfig.RedirectAddr = envAA
@@ -597,7 +608,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())
-	infoKeys = append(infoKeys, "log level", "mlock", "storage")
+	infoKeys = append(infoKeys, "mlock", "storage")
 
 	if coreConfig.ClusterAddr != "" {
 		info["cluster address"] = coreConfig.ClusterAddr
@@ -628,7 +639,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.reloadFuncsLock.Lock()
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logGate)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logGate, c.UI)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
@@ -831,14 +842,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		c.UI.Warn("")
 	}
 
-	// Initialize the HTTP server
-	server := &http.Server{}
-	if err := http2.ConfigureServer(server, nil); err != nil {
-		c.UI.Error(fmt.Sprintf("Error configuring server for HTTP/2: %s", err))
-		return 1
-	}
-	server.Handler = handler
+	// Initialize the HTTP servers
 	for _, ln := range lns {
+		server := &http.Server{
+			Handler: handler,
+		}
 		go server.Serve(ln)
 	}
 
@@ -1023,16 +1031,17 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	return init, nil
 }
 
-func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string) int {
+func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
 	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
+		RawLogger:         c.logger,
+		TempDir:           tempDir,
 	})
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
 
 	info["cluster parameters path"] = testCluster.TempDir
-	info["log level"] = "trace"
-	infoKeys = append(infoKeys, "cluster parameters path", "log level")
+	infoKeys = append(infoKeys, "cluster parameters path")
 
 	for i, core := range testCluster.Cores {
 		info[fmt.Sprintf("node %d redirect address", i)] = fmt.Sprintf("https://%s", core.Listeners[0].Address.String())
@@ -1465,19 +1474,19 @@ func (g *grpclogFaker) Fatalln(args ...interface{}) {
 }
 
 func (g *grpclogFaker) Print(args ...interface{}) {
-	if g.log || g.logger.IsTrace() {
+	if g.log && g.logger.IsTrace() {
 		g.logger.Trace(fmt.Sprint(args...))
 	}
 }
 
 func (g *grpclogFaker) Printf(format string, args ...interface{}) {
-	if g.log || g.logger.IsTrace() {
+	if g.log && g.logger.IsTrace() {
 		g.logger.Trace(fmt.Sprintf(format, args...))
 	}
 }
 
 func (g *grpclogFaker) Println(args ...interface{}) {
-	if g.log || g.logger.IsTrace() {
+	if g.log && g.logger.IsTrace() {
 		g.logger.Trace(fmt.Sprintln(args...))
 	}
 }

@@ -90,7 +90,7 @@ func TestIdentityStore_EntityByAliasFactors(t *testing.T) {
 		t.Fatalf("expected a non-nil response")
 	}
 
-	entity, err := is.EntityByAliasFactors(ghAccessor, "alias_name", false)
+	entity, err := is.entityByAliasFactors(ghAccessor, "alias_name", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,18 +221,29 @@ func testCoreWithIdentityTokenGithub(t *testing.T) (*Core, *IdentityStore, *Toke
 	return core, is, ts, ghAccessor
 }
 
+func testCoreWithIdentityTokenGithubRoot(t *testing.T) (*Core, *IdentityStore, *TokenStore, string, string) {
+	is, ghAccessor, core, root := testIdentityStoreWithGithubAuthRoot(t)
+	ts := testTokenStore(t, core)
+	return core, is, ts, ghAccessor, root
+}
+
+func testIdentityStoreWithGithubAuth(t *testing.T) (*IdentityStore, string, *Core) {
+	is, ghA, c, _ := testIdentityStoreWithGithubAuthRoot(t)
+	return is, ghA, c
+}
+
 // testIdentityStoreWithGithubAuth returns an instance of identity store which
 // is mounted by default. This function also enables the github auth backend to
 // assist with testing aliases and entities that require an valid mount
 // accessor of an auth backend.
-func testIdentityStoreWithGithubAuth(t *testing.T) (*IdentityStore, string, *Core) {
+func testIdentityStoreWithGithubAuthRoot(t *testing.T) (*IdentityStore, string, *Core, string) {
 	// Add github credential factory to core config
 	err := AddTestCredentialBackend("github", credGithub.Factory)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, root := TestCoreUnsealed(t)
 
 	meGH := &MountEntry{
 		Table:       credentialTableType,
@@ -252,7 +263,7 @@ func testIdentityStoreWithGithubAuth(t *testing.T) (*IdentityStore, string, *Cor
 		t.Fatalf("failed to fetch identity store from router")
 	}
 
-	return identitystore.(*IdentityStore), meGH.Accessor, c
+	return identitystore.(*IdentityStore), meGH.Accessor, c, root
 }
 
 func TestIdentityStore_MetadataKeyRegex(t *testing.T) {

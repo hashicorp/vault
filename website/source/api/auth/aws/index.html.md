@@ -649,12 +649,14 @@ inferencing configuration of that role.
   the metadata document, so essentially, this disables the client nonce check
   whenever the instance is migrated to a new host and pendingTime is newer than
   the previously-remembered time. Use with caution. This only applies to
-  authentications via the ec2 auth method.
+  authentications via the ec2 auth method. This is mutually exclusive with
+  `disallow_reauthentication`.
 - `disallow_reauthentication` `(bool: false)` - If set, only allows a single
   token to be granted per instance ID. In order to perform a fresh login, the
   entry in whitelist for the instance ID needs to be cleared using
   'auth/aws/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'.
-  This only applies to authentications via the ec2 auth method.
+  This only applies to authentications via the ec2 auth method. This is mutually
+  exclusive with `allow_instance_migration`.
 
 ### Sample Payload
 
@@ -809,9 +811,11 @@ given instance can be allowed to gain in a worst-case scenario.
   the metadata document, so essentially, this disables the client nonce check
   whenever the instance is migrated to a new host and pendingTime is newer than
   the previously-remembered time. Use with caution. Defaults to 'false'.
+  Mutually exclusive with `disallow_reauthentication`.
 - `disallow_reauthentication` `(bool: false)` - If set, only allows a single
   token to be granted per instance ID. This can be cleared with the
-  auth/aws/identity-whitelist endpoint. Defaults to 'false'.
+  auth/aws/identity-whitelist endpoint. Defaults to 'false'. Mutually exclusive
+  with `allow_instance_migration`.
 
 ### Sample Payload
 

@@ -58,7 +58,13 @@ type Auth struct {
 
 	// Alias is the information about the authenticated client returned by
 	// the auth backend
-	Alias *Alias `json:"alias" structs:"alias" mapstructure:"alias"`
+	Alias *Alias `json:"alias" mapstructure:"alias" structs:"alias"`
+
+	// GroupAliases are the informational mappings of external groups which an
+	// authenticated user belongs to. This is used to check if there are
+	// mappings groups for the group aliases in identity store. For all the
+	// matching groups, the entity ID of the user will be added.
+	GroupAliases []*Alias `json:"group_aliases" mapstructure:"group_aliases" structs:"group_aliases"`
 }
 
 func (a *Auth) GoString() string {

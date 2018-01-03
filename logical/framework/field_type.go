@@ -30,6 +30,10 @@ const (
 	// rules.  These rules include start and end with an alphanumeric
 	// character and characters in the middle can be alphanumeric or . or -.
 	TypeNameString
+
+	// TypeKVPairs allows you to represent the data as a map or a list of
+	// equal sign delimited key pairs
+	TypeKVPairs
 )
 
 func (t FieldType) String() string {
@@ -44,6 +48,8 @@ func (t FieldType) String() string {
 		return "bool"
 	case TypeMap:
 		return "map"
+	case TypeKVPairs:
+		return "keypair"
 	case TypeDurationSecond:
 		return "duration (sec)"
 	case TypeSlice, TypeStringSlice, TypeCommaStringSlice:

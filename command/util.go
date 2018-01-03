@@ -57,6 +57,8 @@ func RawField(secret *api.Secret, field string) (string, bool) {
 		switch field {
 		case "wrapping_token":
 			val = secret.WrapInfo.Token
+		case "wrapping_accessor":
+			val = secret.WrapInfo.Accessor
 		case "wrapping_token_ttl":
 			val = secret.WrapInfo.TTL
 		case "wrapping_token_creation_time":

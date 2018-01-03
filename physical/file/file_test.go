@@ -173,5 +173,66 @@ func TestFileBackend(t *testing.T) {
 	}
 
 	physical.ExerciseBackend(t, b)
+
+	// Underscores should not trip things up; ref GH-3476
+	e := &physical.Entry{Key: "_zip", Value: []byte("foobar")}
+	err = b.Put(e)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	e = &physical.Entry{Key: "_zip/_zap", Value: []byte("boofar")}
+	err = b.Put(e)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	e, err = b.Get("_zip/_zap")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if e == nil {
+		t.Fatal("got nil entry")
+	}
+	vals, err := b.List("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vals) != 2 || vals[0] == vals[1] {
+		t.Fatalf("bad: %v", vals)
+	}
+	for _, val := range vals {
+		if val != "_zip/" && val != "_zip" {
+			t.Fatalf("bad val: %v", val)
+		}
+	}
+	vals, err = b.List("_zip/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vals) != 1 || vals[0] != "_zap" {
+		t.Fatalf("bad: %v", vals)
+	}
+	err = b.Delete("_zip/_zap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	vals, err = b.List("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vals) != 1 || vals[0] != "_zip" {
+		t.Fatalf("bad: %v", vals)
+	}
+	err = b.Delete("_zip")
+	if err != nil {
+		t.Fatal(err)
+	}
+	vals, err = b.List("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vals) != 0 {
+		t.Fatalf("bad: %v", vals)
+	}
+
 	physical.ExerciseBackend_ListPrefix(t, b)
 }

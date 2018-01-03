@@ -17,7 +17,7 @@ func TestCore_GenerateRoot_Lifecycle(t *testing.T) {
 
 func testCore_GenerateRoot_Lifecycle_Common(t *testing.T, c *Core, keys [][]byte) {
 	// Verify update not allowed
-	if _, err := c.GenerateRootUpdate(keys[0], ""); err == nil {
+	if _, err := c.GenerateRootUpdate(keys[0], "", GenerateStandardRootTokenStrategy); err == nil {
 		t.Fatalf("no root generation in progress")
 	}
 
@@ -51,7 +51,7 @@ func testCore_GenerateRoot_Lifecycle_Common(t *testing.T, c *Core, keys [][]byte
 	}
 
 	// Start a root generation
-	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "")
+	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "", GenerateStandardRootTokenStrategy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -93,13 +93,13 @@ func testCore_GenerateRoot_Init_Common(t *testing.T, c *Core) {
 		t.Fatal(err)
 	}
 
-	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "")
+	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "", GenerateStandardRootTokenStrategy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Second should fail
-	err = c.GenerateRootInit("", pgpkeys.TestPubKey1)
+	err = c.GenerateRootInit("", pgpkeys.TestPubKey1, GenerateStandardRootTokenStrategy)
 	if err == nil {
 		t.Fatalf("should fail")
 	}
@@ -121,7 +121,7 @@ func testCore_GenerateRoot_InvalidMasterNonce_Common(t *testing.T, c *Core, keys
 		t.Fatal(err)
 	}
 
-	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "")
+	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "", GenerateStandardRootTokenStrategy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -136,14 +136,14 @@ func testCore_GenerateRoot_InvalidMasterNonce_Common(t *testing.T, c *Core, keys
 	}
 
 	// Provide the nonce (invalid)
-	_, err = c.GenerateRootUpdate(keys[0], "abcd")
+	_, err = c.GenerateRootUpdate(keys[0], "abcd", GenerateStandardRootTokenStrategy)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 
 	// Provide the master (invalid)
 	for _, key := range keys {
-		_, err = c.GenerateRootUpdate(key, rgconf.Nonce)
+		_, err = c.GenerateRootUpdate(key, rgconf.Nonce, GenerateStandardRootTokenStrategy)
 	}
 	if err == nil {
 		t.Fatalf("expected error")
@@ -164,7 +164,7 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 
 	otp := base64.StdEncoding.EncodeToString(otpBytes)
 	// Start a root generation
-	err = c.GenerateRootInit(otp, "")
+	err = c.GenerateRootInit(otp, "", GenerateStandardRootTokenStrategy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -181,7 +181,7 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 	// Provide the keys
 	var result *GenerateRootResult
 	for _, key := range keys {
-		result, err = c.GenerateRootUpdate(key, rkconf.Nonce)
+		result, err = c.GenerateRootUpdate(key, rkconf.Nonce, GenerateStandardRootTokenStrategy)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -190,7 +190,7 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 		t.Fatalf("Bad, result is nil")
 	}
 
-	encodedRootToken := result.EncodedRootToken
+	encodedToken := result.EncodedToken
 
 	// Should be no progress
 	num, err := c.GenerateRootProgress()
@@ -210,7 +210,7 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 		t.Fatalf("bad: %v", conf)
 	}
 
-	tokenBytes, err := xor.XORBase64(encodedRootToken, otp)
+	tokenBytes, err := xor.XORBase64(encodedToken, otp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +241,7 @@ func TestCore_GenerateRoot_Update_PGP(t *testing.T) {
 
 func testCore_GenerateRoot_Update_PGP_Common(t *testing.T, c *Core, keys [][]byte) {
 	// Start a root generation
-	err := c.GenerateRootInit("", pgpkeys.TestPubKey1)
+	err := c.GenerateRootInit("", pgpkeys.TestPubKey1, GenerateStandardRootTokenStrategy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -258,7 +258,7 @@ func testCore_GenerateRoot_Update_PGP_Common(t *testing.T, c *Core, keys [][]byt
 	// Provide the keys
 	var result *GenerateRootResult
 	for _, key := range keys {
-		result, err = c.GenerateRootUpdate(key, rkconf.Nonce)
+		result, err = c.GenerateRootUpdate(key, rkconf.Nonce, GenerateStandardRootTokenStrategy)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -267,7 +267,7 @@ func testCore_GenerateRoot_Update_PGP_Common(t *testing.T, c *Core, keys [][]byt
 		t.Fatalf("Bad, result is nil")
 	}
 
-	encodedRootToken := result.EncodedRootToken
+	encodedToken := result.EncodedToken
 
 	// Should be no progress
 	num, err := c.GenerateRootProgress()
@@ -287,7 +287,7 @@ func testCore_GenerateRoot_Update_PGP_Common(t *testing.T, c *Core, keys [][]byt
 		t.Fatalf("bad: %v", conf)
 	}
 
-	ptBuf, err := pgpkeys.DecryptBytes(encodedRootToken, pgpkeys.TestPrivKey1)
+	ptBuf, err := pgpkeys.DecryptBytes(encodedToken, pgpkeys.TestPrivKey1)
 	if err != nil {
 		t.Fatal(err)
 	}

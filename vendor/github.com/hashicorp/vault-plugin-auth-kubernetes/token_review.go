@@ -12,11 +12,11 @@ import (
 	"strings"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	authv1 "k8s.io/api/authentication/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	authv1 "k8s.io/client-go/pkg/apis/authentication/v1"
 )
 
 // This is the result from the token review

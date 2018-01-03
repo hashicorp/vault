@@ -1,7 +1,5 @@
 package complete
 
-import "github.com/posener/complete/match"
-
 // Command represents a command line
 // It holds the data that enables auto completion of command line
 // Command can also be a sub command.
@@ -25,9 +23,9 @@ type Command struct {
 }
 
 // Predict returns all possible predictions for args according to the command struct
-func (c *Command) Predict(a Args) (predictions []string) {
-	predictions, _ = c.predict(a)
-	return
+func (c *Command) Predict(a Args) []string {
+	options, _ := c.predict(a)
+	return options
 }
 
 // Commands is the type of Sub member, it maps a command name to a command struct
@@ -36,9 +34,7 @@ type Commands map[string]Command
 // Predict completion of sub command names names according to command line arguments
 func (c Commands) Predict(a Args) (prediction []string) {
 	for sub := range c {
-		if match.Prefix(sub, a.Last) {
-			prediction = append(prediction, sub)
-		}
+		prediction = append(prediction, sub)
 	}
 	return
 }
@@ -56,10 +52,7 @@ func (f Flags) Predict(a Args) (prediction []string) {
 		if flagHyphenStart && !lastHyphenStart {
 			continue
 		}
-
-		if match.Prefix(flag, a.Last) {
-			prediction = append(prediction, flag)
-		}
+		prediction = append(prediction, flag)
 	}
 	return
 }

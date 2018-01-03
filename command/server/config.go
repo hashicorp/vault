@@ -50,6 +50,11 @@ type Config struct {
 	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
+
+	APIAddr              string      `hcl:"api_addr"`
+	ClusterAddr          string      `hcl:"cluster_addr"`
+	DisableClustering    bool        `hcl:"-"`
+	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -383,6 +388,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DisableClusteringRaw != nil {
+		if result.DisableClustering, err = parseutil.ParseBool(result.DisableClusteringRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -408,6 +419,9 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"plugin_directory",
 		"pid_file",
 		"raw_storage_endpoint",
+		"api_addr",
+		"cluster_addr",
+		"disable_clustering",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
 		return nil, err
@@ -587,6 +601,19 @@ func parseStorage(result *Config, list *ast.ObjectList, name string) error {
 		delete(m, "disable_clustering")
 	}
 
+	// Override with top-level values if they are set
+	if result.APIAddr != "" {
+		redirectAddr = result.APIAddr
+	}
+
+	if result.ClusterAddr != "" {
+		clusterAddr = result.ClusterAddr
+	}
+
+	if result.DisableClusteringRaw != nil {
+		disableClustering = result.DisableClustering
+	}
+
 	result.Storage = &Storage{
 		RedirectAddr:      redirectAddr,
 		ClusterAddr:       clusterAddr,
@@ -642,6 +669,19 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 		delete(m, "disable_clustering")
 	}
 
+	// Override with top-level values if they are set
+	if result.APIAddr != "" {
+		redirectAddr = result.APIAddr
+	}
+
+	if result.ClusterAddr != "" {
+		clusterAddr = result.ClusterAddr
+	}
+
+	if result.DisableClusteringRaw != nil {
+		disableClustering = result.DisableClustering
+	}
+
 	result.HAStorage = &Storage{
 		RedirectAddr:      redirectAddr,
 		ClusterAddr:       clusterAddr,
@@ -683,7 +723,7 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		}
 	case "awskms":
 		valid = []string{
-			"aws_region",
+			"region",
 			"access_key",
 			"secret_key",
 			"kms_key_id",

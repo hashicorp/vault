@@ -1,15 +1,12 @@
 package vault
 
 import (
-	"crypto/sha1"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -125,16 +122,6 @@ func (t *MountTable) shallowClone() *MountTable {
 	return mt
 }
 
-// Hash is used to generate a hash value for the mount table
-func (t *MountTable) Hash() ([]byte, error) {
-	buf, err := json.Marshal(t)
-	if err != nil {
-		return nil, err
-	}
-	hash := sha1.Sum(buf)
-	return hash[:], nil
-}
-
 // setTaint is used to set the taint on given entry
 func (t *MountTable) setTaint(path string, value bool) *MountEntry {
 	n := len(t.Entries)
@@ -181,6 +168,7 @@ type MountEntry struct {
 	Config      MountConfig       `json:"config"`            // Configuration related to this mount (but not backend-derived)
 	Options     map[string]string `json:"options"`           // Backend options
 	Local       bool              `json:"local"`             // Local mounts are not replicated or affected by replication
+	SealWrap    bool              `json:"seal_wrap"`         // Whether to wrap CSPs
 	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
 }
 
@@ -190,7 +178,6 @@ type MountConfig struct {
 	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache    bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
 	PluginName      string        `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	SealWrap        bool          `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -199,7 +186,6 @@ type APIMountConfig struct {
 	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
 	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	SealWrap        bool   `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 // Clone returns a deep copy of the mount entry
@@ -238,8 +224,8 @@ func (c *Core) mountInternal(entry *MountEntry) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	// Verify there is no conflicting mount
-	if match := c.router.MatchingMount(entry.Path); match != "" {
+	// Verify there are no conflicting mounts
+	if match := c.router.MountConflict(entry.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
 
@@ -582,77 +568,78 @@ func (c *Core) loadMounts() error {
 		}
 		c.mounts = mountTable
 	}
+
+	var needPersist bool
+	if c.mounts == nil {
+		c.mounts = c.defaultMountTable()
+		needPersist = true
+	}
+
 	if rawLocal != nil {
 		if err := jsonutil.DecodeJSON(rawLocal.Value, localMountTable); err != nil {
 			c.logger.Error("core: failed to decompress and/or decode the local mount table", "error", err)
 			return err
 		}
-		c.mounts.Entries = append(c.mounts.Entries, localMountTable.Entries...)
+		if localMountTable != nil && len(localMountTable.Entries) > 0 {
+			c.mounts.Entries = append(c.mounts.Entries, localMountTable.Entries...)
+		}
 	}
 
-	// Ensure that required entries are loaded, or new ones
-	// added may never get loaded at all. Note that this
-	// is only designed to work with singletons, as it checks
-	// by type only.
-	if c.mounts != nil {
-		needPersist := false
+	// Note that this is only designed to work with singletons, as it checks by
+	// type only.
 
-		// Upgrade to typed mount table
-		if c.mounts.Type == "" {
-			c.mounts.Type = mountTableType
+	// Upgrade to typed mount table
+	if c.mounts.Type == "" {
+		c.mounts.Type = mountTableType
+		needPersist = true
+	}
+
+	for _, requiredMount := range c.requiredMountTable().Entries {
+		foundRequired := false
+		for _, coreMount := range c.mounts.Entries {
+			if coreMount.Type == requiredMount.Type {
+				foundRequired = true
+				break
+			}
+		}
+
+		// In a replication scenario we will let sync invalidation take
+		// care of creating a new required mount that doesn't exist yet.
+		// This should only happen in the upgrade case where a new one is
+		// introduced on the primary; otherwise initial bootstrapping will
+		// ensure this comes over. If we upgrade first, we simply don't
+		// create the mount, so we won't conflict when we sync. If this is
+		// local (e.g. cubbyhole) we do still add it.
+		if !foundRequired && (!c.replicationState.HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
+			c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 			needPersist = true
 		}
+	}
 
-		for _, requiredMount := range c.requiredMountTable().Entries {
-			foundRequired := false
-			for _, coreMount := range c.mounts.Entries {
-				if coreMount.Type == requiredMount.Type {
-					foundRequired = true
-					break
-				}
-			}
-
-			// In a replication scenario we will let sync invalidation take
-			// care of creating a new required mount that doesn't exist yet.
-			// This should only happen in the upgrade case where a new one is
-			// introduced on the primary; otherwise initial bootstrapping will
-			// ensure this comes over. If we upgrade first, we simply don't
-			// create the mount, so we won't conflict when we sync. If this is
-			// local (e.g. cubbyhole) we do still add it.
-			if !foundRequired && (!c.replicationState.HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
-				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
-				needPersist = true
-			}
+	// Upgrade to table-scoped entries
+	for _, entry := range c.mounts.Entries {
+		if entry.Type == "cubbyhole" && !entry.Local {
+			entry.Local = true
+			needPersist = true
 		}
-
-		// Upgrade to table-scoped entries
-		for _, entry := range c.mounts.Entries {
-			if entry.Type == "cubbyhole" && !entry.Local {
-				entry.Local = true
-				needPersist = true
-			}
-			if entry.Table == "" {
-				entry.Table = c.mounts.Type
-				needPersist = true
-			}
-			if entry.Accessor == "" {
-				accessor, err := c.generateMountAccessor(entry.Type)
-				if err != nil {
-					return err
-				}
-				entry.Accessor = accessor
-				needPersist = true
-			}
+		if entry.Table == "" {
+			entry.Table = c.mounts.Type
+			needPersist = true
 		}
-
-		// Done if we have restored the mount table and we don't need
-		// to persist
-		if !needPersist {
-			return nil
+		if entry.Accessor == "" {
+			accessor, err := c.generateMountAccessor(entry.Type)
+			if err != nil {
+				return err
+			}
+			entry.Accessor = accessor
+			needPersist = true
 		}
-	} else {
-		// Create and persist the default mount table
-		c.mounts = c.defaultMountTable()
+	}
+
+	// Done if we have restored the mount table and we don't need
+	// to persist
+	if !needPersist {
+		return nil
 	}
 
 	if err := c.persistMounts(c.mounts, false); err != nil {
@@ -765,10 +752,11 @@ func (c *Core) setupMounts() error {
 		backend, err = c.newLogicalBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
-			if errwrap.Contains(err, ErrPluginNotFound.Error()) && entry.Type == "plugin" {
-				// If we encounter an error instantiating the backend due to it being missing from the catalog,
-				// skip backend initialization but register the entry to the mount table to preserve storage
-				// and path.
+			if entry.Type == "plugin" {
+				// If we encounter an error instantiating the backend due to an error,
+				// skip backend initialization but register the entry to the mount table
+				// to preserve storage and path.
+				c.logger.Warn("core: skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
 			return errLoadMountsFailed

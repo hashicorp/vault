@@ -178,14 +178,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 					},
 
 					"allowed_policies": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Default:     "",
+						Type:        framework.TypeCommaStringSlice,
 						Description: tokenAllowedPoliciesHelp,
 					},
 
 					"disallowed_policies": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Default:     "",
+						Type:        framework.TypeCommaStringSlice,
 						Description: tokenDisallowedPoliciesHelp,
 					},
 
@@ -623,6 +621,21 @@ func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
 	return nil, nil
 }
 
+func (te *TokenEntry) SentinelKeys() []string {
+	return []string{
+		"period",
+		"period_seconds",
+		"explicit_max_ttl",
+		"explicit_max_ttl_seconds",
+		"creation_ttl",
+		"creation_ttl_seconds",
+		"creation_time",
+		"creation_time_unix",
+		"meta",
+		"metadata",
+	}
+}
+
 // tsRoleEntry contains token store role information
 type tsRoleEntry struct {
 	// The name of the role. Embedded so it can be used for pathing
@@ -838,6 +851,9 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 	// Write the primary ID
 	path := lookupPrefix + saltedId
 	le := &logical.StorageEntry{Key: path, Value: enc}
+	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+		le.SealWrap = true
+	}
 	if err := ts.view.Put(le); err != nil {
 		return fmt.Errorf("failed to persist entry: %v", err)
 	}
@@ -859,6 +875,12 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 	// from 1 to -1. So it's a nice optimization to check this without a read
 	// lock.
 	if te.NumUses == 0 {
+		return te, nil
+	}
+
+	// If we are attempting to unwrap a control group request, don't use the token.
+	// It will be manually revoked by the handler.
+	if len(te.Policies) == 1 && te.Policies[0] == controlGroupPolicyName {
 		return te, nil
 	}
 
@@ -929,6 +951,25 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 		return nil, err
 	}
 	return ts.lookupSalted(saltedID, false)
+}
+
+// lookupTainted is used to find a token that may or maynot be tainted given its
+// ID. It acquires a read lock, then calls lookupSalted.
+func (ts *TokenStore) lookupTainted(id string) (*TokenEntry, error) {
+	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
+	if id == "" {
+		return nil, fmt.Errorf("cannot lookup blank token")
+	}
+
+	lock := locksutil.LockForKey(ts.tokenLocks, id)
+	lock.RLock()
+	defer lock.RUnlock()
+
+	saltedID, err := ts.SaltID(id)
+	if err != nil {
+		return nil, err
+	}
+	return ts.lookupSalted(saltedID, true)
 }
 
 // lookupSalted is used to find a token given its salted ID. If tainted is
@@ -1173,29 +1214,39 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	return nil
 }
 
-// revokeTreeSalted is used to invalide a given token and all
+// revokeTreeSalted is used to invalidate a given token and all
 // child tokens using a saltedID.
+// Updated to be non-recursive and revoke child tokens
+// before parent tokens(DFS).
 func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
-	// Scan for child tokens
-	path := parentPrefix + saltedId + "/"
-	children, err := ts.view.List(path)
-	if err != nil {
-		return fmt.Errorf("failed to scan for children: %v", err)
-	}
+	var dfs []string
+	dfs = append(dfs, saltedId)
 
-	// Recursively nuke the children. The subtle nuance here is that
-	// we don't have the acutal ID of the child, but we have the salted
-	// value. Turns out, this is good enough!
-	for _, child := range children {
-		if err := ts.revokeTreeSalted(child); err != nil {
-			return err
+	for l := len(dfs); l > 0; l = len(dfs) {
+		id := dfs[0]
+		path := parentPrefix + id + "/"
+		children, err := ts.view.List(path)
+		if err != nil {
+			return fmt.Errorf("failed to scan for children: %v", err)
+		}
+		// If the length of the children array is zero,
+		// then we are at a leaf node.
+		if len(children) == 0 {
+			if err := ts.revokeSalted(id); err != nil {
+				return fmt.Errorf("failed to revoke entry: %v", err)
+			}
+			// If the length of l is equal to 1, then the last token has been deleted
+			if l == 1 {
+				return nil
+			}
+			dfs = dfs[1:]
+		} else {
+			// If we make it here, there are children and they must
+			// be prepended.
+			dfs = append(children, dfs...)
 		}
 	}
 
-	// Revoke this entry
-	if err := ts.revokeSalted(saltedId); err != nil {
-		return fmt.Errorf("failed to revoke entry: %v", err)
-	}
 	return nil
 }
 
@@ -2422,18 +2473,18 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("error registering path suffix: %s", consts.ErrPathContainsParentReferences)), nil
 	}
 
-	allowedPoliciesStr, ok := data.GetOk("allowed_policies")
+	allowedPoliciesRaw, ok := data.GetOk("allowed_policies")
 	if ok {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(allowedPoliciesStr.(string), ","), policyutil.DoNotAddDefaultPolicy)
+		entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPoliciesRaw.([]string), policyutil.DoNotAddDefaultPolicy)
 	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("allowed_policies").(string), ","), policyutil.DoNotAddDefaultPolicy)
+		entry.AllowedPolicies = policyutil.SanitizePolicies(data.Get("allowed_policies").([]string), policyutil.DoNotAddDefaultPolicy)
 	}
 
-	disallowedPoliciesStr, ok := data.GetOk("disallowed_policies")
+	disallowedPoliciesRaw, ok := data.GetOk("disallowed_policies")
 	if ok {
-		entry.DisallowedPolicies = strutil.ParseDedupLowercaseAndSortStrings(disallowedPoliciesStr.(string), ",")
+		entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
 	} else if req.Operation == logical.CreateOperation {
-		entry.DisallowedPolicies = strutil.ParseDedupLowercaseAndSortStrings(data.Get("disallowed_policies").(string), ",")
+		entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
 	}
 
 	// Store it

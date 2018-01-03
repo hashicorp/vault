@@ -26,6 +26,10 @@ func Backend() *backend {
 				"login",
 				"login/*",
 			},
+
+			SealWrapStorage: []string{
+				"config",
+			},
 		},
 
 		Paths: append([]*framework.Path{

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -129,6 +130,15 @@ func (b *PassthroughBackend) handleRead(
 			Secret: &logical.Secret{},
 			Data:   rawData,
 		}
+	}
+
+	// Ensure seal wrapping is carried through if the response is
+	// response-wrapped
+	if out.SealWrap {
+		if resp.WrapInfo == nil {
+			resp.WrapInfo = &wrapping.ResponseWrapInfo{}
+		}
+		resp.WrapInfo.SealWrap = out.SealWrap
 	}
 
 	// Check if there is a ttl key

@@ -68,7 +68,8 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		err == nil &&
 		!resp.IsError() &&
 		resp.WrapInfo != nil &&
-		resp.WrapInfo.TTL != 0
+		resp.WrapInfo.TTL != 0 &&
+		resp.WrapInfo.Token == ""
 
 	if wrapping {
 		cubbyResp, cubbyErr := c.wrapInCubbyhole(req, resp, auth)
@@ -161,12 +162,10 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
-		var errType error
+		errType := logical.ErrInvalidRequest
 		switch ctErr {
 		case ErrInternalError, logical.ErrPermissionDenied:
 			errType = ctErr
-		default:
-			errType = logical.ErrInvalidRequest
 		}
 
 		if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, ctErr); err != nil {
@@ -198,6 +197,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
 		var wrapFormat, creationPath string
+		var sealWrap bool
 
 		// Ensure no wrap info information is set other than, possibly, the TTL
 		if resp.WrapInfo != nil {
@@ -206,6 +206,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			}
 			wrapFormat = resp.WrapInfo.Format
 			creationPath = resp.WrapInfo.CreationPath
+			sealWrap = resp.WrapInfo.SealWrap
 			resp.WrapInfo = nil
 		}
 
@@ -230,6 +231,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 				TTL:          wrapTTL,
 				Format:       wrapFormat,
 				CreationPath: creationPath,
+				SealWrap:     sealWrap,
 			}
 		}
 	}
@@ -284,6 +286,21 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 	}
 
+	// If the request was to renew a token, and if there are group aliases set
+	// in the auth object, then the group memberships should be refreshed
+	if strings.HasPrefix(req.Path, "auth/token/renew") &&
+		resp != nil &&
+		resp.Auth != nil &&
+		resp.Auth.EntityID != "" &&
+		resp.Auth.GroupAliases != nil {
+		err := c.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
+		if err != nil {
+			c.logger.Error("core: failed to refresh external group memberships", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+	}
+
 	// Only the token store is allowed to return an auth block, for any
 	// other request this is an internal error. We exclude renewal of a token,
 	// since it does not need to be re-registered
@@ -322,6 +339,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	if routeErr != nil {
 		retErr = multierror.Append(retErr, routeErr)
 	}
+
 	return resp, auth, retErr
 }
 
@@ -354,6 +372,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
 		var wrapFormat, creationPath string
+		var sealWrap bool
 
 		// Ensure no wrap info information is set other than, possibly, the TTL
 		if resp.WrapInfo != nil {
@@ -362,6 +381,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			}
 			wrapFormat = resp.WrapInfo.Format
 			creationPath = resp.WrapInfo.CreationPath
+			sealWrap = resp.WrapInfo.SealWrap
 			resp.WrapInfo = nil
 		}
 
@@ -384,6 +404,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 				TTL:          wrapTTL,
 				Format:       wrapFormat,
 				CreationPath: creationPath,
+				SealWrap:     sealWrap,
 			}
 		}
 	}
@@ -412,7 +433,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			var err error
 
 			// Check if an entity already exists for the given alias
-			entity, err = c.identityStore.EntityByAliasFactors(auth.Alias.MountAccessor, auth.Alias.Name, false)
+			entity, err = c.identityStore.entityByAliasFactors(auth.Alias.MountAccessor, auth.Alias.Name, false)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -430,6 +451,12 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			}
 
 			auth.EntityID = entity.ID
+			if auth.GroupAliases != nil {
+				err = c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
 		}
 
 		if strutil.StrListSubset(auth.Policies, []string{"root"}) {
@@ -450,14 +477,27 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			return nil, nil, ErrInternalError
 		}
 
-		// Set the default lease if not provided
-		if auth.TTL == 0 {
-			auth.TTL = sysView.DefaultLeaseTTL()
-		}
+		// Start off with the sys default value, and update according to period/TTL
+		// from resp.Auth
+		tokenTTL := sysView.DefaultLeaseTTL()
 
-		// Limit the lease duration
-		if auth.TTL > sysView.MaxLeaseTTL() {
-			auth.TTL = sysView.MaxLeaseTTL()
+		switch {
+		case auth.Period > time.Duration(0):
+			// Cap the period value to the sys max_ttl value. The auth backend should
+			// have checked for it on its login path, but we check here again for
+			// sanity.
+			if auth.Period > sysView.MaxLeaseTTL() {
+				auth.Period = sysView.MaxLeaseTTL()
+			}
+			tokenTTL = auth.Period
+		case auth.TTL > time.Duration(0):
+			// Cap the TTL value. The auth backend should have checked for it on its
+			// login path (e.g. a call to b.SanitizeTTL), but we check here again for
+			// sanity.
+			if auth.TTL > sysView.MaxLeaseTTL() {
+				auth.TTL = sysView.MaxLeaseTTL()
+			}
+			tokenTTL = auth.TTL
 		}
 
 		// Generate a token
@@ -467,7 +507,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			Meta:         auth.Metadata,
 			DisplayName:  auth.DisplayName,
 			CreationTime: time.Now().Unix(),
-			TTL:          auth.TTL,
+			TTL:          tokenTTL,
 			NumUses:      auth.NumUses,
 			EntityID:     auth.EntityID,
 		}
@@ -486,10 +526,11 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			return nil, auth, ErrInternalError
 		}
 
-		// Populate the client token and accessor
+		// Populate the client token, accessor, and TTL
 		auth.ClientToken = te.ID
 		auth.Accessor = te.Accessor
 		auth.Policies = te.Policies
+		auth.TTL = te.TTL
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {

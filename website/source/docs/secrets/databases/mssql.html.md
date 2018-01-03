@@ -82,6 +82,45 @@ of the role:
     username           v-root-e2978cd0-
     ```
 
+## Example for Azure SQL Database
+
+Here is a complete example using Azure SQL Database. Note that databases in Azure SQL Database are [contained databases](https://docs.microsoft.com/en-us/sql/relational-databases/databases/contained-databases) and that we do not create a login for the user; instead, we associate the password directly with the user itself. Also note that you will need a separate connection and role for each Azure SQL database for which you want to generate dynamic credentials. You can use a single database backend mount for all these databases or use a separate mount for of them. In this example, we use a custom path for the database backend.
+
+First, we mount a database backend at the azuresql path with `vault mount -path=azuresql database`. Then we configure a connection called "testvault" to connect to a database called "test-vault", using "azuresql" at the beginning of our path:
+
+```
+$ vault write azuresql/config/testvault \
+    plugin_name=mssql-database-plugin \
+    connection_url='server=hashisqlserver.database.windows.net;port=1433; \
+    user id=admin;password=pAssw0rd;database=test-vault;app name=vault;' \
+    allowed_roles="test"
+```
+
+Now we add a role called "test" for use with the "testvault" connection:
+
+```
+$ vault write azuresql/roles/test \
+    db_name=testvault \
+    creation_statements="CREATE USER [{{name}}] WITH PASSWORD = '{{password}}';" \
+    revocation_statements="DROP USER IF EXISTS [{{name}}]" \
+    default_ttl="1h" \
+    max_ttl="24h"
+```
+We can now use this role to dynamically generate credentials for the Azure SQL database, test-vault:
+
+```
+$ vault read azuresql/creds/test
+Key            	Value
+---            	-----
+lease_id       	azuresql/creds/test/2e5b1e0b-a081-c7e1-5622-39f58e79a719
+lease_duration 	1h0m0s
+lease_renewable	true
+password       	A1a-48w04t1xzw1s33z3
+username       	v-token-test-tr2t4x9pxvq1z8878s9s-1513446795
+```
+
+When we no longer need the backend, we can unmount it with `vault unmount azuresql`. Now, you can use the MSSQL Database Plugin with your Azure SQL databases.
+
 ## API
 
 The full list of configurable options can be seen in the [MSSQL database

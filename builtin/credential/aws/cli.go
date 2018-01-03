@@ -34,6 +34,11 @@ func GenerateLoginData(accessKey, secretKey, sessionToken, headerValue string) (
 		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
 	}
 
+	_, err = creds.Get()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve credentials from credential chain: %v", err)
+	}
+
 	// Use the credentials we've found to construct an STS session
 	stsSession, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{Credentials: creds},

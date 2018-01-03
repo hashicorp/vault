@@ -155,7 +155,7 @@ func (c *LoginCommand) Run(args []string) int {
 	args = f.Args()
 
 	// Deprecations
-	// TODO: remove in 0.9.0
+	// TODO: remove in 0.10.0
 	switch {
 	case c.flagNoVerify:
 		c.UI.Warn(wrapAtLength(

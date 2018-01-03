@@ -139,7 +139,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 		}
 	}
 
-	out := []string{"Path | Type | Accessor | Plugin | Default TTL | Max TTL | Force No Cache | Replication | Description"}
+	out := []string{"Path | Type | Accessor | Plugin | Default TTL | Max TTL | Force No Cache | Replication | Seal Wrap | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
 
@@ -151,7 +151,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 			replication = "local"
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %v | %s | %s",
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %t | %s | %t | %s",
 			path,
 			mount.Type,
 			mount.Accessor,
@@ -160,6 +160,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 			maxTTL,
 			mount.Config.ForceNoCache,
 			replication,
+			mount.SealWrap,
 			mount.Description,
 		))
 	}

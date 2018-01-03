@@ -13,6 +13,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -79,16 +80,16 @@ func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 // and has a master key set.
 func (b *AESGCMBarrier) Initialized() (bool, error) {
 	// Read the keyring file
-	out, err := b.backend.Get(keyringPath)
+	keys, err := b.backend.List(keyringPrefix)
 	if err != nil {
 		return false, fmt.Errorf("failed to check for initialization: %v", err)
 	}
-	if out != nil {
+	if strutil.StrListContains(keys, "keyring") {
 		return true, nil
 	}
 
 	// Fallback, check for the old sentinel file
-	out, err = b.backend.Get(barrierInitPath)
+	out, err := b.backend.Get(barrierInitPath)
 	if err != nil {
 		return false, fmt.Errorf("failed to check for initialization: %v", err)
 	}
@@ -490,9 +491,8 @@ func (b *AESGCMBarrier) CreateUpgrade(term uint32) error {
 	value := b.encrypt(key, prevTerm, primary, buf)
 	// Create upgrade key
 	pe := &physical.Entry{
-		Key:      key,
-		Value:    value,
-		SealWrap: true,
+		Key:   key,
+		Value: value,
 	}
 	return b.backend.Put(pe)
 }

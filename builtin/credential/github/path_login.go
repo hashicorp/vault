@@ -74,7 +74,7 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse(fmt.Sprintf("error sanitizing TTLs: %s", err)), nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Auth: &logical.Auth{
 			InternalData: map[string]interface{}{
 				"token": token,
@@ -93,7 +93,18 @@ func (b *backend) pathLogin(
 				Name: *verifyResp.User.Login,
 			},
 		},
-	}, nil
+	}
+
+	for _, teamName := range verifyResp.TeamNames {
+		if teamName == "" {
+			continue
+		}
+		resp.Auth.GroupAliases = append(resp.Auth.GroupAliases, &logical.Alias{
+			Name: teamName,
+		})
+	}
+
+	return resp, nil
 }
 
 func (b *backend) pathLoginRenew(
@@ -125,7 +136,22 @@ func (b *backend) pathLoginRenew(
 	if err != nil {
 		return nil, err
 	}
-	return framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(req, d)
+
+	resp, err := framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(req, d)
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove old aliases
+	resp.Auth.GroupAliases = nil
+
+	for _, teamName := range verifyResp.TeamNames {
+		resp.Auth.GroupAliases = append(resp.Auth.GroupAliases, &logical.Alias{
+			Name: teamName,
+		})
+	}
+
+	return resp, nil
 }
 
 func (b *backend) verifyCredentials(req *logical.Request, token string) (*verifyCredentialsResp, *logical.Response, error) {
@@ -233,14 +259,16 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	}
 
 	return &verifyCredentialsResp{
-		User:     user,
-		Org:      org,
-		Policies: append(groupPoliciesList, userPoliciesList...),
+		User:      user,
+		Org:       org,
+		Policies:  append(groupPoliciesList, userPoliciesList...),
+		TeamNames: teamNames,
 	}, nil, nil
 }
 
 type verifyCredentialsResp struct {
-	User     *github.User
-	Org      *github.Organization
-	Policies []string
+	User      *github.User
+	Org       *github.Organization
+	Policies  []string
+	TeamNames []string
 }

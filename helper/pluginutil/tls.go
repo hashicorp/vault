@@ -146,19 +146,19 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 
 		addrRaw := wt.Claims().Get("addr")
 		if addrRaw == nil {
-			return nil, errors.New("decoded token does not contain primary cluster address")
+			return nil, errors.New("decoded token does not contain the active node's api_addr")
 		}
 		vaultAddr, ok := addrRaw.(string)
 		if !ok {
-			return nil, errors.New("decoded token's address not valid")
+			return nil, errors.New("decoded token's api_addr not valid")
 		}
 		if vaultAddr == "" {
-			return nil, errors.New(`no address for the vault found`)
+			return nil, errors.New(`no vault api_addr found`)
 		}
 
 		// Sanity check the value
 		if _, err := url.Parse(vaultAddr); err != nil {
-			return nil, fmt.Errorf("error parsing the vault address: %s", err)
+			return nil, fmt.Errorf("error parsing the vault api_addr: %s", err)
 		}
 
 		// Unwrap the token

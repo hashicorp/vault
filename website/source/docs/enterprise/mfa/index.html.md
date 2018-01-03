@@ -25,17 +25,17 @@ MFA in Vault can be of the following types.
 - `Okta` - If Okta push is configured and enabled on a path, then the enrolled
   device of the user will get a push notification to approve or deny the access
   to the API. The Okta username will be derived from the caller identity's
-  persona.
+  alias.
 
 - `Duo` - If Duo push is configured and enabled on a path, then the enrolled
   device of the user will get a push notification to approve or deny the access
   to the API. The Duo username will be derived from the caller identity's
-  persona.
+  alias.
 
 - `PingID` - If PingID push is configured and enabled on a path, then the
   enrolled device of the user will get a push notification to approve or deny
   the access to the API. The PingID username will be derived from the caller
-  identity's persona.
+  identity's alias.
 
 ## Configuring MFA Methods
 

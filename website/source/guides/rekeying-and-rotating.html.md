@@ -64,7 +64,8 @@ either of these processes.
 ## Rekeying Vault
 
 Rekeying the Vault requires a quorum of unseal keys. Before continuing, you
-should ensure all unseal key holders are available to assist with the rekeying.
+should ensure enough unseal key holders are available to assist with the
+rekeying to match the threshold configured when the keys were issued.
 
 First, initialize a rekeying operation. The flags represent the **newly
 desired** number of keys and threshold:

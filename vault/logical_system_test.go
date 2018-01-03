@@ -126,9 +126,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"plugin_name":       "",
 				"force_no_cache":    false,
-				"seal_wrap":         false,
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 		"sys/": map[string]interface{}{
 			"type":        "system",
@@ -139,9 +139,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"plugin_name":       "",
 				"force_no_cache":    false,
-				"seal_wrap":         false,
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -152,9 +152,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"plugin_name":       "",
 				"force_no_cache":    false,
-				"seal_wrap":         false,
 			},
-			"local": true,
+			"local":     true,
+			"seal_wrap": false,
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -165,9 +165,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"plugin_name":       "",
 				"force_no_cache":    false,
-				"seal_wrap":         false,
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -180,6 +180,8 @@ func TestSystemBackend_mount(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
 	req.Data["type"] = "kv"
+	req.Data["local"] = true
+	req.Data["seal_wrap"] = true
 
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -188,6 +190,86 @@ func TestSystemBackend_mount(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// We can't know the pointer address ahead of time so simply
+	// copy what's given
+	exp := map[string]interface{}{
+		"secret/": map[string]interface{}{
+			"type":        "kv",
+			"description": "key/value secret storage",
+			"accessor":    resp.Data["secret/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+		},
+		"sys/": map[string]interface{}{
+			"type":        "system",
+			"description": "system endpoints used for control, policy and debugging",
+			"accessor":    resp.Data["sys/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+		},
+		"cubbyhole/": map[string]interface{}{
+			"description": "per-token private secret storage",
+			"type":        "cubbyhole",
+			"accessor":    resp.Data["cubbyhole/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     true,
+			"seal_wrap": false,
+		},
+		"identity/": map[string]interface{}{
+			"description": "identity store",
+			"type":        "identity",
+			"accessor":    resp.Data["identity/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+		},
+		"prod/secret/": map[string]interface{}{
+			"description": "",
+			"type":        "kv",
+			"accessor":    resp.Data["prod/secret/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"plugin_name":       "",
+				"force_no_cache":    false,
+			},
+			"local":     true,
+			"seal_wrap": true,
+		},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", resp.Data, exp)
+	}
+
 }
 
 func TestSystemBackend_mount_force_no_cache(t *testing.T) {
@@ -1145,7 +1227,8 @@ func TestSystemBackend_authTable(t *testing.T) {
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
 			},
-			"local": false,
+			"local":     false,
+			"seal_wrap": false,
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -1161,6 +1244,8 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")
 	req.Data["type"] = "noop"
+	req.Data["local"] = true
+	req.Data["seal_wrap"] = true
 
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -1168,6 +1253,43 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 	}
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "auth")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("resp is nil")
+	}
+
+	exp := map[string]interface{}{
+		"foo/": map[string]interface{}{
+			"type":        "noop",
+			"description": "",
+			"accessor":    resp.Data["foo/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": int64(0),
+				"max_lease_ttl":     int64(0),
+			},
+			"local":     true,
+			"seal_wrap": true,
+		},
+		"token/": map[string]interface{}{
+			"type":        "token",
+			"description": "token based credentials",
+			"accessor":    resp.Data["token/"].(map[string]interface{})["accessor"],
+			"config": map[string]interface{}{
+				"default_lease_ttl": int64(0),
+				"max_lease_ttl":     int64(0),
+			},
+			"local":     false,
+			"seal_wrap": false,
+		},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
 }
 

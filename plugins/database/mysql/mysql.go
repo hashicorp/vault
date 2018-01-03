@@ -1,11 +1,12 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -29,6 +30,8 @@ var (
 	UsernameLen       int = 32
 	LegacyUsernameLen int = 16
 )
+
+var _ dbplugin.Database = &MySQL{}
 
 type MySQL struct {
 	connutil.ConnectionProducer
@@ -88,8 +91,8 @@ func (m *MySQL) Type() (string, error) {
 	return mySQLTypeName, nil
 }
 
-func (m *MySQL) getConnection() (*sql.DB, error) {
-	db, err := m.Connection()
+func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
+	db, err := m.Connection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +100,13 @@ func (m *MySQL) getConnection() (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
 
 	// Get the connection
-	db, err := m.getConnection()
+	db, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -128,7 +131,7 @@ func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplug
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -140,17 +143,32 @@ func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplug
 		if len(query) == 0 {
 			continue
 		}
-
-		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+		query = dbutil.QueryHelper(query, map[string]string{
 			"name":       username,
 			"password":   password,
 			"expiration": expirationStr,
-		}))
+		})
+
+		stmt, err := tx.PrepareContext(ctx, query)
 		if err != nil {
+			// If the error code we get back is Error 1295: This command is not
+			// supported in the prepared statement protocol yet, we will execute
+			// the statement without preparing it. This allows the caller to
+			// manually prepare statements, as well as run other not yet
+			// prepare supported commands. If there is no error when running we
+			// will continue to the next statement.
+			if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+				_, err = tx.ExecContext(ctx, query)
+				if err != nil {
+					return "", "", err
+				}
+				continue
+			}
+
 			return "", "", err
 		}
 		defer stmt.Close()
-		if _, err := stmt.Exec(); err != nil {
+		if _, err := stmt.ExecContext(ctx); err != nil {
 			return "", "", err
 		}
 	}
@@ -164,17 +182,17 @@ func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplug
 }
 
 // NOOP
-func (m *MySQL) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+func (m *MySQL) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	return nil
 }
 
-func (m *MySQL) RevokeUser(statements dbplugin.Statements, username string) error {
+func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// Grab the read lock
 	m.Lock()
 	defer m.Unlock()
 
 	// Get the connection
-	db, err := m.getConnection()
+	db, err := m.getConnection(ctx)
 	if err != nil {
 		return err
 	}
@@ -186,7 +204,7 @@ func (m *MySQL) RevokeUser(statements dbplugin.Statements, username string) erro
 	}
 
 	// Start a transaction
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -202,7 +220,7 @@ func (m *MySQL) RevokeUser(statements dbplugin.Statements, username string) erro
 		// 1295: This command is not supported in the prepared statement protocol yet
 		// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
 		query = strings.Replace(query, "{{name}}", username, -1)
-		_, err = tx.Exec(query)
+		_, err = tx.ExecContext(ctx, query)
 		if err != nil {
 			return err
 		}

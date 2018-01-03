@@ -11,6 +11,11 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	groupTypeInternal = "internal"
+	groupTypeExternal = "external"
+)
+
 func groupPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
@@ -18,15 +23,23 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
-					Description: "ID of the group.",
+					Description: "ID of the group. If set, updates the corresponding existing group.",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Type of the group, 'internal' or 'external'. Defaults to 'internal'",
 				},
 				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the group.",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the group. Format should be a list of `key=value` pairs.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the group.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -55,13 +68,22 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "ID of the group.",
 				},
+				"type": {
+					Type:        framework.TypeString,
+					Default:     groupTypeInternal,
+					Description: "Type of the group, 'internal' or 'external'. Defaults to 'internal'",
+				},
 				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the group.",
 				},
 				"metadata": {
-					Type:        framework.TypeStringSlice,
-					Description: "Metadata to be associated with the group. Format should be a list of `key=value` pairs.",
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the group.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -118,7 +140,7 @@ func (i *IdentityStore) pathGroupIDUpdate(req *logical.Request, d *framework.Fie
 	i.groupLock.Lock()
 	defer i.groupLock.Unlock()
 
-	group, err := i.memDBGroupByID(groupID, true)
+	group, err := i.MemDBGroupByID(groupID, true)
 	if err != nil {
 		return nil, err
 	}
@@ -143,11 +165,30 @@ func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framewo
 		group.Policies = policiesRaw.([]string)
 	}
 
+	groupTypeRaw, ok := d.GetOk("type")
+	if ok {
+		groupType := groupTypeRaw.(string)
+		if group.Type != "" && groupType != group.Type {
+			return logical.ErrorResponse(fmt.Sprintf("group type cannot be changed")), nil
+		}
+
+		group.Type = groupType
+	}
+
+	// If group type is not set, default to internal type
+	if group.Type == "" {
+		group.Type = groupTypeInternal
+	}
+
+	if group.Type != groupTypeInternal && group.Type != groupTypeExternal {
+		return logical.ErrorResponse(fmt.Sprintf("invalid group type %q", group.Type)), nil
+	}
+
 	// Get the name
 	groupName := d.Get("name").(string)
 	if groupName != "" {
 		// Check if there is a group already existing for the given name
-		groupByName, err := i.memDBGroupByName(groupName, false)
+		groupByName, err := i.MemDBGroupByName(groupName, false)
 		if err != nil {
 			return nil, err
 		}
@@ -163,16 +204,19 @@ func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framewo
 		group.Name = groupName
 	}
 
-	metadataRaw, ok := d.GetOk("metadata")
+	metadata, ok, err := d.GetOkErr("metadata")
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
+	}
 	if ok {
-		group.Metadata, err = parseMetadata(metadataRaw.([]string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to parse group metadata: %v", err)), nil
-		}
+		group.Metadata = metadata.(map[string]string)
 	}
 
 	memberEntityIDsRaw, ok := d.GetOk("member_entity_ids")
 	if ok {
+		if group.Type == groupTypeExternal {
+			return logical.ErrorResponse("member entities can't be set manually for external groups"), nil
+		}
 		group.MemberEntityIDs = memberEntityIDsRaw.([]string)
 		if len(group.MemberEntityIDs) > 512 {
 			return logical.ErrorResponse("member entity IDs exceeding the limit of 512"), nil
@@ -182,6 +226,9 @@ func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framewo
 	memberGroupIDsRaw, ok := d.GetOk("member_group_ids")
 	var memberGroupIDs []string
 	if ok {
+		if group.Type == groupTypeExternal {
+			return logical.ErrorResponse("member groups can't be set for external groups"), nil
+		}
 		memberGroupIDs = memberGroupIDsRaw.([]string)
 	}
 
@@ -205,12 +252,9 @@ func (i *IdentityStore) pathGroupIDRead(req *logical.Request, d *framework.Field
 		return logical.ErrorResponse("empty group id"), nil
 	}
 
-	group, err := i.memDBGroupByID(groupID, false)
+	group, err := i.MemDBGroupByID(groupID, false)
 	if err != nil {
 		return nil, err
-	}
-	if group == nil {
-		return nil, nil
 	}
 
 	return i.handleGroupReadCommon(group)
@@ -218,7 +262,7 @@ func (i *IdentityStore) pathGroupIDRead(req *logical.Request, d *framework.Field
 
 func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.Response, error) {
 	if group == nil {
-		return nil, fmt.Errorf("nil group")
+		return nil, nil
 	}
 
 	respData := map[string]interface{}{}
@@ -230,6 +274,23 @@ func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.R
 	respData["creation_time"] = ptypes.TimestampString(group.CreationTime)
 	respData["last_update_time"] = ptypes.TimestampString(group.LastUpdateTime)
 	respData["modify_index"] = group.ModifyIndex
+	respData["type"] = group.Type
+
+	aliasMap := map[string]interface{}{}
+	if group.Alias != nil {
+		aliasMap["id"] = group.Alias.ID
+		aliasMap["canonical_id"] = group.Alias.CanonicalID
+		aliasMap["mount_type"] = group.Alias.MountType
+		aliasMap["mount_accessor"] = group.Alias.MountAccessor
+		aliasMap["mount_path"] = group.Alias.MountPath
+		aliasMap["metadata"] = group.Alias.Metadata
+		aliasMap["name"] = group.Alias.Name
+		aliasMap["merged_from_canonical_ids"] = group.Alias.MergedFromCanonicalIDs
+		aliasMap["creation_time"] = ptypes.TimestampString(group.Alias.CreationTime)
+		aliasMap["last_update_time"] = ptypes.TimestampString(group.Alias.LastUpdateTime)
+	}
+
+	respData["alias"] = aliasMap
 
 	memberGroupIDs, err := i.memberGroupIDsByID(group.ID)
 	if err != nil {
@@ -253,7 +314,7 @@ func (i *IdentityStore) pathGroupIDDelete(req *logical.Request, d *framework.Fie
 // pathGroupIDList lists the IDs of all the groups in the identity store
 func (i *IdentityStore) pathGroupIDList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ws := memdb.NewWatchSet()
-	iter, err := i.memDBGroupIterator(ws)
+	iter, err := i.MemDBGroupIterator(ws)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch iterator for group in memdb: %v", err)
 	}

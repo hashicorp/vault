@@ -23,6 +23,7 @@ type SecretsEnableCommand struct {
 	flagForceNoCache    bool
 	flagPluginName      string
 	flagLocal           bool
+	flagSealWrap        bool
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -128,6 +129,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 			"replicated or removed by replication.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "seal-wrap",
+		Target:  &c.flagSealWrap,
+		Default: false,
+		Usage:   "Enable seal wrapping of critical values in the secrets engine.",
+	})
+
 	return set
 }
 
@@ -185,6 +193,7 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 		Type:        engineType,
 		Description: c.flagDescription,
 		Local:       c.flagLocal,
+		SealWrap:    c.flagSealWrap,
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),

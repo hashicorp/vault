@@ -75,15 +75,19 @@ func (b *backend) validateRoleID(s logical.Storage, roleID string) (*roleStorage
 		return nil, "", err
 	}
 	if roleIDIndex == nil {
-		return nil, "", fmt.Errorf("failed to find secondary index for role_id %q\n", roleID)
+		return nil, "", fmt.Errorf("invalid role_id %q\n", roleID)
 	}
+
+	lock := b.roleLock(roleIDIndex.Name)
+	lock.RLock()
+	defer lock.RUnlock()
 
 	role, err := b.roleEntry(s, roleIDIndex.Name)
 	if err != nil {
 		return nil, "", err
 	}
 	if role == nil {
-		return nil, "", fmt.Errorf("role %q referred by the SecretID does not exist", roleIDIndex.Name)
+		return nil, "", fmt.Errorf("role %q referred by the role_id %q does not exist anymore", roleIDIndex.Name, roleID)
 	}
 
 	return role, roleIDIndex.Name, nil
@@ -119,6 +123,10 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 		secretID = strings.TrimSpace(data.Get("secret_id").(string))
 		if secretID == "" {
 			return nil, "", metadata, "", fmt.Errorf("missing secret_id")
+		}
+
+		if role.LowerCaseRoleName {
+			roleName = strings.ToLower(roleName)
 		}
 
 		// Check if the SecretID supplied is valid. If use limit was specified

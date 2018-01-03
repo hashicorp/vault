@@ -21,7 +21,7 @@ location, please update your API calls accordingly.
 
 This endpoint configures the connection string used to communicate with the
 desired database. In addition to the parameters listed here, each Database
-plugin has additional, database plugin specifig,  parameters for this endpoint.
+plugin has additional, database plugin specific,  parameters for this endpoint.
 Please read the HTTP API for the plugin you'd wish to configure to see the full
 list of additional parameters.
 

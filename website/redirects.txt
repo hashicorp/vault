@@ -103,3 +103,5 @@
 /docs/commands/environment.html        /docs/commands/index.html#environment-variables
 /docs/commands/read-write.html         /docs/commands/index.html#reading-and-writing-data
 /docs/commands/help.html               /docs/commands/path-help.html
+
+/docs/enterprise/hsm/configuration.html /docs/configuration/seal/pkcs11.html

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -57,13 +56,12 @@ name in a request`,
 			},
 
 			"allowed_domains": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "",
+				Type: framework.TypeCommaStringSlice,
 				Description: `If set, clients can request certificates for
 subdomains directly beneath these domains, including
 the wildcard subdomains. See the documentation for more
-information. This parameter accepts a comma-separated list
-of domains.`,
+information. This parameter accepts a comma-separated 
+string or list of domains.`,
 			},
 
 			"allow_bare_domains": &framework.FieldSchema{
@@ -158,14 +156,14 @@ the key_type.`,
 			},
 
 			"key_usage": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "DigitalSignature,KeyAgreement,KeyEncipherment",
-				Description: `A comma-separated set of key usages (not extended
+				Type:    framework.TypeCommaStringSlice,
+				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+				Description: `A comma-separated string or list of key usages (not extended
 key usages). Valid values can be found at
 https://golang.org/pkg/crypto/x509/#KeyUsage
 -- simply drop the "KeyUsage" part of the name.
 To remove all key usages from being set, set
-this value to an empty string.`,
+this value to an empty list.`,
 			},
 
 			"use_csr_common_name": &framework.FieldSchema{
@@ -217,8 +215,8 @@ leases adversely affect the startup time of Vault.`,
 				Default: false,
 				Description: `
 If set, certificates issued/signed against this role will not be stored in the
-in the storage backend. This can improve performance when issuing large numbers
-of certificates. However, certificates issued in this way cannot be enumerated
+storage backend. This can improve performance when issuing large numbers of 
+certificates. However, certificates issued in this way cannot be enumerated
 or revoked, so this option is recommended only for certificates that are
 non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,
@@ -267,23 +265,21 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		result.AllowBareDomains = true
 		modified = true
 	}
+	if result.AllowedDomainsOld != "" {
+		result.AllowedDomains = strings.Split(result.AllowedDomainsOld, ",")
+		result.AllowedDomainsOld = ""
+		modified = true
+	}
 	if result.AllowedBaseDomain != "" {
 		found := false
-		allowedDomains := strings.Split(result.AllowedDomains, ",")
-		if len(allowedDomains) != 0 {
-			for _, v := range allowedDomains {
-				if v == result.AllowedBaseDomain {
-					found = true
-					break
-				}
+		for _, v := range result.AllowedDomains {
+			if v == result.AllowedBaseDomain {
+				found = true
+				break
 			}
 		}
 		if !found {
-			if result.AllowedDomains == "" {
-				result.AllowedDomains = result.AllowedBaseDomain
-			} else {
-				result.AllowedDomains += "," + result.AllowedBaseDomain
-			}
+			result.AllowedDomains = append(result.AllowedDomains, result.AllowedBaseDomain)
 		}
 		result.AllowedBaseDomain = ""
 		modified = true
@@ -299,13 +295,23 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		modified = true
 	}
 
+	// Upgrade key usages
+	if result.KeyUsageOld != "" {
+		result.KeyUsage = strings.Split(result.KeyUsageOld, ",")
+		result.KeyUsageOld = ""
+		modified = true
+	}
+
 	if modified {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
 			return nil, err
 		}
 		if err := s.Put(jsonEntry); err != nil {
-			return nil, err
+			// Only perform upgrades on replication primary
+			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+				return nil, err
+			}
 		}
 	}
 
@@ -351,18 +357,8 @@ func (b *backend) pathRoleRead(
 	}
 
 	resp := &logical.Response{
-		Data: structs.New(role).Map(),
+		Data: role.ToResponseData(),
 	}
-
-	if resp.Data == nil {
-		return nil, fmt.Errorf("error converting role data to response")
-	}
-
-	// These values are deprecated and the entries are migrated on read
-	delete(resp.Data, "lease")
-	delete(resp.Data, "lease_max")
-	delete(resp.Data, "allowed_base_domain")
-
 	return resp, nil
 }
 
@@ -385,7 +381,7 @@ func (b *backend) pathRoleCreate(
 		MaxTTL:              data.Get("max_ttl").(string),
 		TTL:                 (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		AllowLocalhost:      data.Get("allow_localhost").(bool),
-		AllowedDomains:      data.Get("allowed_domains").(string),
+		AllowedDomains:      data.Get("allowed_domains").([]string),
 		AllowBareDomains:    data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:     data.Get("allow_subdomains").(bool),
 		AllowGlobDomains:    data.Get("allow_glob_domains").(bool),
@@ -400,7 +396,7 @@ func (b *backend) pathRoleCreate(
 		KeyBits:             data.Get("key_bits").(int),
 		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:          data.Get("use_csr_sans").(bool),
-		KeyUsage:            data.Get("key_usage").(string),
+		KeyUsage:            data.Get("key_usage").([]string),
 		OU:                  data.Get("ou").(string),
 		Organization:        data.Get("organization").(string),
 		GenerateLease:       new(bool),
@@ -473,10 +469,9 @@ func (b *backend) pathRoleCreate(
 	return nil, nil
 }
 
-func parseKeyUsages(input string) int {
+func parseKeyUsages(input []string) int {
 	var parsedKeyUsages x509.KeyUsage
-	splitKeyUsage := strings.Split(input, ",")
-	for _, k := range splitKeyUsage {
+	for _, k := range input {
 		switch strings.ToLower(strings.TrimSpace(k)) {
 		case "digitalsignature":
 			parsedKeyUsages |= x509.KeyUsageDigitalSignature
@@ -503,38 +498,75 @@ func parseKeyUsages(input string) int {
 }
 
 type roleEntry struct {
-	LeaseMax              string `json:"lease_max" structs:"lease_max" mapstructure:"lease_max"`
-	Lease                 string `json:"lease" structs:"lease" mapstructure:"lease"`
-	MaxTTL                string `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	TTL                   string `json:"ttl" structs:"ttl" mapstructure:"ttl"`
-	AllowLocalhost        bool   `json:"allow_localhost" structs:"allow_localhost" mapstructure:"allow_localhost"`
-	AllowedBaseDomain     string `json:"allowed_base_domain" structs:"allowed_base_domain" mapstructure:"allowed_base_domain"`
-	AllowedDomains        string `json:"allowed_domains" structs:"allowed_domains" mapstructure:"allowed_domains"`
-	AllowBaseDomain       bool   `json:"allow_base_domain" structs:"allow_base_domain" mapstructure:"allow_base_domain"`
-	AllowBareDomains      bool   `json:"allow_bare_domains" structs:"allow_bare_domains" mapstructure:"allow_bare_domains"`
-	AllowTokenDisplayName bool   `json:"allow_token_displayname" structs:"allow_token_displayname" mapstructure:"allow_token_displayname"`
-	AllowSubdomains       bool   `json:"allow_subdomains" structs:"allow_subdomains" mapstructure:"allow_subdomains"`
-	AllowGlobDomains      bool   `json:"allow_glob_domains" structs:"allow_glob_domains" mapstructure:"allow_glob_domains"`
-	AllowAnyName          bool   `json:"allow_any_name" structs:"allow_any_name" mapstructure:"allow_any_name"`
-	EnforceHostnames      bool   `json:"enforce_hostnames" structs:"enforce_hostnames" mapstructure:"enforce_hostnames"`
-	AllowIPSANs           bool   `json:"allow_ip_sans" structs:"allow_ip_sans" mapstructure:"allow_ip_sans"`
-	ServerFlag            bool   `json:"server_flag" structs:"server_flag" mapstructure:"server_flag"`
-	ClientFlag            bool   `json:"client_flag" structs:"client_flag" mapstructure:"client_flag"`
-	CodeSigningFlag       bool   `json:"code_signing_flag" structs:"code_signing_flag" mapstructure:"code_signing_flag"`
-	EmailProtectionFlag   bool   `json:"email_protection_flag" structs:"email_protection_flag" mapstructure:"email_protection_flag"`
-	UseCSRCommonName      bool   `json:"use_csr_common_name" structs:"use_csr_common_name" mapstructure:"use_csr_common_name"`
-	UseCSRSANs            bool   `json:"use_csr_sans" structs:"use_csr_sans" mapstructure:"use_csr_sans"`
-	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
-	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
-	MaxPathLength         *int   `json:",omitempty" structs:"max_path_length,omitempty" mapstructure:"max_path_length"`
-	KeyUsage              string `json:"key_usage" structs:"key_usage" mapstructure:"key_usage"`
-	OU                    string `json:"ou" structs:"ou" mapstructure:"ou"`
-	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
-	GenerateLease         *bool  `json:"generate_lease,omitempty" structs:"generate_lease,omitempty"`
-	NoStore               bool   `json:"no_store" structs:"no_store" mapstructure:"no_store"`
+	LeaseMax              string   `json:"lease_max"`
+	Lease                 string   `json:"lease"`
+	MaxTTL                string   `json:"max_ttl" mapstructure:"max_ttl"`
+	TTL                   string   `json:"ttl" mapstructure:"ttl"`
+	AllowLocalhost        bool     `json:"allow_localhost" mapstructure:"allow_localhost"`
+	AllowedBaseDomain     string   `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
+	AllowedDomainsOld     string   `json:"allowed_domains,omit_empty"`
+	AllowedDomains        []string `json:"allowed_domains_list" mapstructure:"allowed_domains"`
+	AllowBaseDomain       bool     `json:"allow_base_domain"`
+	AllowBareDomains      bool     `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
+	AllowTokenDisplayName bool     `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
+	AllowSubdomains       bool     `json:"allow_subdomains" mapstructure:"allow_subdomains"`
+	AllowGlobDomains      bool     `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
+	AllowAnyName          bool     `json:"allow_any_name" mapstructure:"allow_any_name"`
+	EnforceHostnames      bool     `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
+	AllowIPSANs           bool     `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
+	ServerFlag            bool     `json:"server_flag" mapstructure:"server_flag"`
+	ClientFlag            bool     `json:"client_flag" mapstructure:"client_flag"`
+	CodeSigningFlag       bool     `json:"code_signing_flag" mapstructure:"code_signing_flag"`
+	EmailProtectionFlag   bool     `json:"email_protection_flag" mapstructure:"email_protection_flag"`
+	UseCSRCommonName      bool     `json:"use_csr_common_name" mapstructure:"use_csr_common_name"`
+	UseCSRSANs            bool     `json:"use_csr_sans" mapstructure:"use_csr_sans"`
+	KeyType               string   `json:"key_type" mapstructure:"key_type"`
+	KeyBits               int      `json:"key_bits" mapstructure:"key_bits"`
+	MaxPathLength         *int     `json:",omitempty" mapstructure:"max_path_length"`
+	KeyUsageOld           string   `json:"key_usage,omitempty"`
+	KeyUsage              []string `json:"key_usage_list" mapstructure:"key_usage"`
+	OU                    string   `json:"ou" mapstructure:"ou"`
+	Organization          string   `json:"organization" mapstructure:"organization"`
+	GenerateLease         *bool    `json:"generate_lease,omitempty"`
+	NoStore               bool     `json:"no_store" mapstructure:"no_store"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
+}
+
+func (r *roleEntry) ToResponseData() map[string]interface{} {
+	responseData := map[string]interface{}{
+		"ttl":                     r.TTL,
+		"max_ttl":                 r.MaxTTL,
+		"allow_localhost":         r.AllowLocalhost,
+		"allowed_domains":         r.AllowedDomains,
+		"allow_bare_domains":      r.AllowBareDomains,
+		"allow_token_displayname": r.AllowTokenDisplayName,
+		"allow_subdomains":        r.AllowSubdomains,
+		"allow_glob_domains":      r.AllowGlobDomains,
+		"allow_any_name":          r.AllowAnyName,
+		"enforce_hostnames":       r.EnforceHostnames,
+		"allow_ip_sans":           r.AllowIPSANs,
+		"server_flag":             r.ServerFlag,
+		"client_flag":             r.ClientFlag,
+		"code_signing_flag":       r.CodeSigningFlag,
+		"email_protection_flag":   r.EmailProtectionFlag,
+		"use_csr_common_name":     r.UseCSRCommonName,
+		"use_csr_sans":            r.UseCSRSANs,
+		"key_type":                r.KeyType,
+		"key_bits":                r.KeyBits,
+		"key_usage":               r.KeyUsage,
+		"ou":                      r.OU,
+		"organization":            r.Organization,
+		"no_store":                r.NoStore,
+	}
+	if r.MaxPathLength != nil {
+		responseData["max_path_length"] = r.MaxPathLength
+	}
+	if r.GenerateLease != nil {
+		responseData["generate_lease"] = r.GenerateLease
+	}
+	return responseData
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`

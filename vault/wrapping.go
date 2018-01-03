@@ -93,6 +93,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, aut
 	}
 
 	var err error
+	sealWrap := resp.WrapInfo.SealWrap
 
 	// If we are wrapping, the first part (performed in this functions) happens
 	// before auditing so that resp.WrapInfo.Token can contain the HMAC'd
@@ -114,6 +115,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, aut
 	}
 
 	resp.WrapInfo.Token = te.ID
+	resp.WrapInfo.Accessor = te.Accessor
 	resp.WrapInfo.CreationTime = creationTime
 	// If this is not a rewrap, store the request path as creation_path
 	if req.Path != "sys/wrapping/rewrap" {
@@ -162,6 +164,11 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, aut
 		Path:        "cubbyhole/response",
 		ClientToken: te.ID,
 	}
+	if sealWrap {
+		cubbyReq.WrapInfo = &logical.RequestWrapInfo{
+			SealWrap: true,
+		}
+	}
 
 	// During a rewrap, store the original response, don't wrap it again.
 	if req.Path == "sys/wrapping/rewrap" {
@@ -206,6 +213,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, aut
 	}
 
 	// Store info for lookup
+	cubbyReq.WrapInfo = nil
 	cubbyReq.Path = "cubbyhole/wrapinfo"
 	cubbyReq.Data = map[string]interface{}{
 		"creation_ttl":  resp.WrapInfo.TTL,
@@ -321,7 +329,7 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 		return false, nil
 	}
 
-	if te.Policies[0] != responseWrappingPolicyName {
+	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
 		return false, nil
 	}
 

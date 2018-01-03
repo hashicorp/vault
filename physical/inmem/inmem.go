@@ -59,7 +59,7 @@ func (i *InmemBackend) Put(entry *physical.Entry) error {
 }
 
 func (i *InmemBackend) PutInternal(entry *physical.Entry) error {
-	i.root.Insert(entry.Key, entry)
+	i.root.Insert(entry.Key, entry.Value)
 	return nil
 }
 
@@ -76,7 +76,10 @@ func (i *InmemBackend) Get(key string) (*physical.Entry, error) {
 
 func (i *InmemBackend) GetInternal(key string) (*physical.Entry, error) {
 	if raw, ok := i.root.Get(key); ok {
-		return raw.(*physical.Entry), nil
+		return &physical.Entry{
+			Key:   key,
+			Value: raw.([]byte),
+		}, nil
 	}
 	return nil, nil
 }

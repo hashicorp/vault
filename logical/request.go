@@ -8,7 +8,7 @@ import (
 )
 
 // RequestWrapInfo is a struct that stores information about desired response
-// wrapping behavior
+// and seal wrapping behavior
 type RequestWrapInfo struct {
 	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
@@ -17,6 +17,10 @@ type RequestWrapInfo struct {
 	// The format to use for the wrapped response; if not specified it's a bare
 	// token
 	Format string `json:"format" structs:"format" mapstructure:"format" sentinel:""`
+
+	// A flag to conforming backends that data for a given request should be
+	// seal wrapped
+	SealWrap bool `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap" sentinel:""`
 }
 
 func (r *RequestWrapInfo) SentinelGet(key string) (interface{}, error) {
@@ -31,6 +35,13 @@ func (r *RequestWrapInfo) SentinelGet(key string) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+func (r *RequestWrapInfo) SentinelKeys() []string {
+	return []string{
+		"ttl",
+		"ttl_seconds",
+	}
 }
 
 // Request is a struct that stores the parameters and context of a request
@@ -172,6 +183,14 @@ func (r *Request) SentinelGet(key string) (interface{}, error) {
 	return nil, nil
 }
 
+func (r *Request) SentinelKeys() []string {
+	return []string{
+		"path",
+		"wrapping",
+		"wrap_info",
+	}
+}
+
 func (r *Request) LastRemoteWAL() uint64 {
 	return r.lastRemoteWAL
 }
@@ -181,8 +200,7 @@ func (r *Request) SetLastRemoteWAL(last uint64) {
 }
 
 // RenewRequest creates the structure of the renew request.
-func RenewRequest(
-	path string, secret *Secret, data map[string]interface{}) *Request {
+func RenewRequest(path string, secret *Secret, data map[string]interface{}) *Request {
 	return &Request{
 		Operation: RenewOperation,
 		Path:      path,
@@ -192,8 +210,7 @@ func RenewRequest(
 }
 
 // RenewAuthRequest creates the structure of the renew request for an auth.
-func RenewAuthRequest(
-	path string, auth *Auth, data map[string]interface{}) *Request {
+func RenewAuthRequest(path string, auth *Auth, data map[string]interface{}) *Request {
 	return &Request{
 		Operation: RenewOperation,
 		Path:      path,
@@ -203,8 +220,7 @@ func RenewAuthRequest(
 }
 
 // RevokeRequest creates the structure of the revoke request.
-func RevokeRequest(
-	path string, secret *Secret, data map[string]interface{}) *Request {
+func RevokeRequest(path string, secret *Secret, data map[string]interface{}) *Request {
 	return &Request{
 		Operation: RevokeOperation,
 		Path:      path,
@@ -256,4 +272,8 @@ var (
 
 	// ErrPermissionDenied is returned if the client is not authorized
 	ErrPermissionDenied = errors.New("permission denied")
+
+	// ErrMultiAuthzPending is returned if the the request needs more
+	// authorizations
+	ErrMultiAuthzPending = errors.New("request needs further approval")
 )

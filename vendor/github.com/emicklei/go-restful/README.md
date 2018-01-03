@@ -56,7 +56,7 @@ func (u UserResource) findUser(request *restful.Request, response *restful.Respo
 - Content encoding (gzip,deflate) of request and response payloads
 - Automatic responses on OPTIONS (using a filter)
 - Automatic CORS request handling (using a filter)
-- API declaration for Swagger UI (see [go-restful-swagger12](https://github.com/emicklei/go-restful-swagger12),[go-restful-openapi](https://github.com/emicklei/go-restful-openapi))
+- API declaration for Swagger UI ([go-restful-openapi](https://github.com/emicklei/go-restful-openapi), see [go-restful-swagger12](https://github.com/emicklei/go-restful-swagger12))
 - Panic recovery to produce HTTP 500, customizable using RecoverHandler(...)
 - Route errors produce HTTP 404/405/406/415 errors, customizable using ServiceErrorHandler(...)
 - Configurable (trace) logging

@@ -267,6 +267,21 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		return nil, EtcdLockHeldError
 	}
 
+	select {
+	case _, ok := <-c.etcdSession.Done():
+		if !ok {
+			// The session's done channel is closed, so the session is over,
+			// and we need a new one
+			session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(etcd3LockTimeoutInSeconds))
+			if err != nil {
+				return nil, err
+			}
+			c.etcdSession = session
+			c.etcdMu = concurrency.NewMutex(session, c.prefix)
+		}
+	default:
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-stopCh

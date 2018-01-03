@@ -99,6 +99,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			LocalStorage: []string{
 				"whitelist/identity/",
 			},
+			SealWrapStorage: []string{
+				"config/client",
+			},
 		},
 		Paths: []*framework.Path{
 			pathLogin(b),

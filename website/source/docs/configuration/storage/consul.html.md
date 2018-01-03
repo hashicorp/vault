@@ -66,7 +66,7 @@ at Consul's service discovery layer.
   [consistency mode][consul-consistency]. Possible values are `"default"` or
   `"strong"`.
 
-- `disable_registration` `(bool: false)` – Specifies whether Vault should
+- `disable_registration` `(string: "false")` – Specifies whether Vault should
   register itself with Consul.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
@@ -115,23 +115,6 @@ connection. You can read more about encrypting Consul connections on the
 
 - `tls_skip_verify` `(bool: false)` – Specifies if the TLS host verification
   should be disabled. It is highly discouraged that you disable this option.
-
-This backend also supports the following high availability parameters. These are
-discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
-
-- `cluster_addr` `(string: "")` – Specifies the address to advertise to other
-  Vault servers in the cluster for request forwarding. This can also be provided
-  via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
-  `redirect_addr`, but Vault will ignore the scheme (all cluster members always
-  use TLS with a private key/certificate).
-
-- `disable_clustering` `(bool: false)` – Specifies whether clustering features
-  such as request forwarding are enabled. Setting this to true on one Vault node
-  will disable these features _only when that node is the active node_.
-
-- `redirect_addr` `(string: <required>)` – Specifies the address (full URL) to
-  advertise to other Vault servers in the cluster for client redirection. This
-  can also be provided via the environment variable `VAULT_REDIRECT_ADDR`.
 
 ## ACLs
 

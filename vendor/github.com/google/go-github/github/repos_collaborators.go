@@ -41,6 +41,8 @@ func (s *RepositoriesService) ListCollaborators(ctx context.Context, owner, repo
 		return nil, nil, err
 	}
 
+	req.Header.Set("Accept", mediaTypeNestedTeamsPreview)
+
 	var users []*User
 	resp, err := s.client.Do(ctx, req, &users)
 	if err != nil {

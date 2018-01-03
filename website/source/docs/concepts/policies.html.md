@@ -113,9 +113,9 @@ path "secret/super-secret" {
   capabilities = ["deny"]
 }
 
-# Policies can also specify allowed and disallowed parameters. Here the key
-# "secret/restricted" can only contain "foo" (any value) and "bar" (one of "zip"
-# or "zap").
+# Policies can also specify allowed, disallowed, and required parameters. Here 
+# the key "secret/restricted" can only contain "foo" (any value) and "bar" (one 
+# of "zip" or "zap").
 path "secret/restricted" {
   capabilities = ["create"]
   allowed_parameters = {
@@ -217,13 +217,24 @@ In addition to the standard set of capabilities, Vault offers finer-grained
 control over permissions at a given path. The capabilities associated with a
 path take precedence over permissions on parameters.
 
-### Allowed and Denied Parameters
+### Parameter Constraints
 
 In Vault, data is represented as `key=value` pairs. Vault policies can
 optionally further restrict paths based on the keys and data at those keys when
 evaluating the permissions for a path. The optional finer-grained control
 options are:
 
+  * `required_parameters` - A list of parameters that must be specified.
+
+      ```ruby
+      # This requires the user to create "secret/foo" with a parameter named
+      # "bar" and "baz". 
+      path "secret/foo" {
+        capabilities = ["create"]
+        required_parameters = ["bar", "baz"]
+      }
+      ```
+  
   * `allowed_parameters` - Whitelists a list of keys and values that are
     permitted on the given path.
 
@@ -474,7 +485,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data 'path "..." {} \'
+  --data '{"rules":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-policy
 ```
 
@@ -498,7 +509,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data 'path "..." {} \'
+  --data '{"rules":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-existing-policy
 ```
 
@@ -558,7 +569,7 @@ authenticated user.
 Tokens are associated with their policies at creation time. For example:
 
 ```sh
-$ vault token-create -policy=dev-readonly,logs
+$ vault token-create -policy=dev-readonly -policy=logs
 ```
 
 Child tokens can be associated with a subset of a parent's policies. Root users

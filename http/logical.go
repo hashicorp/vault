@@ -151,6 +151,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 			httpResp = &logical.HTTPResponse{
 				WrapInfo: &logical.HTTPWrapInfo{
 					Token:           resp.WrapInfo.Token,
+					Accessor:        resp.WrapInfo.Accessor,
 					TTL:             int(resp.WrapInfo.TTL.Seconds()),
 					CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
 					CreationPath:    resp.WrapInfo.CreationPath,
@@ -212,7 +213,7 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 
 	// Get the content type header; don't require it if the body is empty
 	contentTypeRaw, ok := resp.Data[logical.HTTPContentType]
-	if !ok && !nonEmpty {
+	if !ok && nonEmpty {
 		retErr(w, "no content type given")
 		return
 	}

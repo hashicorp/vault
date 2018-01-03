@@ -26,6 +26,7 @@ func TestParseSecret(t *testing.T) {
 	],
 	"wrap_info": {
 		"token": "token",
+		"accessor": "accessor",
 		"ttl": 60,
 		"creation_time": "2016-06-07T15:52:10-04:00",
 		"wrapped_accessor": "abcd1234"
@@ -51,6 +52,7 @@ func TestParseSecret(t *testing.T) {
 		},
 		WrapInfo: &api.SecretWrapInfo{
 			Token:           "token",
+			Accessor:        "accessor",
 			TTL:             60,
 			CreationTime:    rawTime,
 			WrappedAccessor: "abcd1234",

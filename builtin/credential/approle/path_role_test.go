@@ -2,6 +2,7 @@ package approle
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,248 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
 )
+
+func TestApprole_RoleNameLowerCasing(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	var roleID, secretID string
+
+	b, storage := createBackendWithStorage(t)
+
+	// Save a role with out LowerCaseRoleName set
+	role := &roleStorageEntry{
+		RoleID:       "testroleid",
+		HMACKey:      "testhmackey",
+		Policies:     []string{"default"},
+		BindSecretID: true,
+	}
+	err = b.setRoleEntry(storage, "testRoleName", role, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secretIDReq := &logical.Request{
+		Path:      "role/testRoleName/secret-id",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+	}
+	resp, err = b.HandleRequest(secretIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	secretID = resp.Data["secret_id"].(string)
+	roleID = "testroleid"
+
+	// Regular login flow. This should succeed.
+	resp, err = b.HandleRequest(&logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"role_id":   roleID,
+			"secret_id": secretID,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Lower case the role name when generating the secret id
+	secretIDReq.Path = "role/testrolename/secret-id"
+	resp, err = b.HandleRequest(secretIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	secretID = resp.Data["secret_id"].(string)
+
+	// Login should fail
+	resp, err = b.HandleRequest(&logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"role_id":   roleID,
+			"secret_id": secretID,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected an error")
+	}
+
+	// Delete the role and create it again. This time don't directly persist
+	// it, but route the request to the creation handler so that it sets the
+	// LowerCaseRoleName to true.
+	resp, err = b.HandleRequest(&logical.Request{
+		Path:      "role/testRoleName",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	roleReq := &logical.Request{
+		Path:      "role/testRoleName",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"bind_secret_id": true,
+		},
+	}
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Create secret id with lower cased role name
+	resp, err = b.HandleRequest(&logical.Request{
+		Path:      "role/testrolename/secret-id",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	secretID = resp.Data["secret_id"].(string)
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Path:      "role/testrolename/role-id",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	roleID = resp.Data["role_id"].(string)
+
+	// Login should pass
+	resp, err = b.HandleRequest(&logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"role_id":   roleID,
+			"secret_id": secretID,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
+	}
+
+	// Lookup of secret ID should work in case-insensitive manner
+	resp, err = b.HandleRequest(&logical.Request{
+		Path:      "role/testrolename/secret-id/lookup",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"secret_id": secretID,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil {
+		t.Fatalf("failed to lookup secret IDs")
+	}
+
+	// Listing of secret IDs should work in case-insensitive manner
+	resp, err = b.HandleRequest(&logical.Request{
+		Path:      "role/testrolename/secret-id",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	if len(resp.Data["keys"].([]string)) != 1 {
+		t.Fatalf("failed to list secret IDs")
+	}
+}
+
+func TestAppRole_RoleReadSetIndex(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, storage := createBackendWithStorage(t)
+
+	roleReq := &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"bind_secret_id": true,
+		},
+	}
+
+	// Create a role
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+
+	roleIDReq := &logical.Request{
+		Path:      "role/testrole/role-id",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	}
+
+	// Get the role ID
+	resp, err = b.HandleRequest(roleIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+	roleID := resp.Data["role_id"].(string)
+
+	// Delete the role ID index
+	err = b.roleIDEntryDelete(storage, roleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the role again. This should add the index and return a warning
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+
+	// Check if the warning is being returned
+	if !strings.Contains(resp.Warnings[0], "Role identifier was missing an index back to role name.") {
+		t.Fatalf("bad: expected a warning in the response")
+	}
+
+	roleIDIndex, err := b.roleIDEntry(storage, roleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check if the index has been successfully created
+	if roleIDIndex == nil || roleIDIndex.Name != "testrole" {
+		t.Fatalf("bad: expected role to have an index")
+	}
+
+	roleReq.Operation = logical.UpdateOperation
+	roleReq.Data = map[string]interface{}{
+		"bind_secret_id": true,
+		"policies":       "default",
+	}
+
+	// Check if updating and reading of roles work and that there are no lock
+	// contentions dangling due to previous operation
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v\n", resp, err)
+	}
+}
 
 func TestAppRole_CIDRSubset(t *testing.T) {
 	var resp *logical.Response

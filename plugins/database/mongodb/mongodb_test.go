@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -15,6 +16,8 @@ import (
 )
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
+
+const testMongoDBWriteConcern = `{ "wmode": "majority", "wtimeout": 5000 }`
 
 func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	if os.Getenv("MONGODB_URL") != "" {
@@ -77,7 +80,7 @@ func TestMongoDB_Initialize(t *testing.T) {
 	db := dbRaw.(*MongoDB)
 	connProducer := db.ConnectionProducer.(*mongoDBConnectionProducer)
 
-	err = db.Initialize(connectionDetails, true)
+	err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -105,7 +108,7 @@ func TestMongoDB_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	db := dbRaw.(*MongoDB)
-	err = db.Initialize(connectionDetails, true)
+	err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -119,7 +122,45 @@ func TestMongoDB_CreateUser(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+}
+
+func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
+	cleanup, connURL := prepareMongoDBTestContainer(t)
+	defer cleanup()
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+		"write_concern":  testMongoDBWriteConcern,
+	}
+
+	dbRaw, err := New()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	db := dbRaw.(*MongoDB)
+	err = db.Initialize(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	statements := dbplugin.Statements{
+		CreationStatements: testMongoDBRole,
+	}
+
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -142,7 +183,7 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	db := dbRaw.(*MongoDB)
-	err = db.Initialize(connectionDetails, true)
+	err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -156,7 +197,7 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -166,7 +207,7 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 	}
 
 	// Test default revocation statememt
-	err = db.RevokeUser(statements, username)
+	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

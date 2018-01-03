@@ -34,6 +34,10 @@ type TransactionalFileBackend struct {
 	FileBackend
 }
 
+type fileEntry struct {
+	Value []byte
+}
+
 // NewFileBackend constructs a FileBackend using the given directory
 func NewFileBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	path, ok := conf["path"]
@@ -163,12 +167,15 @@ func (b *FileBackend) GetInternal(k string) (*physical.Entry, error) {
 		return nil, err
 	}
 
-	var entry physical.Entry
+	var entry fileEntry
 	if err := jsonutil.DecodeJSONFromReader(f, &entry); err != nil {
 		return nil, err
 	}
 
-	return &entry, nil
+	return &physical.Entry{
+		Key:   k,
+		Value: entry.Value,
+	}, nil
 }
 
 func (b *FileBackend) Put(entry *physical.Entry) error {
@@ -205,7 +212,9 @@ func (b *FileBackend) PutInternal(entry *physical.Entry) error {
 		return err
 	}
 	enc := json.NewEncoder(f)
-	return enc.Encode(entry)
+	return enc.Encode(&fileEntry{
+		Value: entry.Value,
+	})
 }
 
 func (b *FileBackend) List(prefix string) ([]string, error) {
@@ -247,10 +256,16 @@ func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
 	}
 
 	for i, name := range names {
-		if name[0] == '_' {
-			names[i] = name[1:]
-		} else {
+		fi, err := os.Stat(filepath.Join(path, name))
+		if err != nil {
+			return nil, err
+		}
+		if fi.IsDir() {
 			names[i] = name + "/"
+		} else {
+			if name[0] == '_' {
+				names[i] = name[1:]
+			}
 		}
 	}
 

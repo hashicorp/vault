@@ -1,8 +1,10 @@
-Vault [![Build Status](https://travis-ci.org/hashicorp/vault.svg)](https://travis-ci.org/hashicorp/vault) [![Join the chat at https://gitter.im/hashicorp-vault/Lobby](https://badges.gitter.im/hashicorp-vault/Lobby.svg)](https://gitter.im/hashicorp-vault/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![vault enterprise](https://img.shields.io/badge/vault-enterprise-yellow.svg?colorB=7c8797&colorA=000000)](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=banner&utm_campaign=github-vault-enterprise)
-=========
+# Vault [![Build Status](https://travis-ci.org/hashicorp/vault.svg)](https://travis-ci.org/hashicorp/vault) [![Join the chat at https://gitter.im/hashicorp-vault/Lobby](https://badges.gitter.im/hashicorp-vault/Lobby.svg)](https://gitter.im/hashicorp-vault/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![vault enterprise](https://img.shields.io/badge/vault-enterprise-yellow.svg?colorB=7c8797&colorA=000000)](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=banner&utm_campaign=github-vault-enterprise)
+
+----
+
 **Please note**: We take Vault's security and our users' trust very seriously. If you believe you have found a security issue in Vault, _please responsibly disclose_ by contacting us at [security@hashicorp.com](mailto:security@hashicorp.com).
 
-=========
+----
 
 -	Website: https://www.vaultproject.io
 -	IRC: `#vault-tool` on Freenode

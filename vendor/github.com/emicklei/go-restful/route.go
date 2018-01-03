@@ -13,6 +13,11 @@ import (
 // RouteFunction declares the signature of a function that can be bound to a Route.
 type RouteFunction func(*Request, *Response)
 
+// RouteSelectionConditionFunction declares the signature of a function that
+// can be used to add extra conditional logic when selecting whether the route
+// matches the HTTP request.
+type RouteSelectionConditionFunction func(httpRequest *http.Request) bool
+
 // Route binds a HTTP Method,Path,Consumes combination to a RouteFunction.
 type Route struct {
 	Method   string
@@ -21,6 +26,7 @@ type Route struct {
 	Path     string // webservice root path + described path
 	Function RouteFunction
 	Filters  []FilterFunction
+	If       []RouteSelectionConditionFunction
 
 	// cached values for dispatching
 	relativePath string
@@ -37,6 +43,9 @@ type Route struct {
 
 	// Extra information used to store custom information about the route.
 	Metadata map[string]interface{}
+
+	// marks a route as deprecated
+	Deprecated bool
 }
 
 // Initialize for Route

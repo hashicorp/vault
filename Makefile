@@ -79,7 +79,7 @@ vet:
 prep: fmtcheck
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	go generate $(go list ./... | grep -v /vendor/)
-	cp .hooks/* .git/hooks/
+	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by downloading additional tools
 bootstrap:
@@ -92,8 +92,11 @@ proto:
 	protoc -I helper/forwarding -I vault -I ../../.. vault/*.proto --go_out=plugins=grpc:vault
 	protoc -I helper/storagepacker helper/storagepacker/types.proto --go_out=plugins=grpc:helper/storagepacker
 	protoc -I helper/forwarding -I vault -I ../../.. helper/forwarding/types.proto --go_out=plugins=grpc:helper/forwarding
+	protoc -I physical physical/types.proto --go_out=plugins=grpc:physical
 	protoc -I helper/identity -I ../../.. helper/identity/types.proto --go_out=plugins=grpc:helper/identity
+	protoc  builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:.
 	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/protobuf:"/sentinel:"" protobuf:"/' helper/identity/types.pb.go helper/storagepacker/types.pb.go
+	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' physical/types.pb.go
 
 fmtcheck:
 	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"

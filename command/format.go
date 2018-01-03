@@ -172,6 +172,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 
 	if secret.WrapInfo != nil {
 		out = append(out, fmt.Sprintf("wrapping_token: %s %s", hopeDelim, secret.WrapInfo.Token))
+		out = append(out, fmt.Sprintf("wrapping_accessor: %s %s", hopeDelim, secret.WrapInfo.Accessor))
 		out = append(out, fmt.Sprintf("wrapping_token_ttl: %s %s", hopeDelim, humanDurationInt(secret.WrapInfo.TTL)))
 		out = append(out, fmt.Sprintf("wrapping_token_creation_time: %s %s", hopeDelim, secret.WrapInfo.CreationTime.String()))
 		out = append(out, fmt.Sprintf("wrapping_token_creation_path: %s %s", hopeDelim, secret.WrapInfo.CreationPath))
@@ -208,10 +209,17 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 }
 
 func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
+	var sealPrefix string
+	if status.RecoverySeal {
+		sealPrefix = "Recovery "
+	}
+
 	out := []string{}
 	out = append(out, "Key | Value")
+	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
 	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
-	out = append(out, fmt.Sprintf("Total Shares | %d", status.N))
+	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
+	out = append(out, fmt.Sprintf("Threshold | %d", status.T))
 
 	if status.Sealed {
 		out = append(out, fmt.Sprintf("Unseal Progress | %d/%d", status.Progress, status.T))

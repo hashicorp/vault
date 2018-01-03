@@ -9,11 +9,16 @@ description: |-
 
 # Multi-Factor Authentication
 
+~> **NOTE**: This page describes the legacy MFA system available in the OSS
+edition of Vault. Vault Enterprise contains a significantly more complete and
+flexible MFA system that can be used throughout Vault's API. See the [Vault
+Enterprise MFA](/docs/enterprise/mfa/index.html) page for more information.
+
 Several auth methods support multi-factor authentication (MFA). Once
 enabled for a method, users are required to provide additional verification,
 like a one-time passcode, before being authenticated.
 
-Currently, the "ldap", "radius" and "userpass" methods support MFA.
+Currently, the "ldap", "okta", "radius", and "userpass" backends support MFA.
 
 ## Authentication
 

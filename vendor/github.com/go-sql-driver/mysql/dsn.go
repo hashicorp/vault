@@ -28,7 +28,9 @@ var (
 	errInvalidDSNUnsafeCollation = errors.New("invalid DSN: interpolateParams can not be used with unsafe collations")
 )
 
-// Config is a configuration parsed from a DSN string
+// Config is a configuration parsed from a DSN string.
+// If a new Config is created instead of being parsed from a DSN string,
+// the NewConfig function should be used, which sets default values.
 type Config struct {
 	User             string            // Username
 	Passwd           string            // Password (requires User)
@@ -55,7 +57,44 @@ type Config struct {
 	MultiStatements         bool // Allow multiple statements in one query
 	ParseTime               bool // Parse time values to time.Time
 	RejectReadOnly          bool // Reject read-only connections
-	Strict                  bool // Return warnings as errors
+}
+
+// NewConfig creates a new Config and sets default values.
+func NewConfig() *Config {
+	return &Config{
+		Collation:            defaultCollation,
+		Loc:                  time.UTC,
+		MaxAllowedPacket:     defaultMaxAllowedPacket,
+		AllowNativePasswords: true,
+	}
+}
+
+func (cfg *Config) normalize() error {
+	if cfg.InterpolateParams && unsafeCollations[cfg.Collation] {
+		return errInvalidDSNUnsafeCollation
+	}
+
+	// Set default network if empty
+	if cfg.Net == "" {
+		cfg.Net = "tcp"
+	}
+
+	// Set default address if empty
+	if cfg.Addr == "" {
+		switch cfg.Net {
+		case "tcp":
+			cfg.Addr = "127.0.0.1:3306"
+		case "unix":
+			cfg.Addr = "/tmp/mysql.sock"
+		default:
+			return errors.New("default addr for network '" + cfg.Net + "' unknown")
+		}
+
+	} else if cfg.Net == "tcp" {
+		cfg.Addr = ensureHavePort(cfg.Addr)
+	}
+
+	return nil
 }
 
 // FormatDSN formats the given Config into a DSN string which can be passed to
@@ -206,15 +245,6 @@ func (cfg *Config) FormatDSN() string {
 		}
 	}
 
-	if cfg.Strict {
-		if hasParam {
-			buf.WriteString("&strict=true")
-		} else {
-			hasParam = true
-			buf.WriteString("?strict=true")
-		}
-	}
-
 	if cfg.Timeout > 0 {
 		if hasParam {
 			buf.WriteString("&timeout=")
@@ -245,7 +275,7 @@ func (cfg *Config) FormatDSN() string {
 		buf.WriteString(cfg.WriteTimeout.String())
 	}
 
-	if cfg.MaxAllowedPacket > 0 {
+	if cfg.MaxAllowedPacket != defaultMaxAllowedPacket {
 		if hasParam {
 			buf.WriteString("&maxAllowedPacket=")
 		} else {
@@ -283,11 +313,7 @@ func (cfg *Config) FormatDSN() string {
 // ParseDSN parses the DSN string to a Config
 func ParseDSN(dsn string) (cfg *Config, err error) {
 	// New config with some default values
-	cfg = &Config{
-		Loc:                  time.UTC,
-		Collation:            defaultCollation,
-		AllowNativePasswords: true,
-	}
+	cfg = NewConfig()
 
 	// [user[:password]@][net[(addr)]]/dbname[?param1=value1&paramN=valueN]
 	// Find the last '/' (since the password or the net addr might contain a '/')
@@ -355,28 +381,9 @@ func ParseDSN(dsn string) (cfg *Config, err error) {
 		return nil, errInvalidDSNNoSlash
 	}
 
-	if cfg.InterpolateParams && unsafeCollations[cfg.Collation] {
-		return nil, errInvalidDSNUnsafeCollation
+	if err = cfg.normalize(); err != nil {
+		return nil, err
 	}
-
-	// Set default network if empty
-	if cfg.Net == "" {
-		cfg.Net = "tcp"
-	}
-
-	// Set default address if empty
-	if cfg.Addr == "" {
-		switch cfg.Net {
-		case "tcp":
-			cfg.Addr = "127.0.0.1:3306"
-		case "unix":
-			cfg.Addr = "/tmp/mysql.sock"
-		default:
-			return nil, errors.New("default addr for network '" + cfg.Net + "' unknown")
-		}
-
-	}
-
 	return
 }
 
@@ -499,11 +506,7 @@ func parseDSNParams(cfg *Config, params string) (err error) {
 
 		// Strict mode
 		case "strict":
-			var isBool bool
-			cfg.Strict, isBool = readBool(value)
-			if !isBool {
-				return errors.New("invalid bool value: " + value)
-			}
+			panic("strict mode has been removed. See https://github.com/go-sql-driver/mysql/wiki/strict-mode")
 
 		// Dial Timeout
 		case "timeout":
@@ -574,4 +577,11 @@ func parseDSNParams(cfg *Config, params string) (err error) {
 	}
 
 	return
+}
+
+func ensureHavePort(addr string) string {
+	if _, _, err := net.SplitHostPort(addr); err != nil {
+		return net.JoinHostPort(addr, "3306")
+	}
+	return addr
 }

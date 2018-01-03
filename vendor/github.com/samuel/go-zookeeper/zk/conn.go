@@ -279,6 +279,16 @@ func WithMaxBufferSize(maxBufferSize int) connOption {
 	}
 }
 
+// WithMaxConnBufferSize sets maximum buffer size used to send and encode
+// packets to Zookeeper server. The standard Zookeepeer client for java defaults
+// to a limit of 1mb. This option should be used for non-standard server setup
+// where znode is bigger than default 1mb.
+func WithMaxConnBufferSize(maxBufferSize int) connOption {
+       return func(c *Conn) {
+               c.buf = make([]byte, maxBufferSize)
+       }
+}
+
 func (c *Conn) Close() {
 	close(c.shouldQuit)
 

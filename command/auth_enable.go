@@ -19,6 +19,7 @@ type AuthEnableCommand struct {
 	flagPath        string
 	flagPluginName  string
 	flagLocal       bool
+	flagSealWrap    bool
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -90,6 +91,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 			"not replicated nor removed by replication.",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "seal-wrap",
+		Target:  &c.flagSealWrap,
+		Default: false,
+		Usage:   "Enable seal wrapping of critical values in the secrets engine.",
+	})
+
 	return set
 }
 
@@ -144,10 +152,11 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	if err := client.Sys().EnableAuthWithOptions(authPath, &api.EnableAuthOptions{
 		Type:        authType,
 		Description: c.flagDescription,
+		Local:       c.flagLocal,
+		SealWrap:    c.flagSealWrap,
 		Config: api.AuthConfigInput{
 			PluginName: c.flagPluginName,
 		},
-		Local: c.flagLocal,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error enabling %s auth: %s", authType, err))
 		return 2

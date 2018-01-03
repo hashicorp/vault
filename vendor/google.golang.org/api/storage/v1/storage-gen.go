@@ -1839,7 +1839,7 @@ func (r *BucketAccessControlsService) Delete(bucket string, entity string) *Buck
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketAccessControlsDeleteCall) UserProject(userProject string) *BucketAccessControlsDeleteCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -1923,7 +1923,7 @@ func (c *BucketAccessControlsDeleteCall) Do(opts ...googleapi.CallOption) error 
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -1959,7 +1959,7 @@ func (r *BucketAccessControlsService) Get(bucket string, entity string) *BucketA
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketAccessControlsGetCall) UserProject(userProject string) *BucketAccessControlsGetCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -2081,7 +2081,7 @@ func (c *BucketAccessControlsGetCall) Do(opts ...googleapi.CallOption) (*BucketA
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -2118,7 +2118,7 @@ func (r *BucketAccessControlsService) Insert(bucket string, bucketaccesscontrol 
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketAccessControlsInsertCall) UserProject(userProject string) *BucketAccessControlsInsertCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -2224,7 +2224,7 @@ func (c *BucketAccessControlsInsertCall) Do(opts ...googleapi.CallOption) (*Buck
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -2263,7 +2263,7 @@ func (r *BucketAccessControlsService) List(bucket string) *BucketAccessControlsL
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketAccessControlsListCall) UserProject(userProject string) *BucketAccessControlsListCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -2377,7 +2377,7 @@ func (c *BucketAccessControlsListCall) Do(opts ...googleapi.CallOption) (*Bucket
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -2417,7 +2417,7 @@ func (r *BucketAccessControlsService) Patch(bucket string, entity string, bucket
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketAccessControlsPatchCall) UserProject(userProject string) *BucketAccessControlsPatchCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -2531,7 +2531,7 @@ func (c *BucketAccessControlsPatchCall) Do(opts ...googleapi.CallOption) (*Bucke
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -2573,7 +2573,7 @@ func (r *BucketAccessControlsService) Update(bucket string, entity string, bucke
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketAccessControlsUpdateCall) UserProject(userProject string) *BucketAccessControlsUpdateCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -2687,7 +2687,7 @@ func (c *BucketAccessControlsUpdateCall) Do(opts ...googleapi.CallOption) (*Buck
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -2741,7 +2741,7 @@ func (c *BucketsDeleteCall) IfMetagenerationNotMatch(ifMetagenerationNotMatch in
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketsDeleteCall) UserProject(userProject string) *BucketsDeleteCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -2829,7 +2829,7 @@ func (c *BucketsDeleteCall) Do(opts ...googleapi.CallOption) error {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -2892,7 +2892,7 @@ func (c *BucketsGetCall) Projection(projection string) *BucketsGetCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketsGetCall) UserProject(userProject string) *BucketsGetCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -3031,7 +3031,7 @@ func (c *BucketsGetCall) Do(opts ...googleapi.CallOption) (*Bucket, error) {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -3070,7 +3070,7 @@ func (r *BucketsService) GetIamPolicy(bucket string) *BucketsGetIamPolicyCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketsGetIamPolicyCall) UserProject(userProject string) *BucketsGetIamPolicyCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -3184,7 +3184,7 @@ func (c *BucketsGetIamPolicyCall) Do(opts ...googleapi.CallOption) (*Policy, err
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -3271,6 +3271,13 @@ func (c *BucketsInsertCall) PredefinedDefaultObjectAcl(predefinedDefaultObjectAc
 //   "noAcl" - Omit owner, acl and defaultObjectAcl properties.
 func (c *BucketsInsertCall) Projection(projection string) *BucketsInsertCall {
 	c.urlParams_.Set("projection", projection)
+	return c
+}
+
+// UserProject sets the optional parameter "userProject": The project to
+// be billed for this request.
+func (c *BucketsInsertCall) UserProject(userProject string) *BucketsInsertCall {
+	c.urlParams_.Set("userProject", userProject)
 	return c
 }
 
@@ -3422,6 +3429,11 @@ func (c *BucketsInsertCall) Do(opts ...googleapi.CallOption) (*Bucket, error) {
 	//       ],
 	//       "location": "query",
 	//       "type": "string"
+	//     },
+	//     "userProject": {
+	//       "description": "The project to be billed for this request.",
+	//       "location": "query",
+	//       "type": "string"
 	//     }
 	//   },
 	//   "path": "b",
@@ -3488,6 +3500,13 @@ func (c *BucketsListCall) Prefix(prefix string) *BucketsListCall {
 //   "noAcl" - Omit owner, acl and defaultObjectAcl properties.
 func (c *BucketsListCall) Projection(projection string) *BucketsListCall {
 	c.urlParams_.Set("projection", projection)
+	return c
+}
+
+// UserProject sets the optional parameter "userProject": The project to
+// be billed for this request.
+func (c *BucketsListCall) UserProject(userProject string) *BucketsListCall {
+	c.urlParams_.Set("userProject", userProject)
 	return c
 }
 
@@ -3625,6 +3644,11 @@ func (c *BucketsListCall) Do(opts ...googleapi.CallOption) (*Buckets, error) {
 	//       ],
 	//       "location": "query",
 	//       "type": "string"
+	//     },
+	//     "userProject": {
+	//       "description": "The project to be billed for this request.",
+	//       "location": "query",
+	//       "type": "string"
 	//     }
 	//   },
 	//   "path": "b",
@@ -3753,7 +3777,7 @@ func (c *BucketsPatchCall) Projection(projection string) *BucketsPatchCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketsPatchCall) UserProject(userProject string) *BucketsPatchCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -3924,7 +3948,7 @@ func (c *BucketsPatchCall) Do(opts ...googleapi.CallOption) (*Bucket, error) {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -3964,7 +3988,7 @@ func (r *BucketsService) SetIamPolicy(bucket string, policy *Policy) *BucketsSet
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketsSetIamPolicyCall) UserProject(userProject string) *BucketsSetIamPolicyCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -4070,7 +4094,7 @@ func (c *BucketsSetIamPolicyCall) Do(opts ...googleapi.CallOption) (*Policy, err
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -4112,7 +4136,7 @@ func (r *BucketsService) TestIamPermissions(bucket string, permissions []string)
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketsTestIamPermissionsCall) UserProject(userProject string) *BucketsTestIamPermissionsCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -4234,7 +4258,7 @@ func (c *BucketsTestIamPermissionsCall) Do(opts ...googleapi.CallOption) (*TestI
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -4344,7 +4368,7 @@ func (c *BucketsUpdateCall) Projection(projection string) *BucketsUpdateCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *BucketsUpdateCall) UserProject(userProject string) *BucketsUpdateCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -4515,7 +4539,7 @@ func (c *BucketsUpdateCall) Do(opts ...googleapi.CallOption) (*Bucket, error) {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -4650,7 +4674,7 @@ func (r *DefaultObjectAccessControlsService) Delete(bucket string, entity string
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *DefaultObjectAccessControlsDeleteCall) UserProject(userProject string) *DefaultObjectAccessControlsDeleteCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -4734,7 +4758,7 @@ func (c *DefaultObjectAccessControlsDeleteCall) Do(opts ...googleapi.CallOption)
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -4770,7 +4794,7 @@ func (r *DefaultObjectAccessControlsService) Get(bucket string, entity string) *
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *DefaultObjectAccessControlsGetCall) UserProject(userProject string) *DefaultObjectAccessControlsGetCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -4892,7 +4916,7 @@ func (c *DefaultObjectAccessControlsGetCall) Do(opts ...googleapi.CallOption) (*
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -4930,7 +4954,7 @@ func (r *DefaultObjectAccessControlsService) Insert(bucket string, objectaccessc
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *DefaultObjectAccessControlsInsertCall) UserProject(userProject string) *DefaultObjectAccessControlsInsertCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -5036,7 +5060,7 @@ func (c *DefaultObjectAccessControlsInsertCall) Do(opts ...googleapi.CallOption)
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -5092,7 +5116,7 @@ func (c *DefaultObjectAccessControlsListCall) IfMetagenerationNotMatch(ifMetagen
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *DefaultObjectAccessControlsListCall) UserProject(userProject string) *DefaultObjectAccessControlsListCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -5218,7 +5242,7 @@ func (c *DefaultObjectAccessControlsListCall) Do(opts ...googleapi.CallOption) (
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -5258,7 +5282,7 @@ func (r *DefaultObjectAccessControlsService) Patch(bucket string, entity string,
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *DefaultObjectAccessControlsPatchCall) UserProject(userProject string) *DefaultObjectAccessControlsPatchCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -5372,7 +5396,7 @@ func (c *DefaultObjectAccessControlsPatchCall) Do(opts ...googleapi.CallOption) 
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -5414,7 +5438,7 @@ func (r *DefaultObjectAccessControlsService) Update(bucket string, entity string
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *DefaultObjectAccessControlsUpdateCall) UserProject(userProject string) *DefaultObjectAccessControlsUpdateCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -5528,7 +5552,7 @@ func (c *DefaultObjectAccessControlsUpdateCall) Do(opts ...googleapi.CallOption)
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -5568,7 +5592,7 @@ func (r *NotificationsService) Delete(bucket string, notification string) *Notif
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *NotificationsDeleteCall) UserProject(userProject string) *NotificationsDeleteCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -5652,7 +5676,7 @@ func (c *NotificationsDeleteCall) Do(opts ...googleapi.CallOption) error {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -5688,7 +5712,7 @@ func (r *NotificationsService) Get(bucket string, notification string) *Notifica
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *NotificationsGetCall) UserProject(userProject string) *NotificationsGetCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -5810,7 +5834,7 @@ func (c *NotificationsGetCall) Do(opts ...googleapi.CallOption) (*Notification, 
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -5850,7 +5874,7 @@ func (r *NotificationsService) Insert(bucket string, notification *Notification)
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *NotificationsInsertCall) UserProject(userProject string) *NotificationsInsertCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -5956,7 +5980,7 @@ func (c *NotificationsInsertCall) Do(opts ...googleapi.CallOption) (*Notificatio
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -5997,7 +6021,7 @@ func (r *NotificationsService) List(bucket string) *NotificationsListCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *NotificationsListCall) UserProject(userProject string) *NotificationsListCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -6111,7 +6135,7 @@ func (c *NotificationsListCall) Do(opts ...googleapi.CallOption) (*Notifications
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -6162,7 +6186,7 @@ func (c *ObjectAccessControlsDeleteCall) Generation(generation int64) *ObjectAcc
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectAccessControlsDeleteCall) UserProject(userProject string) *ObjectAccessControlsDeleteCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -6260,7 +6284,7 @@ func (c *ObjectAccessControlsDeleteCall) Do(opts ...googleapi.CallOption) error 
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -6306,7 +6330,7 @@ func (c *ObjectAccessControlsGetCall) Generation(generation int64) *ObjectAccess
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectAccessControlsGetCall) UserProject(userProject string) *ObjectAccessControlsGetCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -6442,7 +6466,7 @@ func (c *ObjectAccessControlsGetCall) Do(opts ...googleapi.CallOption) (*ObjectA
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -6489,7 +6513,7 @@ func (c *ObjectAccessControlsInsertCall) Generation(generation int64) *ObjectAcc
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectAccessControlsInsertCall) UserProject(userProject string) *ObjectAccessControlsInsertCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -6609,7 +6633,7 @@ func (c *ObjectAccessControlsInsertCall) Do(opts ...googleapi.CallOption) (*Obje
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -6658,7 +6682,7 @@ func (c *ObjectAccessControlsListCall) Generation(generation int64) *ObjectAcces
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectAccessControlsListCall) UserProject(userProject string) *ObjectAccessControlsListCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -6786,7 +6810,7 @@ func (c *ObjectAccessControlsListCall) Do(opts ...googleapi.CallOption) (*Object
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -6836,7 +6860,7 @@ func (c *ObjectAccessControlsPatchCall) Generation(generation int64) *ObjectAcce
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectAccessControlsPatchCall) UserProject(userProject string) *ObjectAccessControlsPatchCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -6964,7 +6988,7 @@ func (c *ObjectAccessControlsPatchCall) Do(opts ...googleapi.CallOption) (*Objec
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -7016,7 +7040,7 @@ func (c *ObjectAccessControlsUpdateCall) Generation(generation int64) *ObjectAcc
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectAccessControlsUpdateCall) UserProject(userProject string) *ObjectAccessControlsUpdateCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -7144,7 +7168,7 @@ func (c *ObjectAccessControlsUpdateCall) Do(opts ...googleapi.CallOption) (*Obje
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -7235,7 +7259,7 @@ func (c *ObjectsComposeCall) KmsKeyName(kmsKeyName string) *ObjectsComposeCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsComposeCall) UserProject(userProject string) *ObjectsComposeCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -7249,9 +7273,9 @@ func (c *ObjectsComposeCall) Fields(s ...googleapi.Field) *ObjectsComposeCall {
 	return c
 }
 
-// Context sets the context to be used in this call's Do and Download
-// methods. Any pending HTTP request will be aborted if the provided
-// context is canceled.
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
 func (c *ObjectsComposeCall) Context(ctx context.Context) *ObjectsComposeCall {
 	c.ctx_ = ctx
 	return c
@@ -7288,22 +7312,6 @@ func (c *ObjectsComposeCall) doRequest(alt string) (*http.Response, error) {
 		"destinationObject": c.destinationObject,
 	})
 	return gensupport.SendRequest(c.ctx_, c.s.client, req)
-}
-
-// Download fetches the API endpoint's "media" value, instead of the normal
-// API response value. If the returned error is nil, the Response is guaranteed to
-// have a 2xx status code. Callers must close the Response.Body as usual.
-func (c *ObjectsComposeCall) Download(opts ...googleapi.CallOption) (*http.Response, error) {
-	gensupport.SetOptions(c.urlParams_, opts...)
-	res, err := c.doRequest("media")
-	if err != nil {
-		return nil, err
-	}
-	if err := googleapi.CheckMediaResponse(res); err != nil {
-		res.Body.Close()
-		return nil, err
-	}
-	return res, nil
 }
 
 // Do executes the "storage.objects.compose" call.
@@ -7403,7 +7411,7 @@ func (c *ObjectsComposeCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -7419,9 +7427,7 @@ func (c *ObjectsComposeCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//     "https://www.googleapis.com/auth/cloud-platform",
 	//     "https://www.googleapis.com/auth/devstorage.full_control",
 	//     "https://www.googleapis.com/auth/devstorage.read_write"
-	//   ],
-	//   "supportsMediaDownload": true,
-	//   "useMediaDownloadService": true
+	//   ]
 	// }
 
 }
@@ -7567,7 +7573,7 @@ func (c *ObjectsCopyCall) SourceGeneration(sourceGeneration int64) *ObjectsCopyC
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsCopyCall) UserProject(userProject string) *ObjectsCopyCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -7581,9 +7587,9 @@ func (c *ObjectsCopyCall) Fields(s ...googleapi.Field) *ObjectsCopyCall {
 	return c
 }
 
-// Context sets the context to be used in this call's Do and Download
-// methods. Any pending HTTP request will be aborted if the provided
-// context is canceled.
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
 func (c *ObjectsCopyCall) Context(ctx context.Context) *ObjectsCopyCall {
 	c.ctx_ = ctx
 	return c
@@ -7622,22 +7628,6 @@ func (c *ObjectsCopyCall) doRequest(alt string) (*http.Response, error) {
 		"destinationObject": c.destinationObject,
 	})
 	return gensupport.SendRequest(c.ctx_, c.s.client, req)
-}
-
-// Download fetches the API endpoint's "media" value, instead of the normal
-// API response value. If the returned error is nil, the Response is guaranteed to
-// have a 2xx status code. Callers must close the Response.Body as usual.
-func (c *ObjectsCopyCall) Download(opts ...googleapi.CallOption) (*http.Response, error) {
-	gensupport.SetOptions(c.urlParams_, opts...)
-	res, err := c.doRequest("media")
-	if err != nil {
-		return nil, err
-	}
-	if err := googleapi.CheckMediaResponse(res); err != nil {
-		res.Body.Close()
-		return nil, err
-	}
-	return res, nil
 }
 
 // Do executes the "storage.objects.copy" call.
@@ -7801,7 +7791,7 @@ func (c *ObjectsCopyCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -7817,9 +7807,7 @@ func (c *ObjectsCopyCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//     "https://www.googleapis.com/auth/cloud-platform",
 	//     "https://www.googleapis.com/auth/devstorage.full_control",
 	//     "https://www.googleapis.com/auth/devstorage.read_write"
-	//   ],
-	//   "supportsMediaDownload": true,
-	//   "useMediaDownloadService": true
+	//   ]
 	// }
 
 }
@@ -7890,7 +7878,7 @@ func (c *ObjectsDeleteCall) IfMetagenerationNotMatch(ifMetagenerationNotMatch in
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsDeleteCall) UserProject(userProject string) *ObjectsDeleteCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -8004,7 +7992,7 @@ func (c *ObjectsDeleteCall) Do(opts ...googleapi.CallOption) error {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -8095,7 +8083,7 @@ func (c *ObjectsGetCall) Projection(projection string) *ObjectsGetCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsGetCall) UserProject(userProject string) *ObjectsGetCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -8276,7 +8264,7 @@ func (c *ObjectsGetCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -8327,7 +8315,7 @@ func (c *ObjectsGetIamPolicyCall) Generation(generation int64) *ObjectsGetIamPol
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsGetIamPolicyCall) UserProject(userProject string) *ObjectsGetIamPolicyCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -8455,7 +8443,7 @@ func (c *ObjectsGetIamPolicyCall) Do(opts ...googleapi.CallOption) (*Policy, err
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -8594,7 +8582,7 @@ func (c *ObjectsInsertCall) Projection(projection string) *ObjectsInsertCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsInsertCall) UserProject(userProject string) *ObjectsInsertCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -8857,7 +8845,7 @@ func (c *ObjectsInsertCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -8874,9 +8862,7 @@ func (c *ObjectsInsertCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//     "https://www.googleapis.com/auth/devstorage.full_control",
 	//     "https://www.googleapis.com/auth/devstorage.read_write"
 	//   ],
-	//   "supportsMediaDownload": true,
-	//   "supportsMediaUpload": true,
-	//   "useMediaDownloadService": true
+	//   "supportsMediaUpload": true
 	// }
 
 }
@@ -8947,7 +8933,7 @@ func (c *ObjectsListCall) Projection(projection string) *ObjectsListCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsListCall) UserProject(userProject string) *ObjectsListCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -9105,7 +9091,7 @@ func (c *ObjectsListCall) Do(opts ...googleapi.CallOption) (*Objects, error) {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -9263,9 +9249,9 @@ func (c *ObjectsPatchCall) Fields(s ...googleapi.Field) *ObjectsPatchCall {
 	return c
 }
 
-// Context sets the context to be used in this call's Do and Download
-// methods. Any pending HTTP request will be aborted if the provided
-// context is canceled.
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
 func (c *ObjectsPatchCall) Context(ctx context.Context) *ObjectsPatchCall {
 	c.ctx_ = ctx
 	return c
@@ -9302,22 +9288,6 @@ func (c *ObjectsPatchCall) doRequest(alt string) (*http.Response, error) {
 		"object": c.object,
 	})
 	return gensupport.SendRequest(c.ctx_, c.s.client, req)
-}
-
-// Download fetches the API endpoint's "media" value, instead of the normal
-// API response value. If the returned error is nil, the Response is guaranteed to
-// have a 2xx status code. Callers must close the Response.Body as usual.
-func (c *ObjectsPatchCall) Download(opts ...googleapi.CallOption) (*http.Response, error) {
-	gensupport.SetOptions(c.urlParams_, opts...)
-	res, err := c.doRequest("media")
-	if err != nil {
-		return nil, err
-	}
-	if err := googleapi.CheckMediaResponse(res); err != nil {
-		res.Body.Close()
-		return nil, err
-	}
-	return res, nil
 }
 
 // Do executes the "storage.objects.patch" call.
@@ -9458,9 +9428,7 @@ func (c *ObjectsPatchCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/cloud-platform",
 	//     "https://www.googleapis.com/auth/devstorage.full_control"
-	//   ],
-	//   "supportsMediaDownload": true,
-	//   "useMediaDownloadService": true
+	//   ]
 	// }
 
 }
@@ -9641,7 +9609,7 @@ func (c *ObjectsRewriteCall) SourceGeneration(sourceGeneration int64) *ObjectsRe
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsRewriteCall) UserProject(userProject string) *ObjectsRewriteCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -9875,7 +9843,7 @@ func (c *ObjectsRewriteCall) Do(opts ...googleapi.CallOption) (*RewriteResponse,
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -9926,7 +9894,7 @@ func (c *ObjectsSetIamPolicyCall) Generation(generation int64) *ObjectsSetIamPol
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsSetIamPolicyCall) UserProject(userProject string) *ObjectsSetIamPolicyCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -10046,7 +10014,7 @@ func (c *ObjectsSetIamPolicyCall) Do(opts ...googleapi.CallOption) (*Policy, err
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -10098,7 +10066,7 @@ func (c *ObjectsTestIamPermissionsCall) Generation(generation int64) *ObjectsTes
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsTestIamPermissionsCall) UserProject(userProject string) *ObjectsTestIamPermissionsCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -10234,7 +10202,7 @@ func (c *ObjectsTestIamPermissionsCall) Do(opts ...googleapi.CallOption) (*TestI
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -10351,7 +10319,7 @@ func (c *ObjectsUpdateCall) Projection(projection string) *ObjectsUpdateCall {
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsUpdateCall) UserProject(userProject string) *ObjectsUpdateCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -10365,9 +10333,9 @@ func (c *ObjectsUpdateCall) Fields(s ...googleapi.Field) *ObjectsUpdateCall {
 	return c
 }
 
-// Context sets the context to be used in this call's Do and Download
-// methods. Any pending HTTP request will be aborted if the provided
-// context is canceled.
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
 func (c *ObjectsUpdateCall) Context(ctx context.Context) *ObjectsUpdateCall {
 	c.ctx_ = ctx
 	return c
@@ -10404,22 +10372,6 @@ func (c *ObjectsUpdateCall) doRequest(alt string) (*http.Response, error) {
 		"object": c.object,
 	})
 	return gensupport.SendRequest(c.ctx_, c.s.client, req)
-}
-
-// Download fetches the API endpoint's "media" value, instead of the normal
-// API response value. If the returned error is nil, the Response is guaranteed to
-// have a 2xx status code. Callers must close the Response.Body as usual.
-func (c *ObjectsUpdateCall) Download(opts ...googleapi.CallOption) (*http.Response, error) {
-	gensupport.SetOptions(c.urlParams_, opts...)
-	res, err := c.doRequest("media")
-	if err != nil {
-		return nil, err
-	}
-	if err := googleapi.CheckMediaResponse(res); err != nil {
-		res.Body.Close()
-		return nil, err
-	}
-	return res, nil
 }
 
 // Do executes the "storage.objects.update" call.
@@ -10545,7 +10497,7 @@ func (c *ObjectsUpdateCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -10560,9 +10512,7 @@ func (c *ObjectsUpdateCall) Do(opts ...googleapi.CallOption) (*Object, error) {
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/cloud-platform",
 	//     "https://www.googleapis.com/auth/devstorage.full_control"
-	//   ],
-	//   "supportsMediaDownload": true,
-	//   "useMediaDownloadService": true
+	//   ]
 	// }
 
 }
@@ -10634,7 +10584,7 @@ func (c *ObjectsWatchAllCall) Projection(projection string) *ObjectsWatchAllCall
 }
 
 // UserProject sets the optional parameter "userProject": The project to
-// be billed for this request, for Requester Pays buckets.
+// be billed for this request. Required for Requester Pays buckets.
 func (c *ObjectsWatchAllCall) UserProject(userProject string) *ObjectsWatchAllCall {
 	c.urlParams_.Set("userProject", userProject)
 	return c
@@ -10784,7 +10734,7 @@ func (c *ObjectsWatchAllCall) Do(opts ...googleapi.CallOption) (*Channel, error)
 	//       "type": "string"
 	//     },
 	//     "userProject": {
-	//       "description": "The project to be billed for this request, for Requester Pays buckets.",
+	//       "description": "The project to be billed for this request. Required for Requester Pays buckets.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -10830,6 +10780,13 @@ type ProjectsServiceAccountGetCall struct {
 func (r *ProjectsServiceAccountService) Get(projectId string) *ProjectsServiceAccountGetCall {
 	c := &ProjectsServiceAccountGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.projectId = projectId
+	return c
+}
+
+// UserProject sets the optional parameter "userProject": The project to
+// be billed for this request.
+func (c *ProjectsServiceAccountGetCall) UserProject(userProject string) *ProjectsServiceAccountGetCall {
+	c.urlParams_.Set("userProject", userProject)
 	return c
 }
 
@@ -10938,6 +10895,11 @@ func (c *ProjectsServiceAccountGetCall) Do(opts ...googleapi.CallOption) (*Servi
 	//       "description": "Project ID",
 	//       "location": "path",
 	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "userProject": {
+	//       "description": "The project to be billed for this request.",
+	//       "location": "query",
 	//       "type": "string"
 	//     }
 	//   },

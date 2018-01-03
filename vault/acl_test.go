@@ -232,6 +232,7 @@ func TestACL_PolicyMerge(t *testing.T) {
 		maxWrappingTTL *time.Duration
 		allowed        map[string][]interface{}
 		denied         map[string][]interface{}
+		required       []string
 	}
 
 	createDuration := func(seconds int) *time.Duration {
@@ -240,14 +241,14 @@ func TestACL_PolicyMerge(t *testing.T) {
 	}
 
 	tcases := []tcase{
-		{"foo/bar", nil, nil, nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}},
-		{"hello/universe", createDuration(50), createDuration(200), map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil},
-		{"allow/all", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
-		{"allow/all1", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
-		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
-		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
-		{"value/merge", nil, nil, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}},
-		{"value/empty", nil, nil, map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}},
+		{"foo/bar", nil, nil, nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}, []string{"baz"}},
+		{"hello/universe", createDuration(50), createDuration(200), map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil, []string{"foo", "bar"}},
+		{"allow/all", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil, nil},
+		{"allow/all1", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil, nil},
+		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}, nil},
+		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}, nil},
+		{"value/merge", nil, nil, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}, nil},
+		{"value/empty", nil, nil, map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}, nil},
 	}
 
 	for _, tc := range tcases {
@@ -262,6 +263,9 @@ func TestACL_PolicyMerge(t *testing.T) {
 		}
 		if !reflect.DeepEqual(tc.denied, p.DeniedParameters) {
 			t.Fatalf("Denied paramaters did not match, Expected: %#v, Got: %#v", tc.denied, p.DeniedParameters)
+		}
+		if !reflect.DeepEqual(tc.required, p.RequiredParameters) {
+			t.Fatalf("Required paramaters did not match, Expected: %#v, Got: %#v", tc.required, p.RequiredParameters)
 		}
 		if tc.minWrappingTTL != nil && *tc.minWrappingTTL != p.MinWrappingTTL {
 			t.Fatalf("Min wrapping TTL did not match, Expected: %#v, Got: %#v", tc.minWrappingTTL, p.MinWrappingTTL)
@@ -319,6 +323,8 @@ func TestACL_AllowOperation(t *testing.T) {
 		{"fruit/apple", nil, []string{"one"}, false},
 		{"cold/weather", nil, []string{"four"}, true},
 		{"var/aws", nil, []string{"cold", "warm", "kitty"}, false},
+		{"var/req", nil, []string{"cold", "warm", "kitty"}, false},
+		{"var/req", nil, []string{"cold", "warm", "kitty", "foo"}, true},
 	}
 
 	for _, tc := range tcases {
@@ -510,6 +516,7 @@ path "foo/bar" {
 	denied_parameters = {
 		"baz" = []
 	}
+	required_parameters = ["baz"]
 }
 path "foo/bar" {
 	policy = "write"
@@ -522,6 +529,7 @@ path "hello/universe" {
 	allowed_parameters = {
 		"foo" = []
 	}
+	required_parameters = ["foo"]
 	max_wrapping_ttl = 300
 	min_wrapping_ttl = 100
 }
@@ -530,6 +538,7 @@ path "hello/universe" {
 	allowed_parameters = {
 		"bar" = []
 	}
+	required_parameters = ["bar"]
 	max_wrapping_ttl = 200
 	min_wrapping_ttl = 50
 }
@@ -704,6 +713,10 @@ path "var/aws" {
 		"warm" = []
 		"kitty" = []
 	}
+}
+path "var/req" {
+	policy = "write"
+	required_parameters = ["foo"]
 }
 `
 

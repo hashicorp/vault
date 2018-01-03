@@ -2,6 +2,7 @@ package pki
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -9,6 +10,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -16,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -372,9 +375,9 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 			}
 		}
 
-		if role.AllowedDomains != "" {
+		if len(role.AllowedDomains) > 0 {
 			valid := false
-			for _, currDomain := range strings.Split(role.AllowedDomains, ",") {
+			for _, currDomain := range role.AllowedDomains {
 				// If there is, say, a trailing comma, ignore it
 				if currDomain == "" {
 					continue
@@ -1182,4 +1185,67 @@ NameCheck:
 	}
 
 	return fmt.Errorf("name %q disallowed by CA's permitted DNS domains", badName)
+}
+
+func convertRespToPKCS8(resp *logical.Response) error {
+	privRaw, ok := resp.Data["private_key"]
+	if !ok {
+		return nil
+	}
+	priv, ok := privRaw.(string)
+	if !ok {
+		return fmt.Errorf("error converting response to pkcs8: could not parse original value as string")
+	}
+
+	privKeyTypeRaw, ok := resp.Data["private_key_type"]
+	if !ok {
+		return fmt.Errorf("error converting response to pkcs8: %q not found in response", "private_key_type")
+	}
+	privKeyType, ok := privKeyTypeRaw.(certutil.PrivateKeyType)
+	if !ok {
+		return fmt.Errorf("error converting response to pkcs8: could not parse original type value as string")
+	}
+
+	var keyData []byte
+	var pemUsed bool
+	var err error
+	var signer crypto.Signer
+
+	block, _ := pem.Decode([]byte(priv))
+	if block == nil {
+		keyData, err = base64.StdEncoding.DecodeString(priv)
+		if err != nil {
+			return errwrap.Wrapf("error converting response to pkcs8: error decoding original value: {{err}}", err)
+		}
+	} else {
+		keyData = block.Bytes
+		pemUsed = true
+	}
+
+	switch privKeyType {
+	case certutil.RSAPrivateKey:
+		signer, err = x509.ParsePKCS1PrivateKey(keyData)
+	case certutil.ECPrivateKey:
+		signer, err = x509.ParseECPrivateKey(keyData)
+	default:
+		return fmt.Errorf("unknown private key type %q", privKeyType)
+	}
+	if err != nil {
+		return errwrap.Wrapf("error converting response to pkcs8: error parsing previous key: {{err}}", err)
+	}
+
+	keyData, err = certutil.MarshalPKCS8PrivateKey(signer)
+	if err != nil {
+		return errwrap.Wrapf("error converting response to pkcs8: error marshaling pkcs8 key: {{err}}", err)
+	}
+
+	if pemUsed {
+		block.Type = "PRIVATE KEY"
+		block.Bytes = keyData
+		resp.Data["private_key"] = string(pem.EncodeToMemory(block))
+	} else {
+		resp.Data["private_key"] = base64.StdEncoding.EncodeToString(keyData)
+	}
+
+	return nil
 }
