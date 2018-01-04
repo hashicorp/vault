@@ -107,7 +107,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleCapabilitiesAccessor(),
+					logical.UpdateOperation: b.handleCapabilitiesAccessor,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
@@ -133,9 +133,9 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleCORSRead(),
-					logical.UpdateOperation: b.handleCORSUpdate(),
-					logical.DeleteOperation: b.handleCORSDelete(),
+					logical.ReadOperation:   b.handleCORSRead,
+					logical.UpdateOperation: b.handleCORSUpdate,
+					logical.DeleteOperation: b.handleCORSDelete,
 				},
 
 				HelpDescription: strings.TrimSpace(sysHelp["config/cors"][0]),
@@ -157,7 +157,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleCapabilities(),
+					logical.UpdateOperation: b.handleCapabilities,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities"][0]),
@@ -179,7 +179,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleCapabilities(),
+					logical.UpdateOperation: b.handleCapabilities,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_self"][0]),
@@ -204,8 +204,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Fields: map[string]*framework.FieldSchema{},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleRekeyRetrieveBarrier(),
-					logical.DeleteOperation: b.handleRekeyDeleteBarrier(),
+					logical.ReadOperation:   b.handleRekeyRetrieveBarrier,
+					logical.DeleteOperation: b.handleRekeyDeleteBarrier,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rekey_backup"][0]),
@@ -218,8 +218,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Fields: map[string]*framework.FieldSchema{},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleRekeyRetrieveRecovery(),
-					logical.DeleteOperation: b.handleRekeyDeleteRecovery(),
+					logical.ReadOperation:   b.handleRekeyRetrieveRecovery,
+					logical.DeleteOperation: b.handleRekeyDeleteRecovery,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rekey_backup"][0]),
@@ -247,8 +247,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleAuthTuneRead(),
-					logical.UpdateOperation: b.handleAuthTuneWrite(),
+					logical.ReadOperation:   b.handleAuthTuneRead,
+					logical.UpdateOperation: b.handleAuthTuneWrite,
 				},
 				HelpSynopsis:    strings.TrimSpace(sysHelp["auth_tune"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["auth_tune"][1]),
@@ -277,8 +277,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleMountTuneRead(),
-					logical.UpdateOperation: b.handleMountTuneWrite(),
+					logical.ReadOperation:   b.handleMountTuneRead,
+					logical.UpdateOperation: b.handleMountTuneWrite,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mount_tune"][0]),
@@ -322,8 +322,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleMount(),
-					logical.DeleteOperation: b.handleUnmount(),
+					logical.UpdateOperation: b.handleMount,
+					logical.DeleteOperation: b.handleUnmount,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mount"][0]),
@@ -334,7 +334,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "mounts$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleMountTable(),
+					logical.ReadOperation: b.handleMountTable,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
@@ -356,7 +356,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleRemount(),
+					logical.UpdateOperation: b.handleRemount,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
@@ -374,7 +374,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ListOperation: b.handleLeaseLookupList(),
+					logical.ListOperation: b.handleLeaseLookupList,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["leases"][0]),
@@ -392,7 +392,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleLeaseLookup(),
+					logical.UpdateOperation: b.handleLeaseLookup,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["leases"][0]),
@@ -418,7 +418,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleRenew(),
+					logical.UpdateOperation: b.handleRenew,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["renew"][0]),
@@ -440,7 +440,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleRevoke(),
+					logical.UpdateOperation: b.handleRevoke,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke"][0]),
@@ -458,7 +458,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleRevokeForce(),
+					logical.UpdateOperation: b.handleRevokeForce,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke-force"][0]),
@@ -476,7 +476,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleRevokePrefix(),
+					logical.UpdateOperation: b.handleRevokePrefix,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke-prefix"][0]),
@@ -487,7 +487,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "leases/tidy$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleTidyLeases(),
+					logical.UpdateOperation: b.handleTidyLeases,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
@@ -498,7 +498,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "auth$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleAuthTable(),
+					logical.ReadOperation: b.handleAuthTable,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["auth-table"][0]),
@@ -542,8 +542,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleEnableAuth(),
-					logical.DeleteOperation: b.handleDisableAuth(),
+					logical.UpdateOperation: b.handleEnableAuth,
+					logical.DeleteOperation: b.handleDisableAuth,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["auth"][0]),
@@ -554,8 +554,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "policy/?$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handlePolicyList(),
-					logical.ListOperation: b.handlePolicyList(),
+					logical.ReadOperation: b.handlePolicyList,
+					logical.ListOperation: b.handlePolicyList,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["policy-list"][0]),
@@ -581,9 +581,9 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handlePolicyRead(),
-					logical.UpdateOperation: b.handlePolicySet(),
-					logical.DeleteOperation: b.handlePolicyDelete(),
+					logical.ReadOperation:   b.handlePolicyRead,
+					logical.UpdateOperation: b.handlePolicySet,
+					logical.DeleteOperation: b.handlePolicyDelete,
 				},
 			},
 
@@ -655,7 +655,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleAuditHash(),
+					logical.UpdateOperation: b.handleAuditHash,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
@@ -666,7 +666,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "audit$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleAuditTable(),
+					logical.ReadOperation: b.handleAuditTable,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audit-table"][0]),
@@ -701,8 +701,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleEnableAudit(),
-					logical.DeleteOperation: b.handleDisableAudit(),
+					logical.UpdateOperation: b.handleEnableAudit,
+					logical.DeleteOperation: b.handleDisableAudit,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audit"][0]),
@@ -713,7 +713,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "key-status$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleKeyStatus(),
+					logical.ReadOperation: b.handleKeyStatus,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["key-status"][0]),
@@ -724,7 +724,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "rotate$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleRotate(),
+					logical.UpdateOperation: b.handleRotate,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
@@ -735,7 +735,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "wrapping/wrap$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleWrappingWrap(),
+					logical.UpdateOperation: b.handleWrappingWrap,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
@@ -752,7 +752,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleWrappingUnwrap(),
+					logical.UpdateOperation: b.handleWrappingUnwrap,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["unwrap"][0]),
@@ -769,8 +769,8 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleWrappingLookup(),
-					logical.ReadOperation:   b.handleWrappingLookup(),
+					logical.UpdateOperation: b.handleWrappingLookup,
+					logical.ReadOperation:   b.handleWrappingLookup,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["wraplookup"][0]),
@@ -787,7 +787,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleWrappingRewrap(),
+					logical.UpdateOperation: b.handleWrappingRewrap,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
@@ -807,9 +807,9 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleAuditedHeaderUpdate(),
-					logical.DeleteOperation: b.handleAuditedHeaderDelete(),
-					logical.ReadOperation:   b.handleAuditedHeaderRead(),
+					logical.UpdateOperation: b.handleAuditedHeaderUpdate,
+					logical.DeleteOperation: b.handleAuditedHeaderDelete,
+					logical.ReadOperation:   b.handleAuditedHeaderRead,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
@@ -820,7 +820,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Pattern: "config/auditing/request-headers$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleAuditedHeadersRead(),
+					logical.ReadOperation: b.handleAuditedHeadersRead,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers"][0]),
@@ -833,7 +833,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				Fields: map[string]*framework.FieldSchema{},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ListOperation: b.handlePluginCatalogList(),
+					logical.ListOperation: b.handlePluginCatalogList,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
@@ -863,9 +863,9 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handlePluginCatalogUpdate(),
-					logical.DeleteOperation: b.handlePluginCatalogDelete(),
-					logical.ReadOperation:   b.handlePluginCatalogRead(),
+					logical.UpdateOperation: b.handlePluginCatalogUpdate,
+					logical.DeleteOperation: b.handlePluginCatalogDelete,
+					logical.ReadOperation:   b.handlePluginCatalogRead,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
@@ -886,7 +886,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handlePluginReloadUpdate(),
+					logical.UpdateOperation: b.handlePluginReloadUpdate,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-reload"][0]),
@@ -926,7 +926,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.pathHashWrite(),
+					logical.UpdateOperation: b.pathHashWrite,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["hash"][0]),
@@ -955,7 +955,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.pathRandomWrite(),
+					logical.UpdateOperation: b.pathRandomWrite,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["random"][0]),
@@ -980,10 +980,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.handleRawRead(),
-				logical.UpdateOperation: b.handleRawWrite(),
-				logical.DeleteOperation: b.handleRawDelete(),
-				logical.ListOperation:   b.handleRawList(),
+				logical.ReadOperation:   b.handleRawRead,
+				logical.UpdateOperation: b.handleRawWrite,
+				logical.DeleteOperation: b.handleRawDelete,
+				logical.ListOperation:   b.handleRawList,
 			},
 		})
 	}
@@ -1003,57 +1003,49 @@ type SystemBackend struct {
 }
 
 // handleCORSRead returns the current CORS configuration
-func (b *SystemBackend) handleCORSRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		corsConf := b.Core.corsConfig
+func (b *SystemBackend) handleCORSRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	corsConf := b.Core.corsConfig
 
-		enabled := corsConf.IsEnabled()
+	enabled := corsConf.IsEnabled()
 
-		resp := &logical.Response{
-			Data: map[string]interface{}{
-				"enabled": enabled,
-			},
-		}
-
-		if enabled {
-			corsConf.RLock()
-			resp.Data["allowed_origins"] = corsConf.AllowedOrigins
-			resp.Data["allowed_headers"] = corsConf.AllowedHeaders
-			corsConf.RUnlock()
-		}
-
-		return resp, nil
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"enabled": enabled,
+		},
 	}
+
+	if enabled {
+		corsConf.RLock()
+		resp.Data["allowed_origins"] = corsConf.AllowedOrigins
+		resp.Data["allowed_headers"] = corsConf.AllowedHeaders
+		corsConf.RUnlock()
+	}
+
+	return resp, nil
 }
 
 // handleCORSUpdate sets the list of origins that are allowed to make
 // cross-origin requests and sets the CORS enabled flag to true
-func (b *SystemBackend) handleCORSUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		origins := d.Get("allowed_origins").([]string)
-		headers := d.Get("allowed_headers").([]string)
+func (b *SystemBackend) handleCORSUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	origins := d.Get("allowed_origins").([]string)
+	headers := d.Get("allowed_headers").([]string)
 
-		return nil, b.Core.corsConfig.Enable(origins, headers)
-	}
+	return nil, b.Core.corsConfig.Enable(origins, headers)
 }
 
 // handleCORSDelete sets the CORS enabled flag to false and clears the list of
 // allowed origins & headers.
-func (b *SystemBackend) handleCORSDelete() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		return nil, b.Core.corsConfig.Disable()
-	}
+func (b *SystemBackend) handleCORSDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return nil, b.Core.corsConfig.Disable()
 }
 
-func (b *SystemBackend) handleTidyLeases() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		err := b.Core.expiration.Tidy()
-		if err != nil {
-			b.Backend.Logger().Error("sys: failed to tidy leases", "error", err)
-			return handleError(err)
-		}
-		return nil, err
+func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	err := b.Core.expiration.Tidy()
+	if err != nil {
+		b.Backend.Logger().Error("sys: failed to tidy leases", "error", err)
+		return handleError(err)
 	}
+	return nil, err
 }
 
 func (b *SystemBackend) invalidate(key string) {
@@ -1078,234 +1070,212 @@ func (b *SystemBackend) invalidate(key string) {
 	}
 }
 
-func (b *SystemBackend) handlePluginCatalogList() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		plugins, err := b.Core.pluginCatalog.List()
-		if err != nil {
-			return nil, err
-		}
-
-		return logical.ListResponse(plugins), nil
+func (b *SystemBackend) handlePluginCatalogList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	plugins, err := b.Core.pluginCatalog.List()
+	if err != nil {
+		return nil, err
 	}
+
+	return logical.ListResponse(plugins), nil
 }
 
-func (b *SystemBackend) handlePluginCatalogUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		pluginName := d.Get("name").(string)
-		if pluginName == "" {
-			return logical.ErrorResponse("missing plugin name"), nil
-		}
+func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
 
-		sha256 := d.Get("sha256").(string)
+	sha256 := d.Get("sha256").(string)
+	if sha256 == "" {
+		sha256 = d.Get("sha_256").(string)
 		if sha256 == "" {
-			sha256 = d.Get("sha_256").(string)
-			if sha256 == "" {
-				return logical.ErrorResponse("missing SHA-256 value"), nil
-			}
+			return logical.ErrorResponse("missing SHA-256 value"), nil
 		}
+	}
 
-		command := d.Get("command").(string)
-		if command == "" {
-			return logical.ErrorResponse("missing command value"), nil
-		}
+	command := d.Get("command").(string)
+	if command == "" {
+		return logical.ErrorResponse("missing command value"), nil
+	}
 
-		sha256Bytes, err := hex.DecodeString(sha256)
-		if err != nil {
-			return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
-		}
+	sha256Bytes, err := hex.DecodeString(sha256)
+	if err != nil {
+		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
+	}
 
-		err = b.Core.pluginCatalog.Set(pluginName, command, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(pluginName, command, sha256Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+	plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	if err != nil {
+		return nil, err
+	}
+	if plugin == nil {
+		return nil, nil
+	}
+
+	// Create a map of data to be returned and remove sensitive information from it
+	data := structs.New(plugin).Map()
+
+	return &logical.Response{
+		Data: data,
+	}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+	err := b.Core.pluginCatalog.Delete(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("plugin").(string)
+	pluginMounts := d.Get("mounts").([]string)
+
+	if pluginName != "" && len(pluginMounts) > 0 {
+		return logical.ErrorResponse("plugin and mounts cannot be set at the same time"), nil
+	}
+	if pluginName == "" && len(pluginMounts) == 0 {
+		return logical.ErrorResponse("plugin or mounts must be provided"), nil
+	}
+
+	if pluginName != "" {
+		err := b.Core.reloadMatchingPlugin(pluginName)
 		if err != nil {
 			return nil, err
 		}
-
-		return nil, nil
-	}
-}
-
-func (b *SystemBackend) handlePluginCatalogRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		pluginName := d.Get("name").(string)
-		if pluginName == "" {
-			return logical.ErrorResponse("missing plugin name"), nil
-		}
-		plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	} else if len(pluginMounts) > 0 {
+		err := b.Core.reloadMatchingPluginMounts(pluginMounts)
 		if err != nil {
 			return nil, err
 		}
-		if plugin == nil {
-			return nil, nil
-		}
-
-		// Create a map of data to be returned and remove sensitive information from it
-		data := structs.New(plugin).Map()
-
-		return &logical.Response{
-			Data: data,
-		}, nil
 	}
-}
 
-func (b *SystemBackend) handlePluginCatalogDelete() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		pluginName := d.Get("name").(string)
-		if pluginName == "" {
-			return logical.ErrorResponse("missing plugin name"), nil
-		}
-		err := b.Core.pluginCatalog.Delete(pluginName)
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, nil
-	}
-}
-
-func (b *SystemBackend) handlePluginReloadUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		pluginName := d.Get("plugin").(string)
-		pluginMounts := d.Get("mounts").([]string)
-
-		if pluginName != "" && len(pluginMounts) > 0 {
-			return logical.ErrorResponse("plugin and mounts cannot be set at the same time"), nil
-		}
-		if pluginName == "" && len(pluginMounts) == 0 {
-			return logical.ErrorResponse("plugin or mounts must be provided"), nil
-		}
-
-		if pluginName != "" {
-			err := b.Core.reloadMatchingPlugin(pluginName)
-			if err != nil {
-				return nil, err
-			}
-		} else if len(pluginMounts) > 0 {
-			err := b.Core.reloadMatchingPluginMounts(pluginMounts)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return nil, nil
-	}
+	return nil, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
-func (b *SystemBackend) handleAuditedHeaderUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		header := d.Get("header").(string)
-		hmac := d.Get("hmac").(bool)
-		if header == "" {
-			return logical.ErrorResponse("missing header name"), nil
-		}
-
-		headerConfig := b.Core.AuditedHeadersConfig()
-		err := headerConfig.add(header, hmac)
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, nil
+func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	hmac := d.Get("hmac").(bool)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
 	}
+
+	headerConfig := b.Core.AuditedHeadersConfig()
+	err := headerConfig.add(header, hmac)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 // handleAudtedHeaderDelete deletes the header with the given name
-func (b *SystemBackend) handleAuditedHeaderDelete() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		header := d.Get("header").(string)
-		if header == "" {
-			return logical.ErrorResponse("missing header name"), nil
-		}
-
-		headerConfig := b.Core.AuditedHeadersConfig()
-		err := headerConfig.remove(header)
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, nil
+func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
 	}
+
+	headerConfig := b.Core.AuditedHeadersConfig()
+	err := headerConfig.remove(header)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 // handleAuditedHeaderRead returns the header configuration for the given header name
-func (b *SystemBackend) handleAuditedHeaderRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		header := d.Get("header").(string)
-		if header == "" {
-			return logical.ErrorResponse("missing header name"), nil
-		}
-
-		headerConfig := b.Core.AuditedHeadersConfig()
-		settings, ok := headerConfig.Headers[strings.ToLower(header)]
-		if !ok {
-			return logical.ErrorResponse("Could not find header in config"), nil
-		}
-
-		return &logical.Response{
-			Data: map[string]interface{}{
-				header: settings,
-			},
-		}, nil
+func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
 	}
+
+	headerConfig := b.Core.AuditedHeadersConfig()
+	settings, ok := headerConfig.Headers[strings.ToLower(header)]
+	if !ok {
+		return logical.ErrorResponse("Could not find header in config"), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			header: settings,
+		},
+	}, nil
 }
 
 // handleAuditedHeadersRead returns the whole audited headers config
-func (b *SystemBackend) handleAuditedHeadersRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		headerConfig := b.Core.AuditedHeadersConfig()
+func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	headerConfig := b.Core.AuditedHeadersConfig()
 
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"headers": headerConfig.Headers,
-			},
-		}, nil
-	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"headers": headerConfig.Headers,
+		},
+	}, nil
 }
 
 // handleCapabilities returns the ACL capabilities of the token for a given path
-func (b *SystemBackend) handleCapabilities() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		token := d.Get("token").(string)
-		if token == "" {
-			token = req.ClientToken
-		}
-		capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
-		if err != nil {
-			return nil, err
-		}
-
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"capabilities": capabilities,
-			},
-		}, nil
+func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	token := d.Get("token").(string)
+	if token == "" {
+		token = req.ClientToken
 	}
+	capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"capabilities": capabilities,
+		},
+	}, nil
 }
 
 // handleCapabilitiesAccessor returns the ACL capabilities of the
 // token associted with the given accessor for a given path.
-func (b *SystemBackend) handleCapabilitiesAccessor() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		accessor := d.Get("accessor").(string)
-		if accessor == "" {
-			return logical.ErrorResponse("missing accessor"), nil
-		}
-
-		aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor, false)
-		if err != nil {
-			return nil, err
-		}
-
-		capabilities, err := b.Core.Capabilities(aEntry.TokenID, d.Get("path").(string))
-		if err != nil {
-			return nil, err
-		}
-
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"capabilities": capabilities,
-			},
-		}, nil
+func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	accessor := d.Get("accessor").(string)
+	if accessor == "" {
+		return logical.ErrorResponse("missing accessor"), nil
 	}
+
+	aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor, false)
+	if err != nil {
+		return nil, err
+	}
+
+	capabilities, err := b.Core.Capabilities(aEntry.TokenID, d.Get("path").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"capabilities": capabilities,
+		},
+	}, nil
 }
 
 // handleRekeyRetrieve returns backed-up, PGP-encrypted unseal keys from a
@@ -1350,16 +1320,12 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	return resp, nil
 }
 
-func (b *SystemBackend) handleRekeyRetrieveBarrier() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		return b.handleRekeyRetrieve(req, data, false)
-	}
+func (b *SystemBackend) handleRekeyRetrieveBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyRetrieve(req, data, false)
 }
 
-func (b *SystemBackend) handleRekeyRetrieveRecovery() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		return b.handleRekeyRetrieve(req, data, true)
-	}
+func (b *SystemBackend) handleRekeyRetrieveRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyRetrieve(req, data, true)
 }
 
 // handleRekeyDelete deletes backed-up, PGP-encrypted unseal keys from a rekey
@@ -1376,166 +1342,157 @@ func (b *SystemBackend) handleRekeyDelete(
 	return nil, nil
 }
 
-func (b *SystemBackend) handleRekeyDeleteBarrier() framework.OperationFunc {
-	return func(ctx context.Context,
-		req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		return b.handleRekeyDelete(req, data, false)
-	}
+func (b *SystemBackend) handleRekeyDeleteBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyDelete(req, data, false)
 }
 
-func (b *SystemBackend) handleRekeyDeleteRecovery() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		return b.handleRekeyDelete(req, data, true)
-	}
+func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyDelete(req, data, true)
 }
 
 // handleMountTable handles the "mounts" endpoint to provide the mount table
-func (b *SystemBackend) handleMountTable() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		b.Core.mountsLock.RLock()
-		defer b.Core.mountsLock.RUnlock()
+func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.mountsLock.RLock()
+	defer b.Core.mountsLock.RUnlock()
 
-		resp := &logical.Response{
-			Data: make(map[string]interface{}),
-		}
-
-		for _, entry := range b.Core.mounts.Entries {
-			// Populate mount info
-			info := map[string]interface{}{
-				"type":        entry.Type,
-				"description": entry.Description,
-				"accessor":    entry.Accessor,
-				"config": map[string]interface{}{
-					"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-					"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-					"force_no_cache":    entry.Config.ForceNoCache,
-					"plugin_name":       entry.Config.PluginName,
-				},
-				"local":     entry.Local,
-				"seal_wrap": entry.SealWrap,
-			}
-			resp.Data[entry.Path] = info
-		}
-
-		return resp, nil
+	resp := &logical.Response{
+		Data: make(map[string]interface{}),
 	}
+
+	for _, entry := range b.Core.mounts.Entries {
+		// Populate mount info
+		info := map[string]interface{}{
+			"type":        entry.Type,
+			"description": entry.Description,
+			"accessor":    entry.Accessor,
+			"config": map[string]interface{}{
+				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+				"force_no_cache":    entry.Config.ForceNoCache,
+				"plugin_name":       entry.Config.PluginName,
+			},
+			"local":     entry.Local,
+			"seal_wrap": entry.SealWrap,
+		}
+		resp.Data[entry.Path] = info
+	}
+
+	return resp, nil
 }
 
 // handleMount is used to mount a new path
-func (b *SystemBackend) handleMount() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		repState := b.Core.replicationState
+func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.replicationState
 
-		local := data.Get("local").(bool)
-		if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-			return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
-		}
-
-		// Get all the options
-		path := data.Get("path").(string)
-		logicalType := data.Get("type").(string)
-		description := data.Get("description").(string)
-		pluginName := data.Get("plugin_name").(string)
-		sealWrap := data.Get("seal_wrap").(bool)
-
-		path = sanitizeMountPath(path)
-
-		var config MountConfig
-		var apiConfig APIMountConfig
-
-		configMap := data.Get("config").(map[string]interface{})
-		if configMap != nil && len(configMap) != 0 {
-			err := mapstructure.Decode(configMap, &apiConfig)
-			if err != nil {
-				return logical.ErrorResponse(
-						"unable to convert given mount config information"),
-					logical.ErrInvalidRequest
-			}
-		}
-
-		switch apiConfig.DefaultLeaseTTL {
-		case "":
-		case "system":
-		default:
-			tmpDef, err := parseutil.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf(
-						"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
-					logical.ErrInvalidRequest
-			}
-			config.DefaultLeaseTTL = tmpDef
-		}
-
-		switch apiConfig.MaxLeaseTTL {
-		case "":
-		case "system":
-		default:
-			tmpMax, err := parseutil.ParseDurationSecond(apiConfig.MaxLeaseTTL)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf(
-						"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
-					logical.ErrInvalidRequest
-			}
-			config.MaxLeaseTTL = tmpMax
-		}
-
-		if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
-			return logical.ErrorResponse(
-					"given default lease TTL greater than given max lease TTL"),
-				logical.ErrInvalidRequest
-		}
-
-		if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
-			return logical.ErrorResponse(fmt.Sprintf(
-					"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
-				logical.ErrInvalidRequest
-		}
-
-		switch logicalType {
-		case "":
-			return logical.ErrorResponse(
-					"backend type must be specified as a string"),
-				logical.ErrInvalidRequest
-
-		case "plugin":
-			// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
-			// option taking precedence.
-			switch {
-			case apiConfig.PluginName != "":
-				config.PluginName = apiConfig.PluginName
-			case pluginName != "":
-				config.PluginName = pluginName
-			default:
-				return logical.ErrorResponse(
-						"plugin_name must be provided for plugin backend"),
-					logical.ErrInvalidRequest
-			}
-		}
-
-		// Copy over the force no cache if set
-		if apiConfig.ForceNoCache {
-			config.ForceNoCache = true
-		}
-
-		// Create the mount entry
-		me := &MountEntry{
-			Table:       mountTableType,
-			Path:        path,
-			Type:        logicalType,
-			Description: description,
-			Config:      config,
-			Local:       local,
-			SealWrap:    sealWrap,
-		}
-
-		// Attempt mount
-		if err := b.Core.mount(me); err != nil {
-			b.Backend.Logger().Error("sys: mount failed", "path", me.Path, "error", err)
-			return handleError(err)
-		}
-
-		return nil, nil
+	local := data.Get("local").(bool)
+	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
 	}
+
+	// Get all the options
+	path := data.Get("path").(string)
+	logicalType := data.Get("type").(string)
+	description := data.Get("description").(string)
+	pluginName := data.Get("plugin_name").(string)
+	sealWrap := data.Get("seal_wrap").(bool)
+
+	path = sanitizeMountPath(path)
+
+	var config MountConfig
+	var apiConfig APIMountConfig
+
+	configMap := data.Get("config").(map[string]interface{})
+	if configMap != nil && len(configMap) != 0 {
+		err := mapstructure.Decode(configMap, &apiConfig)
+		if err != nil {
+			return logical.ErrorResponse(
+					"unable to convert given mount config information"),
+				logical.ErrInvalidRequest
+		}
+	}
+
+	switch apiConfig.DefaultLeaseTTL {
+	case "":
+	case "system":
+	default:
+		tmpDef, err := parseutil.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
+				logical.ErrInvalidRequest
+		}
+		config.DefaultLeaseTTL = tmpDef
+	}
+
+	switch apiConfig.MaxLeaseTTL {
+	case "":
+	case "system":
+	default:
+		tmpMax, err := parseutil.ParseDurationSecond(apiConfig.MaxLeaseTTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
+				logical.ErrInvalidRequest
+		}
+		config.MaxLeaseTTL = tmpMax
+	}
+
+	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
+		return logical.ErrorResponse(
+				"given default lease TTL greater than given max lease TTL"),
+			logical.ErrInvalidRequest
+	}
+
+	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
+		return logical.ErrorResponse(fmt.Sprintf(
+				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
+			logical.ErrInvalidRequest
+	}
+
+	switch logicalType {
+	case "":
+		return logical.ErrorResponse(
+				"backend type must be specified as a string"),
+			logical.ErrInvalidRequest
+
+	case "plugin":
+		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
+		// option taking precedence.
+		switch {
+		case apiConfig.PluginName != "":
+			config.PluginName = apiConfig.PluginName
+		case pluginName != "":
+			config.PluginName = pluginName
+		default:
+			return logical.ErrorResponse(
+					"plugin_name must be provided for plugin backend"),
+				logical.ErrInvalidRequest
+		}
+	}
+
+	// Copy over the force no cache if set
+	if apiConfig.ForceNoCache {
+		config.ForceNoCache = true
+	}
+
+	// Create the mount entry
+	me := &MountEntry{
+		Table:       mountTableType,
+		Path:        path,
+		Type:        logicalType,
+		Description: description,
+		Config:      config,
+		Local:       local,
+		SealWrap:    sealWrap,
+	}
+
+	// Attempt mount
+	if err := b.Core.mount(me); err != nil {
+		b.Backend.Logger().Error("sys: mount failed", "path", me.Path, "error", err)
+		return handleError(err)
+	}
+
+	return nil, nil
 }
 
 // used to intercept an HTTPCodedError so it goes back to callee
@@ -1550,95 +1507,86 @@ func handleError(
 }
 
 // handleUnmount is used to unmount a path
-func (b *SystemBackend) handleUnmount() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
-		path = sanitizeMountPath(path)
+func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
 
-		repState := b.Core.replicationState
-		entry := b.Core.router.MatchingMountEntry(path)
-		if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-			return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
-		}
+	repState := b.Core.replicationState
+	entry := b.Core.router.MatchingMountEntry(path)
+	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
+	}
 
-		// We return success when the mount does not exists to not expose if the
-		// mount existed or not
-		match := b.Core.router.MatchingMount(path)
-		if match == "" || path != match {
-			return nil, nil
-		}
-
-		// Attempt unmount
-		if err := b.Core.unmount(path); err != nil {
-			b.Backend.Logger().Error("sys: unmount failed", "path", path, "error", err)
-			return handleError(err)
-		}
-
+	// We return success when the mount does not exists to not expose if the
+	// mount existed or not
+	match := b.Core.router.MatchingMount(path)
+	if match == "" || path != match {
 		return nil, nil
 	}
+
+	// Attempt unmount
+	if err := b.Core.unmount(path); err != nil {
+		b.Backend.Logger().Error("sys: unmount failed", "path", path, "error", err)
+		return handleError(err)
+	}
+
+	return nil, nil
 }
 
 // handleRemount is used to remount a path
-func (b *SystemBackend) handleRemount() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		repState := b.Core.replicationState
+func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.replicationState
 
-		// Get the paths
-		fromPath := data.Get("from").(string)
-		toPath := data.Get("to").(string)
-		if fromPath == "" || toPath == "" {
-			return logical.ErrorResponse(
-					"both 'from' and 'to' path must be specified as a string"),
-				logical.ErrInvalidRequest
-		}
-
-		fromPath = sanitizeMountPath(fromPath)
-		toPath = sanitizeMountPath(toPath)
-
-		entry := b.Core.router.MatchingMountEntry(fromPath)
-		if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-			return logical.ErrorResponse("cannot remount a non-local mount on a replication secondary"), nil
-		}
-
-		// Attempt remount
-		if err := b.Core.remount(fromPath, toPath); err != nil {
-			b.Backend.Logger().Error("sys: remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
-			return handleError(err)
-		}
-
-		return nil, nil
+	// Get the paths
+	fromPath := data.Get("from").(string)
+	toPath := data.Get("to").(string)
+	if fromPath == "" || toPath == "" {
+		return logical.ErrorResponse(
+				"both 'from' and 'to' path must be specified as a string"),
+			logical.ErrInvalidRequest
 	}
+
+	fromPath = sanitizeMountPath(fromPath)
+	toPath = sanitizeMountPath(toPath)
+
+	entry := b.Core.router.MatchingMountEntry(fromPath)
+	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("cannot remount a non-local mount on a replication secondary"), nil
+	}
+
+	// Attempt remount
+	if err := b.Core.remount(fromPath, toPath); err != nil {
+		b.Backend.Logger().Error("sys: remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
+		return handleError(err)
+	}
+
+	return nil, nil
 }
 
 // handleAuthTuneRead is used to get config settings on a auth path
-func (b *SystemBackend) handleAuthTuneRead() framework.OperationFunc {
-	return func(ctx context.Context,
-		req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
-		if path == "" {
-			return logical.ErrorResponse(
-					"path must be specified as a string"),
-				logical.ErrInvalidRequest
-		}
-		return b.handleTuneReadCommon("auth/" + path)
+func (b *SystemBackend) handleAuthTuneRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse(
+				"path must be specified as a string"),
+			logical.ErrInvalidRequest
 	}
+	return b.handleTuneReadCommon("auth/" + path)
 }
 
 // handleMountTuneRead is used to get config settings on a backend
-func (b *SystemBackend) handleMountTuneRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
-		if path == "" {
-			return logical.ErrorResponse(
-					"path must be specified as a string"),
-				logical.ErrInvalidRequest
-		}
-
-		// This call will read both logical backend's configuration as well as auth backends'.
-		// Retaining this behavior for backward compatibility. If this behavior is not desired,
-		// an error can be returned if path has a prefix of "auth/".
-		return b.handleTuneReadCommon(path)
+func (b *SystemBackend) handleMountTuneRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse(
+				"path must be specified as a string"),
+			logical.ErrInvalidRequest
 	}
+
+	// This call will read both logical backend's configuration as well as auth backends'.
+	// Retaining this behavior for backward compatibility. If this behavior is not desired,
+	// an error can be returned if path has a prefix of "auth/".
+	return b.handleTuneReadCommon(path)
 }
 
 // handleTuneReadCommon returns the config settings of a path
@@ -1669,30 +1617,26 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 }
 
 // handleAuthTuneWrite is used to set config settings on an auth path
-func (b *SystemBackend) handleAuthTuneWrite() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
-		if path == "" {
-			return logical.ErrorResponse("path must be specified as a string"),
-				logical.ErrInvalidRequest
-		}
-		return b.handleTuneWriteCommon("auth/"+path, data)
+func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path must be specified as a string"),
+			logical.ErrInvalidRequest
 	}
+	return b.handleTuneWriteCommon("auth/"+path, data)
 }
 
 // handleMountTuneWrite is used to set config settings on a backend
-func (b *SystemBackend) handleMountTuneWrite() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
-		if path == "" {
-			return logical.ErrorResponse("path must be specified as a string"),
-				logical.ErrInvalidRequest
-		}
-		// This call will write both logical backend's configuration as well as auth backends'.
-		// Retaining this behavior for backward compatibility. If this behavior is not desired,
-		// an error can be returned if path has a prefix of "auth/".
-		return b.handleTuneWriteCommon(path, data)
+func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path must be specified as a string"),
+			logical.ErrInvalidRequest
 	}
+	// This call will write both logical backend's configuration as well as auth backends'.
+	// Retaining this behavior for backward compatibility. If this behavior is not desired,
+	// an error can be returned if path has a prefix of "auth/".
+	return b.handleTuneWriteCommon(path, data)
 }
 
 // handleTuneWriteCommon is used to set config settings on a path
@@ -1806,123 +1750,111 @@ func (b *SystemBackend) handleTuneWriteCommon(path string, data *framework.Field
 }
 
 // handleLease is use to view the metadata for a given LeaseID
-func (b *SystemBackend) handleLeaseLookup() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		leaseID := data.Get("lease_id").(string)
-		if leaseID == "" {
-			return logical.ErrorResponse("lease_id must be specified"),
-				logical.ErrInvalidRequest
-		}
-
-		leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
-		if err != nil {
-			b.Backend.Logger().Error("sys: error retrieving lease", "lease_id", leaseID, "error", err)
-			return handleError(err)
-		}
-		if leaseTimes == nil {
-			return logical.ErrorResponse("invalid lease"), logical.ErrInvalidRequest
-		}
-
-		resp := &logical.Response{
-			Data: map[string]interface{}{
-				"id":           leaseID,
-				"issue_time":   leaseTimes.IssueTime,
-				"expire_time":  nil,
-				"last_renewal": nil,
-				"ttl":          int64(0),
-			},
-		}
-		renewable, _ := leaseTimes.renewable()
-		resp.Data["renewable"] = renewable
-
-		if !leaseTimes.LastRenewalTime.IsZero() {
-			resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
-		}
-		if !leaseTimes.ExpireTime.IsZero() {
-			resp.Data["expire_time"] = leaseTimes.ExpireTime
-			resp.Data["ttl"] = leaseTimes.ttl()
-		}
-		return resp, nil
+func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	leaseID := data.Get("lease_id").(string)
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
 	}
+
+	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
+	if err != nil {
+		b.Backend.Logger().Error("sys: error retrieving lease", "lease_id", leaseID, "error", err)
+		return handleError(err)
+	}
+	if leaseTimes == nil {
+		return logical.ErrorResponse("invalid lease"), logical.ErrInvalidRequest
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"id":           leaseID,
+			"issue_time":   leaseTimes.IssueTime,
+			"expire_time":  nil,
+			"last_renewal": nil,
+			"ttl":          int64(0),
+		},
+	}
+	renewable, _ := leaseTimes.renewable()
+	resp.Data["renewable"] = renewable
+
+	if !leaseTimes.LastRenewalTime.IsZero() {
+		resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
+	}
+	if !leaseTimes.ExpireTime.IsZero() {
+		resp.Data["expire_time"] = leaseTimes.ExpireTime
+		resp.Data["ttl"] = leaseTimes.ttl()
+	}
+	return resp, nil
 }
 
-func (b *SystemBackend) handleLeaseLookupList() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		prefix := data.Get("prefix").(string)
-		if prefix != "" && !strings.HasSuffix(prefix, "/") {
-			prefix = prefix + "/"
-		}
-
-		keys, err := b.Core.expiration.idView.List(prefix)
-		if err != nil {
-			b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
-			return handleError(err)
-		}
-		return logical.ListResponse(keys), nil
+func (b *SystemBackend) handleLeaseLookupList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	prefix := data.Get("prefix").(string)
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
 	}
+
+	keys, err := b.Core.expiration.idView.List(prefix)
+	if err != nil {
+		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
+		return handleError(err)
+	}
+	return logical.ListResponse(keys), nil
 }
 
 // handleRenew is used to renew a lease with a given LeaseID
-func (b *SystemBackend) handleRenew() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		// Get all the options
-		leaseID := data.Get("lease_id").(string)
-		if leaseID == "" {
-			leaseID = data.Get("url_lease_id").(string)
-		}
-		if leaseID == "" {
-			return logical.ErrorResponse("lease_id must be specified"),
-				logical.ErrInvalidRequest
-		}
-		incrementRaw := data.Get("increment").(int)
-
-		// Convert the increment
-		increment := time.Duration(incrementRaw) * time.Second
-
-		// Invoke the expiration manager directly
-		resp, err := b.Core.expiration.Renew(leaseID, increment)
-		if err != nil {
-			b.Backend.Logger().Error("sys: lease renewal failed", "lease_id", leaseID, "error", err)
-			return handleError(err)
-		}
-		return resp, err
+func (b *SystemBackend) handleRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get all the options
+	leaseID := data.Get("lease_id").(string)
+	if leaseID == "" {
+		leaseID = data.Get("url_lease_id").(string)
 	}
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
+	}
+	incrementRaw := data.Get("increment").(int)
+
+	// Convert the increment
+	increment := time.Duration(incrementRaw) * time.Second
+
+	// Invoke the expiration manager directly
+	resp, err := b.Core.expiration.Renew(leaseID, increment)
+	if err != nil {
+		b.Backend.Logger().Error("sys: lease renewal failed", "lease_id", leaseID, "error", err)
+		return handleError(err)
+	}
+	return resp, err
 }
 
 // handleRevoke is used to revoke a given LeaseID
-func (b *SystemBackend) handleRevoke() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		// Get all the options
-		leaseID := data.Get("lease_id").(string)
-		if leaseID == "" {
-			leaseID = data.Get("url_lease_id").(string)
-		}
-		if leaseID == "" {
-			return logical.ErrorResponse("lease_id must be specified"),
-				logical.ErrInvalidRequest
-		}
-
-		// Invoke the expiration manager directly
-		if err := b.Core.expiration.Revoke(leaseID); err != nil {
-			b.Backend.Logger().Error("sys: lease revocation failed", "lease_id", leaseID, "error", err)
-			return handleError(err)
-		}
-		return nil, nil
+func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get all the options
+	leaseID := data.Get("lease_id").(string)
+	if leaseID == "" {
+		leaseID = data.Get("url_lease_id").(string)
 	}
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
+	}
+
+	// Invoke the expiration manager directly
+	if err := b.Core.expiration.Revoke(leaseID); err != nil {
+		b.Backend.Logger().Error("sys: lease revocation failed", "lease_id", leaseID, "error", err)
+		return handleError(err)
+	}
+	return nil, nil
 }
 
 // handleRevokePrefix is used to revoke a prefix with many LeaseIDs
-func (b *SystemBackend) handleRevokePrefix() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		return b.handleRevokePrefixCommon(req, data, false)
-	}
+func (b *SystemBackend) handleRevokePrefix(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRevokePrefixCommon(req, data, false)
 }
 
 // handleRevokeForce is used to revoke a prefix with many LeaseIDs, ignoring errors
-func (b *SystemBackend) handleRevokeForce() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		return b.handleRevokePrefixCommon(req, data, true)
-	}
+func (b *SystemBackend) handleRevokeForce(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRevokePrefixCommon(req, data, true)
 }
 
 // handleRevokePrefixCommon is used to revoke a prefix with many LeaseIDs
@@ -1946,149 +1878,141 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 }
 
 // handleAuthTable handles the "auth" endpoint to provide the auth table
-func (b *SystemBackend) handleAuthTable() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		b.Core.authLock.RLock()
-		defer b.Core.authLock.RUnlock()
+func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.authLock.RLock()
+	defer b.Core.authLock.RUnlock()
 
-		resp := &logical.Response{
-			Data: make(map[string]interface{}),
-		}
-		for _, entry := range b.Core.auth.Entries {
-			info := map[string]interface{}{
-				"type":        entry.Type,
-				"description": entry.Description,
-				"accessor":    entry.Accessor,
-				"config": map[string]interface{}{
-					"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-					"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-				},
-				"local":     entry.Local,
-				"seal_wrap": entry.SealWrap,
-			}
-			resp.Data[entry.Path] = info
-		}
-		return resp, nil
+	resp := &logical.Response{
+		Data: make(map[string]interface{}),
 	}
+	for _, entry := range b.Core.auth.Entries {
+		info := map[string]interface{}{
+			"type":        entry.Type,
+			"description": entry.Description,
+			"accessor":    entry.Accessor,
+			"config": map[string]interface{}{
+				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+			},
+			"local":     entry.Local,
+			"seal_wrap": entry.SealWrap,
+		}
+		resp.Data[entry.Path] = info
+	}
+	return resp, nil
 }
 
 // handleEnableAuth is used to enable a new credential backend
-func (b *SystemBackend) handleEnableAuth() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		repState := b.Core.replicationState
-		local := data.Get("local").(bool)
-		if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-			return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
-		}
+func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.replicationState
+	local := data.Get("local").(bool)
+	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+	}
 
-		// Get all the options
-		path := data.Get("path").(string)
-		logicalType := data.Get("type").(string)
-		description := data.Get("description").(string)
-		pluginName := data.Get("plugin_name").(string)
-		sealWrap := data.Get("seal_wrap").(bool)
+	// Get all the options
+	path := data.Get("path").(string)
+	logicalType := data.Get("type").(string)
+	description := data.Get("description").(string)
+	pluginName := data.Get("plugin_name").(string)
+	sealWrap := data.Get("seal_wrap").(bool)
 
-		var config MountConfig
-		var apiConfig APIMountConfig
+	var config MountConfig
+	var apiConfig APIMountConfig
 
-		configMap := data.Get("config").(map[string]interface{})
-		if configMap != nil && len(configMap) != 0 {
-			err := mapstructure.Decode(configMap, &apiConfig)
-			if err != nil {
-				return logical.ErrorResponse(
-						"unable to convert given auth config information"),
-					logical.ErrInvalidRequest
-			}
-		}
-
-		// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
-		// option taking precedence.
-		if logicalType == "plugin" {
-			switch {
-			case apiConfig.PluginName != "":
-				config.PluginName = apiConfig.PluginName
-			case pluginName != "":
-				config.PluginName = pluginName
-			default:
-				return logical.ErrorResponse(
-						"plugin_name must be provided for plugin backend"),
-					logical.ErrInvalidRequest
-			}
-		}
-
-		if logicalType == "" {
+	configMap := data.Get("config").(map[string]interface{})
+	if configMap != nil && len(configMap) != 0 {
+		err := mapstructure.Decode(configMap, &apiConfig)
+		if err != nil {
 			return logical.ErrorResponse(
-					"backend type must be specified as a string"),
+					"unable to convert given auth config information"),
 				logical.ErrInvalidRequest
 		}
-
-		path = sanitizeMountPath(path)
-
-		// Create the mount entry
-		me := &MountEntry{
-			Table:       credentialTableType,
-			Path:        path,
-			Type:        logicalType,
-			Description: description,
-			Config:      config,
-			Local:       local,
-			SealWrap:    sealWrap,
-		}
-
-		// Attempt enabling
-		if err := b.Core.enableCredential(me); err != nil {
-			b.Backend.Logger().Error("sys: enable auth mount failed", "path", me.Path, "error", err)
-			return handleError(err)
-		}
-		return nil, nil
 	}
+
+	// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
+	// option taking precedence.
+	if logicalType == "plugin" {
+		switch {
+		case apiConfig.PluginName != "":
+			config.PluginName = apiConfig.PluginName
+		case pluginName != "":
+			config.PluginName = pluginName
+		default:
+			return logical.ErrorResponse(
+					"plugin_name must be provided for plugin backend"),
+				logical.ErrInvalidRequest
+		}
+	}
+
+	if logicalType == "" {
+		return logical.ErrorResponse(
+				"backend type must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	path = sanitizeMountPath(path)
+
+	// Create the mount entry
+	me := &MountEntry{
+		Table:       credentialTableType,
+		Path:        path,
+		Type:        logicalType,
+		Description: description,
+		Config:      config,
+		Local:       local,
+		SealWrap:    sealWrap,
+	}
+
+	// Attempt enabling
+	if err := b.Core.enableCredential(me); err != nil {
+		b.Backend.Logger().Error("sys: enable auth mount failed", "path", me.Path, "error", err)
+		return handleError(err)
+	}
+	return nil, nil
 }
 
 // handleDisableAuth is used to disable a credential backend
-func (b *SystemBackend) handleDisableAuth() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
-		path = sanitizeMountPath(path)
+func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
 
-		fullPath := credentialRoutePrefix + path
+	fullPath := credentialRoutePrefix + path
 
-		repState := b.Core.replicationState
-		entry := b.Core.router.MatchingMountEntry(fullPath)
-		if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-			return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
-		}
+	repState := b.Core.replicationState
+	entry := b.Core.router.MatchingMountEntry(fullPath)
+	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
+	}
 
-		// We return success when the mount does not exists to not expose if the
-		// mount existed or not
-		match := b.Core.router.MatchingMount(fullPath)
-		if match == "" || fullPath != match {
-			return nil, nil
-		}
-
-		// Attempt disable
-		if err := b.Core.disableCredential(path); err != nil {
-			b.Backend.Logger().Error("sys: disable auth mount failed", "path", path, "error", err)
-			return handleError(err)
-		}
+	// We return success when the mount does not exists to not expose if the
+	// mount existed or not
+	match := b.Core.router.MatchingMount(fullPath)
+	if match == "" || fullPath != match {
 		return nil, nil
 	}
+
+	// Attempt disable
+	if err := b.Core.disableCredential(path); err != nil {
+		b.Backend.Logger().Error("sys: disable auth mount failed", "path", path, "error", err)
+		return handleError(err)
+	}
+	return nil, nil
 }
 
 // handlePolicyList handles the "policy" endpoint to provide the enabled policies
-func (b *SystemBackend) handlePolicyList() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		// Get all the configured policies
-		policies, err := b.Core.policyStore.ListPolicies(PolicyTypeACL)
+func (b *SystemBackend) handlePolicyList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get all the configured policies
+	policies, err := b.Core.policyStore.ListPolicies(PolicyTypeACL)
 
-		// Add the special "root" policy
-		policies = append(policies, "root")
-		resp := logical.ListResponse(policies)
+	// Add the special "root" policy
+	policies = append(policies, "root")
+	resp := logical.ListResponse(policies)
 
-		// Backwords compatibility
-		resp.Data["policies"] = resp.Data["keys"]
+	// Backwords compatibility
+	resp.Data["policies"] = resp.Data["keys"]
 
-		return resp, err
-	}
+	return resp, err
 }
 
 func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.OperationFunc {
@@ -2135,28 +2059,26 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 }
 
 // handlePolicyRead handles the "policy/<name>" endpoint to read a policy
-func (b *SystemBackend) handlePolicyRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		name := data.Get("name").(string)
+func (b *SystemBackend) handlePolicyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("name").(string)
 
-		policy, err := b.Core.policyStore.GetPolicy(name, PolicyTypeACL)
-		if err != nil {
-			return handleError(err)
-		}
-
-		if policy == nil {
-			return nil, nil
-		}
-
-		resp := &logical.Response{
-			Data: map[string]interface{}{
-				"name":  policy.Name,
-				"rules": policy.Raw,
-			},
-		}
-
-		return resp, nil
+	policy, err := b.Core.policyStore.GetPolicy(name, PolicyTypeACL)
+	if err != nil {
+		return handleError(err)
 	}
+
+	if policy == nil {
+		return nil, nil
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"name":  policy.Name,
+			"rules": policy.Raw,
+		},
+	}
+
+	return resp, nil
 }
 
 func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.OperationFunc {
@@ -2199,43 +2121,41 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 }
 
 // handlePolicySet handles the "policy/<name>" endpoint to set a policy
-func (b *SystemBackend) handlePolicySet() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePolicySet(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-		policy := &Policy{
-			Type: PolicyTypeACL,
-			Name: strings.ToLower(data.Get("name").(string)),
-		}
-		if policy.Name == "" {
-			return logical.ErrorResponse("policy name must be provided in the URL"), nil
-		}
-
-		var resp *logical.Response
-
-		policy.Raw = data.Get("policy").(string)
-		if policy.Raw == "" {
-			policy.Raw = data.Get("rules").(string)
-			if resp == nil {
-				resp = &logical.Response{}
-			}
-			resp.AddWarning("'rules' is deprecated, please use 'policy' instead")
-		}
-		if policy.Raw == "" {
-			return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
-		}
-
-		p, err := ParseACLPolicy(policy.Raw)
-		if err != nil {
-			return handleError(err)
-		}
-		policy.Paths = p.Paths
-
-		// Update the policy
-		if err := b.Core.policyStore.SetPolicy(policy); err != nil {
-			return handleError(err)
-		}
-		return resp, nil
+	policy := &Policy{
+		Type: PolicyTypeACL,
+		Name: strings.ToLower(data.Get("name").(string)),
 	}
+	if policy.Name == "" {
+		return logical.ErrorResponse("policy name must be provided in the URL"), nil
+	}
+
+	var resp *logical.Response
+
+	policy.Raw = data.Get("policy").(string)
+	if policy.Raw == "" {
+		policy.Raw = data.Get("rules").(string)
+		if resp == nil {
+			resp = &logical.Response{}
+		}
+		resp.AddWarning("'rules' is deprecated, please use 'policy' instead")
+	}
+	if policy.Raw == "" {
+		return logical.ErrorResponse("'policy' parameter not supplied or empty"), nil
+	}
+
+	p, err := ParseACLPolicy(policy.Raw)
+	if err != nil {
+		return handleError(err)
+	}
+	policy.Paths = p.Paths
+
+	// Update the policy
+	if err := b.Core.policyStore.SetPolicy(policy); err != nil {
+		return handleError(err)
+	}
+	return resp, nil
 }
 
 func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.OperationFunc {
@@ -2250,378 +2170,350 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 }
 
 // handlePolicyDelete handles the "policy/<name>" endpoint to delete a policy
-func (b *SystemBackend) handlePolicyDelete() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		name := data.Get("name").(string)
+func (b *SystemBackend) handlePolicyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("name").(string)
 
-		if err := b.Core.policyStore.DeletePolicy(name, PolicyTypeACL); err != nil {
-			return handleError(err)
-		}
-		return nil, nil
+	if err := b.Core.policyStore.DeletePolicy(name, PolicyTypeACL); err != nil {
+		return handleError(err)
 	}
+	return nil, nil
 }
 
 // handleAuditTable handles the "audit" endpoint to provide the audit table
-func (b *SystemBackend) handleAuditTable() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		b.Core.auditLock.RLock()
-		defer b.Core.auditLock.RUnlock()
+func (b *SystemBackend) handleAuditTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.auditLock.RLock()
+	defer b.Core.auditLock.RUnlock()
 
-		resp := &logical.Response{
-			Data: make(map[string]interface{}),
-		}
-		for _, entry := range b.Core.audit.Entries {
-			info := map[string]interface{}{
-				"path":        entry.Path,
-				"type":        entry.Type,
-				"description": entry.Description,
-				"options":     entry.Options,
-				"local":       entry.Local,
-			}
-			resp.Data[entry.Path] = info
-		}
-		return resp, nil
+	resp := &logical.Response{
+		Data: make(map[string]interface{}),
 	}
+	for _, entry := range b.Core.audit.Entries {
+		info := map[string]interface{}{
+			"path":        entry.Path,
+			"type":        entry.Type,
+			"description": entry.Description,
+			"options":     entry.Options,
+			"local":       entry.Local,
+		}
+		resp.Data[entry.Path] = info
+	}
+	return resp, nil
 }
 
 // handleAuditHash is used to fetch the hash of the given input data with the
 // specified audit backend's salt
-func (b *SystemBackend) handleAuditHash() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
-		input := data.Get("input").(string)
-		if input == "" {
-			return logical.ErrorResponse("the \"input\" parameter is empty"), nil
-		}
-
-		path = sanitizeMountPath(path)
-
-		hash, err := b.Core.auditBroker.GetHash(path, input)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"hash": hash,
-			},
-		}, nil
+func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	input := data.Get("input").(string)
+	if input == "" {
+		return logical.ErrorResponse("the \"input\" parameter is empty"), nil
 	}
+
+	path = sanitizeMountPath(path)
+
+	hash, err := b.Core.auditBroker.GetHash(path, input)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"hash": hash,
+		},
+	}, nil
 }
 
 // handleEnableAudit is used to enable a new audit backend
-func (b *SystemBackend) handleEnableAudit() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		repState := b.Core.replicationState
+func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.replicationState
 
-		local := data.Get("local").(bool)
-		if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-			return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
-		}
-
-		// Get all the options
-		path := data.Get("path").(string)
-		backendType := data.Get("type").(string)
-		description := data.Get("description").(string)
-		options := data.Get("options").(map[string]interface{})
-
-		optionMap := make(map[string]string)
-		for k, v := range options {
-			vStr, ok := v.(string)
-			if !ok {
-				return logical.ErrorResponse("options must be string valued"),
-					logical.ErrInvalidRequest
-			}
-			optionMap[k] = vStr
-		}
-
-		// Create the mount entry
-		me := &MountEntry{
-			Table:       auditTableType,
-			Path:        path,
-			Type:        backendType,
-			Description: description,
-			Options:     optionMap,
-			Local:       local,
-		}
-
-		// Attempt enabling
-		if err := b.Core.enableAudit(me); err != nil {
-			b.Backend.Logger().Error("sys: enable audit mount failed", "path", me.Path, "error", err)
-			return handleError(err)
-		}
-		return nil, nil
+	local := data.Get("local").(bool)
+	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
 	}
+
+	// Get all the options
+	path := data.Get("path").(string)
+	backendType := data.Get("type").(string)
+	description := data.Get("description").(string)
+	options := data.Get("options").(map[string]interface{})
+
+	optionMap := make(map[string]string)
+	for k, v := range options {
+		vStr, ok := v.(string)
+		if !ok {
+			return logical.ErrorResponse("options must be string valued"),
+				logical.ErrInvalidRequest
+		}
+		optionMap[k] = vStr
+	}
+
+	// Create the mount entry
+	me := &MountEntry{
+		Table:       auditTableType,
+		Path:        path,
+		Type:        backendType,
+		Description: description,
+		Options:     optionMap,
+		Local:       local,
+	}
+
+	// Attempt enabling
+	if err := b.Core.enableAudit(me); err != nil {
+		b.Backend.Logger().Error("sys: enable audit mount failed", "path", me.Path, "error", err)
+		return handleError(err)
+	}
+	return nil, nil
 }
 
 // handleDisableAudit is used to disable an audit backend
-func (b *SystemBackend) handleDisableAudit() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
+func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
 
-		// Attempt disable
-		if existed, err := b.Core.disableAudit(path); existed && err != nil {
-			b.Backend.Logger().Error("sys: disable audit mount failed", "path", path, "error", err)
-			return handleError(err)
-		}
-		return nil, nil
+	// Attempt disable
+	if existed, err := b.Core.disableAudit(path); existed && err != nil {
+		b.Backend.Logger().Error("sys: disable audit mount failed", "path", path, "error", err)
+		return handleError(err)
 	}
+	return nil, nil
 }
 
 // handleRawRead is used to read directly from the barrier
-func (b *SystemBackend) handleRawRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
+func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
 
-		// Prevent access of protected paths
-		for _, p := range protectedPaths {
-			if strings.HasPrefix(path, p) {
-				err := fmt.Sprintf("cannot read '%s'", path)
-				return logical.ErrorResponse(err), logical.ErrInvalidRequest
-			}
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot read '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
-
-		entry, err := b.Core.barrier.Get(path)
-		if err != nil {
-			return handleError(err)
-		}
-		if entry == nil {
-			return nil, nil
-		}
-		resp := &logical.Response{
-			Data: map[string]interface{}{
-				"value": string(entry.Value),
-			},
-		}
-		return resp, nil
 	}
+
+	entry, err := b.Core.barrier.Get(path)
+	if err != nil {
+		return handleError(err)
+	}
+	if entry == nil {
+		return nil, nil
+	}
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"value": string(entry.Value),
+		},
+	}
+	return resp, nil
 }
 
 // handleRawWrite is used to write directly to the barrier
-func (b *SystemBackend) handleRawWrite() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
+func (b *SystemBackend) handleRawWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
 
-		// Prevent access of protected paths
-		for _, p := range protectedPaths {
-			if strings.HasPrefix(path, p) {
-				err := fmt.Sprintf("cannot write '%s'", path)
-				return logical.ErrorResponse(err), logical.ErrInvalidRequest
-			}
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot write '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
-
-		value := data.Get("value").(string)
-		entry := &Entry{
-			Key:   path,
-			Value: []byte(value),
-		}
-		if err := b.Core.barrier.Put(entry); err != nil {
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		}
-		return nil, nil
 	}
+
+	value := data.Get("value").(string)
+	entry := &Entry{
+		Key:   path,
+		Value: []byte(value),
+	}
+	if err := b.Core.barrier.Put(entry); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	return nil, nil
 }
 
 // handleRawDelete is used to delete directly from the barrier
-func (b *SystemBackend) handleRawDelete() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
+func (b *SystemBackend) handleRawDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
 
-		// Prevent access of protected paths
-		for _, p := range protectedPaths {
-			if strings.HasPrefix(path, p) {
-				err := fmt.Sprintf("cannot delete '%s'", path)
-				return logical.ErrorResponse(err), logical.ErrInvalidRequest
-			}
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot delete '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
-
-		if err := b.Core.barrier.Delete(path); err != nil {
-			return handleError(err)
-		}
-		return nil, nil
 	}
+
+	if err := b.Core.barrier.Delete(path); err != nil {
+		return handleError(err)
+	}
+	return nil, nil
 }
 
 // handleRawList is used to list directly from the barrier
-func (b *SystemBackend) handleRawList() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		path := data.Get("path").(string)
-		if path != "" && !strings.HasSuffix(path, "/") {
-			path = path + "/"
-		}
-
-		// Prevent access of protected paths
-		for _, p := range protectedPaths {
-			if strings.HasPrefix(path, p) {
-				err := fmt.Sprintf("cannot list '%s'", path)
-				return logical.ErrorResponse(err), logical.ErrInvalidRequest
-			}
-		}
-
-		keys, err := b.Core.barrier.List(path)
-		if err != nil {
-			return handleError(err)
-		}
-		return logical.ListResponse(keys), nil
+func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path = path + "/"
 	}
+
+	// Prevent access of protected paths
+	for _, p := range protectedPaths {
+		if strings.HasPrefix(path, p) {
+			err := fmt.Sprintf("cannot list '%s'", path)
+			return logical.ErrorResponse(err), logical.ErrInvalidRequest
+		}
+	}
+
+	keys, err := b.Core.barrier.List(path)
+	if err != nil {
+		return handleError(err)
+	}
+	return logical.ListResponse(keys), nil
 }
 
 // handleKeyStatus returns status information about the backend key
-func (b *SystemBackend) handleKeyStatus() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		// Get the key info
-		info, err := b.Core.barrier.ActiveKeyInfo()
-		if err != nil {
-			return nil, err
-		}
-
-		resp := &logical.Response{
-			Data: map[string]interface{}{
-				"term":         info.Term,
-				"install_time": info.InstallTime.Format(time.RFC3339Nano),
-			},
-		}
-		return resp, nil
+func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get the key info
+	info, err := b.Core.barrier.ActiveKeyInfo()
+	if err != nil {
+		return nil, err
 	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"term":         info.Term,
+			"install_time": info.InstallTime.Format(time.RFC3339Nano),
+		},
+	}
+	return resp, nil
 }
 
 // handleRotate is used to trigger a key rotation
-func (b *SystemBackend) handleRotate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		repState := b.Core.replicationState
-		if repState.HasState(consts.ReplicationPerformanceSecondary) {
-			return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
+func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.replicationState
+	if repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
+	}
+
+	// Rotate to the new term
+	newTerm, err := b.Core.barrier.Rotate()
+	if err != nil {
+		b.Backend.Logger().Error("sys: failed to create new encryption key", "error", err)
+		return handleError(err)
+	}
+	b.Backend.Logger().Info("sys: installed new encryption key")
+
+	// In HA mode, we need to an upgrade path for the standby instances
+	if b.Core.ha != nil {
+		// Create the upgrade path to the new term
+		if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
+			b.Backend.Logger().Error("sys: failed to create new upgrade", "term", newTerm, "error", err)
 		}
 
-		// Rotate to the new term
-		newTerm, err := b.Core.barrier.Rotate()
-		if err != nil {
-			b.Backend.Logger().Error("sys: failed to create new encryption key", "error", err)
-			return handleError(err)
-		}
-		b.Backend.Logger().Info("sys: installed new encryption key")
-
-		// In HA mode, we need to an upgrade path for the standby instances
-		if b.Core.ha != nil {
-			// Create the upgrade path to the new term
-			if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
-				b.Backend.Logger().Error("sys: failed to create new upgrade", "term", newTerm, "error", err)
+		// Schedule the destroy of the upgrade path
+		time.AfterFunc(keyRotateGracePeriod, func() {
+			if err := b.Core.barrier.DestroyUpgrade(newTerm); err != nil {
+				b.Backend.Logger().Error("sys: failed to destroy upgrade", "term", newTerm, "error", err)
 			}
-
-			// Schedule the destroy of the upgrade path
-			time.AfterFunc(keyRotateGracePeriod, func() {
-				if err := b.Core.barrier.DestroyUpgrade(newTerm); err != nil {
-					b.Backend.Logger().Error("sys: failed to destroy upgrade", "term", newTerm, "error", err)
-				}
-			})
-		}
-
-		// Write to the canary path, which will force a synchronous truing during
-		// replication
-		if err := b.Core.barrier.Put(&Entry{
-			Key:   coreKeyringCanaryPath,
-			Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
-		}); err != nil {
-			b.Core.logger.Error("core: error saving keyring canary", "error", err)
-			return nil, fmt.Errorf("failed to save keyring canary: %v", err)
-		}
-
-		return nil, nil
+		})
 	}
+
+	// Write to the canary path, which will force a synchronous truing during
+	// replication
+	if err := b.Core.barrier.Put(&Entry{
+		Key:   coreKeyringCanaryPath,
+		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
+	}); err != nil {
+		b.Core.logger.Error("core: error saving keyring canary", "error", err)
+		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
+	}
+
+	return nil, nil
 }
 
-func (b *SystemBackend) handleWrappingPubkey() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		x, _ := b.Core.wrappingJWTKey.X.MarshalText()
-		y, _ := b.Core.wrappingJWTKey.Y.MarshalText()
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"jwt_x":     string(x),
-				"jwt_y":     string(y),
-				"jwt_curve": corePrivateKeyTypeP521,
-			},
-		}, nil
-	}
+func (b *SystemBackend) handleWrappingPubkey(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	x, _ := b.Core.wrappingJWTKey.X.MarshalText()
+	y, _ := b.Core.wrappingJWTKey.Y.MarshalText()
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"jwt_x":     string(x),
+			"jwt_y":     string(y),
+			"jwt_curve": corePrivateKeyTypeP521,
+		},
+	}, nil
 }
 
-func (b *SystemBackend) handleWrappingWrap() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		if req.WrapInfo == nil || req.WrapInfo.TTL == 0 {
-			return logical.ErrorResponse("endpoint requires response wrapping to be used"), logical.ErrInvalidRequest
-		}
-
-		// N.B.: Do *NOT* allow JWT wrapping tokens to be created through this
-		// endpoint. JWTs are signed so if we don't allow users to create wrapping
-		// tokens using them we can ensure that an operator can't spoof a legit JWT
-		// wrapped token, which makes certain init/rekey/generate-root cases have
-		// better properties.
-		req.WrapInfo.Format = "uuid"
-
-		return &logical.Response{
-			Data: data.Raw,
-		}, nil
+func (b *SystemBackend) handleWrappingWrap(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if req.WrapInfo == nil || req.WrapInfo.TTL == 0 {
+		return logical.ErrorResponse("endpoint requires response wrapping to be used"), logical.ErrInvalidRequest
 	}
+
+	// N.B.: Do *NOT* allow JWT wrapping tokens to be created through this
+	// endpoint. JWTs are signed so if we don't allow users to create wrapping
+	// tokens using them we can ensure that an operator can't spoof a legit JWT
+	// wrapped token, which makes certain init/rekey/generate-root cases have
+	// better properties.
+	req.WrapInfo.Format = "uuid"
+
+	return &logical.Response{
+		Data: data.Raw,
+	}, nil
 }
 
-func (b *SystemBackend) handleWrappingUnwrap() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		// If a third party is unwrapping (rather than the calling token being the
-		// wrapping token) we detect this so that we can revoke the original
-		// wrapping token after reading it
-		var thirdParty bool
+func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// If a third party is unwrapping (rather than the calling token being the
+	// wrapping token) we detect this so that we can revoke the original
+	// wrapping token after reading it
+	var thirdParty bool
 
-		token := data.Get("token").(string)
-		if token != "" {
-			thirdParty = true
-		} else {
-			token = req.ClientToken
-		}
-
-		// Get the policies so we can determine if this is a normal response
-		// wrapping request or a control group token.
-		//
-		// We use lookupTainted here because the token might have already been used
-		// by handleRequest(), this happens when it's a normal response wrapping
-		// request and the token was provided "first party". We want to inspect the
-		// token policies but will not use this token entry for anything else.
-		te, err := b.Core.tokenStore.lookupTainted(token)
-		if err != nil {
-			return nil, err
-		}
-		if te == nil {
-			return nil, errors.New("could not find token")
-		}
-		if len(te.Policies) != 1 {
-			return nil, errors.New("token is not a valid unwrap token")
-		}
-
-		var response string
-		switch te.Policies[0] {
-		case responseWrappingPolicyName:
-			response, err = b.responseWrappingUnwrap(ctx, token, thirdParty)
-		}
-		if err != nil {
-			var respErr *logical.Response
-			if len(response) > 0 {
-				respErr = logical.ErrorResponse(response)
-			}
-
-			return respErr, err
-		}
-
-		resp := &logical.Response{
-			Data: map[string]interface{}{},
-		}
-		if len(response) == 0 {
-			resp.Data[logical.HTTPStatusCode] = 204
-		} else {
-			resp.Data[logical.HTTPStatusCode] = 200
-			resp.Data[logical.HTTPRawBody] = []byte(response)
-			resp.Data[logical.HTTPContentType] = "application/json"
-		}
-
-		return resp, nil
+	token := data.Get("token").(string)
+	if token != "" {
+		thirdParty = true
+	} else {
+		token = req.ClientToken
 	}
+
+	// Get the policies so we can determine if this is a normal response
+	// wrapping request or a control group token.
+	//
+	// We use lookupTainted here because the token might have already been used
+	// by handleRequest(), this happens when it's a normal response wrapping
+	// request and the token was provided "first party". We want to inspect the
+	// token policies but will not use this token entry for anything else.
+	te, err := b.Core.tokenStore.lookupTainted(token)
+	if err != nil {
+		return nil, err
+	}
+	if te == nil {
+		return nil, errors.New("could not find token")
+	}
+	if len(te.Policies) != 1 {
+		return nil, errors.New("token is not a valid unwrap token")
+	}
+
+	var response string
+	switch te.Policies[0] {
+	case responseWrappingPolicyName:
+		response, err = b.responseWrappingUnwrap(ctx, token, thirdParty)
+	}
+	if err != nil {
+		var respErr *logical.Response
+		if len(response) > 0 {
+			respErr = logical.ErrorResponse(response)
+		}
+
+		return respErr, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{},
+	}
+	if len(response) == 0 {
+		resp.Data[logical.HTTPStatusCode] = 204
+	} else {
+		resp.Data[logical.HTTPStatusCode] = 200
+		resp.Data[logical.HTTPRawBody] = []byte(response)
+		resp.Data[logical.HTTPContentType] = "application/json"
+	}
+
+	return resp, nil
 }
 
 // responseWrappingUnwrap will read the stored response in the cubbyhole and
@@ -2668,266 +2560,258 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string
 	return response, nil
 }
 
-func (b *SystemBackend) handleWrappingLookup() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		// This ordering of lookups has been validated already in the wrapping
-		// validation func, we're just doing this for a safety check
-		token := data.Get("token").(string)
+func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// This ordering of lookups has been validated already in the wrapping
+	// validation func, we're just doing this for a safety check
+	token := data.Get("token").(string)
+	if token == "" {
+		token = req.ClientToken
 		if token == "" {
-			token = req.ClientToken
-			if token == "" {
-				return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
-			}
+			return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
 		}
-
-		cubbyReq := &logical.Request{
-			Operation:   logical.ReadOperation,
-			Path:        "cubbyhole/wrapinfo",
-			ClientToken: token,
-		}
-		cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
-		if err != nil {
-			return nil, fmt.Errorf("error looking up wrapping information: %v", err)
-		}
-		if cubbyResp == nil {
-			return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
-		}
-		if cubbyResp != nil && cubbyResp.IsError() {
-			return cubbyResp, nil
-		}
-		if cubbyResp.Data == nil {
-			return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
-		}
-
-		creationTTLRaw := cubbyResp.Data["creation_ttl"]
-		creationTime := cubbyResp.Data["creation_time"]
-		creationPath := cubbyResp.Data["creation_path"]
-
-		resp := &logical.Response{
-			Data: map[string]interface{}{},
-		}
-		if creationTTLRaw != nil {
-			creationTTL, err := creationTTLRaw.(json.Number).Int64()
-			if err != nil {
-				return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
-			}
-			resp.Data["creation_ttl"] = time.Duration(creationTTL).Seconds()
-		}
-		if creationTime != nil {
-			// This was JSON marshaled so it's already a string in RFC3339 format
-			resp.Data["creation_time"] = cubbyResp.Data["creation_time"]
-		}
-		if creationPath != nil {
-			resp.Data["creation_path"] = cubbyResp.Data["creation_path"]
-		}
-
-		return resp, nil
 	}
-}
 
-func (b *SystemBackend) handleWrappingRewrap() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		// If a third party is rewrapping (rather than the calling token being the
-		// wrapping token) we detect this so that we can revoke the original
-		// wrapping token after reading it. Right now wrapped tokens can't unwrap
-		// themselves, but in case we change it, this will be ready to do the right
-		// thing.
-		var thirdParty bool
+	cubbyReq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/wrapinfo",
+		ClientToken: token,
+	}
+	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
+	}
+	if cubbyResp == nil {
+		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
+	}
+	if cubbyResp != nil && cubbyResp.IsError() {
+		return cubbyResp, nil
+	}
+	if cubbyResp.Data == nil {
+		return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
+	}
 
-		token := data.Get("token").(string)
-		if token != "" {
-			thirdParty = true
-		} else {
-			token = req.ClientToken
-		}
+	creationTTLRaw := cubbyResp.Data["creation_ttl"]
+	creationTime := cubbyResp.Data["creation_time"]
+	creationPath := cubbyResp.Data["creation_path"]
 
-		if thirdParty {
-			// Use the token to decrement the use count to avoid a second operation on the token.
-			_, err := b.Core.tokenStore.UseTokenByID(token)
-			if err != nil {
-				return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
-			}
-			defer b.Core.tokenStore.Revoke(token)
-		}
-
-		// Fetch the original TTL
-		cubbyReq := &logical.Request{
-			Operation:   logical.ReadOperation,
-			Path:        "cubbyhole/wrapinfo",
-			ClientToken: token,
-		}
-		cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
-		if err != nil {
-			return nil, fmt.Errorf("error looking up wrapping information: %v", err)
-		}
-		if cubbyResp == nil {
-			return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
-		}
-		if cubbyResp != nil && cubbyResp.IsError() {
-			return cubbyResp, nil
-		}
-		if cubbyResp.Data == nil {
-			return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
-		}
-
-		// Set the creation TTL on the request
-		creationTTLRaw := cubbyResp.Data["creation_ttl"]
-		if creationTTLRaw == nil {
-			return nil, fmt.Errorf("creation_ttl value in wrapping information was nil")
-		}
-		creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
+	resp := &logical.Response{
+		Data: map[string]interface{}{},
+	}
+	if creationTTLRaw != nil {
+		creationTTL, err := creationTTLRaw.(json.Number).Int64()
 		if err != nil {
 			return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
 		}
-
-		// Get creation_path to return as the response later
-		creationPathRaw := cubbyResp.Data["creation_path"]
-		if creationPathRaw == nil {
-			return nil, fmt.Errorf("creation_path value in wrapping information was nil")
-		}
-		creationPath := creationPathRaw.(string)
-
-		// Fetch the original response and return it as the data for the new response
-		cubbyReq = &logical.Request{
-			Operation:   logical.ReadOperation,
-			Path:        "cubbyhole/response",
-			ClientToken: token,
-		}
-		cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
-		if err != nil {
-			return nil, fmt.Errorf("error looking up response: %v", err)
-		}
-		if cubbyResp == nil {
-			return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
-		}
-		if cubbyResp != nil && cubbyResp.IsError() {
-			return cubbyResp, nil
-		}
-		if cubbyResp.Data == nil {
-			return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
-		}
-
-		response := cubbyResp.Data["response"]
-		if response == nil {
-			return nil, fmt.Errorf("no response found inside the cubbyhole")
-		}
-
-		// Return response in "response"; wrapping code will detect the rewrap and
-		// slot in instead of nesting
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"response": response,
-			},
-			WrapInfo: &wrapping.ResponseWrapInfo{
-				TTL:          time.Duration(creationTTL),
-				CreationPath: creationPath,
-			},
-		}, nil
+		resp.Data["creation_ttl"] = time.Duration(creationTTL).Seconds()
 	}
+	if creationTime != nil {
+		// This was JSON marshaled so it's already a string in RFC3339 format
+		resp.Data["creation_time"] = cubbyResp.Data["creation_time"]
+	}
+	if creationPath != nil {
+		resp.Data["creation_path"] = cubbyResp.Data["creation_path"]
+	}
+
+	return resp, nil
 }
 
-func (b *SystemBackend) pathHashWrite() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		inputB64 := d.Get("input").(string)
-		format := d.Get("format").(string)
-		algorithm := d.Get("urlalgorithm").(string)
-		if algorithm == "" {
-			algorithm = d.Get("algorithm").(string)
-		}
+func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// If a third party is rewrapping (rather than the calling token being the
+	// wrapping token) we detect this so that we can revoke the original
+	// wrapping token after reading it. Right now wrapped tokens can't unwrap
+	// themselves, but in case we change it, this will be ready to do the right
+	// thing.
+	var thirdParty bool
 
-		input, err := base64.StdEncoding.DecodeString(inputB64)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
-		}
-
-		switch format {
-		case "hex":
-		case "base64":
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
-		}
-
-		var hf hash.Hash
-		switch algorithm {
-		case "sha2-224":
-			hf = sha256.New224()
-		case "sha2-256":
-			hf = sha256.New()
-		case "sha2-384":
-			hf = sha512.New384()
-		case "sha2-512":
-			hf = sha512.New()
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
-		}
-		hf.Write(input)
-		retBytes := hf.Sum(nil)
-
-		var retStr string
-		switch format {
-		case "hex":
-			retStr = hex.EncodeToString(retBytes)
-		case "base64":
-			retStr = base64.StdEncoding.EncodeToString(retBytes)
-		}
-
-		// Generate the response
-		resp := &logical.Response{
-			Data: map[string]interface{}{
-				"sum": retStr,
-			},
-		}
-		return resp, nil
+	token := data.Get("token").(string)
+	if token != "" {
+		thirdParty = true
+	} else {
+		token = req.ClientToken
 	}
+
+	if thirdParty {
+		// Use the token to decrement the use count to avoid a second operation on the token.
+		_, err := b.Core.tokenStore.UseTokenByID(token)
+		if err != nil {
+			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+		}
+		defer b.Core.tokenStore.Revoke(token)
+	}
+
+	// Fetch the original TTL
+	cubbyReq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/wrapinfo",
+		ClientToken: token,
+	}
+	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
+	}
+	if cubbyResp == nil {
+		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
+	}
+	if cubbyResp != nil && cubbyResp.IsError() {
+		return cubbyResp, nil
+	}
+	if cubbyResp.Data == nil {
+		return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
+	}
+
+	// Set the creation TTL on the request
+	creationTTLRaw := cubbyResp.Data["creation_ttl"]
+	if creationTTLRaw == nil {
+		return nil, fmt.Errorf("creation_ttl value in wrapping information was nil")
+	}
+	creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
+	if err != nil {
+		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
+	}
+
+	// Get creation_path to return as the response later
+	creationPathRaw := cubbyResp.Data["creation_path"]
+	if creationPathRaw == nil {
+		return nil, fmt.Errorf("creation_path value in wrapping information was nil")
+	}
+	creationPath := creationPathRaw.(string)
+
+	// Fetch the original response and return it as the data for the new response
+	cubbyReq = &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/response",
+		ClientToken: token,
+	}
+	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up response: %v", err)
+	}
+	if cubbyResp == nil {
+		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
+	}
+	if cubbyResp != nil && cubbyResp.IsError() {
+		return cubbyResp, nil
+	}
+	if cubbyResp.Data == nil {
+		return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
+	}
+
+	response := cubbyResp.Data["response"]
+	if response == nil {
+		return nil, fmt.Errorf("no response found inside the cubbyhole")
+	}
+
+	// Return response in "response"; wrapping code will detect the rewrap and
+	// slot in instead of nesting
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"response": response,
+		},
+		WrapInfo: &wrapping.ResponseWrapInfo{
+			TTL:          time.Duration(creationTTL),
+			CreationPath: creationPath,
+		},
+	}, nil
 }
 
-func (b *SystemBackend) pathRandomWrite() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		bytes := 0
-		var err error
-		strBytes := d.Get("urlbytes").(string)
-		if strBytes != "" {
-			bytes, err = strconv.Atoi(strBytes)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
-			}
-		} else {
-			bytes = d.Get("bytes").(int)
-		}
-		format := d.Get("format").(string)
-
-		if bytes < 1 {
-			return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
-		}
-
-		switch format {
-		case "hex":
-		case "base64":
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
-		}
-
-		randBytes, err := uuid.GenerateRandomBytes(bytes)
-		if err != nil {
-			return nil, err
-		}
-
-		var retStr string
-		switch format {
-		case "hex":
-			retStr = hex.EncodeToString(randBytes)
-		case "base64":
-			retStr = base64.StdEncoding.EncodeToString(randBytes)
-		}
-
-		// Generate the response
-		resp := &logical.Response{
-			Data: map[string]interface{}{
-				"random_bytes": retStr,
-			},
-		}
-		return resp, nil
+func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	inputB64 := d.Get("input").(string)
+	format := d.Get("format").(string)
+	algorithm := d.Get("urlalgorithm").(string)
+	if algorithm == "" {
+		algorithm = d.Get("algorithm").(string)
 	}
+
+	input, err := base64.StdEncoding.DecodeString(inputB64)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
+	}
+
+	switch format {
+	case "hex":
+	case "base64":
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
+	}
+
+	var hf hash.Hash
+	switch algorithm {
+	case "sha2-224":
+		hf = sha256.New224()
+	case "sha2-256":
+		hf = sha256.New()
+	case "sha2-384":
+		hf = sha512.New384()
+	case "sha2-512":
+		hf = sha512.New()
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
+	}
+	hf.Write(input)
+	retBytes := hf.Sum(nil)
+
+	var retStr string
+	switch format {
+	case "hex":
+		retStr = hex.EncodeToString(retBytes)
+	case "base64":
+		retStr = base64.StdEncoding.EncodeToString(retBytes)
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"sum": retStr,
+		},
+	}
+	return resp, nil
+}
+
+func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	bytes := 0
+	var err error
+	strBytes := d.Get("urlbytes").(string)
+	if strBytes != "" {
+		bytes, err = strconv.Atoi(strBytes)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
+		}
+	} else {
+		bytes = d.Get("bytes").(int)
+	}
+	format := d.Get("format").(string)
+
+	if bytes < 1 {
+		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
+	}
+
+	switch format {
+	case "hex":
+	case "base64":
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)), nil
+	}
+
+	randBytes, err := uuid.GenerateRandomBytes(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	var retStr string
+	switch format {
+	case "hex":
+		retStr = hex.EncodeToString(randBytes)
+	case "base64":
+		retStr = base64.StdEncoding.EncodeToString(randBytes)
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"random_bytes": retStr,
+		},
+	}
+	return resp, nil
 }
 
 func sanitizeMountPath(path string) string {
