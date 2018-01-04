@@ -133,7 +133,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
-	resp, err := framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(req, d)
+	resp, err := framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(ctx, req, d)
 	if err != nil {
 		return nil, err
 	}

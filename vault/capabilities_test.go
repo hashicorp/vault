@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"testing"
@@ -60,7 +61,7 @@ path "secret/sample" {
 			"policies": "policy1",
 		},
 	}
-	resp, err = i.HandleRequest(entityReq)
+	resp, err = i.HandleRequest(context.Background(), entityReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %#v\n", resp, err)
 	}
@@ -97,7 +98,7 @@ path "secret/sample" {
 			"policies":          "policy3",
 		},
 	}
-	resp, err = i.HandleRequest(groupReq)
+	resp, err = i.HandleRequest(context.Background(), groupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %#v\n", resp, err)
 	}
