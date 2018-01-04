@@ -438,7 +438,7 @@ type CoreConfig struct {
 func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		if conf.RedirectAddr == "" {
-			return nil, fmt.Errorf("missing redirect address")
+			return nil, fmt.Errorf("missing API address, please set in configuration or via environment")
 		}
 	}
 
