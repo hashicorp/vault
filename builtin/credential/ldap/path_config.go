@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -163,9 +164,7 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 	return result, nil
 }
 
-func (b *backend) pathConfigRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	cfg, err := b.Config(req)
 	if err != nil {
 		return nil, err
@@ -289,9 +288,7 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	return cfg, nil
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Build a ConfigEntry struct out of the supplied FieldData
 	cfg, err := b.newConfigEntry(d)
 	if err != nil {

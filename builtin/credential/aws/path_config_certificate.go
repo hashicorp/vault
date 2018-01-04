@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -124,7 +125,7 @@ vary. Defaults to "pkcs7".`,
 
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
-func (b *backend) pathConfigCertificateExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathConfigCertificateExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	certName := data.Get("cert_name").(string)
 	if certName == "" {
 		return false, fmt.Errorf("missing cert_name")
@@ -138,8 +139,7 @@ func (b *backend) pathConfigCertificateExistenceCheck(req *logical.Request, data
 }
 
 // pathCertificatesList is used to list all the AWS public certificates registered with Vault
-func (b *backend) pathCertificatesList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCertificatesList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
@@ -309,7 +309,7 @@ func (b *backend) nonLockedAWSPublicCertificateEntry(s logical.Storage, certName
 // pathConfigCertificateDelete is used to delete the previously configured AWS
 // Public Key that is used to verify the PKCS#7 signature of the instance
 // identity document.
-func (b *backend) pathConfigCertificateDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigCertificateDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -323,8 +323,7 @@ func (b *backend) pathConfigCertificateDelete(req *logical.Request, data *framew
 
 // pathConfigCertificateRead is used to view the configured AWS Public Key that
 // is used to verify the PKCS#7 signature of the instance identity document.
-func (b *backend) pathConfigCertificateRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigCertificateRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	certName := data.Get("cert_name").(string)
 	if certName == "" {
 		return logical.ErrorResponse("missing cert_name"), nil
@@ -345,8 +344,7 @@ func (b *backend) pathConfigCertificateRead(
 
 // pathConfigCertificateCreateUpdate is used to register an AWS Public Key that
 // is used to verify the PKCS#7 signature of the instance identity document.
-func (b *backend) pathConfigCertificateCreateUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigCertificateCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	certName := data.Get("cert_name").(string)
 	if certName == "" {
 		return logical.ErrorResponse("missing certificate name"), nil

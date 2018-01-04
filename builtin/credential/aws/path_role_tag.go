@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -69,9 +70,7 @@ If set, the created tag can only be used by the instance with the given ID.`,
 
 // pathRoleTagUpdate is used to create an EC2 instance tag which will
 // identify the Vault resources that the instance will be authorized for.
-func (b *backend) pathRoleTagUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := strings.ToLower(data.Get("role").(string))
 	if roleName == "" {
 		return logical.ErrorResponse("missing role"), nil

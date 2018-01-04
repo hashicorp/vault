@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -76,8 +77,7 @@ func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) er
 }
 
 // pathTidyIdentityWhitelistUpdate is used to delete entries in the whitelist that are expired.
-func (b *backend) pathTidyIdentityWhitelistUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathTidyIdentityWhitelistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return nil, b.tidyWhitelistIdentity(req.Storage, data.Get("safety_buffer").(int))
 }
 

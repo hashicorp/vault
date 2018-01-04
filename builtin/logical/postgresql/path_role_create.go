@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -31,8 +32,7 @@ func pathRoleCreate(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRoleCreateRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.logger.Trace("postgres/pathRoleCreateRead: enter")
 	defer b.logger.Trace("postgres/pathRoleCreateRead: exit")
 

@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -29,8 +30,7 @@ func pathUser(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathUserRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	policyName := d.Get("name").(string)
 
 	// Read the policy

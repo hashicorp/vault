@@ -22,7 +22,7 @@ const (
 )
 
 // HandleRequest is used to handle a new incoming request
-func (c *Core) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
+func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -31,6 +31,9 @@ func (c *Core) HandleRequest(ctx context.Context, req *logical.Request) (resp *l
 	if c.standby {
 		return nil, consts.ErrStandby
 	}
+
+	ctx, cancel := context.WithCancel(c.requestContext)
+	defer cancel()
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,

@@ -1,6 +1,7 @@
 package mssql
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -39,8 +40,7 @@ time a credential is valid for.`,
 	}
 }
 
-func (b *backend) pathConfigLeaseWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigLeaseWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ttlRaw := d.Get("ttl").(string)
 	ttlMaxRaw := d.Get("max_ttl").(string)
 	if len(ttlMaxRaw) == 0 {
@@ -73,8 +73,7 @@ func (b *backend) pathConfigLeaseWrite(
 	return nil, nil
 }
 
-func (b *backend) pathConfigLeaseRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigLeaseRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	leaseConfig, err := b.LeaseConfig(req.Storage)
 
 	if err != nil {

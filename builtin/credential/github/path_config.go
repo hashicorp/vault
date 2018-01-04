@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"time"
@@ -42,8 +43,7 @@ API-compatible authentication server.`,
 	}
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	organization := data.Get("organization").(string)
 	baseURL := data.Get("base_url").(string)
 	if len(baseURL) != 0 {
@@ -94,7 +94,7 @@ func (b *backend) pathConfigWrite(
 	return nil, nil
 }
 
-func (b *backend) pathConfigRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config, err := b.Config(req.Storage)
 	if err != nil {
 		return nil, err

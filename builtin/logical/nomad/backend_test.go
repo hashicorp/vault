@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -129,13 +130,13 @@ func TestBackend_config_access(t *testing.T) {
 		Data:      connData,
 	}
 
-	resp, err := b.HandleRequest(confReq)
+	resp, err := b.HandleRequest(context.Background(), confReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
 
 	confReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(confReq)
+	resp, err = b.HandleRequest(context.Background(), confReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
@@ -172,7 +173,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,14 +183,14 @@ func TestBackend_renew_revoke(t *testing.T) {
 		"policies": []string{"policy"},
 		"lease":    "6h",
 	}
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +231,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 
 	req.Operation = logical.RenewOperation
 	req.Secret = generatedSecret
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +240,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +278,7 @@ func TestBackend_CredsCreateEnvVar(t *testing.T) {
 		"policies": []string{"policy"},
 		"lease":    "6h",
 	}
-	resp, err := b.HandleRequest(req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +290,7 @@ func TestBackend_CredsCreateEnvVar(t *testing.T) {
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}

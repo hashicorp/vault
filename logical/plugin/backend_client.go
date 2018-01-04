@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"errors"
 	"net/rpc"
 
@@ -88,7 +89,7 @@ type RegisterLicenseReply struct {
 	Error error
 }
 
-func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (b *backendPluginClient) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if b.metadataMode {
 		return nil, ErrClientInMetadataMode
 	}
@@ -146,7 +147,7 @@ func (b *backendPluginClient) Logger() log.Logger {
 	return b.logger
 }
 
-func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+func (b *backendPluginClient) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	if b.metadataMode {
 		return false, false, ErrClientInMetadataMode
 	}

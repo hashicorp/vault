@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -35,7 +36,7 @@ func pathConfigLease(b *backend) *framework.Path {
 }
 
 // Sets the lease configuration parameters
-func (b *backend) pathLeaseUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLeaseUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config/lease", &configLease{
 		TTL:    time.Second * time.Duration(d.Get("ttl").(int)),
 		MaxTTL: time.Second * time.Duration(d.Get("max_ttl").(int)),
@@ -50,7 +51,7 @@ func (b *backend) pathLeaseUpdate(req *logical.Request, d *framework.FieldData) 
 	return nil, nil
 }
 
-func (b *backend) pathLeaseDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLeaseDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if err := req.Storage.Delete(leaseConfigKey); err != nil {
 		return nil, err
 	}
@@ -59,7 +60,7 @@ func (b *backend) pathLeaseDelete(req *logical.Request, d *framework.FieldData) 
 }
 
 // Returns the lease configuration parameters
-func (b *backend) pathLeaseRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	lease, err := b.LeaseConfig(req.Storage)
 	if err != nil {
 		return nil, err

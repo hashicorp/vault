@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -202,7 +203,7 @@ func pathListRoles(b *backend) *framework.Path {
 
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
-func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	entry, err := b.lockedAWSRole(req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return false, err
@@ -370,8 +371,7 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 }
 
 // pathRoleDelete is used to delete the information registered for a given AMI ID.
-func (b *backend) pathRoleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role"), nil
@@ -384,8 +384,7 @@ func (b *backend) pathRoleDelete(
 }
 
 // pathRoleList is used to list all the AMI IDs registered with Vault.
-func (b *backend) pathRoleList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.roleMutex.RLock()
 	defer b.roleMutex.RUnlock()
 
@@ -397,8 +396,7 @@ func (b *backend) pathRoleList(
 }
 
 // pathRoleRead is used to view the information registered for a given AMI ID.
-func (b *backend) pathRoleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleEntry, err := b.lockedAWSRole(req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return nil, err
@@ -424,9 +422,7 @@ func (b *backend) pathRoleRead(
 }
 
 // pathRoleCreateUpdate is used to associate Vault policies to a given AMI ID.
-func (b *backend) pathRoleCreateUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := strings.ToLower(data.Get("role").(string))
 	if roleName == "" {
 		return logical.ErrorResponse("missing role"), nil

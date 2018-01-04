@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -78,8 +79,7 @@ basic constraints.`,
 
 // pathIssue issues a certificate and private key from given parameters,
 // subject to role restrictions
-func (b *backend) pathIssue(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
 
 	// Get the role
@@ -96,8 +96,7 @@ func (b *backend) pathIssue(
 
 // pathSign issues a certificate from a submitted CSR, subject to role
 // restrictions
-func (b *backend) pathSign(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
 
 	// Get the role
@@ -114,8 +113,7 @@ func (b *backend) pathSign(
 
 // pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
 // role restrictions
-func (b *backend) pathSignVerbatim(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	roleName := data.Get("role").(string)
 
@@ -159,8 +157,7 @@ func (b *backend) pathSignVerbatim(
 	return b.pathIssueSignCert(req, data, entry, true, true)
 }
 
-func (b *backend) pathIssueSignCert(
-	req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
+func (b *backend) pathIssueSignCert(req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(

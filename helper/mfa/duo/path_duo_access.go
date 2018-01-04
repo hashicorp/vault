@@ -1,6 +1,7 @@
 package duo
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -74,8 +75,7 @@ func GetDuoAuthClient(req *logical.Request, config *DuoConfig) (AuthClient, erro
 	return duoAuthClient, nil
 }
 
-func pathDuoAccessWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func pathDuoAccessWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("duo/access", DuoAccess{
 		SKey: d.Get("skey").(string),
 		IKey: d.Get("ikey").(string),

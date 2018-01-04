@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -129,7 +130,7 @@ func TestBackend_allowed_users(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err := b.HandleRequest(roleReq)
+	resp, err := b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
@@ -145,7 +146,7 @@ func TestBackend_allowed_users(t *testing.T) {
 		Data:      credsData,
 	}
 
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
@@ -157,7 +158,7 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 
 	credsData["username"] = "test"
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
@@ -169,19 +170,19 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 
 	credsData["username"] = "random"
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("expected failure: resp:%#v err:%s", resp, err)
 	}
 
 	delete(roleData, "allowed_users")
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
 
 	credsData["username"] = "ubuntu"
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
@@ -193,18 +194,18 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 
 	credsData["username"] = "test"
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("expected failure: resp:%#v err:%s", resp, err)
 	}
 
 	roleData["allowed_users"] = "*"
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
 
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}

@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -61,8 +62,7 @@ Read operations will return the public key, if already stored/generated.`,
 	}
 }
 
-func (b *backend) pathConfigCARead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigCARead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	publicKeyEntry, err := caKey(req.Storage, caPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA public key: %v", err)
@@ -81,8 +81,7 @@ func (b *backend) pathConfigCARead(
 	return response, nil
 }
 
-func (b *backend) pathConfigCADelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigCADelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if err := req.Storage.Delete(caPrivateKeyStoragePath); err != nil {
 		return nil, err
 	}
@@ -144,7 +143,7 @@ func caKey(storage logical.Storage, keyType string) (*keyStorageEntry, error) {
 	return &keyEntry, nil
 }
 
-func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 	publicKey := data.Get("public_key").(string)
 	privateKey := data.Get("private_key").(string)

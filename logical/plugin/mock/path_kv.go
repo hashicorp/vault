@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -34,7 +35,7 @@ func kvPaths(b *backend) []*framework.Path {
 	}
 }
 
-func (b *backend) pathExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	out, err := req.Storage.Get(req.Path)
 	if err != nil {
 		return false, fmt.Errorf("existence check failed: %v", err)
@@ -43,8 +44,7 @@ func (b *backend) pathExistenceCheck(req *logical.Request, data *framework.Field
 	return out != nil, nil
 }
 
-func (b *backend) pathKVRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := req.Storage.Get(req.Path)
 	if err != nil {
 		return nil, err
@@ -64,8 +64,7 @@ func (b *backend) pathKVRead(
 	}, nil
 }
 
-func (b *backend) pathKVCreateUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKVCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	value := data.Get("value").(string)
 
 	entry := &logical.StorageEntry{
@@ -86,7 +85,7 @@ func (b *backend) pathKVCreateUpdate(
 	}, nil
 }
 
-func (b *backend) pathKVDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKVDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if err := req.Storage.Delete(req.Path); err != nil {
 		return nil, err
 	}
@@ -94,7 +93,7 @@ func (b *backend) pathKVDelete(req *logical.Request, data *framework.FieldData) 
 	return nil, nil
 }
 
-func (b *backend) pathKVList(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKVList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	vals, err := req.Storage.List("kv/")
 	if err != nil {
 		return nil, err

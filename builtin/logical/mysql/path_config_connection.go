@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -49,7 +50,7 @@ This name is deprecated.`,
 }
 
 // pathConnectionRead reads out the connection configuration
-func (b *backend) pathConnectionRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := req.Storage.Get("config/connection")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read connection configuration")
@@ -67,8 +68,7 @@ func (b *backend) pathConnectionRead(req *logical.Request, data *framework.Field
 	}, nil
 }
 
-func (b *backend) pathConnectionWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	connValue := data.Get("value").(string)
 	connURL := data.Get("connection_url").(string)
 	if connURL == "" {

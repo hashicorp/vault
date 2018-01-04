@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/asaskevich/govalidator"
@@ -86,8 +87,7 @@ func writeURLs(req *logical.Request, entries *urlEntries) error {
 	return nil
 }
 
-func (b *backend) pathReadURL(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entries, err := getURLs(req)
 	if err != nil {
 		return nil, err
@@ -103,8 +103,7 @@ func (b *backend) pathReadURL(
 	return resp, nil
 }
 
-func (b *backend) pathWriteURL(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entries, err := getURLs(req)
 	if err != nil {
 		return nil, err
