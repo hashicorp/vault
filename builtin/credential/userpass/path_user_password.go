@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"strings"
 )
 
 func pathUserPassword(b *backend) *framework.Path {
@@ -21,6 +22,11 @@ func pathUserPassword(b *backend) *framework.Path {
 			"password": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
+			},
+
+			"password_hash": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Pre-hashed password in bcrypt format for this user.",
 			},
 		},
 
@@ -59,14 +65,34 @@ func (b *backend) pathUserPasswordUpdate(
 
 func (b *backend) updateUserPassword(req *logical.Request, d *framework.FieldData, userEntry *UserEntry) (error, error) {
 	password := d.Get("password").(string)
-	if password == "" {
+	prehashedPassword := d.Get("password_hash").(string)
+
+	if password != "" && prehashedPassword != "" {
+		return fmt.Errorf("can't provide both password and password_hash"), nil
+	}
+
+	if password == "" && prehashedPassword == "" {
 		return fmt.Errorf("missing password"), nil
 	}
-	// Generate a hash of the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
+
+	var hash []byte
+
+	// If a hash was provided, use it.
+	if prehashedPassword != "" {
+		if strings.HasPrefix(prehashedPassword, "$2a$") {
+			hash = []byte(prehashedPassword)
+		} else {
+			return nil, fmt.Errorf("password_hash doesn't appear to be a valid bcrypt hash")
+		}
+	} else {
+		// Otherwise, generate a hash of the password
+		var err error
+		hash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	userEntry.PasswordHash = hash
 	return nil, nil
 }

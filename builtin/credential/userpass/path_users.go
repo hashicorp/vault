@@ -37,6 +37,11 @@ func pathUsers(b *backend) *framework.Path {
 				Description: "Password for this user.",
 			},
 
+			"password_hash": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Pre-hashed password in bcrypt format for this user.",
+			},
+
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
@@ -155,7 +160,15 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		userEntry = &UserEntry{}
 	}
 
+	var passwordWasGiven = false
 	if _, ok := d.GetOk("password"); ok {
+		passwordWasGiven = true
+	}
+	if _, ok := d.GetOk("password_hash"); ok {
+		passwordWasGiven = true
+	}
+
+	if passwordWasGiven {
 		userErr, intErr := b.updateUserPassword(req, d, userEntry)
 		if intErr != nil {
 			return nil, err
@@ -190,7 +203,13 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	password := d.Get("password").(string)
-	if req.Operation == logical.CreateOperation && password == "" {
+	prehashedPassword := d.Get("password_hash").(string)
+
+	if password != "" && prehashedPassword != "" {
+		return logical.ErrorResponse("can't provide both password and password_hash"), logical.ErrInvalidRequest
+	}
+
+	if req.Operation == logical.CreateOperation && password == "" && prehashedPassword == "" {
 		return logical.ErrorResponse("missing password"), logical.ErrInvalidRequest
 	}
 	return b.userCreateUpdate(req, d)
