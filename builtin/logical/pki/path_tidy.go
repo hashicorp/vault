@@ -7,7 +7,10 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"sync/atomic"
 )
+
+const defaultSafetyBufferDuration = 259200 //seconds
 
 func pathTidy(b *backend) *framework.Path {
 	return &framework.Path{
@@ -33,7 +36,7 @@ the revocation list`,
 beyond certificate expiration before it is removed
 from the backend storage and/or revocation list.
 Defaults to 72 hours.`,
-				Default: 259200, //72h, but TypeDurationSecond currently requires defaults to be int
+				Default: defaultSafetyBufferDuration, //72h, but TypeDurationSecond currently requires defaults to be int
 			},
 		},
 
@@ -46,42 +49,40 @@ Defaults to 72 hours.`,
 	}
 }
 
-func (b *backend) pathTidyWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	safetyBuffer := d.Get("safety_buffer").(int)
-	tidyCertStore := d.Get("tidy_cert_store").(bool)
-	tidyRevocationList := d.Get("tidy_revocation_list").(bool)
-
-	bufferDuration := time.Duration(safetyBuffer) * time.Second
+func (b *backend) tidyPKI(
+	req *logical.Request, bufferDuration time.Duration, tidyCertStore bool, tidyRevocationList bool) error {
+	if !atomic.CompareAndSwapInt32(&b.tidyRunning, 0, 1) {
+		return fmt.Errorf("error running tidy pki: operation is already in progress")
+	}
 
 	if tidyCertStore {
 		serials, err := req.Storage.List("certs/")
 		if err != nil {
-			return nil, fmt.Errorf("error fetching list of certs: %s", err)
+			return fmt.Errorf("error fetching list of certs: %s", err)
 		}
 
 		for _, serial := range serials {
 			certEntry, err := req.Storage.Get("certs/" + serial)
 			if err != nil {
-				return nil, fmt.Errorf("error fetching certificate %s: %s", serial, err)
+				return fmt.Errorf("error fetching certificate %s: %s", serial, err)
 			}
 
 			if certEntry == nil {
-				return nil, fmt.Errorf("certificate entry for serial %s is nil", serial)
+				return fmt.Errorf("certificate entry for serial %s is nil", serial)
 			}
 
 			if certEntry.Value == nil || len(certEntry.Value) == 0 {
-				return nil, fmt.Errorf("found entry for serial %s but actual certificate is empty", serial)
+				return fmt.Errorf("found entry for serial %s but actual certificate is empty", serial)
 			}
 
 			cert, err := x509.ParseCertificate(certEntry.Value)
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse stored certificate with serial %s: %s", serial, err)
+				return fmt.Errorf("unable to parse stored certificate with serial %s: %s", serial, err)
 			}
 
 			if time.Now().After(cert.NotAfter.Add(bufferDuration)) {
 				if err := req.Storage.Delete("certs/" + serial); err != nil {
-					return nil, fmt.Errorf("error deleting serial %s from storage: %s", serial, err)
+					return fmt.Errorf("error deleting serial %s from storage: %s", serial, err)
 				}
 			}
 		}
@@ -95,38 +96,38 @@ func (b *backend) pathTidyWrite(
 
 		revokedSerials, err := req.Storage.List("revoked/")
 		if err != nil {
-			return nil, fmt.Errorf("error fetching list of revoked certs: %s", err)
+			return fmt.Errorf("error fetching list of revoked certs: %s", err)
 		}
 
 		var revInfo revocationInfo
 		for _, serial := range revokedSerials {
 			revokedEntry, err := req.Storage.Get("revoked/" + serial)
 			if err != nil {
-				return nil, fmt.Errorf("unable to fetch revoked cert with serial %s: %s", serial, err)
+				return fmt.Errorf("unable to fetch revoked cert with serial %s: %s", serial, err)
 			}
 			if revokedEntry == nil {
-				return nil, fmt.Errorf("revoked certificate entry for serial %s is nil", serial)
+				return fmt.Errorf("revoked certificate entry for serial %s is nil", serial)
 			}
 			if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
 				// TODO: In this case, remove it and continue? How likely is this to
 				// happen? Alternately, could skip it entirely, or could implement a
 				// delete function so that there is a way to remove these
-				return nil, fmt.Errorf("found revoked serial but actual certificate is empty")
+				return fmt.Errorf("found revoked serial but actual certificate is empty")
 			}
 
 			err = revokedEntry.DecodeJSON(&revInfo)
 			if err != nil {
-				return nil, fmt.Errorf("error decoding revocation entry for serial %s: %s", serial, err)
+				return fmt.Errorf("error decoding revocation entry for serial %s: %s", serial, err)
 			}
 
 			revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse stored revoked certificate with serial %s: %s", serial, err)
+				return fmt.Errorf("unable to parse stored revoked certificate with serial %s: %s", serial, err)
 			}
 
 			if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
 				if err := req.Storage.Delete("revoked/" + serial); err != nil {
-					return nil, fmt.Errorf("error deleting serial %s from revoked list: %s", serial, err)
+					return fmt.Errorf("error deleting serial %s from revoked list: %s", serial, err)
 				}
 				tidiedRevoked = true
 			}
@@ -134,12 +135,26 @@ func (b *backend) pathTidyWrite(
 
 		if tidiedRevoked {
 			if err := buildCRL(b, req); err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
 
-	return nil, nil
+	// Unset flag
+	defer atomic.StoreInt32(&b.tidyRunning, 0)
+
+	return nil
+}
+
+func (b *backend) pathTidyWrite(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	safetyBuffer := d.Get("safety_buffer").(int)
+	tidyCertStore := d.Get("tidy_cert_store").(bool)
+	tidyRevocationList := d.Get("tidy_revocation_list").(bool)
+
+	bufferDuration := time.Duration(safetyBuffer) * time.Second
+
+	return nil, b.tidyPKI(req, bufferDuration, tidyCertStore, tidyRevocationList)
 }
 
 const pathTidyHelpSyn = `
