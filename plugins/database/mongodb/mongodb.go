@@ -133,15 +133,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	switch {
 	case err == nil:
 	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		// Reset and retry query if we get an EOF error on first attempt.
-
-		// Unlock mutex lock to prevent deadlock on Close()
-		m.Unlock()
-		err := m.ConnectionProducer.Close()
-		m.Lock()
-		if err != nil {
-			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
-		}
+		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
 		session, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
