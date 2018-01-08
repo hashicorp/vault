@@ -160,9 +160,10 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"initialized": true,
-		"sealed":      true,
-		"standby":     true,
+		"replication_dr_secondary": false,
+		"initialized":              true,
+		"sealed":                   true,
+		"standby":                  true,
 	}
 	testResponseStatus(t, resp, 523)
 	testResponseBody(t, resp, &actual)
@@ -195,9 +196,10 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"initialized": true,
-		"sealed":      false,
-		"standby":     false,
+		"replication_dr_secondary": false,
+		"initialized":              true,
+		"sealed":                   false,
+		"standby":                  false,
 	}
 	testResponseStatus(t, resp, 202)
 	testResponseBody(t, resp, &actual)
