@@ -1,6 +1,7 @@
 package gcpauth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -38,7 +39,7 @@ If not specified, will use the OAuth2 library default. Useful for testing.`,
 	}
 }
 
-func (b *GcpAuthBackend) pathConfigWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config, err := b.config(req.Storage)
 
 	if err != nil {
@@ -63,7 +64,7 @@ func (b *GcpAuthBackend) pathConfigWrite(req *logical.Request, data *framework.F
 	return nil, nil
 }
 
-func (b *GcpAuthBackend) pathConfigRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config, err := b.config(req.Storage)
 	if err != nil {
 		return nil, err

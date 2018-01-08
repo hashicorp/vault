@@ -1,6 +1,7 @@
 package gcpauth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -49,7 +50,7 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 	}
 }
 
-func (b *GcpAuthBackend) pathLogin(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	loginInfo, err := b.parseAndValidateJwt(req, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -66,7 +67,7 @@ func (b *GcpAuthBackend) pathLogin(req *logical.Request, data *framework.FieldDa
 	}
 }
 
-func (b *GcpAuthBackend) pathLoginRenew(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Check role exists and allowed policies are still the same.
 	roleName := req.Auth.Metadata["role"]
 	if roleName == "" {
@@ -100,7 +101,7 @@ func (b *GcpAuthBackend) pathLoginRenew(req *logical.Request, data *framework.Fi
 		req.Auth.TTL = role.Period
 		return &logical.Response{Auth: req.Auth}, nil
 	} else {
-		return framework.LeaseExtend(role.TTL, role.MaxTTL, b.System())(req, data)
+		return framework.LeaseExtend(role.TTL, role.MaxTTL, b.System())(ctx, req, data)
 	}
 }
 

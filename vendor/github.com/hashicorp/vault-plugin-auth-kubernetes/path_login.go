@@ -1,6 +1,7 @@
 package kubeauth
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"errors"
@@ -55,7 +56,7 @@ func pathLogin(b *kubeAuthBackend) *framework.Path {
 
 // pathLogin is used to authenticate to this backend
 func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		roleName := data.Get("role").(string)
 		if len(roleName) == 0 {
 			return logical.ErrorResponse("missing role"), nil
@@ -137,7 +138,7 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 // aliasLookahead returns the alias object with the SA UID from the JWT
 // Claims.
 func (b *kubeAuthBackend) aliasLookahead() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		jwtStr := data.Get("jwt").(string)
 		if len(jwtStr) == 0 {
 			return logical.ErrorResponse("missing jwt"), nil
@@ -309,34 +310,36 @@ func (s *serviceAccount) lookup(jwtStr string, tr tokenReviewer) error {
 }
 
 // Invoked when the token issued by this backend is attempting a renewal.
-func (b *kubeAuthBackend) pathLoginRenew(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := req.Auth.InternalData["role"].(string)
-	if roleName == "" {
-		return nil, fmt.Errorf("failed to fetch role_name during renewal")
-	}
+func (b *kubeAuthBackend) pathLoginRenew() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		roleName := req.Auth.InternalData["role"].(string)
+		if roleName == "" {
+			return nil, fmt.Errorf("failed to fetch role_name during renewal")
+		}
 
-	b.l.RLock()
-	defer b.l.RUnlock()
+		b.l.RLock()
+		defer b.l.RUnlock()
 
-	// Ensure that the Role still exists.
-	role, err := b.role(req.Storage, roleName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate role %s during renewal:%s", roleName, err)
-	}
-	if role == nil {
-		return nil, fmt.Errorf("role %s does not exist during renewal", roleName)
-	}
+		// Ensure that the Role still exists.
+		role, err := b.role(req.Storage, roleName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate role %s during renewal:%s", roleName, err)
+		}
+		if role == nil {
+			return nil, fmt.Errorf("role %s does not exist during renewal", roleName)
+		}
 
-	// If 'Period' is set on the Role, the token should never expire.
-	// Replenish the TTL with 'Period's value.
-	if role.Period > time.Duration(0) {
-		// If 'Period' was updated after the token was issued,
-		// token will bear the updated 'Period' value as its TTL.
-		req.Auth.TTL = role.Period
-		return &logical.Response{Auth: req.Auth}, nil
-	}
+		// If 'Period' is set on the Role, the token should never expire.
+		// Replenish the TTL with 'Period's value.
+		if role.Period > time.Duration(0) {
+			// If 'Period' was updated after the token was issued,
+			// token will bear the updated 'Period' value as its TTL.
+			req.Auth.TTL = role.Period
+			return &logical.Response{Auth: req.Auth}, nil
+		}
 
-	return framework.LeaseExtend(role.TTL, role.MaxTTL, b.System())(req, data)
+		return framework.LeaseExtend(role.TTL, role.MaxTTL, b.System())(ctx, req, data)
+	}
 }
 
 const pathLoginHelpSyn = `Authenticates Kubernetes service accounts with Vault.`
