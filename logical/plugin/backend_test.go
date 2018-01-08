@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -20,7 +21,7 @@ func TestBackendPlugin_HandleRequest(t *testing.T) {
 	b, cleanup := testBackend(t)
 	defer cleanup()
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "kv/foo",
 		Data: map[string]interface{}{
@@ -76,7 +77,7 @@ func TestBackendPlugin_HandleExistenceCheck(t *testing.T) {
 	b, cleanup := testBackend(t)
 	defer cleanup()
 
-	checkFound, exists, err := b.HandleExistenceCheck(&logical.Request{
+	checkFound, exists, err := b.HandleExistenceCheck(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "kv/foo",
 		Data:      map[string]interface{}{"value": "bar"},
@@ -113,7 +114,7 @@ func TestBackendPlugin_InvalidateKey(t *testing.T) {
 	b, cleanup := testBackend(t)
 	defer cleanup()
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "internal",
 	})
@@ -126,7 +127,7 @@ func TestBackendPlugin_InvalidateKey(t *testing.T) {
 
 	b.InvalidateKey("internal")
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "internal",
 	})

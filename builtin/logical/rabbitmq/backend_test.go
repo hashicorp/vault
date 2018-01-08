@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -130,7 +131,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 				t.Fatalf("unable to list vhosts with generated credentials: %s", err)
 			}
 
-			resp, err = b.HandleRequest(&logical.Request{
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
 				Operation: logical.RevokeOperation,
 				Secret: &logical.Secret{
 					InternalData: map[string]interface{}{

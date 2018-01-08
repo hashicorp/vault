@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"os"
@@ -160,7 +161,7 @@ func TestGenerateRoot_OTP(t *testing.T) {
 	req := logical.TestRequest(t, logical.ReadOperation, "lookup-self")
 	req.ClientToken = token
 
-	resp, err := ts.HandleRequest(req)
+	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("error running token lookup-self: %v", err)
 	}
@@ -272,7 +273,7 @@ func TestGenerateRoot_PGP(t *testing.T) {
 	req := logical.TestRequest(t, logical.ReadOperation, "lookup-self")
 	req.ClientToken = token
 
-	resp, err := ts.HandleRequest(req)
+	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("error running token lookup-self: %v", err)
 	}

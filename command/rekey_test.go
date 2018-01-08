@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/hex"
 	"os"
 	"sort"
@@ -267,7 +268,7 @@ func TestRekey_init_pgp(t *testing.T) {
 	backupVals := &backupStruct{}
 
 	req := logical.TestRequest(t, logical.ReadOperation, "rekey/backup")
-	resp, err := sysBackend.HandleRequest(req)
+	resp, err := sysBackend.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("error running backed-up unseal key fetch: %v", err)
 	}
@@ -286,12 +287,12 @@ func TestRekey_init_pgp(t *testing.T) {
 
 	// Now delete and try again; the values should be inaccessible
 	req = logical.TestRequest(t, logical.DeleteOperation, "rekey/backup")
-	resp, err = sysBackend.HandleRequest(req)
+	resp, err = sysBackend.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("error running backed-up unseal key delete: %v", err)
 	}
 	req = logical.TestRequest(t, logical.ReadOperation, "rekey/backup")
-	resp, err = sysBackend.HandleRequest(req)
+	resp, err = sysBackend.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("error running backed-up unseal key fetch: %v", err)
 	}
