@@ -87,6 +87,6 @@ then "aws/sts/deploy" would generate access keys for the "deploy" role.
 
 Note, these credentials are instantiated using the AWS STS backend.
 
-The access keys will have a lease associated with them. The access keys
-can be revoked by using the lease ID.
+The access keys will have a lease associated with them, but revoking the lease
+does not revoke the access keys.
 `
