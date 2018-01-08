@@ -133,9 +133,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	switch {
 	case err == nil:
 	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		if err := m.ConnectionProducer.Close(); err != nil {
-			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
-		}
+		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
 		session, err := m.getConnection(ctx)
 		if err != nil {
 			return "", "", err
