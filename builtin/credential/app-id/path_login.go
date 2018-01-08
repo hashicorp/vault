@@ -1,6 +1,7 @@
 package appId
 
 import (
+	"context"
 	"crypto/sha1"
 	"crypto/subtle"
 	"encoding/hex"
@@ -62,8 +63,7 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLoginAliasLookahead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	appId := data.Get("app_id").(string)
 
 	if appId == "" {
@@ -79,8 +79,7 @@ func (b *backend) pathLoginAliasLookahead(
 	}, nil
 }
 
-func (b *backend) pathLogin(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	appId := data.Get("app_id").(string)
 	userId := data.Get("user_id").(string)
 
@@ -126,8 +125,7 @@ func (b *backend) pathLogin(
 	}, nil
 }
 
-func (b *backend) pathLoginRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	appId := req.Auth.InternalData["app-id"].(string)
 	userId := req.Auth.InternalData["user-id"].(string)
 
@@ -148,7 +146,7 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies do not match")
 	}
 
-	return framework.LeaseExtend(0, 0, b.System())(req, d)
+	return framework.LeaseExtend(0, 0, b.System())(ctx, req, d)
 }
 
 func (b *backend) verifyCredentials(req *logical.Request, appId, userId string) (string, *logical.Response, error) {

@@ -1,6 +1,7 @@
 package radius
 
 import (
+	"context"
 	"strings"
 
 	"github.com/fatih/structs"
@@ -63,7 +64,7 @@ func pathConfig(b *backend) *framework.Path {
 
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
-func (b *backend) configExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	entry, err := b.Config(req)
 	if err != nil {
 		return false, err
@@ -94,9 +95,7 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathConfigRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	cfg, err := b.Config(req)
 	if err != nil {
 		return nil, err
@@ -112,9 +111,7 @@ func (b *backend) pathConfigRead(
 	return resp, nil
 }
 
-func (b *backend) pathConfigCreateUpdate(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Build a ConfigEntry struct out of the supplied FieldData
 	cfg, err := b.Config(req)
 	if err != nil {

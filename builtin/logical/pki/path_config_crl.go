@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -52,8 +53,7 @@ func (b *backend) CRL(s logical.Storage) (*crlConfig, error) {
 	return &result, nil
 }
 
-func (b *backend) pathCRLRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config, err := b.CRL(req.Storage)
 	if err != nil {
 		return nil, err
@@ -69,8 +69,7 @@ func (b *backend) pathCRLRead(
 	}, nil
 }
 
-func (b *backend) pathCRLWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	expiry := d.Get("expiry").(string)
 
 	_, err := time.ParseDuration(expiry)

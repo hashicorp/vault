@@ -2,6 +2,7 @@ package totp
 
 import (
 	"bytes"
+	"context"
 	"encoding/base32"
 	"encoding/base64"
 	"fmt"
@@ -135,8 +136,7 @@ func (b *backend) Key(s logical.Storage, n string) (*keyEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathKeyDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKeyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete("key/" + data.Get("name").(string))
 	if err != nil {
 		return nil, err
@@ -145,8 +145,7 @@ func (b *backend) pathKeyDelete(
 	return nil, nil
 }
 
-func (b *backend) pathKeyRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKeyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	key, err := b.Key(req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
@@ -170,8 +169,7 @@ func (b *backend) pathKeyRead(
 	}, nil
 }
 
-func (b *backend) pathKeyList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKeyList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entries, err := req.Storage.List("key/")
 	if err != nil {
 		return nil, err
@@ -180,8 +178,7 @@ func (b *backend) pathKeyList(
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathKeyCreate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	generate := data.Get("generate").(bool)
 	exported := data.Get("exported").(bool)

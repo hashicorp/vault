@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"crypto/subtle"
 	"crypto/x509"
 	"encoding/base64"
@@ -345,8 +346,7 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 	return &identityDoc, nil
 }
 
-func (b *backend) pathLoginUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	anyEc2, allEc2 := hasValuesForEc2Auth(data)
 	anyIam, allIam := hasValuesForIamAuth(data)
 	switch {
@@ -355,11 +355,11 @@ func (b *backend) pathLoginUpdate(
 	case anyEc2 && !allEc2:
 		return logical.ErrorResponse("supplied some of the auth values for the ec2 auth type but not all"), nil
 	case anyEc2:
-		return b.pathLoginUpdateEc2(req, data)
+		return b.pathLoginUpdateEc2(ctx, req, data)
 	case anyIam && !allIam:
 		return logical.ErrorResponse("supplied some of the auth values for the iam auth type but not all"), nil
 	case anyIam:
-		return b.pathLoginUpdateIam(req, data)
+		return b.pathLoginUpdateIam(ctx, req, data)
 	default:
 		return logical.ErrorResponse("didn't supply required authentication values"), nil
 	}
@@ -495,8 +495,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 // by providing the pkcs7 signature of the instance identity document
 // and a client created nonce. Client nonce is optional if 'disallow_reauthentication'
 // option is enabled on the registered role.
-func (b *backend) pathLoginUpdateEc2(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	identityDocB64 := data.Get("identity").(string)
 	var identityDocBytes []byte
 	var err error
@@ -870,8 +869,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, roleName string, roleEnt
 }
 
 // pathLoginRenew is used to renew an authenticated token
-func (b *backend) pathLoginRenew(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	authType, ok := req.Auth.Metadata["auth_type"]
 	if !ok {
 		// backwards compatibility for clients that have leases from before we added auth_type
@@ -879,16 +877,15 @@ func (b *backend) pathLoginRenew(
 	}
 
 	if authType == ec2AuthType {
-		return b.pathLoginRenewEc2(req, data)
+		return b.pathLoginRenewEc2(ctx, req, data)
 	} else if authType == iamAuthType {
-		return b.pathLoginRenewIam(req, data)
+		return b.pathLoginRenewIam(ctx, req, data)
 	} else {
 		return nil, fmt.Errorf("unrecognized auth_type: %q", authType)
 	}
 }
 
-func (b *backend) pathLoginRenewIam(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	canonicalArn := req.Auth.Metadata["canonical_arn"]
 	if canonicalArn == "" {
 		return nil, fmt.Errorf("unable to retrieve canonical ARN from metadata during renewal")
@@ -977,7 +974,7 @@ func (b *backend) pathLoginRenewIam(
 		}
 	}
 
-	resp, err := framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+	resp, err := framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(ctx, req, data)
 	if err != nil {
 		return nil, err
 	}
@@ -985,8 +982,7 @@ func (b *backend) pathLoginRenewIam(
 	return resp, nil
 }
 
-func (b *backend) pathLoginRenewEc2(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	instanceID := req.Auth.Metadata["instance_id"]
 	if instanceID == "" {
 		return nil, fmt.Errorf("unable to fetch instance ID from metadata during renewal")
@@ -1063,7 +1059,7 @@ func (b *backend) pathLoginRenewEc2(
 		return nil, err
 	}
 
-	resp, err := framework.LeaseExtend(roleEntry.TTL, shortestMaxTTL, b.System())(req, data)
+	resp, err := framework.LeaseExtend(roleEntry.TTL, shortestMaxTTL, b.System())(ctx, req, data)
 	if err != nil {
 		return nil, err
 	}
@@ -1071,9 +1067,7 @@ func (b *backend) pathLoginRenewEc2(
 	return resp, nil
 }
 
-func (b *backend) pathLoginUpdateIam(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	method := data.Get("iam_http_request_method").(string)
 	if method == "" {
 		return logical.ErrorResponse("missing iam_http_request_method"), nil

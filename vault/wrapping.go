@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -72,7 +73,7 @@ func (c *Core) ensureWrappingKey() error {
 	return nil
 }
 
-func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, auth *logical.Auth) (*logical.Response, error) {
+func (c *Core) wrapInCubbyhole(ctx context.Context, req *logical.Request, resp *logical.Response, auth *logical.Auth) (*logical.Response, error) {
 	// Before wrapping, obey special rules for listing: if no entries are
 	// found, 404. This prevents unwrapping only to find empty data.
 	if req.Operation == logical.ListOperation {
@@ -199,7 +200,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, aut
 		}
 	}
 
-	cubbyResp, err := c.router.Route(cubbyReq)
+	cubbyResp, err := c.router.Route(ctx, cubbyReq)
 	if err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.Revoke(te.ID)
@@ -225,7 +226,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response, aut
 	} else {
 		cubbyReq.Data["creation_path"] = resp.WrapInfo.CreationPath
 	}
-	cubbyResp, err = c.router.Route(cubbyReq)
+	cubbyResp, err = c.router.Route(ctx, cubbyReq)
 	if err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.Revoke(te.ID)

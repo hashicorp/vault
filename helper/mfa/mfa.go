@@ -13,6 +13,8 @@
 package mfa
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/helper/mfa/duo"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -62,9 +64,9 @@ func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
 }
 
 func (b *backend) wrapLoginHandler(loginHandler framework.OperationFunc) framework.OperationFunc {
-	return func(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		// login with original login function first
-		resp, err := loginHandler(req, d)
+		resp, err := loginHandler(ctx, req, d)
 		if err != nil || resp.Auth == nil {
 			return resp, err
 		}

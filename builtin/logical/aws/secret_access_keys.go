@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"regexp"
@@ -249,9 +250,7 @@ func (b *backend) secretAccessKeysCreate(
 	return resp, nil
 }
 
-func (b *backend) secretAccessKeysRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// STS already has a lifetime, and we don't support renewing it
 	isSTSRaw, ok := req.Secret.InternalData["is_sts"]
 	if ok {
@@ -272,11 +271,10 @@ func (b *backend) secretAccessKeysRenew(
 	}
 
 	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	return f(req, d)
+	return f(ctx, req, d)
 }
 
-func secretAccessKeysRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	// STS cleans up after itself so we can skip this if is_sts internal data
 	// element set to true. If is_sts is not set, assumes old version

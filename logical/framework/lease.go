@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -21,7 +22,7 @@ import (
 // systemView is the system view from the calling backend, used to determine
 // and/or correct default/max times.
 func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.SystemView) OperationFunc {
-	return func(req *logical.Request, data *FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
 		var leaseOpts *logical.LeaseOptions
 		switch {
 		case req.Auth != nil:

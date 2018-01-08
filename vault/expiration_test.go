@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -1446,7 +1447,7 @@ func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 			&framework.Path{
 				Pattern: "creds",
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+					logical.ReadOperation: func(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
 						resp := &logical.Response{
 							Secret: &logical.Secret{
 								InternalData: map[string]interface{}{
@@ -1464,7 +1465,7 @@ func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 		Secrets: []*framework.Secret{
 			&framework.Secret{
 				Type: "badRenewBackend",
-				Revoke: func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
+				Revoke: func(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
 					return nil, fmt.Errorf("always errors")
 				},
 			},

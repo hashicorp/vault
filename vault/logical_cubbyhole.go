@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -67,8 +68,7 @@ func (b *CubbyholeBackend) revoke(saltedToken string) error {
 	return nil
 }
 
-func (b *CubbyholeBackend) handleExistenceCheck(
-	req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *CubbyholeBackend) handleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	out, err := req.Storage.Get(req.ClientToken + "/" + req.Path)
 	if err != nil {
 		return false, fmt.Errorf("existence check failed: %v", err)
@@ -77,8 +77,7 @@ func (b *CubbyholeBackend) handleExistenceCheck(
 	return out != nil, nil
 }
 
-func (b *CubbyholeBackend) handleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *CubbyholeBackend) handleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
 		return nil, fmt.Errorf("cubbyhole read: client token empty")
 	}
@@ -108,8 +107,7 @@ func (b *CubbyholeBackend) handleRead(
 	return resp, nil
 }
 
-func (b *CubbyholeBackend) handleWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *CubbyholeBackend) handleWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
 		return nil, fmt.Errorf("cubbyhole write: client token empty")
 	}
@@ -139,8 +137,7 @@ func (b *CubbyholeBackend) handleWrite(
 	return nil, nil
 }
 
-func (b *CubbyholeBackend) handleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
 		return nil, fmt.Errorf("cubbyhole delete: client token empty")
 	}
@@ -152,8 +149,7 @@ func (b *CubbyholeBackend) handleDelete(
 	return nil, nil
 }
 
-func (b *CubbyholeBackend) handleList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
 		return nil, fmt.Errorf("cubbyhole list: client token empty")
 	}

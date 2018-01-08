@@ -1,6 +1,7 @@
 package okta
 
 import (
+	"context"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -83,8 +84,7 @@ func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, string, error
 	return &result, canonicalName, nil
 }
 
-func (b *backend) pathGroupDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if len(name) == 0 {
 		return logical.ErrorResponse("'name' must be supplied"), nil
@@ -104,8 +104,7 @@ func (b *backend) pathGroupDelete(
 	return nil, nil
 }
 
-func (b *backend) pathGroupRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathGroupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if len(name) == 0 {
 		return logical.ErrorResponse("'name' must be supplied"), nil
@@ -126,8 +125,7 @@ func (b *backend) pathGroupRead(
 	}, nil
 }
 
-func (b *backend) pathGroupWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if len(name) == 0 {
 		return logical.ErrorResponse("'name' must be supplied"), nil
@@ -158,8 +156,7 @@ func (b *backend) pathGroupWrite(
 	return nil, nil
 }
 
-func (b *backend) pathGroupList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	groups, err := req.Storage.List("group/")
 	if err != nil {
 		return nil, err

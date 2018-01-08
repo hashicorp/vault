@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -99,7 +100,10 @@ type Backend struct {
 type periodicFunc func(*logical.Request) error
 
 // OperationFunc is the callback called for an operation on a path.
-type OperationFunc func(*logical.Request, *FieldData) (*logical.Response, error)
+type OperationFunc func(context.Context, *logical.Request, *FieldData) (*logical.Response, error)
+
+// ExistenceFunc is the callback called for an existenc check on a path.
+type ExistenceFunc func(context.Context, *logical.Request, *FieldData) (bool, error)
 
 // WALRollbackFunc is the callback for rollbacks.
 type WALRollbackFunc func(*logical.Request, string, interface{}) error
@@ -117,7 +121,7 @@ type InvalidateFunc func(string)
 type LicenseRegistrationFunc func(interface{}) error
 
 // HandleExistenceCheck is the logical.Backend implementation.
-func (b *Backend) HandleExistenceCheck(req *logical.Request) (checkFound bool, exists bool, err error) {
+func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
 	b.once.Do(b.init)
 
 	// Ensure we are only doing this when one of the correct operations is in play
@@ -160,12 +164,12 @@ func (b *Backend) HandleExistenceCheck(req *logical.Request) (checkFound bool, e
 	}
 
 	// Call the callback with the request and the data
-	exists, err = path.ExistenceCheck(req, &fd)
+	exists, err = path.ExistenceCheck(ctx, req, &fd)
 	return
 }
 
 // HandleRequest is the logical.Backend implementation.
-func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	b.once.Do(b.init)
 
 	// Check for special cased global operations. These don't route
@@ -174,7 +178,7 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 	case logical.RenewOperation:
 		fallthrough
 	case logical.RevokeOperation:
-		return b.handleRevokeRenew(req)
+		return b.handleRevokeRenew(ctx, req)
 	case logical.RollbackOperation:
 		return b.handleRollback(req)
 	}
@@ -208,7 +212,7 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 	}
 	if !ok {
 		if req.Operation == logical.HelpOperation {
-			callback = path.helpCallback
+			callback = path.helpCallback()
 			ok = true
 		}
 	}
@@ -228,7 +232,7 @@ func (b *Backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 	}
 
 	// Call the callback with the request and the data
-	return callback(req, &fd)
+	return callback(ctx, req, &fd)
 }
 
 // SpecialPaths is the logical.Backend implementation.
@@ -432,11 +436,10 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 	return logical.HelpResponse(help, nil), nil
 }
 
-func (b *Backend) handleRevokeRenew(
-	req *logical.Request) (*logical.Response, error) {
+func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// Special case renewal of authentication for credential backends
 	if req.Operation == logical.RenewOperation && req.Auth != nil {
-		return b.handleAuthRenew(req)
+		return b.handleAuthRenew(ctx, req)
 	}
 
 	if req.Secret == nil {
@@ -459,9 +462,9 @@ func (b *Backend) handleRevokeRenew(
 
 	switch req.Operation {
 	case logical.RenewOperation:
-		return secret.HandleRenew(req)
+		return secret.HandleRenew(ctx, req)
 	case logical.RevokeOperation:
-		return secret.HandleRevoke(req)
+		return secret.HandleRevoke(ctx, req)
 	default:
 		return nil, fmt.Errorf(
 			"invalid operation for revoke/renew: %s", req.Operation)
@@ -469,8 +472,7 @@ func (b *Backend) handleRevokeRenew(
 }
 
 // handleRollback invokes the PeriodicFunc set on the backend. It also does a WAL rollback operation.
-func (b *Backend) handleRollback(
-	req *logical.Request) (*logical.Response, error) {
+func (b *Backend) handleRollback(req *logical.Request) (*logical.Response, error) {
 	// Response is not expected from the periodic operation.
 	if b.PeriodicFunc != nil {
 		if err := b.PeriodicFunc(req); err != nil {
@@ -481,12 +483,12 @@ func (b *Backend) handleRollback(
 	return b.handleWALRollback(req)
 }
 
-func (b *Backend) handleAuthRenew(req *logical.Request) (*logical.Response, error) {
+func (b *Backend) handleAuthRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if b.AuthRenew == nil {
 		return logical.ErrorResponse("this auth type doesn't support renew"), nil
 	}
 
-	return b.AuthRenew(req, nil)
+	return b.AuthRenew(ctx, req, nil)
 }
 
 func (b *Backend) handleWALRollback(

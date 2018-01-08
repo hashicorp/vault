@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -703,8 +704,7 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 	return te, nil
 }
 
-func (ts *TokenStore) tokenStoreAccessorList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entries, err := ts.view.List(accessorPrefix)
 	if err != nil {
 		return nil, err
@@ -1251,8 +1251,7 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 }
 
 // handleCreateAgainstRole handles the auth/token/create path for a role
-func (ts *TokenStore) handleCreateAgainstRole(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleCreateAgainstRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("role_name").(string)
 	roleEntry, err := ts.tokenStoreRole(name)
 	if err != nil {
@@ -1312,7 +1311,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string, tainted bool
 
 // handleTidy handles the cleaning up of leaked accessor storage entries and
 // cleaning up of leases that are associated to tokens that are expired.
-func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var tidyErrors *multierror.Error
 
 	if !atomic.CompareAndSwapInt64(&ts.tidyLock, 0, 1) {
@@ -1474,7 +1473,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
 // the properties of the token associated with the accessor
-func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
@@ -1502,7 +1501,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 			},
 		},
 	}
-	resp, err := ts.handleLookup(req, d)
+	resp, err := ts.handleLookup(ctx, req, d)
 	if err != nil {
 		return nil, err
 	}
@@ -1528,7 +1527,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 
 // handleUpdateRevokeAccessor handles the auth/token/revoke-accessor path for revoking
 // the token associated with the accessor
-func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
@@ -1560,21 +1559,18 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 
 // handleCreate handles the auth/token/create path for creation of new orphan
 // tokens
-func (ts *TokenStore) handleCreateOrphan(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleCreateOrphan(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	return ts.handleCreateCommon(req, d, true, nil)
 }
 
 // handleCreate handles the auth/token/create path for creation of new non-orphan
 // tokens
-func (ts *TokenStore) handleCreate(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	return ts.handleCreateCommon(req, d, false, nil)
 }
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
-func (ts *TokenStore) handleCreateCommon(
-	req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
+func (ts *TokenStore) handleCreateCommon(req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
 	// Read the parent policy
 	parent, err := ts.Lookup(req.ClientToken)
 	if err != nil || parent == nil {
@@ -1991,8 +1987,7 @@ func (ts *TokenStore) handleCreateCommon(
 // handleRevokeSelf handles the auth/token/revoke-self path for revocation of tokens
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
-func (ts *TokenStore) handleRevokeSelf(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Revoke the token and its children
 	if err := ts.RevokeTree(req.ClientToken); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -2003,8 +1998,7 @@ func (ts *TokenStore) handleRevokeSelf(
 // handleRevokeTree handles the auth/token/revoke/id path for revocation of tokens
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
-func (ts *TokenStore) handleRevokeTree(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
@@ -2032,8 +2026,7 @@ func (ts *TokenStore) handleRevokeTree(
 // handleRevokeOrphan handles the auth/token/revoke-orphan/id path for revocation of tokens
 // in a way that leaves child tokens orphaned. Normally, using sys/revoke/leaseID will revoke
 // the token and all children.
-func (ts *TokenStore) handleRevokeOrphan(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urltoken bool
 	// Parse the id
 	id := data.Get("token").(string)
@@ -2075,16 +2068,14 @@ func (ts *TokenStore) handleRevokeOrphan(
 	return nil, nil
 }
 
-func (ts *TokenStore) handleLookupSelf(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleLookupSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	data.Raw["token"] = req.ClientToken
-	return ts.handleLookup(req, data)
+	return ts.handleLookup(ctx, req, data)
 }
 
 // handleLookup handles the auth/token/lookup/id path for querying information about
 // a particular token. This can be used to see which policies are applicable.
-func (ts *TokenStore) handleLookup(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
@@ -2176,16 +2167,14 @@ func (ts *TokenStore) handleLookup(
 	return resp, nil
 }
 
-func (ts *TokenStore) handleRenewSelf(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRenewSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	data.Raw["token"] = req.ClientToken
-	return ts.handleRenew(req, data)
+	return ts.handleRenew(ctx, req, data)
 }
 
 // handleRenew handles the auth/token/renew/id path for renewal of tokens.
 // This is used to prevent token expiration and revocation.
-func (ts *TokenStore) handleRenew(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
@@ -2229,8 +2218,7 @@ func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
 	return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 }
 
-func (ts *TokenStore) authRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.Auth == nil {
 		return nil, fmt.Errorf("request auth is nil")
 	}
@@ -2272,7 +2260,7 @@ func (ts *TokenStore) authRenew(
 				return &logical.Response{Auth: req.Auth}, nil
 			}
 		}
-		return f(req, d)
+		return f(ctx, req, d)
 	}
 
 	role, err := ts.tokenStoreRole(te.Role)
@@ -2304,7 +2292,7 @@ func (ts *TokenStore) authRenew(
 		}
 	}
 
-	return f(req, d)
+	return f(ctx, req, d)
 }
 
 func (ts *TokenStore) tokenStoreRole(name string) (*tsRoleEntry, error) {
@@ -2324,8 +2312,7 @@ func (ts *TokenStore) tokenStoreRole(name string) (*tsRoleEntry, error) {
 	return &result, nil
 }
 
-func (ts *TokenStore) tokenStoreRoleList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) tokenStoreRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entries, err := ts.view.List(rolesPrefix)
 	if err != nil {
 		return nil, err
@@ -2339,8 +2326,7 @@ func (ts *TokenStore) tokenStoreRoleList(
 	return logical.ListResponse(ret), nil
 }
 
-func (ts *TokenStore) tokenStoreRoleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) tokenStoreRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	err := ts.view.Delete(fmt.Sprintf("%s%s", rolesPrefix, data.Get("role_name").(string)))
 	if err != nil {
 		return nil, err
@@ -2349,8 +2335,7 @@ func (ts *TokenStore) tokenStoreRoleDelete(
 	return nil, nil
 }
 
-func (ts *TokenStore) tokenStoreRoleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	role, err := ts.tokenStoreRole(data.Get("role_name").(string))
 	if err != nil {
 		return nil, err
@@ -2375,7 +2360,7 @@ func (ts *TokenStore) tokenStoreRoleRead(
 	return resp, nil
 }
 
-func (ts *TokenStore) tokenStoreRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (ts *TokenStore) tokenStoreRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	name := data.Get("role_name").(string)
 	if name == "" {
 		return false, fmt.Errorf("role name cannot be empty")
@@ -2388,8 +2373,7 @@ func (ts *TokenStore) tokenStoreRoleExistenceCheck(req *logical.Request, data *f
 	return role != nil, nil
 }
 
-func (ts *TokenStore) tokenStoreRoleCreateUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("role_name").(string)
 	if name == "" {
 		return logical.ErrorResponse("role name cannot be empty"), nil

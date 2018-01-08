@@ -1,6 +1,7 @@
 package mssql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -30,8 +31,7 @@ func secretCreds(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretCredsRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the lease information
 	leaseConfig, err := b.LeaseConfig(req.Storage)
 	if err != nil {
@@ -42,11 +42,10 @@ func (b *backend) secretCredsRenew(
 	}
 
 	f := framework.LeaseExtend(leaseConfig.TTL, leaseConfig.TTLMax, b.System())
-	return f(req, d)
+	return f(ctx, req, d)
 }
 
-func (b *backend) secretCredsRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {

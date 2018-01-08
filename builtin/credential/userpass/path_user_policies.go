@@ -1,6 +1,7 @@
 package userpass
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -31,9 +32,7 @@ func pathUserPolicies(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathUserPoliciesUpdate(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathUserPoliciesUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 
 	userEntry, err := b.user(req.Storage, username)

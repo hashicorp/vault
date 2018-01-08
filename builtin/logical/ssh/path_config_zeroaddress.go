@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -34,7 +35,7 @@ func pathConfigZeroAddress(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConfigZeroAddressDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigZeroAddressDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete("config/zeroaddress")
 	if err != nil {
 		return nil, err
@@ -42,7 +43,7 @@ func (b *backend) pathConfigZeroAddressDelete(req *logical.Request, d *framework
 	return nil, nil
 }
 
-func (b *backend) pathConfigZeroAddressRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigZeroAddressRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entry, err := b.getZeroAddressRoles(req.Storage)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func (b *backend) pathConfigZeroAddressRead(req *logical.Request, d *framework.F
 	}, nil
 }
 
-func (b *backend) pathConfigZeroAddressWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigZeroAddressWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleNames := d.Get("roles").(string)
 	if roleNames == "" {
 		return logical.ErrorResponse("Missing roles"), nil

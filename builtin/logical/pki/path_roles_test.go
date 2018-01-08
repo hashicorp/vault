@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -37,14 +38,14 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -80,7 +81,7 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 	}
 
 	// Reading should upgrade generate_lease
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -100,13 +101,13 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 	roleReq.Path = "roles/testrole2"
 	roleReq.Data["generate_lease"] = true
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -138,13 +139,13 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -177,7 +178,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	}
 
 	// Reading should upgrade key_usage
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -225,13 +226,13 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -264,7 +265,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	}
 
 	// Reading should upgrade key_usage
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -312,14 +313,14 @@ func TestPki_RoleNoStore(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -338,13 +339,13 @@ func TestPki_RoleNoStore(t *testing.T) {
 	roleReq.Data["allow_subdomains"] = true
 	roleReq.Data["ttl"] = "5h"
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -366,7 +367,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 		Storage:   storage,
 		Data:      caData,
 	}
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -384,13 +385,13 @@ func TestPki_RoleNoStore(t *testing.T) {
 		Data:      issueData,
 	}
 
-	resp, err = b.HandleRequest(issueReq)
+	resp, err = b.HandleRequest(context.Background(), issueReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	// list certs
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "certs",
 		Storage:   storage,
@@ -421,7 +422,7 @@ func TestPki_CertsLease(t *testing.T) {
 		Data:      caData,
 	}
 
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -439,7 +440,7 @@ func TestPki_CertsLease(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -456,7 +457,7 @@ func TestPki_CertsLease(t *testing.T) {
 		Data:      issueData,
 	}
 
-	resp, err = b.HandleRequest(issueReq)
+	resp, err = b.HandleRequest(context.Background(), issueReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -469,12 +470,12 @@ func TestPki_CertsLease(t *testing.T) {
 	// should have a `Secret` object populated.
 	roleData["generate_lease"] = true
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
-	resp, err = b.HandleRequest(issueReq)
+	resp, err = b.HandleRequest(context.Background(), issueReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}

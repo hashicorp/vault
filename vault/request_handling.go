@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -31,6 +32,9 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		return nil, consts.ErrStandby
 	}
 
+	ctx, cancel := context.WithCancel(c.requestContext)
+	defer cancel()
+
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
 	// cubbyhole) -- did they want a key named foo/ or did they want to write
@@ -45,9 +49,9 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 	var auth *logical.Auth
 	if c.router.LoginPath(req.Path) {
-		resp, auth, err = c.handleLoginRequest(req)
+		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
-		resp, auth, err = c.handleRequest(req)
+		resp, auth, err = c.handleRequest(ctx, req)
 	}
 
 	// Ensure we don't leak internal data
@@ -72,7 +76,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		resp.WrapInfo.Token == ""
 
 	if wrapping {
-		cubbyResp, cubbyErr := c.wrapInCubbyhole(req, resp, auth)
+		cubbyResp, cubbyErr := c.wrapInCubbyhole(ctx, req, resp, auth)
 		// If not successful, returns either an error response from the
 		// cubbyhole backend or an error; if either is set, set resp and err to
 		// those and continue so that that's what we audit log. Otherwise
@@ -118,11 +122,11 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	return
 }
 
-func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
+func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Validate the token
-	auth, te, ctErr := c.checkToken(req, false)
+	auth, te, ctErr := c.checkToken(ctx, req, false)
 	// We run this logic first because we want to decrement the use count even in the case of an error
 	if te != nil {
 		// Attempt to use the token (decrement NumUses)
@@ -192,7 +196,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	}
 
 	// Route the request
-	resp, routeErr := c.router.Route(req)
+	resp, routeErr := c.router.Route(ctx, req)
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
@@ -345,7 +349,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
-func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
+func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
 	req.Unauthenticated = true
@@ -367,7 +371,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 	}
 
 	// Route the request
-	resp, routeErr := c.router.Route(req)
+	resp, routeErr := c.router.Route(ctx, req)
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration

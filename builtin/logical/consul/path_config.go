@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -58,8 +59,7 @@ func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
 	return conf, nil, nil
 }
 
-func pathConfigAccessRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func pathConfigAccessRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	conf, userErr, intErr := readConfigAccess(req.Storage)
 	if intErr != nil {
 		return nil, intErr
@@ -79,8 +79,7 @@ func pathConfigAccessRead(
 	}, nil
 }
 
-func pathConfigAccessWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
 		Address: data.Get("address").(string),
 		Scheme:  data.Get("scheme").(string),

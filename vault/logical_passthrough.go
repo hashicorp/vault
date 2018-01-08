@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -84,14 +85,12 @@ type PassthroughBackend struct {
 	generateLeases bool
 }
 
-func (b *PassthroughBackend) handleRevoke(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *PassthroughBackend) handleRevoke(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// This is a no-op
 	return nil, nil
 }
 
-func (b *PassthroughBackend) handleExistenceCheck(
-	req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *PassthroughBackend) handleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	out, err := req.Storage.Get(req.Path)
 	if err != nil {
 		return false, fmt.Errorf("existence check failed: %v", err)
@@ -100,8 +99,7 @@ func (b *PassthroughBackend) handleExistenceCheck(
 	return out != nil, nil
 }
 
-func (b *PassthroughBackend) handleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *PassthroughBackend) handleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Read the path
 	out, err := req.Storage.Get(req.Path)
 	if err != nil {
@@ -167,8 +165,7 @@ func (b *PassthroughBackend) GeneratesLeases() bool {
 	return b.generateLeases
 }
 
-func (b *PassthroughBackend) handleWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *PassthroughBackend) handleWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return logical.ErrorResponse("missing data fields"), nil
@@ -192,8 +189,7 @@ func (b *PassthroughBackend) handleWrite(
 	return nil, nil
 }
 
-func (b *PassthroughBackend) handleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *PassthroughBackend) handleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Delete the key at the request path
 	if err := req.Storage.Delete(req.Path); err != nil {
 		return nil, err
@@ -202,8 +198,7 @@ func (b *PassthroughBackend) handleDelete(
 	return nil, nil
 }
 
-func (b *PassthroughBackend) handleList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *PassthroughBackend) handleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Right now we only handle directories, so ensure it ends with /; however,
 	// some physical backends may not handle the "/" case properly, so only add
 	// it if we're not listing the root

@@ -1,6 +1,8 @@
 package transit
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -28,7 +30,7 @@ func (b *backend) pathRestore() *framework.Path {
 	}
 }
 
-func (b *backend) pathRestoreUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	backupB64 := d.Get("backup").(string)
 	if backupB64 == "" {
 		return logical.ErrorResponse("'backup' must be supplied"), nil

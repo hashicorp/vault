@@ -1,6 +1,7 @@
 package okta
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -87,9 +88,7 @@ func (b *backend) Config(s logical.Storage) (*ConfigEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathConfigRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	cfg, err := b.Config(req.Storage)
 	if err != nil {
 		return nil, err
@@ -116,8 +115,7 @@ func (b *backend) pathConfigRead(
 	return resp, nil
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	cfg, err := b.Config(req.Storage)
 	if err != nil {
 		return nil, err
@@ -202,8 +200,7 @@ func (b *backend) pathConfigWrite(
 	return nil, nil
 }
 
-func (b *backend) pathConfigExistenceCheck(
-	req *logical.Request, d *framework.FieldData) (bool, error) {
+func (b *backend) pathConfigExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	cfg, err := b.Config(req.Storage)
 	if err != nil {
 		return false, err

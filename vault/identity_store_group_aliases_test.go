@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/identity"
@@ -19,7 +20,7 @@ func TestIdentityStore_GroupAliases_CRUD(t *testing.T) {
 			"type": "external",
 		},
 	}
-	resp, err = i.HandleRequest(groupReq)
+	resp, err = i.HandleRequest(context.Background(), groupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
 	}
@@ -35,7 +36,7 @@ func TestIdentityStore_GroupAliases_CRUD(t *testing.T) {
 			"mount_type":     "ldap",
 		},
 	}
-	resp, err = i.HandleRequest(groupAliasReq)
+	resp, err = i.HandleRequest(context.Background(), groupAliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
 	}
@@ -43,7 +44,7 @@ func TestIdentityStore_GroupAliases_CRUD(t *testing.T) {
 
 	groupAliasReq.Path = "group-alias/id/" + groupAliasID
 	groupAliasReq.Operation = logical.ReadOperation
-	resp, err = i.HandleRequest(groupAliasReq)
+	resp, err = i.HandleRequest(context.Background(), groupAliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
 	}
@@ -53,13 +54,13 @@ func TestIdentityStore_GroupAliases_CRUD(t *testing.T) {
 	}
 
 	groupAliasReq.Operation = logical.DeleteOperation
-	resp, err = i.HandleRequest(groupAliasReq)
+	resp, err = i.HandleRequest(context.Background(), groupAliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
 	}
 
 	groupAliasReq.Operation = logical.ReadOperation
-	resp, err = i.HandleRequest(groupAliasReq)
+	resp, err = i.HandleRequest(context.Background(), groupAliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
 	}
@@ -138,7 +139,7 @@ func TestIdentityStore_GroupAliases_AliasOnInternalGroup(t *testing.T) {
 		Path:      "group",
 		Operation: logical.UpdateOperation,
 	}
-	resp, err = i.HandleRequest(groupReq)
+	resp, err = i.HandleRequest(context.Background(), groupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v; err: %v", resp, err)
 	}
@@ -153,7 +154,7 @@ func TestIdentityStore_GroupAliases_AliasOnInternalGroup(t *testing.T) {
 			"canonical_id":   groupID,
 		},
 	}
-	resp, err = i.HandleRequest(aliasReq)
+	resp, err = i.HandleRequest(context.Background(), aliasReq)
 	if err != nil {
 		t.Fatal(err)
 	}

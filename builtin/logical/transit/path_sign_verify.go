@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -136,8 +137,7 @@ Defaults to "sha2-256". Not valid for all key types.`,
 	}
 }
 
-func (b *backend) pathSignWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
@@ -217,8 +217,7 @@ func (b *backend) pathSignWrite(
 	return resp, nil
 }
 
-func (b *backend) pathVerifyWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	sig := d.Get("signature").(string)
 	hmac := d.Get("hmac").(string)
@@ -230,7 +229,7 @@ func (b *backend) pathVerifyWrite(
 		return logical.ErrorResponse("neither a 'signature' nor an 'hmac' were given to verify"), logical.ErrInvalidRequest
 
 	case hmac != "":
-		return b.pathHMACVerify(req, d, hmac)
+		return b.pathHMACVerify(ctx, req, d, hmac)
 	}
 
 	name := d.Get("name").(string)
