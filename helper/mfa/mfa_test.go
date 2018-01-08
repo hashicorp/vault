@@ -1,6 +1,7 @@
 package mfa
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -43,8 +44,7 @@ func testPathLogin() *framework.Path {
 	}
 }
 
-func testPathLoginHandler(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func testPathLoginHandler(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 
 	return &logical.Response{

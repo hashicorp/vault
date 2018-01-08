@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/salt"
@@ -13,7 +14,7 @@ func TestPathMap(t *testing.T) {
 	var b logical.Backend = &Backend{Paths: p.Paths()}
 
 	// Write via HTTP
-	_, err := b.HandleRequest(&logical.Request{
+	_, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "map/foo/a",
 		Data: map[string]interface{}{
@@ -26,7 +27,7 @@ func TestPathMap(t *testing.T) {
 	}
 
 	// Read via HTTP
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "map/foo/a",
 		Storage:   storage,
@@ -66,7 +67,7 @@ func TestPathMap(t *testing.T) {
 	}
 
 	// LIST via HTTP
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "map/foo/",
 		Storage:   storage,
@@ -80,7 +81,7 @@ func TestPathMap(t *testing.T) {
 	}
 
 	// Delete via HTTP
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "map/foo/a",
 		Storage:   storage,
@@ -93,7 +94,7 @@ func TestPathMap(t *testing.T) {
 	}
 
 	// Re-read via HTTP
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "map/foo/a",
 		Storage:   storage,
@@ -149,7 +150,7 @@ func TestPathMap_Salted(t *testing.T) {
 	var b logical.Backend = &Backend{Paths: p.Paths()}
 
 	// Write via HTTP
-	_, err = b.HandleRequest(&logical.Request{
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "map/foo/a",
 		Data: map[string]interface{}{
@@ -181,7 +182,7 @@ func TestPathMap_Salted(t *testing.T) {
 	}
 
 	// Read via HTTP
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "map/foo/a",
 		Storage:   storage,
@@ -221,7 +222,7 @@ func TestPathMap_Salted(t *testing.T) {
 	}
 
 	// Delete via HTTP
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "map/foo/a",
 		Storage:   storage,
@@ -234,7 +235,7 @@ func TestPathMap_Salted(t *testing.T) {
 	}
 
 	// Re-read via HTTP
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "map/foo/a",
 		Storage:   storage,
@@ -265,7 +266,7 @@ func TestPathMap_Salted(t *testing.T) {
 		t.Fatal("err: %v", err)
 	}
 	// A read should transparently upgrade
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "map/foo/b",
 		Storage:   storage,
@@ -304,7 +305,7 @@ func TestPathMap_SaltFunc(t *testing.T) {
 	var b logical.Backend = &Backend{Paths: p.Paths()}
 
 	// Write via HTTP
-	_, err = b.HandleRequest(&logical.Request{
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "map/foo/a",
 		Data: map[string]interface{}{
@@ -336,7 +337,7 @@ func TestPathMap_SaltFunc(t *testing.T) {
 	}
 
 	// Read via HTTP
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "map/foo/a",
 		Storage:   storage,
@@ -376,7 +377,7 @@ func TestPathMap_SaltFunc(t *testing.T) {
 	}
 
 	// Delete via HTTP
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "map/foo/a",
 		Storage:   storage,
@@ -389,7 +390,7 @@ func TestPathMap_SaltFunc(t *testing.T) {
 	}
 
 	// Re-read via HTTP
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "map/foo/a",
 		Storage:   storage,
@@ -420,7 +421,7 @@ func TestPathMap_SaltFunc(t *testing.T) {
 		t.Fatal("err: %v", err)
 	}
 	// A read should transparently upgrade
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "map/foo/b",
 		Storage:   storage,
