@@ -437,7 +437,7 @@ revoked, all dynamic secrets generated with it are also revoked.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/revoke-self`     | `200 application/json` |
+| `POST`   | `/auth/token/revoke-self`     | `204 (empty body)` |
 
 ### Sample Request
 

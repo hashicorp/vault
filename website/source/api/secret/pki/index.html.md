@@ -175,9 +175,14 @@ $ curl \
 ## Submit CA Information
 
 This endpoint allows submitting the CA information for the backend via a PEM
-file containing the CA certificate and its private key, concatenated. Not needed
-if you are generating a self-signed root certificate, and not used if you have a
-signed intermediate CA certificate with a generated key (use the
+file containing the CA certificate and its private key, concatenated.
+
+May optionally append additional CA certificates.  Useful when creating an
+intermediate CA to ensure a full chain is returned when signing or generating
+certificates.
+
+Not needed if you are generating a self-signed root certificate, and not used
+if you have a signed intermediate CA certificate with a generated key (use the
 `/pki/intermediate/set-signed` endpoint for that). _If you have already set a
 certificate and key, they will be overridden._
 
