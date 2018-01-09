@@ -21,4 +21,14 @@ website:
 		--volume "$(shell pwd):/website" \
 		hashicorp/middleman-hashicorp:${VERSION}
 
+update-deps:
+	@echo "==> Updating deps..."
+	@docker run \
+		--interactive \
+		--rm \
+		--tty \
+		--volume "$(shell pwd):/website" \
+		hashicorp/middleman-hashicorp:${VERSION} \
+		bundle update --verbose
+
 .PHONY: build website
