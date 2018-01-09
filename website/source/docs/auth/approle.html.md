@@ -90,7 +90,16 @@ $ vault auth-enable approle
 #### Create a role
 
 ```shell
-$ vault write auth/approle/role/testrole secret_id_ttl=10m token_num_uses=10 token_ttl=20m token_max_ttl=30m secret_id_num_uses=40
+$ vault write auth/approle/role/testrole \
+  secret_id_ttl=10m \
+  token_num_uses=10 \
+  token_ttl=20m \
+  token_max_ttl=30m \
+  secret_id_num_uses=40
+```
+
+```shell
+Success! Data written to: auth/approle/role/testrole
 ```
 
 #### Fetch the RoleID of the AppRole
@@ -118,7 +127,9 @@ secret_id_accessor      c454f7e5-996e-7230-6074-6ef26b7bcf86
 #### Login to get a Vault Token
 
 ```shell
-$ vault write auth/approle/login role_id=db02de05-fa39-4855-059b-67221c5c2f63 secret_id=6a174c20-f6de-a53c-74d2-6018fcceff64
+$ vault write auth/approle/login \
+  role_id=db02de05-fa39-4855-059b-67221c5c2f63 \
+  secret_id=6a174c20-f6de-a53c-74d2-6018fcceff64
 ```
 
 ```shell
@@ -134,87 +145,100 @@ token_policies  [default]
 #### Enable the AppRole authentication.
 
 ```javascript
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"type":"approle"}' http://127.0.0.1:8200/v1/sys/auth/approle
+$ curl -s -X POST \
+  -H "X-Vault-Token:$VAULT_TOKEN" \
+  -d '{"type":"approle"}' \
+  http://127.0.0.1:8200/v1/sys/auth/approle
 ```
 
 #### Create an AppRole with desired set of policies.
 
 ```javascript
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"dev-policy,test-policy"}' http://127.0.0.1:8200/v1/auth/approle/role/testrole
+$ curl -s -X POST \
+  -H "X-Vault-Token:$VAULT_TOKEN" \
+  -d '{"policies":"dev-policy,test-policy"}' \
+  http://127.0.0.1:8200/v1/auth/approle/role/testrole
 ```
 
-#### Fetch the identifier of the role.
+#### Fetch the role identifier.
 
 ```javascript
-$ curl -X GET -H "X-Vault-Token:$VAULT_TOKEN" http://127.0.0.1:8200/v1/auth/approle/role/testrole/role-id | jq .
+$ curl -s -X GET \
+  -H "X-Vault-Token:$VAULT_TOKEN" \
+  http://127.0.0.1:8200/v1/auth/approle/role/testrole/role-id | jq .
 ```
 
 ```javascript
 {
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "role_id": "988a9dfd-ea69-4a53-6cb6-9d6b86474bba"
-  },
-  "lease_duration": 0,
-  "renewable": false,
+  "request_id": "666c09c9-4144-fcc7-aaca-f1ec618bacce",
   "lease_id": "",
-  "request_id": "ef5c9b3f-e15e-0527-5457-79b4ecfe7b60"
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "role_id": "7f4a4958-792f-c7a1-afef-1c6fa432cd55"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
 }
 ```
 
 #### Create a new secret identifier under the role.
 
 ```javascript
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" http://127.0.0.1:8200/v1/auth/approle/role/testrole/secret-id | jq .
+$ curl -s -X POST \
+  -H "X-Vault-Token:$VAULT_TOKEN" \
+  http://127.0.0.1:8200/v1/auth/approle/role/testrole/secret-id | jq .
 ```
 
 ```javascript
 {
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "secret_id_accessor": "45946873-1d96-a9d4-678c-9229f74386a5",
-    "secret_id": "37b74931-c4cd-d49a-9246-ccc62d682a25"
-  },
-  "lease_duration": 0,
-  "renewable": false,
+  "request_id": "fcd4c136-f624-a941-a77d-da5693aab6c8",
   "lease_id": "",
-  "request_id": "c98fa1c2-7565-fd45-d9de-0b43c307f2aa"
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "secret_id": "4ac995f6-693c-7504-c0b2-4a7cf17beed3",
+    "secret_id_accessor": "ea669784-996e-c241-fcda-e68d6d543420"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
 }
 ```
 
 #### Perform the login operation to fetch a new Vault token.
 
 ```javascript
-$ curl -X POST \
+$ curl -s -X POST \
      -d '{"role_id":"988a9dfd-ea69-4a53-6cb6-9d6b86474bba","secret_id":"37b74931-c4cd-d49a-9246-ccc62d682a25"}' \
      http://127.0.0.1:8200/v1/auth/approle/login | jq .
 ```
 
 ```javascript
 {
+  "request_id": "a908c67b-3f4f-6b07-c86e-03a3f71e3b98",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "wrap_info": null,
+  "warnings": null,
   "auth": {
-    "renewable": true,
-    "lease_duration": 2764800,
-    "metadata": {},
+    "client_token": "930a35a5-739b-69ef-cdc6-de611dda8141",
+    "accessor": "2ab4a9d7-0231-1916-3455-35cf3e7a420b",
     "policies": [
       "default",
       "dev-policy",
       "test-policy"
     ],
-    "accessor": "5d7fb475-07cb-4060-c2de-1ca3fcbf0c56",
-    "client_token": "98a4c7ab-b1fe-361b-ba0b-e307aacfd587"
-  },
-  "warnings": null,
-  "wrap_info": null,
-  "data": null,
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": "",
-  "request_id": "988fb8db-ce3b-0167-0ac7-1a568b902d75"
+    "metadata": {
+      "role_name": "testrole"
+    },
+    "lease_duration": 2764800,
+    "renewable": true,
+    "entity_id": "843c8e81-3009-8ef1-49ab-3b3ed4fc7b86"
+  }
 }
 ```
 
