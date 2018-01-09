@@ -75,8 +75,6 @@ not require a credential, but still enforce constraints for login.  For
 example, `bound_cidr_list` will only allow requests coming from IP addresses
 belonging to configured CIDR blocks on the AppRole.
 
-## Comparison to Tokens
-
 ## Authentication
 
 ### Via the CLI
