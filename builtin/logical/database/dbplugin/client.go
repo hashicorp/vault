@@ -1,7 +1,6 @@
 package dbplugin
 
 import (
-	"context"
 	"errors"
 	"sync"
 
@@ -24,16 +23,6 @@ type DatabasePluginClient struct {
 func (dc *DatabasePluginClient) Close() error {
 	err := dc.Database.Close()
 	dc.client.Kill()
-
-	return err
-}
-
-// This wraps the Initialize call and ensures we close the plugin on error.
-func (dc *DatabasePluginClient) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error {
-	err := dc.Database.Initialize(ctx, config, verifyConnection)
-	if err != nil {
-		dc.Close()
-	}
 
 	return err
 }
