@@ -233,7 +233,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		err = db.Initialize(ctx, config.ConnectionDetails, verifyConnection)
 		if err != nil {
-			db.Close()
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
 
