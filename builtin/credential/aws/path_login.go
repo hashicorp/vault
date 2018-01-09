@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"encoding/xml"
 	"fmt"
@@ -1467,11 +1468,15 @@ func parseIamRequestHeaders(headersB64 string) (http.Header, error) {
 		switch typedValue := v.(type) {
 		case string:
 			headers.Add(k, typedValue)
+		case json.Number:
+			headers.Add(k, typedValue.String())
 		case []interface{}:
 			for _, individualVal := range typedValue {
 				switch possibleStrVal := individualVal.(type) {
 				case string:
 					headers.Add(k, possibleStrVal)
+				case json.Number:
+					headers.Add(k, possibleStrVal.String())
 				default:
 					return nil, fmt.Errorf("header %q contains value %q that has type %s, not string", k, individualVal, reflect.TypeOf(individualVal))
 				}
