@@ -278,7 +278,7 @@ func getAnyRegionForAwsPartition(partitionId string) *endpoints.Region {
 }
 
 const backendHelp = `
-aws-ec2 auth backend takes in PKCS#7 signature of an AWS EC2 instance and a client
+aws-ec2 auth method takes in PKCS#7 signature of an AWS EC2 instance and a client
 created nonce to authenticates the EC2 instance with Vault.
 
 Authentication is backed by a preconfigured role in the backend. The role

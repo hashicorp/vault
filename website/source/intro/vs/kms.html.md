@@ -23,7 +23,7 @@ capabilities as KMS, allowing for encryption keys to be stored and
 cryptographic operations to be performed. However, Vault goes much further than
 just key management.
 
-The flexible secret backends allow Vault to handle any type of secret data,
+The flexible secrets engines allow Vault to handle any type of secret data,
 including database credentials, API keys, PKI keys, and encryption keys.  Vault
 also supports dynamic secrets, generating credentials on-demand for
 fine-grained security controls, auditing, and non-repudiation.

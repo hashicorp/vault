@@ -113,29 +113,51 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 func (h *CLIHandler) Help() string {
 	help := `
-The AWS credential provider allows you to authenticate with
-AWS IAM credentials. To use it, you specify valid AWS IAM credentials
-in one of a number of ways. They can be specified explicitly on the
-command line (which in general you should not do), via the standard AWS
-environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and
-AWS_SECURITY_TOKEN), via the ~/.aws/credentials file, or via an EC2
-instance profile (in that order).
+Usage: vault login -method=aws [CONFIG K=V...]
 
-  Example: vault auth -method=aws
+  The AWS auth method allows users to authenticate with AWS IAM
+  credentials. The AWS IAM credentials may be specified in a number of ways,
+  listed in order of precedence below:
 
-If you need to explicitly pass in credentials, you would do it like this:
-  Example: vault auth -method=aws aws_access_key_id=<access key> aws_secret_access_key=<secret key> aws_security_token=<token>
+    1. Explicitly via the command line (not recommended)
 
-Key/Value Pairs:
+    2. Via the standard AWS environment variables (AWS_ACCESS_KEY, etc.)
 
-  mount=aws                           The mountpoint for the AWS credential provider.
-                                      Defaults to "aws"
-  aws_access_key_id=<access key>      Explicitly specified AWS access key
-  aws_secret_access_key=<secret key>  Explicitly specified AWS secret key
-  aws_security_token=<token>          Security token for temporary credentials
-  header_value                        The Value of the X-Vault-AWS-IAM-Server-ID header.
-  role                                The name of the role you're requesting a token for
-  `
+    3. Via the ~/.aws/credentials file
+
+    4. Via EC2 instance profile
+
+  Authenticate using locally stored credentials:
+
+      $ vault login -method=aws
+
+  Authenticate by passing keys:
+
+      $ vault login -method=aws aws_access_key_id=... aws_secret_access_key=...
+
+Configuration:
+
+  aws_access_key_id=<string>
+      Explicit AWS access key ID
+
+  aws_secret_access_key=<string>
+      Explicit AWS secret access key
+
+  aws_security_token=<string>
+      Explicit AWS security token for temporary credentials
+
+  header_value=<string>
+      Value for the x-vault-aws-iam-server-id header in requests
+
+  mount=<string>
+      Path where the AWS credential method is mounted. This is usually provided
+      via the -path flag in the "vault login" command, but it can be specified
+      here as well. If specified here, it takes precedence over the value for
+      -path. The default value is "aws".
+
+  role=<string>
+      Name of the role to request a token against
+`
 
 	return strings.TrimSpace(help)
 }

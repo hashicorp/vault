@@ -1,5 +1,5 @@
 // Package mfa provides wrappers to add multi-factor authentication
-// to any auth backend.
+// to any auth method.
 //
 // To add MFA to a backend, replace its login path with the
 // paths returned by MFAPaths and add the additional root

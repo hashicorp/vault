@@ -37,7 +37,6 @@ helpers do
   # @return [String]
   def description_for(page)
     description = (page.data.description || "")
-      .gsub('"', '')
       .gsub(/\n+/, ' ')
       .squeeze(' ')
 

@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise HSM Security Details"
+page_title: "Security Details - HSM Integration - Vault Enterprise"
 sidebar_current: "docs-vault-enterprise-hsm-security"
 description: |-
   Recommendations to ensure the security of a Vault Enterprise HSM deployment.

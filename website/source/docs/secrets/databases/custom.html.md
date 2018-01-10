@@ -1,23 +1,26 @@
 ---
 layout: "docs"
-page_title: "Custom Database Plugins - Database Secret Backend"
+page_title: "Custom - Database - Secrets Engines"
 sidebar_current: "docs-secrets-databases-custom"
 description: |-
-  Creating custom database plugins for Vault's Database backend to generate credentials for a database.
+  The database secrets engine allows new functionality to be added through a
+  plugin interface without needing to modify vault's core code. This allows you
+  write your own code to generate credentials in any database you wish. It also
+  allows databases that require dynamically linked libraries to be used as
+  plugins while keeping Vault itself statically linked.
 ---
 
-# Custom Database Plugins
+# Custom Database Secrets Engines
 
-The Database backend allows new functionality to be added through a plugin
-interface without needing to modify vault's core code. This allows you write
-your own code to generate credentials in any database you wish. It also allows
-databases that require dynamically linked libraries to be used as plugins while
-keeping Vault itself statically linked.
+The database secrets engine allows new functionality to be added through a
+plugin interface without needing to modify vault's core code. This allows you
+write your own code to generate credentials in any database you wish. It also
+allows databases that require dynamically linked libraries to be used as plugins
+while keeping Vault itself statically linked.
 
-~> **Advanced topic!** Plugin development is a highly advanced
-topic in Vault, and is not required knowledge for day-to-day usage.
-If you don't plan on writing any plugins, we recommend not reading
-this section of the documentation.
+~> **Advanced topic!** Plugin development is a highly advanced topic in Vault,
+and is not required knowledge for day-to-day usage. If you don't plan on writing
+any plugins, we recommend not reading this section of the documentation.
 
 Please read the [Plugins internals](/docs/internals/plugins.html) docs for more
 information about the plugin system before getting started building your
@@ -25,7 +28,7 @@ Database plugin.
 
 ## Plugin Interface
 
-All plugins for the Database backend must implement the same simple interface.
+All plugins for the database secrets engine must implement the same simple interface.
 
 ```go
 type Database interface {
@@ -91,27 +94,24 @@ The above main package, once built, will supply you with a binary of your
 plugin. We also recommend if you are planning on distributing your plugin to
 build with [gox](https://github.com/mitchellh/gox) for cross platform builds.
 
-To use your plugin with the Database backend you need to place the binary in the
+To use your plugin with the database secrets engine you need to place the binary in the
 plugin directory as specified in the [plugin internals](/docs/internals/plugins.html) docs.
 
 You should now be able to register your plugin into the vault catalog. To do
 this your token will need sudo permissions.
 
-```
+```text
 $ vault write sys/plugins/catalog/myplugin-database-plugin \
-    sha_256=<expected SHA256 Hex value of the plugin binary> \
+    sha_256="..." \
     command="myplugin"
 Success! Data written to: sys/plugins/catalog/myplugin-database-plugin
 ```
 
 Now you should be able to configure your plugin like any other:
 
-```
+```text
 $ vault write database/config/myplugin \
     plugin_name=myplugin-database-plugin \
     allowed_roles="readonly" \
-    myplugins_connection_details=....
-
-The following warnings were returned from the Vault server:
-* Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
+    myplugins_connection_details="..."
 ```

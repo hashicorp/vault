@@ -1,24 +1,24 @@
 ---
 layout: "api"
-page_title: "Github Auth Backend - HTTP API"
+page_title: "GitHub - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-github"
 description: |-
-  This is the API documentation for the Vault Github authentication backend.
+  This is the API documentation for the Vault Github auth method.
 ---
 
-# Github Auth Backend HTTP API
+# Github Auth Method (API)
 
-This is the API documentation for the Vault Github authentication backend. For
-general information about the usage and operation of the Github backend, please
-see the [Vault Github backend documentation](/docs/auth/github.html).
+This is the API documentation for the Vault Github auth method. For
+general information about the usage and operation of the Github method, please
+see the [Vault Github method documentation](/docs/auth/github.html).
 
-This documentation assumes the Github backend is mounted at the `/auth/github`
-path in Vault. Since it is possible to mount auth backends at any location,
+This documentation assumes the Github method is enabled at the `/auth/github`
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
-## Configure Backend
+## Configure Method
 
-Configures the connection parameters for Github. This path honors the 
+Configures the connection parameters for GitHub. This path honors the
 distinction between the `create` and `update` capabilities inside ACL policies.
 
 | Method   | Path                         | Produces               |
@@ -27,12 +27,12 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 ### Parameters
 
-- `organization` `(string: <required>)` - The organization users must be part 
+- `organization` `(string: <required>)` - The organization users must be part
   of.
 - `base_url` `(string: "")` - The API endpoint to use. Useful if you are running
   GitHub Enterprise or an API-compatible authentication server.
 - `ttl` `(string: "")` - Duration after which authentication will be expired.
-- `max_ttl` `(string: "")` - Maximum duration after which authentication will 
+- `max_ttl` `(string: "")` - Maximum duration after which authentication will
   be expired.
 
 ### Sample Payload
@@ -55,7 +55,7 @@ $ curl \
 
 ## Read Configuration
 
-Reads the Github configuration.
+Reads the GitHub configuration.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

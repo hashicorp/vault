@@ -4,64 +4,91 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
-// DeleteCommand is a Command that puts data into the Vault.
+var _ cli.Command = (*DeleteCommand)(nil)
+var _ cli.CommandAutocomplete = (*DeleteCommand)(nil)
+
 type DeleteCommand struct {
-	meta.Meta
-}
-
-func (c *DeleteCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("delete", meta.FlagSetDefault)
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	args = flags.Args()
-	if len(args) != 1 {
-		c.Ui.Error("delete expects one argument")
-		flags.Usage()
-		return 1
-	}
-
-	path := args[0]
-
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 2
-	}
-
-	if _, err := client.Logical().Delete(path); err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error deleting '%s': %s", path, err))
-		return 1
-	}
-
-	c.Ui.Output(fmt.Sprintf("Success! Deleted '%s' if it existed.", path))
-	return 0
+	*BaseCommand
 }
 
 func (c *DeleteCommand) Synopsis() string {
-	return "Delete operation on secrets in Vault"
+	return "Delete secrets and configuration"
 }
 
 func (c *DeleteCommand) Help() string {
 	helpText := `
-Usage: vault delete [options] path
+Usage: vault delete [options] PATH
 
-  Delete data (secrets or configuration) from Vault.
+  Deletes secrets and configuration from Vault at the given path. The behavior
+  of "delete" is delegated to the backend corresponding to the given path.
 
-  Delete sends a delete operation request to the given path. The
-  behavior of the delete is determined by the backend at the given
-  path. For example, deleting "aws/policy/ops" will delete the "ops"
-  policy for the AWS backend. Use "vault help" for more details on
-  whether delete is supported for a path and what the behavior is.
+  Remove data in the status secret backend:
 
-General Options:
-` + meta.GeneralOptionsUsage()
+      $ vault delete secret/my-secret
+
+  Uninstall an encryption key in the transit backend:
+
+      $ vault delete transit/keys/my-key
+
+  Delete an IAM role:
+
+      $ vault delete aws/roles/ops
+
+  For a full list of examples and paths, please see the documentation that
+  corresponds to the secret backend in use.
+
+` + c.Flags().Help()
+
 	return strings.TrimSpace(helpText)
+}
+
+func (c *DeleteCommand) Flags() *FlagSets {
+	return c.flagSet(FlagSetHTTP)
+}
+
+func (c *DeleteCommand) AutocompleteArgs() complete.Predictor {
+	return c.PredictVaultFiles()
+}
+
+func (c *DeleteCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
+}
+
+func (c *DeleteCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = f.Args()
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		return 1
+	case len(args) > 1:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	path := sanitizePath(args[0])
+
+	if _, err := client.Logical().Delete(path); err != nil {
+		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
+		return 2
+	}
+
+	c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", path))
+	return 0
 }

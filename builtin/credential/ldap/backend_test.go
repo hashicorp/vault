@@ -103,7 +103,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 }
 
 /*
- * Acceptance test for LDAP Auth Backend
+ * Acceptance test for LDAP Auth Method
  *
  * The tests here rely on a public LDAP server:
  * [http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/]

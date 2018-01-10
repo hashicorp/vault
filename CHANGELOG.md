@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+ * auth/aws: Handle IAM headers produced by clients that formulate numbers as
+   ints rather than strings [GH-3763]
  * physical/s3: Allow using paths with S3 for non-AWS deployments [GH-3730]
  * physical/s3: Add ability to disable SSL for non-AWS deployments [GH-3730]
 
@@ -291,14 +293,14 @@ IMPROVEMENTS:
    (PID) in a file [GH-3321]
  * mfa (Enterprise): Add the ability to use identity metadata in username format
  * mfa/okta (Enterprise): Add support for configuring base_url for API calls
- * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value 
+ * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value
    longer than the signing CA certificate's NotAfter value. [GH-3325]
  * sys/raw: Raw storage access is now disabled by default [GH-3329]
 
 BUG FIXES:
 
  * auth/okta: Fix regression that removed the ability to set base_url [GH-3313]
- * core: Fix panic while loading leases at startup on ARM processors 
+ * core: Fix panic while loading leases at startup on ARM processors
    [GH-3314]
  * secret/pki: Fix `sign-self-issued` encoding the wrong subject public key
    [GH-3325]
@@ -348,7 +350,7 @@ IMPROVEMENTS:
  * auth/okta: Compare groups case-insensitively since Okta is only
    case-preserving [GH-3240]
  * auth/okta: Standardize Okta configuration APIs across backends [GH-3245]
- * cli: Add subcommand autocompletion that can be enabled with 
+ * cli: Add subcommand autocompletion that can be enabled with
    `vault -autocomplete-install` [GH-3223]
  * cli: Add ability to handle wrapped responses when using `vault auth`. What
    is output depends on the other given flags; see the help output for that
