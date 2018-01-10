@@ -62,6 +62,35 @@ func getPubKeyFiles(t *testing.T) (string, []string, error) {
 	return tempDir, pubFiles, nil
 }
 
+func testPGPDecrypt(tb testing.TB, privKey, enc string) string {
+	tb.Helper()
+
+	privKeyBytes, err := base64.StdEncoding.DecodeString(privKey)
+	if err != nil {
+		tb.Fatal(err)
+	}
+
+	ptBuf := bytes.NewBuffer(nil)
+	entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(privKeyBytes)))
+	if err != nil {
+		tb.Fatal(err)
+	}
+
+	var rootBytes []byte
+	rootBytes, err = base64.StdEncoding.DecodeString(enc)
+	if err != nil {
+		tb.Fatal(err)
+	}
+
+	entityList := &openpgp.EntityList{entity}
+	md, err := openpgp.ReadMessage(bytes.NewBuffer(rootBytes), entityList, nil, nil)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	ptBuf.ReadFrom(md.UnverifiedBody)
+	return ptBuf.String()
+}
+
 func parseDecryptAndTestUnsealKeys(t *testing.T,
 	input, rootToken string,
 	fingerprints bool,

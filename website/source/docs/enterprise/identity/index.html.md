@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise Identity"
+page_title: "Identity - Vault Enterprise"
 sidebar_current: "docs-vault-enterprise-identity"
 description: |-
   Vault Enterprise has the foundations of the identity management system.

@@ -71,7 +71,7 @@ First, initialize a rekeying operation. The flags represent the **newly
 desired** number of keys and threshold:
 
 ```text
-$ vault rekey -init -key-shares=3 -key-threshold=2
+$ vault operator rekey -init -key-shares=3 -key-threshold=2
 ```
 
 This will generate a nonce value and start the rekeying process. All other
@@ -80,19 +80,20 @@ secret, so it is safe to distribute over insecure channels like chat, email, or
 carrier pigeon.
 
 ```text
-Nonce: 22657753-9cca-189a-65b8-cb743d104ffc
-Started: true
-Key Shares: 3
-Key Threshold: 2
-Rekey Progress: 0
-Required Keys: 1
+Key               Value
+---               -----
+Nonce             dc1aec3b-ae67-5780-b4b5-2a10ca05b17c
+Started           true
+Rekey Progress    0/1
+New Shares        3
+New Threshold     2
 ```
 
 Each unseal key holder runs the following command and enters their unseal key:
 
 ```text
 $ vault rekey -nonce=<nonce>
-Rekey operation nonce: 22657753-9cca-189a-65b8-cb743d104ffc
+Rekey operation nonce: dc1aec3b-ae67-5780-b4b5-2a10ca05b17c
 Key (will be hidden):
 ```
 
@@ -104,7 +105,7 @@ Key 1: EDj4NZK6z5Y9rpr+TtihTulfdHvFzXtBYQk36dmBczuQ
 Key 2: sCkM1i5BGGNDFk5GsqtVolWRPyd5mWn2eZG0gUySiCF7
 Key 3: e5DUvDIH0cPU8Q+hh1KNVkkMc9lliliPVe9u3Fzbzv38
 
-Operation nonce: 22657753-9cca-189a-65b8-cb743d104ffc
+Operation nonce: dc1aec3b-ae67-5780-b4b5-2a10ca05b17c
 
 Vault rekeyed with 3 keys and a key threshold of 2. Please
 securely distribute the above keys. When the vault is re-sealed,

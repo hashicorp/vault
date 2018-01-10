@@ -1,16 +1,16 @@
 ---
 layout: "docs"
-page_title: "Identity Secret Backend"
+page_title: "Identity - Secrets Engines"
 sidebar_current: "docs-secrets-identity"
 description: |-
-  The Identity secret backend for Vault manages client identities.
+  The Identity secrets engine for Vault manages client identities.
 ---
 
-# Identity Secret Backend
+# Identity Secrets Engine
 
 Name: `identity`
 
-The Identity secret backend is the identity management solution for Vault. It
+The Identity secrets engine is the identity management solution for Vault. It
 internally maintains the clients who are recognized by Vault. Each client is
 internally termed as an `Entity`. An entity can have multiple `Aliases`. For
 example, a single user who has accounts in both Github and LDAP, can be mapped
@@ -31,11 +31,11 @@ entities are **an addition** to the existing capabilities of the token and
 entities are computed dynamically at request time. This provides flexibility in
 controlling the access of tokens that are already issued.
 
-This backend will be mounted by default. This backend cannot be unmounted or
-remounted.
+This secrets engine will be mounted by default. This secrets engine cannot be
+disabled or moved.
 
 ## API
 
-The Identity secret backend has a full HTTP API. Please see the
-[Identity secret backend API](/api/secret/identity/index.html) for more
+The Identity secrets engine has a full HTTP API. Please see the
+[Identity secrets engine API](/api/secret/identity/index.html) for more
 details.

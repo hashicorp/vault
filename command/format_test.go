@@ -24,18 +24,10 @@ func (m mockUi) AskSecret(_ string) (string, error) {
 	m.t.FailNow()
 	return "", nil
 }
-func (m mockUi) Output(s string) {
-	output = s
-}
-func (m mockUi) Info(s string) {
-	m.t.Log(s)
-}
-func (m mockUi) Error(s string) {
-	m.t.Log(s)
-}
-func (m mockUi) Warn(s string) {
-	m.t.Log(s)
-}
+func (m mockUi) Output(s string) { output = s }
+func (m mockUi) Info(s string)   { m.t.Log(s) }
+func (m mockUi) Error(s string)  { m.t.Log(s) }
+func (m mockUi) Warn(s string)   { m.t.Log(s) }
 
 func TestJsonFormatter(t *testing.T) {
 	ui := mockUi{t: t, SampleData: "something"}
