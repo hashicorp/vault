@@ -56,6 +56,7 @@ func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *fr
 
 	value := string(entry.Value)
 
+	b.Logger().Info("reading value", "key", req.Path, "value", value)
 	// Return the secret
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -67,6 +68,7 @@ func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *fr
 func (b *backend) pathKVCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	value := data.Get("value").(string)
 
+	b.Logger().Info("storing value", "key", req.Path, "value", value)
 	entry := &logical.StorageEntry{
 		Key:   req.Path,
 		Value: []byte(value),

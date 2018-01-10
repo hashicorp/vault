@@ -6,6 +6,7 @@ import (
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
+	log "github.com/mgutz/logxi/v1"
 	"google.golang.org/grpc"
 )
 
@@ -16,6 +17,8 @@ type backendGRPCPluginServer struct {
 	factory func(*logical.BackendConfig) (logical.Backend, error)
 
 	brokeredClient *grpc.ClientConn
+
+	logger log.Logger
 }
 
 // Setup dials into the plugin's broker to get a shimmed storage, logger, and
@@ -33,9 +36,9 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 
 	config := &logical.BackendConfig{
 		StorageView: storage,
-		//		Logger:      logger,
-		System: sysView,
-		Config: args.Config,
+		Logger:      b.logger,
+		System:      sysView,
+		Config:      args.Config,
 	}
 
 	// Call the underlying backend factory after shims have been created

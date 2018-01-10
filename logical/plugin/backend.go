@@ -5,7 +5,9 @@ import (
 
 	"google.golang.org/grpc"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
 )
@@ -14,6 +16,7 @@ import (
 type BackendPlugin struct {
 	Factory      func(*logical.BackendConfig) (logical.Backend, error)
 	metadataMode bool
+	Logger       hclog.Logger
 }
 
 // Server gets called when on plugin.Serve()
@@ -30,6 +33,7 @@ func (b BackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) err
 	pb.RegisterBackendServer(s, &backendGRPCPluginServer{
 		broker:  broker,
 		factory: b.Factory,
+		logger:  logbridge.NewLogger(b.Logger).LogxiLogger(),
 	})
 	return nil
 }
