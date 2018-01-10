@@ -45,7 +45,9 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 	// to set b.backend
 	backend, err := b.factory(config)
 	if err != nil {
-		return &pb.SetupReply{}, err
+		return &pb.SetupReply{
+			Err: pb.ErrToString(err),
+		}, nil
 	}
 	b.backend = backend
 
@@ -64,10 +66,7 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 	logicalReq.Storage = newGRPCStorageClient(b.brokeredClient)
 
-	resp, err := b.backend.HandleRequest(ctx, logicalReq)
-	if err != nil {
-		return &pb.HandleRequestReply{}, err
-	}
+	resp, respErr := b.backend.HandleRequest(ctx, logicalReq)
 
 	pbResp, err := pb.LogicalResponseToProtoResp(resp)
 	if err != nil {
@@ -76,6 +75,7 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 	return &pb.HandleRequestReply{
 		Response: pbResp,
+		Err:      pb.ErrToString(respErr),
 	}, nil
 }
 
@@ -149,5 +149,7 @@ func (b *backendGRPCPluginServer) RegisterLicense(ctx context.Context, _ *pb.Reg
 	}
 
 	err := b.backend.RegisterLicense(struct{}{})
-	return &pb.RegisterLicenseReply{}, err
+	return &pb.RegisterLicenseReply{
+		Err: pb.ErrToString(err),
+	}, nil
 }

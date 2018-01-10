@@ -99,7 +99,6 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 		return false, false, err
 	}
 	if reply.Err != "" {
-		// THINKING: Should be be a switch on all error types?
 		if reply.Err == logical.ErrUnsupportedPath.Error() {
 			return false, false, logical.ErrUnsupportedPath
 		}
