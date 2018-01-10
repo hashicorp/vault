@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -123,21 +124,21 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 	}
 
 	return &Request{
-		Id:                  r.ID,
-		ReplicationCluster:  r.ReplicationCluster,
-		Operation:           string(r.Operation),
-		Path:                r.Path,
-		Data:                buf,
-		Secret:              secret,
-		Auth:                auth,
-		Headers:             headers,
-		ClientToken:         r.ClientToken,
-		ClientTokenAccessor: r.ClientTokenAccessor,
-		DisplayName:         r.DisplayName,
-		MountPoint:          r.MountPoint,
-		MountType:           r.MountType,
-		MountAccessor:       r.MountAccessor,
-		//		WrapInfo: args.Request.WrapInfo,
+		Id:                       r.ID,
+		ReplicationCluster:       r.ReplicationCluster,
+		Operation:                string(r.Operation),
+		Path:                     r.Path,
+		Data:                     buf,
+		Secret:                   secret,
+		Auth:                     auth,
+		Headers:                  headers,
+		ClientToken:              r.ClientToken,
+		ClientTokenAccessor:      r.ClientTokenAccessor,
+		DisplayName:              r.DisplayName,
+		MountPoint:               r.MountPoint,
+		MountType:                r.MountType,
+		MountAccessor:            r.MountAccessor,
+		WrapInfo:                 LogicalRequestWrapInfoToProtoRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int64(r.ClientTokenRemainingUses),
 		//MFACreds: MFACreds,
 		EntityId:        r.EntityID,
@@ -169,21 +170,21 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 	}
 
 	return &logical.Request{
-		ID:                  r.Id,
-		ReplicationCluster:  r.ReplicationCluster,
-		Operation:           logical.Operation(r.Operation),
-		Path:                r.Path,
-		Data:                data,
-		Secret:              secret,
-		Auth:                auth,
-		Headers:             headers,
-		ClientToken:         r.ClientToken,
-		ClientTokenAccessor: r.ClientTokenAccessor,
-		DisplayName:         r.DisplayName,
-		MountPoint:          r.MountPoint,
-		MountType:           r.MountType,
-		MountAccessor:       r.MountAccessor,
-		//		WrapInfo: args.Request.WrapInfo,
+		ID:                       r.Id,
+		ReplicationCluster:       r.ReplicationCluster,
+		Operation:                logical.Operation(r.Operation),
+		Path:                     r.Path,
+		Data:                     data,
+		Secret:                   secret,
+		Auth:                     auth,
+		Headers:                  headers,
+		ClientToken:              r.ClientToken,
+		ClientTokenAccessor:      r.ClientTokenAccessor,
+		DisplayName:              r.DisplayName,
+		MountPoint:               r.MountPoint,
+		MountType:                r.MountType,
+		MountAccessor:            r.MountAccessor,
+		WrapInfo:                 ProtoRequestWrapInfoToLogicalRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int(r.ClientTokenRemainingUses),
 		//MFACreds: MFACreds,
 		EntityID:        r.EntityId,
@@ -192,7 +193,27 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 	}, nil
 }
 
+func LogicalRequestWrapInfoToProtoRequestWrapInfo(i *logical.RequestWrapInfo) *RequestWrapInfo {
+	return &RequestWrapInfo{
+		TTL:      int64(i.TTL),
+		Format:   i.Format,
+		SealWrap: i.SealWrap,
+	}
+}
+
+func ProtoRequestWrapInfoToLogicalRequestWrapInfo(i *RequestWrapInfo) *logical.RequestWrapInfo {
+	return &logical.RequestWrapInfo{
+		TTL:      time.Duration(i.TTL),
+		Format:   i.Format,
+		SealWrap: i.SealWrap,
+	}
+}
+
 func ProtoResponseToLogicalResponse(r *Response) (*logical.Response, error) {
+	if r == nil {
+		return nil, nil
+	}
+
 	secret, err := ProtoSecretToLogicalSecret(r.Secret)
 	if err != nil {
 		return nil, err
@@ -209,13 +230,56 @@ func ProtoResponseToLogicalResponse(r *Response) (*logical.Response, error) {
 		return nil, err
 	}
 
+	wrapInfo, err := ProtoResponseWrapInfoToLogicalResponseWrapInfo(r.WrapInfo)
+	if err != nil {
+		return nil, err
+	}
+
 	return &logical.Response{
 		Secret:   secret,
 		Auth:     auth,
 		Data:     data,
 		Redirect: r.Redirect,
 		Warnings: r.Warnings,
-		//	WrapInfo: r.WrapInfo,
+		WrapInfo: wrapInfo,
+	}, nil
+}
+
+func ProtoResponseWrapInfoToLogicalResponseWrapInfo(i *ResponseWrapInfo) (*wrapping.ResponseWrapInfo, error) {
+	t, err := ptypes.Timestamp(i.CreationTime)
+	if err != nil {
+		return nil, err
+	}
+
+	return &wrapping.ResponseWrapInfo{
+		TTL:             time.Duration(i.TTL),
+		Token:           i.Token,
+		Accessor:        i.Accessor,
+		CreationTime:    t,
+		WrappedAccessor: i.WrappedAccessor,
+		WrappedEntityID: i.WrappedEntityId,
+		Format:          i.Format,
+		CreationPath:    i.CreationPath,
+		SealWrap:        i.SealWrap,
+	}, nil
+}
+
+func LogicalResponseWrapInfoToProtoResponseWrapInfo(i *wrapping.ResponseWrapInfo) (*ResponseWrapInfo, error) {
+	t, err := ptypes.TimestampProto(i.CreationTime)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResponseWrapInfo{
+		TTL:             int64(i.TTL),
+		Token:           i.Token,
+		Accessor:        i.Accessor,
+		CreationTime:    t,
+		WrappedAccessor: i.WrappedAccessor,
+		WrappedEntityId: i.WrappedEntityID,
+		Format:          i.Format,
+		CreationPath:    i.CreationPath,
+		SealWrap:        i.SealWrap,
 	}, nil
 }
 
@@ -235,13 +299,18 @@ func LogicalResponseToProtoResp(r *logical.Response) (*Response, error) {
 		return nil, err
 	}
 
+	wrapInfo, err := LogicalResponseWrapInfoToProtoResponseWrapInfo(r.WrapInfo)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Response{
 		Secret:   secret,
 		Auth:     auth,
 		Data:     buf,
 		Redirect: r.Redirect,
 		Warnings: r.Warnings,
-		//	WrapInfo: r.WrapInfo,
+		WrapInfo: wrapInfo,
 	}, nil
 }
 

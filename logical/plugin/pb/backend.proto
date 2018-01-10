@@ -90,7 +90,7 @@ message Request {
 	string mount_accessor = 14;
 
 	// WrapInfo contains requested response wrapping parameters
-//	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info" sentinel:""`
+	RequestWrapInfo wrap_info = 15;
 
 	// ClientTokenRemainingUses represents the allowed number of uses left on the
 	// token supplied
@@ -231,7 +231,55 @@ message Response {
 	repeated string warnings = 5;
 
 	// Information for wrapping the response in a cubbyhole
-	//WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
+	ResponseWrapInfo wrap_info = 6;
+}
+
+message ResponseWrapInfo {
+    // Setting to non-zero specifies that the response should be wrapped.
+	// Specifies the desired TTL of the wrapping token.
+	int64 TTL = 1;
+
+	// The token containing the wrapped response
+	string token = 2;
+
+	// The token accessor for the wrapped response token
+	string accessor = 3;
+
+	// The creation time. This can be used with the TTL to figure out an
+	// expected expiration.
+	google.protobuf.Timestamp creation_time = 4;
+
+	// If the contained response is the output of a token creation call, the
+	// created token's accessor will be accessible here
+	string wrapped_accessor = 5;
+
+	// WrappedEntityID is the entity identifier of the caller who initiated the
+	// wrapping request
+	string wrapped_entity_id = 6;
+
+	// The format to use. This doesn't get returned, it's only internal.
+	string format = 7;
+
+	// CreationPath is the original request path that was used to create
+	// the wrapped response.
+	string creation_path = 8;
+
+	// Controls seal wrapping behavior downstream for specific use cases
+	bool seal_wrap = 9;
+}
+
+message RequestWrapInfo {
+    // Setting to non-zero specifies that the response should be wrapped.
+	// Specifies the desired TTL of the wrapping token.
+	int64 TTL = 1;
+
+	// The format to use for the wrapped response; if not specified it's a bare
+	// token
+	string format = 2;
+
+	// A flag to conforming backends that data for a given request should be
+	// seal wrapped
+    bool seal_wrap = 3;
 }
 
 // HandleRequestArgs is the args for HandleRequest method.
