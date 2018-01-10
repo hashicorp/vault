@@ -18,6 +18,10 @@ func ErrToString(e error) string {
 }
 
 func LogicalStorageEntryToProtoStorageEntry(e *logical.StorageEntry) *StorageEntry {
+	if e == nil {
+		return nil
+	}
+
 	return &StorageEntry{
 		Key:      e.Key,
 		Value:    e.Value,
@@ -26,6 +30,10 @@ func LogicalStorageEntryToProtoStorageEntry(e *logical.StorageEntry) *StorageEnt
 }
 
 func ProtoStorageEntryToLogicalStorageEntry(e *StorageEntry) *logical.StorageEntry {
+	if e == nil {
+		return nil
+	}
+
 	return &logical.StorageEntry{
 		Key:      e.Key,
 		Value:    e.Value,
@@ -34,6 +42,10 @@ func ProtoStorageEntryToLogicalStorageEntry(e *StorageEntry) *logical.StorageEnt
 }
 
 func ProtoLeaseOptionsToLogicalLeaseOptions(l *LeaseOptions) (logical.LeaseOptions, error) {
+	if l == nil {
+		return logical.LeaseOptions{}, nil
+	}
+
 	t, err := ptypes.Timestamp(l.IssueTime)
 	return logical.LeaseOptions{
 		TTL:       time.Duration(l.TTL),
@@ -103,6 +115,10 @@ func LogicalSecretToProtoSecret(s *logical.Secret) (*Secret, error) {
 }
 
 func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
+	if r == nil {
+		return nil, nil
+	}
+
 	buf, err := json.Marshal(r.Data)
 	if err != nil {
 		return nil, err
@@ -148,6 +164,10 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 }
 
 func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
+	if r == nil {
+		return nil, nil
+	}
+
 	data := map[string]interface{}{}
 	err := json.Unmarshal(r.Data, &data)
 	if err != nil {
@@ -194,6 +214,10 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 }
 
 func LogicalRequestWrapInfoToProtoRequestWrapInfo(i *logical.RequestWrapInfo) *RequestWrapInfo {
+	if i == nil {
+		return nil
+	}
+
 	return &RequestWrapInfo{
 		TTL:      int64(i.TTL),
 		Format:   i.Format,
@@ -202,6 +226,10 @@ func LogicalRequestWrapInfoToProtoRequestWrapInfo(i *logical.RequestWrapInfo) *R
 }
 
 func ProtoRequestWrapInfoToLogicalRequestWrapInfo(i *RequestWrapInfo) *logical.RequestWrapInfo {
+	if i == nil {
+		return nil
+	}
+
 	return &logical.RequestWrapInfo{
 		TTL:      time.Duration(i.TTL),
 		Format:   i.Format,
@@ -246,6 +274,10 @@ func ProtoResponseToLogicalResponse(r *Response) (*logical.Response, error) {
 }
 
 func ProtoResponseWrapInfoToLogicalResponseWrapInfo(i *ResponseWrapInfo) (*wrapping.ResponseWrapInfo, error) {
+	if i == nil {
+		return nil, nil
+	}
+
 	t, err := ptypes.Timestamp(i.CreationTime)
 	if err != nil {
 		return nil, err
@@ -265,6 +297,10 @@ func ProtoResponseWrapInfoToLogicalResponseWrapInfo(i *ResponseWrapInfo) (*wrapp
 }
 
 func LogicalResponseWrapInfoToProtoResponseWrapInfo(i *wrapping.ResponseWrapInfo) (*ResponseWrapInfo, error) {
+	if i == nil {
+		return nil, nil
+	}
+
 	t, err := ptypes.TimestampProto(i.CreationTime)
 	if err != nil {
 		return nil, err
@@ -284,6 +320,10 @@ func LogicalResponseWrapInfoToProtoResponseWrapInfo(i *wrapping.ResponseWrapInfo
 }
 
 func LogicalResponseToProtoResp(r *logical.Response) (*Response, error) {
+	if r == nil {
+		return nil, nil
+	}
+
 	secret, err := LogicalSecretToProtoSecret(r.Secret)
 	if err != nil {
 		return nil, err
@@ -315,6 +355,10 @@ func LogicalResponseToProtoResp(r *logical.Response) (*Response, error) {
 }
 
 func LogicalAliasToProtoAlias(a *logical.Alias) *Alias {
+	if a == nil {
+		return nil
+	}
+
 	return &Alias{
 		MountType:     a.MountType,
 		MountAccessor: a.MountAccessor,
@@ -323,6 +367,10 @@ func LogicalAliasToProtoAlias(a *logical.Alias) *Alias {
 }
 
 func ProtoAliasToLogicalAlias(a *Alias) *logical.Alias {
+	if a == nil {
+		return nil
+	}
+
 	return &logical.Alias{
 		MountType:     a.MountType,
 		MountAccessor: a.MountAccessor,
