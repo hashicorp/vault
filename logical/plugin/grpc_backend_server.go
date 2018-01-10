@@ -25,7 +25,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 	// Dial for storage
 	brokeredClient, err := b.broker.Dial(args.BrokerId)
 	if err != nil {
-		return nil, err
+		return &pb.SetupReply{}, err
 	}
 	b.brokeredClient = brokeredClient
 	storage := newGRPCStorageClient(brokeredClient)
@@ -42,7 +42,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 	// to set b.backend
 	backend, err := b.factory(config)
 	if err != nil {
-		return nil, err
+		return &pb.SetupReply{}, err
 	}
 	b.backend = backend
 
@@ -51,24 +51,24 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 
 func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.HandleRequestArgs) (*pb.HandleRequestReply, error) {
 	if inMetadataMode() {
-		return nil, ErrServerInMetadataMode
+		return &pb.HandleRequestReply{}, ErrServerInMetadataMode
 	}
 
 	logicalReq, err := pb.ProtoRequestToLogicalRequest(args.Request)
 	if err != nil {
-		return nil, err
+		return &pb.HandleRequestReply{}, err
 	}
 
-	//	logicalReq.Storage = &StorageClient{client: b.storageClient}
+	logicalReq.Storage = newGRPCStorageClient(b.brokeredClient)
 
 	resp, err := b.backend.HandleRequest(ctx, logicalReq)
 	if err != nil {
-		return nil, err
+		return &pb.HandleRequestReply{}, err
 	}
 
 	pbResp, err := pb.LogicalResponseToProtoResp(resp)
 	if err != nil {
-		return nil, err
+		return &pb.HandleRequestReply{}, err
 	}
 
 	return &pb.HandleRequestReply{
@@ -91,20 +91,20 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 
 func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args *pb.HandleExistenceCheckArgs) (*pb.HandleExistenceCheckReply, error) {
 	if inMetadataMode() {
-		return nil, ErrServerInMetadataMode
+		return &pb.HandleExistenceCheckReply{}, ErrServerInMetadataMode
 	}
 
 	logicalReq, err := pb.ProtoRequestToLogicalRequest(args.Request)
 	if err != nil {
-		return nil, err
+		return &pb.HandleExistenceCheckReply{}, err
 	}
-	//	storage := &StorageClient{client: b.storageClient}
-	//	logicalReq.Storage = storage
+	logicalReq.Storage = newGRPCStorageClient(b.brokeredClient)
+
 	checkFound, exists, err := b.backend.HandleExistenceCheck(ctx, logicalReq)
 	return &pb.HandleExistenceCheckReply{
 		CheckFound: checkFound,
 		Exists:     exists,
-		Err:        err.Error(),
+		Err:        pb.ErrToString(err),
 	}, nil
 }
 
@@ -113,25 +113,25 @@ func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb
 
 	// Close rpc clients
 	b.brokeredClient.Close()
-	return nil, nil
+	return &pb.Empty{}, nil
 }
 
 func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Empty) (*pb.Empty, error) {
 	if inMetadataMode() {
-		return nil, ErrServerInMetadataMode
+		return &pb.Empty{}, ErrServerInMetadataMode
 	}
 
 	err := b.backend.Initialize()
-	return nil, err
+	return &pb.Empty{}, err
 }
 
 func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.InvalidateKeyArgs) (*pb.Empty, error) {
 	if inMetadataMode() {
-		return nil, ErrServerInMetadataMode
+		return &pb.Empty{}, ErrServerInMetadataMode
 	}
 
 	b.backend.InvalidateKey(args.Key)
-	return nil, nil
+	return &pb.Empty{}, nil
 }
 
 func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.TypeReply, error) {
@@ -142,9 +142,9 @@ func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.Ty
 
 func (b *backendGRPCPluginServer) RegisterLicense(ctx context.Context, _ *pb.RegisterLicenseArgs) (*pb.RegisterLicenseReply, error) {
 	if inMetadataMode() {
-		return nil, ErrServerInMetadataMode
+		return &pb.RegisterLicenseReply{}, ErrServerInMetadataMode
 	}
 
 	err := b.backend.RegisterLicense(struct{}{})
-	return nil, err
+	return &pb.RegisterLicenseReply{}, err
 }
