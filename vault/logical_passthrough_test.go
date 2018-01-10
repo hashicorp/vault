@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -28,7 +29,7 @@ func TestPassthroughBackend_Write(t *testing.T) {
 		req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 		req.Data["raw"] = "test"
 
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -66,14 +67,14 @@ func TestPassthroughBackend_Read(t *testing.T) {
 		req.Data[ttlType] = reqTTL
 		storage := req.Storage
 
-		if _, err := b.HandleRequest(req); err != nil {
+		if _, err := b.HandleRequest(context.Background(), req); err != nil {
 			t.Fatalf("err: %v", err)
 		}
 
 		req = logical.TestRequest(t, logical.ReadOperation, "foo")
 		req.Storage = storage
 
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -132,13 +133,13 @@ func TestPassthroughBackend_Delete(t *testing.T) {
 		req.Data["raw"] = "test"
 		storage := req.Storage
 
-		if _, err := b.HandleRequest(req); err != nil {
+		if _, err := b.HandleRequest(context.Background(), req); err != nil {
 			t.Fatalf("err: %v", err)
 		}
 
 		req = logical.TestRequest(t, logical.DeleteOperation, "foo")
 		req.Storage = storage
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -148,7 +149,7 @@ func TestPassthroughBackend_Delete(t *testing.T) {
 
 		req = logical.TestRequest(t, logical.ReadOperation, "foo")
 		req.Storage = storage
-		resp, err = b.HandleRequest(req)
+		resp, err = b.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -168,13 +169,13 @@ func TestPassthroughBackend_List(t *testing.T) {
 		req.Data["raw"] = "test"
 		storage := req.Storage
 
-		if _, err := b.HandleRequest(req); err != nil {
+		if _, err := b.HandleRequest(context.Background(), req); err != nil {
 			t.Fatalf("err: %v", err)
 		}
 
 		req = logical.TestRequest(t, logical.ListOperation, "")
 		req.Storage = storage
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -204,7 +205,7 @@ func TestPassthroughBackend_Revoke(t *testing.T) {
 			},
 		}
 
-		if _, err := b.HandleRequest(req); err != nil {
+		if _, err := b.HandleRequest(context.Background(), req); err != nil {
 			t.Fatalf("err: %v", err)
 		}
 	}

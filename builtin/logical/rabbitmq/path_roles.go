@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/fatih/structs"
@@ -66,7 +67,7 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 }
 
 // Deletes an existing role
-func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
@@ -76,7 +77,7 @@ func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (
 }
 
 // Reads an existing role
-func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
@@ -96,8 +97,7 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 }
 
 // Lists all the roles registered with the backend
-func (b *backend) pathRoleList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roles, err := req.Storage.List("role/")
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (b *backend) pathRoleList(
 }
 
 // Registers a new role with the backend
-func (b *backend) pathRoleUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil

@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"encoding/base64"
 	"strconv"
 	"strings"
@@ -31,7 +32,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 			"type": "ecdsa-p256",
 		},
 	}
-	_, err := b.HandleRequest(req)
+	_, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +89,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 
 	signRequest := func(req *logical.Request, errExpected bool, postpath string) string {
 		req.Path = "sign/foo" + postpath
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			t.Fatal(err)
 		}
@@ -114,7 +115,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	verifyRequest := func(req *logical.Request, errExpected bool, postpath, sig string) {
 		req.Path = "verify/foo" + postpath
 		req.Data["signature"] = sig
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			t.Fatalf("got error: %v, sig was %v", err, sig)
 		}
@@ -230,7 +231,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			"type": "ed25519",
 		},
 	}
-	_, err := b.HandleRequest(req)
+	_, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +246,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			"derived": true,
 		},
 	}
-	_, err = b.HandleRequest(req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +269,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		// Delete any key that exists in the request
 		delete(req.Data, "public_key")
 		req.Path = "sign/" + postpath
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			t.Fatal(err)
 		}
@@ -298,7 +299,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	verifyRequest := func(req *logical.Request, errExpected bool, postpath, sig string) {
 		req.Path = "verify/" + postpath
 		req.Data["signature"] = sig
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			t.Fatalf("got error: %v, sig was %v", err, sig)
 		}
@@ -334,7 +335,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 				Operation: logical.ReadOperation,
 				Path:      "keys/" + postpath,
 			}
-			keyReadResp, err := b.HandleRequest(keyReadReq)
+			keyReadResp, err := b.HandleRequest(context.Background(), keyReadReq)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -349,7 +350,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			keyReadReq.Data = map[string]interface{}{
 				"context": "abcd",
 			}
-			keyReadResp, err = b.HandleRequest(keyReadReq)
+			keyReadResp, err = b.HandleRequest(context.Background(), keyReadReq)
 			if err != nil {
 				t.Fatal(err)
 			}

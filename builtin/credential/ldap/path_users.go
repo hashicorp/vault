@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"context"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -70,8 +71,7 @@ func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathUserDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete("user/" + d.Get("name").(string))
 	if err != nil {
 		return nil, err
@@ -80,8 +80,7 @@ func (b *backend) pathUserDelete(
 	return nil, nil
 }
 
-func (b *backend) pathUserRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	user, err := b.User(req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
@@ -98,8 +97,7 @@ func (b *backend) pathUserRead(
 	}, nil
 }
 
-func (b *backend) pathUserWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	groups := strutil.RemoveDuplicates(strutil.ParseStringSlice(d.Get("groups").(string), ","), false)
 	policies := policyutil.ParsePolicies(d.Get("policies"))
@@ -122,8 +120,7 @@ func (b *backend) pathUserWrite(
 	return nil, nil
 }
 
-func (b *backend) pathUserList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	users, err := req.Storage.List("user/")
 	if err != nil {
 		return nil, err

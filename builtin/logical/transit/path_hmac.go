@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -63,8 +64,7 @@ to the min_encryption_version configured on the key.`,
 	}
 }
 
-func (b *backend) pathHMACWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
@@ -137,9 +137,7 @@ func (b *backend) pathHMACWrite(
 	return resp, nil
 }
 
-func (b *backend) pathHMACVerify(
-	req *logical.Request, d *framework.FieldData, verificationHMAC string) (*logical.Response, error) {
-
+func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *framework.FieldData, verificationHMAC string) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	inputB64 := d.Get("input").(string)
 	algorithm := d.Get("urlalgorithm").(string)

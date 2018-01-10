@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -49,7 +50,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		},
 		Storage: storage,
 	}
-	resp, err = b.HandleRequest(configReq)
+	resp, err = b.HandleRequest(context.Background(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -62,7 +63,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Path:    "groups/engineers",
 		Storage: storage,
 	}
-	resp, err = b.HandleRequest(groupReq)
+	resp, err = b.HandleRequest(context.Background(), groupReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -77,7 +78,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Storage: storage,
 	}
 
-	resp, err = b.HandleRequest(userReq)
+	resp, err = b.HandleRequest(context.Background(), userReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -91,7 +92,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Storage: storage,
 	}
 
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}

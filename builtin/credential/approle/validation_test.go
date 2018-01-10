@@ -1,6 +1,7 @@
 package approle
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -23,7 +24,7 @@ func TestAppRole_SecretIDNumUsesUpgrade(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -34,7 +35,7 @@ func TestAppRole_SecretIDNumUsesUpgrade(t *testing.T) {
 		Storage:   storage,
 	}
 
-	resp, err = b.HandleRequest(secretIDReq)
+	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -44,7 +45,7 @@ func TestAppRole_SecretIDNumUsesUpgrade(t *testing.T) {
 	secretIDReq.Data = map[string]interface{}{
 		"secret_id": resp.Data["secret_id"].(string),
 	}
-	resp, err = b.HandleRequest(secretIDReq)
+	resp, err = b.HandleRequest(context.Background(), secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}

@@ -1,15 +1,17 @@
 package gcpauth
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/vault-plugin-auth-gcp/plugin/util"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"strings"
-	"time"
 )
 
 const (
@@ -225,7 +227,7 @@ func pathsRole(b *GcpAuthBackend) []*framework.Path {
 	return paths
 }
 
-func (b *GcpAuthBackend) pathRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *GcpAuthBackend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	entry, err := b.role(req.Storage, data.Get("name").(string))
 	if err != nil {
 		return false, err
@@ -233,7 +235,7 @@ func (b *GcpAuthBackend) pathRoleExistenceCheck(req *logical.Request, data *fram
 	return entry != nil, nil
 }
 
-func (b *GcpAuthBackend) pathRoleDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse(errEmptyRoleName), nil
@@ -245,7 +247,7 @@ func (b *GcpAuthBackend) pathRoleDelete(req *logical.Request, data *framework.Fi
 	return nil, nil
 }
 
-func (b *GcpAuthBackend) pathRoleRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse(errEmptyRoleName), nil
@@ -289,7 +291,7 @@ func (b *GcpAuthBackend) pathRoleRead(req *logical.Request, data *framework.Fiel
 	}, nil
 }
 
-func (b *GcpAuthBackend) pathRoleCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(data.Get("name").(string))
 	if name == "" {
 		return logical.ErrorResponse(errEmptyRoleName), nil
@@ -309,7 +311,7 @@ func (b *GcpAuthBackend) pathRoleCreateUpdate(req *logical.Request, data *framew
 	return b.storeRole(req.Storage, name, role)
 }
 
-func (b *GcpAuthBackend) pathRoleList(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roles, err := req.Storage.List("role/")
 	if err != nil {
 		return nil, err
@@ -328,7 +330,7 @@ the authorization token for the instance can access.
 const pathListRolesHelpSyn = `Lists all the roles that are registered with Vault.`
 const pathListRolesHelpDesc = `Lists all roles under the GCP backends by name.`
 
-func (b *GcpAuthBackend) pathRoleEditIamServiceAccounts(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathRoleEditIamServiceAccounts(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse(errEmptyRoleName), nil
@@ -378,7 +380,7 @@ func editStringValues(initial []string, toAdd []string, toRemove []string) []str
 	return updated
 }
 
-func (b *GcpAuthBackend) pathRoleEditGceLabels(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathRoleEditGceLabels(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse(errEmptyRoleName), nil

@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -22,7 +23,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 
 	// make sure we start with empty roles, which gives us confidence that the read later
 	// actually is the two roles we created
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config/client",
 		Storage:   storage,
@@ -44,7 +45,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		"sts_endpoint":               "https://my-custom-sts-endpoint.example.com",
 		"iam_server_id_header_value": "vault_server_identification_314159",
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "config/client",
 		Data:      data,
@@ -58,7 +59,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		t.Fatal("failed to create the client config entry")
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config/client",
 		Storage:   storage,
@@ -77,7 +78,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 	data = map[string]interface{}{
 		"iam_server_id_header_value": "vault_server_identification_2718281",
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/client",
 		Data:      data,
@@ -91,7 +92,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		t.Fatal("failed to update the client config entry")
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config/client",
 		Storage:   storage,

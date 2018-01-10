@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"net/rpc"
 
 	"github.com/hashicorp/vault/logical"
@@ -26,7 +27,6 @@ func errorPaths(b *backend) []*framework.Path {
 	}
 }
 
-func (b *backend) pathErrorRPCRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathErrorRPCRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return nil, rpc.ErrShutdown
 }

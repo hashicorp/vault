@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -36,7 +37,7 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathLookupEntityUpdate,
+				logical.UpdateOperation: i.pathLookupEntityUpdate(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(lookupHelp["lookup-entity"][0]),
@@ -67,7 +68,7 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathLookupGroupUpdate,
+				logical.UpdateOperation: i.pathLookupGroupUpdate(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(lookupHelp["lookup-group"][0]),
@@ -76,222 +77,226 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 	}
 }
 
-func (i *IdentityStore) pathLookupEntityUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var entity *identity.Entity
-	var err error
+func (i *IdentityStore) pathLookupEntityUpdate() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		var entity *identity.Entity
+		var err error
 
-	inputCount := 0
+		inputCount := 0
 
-	id := ""
-	idRaw, ok := d.GetOk("id")
-	if ok {
-		inputCount++
-		id = idRaw.(string)
-	}
+		id := ""
+		idRaw, ok := d.GetOk("id")
+		if ok {
+			inputCount++
+			id = idRaw.(string)
+		}
 
-	name := ""
-	nameRaw, ok := d.GetOk("name")
-	if ok {
-		inputCount++
-		name = nameRaw.(string)
-	}
+		name := ""
+		nameRaw, ok := d.GetOk("name")
+		if ok {
+			inputCount++
+			name = nameRaw.(string)
+		}
 
-	aliasID := ""
-	aliasIDRaw, ok := d.GetOk("alias_id")
-	if ok {
-		inputCount++
-		aliasID = aliasIDRaw.(string)
-	}
+		aliasID := ""
+		aliasIDRaw, ok := d.GetOk("alias_id")
+		if ok {
+			inputCount++
+			aliasID = aliasIDRaw.(string)
+		}
 
-	aliasName := ""
-	aliasNameRaw, ok := d.GetOk("alias_name")
-	if ok {
-		inputCount++
-		aliasName = aliasNameRaw.(string)
-	}
+		aliasName := ""
+		aliasNameRaw, ok := d.GetOk("alias_name")
+		if ok {
+			inputCount++
+			aliasName = aliasNameRaw.(string)
+		}
 
-	aliasMountAccessor := ""
-	aliasMountAccessorRaw, ok := d.GetOk("alias_mount_accessor")
-	if ok {
-		inputCount++
-		aliasMountAccessor = aliasMountAccessorRaw.(string)
-	}
+		aliasMountAccessor := ""
+		aliasMountAccessorRaw, ok := d.GetOk("alias_mount_accessor")
+		if ok {
+			inputCount++
+			aliasMountAccessor = aliasMountAccessorRaw.(string)
+		}
 
-	switch {
-	case inputCount == 0:
-		return logical.ErrorResponse(fmt.Sprintf("query parameter not supplied")), nil
-
-	case inputCount != 1:
 		switch {
-		case inputCount == 2 && aliasName != "" && aliasMountAccessor != "":
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("query parameter conflict; please supply distinct set of query parameters")), nil
+		case inputCount == 0:
+			return logical.ErrorResponse(fmt.Sprintf("query parameter not supplied")), nil
+
+		case inputCount != 1:
+			switch {
+			case inputCount == 2 && aliasName != "" && aliasMountAccessor != "":
+			default:
+				return logical.ErrorResponse(fmt.Sprintf("query parameter conflict; please supply distinct set of query parameters")), nil
+			}
+
+		case inputCount == 1:
+			switch {
+			case aliasName != "" || aliasMountAccessor != "":
+				return logical.ErrorResponse(fmt.Sprintf("both 'alias_name' and 'alias_mount_accessor' needs to be set")), nil
+			}
 		}
 
-	case inputCount == 1:
 		switch {
-		case aliasName != "" || aliasMountAccessor != "":
-			return logical.ErrorResponse(fmt.Sprintf("both 'alias_name' and 'alias_mount_accessor' needs to be set")), nil
+		case id != "":
+			entity, err = i.MemDBEntityByID(id, false)
+			if err != nil {
+				return nil, err
+			}
+
+		case name != "":
+			entity, err = i.MemDBEntityByName(name, false)
+			if err != nil {
+				return nil, err
+			}
+
+		case aliasID != "":
+			alias, err := i.MemDBAliasByID(aliasID, false, false)
+			if err != nil {
+				return nil, err
+			}
+
+			if alias == nil {
+				break
+			}
+
+			entity, err = i.MemDBEntityByAliasID(alias.ID, false)
+			if err != nil {
+				return nil, err
+			}
+
+		case aliasName != "" && aliasMountAccessor != "":
+			alias, err := i.MemDBAliasByFactors(aliasMountAccessor, aliasName, false, false)
+			if err != nil {
+				return nil, err
+			}
+
+			if alias == nil {
+				break
+			}
+
+			entity, err = i.MemDBEntityByAliasID(alias.ID, false)
+			if err != nil {
+				return nil, err
+			}
 		}
+
+		if entity == nil {
+			return nil, nil
+		}
+
+		return i.handleEntityReadCommon(entity)
 	}
-
-	switch {
-	case id != "":
-		entity, err = i.MemDBEntityByID(id, false)
-		if err != nil {
-			return nil, err
-		}
-
-	case name != "":
-		entity, err = i.MemDBEntityByName(name, false)
-		if err != nil {
-			return nil, err
-		}
-
-	case aliasID != "":
-		alias, err := i.MemDBAliasByID(aliasID, false, false)
-		if err != nil {
-			return nil, err
-		}
-
-		if alias == nil {
-			break
-		}
-
-		entity, err = i.MemDBEntityByAliasID(alias.ID, false)
-		if err != nil {
-			return nil, err
-		}
-
-	case aliasName != "" && aliasMountAccessor != "":
-		alias, err := i.MemDBAliasByFactors(aliasMountAccessor, aliasName, false, false)
-		if err != nil {
-			return nil, err
-		}
-
-		if alias == nil {
-			break
-		}
-
-		entity, err = i.MemDBEntityByAliasID(alias.ID, false)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if entity == nil {
-		return nil, nil
-	}
-
-	return i.handleEntityReadCommon(entity)
 }
 
-func (i *IdentityStore) pathLookupGroupUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var group *identity.Group
-	var err error
+func (i *IdentityStore) pathLookupGroupUpdate() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		var group *identity.Group
+		var err error
 
-	inputCount := 0
+		inputCount := 0
 
-	id := ""
-	idRaw, ok := d.GetOk("id")
-	if ok {
-		inputCount++
-		id = idRaw.(string)
-	}
+		id := ""
+		idRaw, ok := d.GetOk("id")
+		if ok {
+			inputCount++
+			id = idRaw.(string)
+		}
 
-	name := ""
-	nameRaw, ok := d.GetOk("name")
-	if ok {
-		inputCount++
-		name = nameRaw.(string)
-	}
+		name := ""
+		nameRaw, ok := d.GetOk("name")
+		if ok {
+			inputCount++
+			name = nameRaw.(string)
+		}
 
-	aliasID := ""
-	aliasIDRaw, ok := d.GetOk("alias_id")
-	if ok {
-		inputCount++
-		aliasID = aliasIDRaw.(string)
-	}
+		aliasID := ""
+		aliasIDRaw, ok := d.GetOk("alias_id")
+		if ok {
+			inputCount++
+			aliasID = aliasIDRaw.(string)
+		}
 
-	aliasName := ""
-	aliasNameRaw, ok := d.GetOk("alias_name")
-	if ok {
-		inputCount++
-		aliasName = aliasNameRaw.(string)
-	}
+		aliasName := ""
+		aliasNameRaw, ok := d.GetOk("alias_name")
+		if ok {
+			inputCount++
+			aliasName = aliasNameRaw.(string)
+		}
 
-	aliasMountAccessor := ""
-	aliasMountAccessorRaw, ok := d.GetOk("alias_mount_accessor")
-	if ok {
-		inputCount++
-		aliasMountAccessor = aliasMountAccessorRaw.(string)
-	}
+		aliasMountAccessor := ""
+		aliasMountAccessorRaw, ok := d.GetOk("alias_mount_accessor")
+		if ok {
+			inputCount++
+			aliasMountAccessor = aliasMountAccessorRaw.(string)
+		}
 
-	switch {
-	case inputCount == 0:
-		return logical.ErrorResponse(fmt.Sprintf("query parameter not supplied")), nil
-
-	case inputCount != 1:
 		switch {
-		case inputCount == 2 && aliasName != "" && aliasMountAccessor != "":
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("query parameter conflict; please supply distinct set of query parameters")), nil
+		case inputCount == 0:
+			return logical.ErrorResponse(fmt.Sprintf("query parameter not supplied")), nil
+
+		case inputCount != 1:
+			switch {
+			case inputCount == 2 && aliasName != "" && aliasMountAccessor != "":
+			default:
+				return logical.ErrorResponse(fmt.Sprintf("query parameter conflict; please supply distinct set of query parameters")), nil
+			}
+
+		case inputCount == 1:
+			switch {
+			case aliasName != "" || aliasMountAccessor != "":
+				return logical.ErrorResponse(fmt.Sprintf("both 'alias_name' and 'alias_mount_accessor' needs to be set")), nil
+			}
 		}
 
-	case inputCount == 1:
 		switch {
-		case aliasName != "" || aliasMountAccessor != "":
-			return logical.ErrorResponse(fmt.Sprintf("both 'alias_name' and 'alias_mount_accessor' needs to be set")), nil
+		case id != "":
+			group, err = i.MemDBGroupByID(id, false)
+			if err != nil {
+				return nil, err
+			}
+		case name != "":
+			group, err = i.MemDBGroupByName(name, false)
+			if err != nil {
+				return nil, err
+			}
+		case aliasID != "":
+			alias, err := i.MemDBAliasByID(aliasID, false, true)
+			if err != nil {
+				return nil, err
+			}
+
+			if alias == nil {
+				break
+			}
+
+			group, err = i.MemDBGroupByAliasID(alias.ID, false)
+			if err != nil {
+				return nil, err
+			}
+
+		case aliasName != "" && aliasMountAccessor != "":
+			alias, err := i.MemDBAliasByFactors(aliasMountAccessor, aliasName, false, true)
+			if err != nil {
+				return nil, err
+			}
+
+			if alias == nil {
+				break
+			}
+
+			group, err = i.MemDBGroupByAliasID(alias.ID, false)
+			if err != nil {
+				return nil, err
+			}
 		}
+
+		if group == nil {
+			return nil, nil
+		}
+
+		return i.handleGroupReadCommon(group)
 	}
-
-	switch {
-	case id != "":
-		group, err = i.MemDBGroupByID(id, false)
-		if err != nil {
-			return nil, err
-		}
-	case name != "":
-		group, err = i.MemDBGroupByName(name, false)
-		if err != nil {
-			return nil, err
-		}
-	case aliasID != "":
-		alias, err := i.MemDBAliasByID(aliasID, false, true)
-		if err != nil {
-			return nil, err
-		}
-
-		if alias == nil {
-			break
-		}
-
-		group, err = i.MemDBGroupByAliasID(alias.ID, false)
-		if err != nil {
-			return nil, err
-		}
-
-	case aliasName != "" && aliasMountAccessor != "":
-		alias, err := i.MemDBAliasByFactors(aliasMountAccessor, aliasName, false, true)
-		if err != nil {
-			return nil, err
-		}
-
-		if alias == nil {
-			break
-		}
-
-		group, err = i.MemDBGroupByAliasID(alias.ID, false)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if group == nil {
-		return nil, nil
-	}
-
-	return i.handleGroupReadCommon(group)
 }
 
 var lookupHelp = map[string][2]string{

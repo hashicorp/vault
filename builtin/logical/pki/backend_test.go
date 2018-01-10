@@ -2,6 +2,7 @@ package pki
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -1903,7 +1904,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		"ttl":         "6h",
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -1922,7 +1923,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/urls",
 		Storage:   storage,
@@ -1942,7 +1943,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		"max_ttl":          "4h",
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test-example",
 		Storage:   storage,
@@ -1961,7 +1962,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		certData := map[string]interface{}{
 			"common_name": "example.test.com",
 		}
-		resp, err = b.HandleRequest(&logical.Request{
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      "issue/test-example",
 			Storage:   storage,
@@ -1978,7 +1979,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	}
 
 	// list certs
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "certs",
 		Storage:   storage,
@@ -1995,7 +1996,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	}
 
 	// list certs/
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "certs/",
 		Storage:   storage,
@@ -2030,7 +2031,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		"ttl":         "172800",
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -2068,7 +2069,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		t.Fatal("pem csr is empty")
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim",
 		Storage:   storage,
@@ -2091,7 +2092,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		"ttl":     "4h",
 		"max_ttl": "8h",
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test",
 		Storage:   storage,
@@ -2103,7 +2104,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
@@ -2121,7 +2122,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if resp.Secret != nil {
 		t.Fatal("got a lease when we should not have")
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
@@ -2162,7 +2163,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		"max_ttl":        "8h",
 		"generate_lease": true,
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test",
 		Storage:   storage,
@@ -2174,7 +2175,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
@@ -2574,7 +2575,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		"ttl":         "172800",
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -2618,7 +2619,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	}
 
 	ss, _ := getSelfSigned(template, template)
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
@@ -2648,7 +2649,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		BasicConstraintsValid: true,
 	}
 	ss, ssCert := getSelfSigned(template, issuer)
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
@@ -2667,7 +2668,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	}
 
 	ss, ssCert = getSelfSigned(template, template)
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,

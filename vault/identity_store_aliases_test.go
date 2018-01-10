@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -18,7 +19,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "entity",
 	}
-	resp, err = is.HandleRequest(entityReq)
+	resp, err = is.HandleRequest(context.Background(), entityReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -37,14 +38,14 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 		Path:      "entity-alias",
 		Data:      aliasData,
 	}
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	aliasData["name"] = "entityalias"
 	aliasData["entity_id"] = entityID
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -53,7 +54,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 		Operation: logical.ListOperation,
 		Path:      "entity-alias/id",
 	}
-	resp, err = is.HandleRequest(listReq)
+	resp, err = is.HandleRequest(context.Background(), listReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -83,13 +84,13 @@ func TestIdentityStore_AliasSameAliasNames(t *testing.T) {
 	}
 
 	// Register an alias
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	// Register another alias with same name
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +291,7 @@ func TestIdentityStore_AliasRegister(t *testing.T) {
 	}
 
 	// Register the alias
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -334,7 +335,7 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 	}
 
 	// This will create an alias and a corresponding entity
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -348,13 +349,13 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 
 	aliasReq.Data = updateData
 	aliasReq.Path = "entity-alias/id/" + aliasID
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	aliasReq.Operation = logical.ReadOperation
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -386,7 +387,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 	}
 
 	// Try to update an non-existent alias
-	resp, err = is.HandleRequest(updateReq)
+	resp, err = is.HandleRequest(context.Background(), updateReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -406,7 +407,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 		Data:      registerData,
 	}
 
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -421,7 +422,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 	}
 
 	updateReq.Path = "entity-alias/id/" + id
-	resp, err = is.HandleRequest(updateReq)
+	resp, err = is.HandleRequest(context.Background(), updateReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -430,7 +431,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Path:      updateReq.Path,
 	}
-	resp, err = is.HandleRequest(readReq)
+	resp, err = is.HandleRequest(context.Background(), readReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -445,7 +446,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 
 	delete(registerReq.Data, "name")
 
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -456,7 +457,7 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 	registerReq.Data["name"] = "testaliasname"
 	delete(registerReq.Data, "mount_accessor")
 
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -483,7 +484,7 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 		Data:      registerData,
 	}
 
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -502,7 +503,7 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Path:      "entity-alias/id/" + id,
 	}
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -515,13 +516,13 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 	}
 
 	aliasReq.Operation = logical.DeleteOperation
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	aliasReq.Operation = logical.ReadOperation
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}

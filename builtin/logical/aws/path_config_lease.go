@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -51,8 +52,7 @@ func (b *backend) Lease(s logical.Storage) (*configLease, error) {
 	return &result, nil
 }
 
-func (b *backend) pathLeaseWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	leaseRaw := d.Get("lease").(string)
 	leaseMaxRaw := d.Get("lease_max").(string)
 
@@ -89,8 +89,7 @@ func (b *backend) pathLeaseWrite(
 	return nil, nil
 }
 
-func (b *backend) pathLeaseRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	lease, err := b.Lease(req.Storage)
 
 	if err != nil {

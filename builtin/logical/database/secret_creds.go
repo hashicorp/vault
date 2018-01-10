@@ -21,7 +21,7 @@ func secretCreds(b *databaseBackend) *framework.Secret {
 }
 
 func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		// Get the username from the internal data
 		usernameRaw, ok := req.Secret.InternalData["username"]
 		if !ok {
@@ -43,7 +43,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		}
 
 		f := framework.LeaseExtend(role.DefaultTTL, role.MaxTTL, b.System())
-		resp, err := f(req, data)
+		resp, err := f(ctx, req, data)
 		if err != nil {
 			return nil, err
 		}
@@ -61,7 +61,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			unlockFunc = b.Unlock
 
 			// Create a new DB object
-			db, err = b.createDBObj(context.TODO(), req.Storage, role.DBName)
+			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
 				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
@@ -70,7 +70,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
 		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
-			err := db.RenewUser(context.TODO(), role.Statements, username, expireTime)
+			err := db.RenewUser(ctx, role.Statements, username, expireTime)
 			// Unlock
 			unlockFunc()
 			if err != nil {
@@ -84,7 +84,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 }
 
 func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		// Get the username from the internal data
 		usernameRaw, ok := req.Secret.InternalData["username"]
 		if !ok {
@@ -120,14 +120,14 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			unlockFunc = b.Unlock
 
 			// Create a new DB object
-			db, err = b.createDBObj(context.TODO(), req.Storage, role.DBName)
+			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
 				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
 			}
 		}
 
-		err = db.RevokeUser(context.TODO(), role.Statements, username)
+		err = db.RevokeUser(ctx, role.Statements, username)
 		// Unlock
 		unlockFunc()
 		if err != nil {

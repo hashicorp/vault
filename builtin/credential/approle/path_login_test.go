@@ -1,6 +1,7 @@
 package approle
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -17,7 +18,7 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Path:      "role/role1/role-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(roleRoleIDReq)
+	resp, err = b.HandleRequest(context.Background(), roleRoleIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -28,7 +29,7 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Path:      "role/role1/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(roleSecretIDReq)
+	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -47,7 +48,7 @@ func TestAppRole_RoleLogin(t *testing.T) {
 			RemoteAddr: "127.0.0.1",
 		},
 	}
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}

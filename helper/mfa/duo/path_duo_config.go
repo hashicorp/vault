@@ -1,6 +1,7 @@
 package duo
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -51,8 +52,7 @@ func GetDuoConfig(req *logical.Request) (*DuoConfig, error) {
 	return &result, nil
 }
 
-func pathDuoConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func pathDuoConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username_format := d.Get("username_format").(string)
 	if username_format == "" {
 		username_format = "%s"
@@ -76,9 +76,7 @@ func pathDuoConfigWrite(
 	return nil, nil
 }
 
-func pathDuoConfigRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func pathDuoConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	config, err := GetDuoConfig(req)
 	if err != nil {
 		return nil, err

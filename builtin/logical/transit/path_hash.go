@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -55,8 +56,7 @@ Defaults to "sha2-256".`,
 	}
 }
 
-func (b *backend) pathHashWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathHashWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	inputB64 := d.Get("input").(string)
 	format := d.Get("format").(string)
 	algorithm := d.Get("urlalgorithm").(string)

@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/fatih/structs"
@@ -43,7 +44,7 @@ expiration, before it is removed from the backend storage.`,
 	}
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	entry, err := b.lockedConfigTidyIdentities(req.Storage)
 	if err != nil {
 		return false, err
@@ -74,7 +75,7 @@ func (b *backend) nonLockedConfigTidyIdentities(s logical.Storage) (*tidyWhiteli
 	return &result, nil
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -112,7 +113,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(req *logical.Reque
 	return nil, nil
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	clientConfig, err := b.lockedConfigTidyIdentities(req.Storage)
 	if err != nil {
 		return nil, err
@@ -126,7 +127,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistRead(req *logical.Request, data
 	}, nil
 }
 
-func (b *backend) pathConfigTidyIdentityWhitelistDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyIdentityWhitelistDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 

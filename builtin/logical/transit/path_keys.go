@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/base64"
@@ -106,8 +107,7 @@ return the public key for the given context.`,
 	}
 }
 
-func (b *backend) pathKeysList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entries, err := req.Storage.List("policy/")
 	if err != nil {
 		return nil, err
@@ -116,8 +116,7 @@ func (b *backend) pathKeysList(
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathPolicyWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
@@ -178,8 +177,7 @@ type asymKey struct {
 	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
-func (b *backend) pathPolicyRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
@@ -308,8 +306,7 @@ func (b *backend) pathPolicyRead(
 	return resp, nil
 }
 
-func (b *backend) pathPolicyDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	// Delete does its own locking

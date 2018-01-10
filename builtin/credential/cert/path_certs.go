@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 	"strings"
@@ -116,8 +117,7 @@ func (b *backend) Cert(s logical.Storage, n string) (*CertEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathCertDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete("cert/" + strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
@@ -125,8 +125,7 @@ func (b *backend) pathCertDelete(
 	return nil, nil
 }
 
-func (b *backend) pathCertList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCertList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	certs, err := req.Storage.List("cert/")
 	if err != nil {
 		return nil, err
@@ -134,8 +133,7 @@ func (b *backend) pathCertList(
 	return logical.ListResponse(certs), nil
 }
 
-func (b *backend) pathCertRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	cert, err := b.Cert(req.Storage, strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
@@ -156,8 +154,7 @@ func (b *backend) pathCertRead(
 	}, nil
 }
 
-func (b *backend) pathCertWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
 	certificate := d.Get("certificate").(string)
 	displayName := d.Get("display_name").(string)

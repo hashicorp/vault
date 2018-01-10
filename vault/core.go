@@ -438,7 +438,7 @@ type CoreConfig struct {
 func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		if conf.RedirectAddr == "" {
-			return nil, fmt.Errorf("missing redirect address")
+			return nil, fmt.Errorf("missing API address, please set in configuration or via environment")
 		}
 	}
 
@@ -756,7 +756,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 	return acl, te, entity, nil
 }
 
-func (c *Core) checkToken(req *logical.Request, unauth bool) (*logical.Auth, *TokenEntry, error) {
+func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
 	var acl *ACL
@@ -790,7 +790,7 @@ func (c *Core) checkToken(req *logical.Request, unauth bool) (*logical.Auth, *To
 	// whether a particular resource exists. Then we can mark it as an update
 	// or creation as appropriate.
 	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
-		checkExists, resourceExists, err := c.router.RouteExistenceCheck(req)
+		checkExists, resourceExists, err := c.router.RouteExistenceCheck(ctx, req)
 		switch err {
 		case logical.ErrUnsupportedPath:
 			// fail later via bad path to avoid confusing items in the log
@@ -2141,4 +2141,9 @@ func (c *Core) PhysicalAccess() *physical.PhysicalAccess {
 
 func (c *Core) RouterAccess() *RouterAccess {
 	return NewRouterAccess(c)
+}
+
+// IsDRSecondary returns if the current cluster state is a DR secondary.
+func (c *Core) IsDRSecondary() bool {
+	return c.ReplicationState().HasState(consts.ReplicationDRSecondary)
 }

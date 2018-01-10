@@ -1,6 +1,7 @@
 package approle
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -88,12 +89,11 @@ func (b *backend) tidySecretID(s logical.Storage) error {
 }
 
 // pathTidySecretIDUpdate is used to delete the expired SecretID entries
-func (b *backend) pathTidySecretIDUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathTidySecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return nil, b.tidySecretID(req.Storage)
 }
 
 const pathTidySecretIDSyn = "Trigger the clean-up of expired SecretID entries."
-const pathTidySecretIDDesc = `SecretIDs will have expiratin time attached to them. The periodic function
+const pathTidySecretIDDesc = `SecretIDs will have expiration time attached to them. The periodic function
 of the backend will look for expired entries and delete them. This happens once in a minute. Invoking
 this endpoint will trigger the clean-up action, without waiting for the backend's periodic function.`

@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/certutil"
@@ -29,8 +30,7 @@ secret key and certificate.`,
 	}
 }
 
-func (b *backend) pathCAWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCAWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	pemBundle := data.Get("pem_bundle").(string)
 
 	parsedBundle, err := certutil.ParsePEMBundle(pemBundle)

@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -109,20 +110,20 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	}
 
 	// Auto-generate the keys
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}
 
 	// Fail to overwrite it
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
 
 	caReq.Operation = logical.DeleteOperation
 	// Delete the configured keys
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}
@@ -134,20 +135,20 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	}
 
 	// Successfully create a new one
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}
 
 	// Fail to overwrite it
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
 
 	caReq.Operation = logical.DeleteOperation
 	// Delete the configured keys
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}
@@ -156,7 +157,7 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	caReq.Data = nil
 
 	// Successfully create a new one
-	resp, err = b.HandleRequest(caReq)
+	resp, err = b.HandleRequest(context.Background(), caReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v, resp:%v", err, resp)
 	}

@@ -1,6 +1,8 @@
 package awsauth
 
 import (
+	"context"
+
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -63,9 +65,7 @@ func pathConfigClient(b *backend) *framework.Path {
 
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
-func (b *backend) pathConfigClientExistenceCheck(
-	req *logical.Request, data *framework.FieldData) (bool, error) {
-
+func (b *backend) pathConfigClientExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	entry, err := b.lockedClientConfigEntry(req.Storage)
 	if err != nil {
 		return false, err
@@ -98,8 +98,7 @@ func (b *backend) nonLockedClientConfigEntry(s logical.Storage) (*clientConfig, 
 	return &result, nil
 }
 
-func (b *backend) pathConfigClientRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	clientConfig, err := b.lockedClientConfigEntry(req.Storage)
 	if err != nil {
 		return nil, err
@@ -114,8 +113,7 @@ func (b *backend) pathConfigClientRead(
 	}, nil
 }
 
-func (b *backend) pathConfigClientDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigClientDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -137,8 +135,7 @@ func (b *backend) pathConfigClientDelete(
 
 // pathConfigClientCreateUpdate is used to register the 'aws_secret_key' and 'aws_access_key'
 // that can be used to interact with AWS EC2 API.
-func (b *backend) pathConfigClientCreateUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 

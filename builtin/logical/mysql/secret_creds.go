@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -41,8 +42,7 @@ func secretCreds(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretCredsRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the lease information
 	lease, err := b.Lease(req.Storage)
 	if err != nil {
@@ -53,11 +53,10 @@ func (b *backend) secretCredsRenew(
 	}
 
 	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	return f(req, d)
+	return f(ctx, req, d)
 }
 
-func (b *backend) secretCredsRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var resp *logical.Response
 
 	// Get the username from the internal data

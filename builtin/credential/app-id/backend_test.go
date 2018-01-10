@@ -1,6 +1,7 @@
 package appId
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -41,7 +42,7 @@ func TestBackend_basic(t *testing.T) {
 		Operation: logical.ListOperation,
 		Storage:   storage,
 	}
-	resp, err := b.HandleRequest(req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}

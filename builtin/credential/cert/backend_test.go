@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -324,7 +325,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 		Data:      certData,
 	}
 
-	resp, err = b.HandleRequest(certReq)
+	resp, err = b.HandleRequest(context.Background(), certReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -345,7 +346,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	}
 
 	// Login when the certificate is still valid. Login should succeed.
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -354,7 +355,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	// Login attempt after certificate expiry should fail
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err == nil {
 		t.Fatalf("expected error due to expired certificate")
 	}
@@ -389,7 +390,7 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 		Data:      certData,
 	}
 
-	resp, err := b.HandleRequest(certReq)
+	resp, err := b.HandleRequest(context.Background(), certReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -409,7 +410,7 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 		},
 	}
 	// Login should succeed.
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -428,13 +429,13 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 		Path:      "crls/issuedcrl",
 		Data:      crlData,
 	}
-	resp, err = b.HandleRequest(crlReq)
+	resp, err = b.HandleRequest(context.Background(), crlReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	// Attempt login with the same connection state but with the CRL registered
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -472,7 +473,7 @@ func TestBackend_CRLs(t *testing.T) {
 		Data:      certData,
 	}
 
-	resp, err := b.HandleRequest(certReq)
+	resp, err := b.HandleRequest(context.Background(), certReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -491,7 +492,7 @@ func TestBackend_CRLs(t *testing.T) {
 			ConnState: &connState,
 		},
 	}
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -505,7 +506,7 @@ func TestBackend_CRLs(t *testing.T) {
 	loginReq.Connection.ConnState = &connState
 
 	// Attempt login with the updated connection
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -525,13 +526,13 @@ func TestBackend_CRLs(t *testing.T) {
 		Path:      "crls/issuedcrl",
 		Data:      crlData,
 	}
-	resp, err = b.HandleRequest(crlReq)
+	resp, err = b.HandleRequest(context.Background(), crlReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	// Attempt login with the revoked certificate.
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -545,7 +546,7 @@ func TestBackend_CRLs(t *testing.T) {
 		t.Fatal(err)
 	}
 	certData["certificate"] = clientCA2
-	resp, err = b.HandleRequest(certReq)
+	resp, err = b.HandleRequest(context.Background(), certReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -558,7 +559,7 @@ func TestBackend_CRLs(t *testing.T) {
 	loginReq.Connection.ConnState = &connState
 
 	// Attempt login with the updated connection
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -569,13 +570,13 @@ func TestBackend_CRLs(t *testing.T) {
 		t.Fatal(err)
 	}
 	crlData["crl"] = rootCRL
-	resp, err = b.HandleRequest(crlReq)
+	resp, err = b.HandleRequest(context.Background(), crlReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	// Attempt login with the same connection state but with the CRL registered
-	resp, err = b.HandleRequest(loginReq)
+	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1173,7 +1174,7 @@ func Test_Renew(t *testing.T) {
 		Schema: pathCerts(b).Fields,
 	}
 
-	resp, err := b.pathCertWrite(req, fd)
+	resp, err := b.pathCertWrite(context.Background(), req, fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1182,7 +1183,7 @@ func Test_Renew(t *testing.T) {
 		Raw:    map[string]interface{}{},
 		Schema: pathLogin(b).Fields,
 	}
-	resp, err = b.pathLogin(req, empty_login_fd)
+	resp, err = b.pathLogin(context.Background(), req, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1196,7 +1197,7 @@ func Test_Renew(t *testing.T) {
 	req.Auth.IssueTime = time.Now()
 
 	// Normal renewal
-	resp, err = b.pathLoginRenew(req, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), req, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1209,24 +1210,24 @@ func Test_Renew(t *testing.T) {
 
 	// Change the policies -- this should fail
 	fd.Raw["policies"] = "zip,zap"
-	resp, err = b.pathCertWrite(req, fd)
+	resp, err = b.pathCertWrite(context.Background(), req, fd)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err = b.pathLoginRenew(req, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), req, empty_login_fd)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
 	// Put the policies back, this shold be okay
 	fd.Raw["policies"] = "bar,foo"
-	resp, err = b.pathCertWrite(req, fd)
+	resp, err = b.pathCertWrite(context.Background(), req, fd)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err = b.pathLoginRenew(req, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), req, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1238,12 +1239,12 @@ func Test_Renew(t *testing.T) {
 	}
 
 	// Delete CA, make sure we can't renew
-	resp, err = b.pathCertDelete(req, fd)
+	resp, err = b.pathCertDelete(context.Background(), req, fd)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	resp, err = b.pathLoginRenew(req, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), req, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
 	}

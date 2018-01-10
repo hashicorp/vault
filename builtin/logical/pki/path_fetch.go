@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"encoding/pem"
 	"fmt"
 
@@ -101,7 +102,7 @@ func pathFetchListCerts(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathFetchCertList(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
+func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	entries, err := req.Storage.List("certs/")
 	if err != nil {
 		return nil, err
@@ -110,7 +111,7 @@ func (b *backend) pathFetchCertList(req *logical.Request, data *framework.FieldD
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
+func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	var serial, pemType, contentType string
 	var certEntry, revokedEntry *logical.StorageEntry
 	var funcErr error

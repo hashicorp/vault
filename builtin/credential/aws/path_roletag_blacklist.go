@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"encoding/base64"
 	"time"
 
@@ -45,8 +46,7 @@ func pathListRoletagBlacklist(b *backend) *framework.Path {
 }
 
 // Lists all the blacklisted role tags.
-func (b *backend) pathRoletagBlacklistsList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoletagBlacklistsList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.blacklistMutex.RLock()
 	defer b.blacklistMutex.RUnlock()
 
@@ -95,8 +95,7 @@ func (b *backend) nonLockedBlacklistRoleTagEntry(s logical.Storage, tag string) 
 }
 
 // Deletes an entry from the role tag blacklist for a given tag.
-func (b *backend) pathRoletagBlacklistDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoletagBlacklistDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.blacklistMutex.Lock()
 	defer b.blacklistMutex.Unlock()
 
@@ -110,9 +109,7 @@ func (b *backend) pathRoletagBlacklistDelete(
 
 // If the given role tag is blacklisted, returns the details of the blacklist entry.
 // Returns 'nil' otherwise.
-func (b *backend) pathRoletagBlacklistRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathRoletagBlacklistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	tag := data.Get("role_tag").(string)
 	if tag == "" {
 		return logical.ErrorResponse("missing role_tag"), nil
@@ -137,9 +134,7 @@ func (b *backend) pathRoletagBlacklistRead(
 // pathRoletagBlacklistUpdate is used to blacklist a given role tag.
 // Before a role tag is blacklisted, the correctness of the plaintext part
 // in the role tag is verified using the associated HMAC.
-func (b *backend) pathRoletagBlacklistUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// The role_tag value provided, optionally can be base64 encoded.
 	tagInput := data.Get("role_tag").(string)
 	if tagInput == "" {

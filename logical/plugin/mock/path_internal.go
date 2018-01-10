@@ -1,6 +1,8 @@
 package mock
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -20,16 +22,14 @@ func pathInternal(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathInternalUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathInternalUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	value := data.Get("value").(string)
 	b.internal = value
 	// Return the secret
 	return nil, nil
 }
 
-func (b *backend) pathInternalRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathInternalRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Return the secret
 	return &logical.Response{
 		Data: map[string]interface{}{

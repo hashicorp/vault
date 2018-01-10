@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -25,7 +26,7 @@ func pathLookup(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLookupWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ipAddr := d.Get("ip").(string)
 	if ipAddr == "" {
 		return logical.ErrorResponse("Missing ip"), nil
