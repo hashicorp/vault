@@ -1,7 +1,7 @@
 ---
 layout: "guides"
-page_title: "Authentication - Guides"
-sidebar_current: "guides-foundation-authentication"
+page_title: "Authentication using AppRole - Guides"
+sidebar_current: "guides-authentication"
 description: |-
   Authentication is a process in Vault by which user or machine-supplied
   information is verified to create a token with pre-configured policy.
@@ -26,17 +26,11 @@ while others are targeted toward machines or apps. For example,
 an existing LDAP server while [**AppRole**](/docs/auth/approle.html) auth
 backend is recommended for machines or apps.
 
-[![Vault Shamir Secret Sharing Algorithm](/assets/images/vault-auth-workflow.svg)](/assets/images/vault-auth-workflow.svg)
-
 [Getting Started](/intro/getting-started/authentication.html) guide walks you
 through how to enable GitHub auth backend for user authentication.
 
 This guide focuses on generating tokens for machines or apps by enabling
-[**AppRole**](/docs/auth/approle.html) auth backend. Think of a scenario where a
-DevOps team wants to configure Jenkins to read secrets from Vault so that it can
-inject the secrets to app's environment variables at deployment time. In this
-scenario, you want to enable AppRole auth backend so that the Jenkins server can
-obtains a Vault token with appropriate policies allowing to retrieve secrets.
+[**AppRole**](/docs/auth/approle.html) auth backend.
 
 
 ## Reference Material
@@ -49,6 +43,20 @@ obtains a Vault token with appropriate policies allowing to retrieve secrets.
 ## Estimated Time to Complete
 
 10 minutes
+
+## Challenge
+
+Think of a scenario where a DevOps team wants to configure Jenkins to read
+secrets from Vault so that it can inject the secrets to app's environment
+variables at deployment time.
+
+How to generate a token for the Jenkins server use?
+
+## Solution
+
+Needless to say, you don't want to pass your token to the Jenkins server. Enable
+**AppRole** auth backend so that the Jenkins server can obtains a Vault token
+with appropriate policies attached.
 
 ## Prerequisites
 
@@ -68,7 +76,12 @@ Make sure that your Vault server has been [initialized and unsealed][initialize]
 ## Steps
 
 Vault supports a number of authentication backends, and most auth backends must
-be enabled first. The workflow is:
+be enabled first including AppRole.
+
+The overall workflow is:
+[![AppRole auth backend workflow](assets/images/vault-approle-workflow.png)](assets/images/vault-approle-workflow.png)
+
+In this guide, you are going to perform the following steps:
 
 1. [Enable AppRole auth backend](#step1)
 2. [Create a role with policy attached](#step2)
@@ -154,9 +167,9 @@ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"dev-pol,devops-pol
 
 ### <a name="step3"></a>Step 3: Get Role ID and Secret ID
 
-Since the example created `jenkins` role which operates in pull mode, Vault will
-generate the Secret ID. Similarly to tokens, you can set properties such as
-usage-limit, TTLs and expirations on the secret IDs.
+Since the example created a `jenkins` role which operates in pull mode, Vault
+will generate the Secret ID. Similarly to tokens, you can set properties such as
+usage-limit, TTLs, and expirations on the secret IDs.
 
 #### CLI command
 
@@ -203,7 +216,7 @@ curl -X LIST -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/auth/approle/role/j
 ### <a name="step4"></a>Step 4: Acquire token using Role ID & Secret ID
 
 To get a Vault token for the `jenkins` role, you need to pass the role ID and
-secret ID you obtained previously.
+secret ID you obtained previously to the client (in this case, Jenkins).
 
 #### CLI command
 
@@ -240,13 +253,18 @@ $ cat jenkins.json
 $ curl -X POST -d @jenkins.json $VAULT_ADDR/v1/auth/approle/login | jq
 ```
 
+-> Once the client acquired the token, the future requests can be made using
+that token.
+
 
 ## Reference Content
 
-To keep the Secret ID confidential, use [**response wrapping**](/docs/concepts/response-wrapping.html) so that the only
-expected client can unwrap the Secret ID.
+To keep the Secret ID confidential, use [**response
+wrapping**](/docs/concepts/response-wrapping.html) so that the only expected
+client can unwrap the Secret ID.
 
-In the previous step, you executed the following command to retrieve the Secret ID:
+In the previous step, you executed the following command to retrieve the Secret
+ID:
 
 ```text
 vault write -f auth/approle/role/jenkins/secret-id
