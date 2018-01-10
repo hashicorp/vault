@@ -277,7 +277,7 @@ func TestPredict_Mounts(t *testing.T) {
 		{
 			"good_path",
 			client,
-			[]string{"cubbyhole/", "secret/", "sys/"},
+			[]string{"cubbyhole/", "identity/", "secret/", "sys/"},
 		},
 	}
 
