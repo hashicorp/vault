@@ -2,6 +2,8 @@
 
 IMPROVEMENTS:
 
+ * auth/aws: Handle IAM headers produced by clients that formulate numbers as
+   ints rather than strings [GH-3763]
  * physical/s3: Allow using paths with S3 for non-AWS deployments [GH-3730]
  * physical/s3: Add ability to disable SSL for non-AWS deployments [GH-3730]
 
