@@ -1664,9 +1664,17 @@ func (i *IdentityStore) deleteGroupByID(groupID string) error {
 		return err
 	}
 
-	// If there is no entity for the ID, do nothing
+	// If there is no group for the ID, do nothing
 	if group == nil {
 		return nil
+	}
+
+	// Delete group alias from memdb
+	if group.Type == groupTypeExternal && group.Alias != nil {
+		err = i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Delete the group using the same transaction
@@ -1675,7 +1683,7 @@ func (i *IdentityStore) deleteGroupByID(groupID string) error {
 		return err
 	}
 
-	// Delete the entity from storage
+	// Delete the group from storage
 	err = i.groupPacker.DeleteItem(group.ID)
 	if err != nil {
 		return err
