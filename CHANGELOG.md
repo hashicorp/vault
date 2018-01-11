@@ -7,6 +7,10 @@ IMPROVEMENTS:
  * physical/s3: Allow using paths with S3 for non-AWS deployments [GH-3730]
  * physical/s3: Add ability to disable SSL for non-AWS deployments [GH-3730]
 
+BUG FIXES:
+
+ * identity: Delete group alias when an external group is deleted [GH-3773]
+
 ## 0.9.1 (December 21st, 2017)
 
 DEPRECATIONS/CHANGES:
