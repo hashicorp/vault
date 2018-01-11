@@ -8,6 +8,58 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestIdentityStore_GroupAliasDeletionOnGroupDeletion(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	i, accessor, _ := testIdentityStoreWithGithubAuth(t)
+
+	resp, err = i.HandleRequest(context.Background(), &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": "external",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
+	}
+	groupID := resp.Data["id"].(string)
+
+	resp, err = i.HandleRequest(context.Background(), &logical.Request{
+		Path:      "group-alias",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":           "testgroupalias",
+			"mount_accessor": accessor,
+			"canonical_id":   groupID,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
+	}
+	groupAliasID := resp.Data["id"].(string)
+
+	resp, err = i.HandleRequest(context.Background(), &logical.Request{
+		Path:      "group/id/" + groupID,
+		Operation: logical.DeleteOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	resp, err = i.HandleRequest(context.Background(), &logical.Request{
+		Path:      "group-alias/id/" + groupAliasID,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+}
+
 func TestIdentityStore_GroupAliases_CRUD(t *testing.T) {
 	var resp *logical.Response
 	var err error
