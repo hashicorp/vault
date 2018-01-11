@@ -50,7 +50,8 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 
 		// Grab the read lock
 		b.RLock()
-		var unlockFunc func() = b.RUnlock
+		unlockFunc := b.RUnlock
+		defer func() { unlockFunc() }()
 
 		// Get the Database object
 		db, ok := b.getDBObj(role.DBName)
@@ -60,19 +61,20 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			b.Lock()
 			unlockFunc = b.Unlock
 
-			// Create a new DB object
-			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
-			if err != nil {
-				unlockFunc()
-				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+			// Check again
+			db, ok = b.getDBObj(role.DBName)
+			if !ok {
+				// Create a new DB object
+				db, err = b.createDBObj(ctx, req.Storage, role.DBName)
+				if err != nil {
+					return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+				}
 			}
 		}
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
 		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
 			err := db.RenewUser(ctx, role.Statements, username, expireTime)
-			// Unlock
-			unlockFunc()
 			if err != nil {
 				b.closeIfShutdown(role.DBName, err)
 				return nil, err
@@ -109,7 +111,8 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 
 		// Grab the read lock
 		b.RLock()
-		var unlockFunc func() = b.RUnlock
+		unlockFunc := b.RUnlock
+		defer func() { unlockFunc() }()
 
 		// Get our connection
 		db, ok := b.getDBObj(role.DBName)
@@ -119,18 +122,18 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			b.Lock()
 			unlockFunc = b.Unlock
 
-			// Create a new DB object
-			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
-			if err != nil {
-				unlockFunc()
-				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+			// Check again
+			db, ok = b.getDBObj(role.DBName)
+			if !ok {
+				// Create a new DB object
+				db, err = b.createDBObj(ctx, req.Storage, role.DBName)
+				if err != nil {
+					return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+				}
 			}
 		}
 
-		err = db.RevokeUser(ctx, role.Statements, username)
-		// Unlock
-		unlockFunc()
-		if err != nil {
+		if err := db.RevokeUser(ctx, role.Statements, username); err != nil {
 			b.closeIfShutdown(role.DBName, err)
 			return nil, err
 		}

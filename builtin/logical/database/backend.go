@@ -198,13 +198,13 @@ func (b *databaseBackend) clearConnection(name string) {
 	}
 }
 
+// closeIfShutdown clears the connections if shutdown. The lock should be held
+// entering this function.
 func (b *databaseBackend) closeIfShutdown(name string, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
 	case rpc.ErrShutdown, dbplugin.ErrPluginShutdown:
-		b.Lock()
 		b.clearConnection(name)
-		b.Unlock()
 	}
 }
 
