@@ -9,6 +9,12 @@ message Header {
     repeated string header = 1;
 }
 
+message ProtoError {
+    uint32 err_type = 1;
+    string err_msg = 2;
+    int64 err_code = 3;
+}
+
 // Paths is the structure of special paths that is used for SpecialPaths.
 message  Paths {
 	// Root are the paths that require a root token to access
@@ -291,7 +297,7 @@ message HandleRequestArgs {
 // HandleRequestReply is the reply for HandleRequest method.
 message HandleRequestReply {
 	Response response = 1;
-	string err = 2;
+	ProtoError err = 2;
 }
 
 // SpecialPathsReply is the reply for SpecialPaths method.
@@ -309,7 +315,7 @@ message HandleExistenceCheckArgs {
 message HandleExistenceCheckReply {
 	bool check_found = 1;
 	bool exists = 2;
-	string err = 3;
+	ProtoError err = 3;
 }
 
 // SetupArgs is the args for Setup method.

@@ -75,7 +75,7 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 	return &pb.HandleRequestReply{
 		Response: pbResp,
-		Err:      pb.ErrToString(respErr),
+		Err:      pb.ErrToProtoErr(respErr),
 	}, nil
 }
 
@@ -107,7 +107,7 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 	return &pb.HandleExistenceCheckReply{
 		CheckFound: checkFound,
 		Exists:     exists,
-		Err:        pb.ErrToString(err),
+		Err:        pb.ErrToProtoErr(err),
 	}, nil
 }
 

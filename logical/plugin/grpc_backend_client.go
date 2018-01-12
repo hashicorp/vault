@@ -58,12 +58,8 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 	if err != nil {
 		return nil, err
 	}
-	if reply.Err != "" {
-		if reply.Err == logical.ErrUnsupportedOperation.Error() {
-			return nil, logical.ErrUnsupportedOperation
-		}
-
-		return resp, errors.New(reply.Err)
+	if reply.Err != nil {
+		return resp, pb.ProtoErrToErr(reply.Err)
 	}
 
 	return resp, nil
@@ -127,11 +123,8 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	if err != nil {
 		return false, false, err
 	}
-	if reply.Err != "" {
-		if reply.Err == logical.ErrUnsupportedPath.Error() {
-			return false, false, logical.ErrUnsupportedPath
-		}
-		return false, false, errors.New(reply.Err)
+	if reply.Err != nil {
+		return false, false, pb.ProtoErrToErr(reply.Err)
 	}
 
 	return reply.CheckFound, reply.Exists, nil
@@ -154,12 +147,14 @@ func (b *backendGRPCPluginClient) Initialize() error {
 		return ErrClientInMetadataMode
 	}
 
+	// Make sure we have a healthy connection.
 	switch b.clientConn.GetState() {
 	case connectivity.Ready, connectivity.Idle:
 	default:
 		return ErrPluginShutdown
 	}
 
+	// Timeout the call.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	_, err := b.client.Initialize(ctx, &pb.Empty{})
@@ -196,6 +191,7 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 		impl: sysViewImpl,
 	}
 
+	// Register the server in this closure.
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
 		s := grpc.NewServer(opts...)
 		pb.RegisterSystemViewServer(s, sysView)

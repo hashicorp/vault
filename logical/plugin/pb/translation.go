@@ -2,12 +2,92 @@ package pb
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 )
+
+const (
+	ErrTypeUnknown uint32 = iota
+	ErrTypeUserError
+	ErrTypeInternalError
+	ErrTypeCodedError
+	ErrTypeStatusBadRequest
+	ErrTypeUnsupportedOperation
+	ErrTypeUnsupportedPath
+	ErrTypeInvalidRequest
+	ErrTypePermissionDenied
+	ErrTypeMultiAuthzPending
+)
+
+func ProtoErrToErr(e *ProtoError) error {
+	var err error
+	switch e.ErrType {
+	case ErrTypeUnknown:
+		err = errors.New(e.ErrMsg)
+	case ErrTypeUserError:
+		err = errutil.UserError{Err: e.ErrMsg}
+	case ErrTypeInternalError:
+		err = errutil.InternalError{Err: e.ErrMsg}
+	case ErrTypeCodedError:
+		err = logical.CodedError(int(e.ErrCode), e.ErrMsg)
+	case ErrTypeStatusBadRequest:
+		err = &logical.StatusBadRequest{Err: e.ErrMsg}
+	case ErrTypeUnsupportedOperation:
+		err = logical.ErrUnsupportedOperation
+	case ErrTypeUnsupportedPath:
+		err = logical.ErrUnsupportedPath
+	case ErrTypeInvalidRequest:
+		err = logical.ErrInvalidRequest
+	case ErrTypePermissionDenied:
+		err = logical.ErrPermissionDenied
+	case ErrTypeMultiAuthzPending:
+		err = logical.ErrMultiAuthzPending
+	}
+
+	return err
+}
+
+func ErrToProtoErr(e error) *ProtoError {
+	if e == nil {
+		return nil
+	}
+	pbErr := &ProtoError{
+		ErrMsg:  e.Error(),
+		ErrType: ErrTypeUnknown,
+	}
+
+	switch e.(type) {
+	case errutil.UserError:
+		pbErr.ErrType = ErrTypeUserError
+	case errutil.InternalError:
+		pbErr.ErrType = ErrTypeInternalError
+	case logical.HTTPCodedError:
+		pbErr.ErrType = ErrTypeCodedError
+		pbErr.ErrCode = int64(e.(logical.HTTPCodedError).Code())
+	case *logical.StatusBadRequest:
+		pbErr.ErrType = ErrTypeStatusBadRequest
+	}
+
+	switch {
+	case e == logical.ErrUnsupportedOperation:
+		pbErr.ErrType = ErrTypeUnsupportedOperation
+	case e == logical.ErrUnsupportedPath:
+		pbErr.ErrType = ErrTypeUnsupportedPath
+	case e == logical.ErrInvalidRequest:
+		pbErr.ErrType = ErrTypeInvalidRequest
+	case e == logical.ErrPermissionDenied:
+		pbErr.ErrType = ErrTypePermissionDenied
+	case e == logical.ErrMultiAuthzPending:
+		pbErr.ErrType = ErrTypeMultiAuthzPending
+	}
+
+	return pbErr
+}
 
 func ErrToString(e error) string {
 	if e == nil {
