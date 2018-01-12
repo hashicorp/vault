@@ -10,12 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/fatih/structs"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -860,6 +860,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
 					},
+					"args": &framework.FieldSchema{
+						Type:        framework.TypeStringSlice,
+						Description: strings.TrimSpace(sysHelp["plugin-catalog_args"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1098,12 +1102,17 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing command value"), nil
 	}
 
+	args := d.Get("args").([]string)
+	// For backwards compatibility, also accept args as part of command.
+	parts := strings.Split(command, " ")
+	args = append(parts[1:], args...)
+
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(pluginName, command, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(pluginName, parts[0], args, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -1124,8 +1133,17 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		return nil, nil
 	}
 
-	// Create a map of data to be returned and remove sensitive information from it
-	data := structs.New(plugin).Map()
+	command, err := filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
+	if err != nil {
+		return nil, err
+	}
+
+	data := map[string]interface{}{
+		"name":    plugin.Name,
+		"args":    plugin.Args,
+		"command": command,
+		"sha256":  hex.EncodeToString(plugin.Sha256),
+	}
 
 	return &logical.Response{
 		Data: data,
@@ -3330,6 +3348,10 @@ command field. This should be HEX encoded.`,
 		`The command used to start the plugin. The
 executable defined in this command must exist in vault's
 plugin directory.`,
+		"",
+	},
+	"plugin-catalog_args": {
+		`The args passed to plugin command.`,
 		"",
 	},
 	"leases": {
