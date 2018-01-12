@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -51,7 +52,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasRegister,
+				logical.UpdateOperation: i.pathAliasRegister(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
@@ -92,7 +93,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasRegister,
+				logical.UpdateOperation: i.pathAliasRegister(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
@@ -132,9 +133,9 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasIDUpdate,
-				logical.ReadOperation:   i.pathAliasIDRead,
-				logical.DeleteOperation: i.pathAliasIDDelete,
+				logical.UpdateOperation: i.pathAliasIDUpdate(),
+				logical.ReadOperation:   i.pathAliasIDRead(),
+				logical.DeleteOperation: i.pathAliasIDDelete(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id"][0]),
@@ -143,7 +144,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 		{
 			Pattern: "entity-alias/id/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathAliasIDList,
+				logical.ListOperation: i.pathAliasIDList(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id-list"][0]),
@@ -153,34 +154,38 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 }
 
 // pathAliasRegister is used to register new alias
-func (i *IdentityStore) pathAliasRegister(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	_, ok := d.GetOk("id")
-	if ok {
-		return i.pathAliasIDUpdate(req, d)
-	}
+func (i *IdentityStore) pathAliasRegister() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		_, ok := d.GetOk("id")
+		if ok {
+			return i.pathAliasIDUpdate()(ctx, req, d)
+		}
 
-	return i.handleAliasUpdateCommon(req, d, nil)
+		return i.handleAliasUpdateCommon(req, d, nil)
+	}
 }
 
 // pathAliasIDUpdate is used to update an alias based on the given
 // alias ID
-func (i *IdentityStore) pathAliasIDUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Get alias id
-	aliasID := d.Get("id").(string)
+func (i *IdentityStore) pathAliasIDUpdate() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		// Get alias id
+		aliasID := d.Get("id").(string)
 
-	if aliasID == "" {
-		return logical.ErrorResponse("empty alias ID"), nil
-	}
+		if aliasID == "" {
+			return logical.ErrorResponse("empty alias ID"), nil
+		}
 
-	alias, err := i.MemDBAliasByID(aliasID, true, false)
-	if err != nil {
-		return nil, err
-	}
-	if alias == nil {
-		return logical.ErrorResponse("invalid alias id"), nil
-	}
+		alias, err := i.MemDBAliasByID(aliasID, true, false)
+		if err != nil {
+			return nil, err
+		}
+		if alias == nil {
+			return logical.ErrorResponse("invalid alias id"), nil
+		}
 
-	return i.handleAliasUpdateCommon(req, d, alias)
+		return i.handleAliasUpdateCommon(req, d, alias)
+	}
 }
 
 // handleAliasUpdateCommon is used to update an alias
@@ -343,18 +348,20 @@ func (i *IdentityStore) handleAliasUpdateCommon(req *logical.Request, d *framewo
 
 // pathAliasIDRead returns the properties of an alias for a given
 // alias ID
-func (i *IdentityStore) pathAliasIDRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	aliasID := d.Get("id").(string)
-	if aliasID == "" {
-		return logical.ErrorResponse("missing alias id"), nil
-	}
+func (i *IdentityStore) pathAliasIDRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		aliasID := d.Get("id").(string)
+		if aliasID == "" {
+			return logical.ErrorResponse("missing alias id"), nil
+		}
 
-	alias, err := i.MemDBAliasByID(aliasID, false, false)
-	if err != nil {
-		return nil, err
-	}
+		alias, err := i.MemDBAliasByID(aliasID, false, false)
+		if err != nil {
+			return nil, err
+		}
 
-	return i.handleAliasReadCommon(alias)
+		return i.handleAliasReadCommon(alias)
+	}
 }
 
 func (i *IdentityStore) handleAliasReadCommon(alias *identity.Alias) (*logical.Response, error) {
@@ -382,34 +389,38 @@ func (i *IdentityStore) handleAliasReadCommon(alias *identity.Alias) (*logical.R
 }
 
 // pathAliasIDDelete deletes the alias for a given alias ID
-func (i *IdentityStore) pathAliasIDDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	aliasID := d.Get("id").(string)
-	if aliasID == "" {
-		return logical.ErrorResponse("missing alias ID"), nil
-	}
+func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		aliasID := d.Get("id").(string)
+		if aliasID == "" {
+			return logical.ErrorResponse("missing alias ID"), nil
+		}
 
-	return nil, i.deleteAlias(aliasID)
+		return nil, i.deleteAlias(aliasID)
+	}
 }
 
 // pathAliasIDList lists the IDs of all the valid aliases in the identity
 // store
-func (i *IdentityStore) pathAliasIDList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ws := memdb.NewWatchSet()
-	iter, err := i.MemDBAliases(ws, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch iterator for aliases in memdb: %v", err)
-	}
-
-	var aliasIDs []string
-	for {
-		raw := iter.Next()
-		if raw == nil {
-			break
+func (i *IdentityStore) pathAliasIDList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		ws := memdb.NewWatchSet()
+		iter, err := i.MemDBAliases(ws, false)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch iterator for aliases in memdb: %v", err)
 		}
-		aliasIDs = append(aliasIDs, raw.(*identity.Alias).ID)
-	}
 
-	return logical.ListResponse(aliasIDs), nil
+		var aliasIDs []string
+		for {
+			raw := iter.Next()
+			if raw == nil {
+				break
+			}
+			aliasIDs = append(aliasIDs, raw.(*identity.Alias).ID)
+		}
+
+		return logical.ListResponse(aliasIDs), nil
+	}
 }
 
 var aliasHelp = map[string][2]string{

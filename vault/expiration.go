@@ -750,6 +750,31 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		}, nil
 	}
 
+	sysView := m.router.MatchingSystemView(le.Path)
+	if sysView == nil {
+		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
+	}
+
+	retResp := &logical.Response{}
+	switch {
+	case resp.Auth.Period > time.Duration(0):
+		// If it resp.Period is non-zero, use that as the TTL and override backend's
+		// call on TTL modification, such as a TTL value determined by
+		// framework.LeaseExtend call against the request. Also, cap period value to
+		// the sys/mount max value.
+		if resp.Auth.Period > sysView.MaxLeaseTTL() {
+			retResp.AddWarning(fmt.Sprintf("Period of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", resp.Auth.TTL, sysView.MaxLeaseTTL()))
+			resp.Auth.Period = sysView.MaxLeaseTTL()
+		}
+		resp.Auth.TTL = resp.Auth.Period
+	case resp.Auth.TTL > time.Duration(0):
+		// Cap TTL value to the sys/mount max value
+		if resp.Auth.TTL > sysView.MaxLeaseTTL() {
+			retResp.AddWarning(fmt.Sprintf("TTL of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", resp.Auth.TTL, sysView.MaxLeaseTTL()))
+			resp.Auth.TTL = sysView.MaxLeaseTTL()
+		}
+	}
+
 	// Attach the ClientToken
 	resp.Auth.ClientToken = token
 	resp.Auth.Increment = 0
@@ -764,9 +789,9 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 
 	// Update the expiration time
 	m.updatePending(le, resp.Auth.LeaseTotal())
-	return &logical.Response{
-		Auth: resp.Auth,
-	}, nil
+
+	retResp.Auth = resp.Auth
+	return retResp, nil
 }
 
 // Register is used to take a request and response with an associated
@@ -803,7 +828,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		// want to revoke a generated secret (since an error means we may not
 		// be successfully tracking it), remove indexes, and delete the entry.
 		if retErr != nil {
-			revResp, err := m.router.Route(logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
+			revResp, err := m.router.Route(m.quitContext, logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
 			if err != nil {
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional internal error was encountered revoking the newly-generated secret: {{err}}", err))
 			} else if revResp != nil && revResp.IsError() {
@@ -864,6 +889,12 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 	saltedID, err := m.tokenStore.SaltID(auth.ClientToken)
 	if err != nil {
 		return err
+	}
+
+	// If it resp.Period is non-zero, override the TTL value determined
+	// by the backend.
+	if auth.Period > time.Duration(0) {
+		auth.TTL = auth.Period
 	}
 
 	// Create a lease entry
@@ -1017,8 +1048,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	}
 
 	// Handle standard revocation via backends
-	resp, err := m.router.Route(logical.RevokeRequest(
-		le.Path, le.Secret, le.Data))
+	resp, err := m.router.Route(m.quitContext, logical.RevokeRequest(le.Path, le.Secret, le.Data))
 	if err != nil || (resp != nil && resp.IsError()) {
 		return fmt.Errorf("failed to revoke entry: resp:%#v err:%s", resp, err)
 	}
@@ -1033,7 +1063,7 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 	secret.LeaseID = ""
 
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
-	resp, err := m.router.Route(req)
+	resp, err := m.router.Route(m.quitContext, req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		return nil, fmt.Errorf("failed to renew entry: resp:%#v err:%s", resp, err)
 	}
@@ -1054,7 +1084,7 @@ func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry,
 
 	authReq := logical.RenewAuthRequest(le.Path, &auth, nil)
 	authReq.Connection = req.Connection
-	resp, err := m.router.Route(authReq)
+	resp, err := m.router.Route(m.quitContext, authReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to renew entry: %v", err)
 	}

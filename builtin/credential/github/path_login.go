@@ -29,8 +29,7 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLoginAliasLookahead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	token := data.Get("token").(string)
 
 	var verifyResp *verifyCredentialsResp
@@ -51,8 +50,7 @@ func (b *backend) pathLoginAliasLookahead(
 	}, nil
 }
 
-func (b *backend) pathLogin(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	token := data.Get("token").(string)
 
 	var verifyResp *verifyCredentialsResp
@@ -107,9 +105,7 @@ func (b *backend) pathLogin(
 	return resp, nil
 }
 
-func (b *backend) pathLoginRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.Auth == nil {
 		return nil, fmt.Errorf("request auth was nil")
 	}
@@ -137,7 +133,7 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 
-	resp, err := framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(req, d)
+	resp, err := framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(ctx, req, d)
 	if err != nil {
 		return nil, err
 	}

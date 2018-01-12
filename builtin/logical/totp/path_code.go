@@ -1,6 +1,7 @@
 package totp
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -35,8 +36,7 @@ func pathCode(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathReadCode(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathReadCode(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
 	// Get the key
@@ -66,8 +66,7 @@ func (b *backend) pathReadCode(
 	}, nil
 }
 
-func (b *backend) pathValidateCode(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	code := data.Get("code").(string)
 

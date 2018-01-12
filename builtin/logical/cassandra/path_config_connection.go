@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/fatih/structs"
@@ -85,8 +86,7 @@ take precedence.`,
 	}
 }
 
-func (b *backend) pathConnectionRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := req.Storage.Get("config/connection")
 	if err != nil {
 		return nil, err
@@ -110,8 +110,7 @@ func (b *backend) pathConnectionRead(
 	}, nil
 }
 
-func (b *backend) pathConnectionWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	hosts := data.Get("hosts").(string)
 	username := data.Get("username").(string)
 	password := data.Get("password").(string)

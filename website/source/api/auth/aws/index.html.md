@@ -1,19 +1,19 @@
 ---
 layout: "api"
-page_title: "AWS Auth Backend - HTTP API"
+page_title: "AWS - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-aws"
 description: |-
-  This is the API documentation for the Vault AWS authentication backend.
+  This is the API documentation for the Vault AWS auth method.
 ---
 
-# AWS Auth Backend HTTP API
+# AWS Auth Method (API)
 
-This is the API documentation for the Vault AWS authentication backend. For
-general information about the usage and operation of the AWS backend, please
-see the [Vault AWS backend documentation](/docs/auth/aws.html).
+This is the API documentation for the Vault AWS auth method. For
+general information about the usage and operation of the AWS method, please
+see the [Vault AWS method documentation](/docs/auth/aws.html).
 
-This documentation assumes the AWS backend is mounted at the `/auth/aws`
-path in Vault. Since it is possible to mount auth backends at any location,
+This documentation assumes the AWS method is mounted at the `/auth/aws`
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Configure Client
@@ -26,7 +26,7 @@ of the instances via DescribeInstances API. If static credentials are not
 provided using this endpoint, then the credentials will be retrieved from
 the environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and
 `AWS_REGION` respectively. If the credentials are still not found and if the
-backend is configured on an EC2 instance with metadata querying
+method is configured on an EC2 instance with metadata querying
 capabilities, the credentials are fetched automatically.
 
 | Method   | Path                         | Produces               |
@@ -220,12 +220,11 @@ $ curl \
 
 ## List Certificate Configurations
 
-Lists all the AWS public certificates that are registered with the backend.
+Lists all the AWS public certificates that are registered with the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/config/certificates` | `200 application/json` |
-| `GET`   | `/auth/aws/config/certificates?list=true` | `200 application/json` |
 
 ### Sample Request
 
@@ -325,7 +324,6 @@ Lists all the AWS Account IDs for which an STS role is registered.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/config/sts`       | `200 application/json` |
-| `GET`   | `/auth/aws/config/sts?list=true`       | `200 application/json` |
 
 ### Sample Request
 
@@ -377,7 +375,7 @@ Configures the periodic tidying operation of the whitelisted identity entries.
 ### Parameters
 
 - `safety_buffer` `(string: "72h")` - The amount of extra time that must have
-  passed beyond the `roletag` expiration, before it is removed from the backend
+  passed beyond the `roletag` expiration, before it is removed from the method
   storage. Defaults to 72h.
 - `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the
   periodic tidying of the `identity-whitelist/<instance_id>` entries.
@@ -455,7 +453,7 @@ Configures the periodic tidying operation of the blacklisted role tag entries.
 ### Parameters
 
 - `safety_buffer` `(string: "72h")` - The amount of extra time that must have
-  passed beyond the `roletag` expiration, before it is removed from the backend
+  passed beyond the `roletag` expiration, before it is removed from the method
   storage. Defaults to 72h.
 - `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the
   periodic tidying of the `roletag-blacklist/<instance_id>` entries.
@@ -524,7 +522,7 @@ $ curl \
 
 ## Create Role
 
-Registers a role in the backend. Only those instances or principals which
+Registers a role in the method. Only those instances or principals which
 are using the role registered using this endpoint, will be able to perform
 the login operation. Contraints can be specified on the role, that are
 applied on the instances or principals attempting to login. At least one
@@ -728,12 +726,11 @@ $ curl \
 
 ## List Roles
 
-Lists all the roles that are registered with the backend.
+Lists all the roles that are registered with the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/roles`       | `200 application/json` |
-| `GET`   | `/auth/aws/roles?list=true`       | `200 application/json` |
 
 ### Sample Request
 
@@ -883,7 +880,7 @@ along with its RSA digest can be supplied to this endpoint.
   and `signature` need to be set when using the ec2 auth method.
 - `nonce` `(string: "")` - The nonce to be used for subsequent login requests.
   If this parameter is not specified at all and if reauthentication is allowed,
-  then the backend will generate a random nonce, attaches it to the instance's
+  then the method will generate a random nonce, attaches it to the instance's
   identity-whitelist entry and returns the nonce back as part of auth metadata.
   This value should be used with further login requests, to establish client
   authenticity. Clients can choose to set a custom nonce if preferred, in which
@@ -1023,7 +1020,6 @@ Lists all the role tags that are blacklisted.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/roletag-blacklist`       | `200 application/json` |
-| `GET`   | `/auth/aws/roletag-blacklist?list=true`       | `200 application/json` |
 
 ### Sample Request
 
@@ -1082,7 +1078,7 @@ Cleans up the entries in the blacklist based on expiration time on the entry and
 ### Parameters
 
 - `safety_buffer` `(string: "72h")` - The amount of extra time that must have
-  passed beyond the `roletag` expiration, before it is removed from the backend
+  passed beyond the `roletag` expiration, before it is removed from the method
   storage. Defaults to 72h.
 
 ### Sample Request
@@ -1139,7 +1135,6 @@ $ curl \
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/aws/identity-whitelist`       | `200 application/json` |
-| `GET`   | `/auth/aws/identity-whitelist?list=true`       | `200 application/json` |
 
 ### Sample Request
 
@@ -1197,7 +1192,7 @@ Cleans up the entries in the whitelist based on expiration time and
 ### Parameters
 
 - `safety_buffer` `(string: "72h")` - The amount of extra time that must have
-  passed beyond the `roletag` expiration, before it is removed from the backend
+  passed beyond the `roletag` expiration, before it is removed from the method
   storage. Defaults to 72h.
 
 ### Sample Request

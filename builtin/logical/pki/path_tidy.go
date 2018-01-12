@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 	"time"
@@ -46,8 +47,7 @@ Defaults to 72 hours.`,
 	}
 }
 
-func (b *backend) pathTidyWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevocationList := d.Get("tidy_revocation_list").(bool)

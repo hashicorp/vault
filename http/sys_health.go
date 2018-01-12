@@ -101,9 +101,17 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		activeCode = code
 	}
 
+	drSecondaryCode := 472 // unofficial 4xx status code
+	if code, found, ok := fetchStatusCode(r, "drsecondarycode"); !ok {
+		return http.StatusBadRequest, nil, nil
+	} else if found {
+		drSecondaryCode = code
+	}
+
 	// Check system status
 	sealed, _ := core.Sealed()
 	standby, _ := core.Standby()
+	drSecondary := core.IsDRSecondary()
 	init, err := core.Initialized()
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
@@ -116,6 +124,8 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = uninitCode
 	case sealed:
 		code = sealedCode
+	case drSecondary:
+		code = drSecondaryCode
 	case !standbyOK && standby:
 		code = standbyCode
 	}
@@ -136,23 +146,25 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 
 	// Format the body
 	body := &HealthResponse{
-		Initialized:   init,
-		Sealed:        sealed,
-		Standby:       standby,
-		ServerTimeUTC: time.Now().UTC().Unix(),
-		Version:       version.GetVersion().VersionNumber(),
-		ClusterName:   clusterName,
-		ClusterID:     clusterID,
+		Initialized:            init,
+		Sealed:                 sealed,
+		Standby:                standby,
+		ReplicationDRSecondary: drSecondary,
+		ServerTimeUTC:          time.Now().UTC().Unix(),
+		Version:                version.GetVersion().VersionNumber(),
+		ClusterName:            clusterName,
+		ClusterID:              clusterID,
 	}
 	return code, body, nil
 }
 
 type HealthResponse struct {
-	Initialized   bool   `json:"initialized"`
-	Sealed        bool   `json:"sealed"`
-	Standby       bool   `json:"standby"`
-	ServerTimeUTC int64  `json:"server_time_utc"`
-	Version       string `json:"version"`
-	ClusterName   string `json:"cluster_name,omitempty"`
-	ClusterID     string `json:"cluster_id,omitempty"`
+	Initialized            bool   `json:"initialized"`
+	Sealed                 bool   `json:"sealed"`
+	Standby                bool   `json:"standby"`
+	ReplicationDRSecondary bool   `json:"replication_dr_secondary"`
+	ServerTimeUTC          int64  `json:"server_time_utc"`
+	Version                string `json:"version"`
+	ClusterName            string `json:"cluster_name,omitempty"`
+	ClusterID              string `json:"cluster_id,omitempty"`
 }

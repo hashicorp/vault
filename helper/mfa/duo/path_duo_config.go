@@ -1,6 +1,7 @@
 package duo
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -18,7 +19,7 @@ func pathDuoConfig() *framework.Path {
 			},
 			"username_format": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Format string given auth backend username as argument to create Duo username (default '%s')",
+				Description: "Format string given auth method username as argument to create Duo username (default '%s')",
 			},
 			"push_info": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -51,8 +52,7 @@ func GetDuoConfig(req *logical.Request) (*DuoConfig, error) {
 	return &result, nil
 }
 
-func pathDuoConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func pathDuoConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username_format := d.Get("username_format").(string)
 	if username_format == "" {
 		username_format = "%s"
@@ -76,9 +76,7 @@ func pathDuoConfigWrite(
 	return nil, nil
 }
 
-func pathDuoConfigRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func pathDuoConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	config, err := GetDuoConfig(req)
 	if err != nil {
 		return nil, err
@@ -103,10 +101,10 @@ type DuoConfig struct {
 }
 
 const pathDuoConfigHelpSyn = `
-Configure Duo second factor behavior. 
+Configure Duo second factor behavior.
 `
 
 const pathDuoConfigHelpDesc = `
-This endpoint allows you to configure how the original auth backend username maps to
+This endpoint allows you to configure how the original auth method username maps to
 the Duo username by providing a template format string.
 `

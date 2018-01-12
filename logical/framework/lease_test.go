@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -97,7 +98,7 @@ func TestLeaseExtend(t *testing.T) {
 		}
 
 		callback := LeaseExtend(tc.BackendDefault, tc.BackendMax, testSysView)
-		resp, err := callback(req, nil)
+		resp, err := callback(context.Background(), req, nil)
 		if (err != nil) != tc.Error {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}

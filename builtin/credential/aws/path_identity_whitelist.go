@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"time"
 
 	"github.com/fatih/structs"
@@ -44,8 +45,7 @@ func pathListIdentityWhitelist(b *backend) *framework.Path {
 
 // pathWhitelistIdentitiesList is used to list all the instance IDs that are present
 // in the identity whitelist. This will list both valid and expired entries.
-func (b *backend) pathWhitelistIdentitiesList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathWhitelistIdentitiesList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	identities, err := req.Storage.List("whitelist/identity/")
 	if err != nil {
 		return nil, err
@@ -85,8 +85,7 @@ func setWhitelistIdentityEntry(s logical.Storage, instanceID string, identity *w
 }
 
 // pathIdentityWhitelistDelete is used to delete an entry from the identity whitelist given an instance ID.
-func (b *backend) pathIdentityWhitelistDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathIdentityWhitelistDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	instanceID := data.Get("instance_id").(string)
 	if instanceID == "" {
 		return logical.ErrorResponse("missing instance_id"), nil
@@ -96,8 +95,7 @@ func (b *backend) pathIdentityWhitelistDelete(
 }
 
 // pathIdentityWhitelistRead is used to view an entry in the identity whitelist given an instance ID.
-func (b *backend) pathIdentityWhitelistRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathIdentityWhitelistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	instanceID := data.Get("instance_id").(string)
 	if instanceID == "" {
 		return logical.ErrorResponse("missing instance_id"), nil

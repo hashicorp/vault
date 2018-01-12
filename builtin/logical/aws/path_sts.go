@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -39,8 +40,7 @@ the session for AWS account owners defaults to one hour.`,
 	}
 }
 
-func (b *backend) pathSTSRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSTSRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	policyName := d.Get("name").(string)
 	ttl := int64(d.Get("ttl").(int))
 
@@ -87,6 +87,6 @@ then "aws/sts/deploy" would generate access keys for the "deploy" role.
 
 Note, these credentials are instantiated using the AWS STS backend.
 
-The access keys will have a lease associated with them. The access keys
-can be revoked by using the lease ID.
+The access keys will have a lease associated with them, but revoking the lease
+does not revoke the access keys.
 `

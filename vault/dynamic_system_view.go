@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -109,7 +110,7 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 		resp.WrapInfo.Format = "jwt"
 	}
 
-	_, err := d.core.wrapInCubbyhole(req, resp, nil)
+	_, err := d.core.wrapInCubbyhole(context.TODO(), req, resp, nil)
 	if err != nil {
 		return nil, err
 	}

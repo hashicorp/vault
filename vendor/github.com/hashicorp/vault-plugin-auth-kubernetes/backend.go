@@ -40,12 +40,15 @@ func Backend() *kubeAuthBackend {
 	b := &kubeAuthBackend{}
 
 	b.Backend = &framework.Backend{
-		AuthRenew:   b.pathLoginRenew,
+		AuthRenew:   b.pathLoginRenew(),
 		BackendType: logical.TypeCredential,
 		Help:        backendHelp,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
+			},
+			SealWrapStorage: []string{
+				configPath,
 			},
 		},
 		Paths: framework.PathAppend(

@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/fatih/structs"
@@ -33,7 +34,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 }
 
 // pathConnectionRead reads out the connection configuration
-func (b *backend) pathConnectionRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := req.Storage.Get("config/connection")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read connection configuration")
@@ -51,7 +52,7 @@ func (b *backend) pathConnectionRead(req *logical.Request, data *framework.Field
 	}, nil
 }
 
-func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	uri := data.Get("uri").(string)
 	if uri == "" {
 		return logical.ErrorResponse("uri parameter is required"), nil

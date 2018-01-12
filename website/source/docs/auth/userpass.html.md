@@ -1,49 +1,45 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: Username & Password"
+page_title: "Userpass - Auth Methods"
 sidebar_current: "docs-auth-userpass"
 description: |-
-  The "userpass" auth backend allows users to authenticate with Vault using a username and password.
+  The "userpass" auth method allows users to authenticate with Vault using a username and password.
 ---
 
-# Auth Backend: Username & Password
+# Userpass Auth Method
 
-Name: `userpass`
-
-The "userpass" auth backend allows users to authenticate with Vault using
+The `userpass` auth method allows users to authenticate with Vault using
 a username and password combination.
 
 The username/password combinations are configured directly to the auth
-backend using the `users/` path. This backend cannot read usernames and
+method using the `users/` path. This method cannot read usernames and
 passwords from an external source.
 
-The backend lowercases all submitted usernames, e.g. `Mary` and `mary` are the
+The method lowercases all submitted usernames, e.g. `Mary` and `mary` are the
 same entry.
 
 ## Authentication
 
-#### Via the CLI
+### Via the CLI
 
-```
-$ vault auth -method=userpass \
+```text
+$ vault login -method=userpass \
     username=foo \
     password=bar
 ```
 
-#### Via the API
-
-The endpoint for the login is `auth/userpass/login/<username>`.
-
-The password should be sent in the POST body encoded as JSON.
+### Via the API
 
 ```shell
-$ curl $VAULT_ADDR/v1/auth/userpass/login/mitchellh \
-    -d '{ "password": "foo" }'
+$ curl \
+    --request POST \
+    --data '{"password": "foo"}' \
+    https://vault.rocks/v1/auth/userpass/login/mitchellh
 ```
 
-The response will be in JSON. For example:
+The response will contain the token at `auth.client_token`:
 
-```javascript
+```json
 {
   "lease_id": "",
   "renewable": false,
@@ -65,40 +61,30 @@ The response will be in JSON. For example:
 
 ## Configuration
 
-First, you must enable the username/password auth backend:
+Auth methods must be configured in advance before users or machines can
+authenticate. These steps are usually completed by an operator or configuration
+management tool.
 
-```
-$ vault auth-enable userpass
-Successfully enabled 'userpass' at 'userpass'!
-```
+1. Enable the userpass auth method:
 
-Now when you run `vault auth -methods`, the username/password backend is
-available:
+    ```text
+    $ vault auth enable userpass
+    ```
 
-```
-Path       Type      Description
-token/     token     token based credentials
-userpass/  userpass
-```
+1. Configure it with users that are allowed to authenticate:
 
-To use the "userpass" auth backend, an operator must configure it with
-users that are allowed to authenticate. An example is shown below.
-Use `vault path-help` for more details.
+    ```text
+    $ vault write auth/userpass/users/mitchellh \
+        password=foo \
+        policies=admins
+    ```
 
-```
-$ vault write auth/userpass/users/mitchellh \
-    password=foo \
-    policies=admins
-...
-```
-
-The above creates a new user "mitchellh" with the password "foo" that
-will be associated with the "admins" policy. This is the only configuration
-necessary.
+    This creates a new user "mitchellh" with the password "foo" that will be
+    associated with the "admins" policy. This is the only configuration
+    necessary.
 
 ## API
 
-The Username & Password authentication backend has a full HTTP API. Please see the
-[Userpass auth backend API](/api/auth/userpass/index.html) for more
+The Userpass auth method has a full HTTP API. Please see the
+[Userpass auth method API](/api/auth/userpass/index.html) for more
 details.
-

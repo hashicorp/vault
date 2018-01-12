@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -30,7 +31,7 @@ func pathCredsCreate(b *databaseBackend) *framework.Path {
 }
 
 func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
 		// Get the role
@@ -66,7 +67,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			unlockFunc = b.Unlock
 
 			// Create a new DB object
-			db, err = b.createDBObj(req.Storage, role.DBName)
+			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
 				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
@@ -81,7 +82,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		}
 
 		// Create the user
-		username, password, err := db.CreateUser(role.Statements, usernameConfig, expiration)
+		username, password, err := db.CreateUser(ctx, role.Statements, usernameConfig, expiration)
 		// Unlock
 		unlockFunc()
 		if err != nil {

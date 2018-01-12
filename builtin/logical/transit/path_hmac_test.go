@@ -1,7 +1,9 @@
 package transit
 
 import (
+	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -24,7 +26,7 @@ func TestTransit_HMAC(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "keys/foo",
 	}
-	_, err := b.HandleRequest(req)
+	_, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,9 +38,10 @@ func TestTransit_HMAC(t *testing.T) {
 	}
 	// We don't care as we're the only one using this
 	lock.RUnlock()
-	keyEntry := p.Keys[p.LatestVersion]
+	latestVersion := strconv.Itoa(p.LatestVersion)
+	keyEntry := p.Keys[latestVersion]
 	keyEntry.HMACKey = []byte("01234567890123456789012345678901")
-	p.Keys[p.LatestVersion] = keyEntry
+	p.Keys[latestVersion] = keyEntry
 	if err = p.Persist(storage); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +55,7 @@ func TestTransit_HMAC(t *testing.T) {
 		path := req.Path
 		defer func() { req.Path = path }()
 
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			panic(fmt.Sprintf("%v", err))
 		}
@@ -79,7 +82,7 @@ func TestTransit_HMAC(t *testing.T) {
 		// Now verify
 		req.Path = strings.Replace(req.Path, "hmac", "verify", -1)
 		req.Data["hmac"] = value.(string)
-		resp, err = b.HandleRequest(req)
+		resp, err = b.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatalf("%v: %v", err, resp)
 		}
@@ -128,10 +131,10 @@ func TestTransit_HMAC(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	keyEntry = p.Keys[2]
+	keyEntry = p.Keys["2"]
 	// Set to another value we control
 	keyEntry.HMACKey = []byte("12345678901234567890123456789012")
-	p.Keys[2] = keyEntry
+	p.Keys["2"] = keyEntry
 	if err = p.Persist(storage); err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +145,7 @@ func TestTransit_HMAC(t *testing.T) {
 	req.Path = "verify/foo"
 
 	req.Data["hmac"] = "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="
-	resp, err := b.HandleRequest(req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("%v: %v", err, resp)
 	}
@@ -155,7 +158,7 @@ func TestTransit_HMAC(t *testing.T) {
 
 	// Try a bad value
 	req.Data["hmac"] = "vault:v1:UcBvm4VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("%v: %v", err, resp)
 	}
@@ -173,7 +176,7 @@ func TestTransit_HMAC(t *testing.T) {
 	}
 
 	req.Data["hmac"] = "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatalf("expected an error, got response %#v", resp)
 	}

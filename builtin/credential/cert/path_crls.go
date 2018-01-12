@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 	"math/big"
@@ -122,8 +123,7 @@ func parseSerialString(input string) (*big.Int, error) {
 	return ret, nil
 }
 
-func (b *backend) pathCRLDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
 	if name == "" {
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
@@ -154,8 +154,7 @@ func (b *backend) pathCRLDelete(
 	return nil, nil
 }
 
-func (b *backend) pathCRLRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
 	if name == "" {
 		return logical.ErrorResponse(`"name" parameter must be set`), nil
@@ -184,8 +183,7 @@ func (b *backend) pathCRLRead(
 	}, nil
 }
 
-func (b *backend) pathCRLWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := strings.ToLower(d.Get("name").(string))
 	if name == "" {
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil

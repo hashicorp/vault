@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -58,7 +59,7 @@ func TestIdentityStore_EntityByAliasFactors(t *testing.T) {
 	}
 
 	// Register the entity
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -82,7 +83,7 @@ func TestIdentityStore_EntityByAliasFactors(t *testing.T) {
 		Data:      aliasData,
 	}
 
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -121,7 +122,7 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 	}
 
 	// Register the entity
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -194,7 +195,7 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 		ClientToken: te.ID,
 	}
 
-	resp, err := ts.HandleRequest(tokenReq)
+	resp, err := ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v err: %v", err, resp)
 	}
@@ -205,7 +206,7 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 
 	// Create an orphan token; this should not inherit the EntityID
 	tokenReq.Path = "create-orphan"
-	resp, err = ts.HandleRequest(tokenReq)
+	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v err: %v", err, resp)
 	}

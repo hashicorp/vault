@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"net/rpc"
 	"reflect"
@@ -132,7 +133,7 @@ func (b *backend) startBackend() error {
 }
 
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
-func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	b.RLock()
 	canary := b.canary
 
@@ -152,7 +153,7 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 		b.Unlock()
 		b.RLock()
 	}
-	resp, err := b.Backend.HandleRequest(req)
+	resp, err := b.Backend.HandleRequest(ctx, req)
 	b.RUnlock()
 	// Need to compare string value for case were err comes from plugin RPC
 	// and is returned as plugin.BasicError type.
@@ -176,13 +177,13 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 		// Try request once more
 		b.RLock()
 		defer b.RUnlock()
-		return b.Backend.HandleRequest(req)
+		return b.Backend.HandleRequest(ctx, req)
 	}
 	return resp, err
 }
 
 // HandleExistenceCheck is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
-func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	b.RLock()
 	canary := b.canary
 
@@ -203,7 +204,7 @@ func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error)
 		b.RLock()
 	}
 
-	checkFound, exists, err := b.Backend.HandleExistenceCheck(req)
+	checkFound, exists, err := b.Backend.HandleExistenceCheck(ctx, req)
 	b.RUnlock()
 	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
 		// Reload plugin if it's an rpc.ErrShutdown
@@ -225,7 +226,7 @@ func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error)
 		// Try request once more
 		b.RLock()
 		defer b.RUnlock()
-		return b.Backend.HandleExistenceCheck(req)
+		return b.Backend.HandleExistenceCheck(ctx, req)
 	}
 	return checkFound, exists, err
 }

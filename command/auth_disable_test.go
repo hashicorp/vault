@@ -1,102 +1,133 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
-func TestAuthDisable(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testAuthDisableCommand(tb testing.TB) (*cli.MockUi, *AuthDisableCommand) {
+	tb.Helper()
 
-	ui := new(cli.MockUi)
-	c := &AuthDisableCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	ui := cli.NewMockUi()
+	return ui, &AuthDisableCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
 		},
-	}
-
-	args := []string{
-		"-address", addr,
-		"noop",
-	}
-
-	// Run the command once to setup the client, it will fail
-	c.Run(args)
-
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err := client.Sys().EnableAuth("noop", "noop", ""); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-
-	mounts, err := client.Sys().ListAuth()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if _, ok := mounts["noop"]; ok {
-		t.Fatal("should not have noop mount")
 	}
 }
 
-func TestAuthDisableWithOptions(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func TestAuthDisableCommand_Run(t *testing.T) {
+	t.Parallel()
 
-	ui := new(cli.MockUi)
-	c := &AuthDisableCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"not_enough_args",
+			nil,
+			"Not enough arguments",
+			1,
+		},
+		{
+			"too_many_args",
+			[]string{"foo", "bar"},
+			"Too many arguments",
+			1,
 		},
 	}
 
-	args := []string{
-		"-address", addr,
-		"noop",
-	}
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
 
-	// Run the command once to setup the client, it will fail
-	c.Run(args)
+		for _, tc := range cases {
+			tc := tc
 
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 
-	if err := client.Sys().EnableAuthWithOptions("noop", &api.EnableAuthOptions{
-		Type:        "noop",
-		Description: "",
-	}); err != nil {
-		t.Fatalf("err: %#v", err)
-	}
+				ui, cmd := testAuthDisableCommand(t)
 
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
 
-	mounts, err := client.Sys().ListAuth()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			})
+		}
+	})
 
-	if _, ok := mounts["noop"]; ok {
-		t.Fatal("should not have noop mount")
-	}
+	t.Run("integration", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		if err := client.Sys().EnableAuth("my-auth", "userpass", ""); err != nil {
+			t.Fatal(err)
+		}
+
+		ui, cmd := testAuthDisableCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"my-auth",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! Disabled the auth method"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		auths, err := client.Sys().ListAuth()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if auth, ok := auths["my-auth/"]; ok {
+			t.Errorf("expected auth to be disabled: %#v", auth)
+		}
+	})
+
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testAuthDisableCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"my-auth",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error disabling auth method at my-auth/: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testAuthDisableCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }

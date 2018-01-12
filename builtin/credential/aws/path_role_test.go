@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -30,7 +31,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 		"max_ttl":      "2h",
 		"bound_ami_id": "ami-abcd123",
 	}
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ami-abcd123",
 		Data:      data,
@@ -43,7 +44,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/ami-abcd123",
 		Storage:   storage,
@@ -60,7 +61,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 
 	data["allow_instance_migration"] = true
 	data["disallow_reauthentication"] = true
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "role/ami-abcd123",
 		Data:      data,
@@ -73,7 +74,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 		t.Fatalf("expected failure to create role with both allow_instance_migration true and disallow_reauthentication true")
 	}
 	data["disallow_reauthentication"] = false
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "role/ami-abcd123",
 		Data:      data,
@@ -85,7 +86,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failure to update role: %v", resp.Data["error"])
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/ami-abcd123",
 		Storage:   storage,
@@ -103,7 +104,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 
 	// add another entry, to test listing of role entries
 	data["bound_ami_id"] = "ami-abcd456"
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ami-abcd456",
 		Data:      data,
@@ -116,7 +117,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles",
 		Storage:   storage,
@@ -132,7 +133,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 		t.Fatalf("bad: keys: %#v\n", keys)
 	}
 
-	_, err = b.HandleRequest(&logical.Request{
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "role/ami-abcd123",
 		Storage:   storage,
@@ -141,7 +142,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/ami-abcd123",
 		Storage:   storage,
@@ -179,7 +180,7 @@ func Test_enableIamIDResolution(t *testing.T) {
 	}
 
 	submitRequest := func(roleName string, op logical.Operation) (*logical.Response, error) {
-		return b.HandleRequest(&logical.Request{
+		return b.HandleRequest(context.Background(), &logical.Request{
 			Operation: op,
 			Path:      "role/" + roleName,
 			Data:      data,
@@ -245,7 +246,7 @@ func TestBackend_pathIam(t *testing.T) {
 
 	// make sure we start with empty roles, which gives us confidence that the read later
 	// actually is the two roles we created
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles",
 		Storage:   storage,
@@ -267,7 +268,7 @@ func TestBackend_pathIam(t *testing.T) {
 		"bound_iam_principal_arn": "n:aws:iam::123456789012:user/MyUserName",
 		"resolve_aws_unique_ids":  false,
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/MyRoleName",
 		Data:      data,
@@ -281,7 +282,7 @@ func TestBackend_pathIam(t *testing.T) {
 		t.Fatalf("failed to create the role entry; resp: %#v", resp)
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/MyRoleName",
 		Storage:   storage,
@@ -297,7 +298,7 @@ func TestBackend_pathIam(t *testing.T) {
 	}
 
 	data["inferred_entity_type"] = "invalid"
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ShouldNeverExist",
 		Data:      data,
@@ -311,7 +312,7 @@ func TestBackend_pathIam(t *testing.T) {
 	}
 
 	data["inferred_entity_type"] = ec2EntityType
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ShouldNeverExist",
 		Data:      data,
@@ -326,7 +327,7 @@ func TestBackend_pathIam(t *testing.T) {
 
 	delete(data, "bound_iam_principal_arn")
 	data["inferred_aws_region"] = "us-east-1"
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ShouldNeverExist",
 		Data:      data,
@@ -347,7 +348,7 @@ func TestBackend_pathIam(t *testing.T) {
 		Data:      data,
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(secondRole)
+	resp, err = b.HandleRequest(context.Background(), secondRole)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -355,7 +356,7 @@ func TestBackend_pathIam(t *testing.T) {
 		t.Fatalf("failed to create additional role: %v", *secondRole)
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles",
 		Storage:   storage,
@@ -371,7 +372,7 @@ func TestBackend_pathIam(t *testing.T) {
 		t.Fatalf("bad: keys %#v\n", keys)
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "role/MyOtherRoleName",
 		Storage:   storage,
@@ -380,7 +381,7 @@ func TestBackend_pathIam(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/MyOtherRoleName",
 		Storage:   storage,
@@ -414,7 +415,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	}
 
 	submitRequest := func(roleName string, op logical.Operation) (*logical.Response, error) {
-		return b.HandleRequest(&logical.Request{
+		return b.HandleRequest(context.Background(), &logical.Request{
 			Operation: op,
 			Path:      "role/" + roleName,
 			Data:      data,
@@ -526,7 +527,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		Data:      role1Data,
 	}
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
@@ -553,14 +554,14 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 
 	roleReq.Path = "role/testrole"
 	roleReq.Data = roleData
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
 	roleReq.Operation = logical.ReadOperation
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
@@ -595,14 +596,14 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	roleData["bound_vpc_id"] = "newvpcid"
 	roleReq.Operation = logical.UpdateOperation
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
 	roleReq.Operation = logical.ReadOperation
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
@@ -615,7 +616,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 
 	roleReq.Operation = logical.DeleteOperation
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
@@ -655,14 +656,14 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err := b.HandleRequest(roleReq)
+	resp, err := b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
 	roleReq.Operation = logical.ReadOperation
 
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}

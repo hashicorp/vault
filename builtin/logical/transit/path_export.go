@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
@@ -50,8 +51,7 @@ func (b *backend) pathExportKeys() *framework.Path {
 	}
 }
 
-func (b *backend) pathPolicyExportRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	exportType := d.Get("type").(string)
 	name := d.Get("name").(string)
 	version := d.Get("version").(string)
@@ -98,7 +98,7 @@ func (b *backend) pathPolicyExportRead(
 			if err != nil {
 				return nil, err
 			}
-			retKeys[strconv.Itoa(k)] = exportKey
+			retKeys[k] = exportKey
 		}
 
 	default:
@@ -116,7 +116,7 @@ func (b *backend) pathPolicyExportRead(
 		if versionValue < p.MinDecryptionVersion {
 			return logical.ErrorResponse("version for export is below minimun decryption version"), logical.ErrInvalidRequest
 		}
-		key, ok := p.Keys[versionValue]
+		key, ok := p.Keys[strconv.Itoa(versionValue)]
 		if !ok {
 			return logical.ErrorResponse("version does not exist or cannot be found"), logical.ErrInvalidRequest
 		}

@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/fatih/structs"
@@ -45,7 +46,7 @@ Defaults to 4320h (180 days).`,
 	}
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathConfigTidyRoletagBlacklistExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	entry, err := b.lockedConfigTidyRoleTags(req.Storage)
 	if err != nil {
 		return false, err
@@ -77,7 +78,7 @@ func (b *backend) nonLockedConfigTidyRoleTags(s logical.Storage) (*tidyBlacklist
 	return &result, nil
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -113,7 +114,7 @@ func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(req *logical.Reques
 	return nil, nil
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyRoletagBlacklistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	clientConfig, err := b.lockedConfigTidyRoleTags(req.Storage)
 	if err != nil {
 		return nil, err
@@ -127,7 +128,7 @@ func (b *backend) pathConfigTidyRoletagBlacklistRead(req *logical.Request, data 
 	}, nil
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyRoletagBlacklistDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 

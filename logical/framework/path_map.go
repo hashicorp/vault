@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -170,8 +171,8 @@ func (p *PathMap) Paths() []*Path {
 			Pattern: fmt.Sprintf("%s/%s/?$", p.Prefix, p.Name),
 
 			Callbacks: map[logical.Operation]OperationFunc{
-				logical.ListOperation: p.pathList,
-				logical.ReadOperation: p.pathList,
+				logical.ListOperation: p.pathList(),
+				logical.ReadOperation: p.pathList(),
 			},
 
 			HelpSynopsis: fmt.Sprintf("Read mappings for %s", p.Name),
@@ -183,58 +184,63 @@ func (p *PathMap) Paths() []*Path {
 			Fields: schema,
 
 			Callbacks: map[logical.Operation]OperationFunc{
-				logical.CreateOperation: p.pathSingleWrite,
-				logical.ReadOperation:   p.pathSingleRead,
-				logical.UpdateOperation: p.pathSingleWrite,
-				logical.DeleteOperation: p.pathSingleDelete,
+				logical.CreateOperation: p.pathSingleWrite(),
+				logical.ReadOperation:   p.pathSingleRead(),
+				logical.UpdateOperation: p.pathSingleWrite(),
+				logical.DeleteOperation: p.pathSingleDelete(),
 			},
 
 			HelpSynopsis: fmt.Sprintf("Read/write/delete a single %s mapping", p.Name),
 
-			ExistenceCheck: p.pathSingleExistenceCheck,
+			ExistenceCheck: p.pathSingleExistenceCheck(),
 		},
 	}
 }
 
-func (p *PathMap) pathList(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	keys, err := p.List(req.Storage, "")
-	if err != nil {
+func (p *PathMap) pathList() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		keys, err := p.List(req.Storage, "")
+		if err != nil {
+			return nil, err
+		}
+
+		return logical.ListResponse(keys), nil
+	}
+}
+
+func (p *PathMap) pathSingleRead() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		v, err := p.Get(req.Storage, d.Get("key").(string))
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: v,
+		}, nil
+	}
+}
+
+func (p *PathMap) pathSingleWrite() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		err := p.Put(req.Storage, d.Get("key").(string), d.Raw)
 		return nil, err
 	}
-
-	return logical.ListResponse(keys), nil
 }
 
-func (p *PathMap) pathSingleRead(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	v, err := p.Get(req.Storage, d.Get("key").(string))
-	if err != nil {
+func (p *PathMap) pathSingleDelete() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		err := p.Delete(req.Storage, d.Get("key").(string))
 		return nil, err
 	}
-
-	return &logical.Response{
-		Data: v,
-	}, nil
 }
 
-func (p *PathMap) pathSingleWrite(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	err := p.Put(req.Storage, d.Get("key").(string), d.Raw)
-	return nil, err
-}
-
-func (p *PathMap) pathSingleDelete(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	err := p.Delete(req.Storage, d.Get("key").(string))
-	return nil, err
-}
-
-func (p *PathMap) pathSingleExistenceCheck(
-	req *logical.Request, d *FieldData) (bool, error) {
-	v, err := p.Get(req.Storage, d.Get("key").(string))
-	if err != nil {
-		return false, err
+func (p *PathMap) pathSingleExistenceCheck() ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (bool, error) {
+		v, err := p.Get(req.Storage, d.Get("key").(string))
+		if err != nil {
+			return false, err
+		}
+		return v != nil, nil
 	}
-	return v != nil, nil
 }

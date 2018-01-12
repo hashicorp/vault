@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -40,7 +41,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConnectionUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	uri := data.Get("connection_uri").(string)
 	if uri == "" {
 		return logical.ErrorResponse("missing connection_uri"), nil

@@ -22,6 +22,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -72,6 +73,22 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			}
 		}
 	}
+	s3ForcePathStyleStr, ok := conf["s3_force_path_style"]
+	if !ok {
+		s3ForcePathStyleStr = "false"
+	}
+	s3ForcePathStyleBool, err := parseutil.ParseBool(s3ForcePathStyleStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid boolean set for s3_force_path_style: '%s'", s3ForcePathStyleStr)
+	}
+	disableSSLStr, ok := conf["disable_ssl"]
+	if !ok {
+		disableSSLStr = "false"
+	}
+	disableSSLBool, err := parseutil.ParseBool(disableSSLStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid boolean set for disable_ssl: '%s'", disableSSLStr)
+	}
 
 	credsConfig := &awsutil.CredentialsConfig{
 		AccessKey:    accessKey,
@@ -91,8 +108,10 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		HTTPClient: &http.Client{
 			Transport: pooledTransport,
 		},
-		Endpoint: aws.String(endpoint),
-		Region:   aws.String(region),
+		Endpoint:         aws.String(endpoint),
+		Region:           aws.String(region),
+		S3ForcePathStyle: aws.Bool(s3ForcePathStyleBool),
+		DisableSSL:       aws.Bool(disableSSLBool),
 	}))
 
 	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})

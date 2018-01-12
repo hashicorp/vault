@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -33,8 +34,7 @@ func secretCreds(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretCredsRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
@@ -60,7 +60,7 @@ func (b *backend) secretCredsRenew(
 	}
 
 	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	resp, err := f(req, d)
+	resp, err := f(ctx, req, d)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +86,7 @@ func (b *backend) secretCredsRenew(
 	return resp, nil
 }
 
-func (b *backend) secretCredsRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {

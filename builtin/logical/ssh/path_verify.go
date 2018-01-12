@@ -1,6 +1,8 @@
 package ssh
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -40,7 +42,7 @@ func (b *backend) getOTP(s logical.Storage, n string) (*sshOTP, error) {
 	return &result, nil
 }
 
-func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	otp := d.Get("otp").(string)
 
 	// If OTP is not a UUID and a string matching VerifyEchoRequest, then the

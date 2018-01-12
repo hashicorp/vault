@@ -25,6 +25,7 @@ The default status codes are:
 
 - `200` if initialized, unsealed, and active
 - `429` if unsealed and standby
+- `472` if data recovery mode replication secondary and active
 - `501` if not initialized
 - `503` if sealed
 

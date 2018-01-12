@@ -1,6 +1,7 @@
 package gcpauth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -49,7 +50,7 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 	}
 }
 
-func (b *GcpAuthBackend) pathLogin(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	loginInfo, err := b.parseAndValidateJwt(req, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -66,7 +67,7 @@ func (b *GcpAuthBackend) pathLogin(req *logical.Request, data *framework.FieldDa
 	}
 }
 
-func (b *GcpAuthBackend) pathLoginRenew(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Check role exists and allowed policies are still the same.
 	roleName := req.Auth.Metadata["role"]
 	if roleName == "" {
@@ -100,7 +101,7 @@ func (b *GcpAuthBackend) pathLoginRenew(req *logical.Request, data *framework.Fi
 		req.Auth.TTL = role.Period
 		return &logical.Response{Auth: req.Auth}, nil
 	} else {
-		return framework.LeaseExtend(role.TTL, role.MaxTTL, b.System())(req, data)
+		return framework.LeaseExtend(role.TTL, role.MaxTTL, b.System())(ctx, req, data)
 	}
 }
 
@@ -206,28 +207,36 @@ func (b *GcpAuthBackend) getSigningKey(token *jwt.JSONWebToken, rawToken string,
 
 		accountKey, err := util.ServiceAccountKey(iamClient, keyId, serviceAccountId, role.ProjectId)
 		if err != nil {
-			return nil, err
+			// Attempt to get a normal Google Oauth cert in case of GCE inferrence.
+			key, err := b.getGoogleOauthCert(keyId, s)
+			if err != nil {
+				return nil, errors.New("could not find service account key or Google Oauth cert with given 'kid' id")
+			}
+			return key, nil
 		}
-
 		return util.PublicKey(accountKey.PublicKeyData)
 	case gceRoleType:
-		var certsEndpoint string
-		conf, err := b.config(s)
-		if err != nil {
-			return nil, fmt.Errorf("could not read config for backend: %v", err)
-		}
-		if conf != nil {
-			certsEndpoint = conf.GoogleCertsEndpoint
-		}
-
-		key, err := util.OAuth2RSAPublicKey(keyId, certsEndpoint)
-		if err != nil {
-			return nil, err
-		}
-		return key, nil
+		return b.getGoogleOauthCert(keyId, s)
 	default:
 		return nil, fmt.Errorf("unexpected role type %s", role.RoleType)
 	}
+}
+
+func (b *GcpAuthBackend) getGoogleOauthCert(keyId string, s logical.Storage) (interface{}, error) {
+	var certsEndpoint string
+	conf, err := b.config(s)
+	if err != nil {
+		return nil, fmt.Errorf("could not read config for backend: %v", err)
+	}
+	if conf != nil {
+		certsEndpoint = conf.GoogleCertsEndpoint
+	}
+
+	key, err := util.OAuth2RSAPublicKey(keyId, certsEndpoint)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 func validateBaseJWTClaims(c *jwt.Claims, roleName string) error {
@@ -310,6 +319,20 @@ func (b *GcpAuthBackend) pathIamLogin(req *logical.Request, loginInfo *gcpLoginI
 				TTL:       role.TTL,
 			},
 		},
+	}
+
+	if role.MaxTTL > time.Duration(0) {
+		// Cap maxTTL to the sysview's max TTL
+		maxTTL := role.MaxTTL
+		if maxTTL > b.System().MaxLeaseTTL() {
+			maxTTL = b.System().MaxLeaseTTL()
+		}
+
+		// Cap TTL to MaxTTL
+		if resp.Auth.TTL > maxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
+			resp.Auth.TTL = maxTTL
+		}
 	}
 
 	return resp, nil
@@ -426,6 +449,20 @@ func (b *GcpAuthBackend) pathGceLogin(req *logical.Request, loginInfo *gcpLoginI
 				TTL:       role.TTL,
 			},
 		},
+	}
+
+	if role.MaxTTL > time.Duration(0) {
+		// Cap maxTTL to the sysview's max TTL
+		maxTTL := role.MaxTTL
+		if maxTTL > b.System().MaxLeaseTTL() {
+			maxTTL = b.System().MaxLeaseTTL()
+		}
+
+		// Cap TTL to MaxTTL
+		if resp.Auth.TTL > maxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
+			resp.Auth.TTL = maxTTL
+		}
 	}
 
 	return resp, nil

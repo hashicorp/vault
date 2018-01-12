@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -53,8 +54,7 @@ endpoint.`,
 	return ret
 }
 
-func (b *backend) pathGenerateIntermediate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
 	exported, format, role, errorResp := b.getGenerationParams(data)
@@ -129,8 +129,7 @@ func (b *backend) pathGenerateIntermediate(
 	return resp, nil
 }
 
-func (b *backend) pathSetSignedIntermediate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	cert := data.Get("certificate").(string)
 
 	if cert == "" {

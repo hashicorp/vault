@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -368,18 +369,18 @@ func (r *Router) matchingStoragePrefix(path string, apiPath bool) (string, strin
 }
 
 // Route is used to route a given request
-func (r *Router) Route(req *logical.Request) (*logical.Response, error) {
-	resp, _, _, err := r.routeCommon(req, false)
+func (r *Router) Route(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	resp, _, _, err := r.routeCommon(ctx, req, false)
 	return resp, err
 }
 
 // Route is used to route a given existence check request
-func (r *Router) RouteExistenceCheck(req *logical.Request) (bool, bool, error) {
-	_, ok, exists, err := r.routeCommon(req, true)
+func (r *Router) RouteExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
+	_, ok, exists, err := r.routeCommon(ctx, req, true)
 	return ok, exists, err
 }
 
-func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
+func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
 	// Find the mount point
 	r.l.RLock()
 	adjustedPath := req.Path
@@ -504,10 +505,10 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 
 	// Invoke the backend
 	if existenceCheck {
-		ok, exists, err := re.backend.HandleExistenceCheck(req)
+		ok, exists, err := re.backend.HandleExistenceCheck(ctx, req)
 		return nil, ok, exists, err
 	} else {
-		resp, err := re.backend.HandleRequest(req)
+		resp, err := re.backend.HandleRequest(ctx, req)
 		// When a token gets renewed, the request hits this path and reaches
 		// token store. Token store delegates the renewal to the expiration
 		// manager. Expiration manager in-turn creates a different logical

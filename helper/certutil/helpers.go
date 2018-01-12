@@ -102,8 +102,8 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 
 // ParsePEMBundle takes a string of concatenated PEM-format certificate
 // and private key values and decodes/parses them, checking validity along
-// the way. There must be at max two certificates (a certificate and its
-// issuing certificate) and one private key.
+// the way. The first certificate must be the subject certificate and issuing
+// certificates may follow.  There must be at most one private key.
 func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	if len(pemBundle) == 0 {
 		return nil, errutil.UserError{"empty pem bundle"}

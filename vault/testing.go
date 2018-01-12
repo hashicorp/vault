@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -379,6 +380,8 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 	return &dynamicSystemView{c, me}
 }
 
+// TestAddTestPlugin registers the testFunc as part of the plugin command to the
+// plugin catalog.
 func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
@@ -413,11 +416,74 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 	}
 }
 
+// TestAddTestPluginTempDir registers the testFunc as part of the plugin command to the
+// plugin catalog. It uses tmpDir as the plugin directory.
+func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir string) {
+	file, err := os.Open(os.Args[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	fi, err := file.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Copy over the file to the temp dir
+	dst := filepath.Join(tempDir, filepath.Base(os.Args[0]))
+	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer out.Close()
+
+	if _, err = io.Copy(out, file); err != nil {
+		t.Fatal(err)
+	}
+	err = out.Sync()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Determine plugin directory full path
+	fullPath, err := filepath.EvalSymlinks(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	reader, err := os.Open(filepath.Join(fullPath, filepath.Base(os.Args[0])))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+
+	// Find out the sha256
+	hash := sha256.New()
+
+	_, err = io.Copy(hash, reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sum := hash.Sum(nil)
+
+	// Set core's plugin directory and plugin catalog directory
+	c.pluginDirectory = fullPath
+	c.pluginCatalog.directory = fullPath
+
+	command := fmt.Sprintf("%s --test.run=%s", filepath.Base(os.Args[0]), testFunc)
+	err = c.pluginCatalog.Set(name, command, sum)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 var testLogicalBackends = map[string]logical.Factory{}
 var testCredentialBackends = map[string]logical.Factory{}
 
-// Starts the test server which responds to SSH authentication.
-// Used to test the SSH secret backend.
+// StartSSHHostTestServer starts the test server which responds to SSH
+// authentication. Used to test the SSH secret backend.
 func StartSSHHostTestServer() (string, error) {
 	pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(testSharedPublicKey))
 	if err != nil {
@@ -587,7 +653,7 @@ func (n *noopAudit) Salt() (*salt.Salt, error) {
 
 type rawHTTP struct{}
 
-func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (n *rawHTTP) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	return &logical.Response{
 		Data: map[string]interface{}{
 			logical.HTTPStatusCode:  200,
@@ -597,7 +663,7 @@ func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error)
 	}, nil
 }
 
-func (n *rawHTTP) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+func (n *rawHTTP) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	return false, false, nil
 }
 
@@ -760,6 +826,7 @@ func (c *TestCluster) ensureCoresSealed() error {
 	return nil
 }
 
+// UnsealWithStoredKeys uses stored keys to unseal the test cluster cores
 func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
 	for _, core := range c.Cores {
 		if err := core.UnsealWithStoredKeys(); err != nil {
@@ -813,6 +880,7 @@ type TestClusterOptions struct {
 	NumCores           int
 	SealFunc           func() Seal
 	RawLogger          interface{}
+	TempDir            string
 }
 
 var DefaultNumCores = 3
@@ -856,11 +924,20 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	var testCluster TestCluster
-	tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
-	if err != nil {
-		t.Fatal(err)
+	if opts != nil && opts.TempDir != "" {
+		if _, err := os.Stat(opts.TempDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(opts.TempDir, 0700); err != nil {
+				t.Fatal(err)
+			}
+		}
+		testCluster.TempDir = opts.TempDir
+	} else {
+		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		testCluster.TempDir = tempDir
 	}
-	testCluster.TempDir = tempDir
 
 	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -1014,7 +1091,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		if err != nil {
 			t.Fatal(err)
 		}
-		certGetter := reload.NewCertificateGetter(certFile, keyFile)
+		certGetter := reload.NewCertificateGetter(certFile, keyFile, "")
 		certGetters = append(certGetters, certGetter)
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},

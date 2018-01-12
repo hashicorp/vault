@@ -1,6 +1,8 @@
 package ssh
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -18,7 +20,7 @@ func pathFetchPublicKey(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathFetchPublicKey(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathFetchPublicKey(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	publicKeyEntry, err := caKey(req.Storage, caPublicKey)
 	if err != nil {
 		return nil, err

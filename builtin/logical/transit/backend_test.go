@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"math/rand"
@@ -57,7 +58,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		Storage: storage,
 	}
 
-	resp, err = b.HandleRequest(keyReq)
+	resp, err = b.HandleRequest(context.Background(), keyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -73,7 +74,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		},
 	}
 
-	resp, err = b.HandleRequest(encryptReq)
+	resp, err = b.HandleRequest(context.Background(), encryptReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -89,7 +90,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		},
 	}
 
-	resp, err = b.HandleRequest(decryptReq)
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -106,13 +107,13 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(rotateReq)
+	resp, err = b.HandleRequest(context.Background(), rotateReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
 
 	// Encrypt again
-	resp, err = b.HandleRequest(encryptReq)
+	resp, err = b.HandleRequest(context.Background(), encryptReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -123,7 +124,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 
 	// See if the older ciphertext can still be decrypted
-	resp, err = b.HandleRequest(decryptReq)
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -135,7 +136,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	decryptReq.Data = map[string]interface{}{
 		"ciphertext": ciphertext2,
 	}
-	resp, err = b.HandleRequest(decryptReq)
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -151,7 +152,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 			"input": plaintext,
 		},
 	}
-	resp, err = b.HandleRequest(signReq)
+	resp, err = b.HandleRequest(context.Background(), signReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -167,7 +168,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		},
 	}
 
-	resp, err = b.HandleRequest(verifyReq)
+	resp, err = b.HandleRequest(context.Background(), verifyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -179,7 +180,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		"input":     plaintext,
 		"algorithm": "invalid",
 	}
-	resp, err = b.HandleRequest(signReq)
+	resp, err = b.HandleRequest(context.Background(), signReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +192,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		"input":     plaintext,
 		"algorithm": "sha2-512",
 	}
-	resp, err = b.HandleRequest(signReq)
+	resp, err = b.HandleRequest(context.Background(), signReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -201,7 +202,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		"input":     plaintext,
 		"signature": signature,
 	}
-	resp, err = b.HandleRequest(verifyReq)
+	resp, err = b.HandleRequest(context.Background(), verifyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -214,7 +215,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		"signature": signature,
 		"algorithm": "sha2-512",
 	}
-	resp, err = b.HandleRequest(verifyReq)
+	resp, err = b.HandleRequest(context.Background(), verifyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
@@ -819,7 +820,7 @@ func TestKeyUpgrade(t *testing.T) {
 	if p.Key != nil ||
 		p.Keys == nil ||
 		len(p.Keys) != 1 ||
-		!reflect.DeepEqual(p.Keys[1].Key, key) {
+		!reflect.DeepEqual(p.Keys[strconv.Itoa(1)].Key, key) {
 		t.Errorf("bad key migration, result is %#v", p.Keys)
 	}
 }
@@ -906,7 +907,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		},
 	}
 
-	resp, err := b.HandleRequest(req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -938,7 +939,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 			"nonce":     "Zm9vIGJhcg==", // "foo bar"
 			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 		}
-		resp, err = b.HandleRequest(req)
+		resp, err = b.HandleRequest(context.Background(), req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -954,7 +955,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 			"plaintext": "emlwIHphcA==", // "zip zap"
 			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 		}
-		resp, err = b.HandleRequest(req)
+		resp, err = b.HandleRequest(context.Background(), req)
 		if err == nil && (resp == nil || !resp.IsError()) {
 			t.Fatal("expected error response")
 		}
@@ -966,7 +967,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"nonce":     "b25ldHdvdGhyZWVl", // "onetwothreee"
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -978,7 +979,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	}
 	ciphertext1 := resp.Data["ciphertext"].(string)
 
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1006,7 +1007,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		req.Data["context"] = "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOldandSdd7S"
 	}
 
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1018,7 +1019,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	}
 	ciphertext3 := resp.Data["ciphertext"].(string)
 
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1043,7 +1044,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"nonce":     "dHdvdGhyZWVmb3Vy", // "twothreefour"
 		"context":   "qV4h9iQyvn+raODOer4JNAsOhkXBwdT4HZ677Ql4KLqXSU+Jk4C/fXBWbv6xkSYT",
 	}
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1055,7 +1056,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	}
 	ciphertext5 := resp.Data["ciphertext"].(string)
 
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1083,7 +1084,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"nonce":   "b25ldHdvdGhyZWVl", // "onetwothreee"
 		"context": "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -1100,7 +1101,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"nonce":     "b25ldHdvdGhyZWVl", // "onetwothreee"
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1112,7 +1113,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	}
 	ciphertext7 := resp.Data["ciphertext"].(string)
 
-	resp, err = b.HandleRequest(req)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1192,7 +1193,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			fd.Schema = be.pathKeys().Fields
 
 			// Try to write the key to make sure it exists
-			_, err := be.pathPolicyWrite(req, fd)
+			_, err := be.pathPolicyWrite(context.Background(), req, fd)
 			if err != nil {
 				t.Fatalf("got an error: %v", err)
 			}
@@ -1203,7 +1204,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				fd.Raw["plaintext"] = base64.StdEncoding.EncodeToString([]byte(testPlaintext))
 				fd.Schema = be.pathEncrypt().Fields
-				resp, err := be.pathEncryptWrite(req, fd)
+				resp, err := be.pathEncryptWrite(context.Background(), req, fd)
 				if err != nil {
 					t.Fatalf("got an error: %v, resp is %#v", err, *resp)
 				}
@@ -1213,7 +1214,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			case "rotate":
 				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				fd.Schema = be.pathRotate().Fields
-				resp, err := be.pathRotateWrite(req, fd)
+				resp, err := be.pathRotateWrite(context.Background(), req, fd)
 				if err != nil {
 					t.Fatalf("got an error: %v, resp is %#v, chosenKey is %s", err, *resp, chosenKey)
 				}
@@ -1228,7 +1229,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 				fd.Raw["ciphertext"] = ct
 				fd.Schema = be.pathDecrypt().Fields
-				resp, err := be.pathDecryptWrite(req, fd)
+				resp, err := be.pathDecryptWrite(context.Background(), req, fd)
 				if err != nil {
 					// This could well happen since the min version is jumping around
 					if resp.Data["error"].(string) == keysutil.ErrTooOld {
@@ -1249,7 +1250,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			// Change the min version, which also tests the archive functionality
 			case "change_min_version":
 				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
-				resp, err := be.pathPolicyRead(req, fd)
+				resp, err := be.pathPolicyRead(context.Background(), req, fd)
 				if err != nil {
 					t.Fatalf("got an error reading policy %s: %v", chosenKey, err)
 				}
@@ -1259,7 +1260,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 				setVersion := (rand.Int() % latestVersion) + 1
 				fd.Raw["min_decryption_version"] = setVersion
 				fd.Schema = be.pathConfig().Fields
-				resp, err = be.pathConfigWrite(req, fd)
+				resp, err = be.pathConfigWrite(context.Background(), req, fd)
 				if err != nil {
 					t.Fatalf("got an error setting min decryption version: %v", err)
 				}
@@ -1293,7 +1294,7 @@ func TestBadInput(t *testing.T) {
 		Path:      "keys/test",
 	}
 
-	resp, err := b.HandleRequest(req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1306,7 +1307,7 @@ func TestBadInput(t *testing.T) {
 		"ciphertext": "vault:v1:abcd",
 	}
 
-	_, err = b.HandleRequest(req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error")
 	}

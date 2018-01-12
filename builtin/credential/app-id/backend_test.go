@@ -1,6 +1,7 @@
 package appId
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -41,7 +42,7 @@ func TestBackend_basic(t *testing.T) {
 		Operation: logical.ListOperation,
 		Storage:   storage,
 	}
-	resp, err := b.HandleRequest(req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +142,7 @@ func testAccStepMapUserIdCidr(t *testing.T, cidr string) logicaltest.TestStep {
 func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 	checkTTL := func(resp *logical.Response) error {
 		if resp.Auth.LeaseOptions.TTL.String() != "768h0m0s" {
-			return fmt.Errorf("invalid TTL")
+			return fmt.Errorf("invalid TTL: got %s", resp.Auth.LeaseOptions.TTL)
 		}
 		return nil
 	}
@@ -165,7 +166,7 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 func testAccLoginAppIDInPath(t *testing.T, display string) logicaltest.TestStep {
 	checkTTL := func(resp *logical.Response) error {
 		if resp.Auth.LeaseOptions.TTL.String() != "768h0m0s" {
-			return fmt.Errorf("invalid TTL")
+			return fmt.Errorf("invalid TTL: got %s", resp.Auth.LeaseOptions.TTL)
 		}
 		return nil
 	}

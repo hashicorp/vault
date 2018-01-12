@@ -1,15 +1,15 @@
 ---
 layout: "api"
-page_title: "PostgreSQL Database Plugin - HTTP API"
+page_title: "PostgreSQL - Database - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-databases-postgresql"
 description: |-
-  The PostgreSQL plugin for Vault's Database backend generates database credentials to access PostgreSQL servers.
+  The PostgreSQL plugin for Vault's database secrets engine generates database credentials to access PostgreSQL servers.
 ---
 
 # PostgreSQL Database Plugin HTTP API
 
-The PostgreSQL Database Plugin is one of the supported plugins for the Database
-backend. This plugin generates database credentials dynamically based on
+The PostgreSQL database plugin is one of the supported plugins for the database
+secrets engine. This plugin generates database credentials dynamically based on
 configured roles for the PostgreSQL database.
 
 ## Configure Connection
@@ -61,9 +61,9 @@ $ curl \
 ## Statements
 
 Statements are configured during role creation and are used by the plugin to
-determine what is sent to the datatabse on user creation, renewing, and
+determine what is sent to the database on user creation, renewing, and
 revocation. For more information on configuring roles see the [Role
-API](/api/secret/databases/index.html#create-role) in the Database Backend docs.
+API](/api/secret/databases/index.html#create-role) in the database secrets engine docs.
 
 ### Parameters
 

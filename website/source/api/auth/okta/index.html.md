@@ -1,24 +1,24 @@
 ---
 layout: "api"
-page_title: "Okta Auth Backend - HTTP API"
+page_title: "Okta - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-okta"
 description: |-
-  This is the API documentation for the Vault Okta authentication backend.
+  This is the API documentation for the Vault Okta auth method.
 ---
 
-# Okta Auth Backend HTTP API
+# Okta Auth Method (API)
 
-This is the API documentation for the Vault Okta authentication backend. For
-general information about the usage and operation of the Okta backend, please
-see the [Vault Okta backend documentation](/docs/auth/okta.html).
+This is the API documentation for the Vault Okta auth method. For
+general information about the usage and operation of the Okta method, please
+see the [Vault Okta method documentation](/docs/auth/okta.html).
 
-This documentation assumes the Okta backend is mounted at the `/auth/okta`
-path in Vault. Since it is possible to mount auth backends at any location,
+This documentation assumes the Okta method is mounted at the `/auth/okta`
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Create Configuration
 
-Configures the connection parameters for Okta. This path honors the 
+Configures the connection parameters for Okta. This path honors the
 distinction between the `create` and `update` capabilities inside ACL policies.
 
 | Method   | Path                         | Produces               |
@@ -29,13 +29,13 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 
 - `org_name` `(string: <required>)` - Name of the organization to be used in the
   Okta API.
-- `api_token` `(string: "")` - Okta API token. This is required to query Okta 
-  for user group membership. If this is not supplied only locally configured 
-  groups will be enabled. 
+- `api_token` `(string: "")` - Okta API token. This is required to query Okta
+  for user group membership. If this is not supplied only locally configured
+  groups will be enabled.
 - `base_url` `(string: "")` -  If set, will be used as the base domain
   for API requests.  Examples are okta.com, oktapreview.com, and okta-emea.com.
 - `ttl` `(string: "")` - Duration after which authentication will be expired.
-- `max_ttl` `(string: "")` - Maximum duration after which authentication will 
+- `max_ttl` `(string: "")` - Maximum duration after which authentication will
   be expired.
 
 ### Sample Payload
@@ -94,12 +94,11 @@ $ curl \
 
 ## List Users
 
-List the users configurated in the Okta backend.
+List the users configurated in the Okta method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/okta/users`           | `200 application/json` |
-| `GET`   | `/auth/okta/users?list=true`  | `200 application/json` |
 
 ### Sample Request
 
@@ -140,9 +139,9 @@ Registers a new user and maps a set of policies to it.
 ### Parameters
 
 - `username` `(string: <required>)` - Name of the user.
-- `groups` `(string: "")` - Comma-separated list of groups associated with the 
+- `groups` `(string: "")` - Comma-separated list of groups associated with the
   user.
-- `policies` `(string: "")` - Comma-separated list of policies associated with 
+- `policies` `(string: "")` - Comma-separated list of policies associated with
   the user.
 
 ```json
@@ -199,7 +198,7 @@ $ curl \
 
 ## Delete User
 
-Deletes an existing username from the backend.
+Deletes an existing username from the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -220,12 +219,11 @@ $ curl \
 
 ## List Groups
 
-List the groups configurated in the Okta backend.
+List the groups configurated in the Okta method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/okta/groups`           | `200 application/json` |
-| `GET`   | `/auth/okta/groups?list=true`  | `200 application/json` |
 
 ### Sample Request
 
@@ -266,7 +264,7 @@ Registers a new group and maps a set of policies to it.
 ### Parameters
 
 - `name` `(string: <required>)` - The name of the group.
-- `policies` `(string: "")` - Comma-separated list of policies associated with 
+- `policies` `(string: "")` - Comma-separated list of policies associated with
   the group.
 
 ```json
@@ -322,7 +320,7 @@ $ curl \
 
 ## Delete Group
 
-Deletes an existing group from the backend.
+Deletes an existing group from the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

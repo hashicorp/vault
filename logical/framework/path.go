@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -65,7 +66,7 @@ type Path struct {
 	// is not allowed since the resource must first be created. The reverse is
 	// also true. If not specified, the Update action is forced and the user
 	// must have UpdateCapability on the path.
-	ExistenceCheck func(*logical.Request, *FieldData) (bool, error)
+	ExistenceCheck ExistenceFunc
 
 	// Help is text describing how to use this path. This will be used
 	// to auto-generate the help operation. The Path will automatically
@@ -82,49 +83,50 @@ type Path struct {
 	HelpDescription string
 }
 
-func (p *Path) helpCallback(
-	req *logical.Request, data *FieldData) (*logical.Response, error) {
-	var tplData pathTemplateData
-	tplData.Request = req.Path
-	tplData.RoutePattern = p.Pattern
-	tplData.Synopsis = strings.TrimSpace(p.HelpSynopsis)
-	if tplData.Synopsis == "" {
-		tplData.Synopsis = "<no synopsis>"
-	}
-	tplData.Description = strings.TrimSpace(p.HelpDescription)
-	if tplData.Description == "" {
-		tplData.Description = "<no description>"
-	}
-
-	// Alphabetize the fields
-	fieldKeys := make([]string, 0, len(p.Fields))
-	for k, _ := range p.Fields {
-		fieldKeys = append(fieldKeys, k)
-	}
-	sort.Strings(fieldKeys)
-
-	// Build the field help
-	tplData.Fields = make([]pathTemplateFieldData, len(fieldKeys))
-	for i, k := range fieldKeys {
-		schema := p.Fields[k]
-		description := strings.TrimSpace(schema.Description)
-		if description == "" {
-			description = "<no description>"
+func (p *Path) helpCallback() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
+		var tplData pathTemplateData
+		tplData.Request = req.Path
+		tplData.RoutePattern = p.Pattern
+		tplData.Synopsis = strings.TrimSpace(p.HelpSynopsis)
+		if tplData.Synopsis == "" {
+			tplData.Synopsis = "<no synopsis>"
+		}
+		tplData.Description = strings.TrimSpace(p.HelpDescription)
+		if tplData.Description == "" {
+			tplData.Description = "<no description>"
 		}
 
-		tplData.Fields[i] = pathTemplateFieldData{
-			Key:         k,
-			Type:        schema.Type.String(),
-			Description: description,
+		// Alphabetize the fields
+		fieldKeys := make([]string, 0, len(p.Fields))
+		for k, _ := range p.Fields {
+			fieldKeys = append(fieldKeys, k)
 		}
-	}
+		sort.Strings(fieldKeys)
 
-	help, err := executeTemplate(pathHelpTemplate, &tplData)
-	if err != nil {
-		return nil, fmt.Errorf("error executing template: %s", err)
-	}
+		// Build the field help
+		tplData.Fields = make([]pathTemplateFieldData, len(fieldKeys))
+		for i, k := range fieldKeys {
+			schema := p.Fields[k]
+			description := strings.TrimSpace(schema.Description)
+			if description == "" {
+				description = "<no description>"
+			}
 
-	return logical.HelpResponse(help, nil), nil
+			tplData.Fields[i] = pathTemplateFieldData{
+				Key:         k,
+				Type:        schema.Type.String(),
+				Description: description,
+			}
+		}
+
+		help, err := executeTemplate(pathHelpTemplate, &tplData)
+		if err != nil {
+			return nil, fmt.Errorf("error executing template: %s", err)
+		}
+
+		return logical.HelpResponse(help, nil), nil
+	}
 }
 
 type pathTemplateData struct {

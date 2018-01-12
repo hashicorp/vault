@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/fatih/structs"
@@ -59,7 +60,7 @@ The Vault server must have permissions to assume this role.`,
 
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
-func (b *backend) pathConfigStsExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathConfigStsExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	accountID := data.Get("account_id").(string)
 	if accountID == "" {
 		return false, fmt.Errorf("missing account_id")
@@ -74,8 +75,7 @@ func (b *backend) pathConfigStsExistenceCheck(req *logical.Request, data *framew
 }
 
 // pathStsList is used to list all the AWS STS role configurations
-func (b *backend) pathStsList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathStsList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 	sts, err := req.Storage.List("config/sts/")
@@ -155,7 +155,7 @@ func (b *backend) lockedAwsStsEntry(s logical.Storage, accountID string) (*awsSt
 }
 
 // pathConfigStsRead is used to return information about an STS role/AWS accountID association
-func (b *backend) pathConfigStsRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigStsRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accountID := data.Get("account_id").(string)
 	if accountID == "" {
 		return logical.ErrorResponse("missing account id"), nil
@@ -175,7 +175,7 @@ func (b *backend) pathConfigStsRead(req *logical.Request, data *framework.FieldD
 }
 
 // pathConfigStsCreateUpdate is used to associate an STS role with a given AWS accountID
-func (b *backend) pathConfigStsCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigStsCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accountID := data.Get("account_id").(string)
 	if accountID == "" {
 		return logical.ErrorResponse("missing AWS account ID"), nil
@@ -214,7 +214,7 @@ func (b *backend) pathConfigStsCreateUpdate(req *logical.Request, data *framewor
 }
 
 // pathConfigStsDelete is used to delete a previously configured STS configuration
-func (b *backend) pathConfigStsDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigStsDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 

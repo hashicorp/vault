@@ -18,22 +18,22 @@ system.
 ## Policy-Authorization Workflow
 
 Before a human or machine can gain access, an administrator must configure Vault
-with an [authentication backend](/docs/concepts/auth.html). Authentication is
+with an [auth method](/docs/concepts/auth.html). Authentication is
 the process by which human or machine-supplied information is verified against
 an internal or external system.
 
 Consider the following diagram, which illustrates the steps a security team
 would take to configure Vault to authenticate using a corporate LDAP or
 ActiveDirectory installation. Even though this example uses LDAP, the concept
-applies to all authentication backends.
+applies to all auth methods.
 
 [![Vault Auth Workflow](/assets/images/vault-policy-workflow.svg)](/assets/images/vault-policy-workflow.svg)
 
-1. The security team configures Vault to connect to an authentication backend.
-This configuration varies by authentication backend. In the case of LDAP, Vault
+1. The security team configures Vault to connect to an auth method.
+This configuration varies by auth method. In the case of LDAP, Vault
 needs to know the address of the LDAP server and whether to connect using TLS.
 It is important to note that Vault does not store a copy of the LDAP database -
-Vault will delegate the authentication to the authentication backend.
+Vault will delegate the authentication to the auth method.
 
 1. The security team authors a policy (or uses an existing policy) which grants
 access to paths in Vault. Policies are written in HCL in your editor of
@@ -42,8 +42,8 @@ preference and saved to disk.
 1. The policy's contents are uploaded and store in Vault and referenced by name.
 You can think of the policy's name as a pointer or symlink to its set of rules.
 
-1. Most importantly, the security team maps data in the authentication backend to a
-policy. For example, the security team might create mappings like:
+1. Most importantly, the security team maps data in the auth method to a policy.
+For example, the security team might create mappings like:
 
     > Members of the OU group "dev" map to the Vault policy named "readonly-dev".
 
@@ -53,7 +53,7 @@ policy. For example, the security team might create mappings like:
 
 Now Vault has an internal mapping between a backend authentication system and
 internal policy. When a user authenticates to Vault, the actual authentication
-is delegated to the authentication backend. As a user, the flow looks like:
+is delegated to the auth method. As a user, the flow looks like:
 
 [![Vault Auth Workflow](/assets/images/vault-auth-workflow.svg)](/assets/images/vault-auth-workflow.svg)
 
@@ -538,7 +538,7 @@ policy that does not exist.
 Vault can automatically associate a set of policies to a token based on an
 authorization. This configuration varies significantly between authentication
 backends. For simplicity, this example will use Vault's built-in userpass
-authentication backend.
+auth method.
 
 A Vault administrator or someone from the security team would create the user in
 Vault with a list of associated policies:
@@ -556,7 +556,7 @@ of policies attached.
 The user wishing to authenticate would run
 
 ```sh
-$ vault auth -method="userpass" username="sethvargo"
+$ vault login -method="userpass" username="sethvargo"
 Password (will be hidden): ...
 ```
 
