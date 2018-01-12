@@ -26,7 +26,10 @@ type backendGRPCPluginClient struct {
 	system logical.SystemView
 	logger log.Logger
 
-	server     *grpc.Server
+	// server is the grpc server used for serving storage and sysview requests.
+	server *grpc.Server
+	// clientConn is the underlying grpc connection to the server, we store it
+	// so it can be cleaned up.
 	clientConn *grpc.ClientConn
 }
 
@@ -67,12 +70,14 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 }
 
 func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
+	// If we have a bad connection return an empty set.
 	switch b.clientConn.GetState() {
 	case connectivity.Ready, connectivity.Idle:
 	default:
 		return &logical.Paths{}
 	}
 
+	// Timeout the connection
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	reply, err := b.client.SpecialPaths(ctx, &pb.Empty{})
@@ -110,6 +115,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 		return false, false, err
 	}
 
+	// Make sure the connection is in a good state.
 	switch b.clientConn.GetState() {
 	case connectivity.Ready, connectivity.Idle:
 	default:
@@ -132,6 +138,8 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 }
 
 func (b *backendGRPCPluginClient) Cleanup() {
+	// Timout the connection incase we have a bad connection. We can't block on
+	// shutdown.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	b.client.Cleanup(ctx, &pb.Empty{})

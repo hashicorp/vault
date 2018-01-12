@@ -393,7 +393,13 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 		groupAliases[i] = LogicalAliasToProtoAlias(al)
 	}
 
+	lo, err := LogicalLeaseOptionsToProtoLeaseOptions(a.LeaseOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Auth{
+		LeaseOptions: lo,
 		InternalData: buf,
 		DisplayName:  a.DisplayName,
 		Policies:     a.Policies,
@@ -424,7 +430,13 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		groupAliases[i] = ProtoAliasToLogicalAlias(al)
 	}
 
+	lo, err := ProtoLeaseOptionsToLogicalLeaseOptions(a.LeaseOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	return &logical.Auth{
+		LeaseOptions: lo,
 		InternalData: data,
 		DisplayName:  a.DisplayName,
 		Policies:     a.Policies,
