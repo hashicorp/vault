@@ -1105,6 +1105,9 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 	args := d.Get("args").([]string)
 	// For backwards compatibility, also accept args as part of command.
 	parts := strings.Split(command, " ")
+	if len(parts) <= 0 {
+		return logical.ErrorResponse("missing command value"), nil
+	}
 	args = append(parts[1:], args...)
 
 	sha256Bytes, err := hex.DecodeString(sha256)
