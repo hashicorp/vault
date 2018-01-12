@@ -40,7 +40,8 @@ func (b BackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) err
 
 func (p *BackendPlugin) GRPCClient(broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &backendGRPCPluginClient{
-		client: pb.NewBackendClient(c),
-		broker: broker,
+		client:     pb.NewBackendClient(c),
+		clientConn: c,
+		broker:     broker,
 	}, nil
 }

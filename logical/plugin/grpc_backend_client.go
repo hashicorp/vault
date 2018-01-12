@@ -3,14 +3,18 @@ package plugin
 import (
 	"context"
 	"errors"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
 	log "github.com/mgutz/logxi/v1"
 )
+
+var ErrPluginShutdown = errors.New("plugin is shutdown")
 
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
@@ -22,7 +26,8 @@ type backendGRPCPluginClient struct {
 	system logical.SystemView
 	logger log.Logger
 
-	server *grpc.Server
+	server     *grpc.Server
+	clientConn *grpc.ClientConn
 }
 
 func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
@@ -35,6 +40,11 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 		return nil, err
 	}
 
+	switch b.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return nil, ErrPluginShutdown
+	}
 	reply, err := b.client.HandleRequest(ctx, &pb.HandleRequestArgs{
 		Request: protoReq,
 	})
@@ -57,6 +67,11 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 }
 
 func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
+	switch b.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return &logical.Paths{}
+	}
 	reply, err := b.client.SpecialPaths(context.Background(), &pb.Empty{})
 	if err != nil {
 		return nil
@@ -92,6 +107,11 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 		return false, false, err
 	}
 
+	switch b.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return false, false, ErrPluginShutdown
+	}
 	reply, err := b.client.HandleExistenceCheck(ctx, &pb.HandleExistenceCheckArgs{
 		Request: protoReq,
 	})
@@ -109,13 +129,26 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 }
 
 func (b *backendGRPCPluginClient) Cleanup() {
-	b.client.Cleanup(context.Background(), &pb.Empty{})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	b.client.Cleanup(ctx, &pb.Empty{})
+	if b.server != nil {
+		b.server.GracefulStop()
+	}
+	b.clientConn.Close()
 }
 
 func (b *backendGRPCPluginClient) Initialize() error {
 	if b.metadataMode {
 		return ErrClientInMetadataMode
 	}
+
+	switch b.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return ErrPluginShutdown
+	}
+
 	_, err := b.client.Initialize(context.Background(), &pb.Empty{})
 	return err
 }
@@ -169,6 +202,11 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 		Config:   config.Config,
 	}
 
+	switch b.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return ErrPluginShutdown
+	}
 	reply, err := b.client.Setup(context.Background(), args)
 	if err != nil {
 		return err
@@ -201,6 +239,13 @@ func (b *backendGRPCPluginClient) RegisterLicense(license interface{}) error {
 	args := &pb.RegisterLicenseArgs{
 	//		License: license,
 	}
+
+	switch b.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return ErrPluginShutdown
+	}
+
 	reply, err := b.client.RegisterLicense(context.Background(), args)
 	if err != nil {
 		return err
