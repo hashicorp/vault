@@ -72,7 +72,10 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 	default:
 		return &logical.Paths{}
 	}
-	reply, err := b.client.SpecialPaths(context.Background(), &pb.Empty{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	reply, err := b.client.SpecialPaths(ctx, &pb.Empty{})
 	if err != nil {
 		return nil
 	}
@@ -149,7 +152,9 @@ func (b *backendGRPCPluginClient) Initialize() error {
 		return ErrPluginShutdown
 	}
 
-	_, err := b.client.Initialize(context.Background(), &pb.Empty{})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_, err := b.client.Initialize(ctx, &pb.Empty{})
 	return err
 }
 
@@ -157,7 +162,9 @@ func (b *backendGRPCPluginClient) InvalidateKey(key string) {
 	if b.metadataMode {
 		return
 	}
-	b.client.InvalidateKey(context.Background(), &pb.InvalidateKeyArgs{
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	b.client.InvalidateKey(ctx, &pb.InvalidateKeyArgs{
 		Key: key,
 	})
 }
@@ -172,12 +179,6 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 		impl: storageImpl,
 	}
 
-	// Shim log.Logger
-	/*	loggerImpl := config.Logger
-		if b.metadataMode {
-			loggerImpl = log.NullLog
-		}
-	*/
 	// Shim logical.SystemView
 	sysViewImpl := config.System
 	if b.metadataMode {
@@ -223,7 +224,9 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 }
 
 func (b *backendGRPCPluginClient) Type() logical.BackendType {
-	reply, err := b.client.Type(context.Background(), &pb.Empty{})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	reply, err := b.client.Type(ctx, &pb.Empty{})
 	if err != nil {
 		return logical.TypeUnknown
 	}

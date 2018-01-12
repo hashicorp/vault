@@ -157,7 +157,8 @@ func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	b.RUnlock()
 	// Need to compare string value for case were err comes from plugin RPC
 	// and is returned as plugin.BasicError type.
-	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
+	if err != nil &&
+		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.Lock()
 		if b.canary == canary {
@@ -206,7 +207,8 @@ func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 
 	checkFound, exists, err := b.Backend.HandleExistenceCheck(ctx, req)
 	b.RUnlock()
-	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
+	if err != nil &&
+		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.Lock()
 		if b.canary == canary {
