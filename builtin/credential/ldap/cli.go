@@ -26,10 +26,10 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 	password, ok := m["password"]
 	if !ok {
-		fmt.Printf("Password (will be hidden): ")
+		fmt.Fprintf(os.Stderr, "Password (will be hidden): ")
 		var err error
 		password, err = pwd.Read(os.Stdin)
-		fmt.Println()
+		fmt.Fprintf(os.Stderr, "\n")
 		if err != nil {
 			return nil, err
 		}
