@@ -432,7 +432,7 @@ message ResponseWrapDataArgs {
 }
 
 message ResponseWrapDataReply {
- //   WrapInfo info = 1;
+    ResponseWrapInfo wrap_info = 1;
     string err = 2;
 }
 

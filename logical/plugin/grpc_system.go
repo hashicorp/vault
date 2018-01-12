@@ -102,8 +102,12 @@ func (s *gRPCSystemViewClient) ResponseWrapData(data map[string]interface{}, ttl
 		return nil, errors.New(reply.Err)
 	}
 
-	// TODO:
-	return nil, nil
+	info, err := pb.ProtoResponseWrapInfoToLogicalResponseWrapInfo(reply.WrapInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
 }
 
 func (s *gRPCSystemViewClient) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
@@ -169,19 +173,24 @@ func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.Re
 	data := map[string]interface{}{}
 	err := json.Unmarshal(args.Data, &data)
 	if err != nil {
-		return nil, err
+		return &pb.ResponseWrapDataReply{}, err
 	}
 
 	// Do not allow JWTs to be returned
-	_, err = s.impl.ResponseWrapData(data, time.Duration(args.TTL), false)
+	info, err := s.impl.ResponseWrapData(data, time.Duration(args.TTL), false)
 	if err != nil {
 		return &pb.ResponseWrapDataReply{
 			Err: pb.ErrToString(err),
 		}, nil
 	}
-	// TODO:
+
+	pbInfo, err := pb.LogicalResponseWrapInfoToProtoResponseWrapInfo(info)
+	if err != nil {
+		return &pb.ResponseWrapDataReply{}, err
+	}
+
 	return &pb.ResponseWrapDataReply{
-	//		ResponseWrapInfo: info,
+		WrapInfo: pbInfo,
 	}, nil
 }
 
