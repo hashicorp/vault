@@ -41,6 +41,11 @@ type creationBundle struct {
 	CommonName     string
 	OU             []string
 	Organization   []string
+	Country        []string
+	Province       []string
+	Locality       []string
+	StreetAddress  []string
+	PostalCode     []string
 	DNSNames       []string
 	EmailAddresses []string
 	IPAddresses    []net.IP
@@ -730,6 +735,46 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
+	// Set C (country) values if specified in the role
+	country := []string{}
+	{
+		if role.Country != "" {
+			country = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.Country, ","), false)
+		}
+	}
+
+	// Set ST (state, province) values if specified in the role
+	province := []string{}
+	{
+		if role.Province != "" {
+			province = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.Province, ","), false)
+		}
+	}
+
+	// Set L (locality) values if specified in the role
+	locality := []string{}
+	{
+		if role.Locality != "" {
+			locality = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.Locality, ","), false)
+		}
+	}
+
+	// Set streetAddress values if specified in the role
+	streetAddress := []string{}
+	{
+		if role.StreetAddress != "" {
+			streetAddress = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.StreetAddress, ","), false)
+		}
+	}
+
+	// Set postalCode values if specified in the role
+	postalCode := []string{}
+	{
+		if role.PostalCode != "" {
+			postalCode = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.PostalCode, ","), false)
+		}
+	}
+
 	// Get the TTL and verify it against the max allowed
 	var ttl time.Duration
 	var maxTTL time.Duration
@@ -798,6 +843,11 @@ func generateCreationBundle(b *backend,
 		CommonName:     cn,
 		OU:             ou,
 		Organization:   organization,
+		Country:        country,
+		Province:       province,
+		Locality:       locality,
+		StreetAddress:  streetAddress,
+		PostalCode:     postalCode,
 		DNSNames:       dnsNames,
 		EmailAddresses: emailAddresses,
 		IPAddresses:    ipAddresses,
@@ -891,6 +941,11 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		CommonName:         creationInfo.CommonName,
 		OrganizationalUnit: creationInfo.OU,
 		Organization:       creationInfo.Organization,
+		Country:            creationInfo.Country,
+		Province:           creationInfo.Province,
+		Locality:           creationInfo.Locality,
+		StreetAddress:      creationInfo.StreetAddress,
+		PostalCode:         creationInfo.PostalCode,
 	}
 
 	certTemplate := &x509.Certificate{

@@ -191,10 +191,45 @@ include the Common Name (cn). Defaults to true.`,
 this value in certificates issued by this role.`,
 			},
 
+			"country": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `If set, the C (Country) will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"province": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `If set, the ST (Province) will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"locality": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `If set, the L (Locality) will be set to
+this value in certificates issued by this role.`,
+			},
+
 			"organization": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "",
 				Description: `If set, the O (Organization) will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"street_address": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `If set, the streetAddress will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"postal_code": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `If set, the postalCode will be set to
 this value in certificates issued by this role.`,
 			},
 
@@ -398,6 +433,11 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		Organization:        data.Get("organization").(string),
 		GenerateLease:       new(bool),
 		NoStore:             data.Get("no_store").(bool),
+		Country:             data.Get("country").(string),
+		Province:            data.Get("province").(string),
+		Locality:            data.Get("locality").(string),
+		StreetAddress:       data.Get("street_address").(string),
+		PostalCode:          data.Get("postal_code").(string),
 	}
 
 	// no_store implies generate_lease := false
@@ -526,6 +566,11 @@ type roleEntry struct {
 	Organization          string   `json:"organization" mapstructure:"organization"`
 	GenerateLease         *bool    `json:"generate_lease,omitempty"`
 	NoStore               bool     `json:"no_store" mapstructure:"no_store"`
+	Country               string   `json:"country" mapstructure:"country"`
+	Province              string   `json:"province" mapstructure:"province"`
+	Locality              string   `json:"locality" mapstructure:"locality"`
+	StreetAddress         string   `json:"street_address" mapstructure:"street_address"`
+	PostalCode            string   `json:"postal_address" mapstructure:"postal_code"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
