@@ -31,14 +31,15 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress       string
-	flagCACert        string
-	flagCAPath        string
-	flagClientCert    string
-	flagClientKey     string
-	flagTLSServerName string
-	flagTLSSkipVerify bool
-	flagWrapTTL       time.Duration
+	flagAddress                string
+	flagCACert                 string
+	flagCAPath                 string
+	flagClientCert             string
+	flagClientKey              string
+	flagTLSServerName          string
+	flagTLSSkipVerify          bool
+	flagAWSApiGatewaySignature bool
+	flagWrapTTL                time.Duration
 
 	flagFormat string
 	flagField  string
@@ -65,6 +66,10 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	if c.flagAddress != "" {
 		config.Address = c.flagAddress
+	}
+
+	if c.flagAWSApiGatewaySignature {
+		config.AWSApiGatewaySignature = true
 	}
 
 	// If we need custom TLS configuration, then set it
@@ -223,6 +228,17 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Usage: "Disable verification of TLS certificates. Using this option " +
 					"is highly discouraged and decreases the security of data " +
 					"transmissions to and from the Vault server.",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    "aws-apigateway-signature",
+				Target:  &c.flagAWSApiGatewaySignature,
+				Default: false,
+				EnvVar:  "VAULT_AWS_APIGATEWAY_SIGNATURE",
+				Usage: "Sign all client requests with AWS v4 Signatures for use " +
+					"with AWS API Gateway being used as a reverse proxy." +
+					"The signer will use the default credential provider chain for " +
+					"signing requests.",
 			})
 
 			f.DurationVar(&DurationVar{
