@@ -193,7 +193,7 @@ func TestSecret_TokenID(t *testing.T) {
 		}
 	})
 
-	t.Run("token-create", func(t *testing.T) {
+	t.Run("token create", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -216,7 +216,7 @@ func TestSecret_TokenID(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup", func(t *testing.T) {
+	t.Run("token lookup", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -244,7 +244,7 @@ func TestSecret_TokenID(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup-self", func(t *testing.T) {
+	t.Run("token lookup-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -273,7 +273,7 @@ func TestSecret_TokenID(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew", func(t *testing.T) {
+	t.Run("token renew", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -301,7 +301,7 @@ func TestSecret_TokenID(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew-self", func(t *testing.T) {
+	t.Run("token renew-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -461,7 +461,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		}
 	})
 
-	t.Run("token-create", func(t *testing.T) {
+	t.Run("token create", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -484,7 +484,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup", func(t *testing.T) {
+	t.Run("token lookup", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -512,7 +512,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup-self", func(t *testing.T) {
+	t.Run("token lookup-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -541,7 +541,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew", func(t *testing.T) {
+	t.Run("token renew", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -569,7 +569,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew-self", func(t *testing.T) {
+	t.Run("token renew-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -699,7 +699,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 	})
 
-	t.Run("token-create", func(t *testing.T) {
+	t.Run("token create", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -726,7 +726,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup", func(t *testing.T) {
+	t.Run("token lookup", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -757,7 +757,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup-self", func(t *testing.T) {
+	t.Run("token lookup-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -790,7 +790,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew", func(t *testing.T) {
+	t.Run("token renew", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -823,7 +823,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew-self", func(t *testing.T) {
+	t.Run("token renew-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -999,7 +999,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		}
 	})
 
-	t.Run("token-create", func(t *testing.T) {
+	t.Run("token create", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1023,7 +1023,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup", func(t *testing.T) {
+	t.Run("token lookup", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1053,7 +1053,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup-self", func(t *testing.T) {
+	t.Run("token lookup-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1084,7 +1084,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew", func(t *testing.T) {
+	t.Run("token renew", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1114,7 +1114,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew-self", func(t *testing.T) {
+	t.Run("token renew-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1297,7 +1297,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		}
 	})
 
-	t.Run("token-create", func(t *testing.T) {
+	t.Run("token create", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1322,7 +1322,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup", func(t *testing.T) {
+	t.Run("token lookup", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1353,7 +1353,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup-self", func(t *testing.T) {
+	t.Run("token lookup-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1385,7 +1385,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew", func(t *testing.T) {
+	t.Run("token renew", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1416,7 +1416,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew-self", func(t *testing.T) {
+	t.Run("token renew-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1589,7 +1589,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		}
 	})
 
-	t.Run("token-create", func(t *testing.T) {
+	t.Run("token create", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1614,7 +1614,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup", func(t *testing.T) {
+	t.Run("token lookup", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1645,7 +1645,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup-self", func(t *testing.T) {
+	t.Run("token lookup-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1677,7 +1677,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew", func(t *testing.T) {
+	t.Run("token renew", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1708,7 +1708,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew-self", func(t *testing.T) {
+	t.Run("token renew-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1865,7 +1865,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		}
 	})
 
-	t.Run("token-create", func(t *testing.T) {
+	t.Run("token create", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1891,7 +1891,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup", func(t *testing.T) {
+	t.Run("token lookup", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1923,7 +1923,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		}
 	})
 
-	t.Run("token-lookup-self", func(t *testing.T) {
+	t.Run("token lookup-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1956,7 +1956,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew", func(t *testing.T) {
+	t.Run("token renew", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)
@@ -1988,7 +1988,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		}
 	})
 
-	t.Run("token-renew-self", func(t *testing.T) {
+	t.Run("token renew-self", func(t *testing.T) {
 		t.Parallel()
 
 		client, closer := testVaultServer(t)

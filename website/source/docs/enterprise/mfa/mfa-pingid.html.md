@@ -46,7 +46,7 @@ This page demonstrates PingID MFA on ACL'd paths of Vault.
    above:
 
     ```
-    $ vault policy-write ping-policy -<<EOF
+    $ vault policy write ping-policy -<<EOF
     path "secret/foo" {
       capabilities = ["read"]
       mfa_methods  = ["ping"]
@@ -89,7 +89,7 @@ authenticate against it:
 `entity_id` property of the token:
 
     ```text
-    $ vault token-lookup 70f97438-e174-c03c-40fe-6bcdc1028d6c
+    $ vault token lookup 70f97438-e174-c03c-40fe-6bcdc1028d6c
 
     Key                 Value
     ---                 -----

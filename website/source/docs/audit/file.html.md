@@ -35,8 +35,8 @@ $ vault audit enable -path="vault_audit_1" file file_path=/home/user/vault_audit
 
 ## Configuration
 
-Note the difference between `audit-enable` command options and the `file` backend
-configuration options. Use `vault audit-enable -help` to see the command options.
+Note the difference between `audit enable` command options and the `file` backend
+configuration options. Use `vault audit enable -help` to see the command options.
 Following are the configuration options available for the backend.
 
 <dl class="api">

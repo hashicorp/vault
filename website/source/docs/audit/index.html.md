@@ -42,7 +42,7 @@ documentation for more details).
 ## Enabling/Disabling Audit Devices
 
 When a Vault server is first initialized, no auditing is enabled. Audit
-devices must be enabled by a root user using `vault audit-enable`.
+devices must be enabled by a root user using `vault audit enable`.
 
 When enabling an audit device, options can be passed to it to configure it.
 For example, the command below enables the file audit device:

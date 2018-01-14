@@ -231,7 +231,7 @@ you.
 1. Extend host key certificate TTLs.
 
     ```text
-    $ vault mount-tune -max-lease-ttl=87600h ssh-host-signer
+    $ vault secrets tune -max-lease-ttl=87600h ssh-host-signer
     ```
 
 1. Create a role for signing host keys. Be sure to fill in the list of allowed
