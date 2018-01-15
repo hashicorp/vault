@@ -132,7 +132,7 @@ current TTL is up, the token will no longer function -- it, and its associated
 leases, are revoked.
 
 If the token is renewable, Vault can be asked to extend the token validity
-period using `vault token-renew` or the appropriate renewal endpoint. At this
+period using `vault token renew` or the appropriate renewal endpoint. At this
 time, various factors come into play. What happens depends upon whether the
 token is a periodic token (available for creation by `root`/`sudo` users, token
 store roles, or some auth methods), has an explicit maximum TTL

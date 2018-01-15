@@ -150,7 +150,7 @@ Usage: vault login TOKEN [CONFIG K=V...]
       $ vault login token=96ddf4bc-d217-f3ba-f9bd-017055595017 lookup=false
 
   This token usually comes from a different source such as the API or via the
-  built-in "vault token-create" command.
+  built-in "vault token create" command.
 
 Configuration:
 

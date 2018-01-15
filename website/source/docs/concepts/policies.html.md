@@ -394,7 +394,7 @@ $ vault read sys/policy/default
 To disable attachment of the default policy:
 
 ```sh
-$ vault token-create -no-default-policy
+$ vault token create -no-default-policy
 ```
 
 or via the API:
@@ -422,7 +422,7 @@ controlled users and authentication should be used.
 To revoke a root token, run:
 
 ```sh
-$ vault token-revoke "<token>"
+$ vault token revoke "<token>"
 ```
 
 or via the API:
@@ -569,7 +569,7 @@ authenticated user.
 Tokens are associated with their policies at creation time. For example:
 
 ```sh
-$ vault token-create -policy=dev-readonly -policy=logs
+$ vault token create -policy=dev-readonly -policy=logs
 ```
 
 Child tokens can be associated with a subset of a parent's policies. Root users
