@@ -36,7 +36,7 @@ on-demand for fine-grained security controls, but adds first class support for
 non-repudiation. Key rotation is a first class concern for Keywhiz and Vault,
 so that no external systems need to be used.
 
-Lastly Vault forces a mandatory lease contract with clients. All secrets read
+Lastly, Vault forces a mandatory lease contract with clients. All secrets read
 from Vault have an associated lease which enables operators to audit key usage,
 perform key rolling, and ensure automatic revocation. Vault provides multiple
 revocation mechanisms to give operators a clear "break glass" procedure after a
