@@ -176,7 +176,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	// If a period is provided, set that as part of resp.Auth.Period and return a
-	// response immediately. Let expiration manager handle renewal from thereon.
+	// response immediately. Let expiration manager handle renewal from there on.
 	if cert.Period > time.Duration(0) {
 		resp := &logical.Response{
 			Auth: req.Auth,

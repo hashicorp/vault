@@ -789,9 +789,97 @@ func TestExpiration_RenewToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	fmt.Println(out.Auth)
+
 	if auth.ClientToken != out.Auth.ClientToken {
-		t.Fatalf("Bad: %#v", out)
+		t.Fatalf("bad: %#v", out)
 	}
+}
+
+func TestExpiration_RenewToken_period(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.rootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Register a token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+		Period: time.Minute,
+	}
+	err = exp.RegisterAuth("auth/token/login", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Renew the token
+	out, err := exp.RenewToken(&logical.Request{}, "auth/token/login", root.ID, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if auth.ClientToken != out.Auth.ClientToken {
+		t.Fatalf("bad: %#v", out)
+	}
+
+	fmt.Println(out.Auth)
+
+	if out.Auth.TTL > time.Minute {
+		t.Fatalf("expected TTL to be less than 1 minute, got: %s", out.Auth.TTL)
+	}
+}
+
+func TestExpiration_RenewToken_period_backend(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.rootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Register a token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+		// Period: 5 * time.Second,
+	}
+
+	err = exp.RegisterAuth("auth/foo/login", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Auth: auth,
+		},
+	}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "auth/foo/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", Config: MountConfig{MaxLeaseTTL: 5 * time.Second}}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait 3 seconds
+	time.Sleep(3)
+	out, err := exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	fmt.Println(out.Auth)
 }
 
 func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
