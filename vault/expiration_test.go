@@ -29,11 +29,6 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 	return ts.expiration
 }
 
-func mockCoreExpiration(t testing.TB) (*Core, *ExpirationManager) {
-	c, ts, _, _ := TestCoreWithTokenStore(t)
-	return c, ts.expiration
-}
-
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
 	c, ts, _, _ := TestCoreWithBackendTokenStore(t, backend)
 	return c, ts.expiration
