@@ -70,7 +70,7 @@ updated, it takes effect immediately to all associated users.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/policy/:name`          | `204 (empty body)`     |
+| `PUT`    | `/sys/policy/:name`          | `200 application/json  |
 
 ### Parameters
 
