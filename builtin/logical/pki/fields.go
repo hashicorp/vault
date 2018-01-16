@@ -39,6 +39,12 @@ pkcs8 instead. Defaults to "der".`,
 comma-delimited list`,
 	}
 
+	fields["other_sans"] = &framework.FieldSchema{
+		Type: framework.TypeKVPairs,
+		Description: `Requested other SANs, in an array with the format
+<oid>=<utf8 string value> for each entry.`,
+	}
+
 	return fields
 }
 

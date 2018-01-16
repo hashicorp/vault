@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,6 +27,8 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/ryanuber/go-glob"
+	"golang.org/x/crypto/cryptobyte"
+	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 )
 
 type certExtKeyUsage int
@@ -44,6 +47,7 @@ type creationBundle struct {
 	DNSNames       []string
 	EmailAddresses []string
 	IPAddresses    []net.IP
+	OtherSANs      map[string]string
 	IsCA           bool
 	KeyType        string
 	KeyBits        int
@@ -419,6 +423,29 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 	return ""
 }
 
+func validateOtherSANs(req *logical.Request, names map[string]string, role *roleEntry) (string, string) {
+	for oid, name := range names {
+		allowedNames, ok := role.AllowedOtherSANs[oid]
+		if !ok {
+			return oid, ""
+		}
+
+		valid := false
+		for _, allowedName := range allowedNames {
+			if glob.Glob(allowedName, name) {
+				valid = true
+				break
+			}
+		}
+
+		if !valid {
+			return oid, name
+		}
+	}
+
+	return "", ""
+}
+
 func generateCert(b *backend,
 	role *roleEntry,
 	signingBundle *caInfoBundle,
@@ -680,6 +707,21 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
+	var otherSANs map[string]string
+	if sans := data.Get("other_sans").(map[string]string); len(sans) > 0 {
+		badOID, badName := validateOtherSANs(req, sans, role)
+		switch {
+		case len(badOID) > 0:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"other SAN OID %s not allowed by this role", badOID)}
+		case len(badName) != 0:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"other SAN %s not allowed for OID %s by this role", badName, badOID)}
+		default:
+			otherSANs = sans
+		}
+	}
+
 	// Get and verify any IP SANs
 	ipAddresses := []net.IP{}
 	var ipAltInt interface{}
@@ -801,6 +843,7 @@ func generateCreationBundle(b *backend,
 		DNSNames:       dnsNames,
 		EmailAddresses: emailAddresses,
 		IPAddresses:    ipAddresses,
+		OtherSANs:      otherSANs,
 		KeyType:        role.KeyType,
 		KeyBits:        role.KeyBits,
 		SigningBundle:  signingBundle,
@@ -903,6 +946,10 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 		DNSNames:       creationInfo.DNSNames,
 		EmailAddresses: creationInfo.EmailAddresses,
 		IPAddresses:    creationInfo.IPAddresses,
+	}
+
+	if err := handleOtherSANs(certTemplate, creationInfo.OtherSANs); err != nil {
+		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
 	}
 
 	// Add this before calling addKeyUsages
@@ -1012,6 +1059,10 @@ func createCSR(creationInfo *creationBundle) (*certutil.ParsedCSRBundle, error) 
 		IPAddresses:    creationInfo.IPAddresses,
 	}
 
+	if err := handleOtherCSRSANs(csrTemplate, creationInfo.OtherSANs); err != nil {
+		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
+	}
+
 	switch creationInfo.KeyType {
 	case "rsa":
 		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
@@ -1100,6 +1151,10 @@ func signCertificate(creationInfo *creationBundle,
 		certTemplate.DNSNames = creationInfo.DNSNames
 		certTemplate.EmailAddresses = creationInfo.EmailAddresses
 		certTemplate.IPAddresses = creationInfo.IPAddresses
+	}
+
+	if err := handleOtherSANs(certTemplate, creationInfo.OtherSANs); err != nil {
+		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
 	}
 
 	addKeyUsages(creationInfo, certTemplate)
@@ -1248,4 +1303,114 @@ func convertRespToPKCS8(resp *logical.Response) error {
 	}
 
 	return nil
+}
+
+func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string]string) error {
+	certTemplate := &x509.Certificate{
+		DNSNames:       in.DNSNames,
+		IPAddresses:    in.IPAddresses,
+		EmailAddresses: in.EmailAddresses,
+	}
+	if err := handleOtherSANs(certTemplate, sans); err != nil {
+		return err
+	}
+	if len(certTemplate.ExtraExtensions) > 0 {
+		for _, v := range certTemplate.ExtraExtensions {
+			in.ExtraExtensions = append(in.ExtraExtensions, v)
+		}
+	}
+	return nil
+}
+
+func handleOtherSANs(in *x509.Certificate, sans map[string]string) error {
+	// If other SANs is empty we return which causes normal Go stdlib parsing
+	// of the other SAN types
+	if len(sans) == 0 {
+		return nil
+	}
+
+	var rawValues []asn1.RawValue
+
+	// We need to generate an IMPLICIT sequence for compatibility with OpenSSL
+	// -- it's an open question what the default for RFC 5280 actually is, see
+	// https://github.com/openssl/openssl/issues/5091 -- so we have to use
+	// cryptobyte because using the asn1 package's marshaling always produces
+	// an EXPLICIT sequence. Note that asn1 is way too magical according to
+	// agl, and cryptobyte is modeled after the CBB/CBS bits that agl put into
+	// boringssl.
+	for k, v := range sans {
+		var b cryptobyte.Builder
+		oid, err := stringToOid(k)
+		if err != nil {
+			return err
+		}
+		b.AddASN1ObjectIdentifier(oid)
+		b.AddASN1(cbbasn1.Tag(0).ContextSpecific().Constructed(), func(b *cryptobyte.Builder) {
+			b.AddASN1(cbbasn1.UTF8String, func(b *cryptobyte.Builder) {
+				b.AddBytes([]byte(v))
+			})
+		})
+		m, err := b.Bytes()
+		if err != nil {
+			return err
+		}
+		rawValues = append(rawValues, asn1.RawValue{Tag: 0, Class: 2, IsCompound: true, Bytes: m})
+	}
+
+	// If other SANs is empty we return which causes normal Go stdlib parsing
+	// of the other SAN types
+	if len(rawValues) == 0 {
+		return nil
+	}
+
+	// Append any existing SANs, sans marshalling
+	rawValues = append(rawValues, marshalSANs(in.DNSNames, in.EmailAddresses, in.IPAddresses)...)
+
+	// Marshal and add to ExtraExtensions
+	ext := pkix.Extension{
+		Id: []int{2, 5, 29, 17},
+	}
+	var err error
+	ext.Value, err = asn1.Marshal(rawValues)
+	if err != nil {
+		return err
+	}
+	in.ExtraExtensions = append(in.ExtraExtensions, ext)
+
+	return nil
+}
+
+// Note: Taken from the Go source code since it's not public, plus changed to not marshal
+// marshalSANs marshals a list of addresses into a the contents of an X.509
+// SubjectAlternativeName extension.
+func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP) []asn1.RawValue {
+	var rawValues []asn1.RawValue
+	for _, name := range dnsNames {
+		rawValues = append(rawValues, asn1.RawValue{Tag: 2, Class: 2, Bytes: []byte(name)})
+	}
+	for _, email := range emailAddresses {
+		rawValues = append(rawValues, asn1.RawValue{Tag: 1, Class: 2, Bytes: []byte(email)})
+	}
+	for _, rawIP := range ipAddresses {
+		// If possible, we always want to encode IPv4 addresses in 4 bytes.
+		ip := rawIP.To4()
+		if ip == nil {
+			ip = rawIP
+		}
+		rawValues = append(rawValues, asn1.RawValue{Tag: 7, Class: 2, Bytes: ip})
+	}
+	return rawValues
+}
+
+func stringToOid(in string) (asn1.ObjectIdentifier, error) {
+	ret := []int{}
+	split := strings.Split(in, ".")
+	for _, v := range split {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, i)
+	}
+	return asn1.ObjectIdentifier(ret), nil
 }
