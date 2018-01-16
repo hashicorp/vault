@@ -847,9 +847,10 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 		Response: &logical.Response{
 			Auth: &logical.Auth{
 				LeaseOptions: logical.LeaseOptions{
-					TTL:       5 * time.Second,
+					TTL:       10 * time.Second,
 					Renewable: true,
 				},
+				Period: 5 * time.Second,
 			},
 		},
 		DefaultLeaseTTL: 5 * time.Second,
@@ -871,10 +872,11 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 	auth := &logical.Auth{
 		ClientToken: root.ID,
 		LeaseOptions: logical.LeaseOptions{
-			TTL:       5 * time.Second,
+			TTL:       10 * time.Second,
 			Renewable: true,
+			IssueTime: time.Now(),
 		},
-		// Period: 5 * time.Second,
+		Period: 5 * time.Second,
 	}
 
 	err = exp.RegisterAuth("auth/foo/login", auth)
@@ -883,21 +885,30 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 	}
 
 	// Wait 3 seconds
-	// time.Sleep(3 * time.Second)
-	out, err := exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
+	time.Sleep(3 * time.Second)
+	resp, err := exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	if resp == nil {
+		t.Fatal("expected a response")
+	}
+	if resp.Auth.TTL > 5*time.Second {
+		t.Fatal("expected TTL to be less than or equal to period, got: %s", resp.Auth.TTL)
+	}
 
-	fmt.Println(out.Auth)
-
-	// time.Sleep(3 * time.Second)
-	out, err = exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
+	// Wait another 3 seconds. If period works correctly, this should not fail
+	time.Sleep(3 * time.Second)
+	resp, err = exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-
-	fmt.Println(out.Auth)
+	if resp == nil {
+		t.Fatal("expected a response")
+	}
+	if resp.Auth.TTL < 4*time.Second || resp.Auth.TTL > 5*time.Second {
+		t.Fatal("expected TTL to be around period's value, got: %s", resp.Auth.TTL)
+	}
 }
 
 func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
@@ -1328,7 +1339,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		},
 	}
 	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "auth/foo/")
+	view := NewBarrierView(barrier, "auth/")
 	meUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
