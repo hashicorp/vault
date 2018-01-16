@@ -193,7 +193,7 @@ func (c *Core) disableCredential(path string) error {
 	}
 
 	switch {
-	case entry.Local, !c.replicationState.HasState(consts.ReplicationPerformanceSecondary):
+	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearView(view); err != nil {
 			c.logger.Error("core: failed to clear view for path being unmounted", "error", err, "path", path)

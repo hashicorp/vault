@@ -184,7 +184,7 @@ func (c *Core) setupPolicyStore() error {
 	sysView := &dynamicSystemView{core: c}
 	c.policyStore = NewPolicyStore(c.systemBarrierView, sysView)
 
-	if c.replicationState.HasState(consts.ReplicationPerformanceSecondary) {
+	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		// Policies will sync from the primary
 		return nil
 	}

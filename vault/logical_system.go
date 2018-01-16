@@ -1382,7 +1382,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 
 // handleMount is used to mount a new path
 func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
@@ -1511,7 +1511,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 	path := data.Get("path").(string)
 	path = sanitizeMountPath(path)
 
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(path)
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
@@ -1535,7 +1535,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 
 // handleRemount is used to remount a path
 func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 
 	// Get the paths
 	fromPath := data.Get("from").(string)
@@ -1641,7 +1641,7 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 
 // handleTuneWriteCommon is used to set config settings on a path
 func (b *SystemBackend) handleTuneWriteCommon(path string, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 
 	path = sanitizeMountPath(path)
 
@@ -1904,7 +1904,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
@@ -1979,7 +1979,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 
 	fullPath := credentialRoutePrefix + path
 
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(fullPath)
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
@@ -2225,7 +2225,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 
 // handleEnableAudit is used to enable a new audit backend
 func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
@@ -2387,7 +2387,7 @@ func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Reques
 
 // handleRotate is used to trigger a key rotation
 func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	if repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
 	}
