@@ -29,6 +29,11 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 	return ts.expiration
 }
 
+func mockCoreExpiration(t testing.TB) (*Core, *ExpirationManager) {
+	c, ts, _, _ := TestCoreWithTokenStore(t)
+	return c, ts.expiration
+}
+
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
 	c, ts, _, _ := TestCoreWithBackendTokenStore(t, backend)
 	return c, ts.expiration
@@ -789,8 +794,6 @@ func TestExpiration_RenewToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	fmt.Println(out.Auth)
-
 	if auth.ClientToken != out.Auth.ClientToken {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -827,8 +830,6 @@ func TestExpiration_RenewToken_period(t *testing.T) {
 		t.Fatalf("bad: %#v", out)
 	}
 
-	fmt.Println(out.Auth)
-
 	if out.Auth.TTL > time.Minute {
 		t.Fatalf("expected TTL to be less than 1 minute, got: %s", out.Auth.TTL)
 	}
@@ -841,11 +842,36 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Mount a noop backend
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Auth: &logical.Auth{
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       5 * time.Second,
+					Renewable: true,
+				},
+			},
+		},
+		DefaultLeaseTTL: 5 * time.Second,
+		MaxLeaseTTL:     5 * time.Second,
+	}
+
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, credentialBarrierPrefix)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Register a token
 	auth := &logical.Auth{
 		ClientToken: root.ID,
 		LeaseOptions: logical.LeaseOptions{
-			TTL:       time.Hour,
+			TTL:       5 * time.Second,
 			Renewable: true,
 		},
 		// Period: 5 * time.Second,
@@ -856,25 +882,17 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	noop := &NoopBackend{
-		Response: &logical.Response{
-			Auth: auth,
-		},
-	}
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "auth/foo/")
-	meUUID, err := uuid.GenerateUUID()
+	// Wait 3 seconds
+	// time.Sleep(3 * time.Second)
+	out, err := exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
 	if err != nil {
-		t.Fatal(err)
-	}
-	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", Config: MountConfig{MaxLeaseTTL: 5 * time.Second}}, view)
-	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("err: %v", err)
 	}
 
-	// Wait 3 seconds
-	time.Sleep(3)
-	out, err := exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
+	fmt.Println(out.Auth)
+
+	// time.Sleep(3 * time.Second)
+	out, err = exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
