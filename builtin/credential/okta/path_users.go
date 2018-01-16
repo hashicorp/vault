@@ -2,7 +2,6 @@ package okta
 
 import (
 	"context"
-	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -31,13 +30,13 @@ func pathUsers(b *backend) *framework.Path {
 			},
 
 			"groups": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Comma-separated list of groups associated with the user.",
+				Type:        framework.TypeCommaStringSlice,
+				Description: "List of groups associated with the user.",
 			},
 
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Comma-separated list of policies associated with the user.",
+				Type:        framework.TypeCommaStringSlice,
+				Description: "List of policies associated with the user.",
 			},
 		},
 
@@ -111,15 +110,8 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse("Error empty name"), nil
 	}
 
-	groups := strings.Split(d.Get("groups").(string), ",")
-	for i, g := range groups {
-		groups[i] = strings.TrimSpace(g)
-	}
-
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
-	}
+	groups := d.Get("groups").([]string)
+	policies := d.Get("policies").([]string)
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
