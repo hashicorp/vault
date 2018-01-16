@@ -175,12 +175,17 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	resp, err := framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(ctx, req, d)
-	if err != nil {
-		return nil, err
+	// If a period is provided, set that as part of resp.Auth.Period and return a
+	// response immediately. Let expiration manager handle renewal from thereon.
+	if cert.Period > time.Duration(0) {
+		resp := &logical.Response{
+			Auth: req.Auth,
+		}
+		resp.Auth.Period = cert.Period
+		return resp, nil
 	}
-	resp.Auth.Period = cert.Period
-	return resp, nil
+
+	return framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(ctx, req, d)
 }
 
 func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
