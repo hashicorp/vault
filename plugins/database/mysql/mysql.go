@@ -234,3 +234,9 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 
 	return nil
 }
+
+// RollUserCredentials is not implemented on MySQL, so this is a no-op.
+func (m *MySQL) RollUserCredentials(ctx context.Context, statements dbplugin.Statements, username string) (password string, err error) {
+	// NOOP
+	return "", nil
+}

@@ -302,6 +302,12 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	return nil
 }
 
+// RollUserCredentials is not implemented on MSSQL, so this is a no-op.
+func (m *MSSQL) RollUserCredentials(ctx context.Context, statements dbplugin.Statements, username string) (password string, err error) {
+	// NOOP
+	return "", nil
+}
+
 const dropUserSQL = `
 USE [%s]
 IF EXISTS

@@ -20,6 +20,11 @@ message RenewUserRequest {
 	google.protobuf.Timestamp expiration = 3;
 }
 
+message RollUserCredentialsRequest {
+	Statements statements = 1;
+	string username = 2;
+}
+
 message RevokeUserRequest {
 	Statements statements = 1;
 	string username = 2;
@@ -30,6 +35,7 @@ message Statements {
 	string revocation_statements = 2;
 	string rollback_statements  = 3;
 	string renew_statements = 4;
+	string roll_statements = 5;
 }
 
 message UsernameConfig {
@@ -40,6 +46,10 @@ message UsernameConfig {
 message CreateUserResponse {
 	string username = 1;
 	string password = 2;
+}
+
+message RollUserCredentialsResponse {
+	string password = 1;
 }
 
 message TypeResponse {
@@ -53,6 +63,7 @@ service Database {
     rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
     rpc RenewUser(RenewUserRequest) returns (Empty);
     rpc RevokeUser(RevokeUserRequest) returns (Empty);
+    rpc RollUserCredentials(RollUserCredentialsRequest) returns (RollUserCredentialsResponse);
     rpc Initialize(InitializeRequest) returns (Empty);
     rpc Close(Empty) returns (Empty);
 }

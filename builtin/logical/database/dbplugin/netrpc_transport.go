@@ -37,6 +37,12 @@ func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequestRPC, _ *str
 	return err
 }
 
+func (ds *databasePluginRPCServer) RollUserCredentials(args *RollUserCredentialsRequestRPC, resp *RollUserCredentialsResponse) error {
+	var err error
+	resp.Password, err = ds.impl.RollUserCredentials(context.Background(), args.Statements, args.Username)
+	return err
+}
+
 func (ds *databasePluginRPCServer) Initialize(args *InitializeRequestRPC, _ *struct{}) error {
 	err := ds.impl.Initialize(context.Background(), args.Config, args.VerifyConnection)
 	return err
@@ -97,6 +103,18 @@ func (dr *databasePluginRPCClient) RevokeUser(_ context.Context, statements Stat
 	return err
 }
 
+func (dr *databasePluginRPCClient) RollUserCredentials(_ context.Context, statements Statements, username string) (password string, err error) {
+	req := RollUserCredentialsRequestRPC{
+		Statements: statements,
+		Username:   username,
+	}
+
+	var resp RollUserCredentialsResponse
+	err = dr.client.Call("Plugin.RollUserCredentials", req, &resp)
+
+	return resp.Password, err
+}
+
 func (dr *databasePluginRPCClient) Initialize(_ context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	req := InitializeRequestRPC{
 		Config:           conf,
@@ -134,6 +152,11 @@ type RenewUserRequestRPC struct {
 }
 
 type RevokeUserRequestRPC struct {
+	Statements Statements
+	Username   string
+}
+
+type RollUserCredentialsRequestRPC struct {
 	Statements Statements
 	Username   string
 }

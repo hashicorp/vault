@@ -61,6 +61,18 @@ func (m *mockPlugin) RevokeUser(_ context.Context, statements dbplugin.Statement
 	delete(m.users, username)
 	return nil
 }
+func (m *mockPlugin) RollUserCredentials(_ context.Context, statements dbplugin.Statements, username string) error {
+	err := errors.New("err")
+	if username == "" {
+		return err
+	}
+
+	if _, ok := m.users[username]; !ok {
+		return err
+	}
+
+	return nil
+}
 func (m *mockPlugin) Initialize(_ context.Context, conf map[string]interface{}, _ bool) error {
 	err := errors.New("err")
 	if len(conf) != 1 {
@@ -272,6 +284,40 @@ func TestPlugin_RevokeUser(t *testing.T) {
 }
 
 // Test the code is still compatible with an old netRPC plugin
+func TestPlugin_RollUserCredentials(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	defer db.Close()
+
+	connectionDetails := map[string]interface{}{
+		"test": 1,
+	}
+	err = db.Initialize(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	usernameConf := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	us, _, err := db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	_, err = db.RollUserCredentials(context.Background(), dbplugin.Statements{}, us)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
 func TestPlugin_NetRPC_Initialize(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()

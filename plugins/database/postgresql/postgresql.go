@@ -373,3 +373,9 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 
 	return nil
 }
+
+// RollUserCredentials is not implemented on Postgresql, so this is a no-op.
+func (p *PostgreSQL) RollUserCredentials(ctx context.Context, statements dbplugin.Statements, username string) (password string, err error) {
+	// NOOP
+	return "", nil
+}

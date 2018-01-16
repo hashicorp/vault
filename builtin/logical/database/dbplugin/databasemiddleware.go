@@ -51,6 +51,15 @@ func (mw *databaseTracingMiddleware) RevokeUser(ctx context.Context, statements 
 	return mw.next.RevokeUser(ctx, statements, username)
 }
 
+func (mw *databaseTracingMiddleware) RollUserCredentials(ctx context.Context, statements Statements, username string) (password string, err error) {
+	defer func(then time.Time) {
+		mw.logger.Trace("database", "operation", "RollUserCredentials", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
+	}(time.Now())
+
+	mw.logger.Trace("database", "operation", "RollUserCredentials", "status", "started", mw.typeStr, "transport", mw.transport)
+	return mw.next.RollUserCredentials(ctx, statements, username)
+}
+
 func (mw *databaseTracingMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (err error) {
 	defer func(then time.Time) {
 		mw.logger.Trace("database", "operation", "Initialize", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "verify", verifyConnection, "err", err, "took", time.Since(then))
@@ -129,6 +138,22 @@ func (mw *databaseMetricsMiddleware) RevokeUser(ctx context.Context, statements 
 	metrics.IncrCounter([]string{"database", "RevokeUser"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "RevokeUser"}, 1)
 	return mw.next.RevokeUser(ctx, statements, username)
+}
+
+func (mw *databaseMetricsMiddleware) RollUserCredentials(ctx context.Context, statements Statements, username string) (password string, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"database", "RollUserCredentials"}, now)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "RollUserCredentials"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"database", "RollUserCredentials", "error"}, 1)
+			metrics.IncrCounter([]string{"database", mw.typeStr, "RollUserCredentials", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"database", "RollUserCredentials"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "RollUserCredentials"}, 1)
+	return mw.next.RollUserCredentials(ctx, statements, username)
 }
 
 func (mw *databaseMetricsMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (err error) {

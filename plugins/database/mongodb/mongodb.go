@@ -203,3 +203,9 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 	return nil
 }
+
+// RollUserCredentials is not implemented on MongoDB, so this is a no-op.
+func (m *MongoDB) RollUserCredentials(ctx context.Context, statements dbplugin.Statements, username string) (password string, err error) {
+	// NOOP
+	return "", nil
+}

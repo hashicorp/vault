@@ -284,3 +284,9 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 
 	return nil
 }
+
+// RollUserCredentials is not implemented on hana, so this is a no-op.
+func (h *HANA) RollUserCredentials(ctx context.Context, statements dbplugin.Statements, username string) (password string, err error) {
+	// NOOP
+	return "", nil
+}

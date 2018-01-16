@@ -178,3 +178,9 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 
 	return result.ErrorOrNil()
 }
+
+// RollUserCredentials is not supported on Cassandra, so this is a no-op.
+func (c *Cassandra) RollUserCredentials(ctx context.Context, statements dbplugin.Statements, username string) (password string, err error) {
+	// NOOP
+	return "", nil
+}

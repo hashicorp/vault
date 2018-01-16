@@ -61,6 +61,13 @@ func (s *gRPCServer) RevokeUser(ctx context.Context, req *RevokeUserRequest) (*E
 	return &Empty{}, err
 }
 
+func (s *gRPCServer) RollUserCredentials(ctx context.Context, req *RollUserCredentialsRequest) (*RollUserCredentialsResponse, error) {
+	p, err := s.impl.RollUserCredentials(ctx, *req.Statements, req.Username)
+	return &RollUserCredentialsResponse{
+		Password: p,
+	}, err
+}
+
 func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*Empty, error) {
 	config := map[string]interface{}{}
 
@@ -161,6 +168,24 @@ func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, user
 	})
 
 	return err
+}
+
+func (c *gRPCClient) RollUserCredentials(ctx context.Context, statements Statements, username string) (password string, err error) {
+	switch c.clientConn.GetState() {
+	case connectivity.Ready, connectivity.Idle:
+	default:
+		return "", ErrPluginShutdown
+	}
+
+	resp, err := c.client.RollUserCredentials(ctx, &RollUserCredentialsRequest{
+		Statements: &statements,
+		Username:   username,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return resp.Password, err
 }
 
 func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error {
