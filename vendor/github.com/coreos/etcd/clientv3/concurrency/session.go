@@ -15,10 +15,11 @@
 package concurrency
 
 import (
-	"context"
 	"time"
 
 	v3 "github.com/coreos/etcd/clientv3"
+
+	"golang.org/x/net/context"
 )
 
 const defaultSessionTTL = 60

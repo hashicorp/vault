@@ -33,6 +33,8 @@ import (
 var (
 	// m is a map from name to balancer builder.
 	m = make(map[string]Builder)
+	// defaultBuilder is the default balancer to use.
+	defaultBuilder Builder // TODO(bar) install pickfirst as default.
 )
 
 // Register registers the balancer builder to the balancer map.
@@ -42,12 +44,13 @@ func Register(b Builder) {
 }
 
 // Get returns the resolver builder registered with the given name.
-// If no builder is register with the name, nil will be returned.
+// If no builder is register with the name, the default pickfirst will
+// be used.
 func Get(name string) Builder {
 	if b, ok := m[name]; ok {
 		return b
 	}
-	return nil
+	return defaultBuilder
 }
 
 // SubConn represents a gRPC sub connection.

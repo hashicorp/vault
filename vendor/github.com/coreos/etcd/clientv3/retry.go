@@ -15,11 +15,10 @@
 package clientv3
 
 import (
-	"context"
-
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	pb "github.com/coreos/etcd/etcdserver/etcdserverpb"
 
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -45,7 +44,8 @@ func isNonRepeatableStopError(err error) bool {
 	if ev.Code() != codes.Unavailable {
 		return true
 	}
-	return rpctypes.ErrorDesc(err) != "there is no address available"
+	desc := rpctypes.ErrorDesc(err)
+	return desc != "there is no address available" && desc != "there is no connection available"
 }
 
 func (c *Client) newRetryWrapper(isStop retryStopErrFunc) retryRPCFunc {
@@ -191,14 +191,6 @@ func (rlc *retryLeaseClient) LeaseTimeToLive(ctx context.Context, in *pb.LeaseTi
 	return resp, err
 }
 
-func (rlc *retryLeaseClient) LeaseLeases(ctx context.Context, in *pb.LeaseLeasesRequest, opts ...grpc.CallOption) (resp *pb.LeaseLeasesResponse, err error) {
-	err = rlc.repeatableRetry(ctx, func(rctx context.Context) error {
-		resp, err = rlc.lc.LeaseLeases(rctx, in, opts...)
-		return err
-	})
-	return resp, err
-}
-
 func (rlc *retryLeaseClient) LeaseGrant(ctx context.Context, in *pb.LeaseGrantRequest, opts ...grpc.CallOption) (resp *pb.LeaseGrantResponse, err error) {
 	err = rlc.repeatableRetry(ctx, func(rctx context.Context) error {
 		resp, err = rlc.lc.LeaseGrant(rctx, in, opts...)
@@ -311,28 +303,12 @@ func (rmc *retryMaintenanceClient) Hash(ctx context.Context, in *pb.HashRequest,
 	return resp, err
 }
 
-func (rmc *retryMaintenanceClient) HashKV(ctx context.Context, in *pb.HashKVRequest, opts ...grpc.CallOption) (resp *pb.HashKVResponse, err error) {
-	err = rmc.repeatableRetry(ctx, func(rctx context.Context) error {
-		resp, err = rmc.mc.HashKV(rctx, in, opts...)
-		return err
-	})
-	return resp, err
-}
-
 func (rmc *retryMaintenanceClient) Snapshot(ctx context.Context, in *pb.SnapshotRequest, opts ...grpc.CallOption) (stream pb.Maintenance_SnapshotClient, err error) {
 	err = rmc.repeatableRetry(ctx, func(rctx context.Context) error {
 		stream, err = rmc.mc.Snapshot(rctx, in, opts...)
 		return err
 	})
 	return stream, err
-}
-
-func (rmc *retryMaintenanceClient) MoveLeader(ctx context.Context, in *pb.MoveLeaderRequest, opts ...grpc.CallOption) (resp *pb.MoveLeaderResponse, err error) {
-	err = rmc.repeatableRetry(ctx, func(rctx context.Context) error {
-		resp, err = rmc.mc.MoveLeader(rctx, in, opts...)
-		return err
-	})
-	return resp, err
 }
 
 type nonRepeatableMaintenanceClient struct {
