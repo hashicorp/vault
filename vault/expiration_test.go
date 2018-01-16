@@ -894,7 +894,7 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 		t.Fatal("expected a response")
 	}
 	if resp.Auth.TTL > 5*time.Second {
-		t.Fatal("expected TTL to be less than or equal to period, got: %s", resp.Auth.TTL)
+		t.Fatalf("expected TTL to be less than or equal to period, got: %s", resp.Auth.TTL)
 	}
 
 	// Wait another 3 seconds. If period works correctly, this should not fail
@@ -907,7 +907,7 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 		t.Fatal("expected a response")
 	}
 	if resp.Auth.TTL < 4*time.Second || resp.Auth.TTL > 5*time.Second {
-		t.Fatal("expected TTL to be around period's value, got: %s", resp.Auth.TTL)
+		t.Fatalf("expected TTL to be around period's value, got: %s", resp.Auth.TTL)
 	}
 }
 
