@@ -1,5 +1,12 @@
 ## 0.9.2 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * PKI Secret Backend Roles parameter types: For `ou` and `organization` 
+   in role definitions in the PKI secret backend, input can now be a 
+   comma-separated string or an array of strings. Reading a role will 
+   now return arrays for these parameters.
+
 IMPROVEMENTS:
 
  * auth/aws: Handle IAM headers produced by clients that formulate numbers as
@@ -7,6 +14,8 @@ IMPROVEMENTS:
  * auth/okta: Support JSON lists when specifying groups and policies [GH-3801]
  * physical/s3: Allow using paths with S3 for non-AWS deployments [GH-3730]
  * physical/s3: Add ability to disable SSL for non-AWS deployments [GH-3730]
+ * secret/pki: `ou` and `organization` can now be specified as a 
+   comma-separated string or an array of strings [GH-3804]
 
 BUG FIXES:
 
