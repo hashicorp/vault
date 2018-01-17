@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
@@ -53,11 +54,11 @@ func TestBackend_basic(t *testing.T) {
 	if len(keys) != 1 {
 		t.Fatalf("expected 1 key, got %d", len(keys))
 	}
-	salt, err := b.Salt()
+	bSalt, err := b.Salt()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if keys[0] != salt.SaltID("foo") {
+	if keys[0] != "s"+bSalt.SaltIDHashFunc("foo", salt.SHA256Hash) {
 		t.Fatal("value was improperly salted")
 	}
 }
