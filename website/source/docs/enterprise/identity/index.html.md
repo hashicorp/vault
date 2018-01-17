@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise Identity"
+page_title: "Identity - Vault Enterprise"
 sidebar_current: "docs-vault-enterprise-identity"
 description: |-
   Vault Enterprise has the foundations of the identity management system.
@@ -85,7 +85,7 @@ multiple entities as its members. A group can also have subgroups. Policies set
 on the group is granted to all members of the group. During request time, when
 the token's entity ID is being evaluated for the policies that it has access
 to; along with the policies on the entity itself, policies that are inherited
-due to group memberships are be granted.
+due to group memberships are also granted.
 
 ### Group Hierarchical Permissions
 

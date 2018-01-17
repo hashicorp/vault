@@ -360,7 +360,7 @@ func (c *Core) unmountInternal(path string) error {
 	}
 
 	switch {
-	case entry.Local, !c.replicationState.HasState(consts.ReplicationPerformanceSecondary):
+	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearView(view); err != nil {
 			c.logger.Error("core: failed to clear view for path being unmounted", "error", err, "path", path)
@@ -610,7 +610,7 @@ func (c *Core) loadMounts() error {
 		// ensure this comes over. If we upgrade first, we simply don't
 		// create the mount, so we won't conflict when we sync. If this is
 		// local (e.g. cubbyhole) we do still add it.
-		if !foundRequired && (!c.replicationState.HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
+		if !foundRequired && (!c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
 			c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 			needPersist = true
 		}

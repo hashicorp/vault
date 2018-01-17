@@ -95,7 +95,7 @@ to gain access to secret material they are not authorized to. This is an interna
 threat if the attacker is already permitted some level of access to Vault and is
 able to authenticate.
 
-When a client first authenticates with Vault, a credential backend is used to
+When a client first authenticates with Vault, an auth method is used to
 verify the identity of the client and to return a list of associated ACL policies.
 This association is configured by operators of Vault ahead of time. For example,
 GitHub users in the "engineering" team may be mapped to the "engineering" and "ops"

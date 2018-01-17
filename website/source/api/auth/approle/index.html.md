@@ -1,29 +1,28 @@
 ---
 layout: "api"
-page_title: "AppRole Auth Backend - HTTP API"
+page_title: "AppRole - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-approle"
 description: |-
-  This is the API documentation for the Vault AppRole authentication backend.
+  This is the API documentation for the Vault AppRole auth method.
 ---
 
-# AppRole Auth Backend HTTP API
+# AppRole Auth Method (API)
 
-This is the API documentation for the Vault AppRole authentication backend. For
-general information about the usage and operation of the AppRole backend, please
-see the [Vault AppRole backend documentation](/docs/auth/approle.html).
+This is the API documentation for the Vault AppRole auth method. For
+general information about the usage and operation of the AppRole method, please
+see the [Vault AppRole method documentation](/docs/auth/approle.html).
 
-This documentation assumes the AppRole backend is mounted at the `/auth/approle`
-path in Vault. Since it is possible to mount auth backends at any location,
+This documentation assumes the AppRole method is mounted at the `/auth/approle`
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## List Roles
 
-This endpoint returns a list the existing AppRoles in the backend.
+This endpoint returns a list the existing AppRoles in the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/approle/role`          | `200 application/json` |
-| `GET`   | `/auth/approle/role?list=true` | `200 application/json` |
+| `LIST`   | `/auth/approle/role`         | `200 application/json` |
 
 ### Sample Request
 
@@ -68,28 +67,28 @@ enabled while creating or updating a role.
 ### Parameters
 
 - `role_name` `(string: <required>)` - Name of the AppRole.
-- `bind_secret_id` `(bool: true)` - Require `secret_id` to be presented when 
+- `bind_secret_id` `(bool: true)` - Require `secret_id` to be presented when
   logging in using this AppRole.
 - `bound_cidr_list` `(array: [])` - Comma-separated list of CIDR blocks; if set,
   specifies blocks of IP addresses which can perform the login operation.
-- `policies` `(array: [])` - Comma-separated list of policies set on tokens 
+- `policies` `(array: [])` - Comma-separated list of policies set on tokens
   issued via this AppRole.
 - `secret_id_num_uses` `(integer: 0)` - Number of times any particular SecretID
-  can be used to fetch a token from this AppRole, after which the SecretID will 
+  can be used to fetch a token from this AppRole, after which the SecretID will
   expire.  A value of zero will allow unlimited uses.
-- `secret_id_ttl` `(string: "")` - Duration in either an integer number of 
+- `secret_id_ttl` `(string: "")` - Duration in either an integer number of
   seconds (`3600`) or an integer time unit (`60m`) after which any SecretID
   expires.
 - `token_num_uses` `(integer: 0)` - Number of times issued tokens can be used.
   A value of 0 means unlimited uses.
-- `token_ttl` `(string: "")` - Duration in either an integer number of seconds 
-  (`3600`) or an integer time unit (`60m`) to set as the TTL for issued tokens 
+- `token_ttl` `(string: "")` - Duration in either an integer number of seconds
+  (`3600`) or an integer time unit (`60m`) to set as the TTL for issued tokens
   and at renewal time.
-- `token_max_ttl` `(string: "")` - Duration in either an integer number of 
+- `token_max_ttl` `(string: "")` - Duration in either an integer number of
   seconds (`3600`) or an integer time unit (`60m`) after which the issued token
   can no longer be renewed.
-- `period` `(string: "")` - Duration in either an integer number of seconds 
-  (`3600`) or an integer time unit (`60m`). If set, the token generated using 
+- `period` `(string: "")` - Duration in either an integer number of seconds
+  (`3600`) or an integer time unit (`60m`). If set, the token generated using
   this AppRole is a _periodic_ token; so long as it is renewed it never expires,
   but the TTL set on the token at each renewal is fixed to the value specified
   here. If this value is modified, the token will pick up the new value at its
@@ -166,7 +165,7 @@ $ curl \
 
 ## Delete AppRole
 
-Deletes an existing AppRole from the backend.
+Deletes an existing AppRole from the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -283,12 +282,12 @@ itself, and also to delete the SecretID from the AppRole.
 
 - `role_name` `(string: <required>)` - Name of the AppRole.
 - `metadata` `(map: {})` -  Metadata to be tied to the SecretID. This should be
-  a JSON-formatted string containing the metadata in key-value pairs. This 
-  metadata will be set on tokens issued with this SecretID, and is logged in 
+  a JSON-formatted string containing the metadata in key-value pairs. This
+  metadata will be set on tokens issued with this SecretID, and is logged in
   audit logs _in plaintext_.
 - `cidr_list` `(string: "")` -  Comma separated list of CIDR blocks enforcing
-  secret IDs to be used from specific set of IP addresses. If 'bound_cidr_list' 
-  is set on the role, then the list of CIDR blocks listed here should be a 
+  secret IDs to be used from specific set of IP addresses. If 'bound_cidr_list'
+  is set on the role, then the list of CIDR blocks listed here should be a
   subset of the CIDR blocks listed on the role.
 
 ### Sample Payload
@@ -336,7 +335,6 @@ This includes the accessors for "custom" SecretIDs as well.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/approle/role/:role_name/secret-id` | `200 application/json` |
-| `GET`   | `/auth/approle/role/:role_name/secret-id?list=true` | `200 application/json` |
 
 ### Parameters
 
@@ -511,12 +509,12 @@ Assigns a "custom" SecretID against an existing AppRole. This is used in the
 - `role_name` `(string: <required>)` - Name of the AppRole.
 -  `secret_id` `(string: <required>)` - SecretID to be attached to the Role.
 - `metadata` `(map: {})` -  Metadata to be tied to the SecretID. This should be
-  a JSON-formatted string containing the metadata in key-value pairs. This 
-  metadata will be set on tokens issued with this SecretID, and is logged in 
+  a JSON-formatted string containing the metadata in key-value pairs. This
+  metadata will be set on tokens issued with this SecretID, and is logged in
   audit logs _in plaintext_.
 - `cidr_list` `(string: "")` -  Comma separated list of CIDR blocks enforcing
-  secret IDs to be used from ppecific set of IP addresses. If 'bound_cidr_list' 
-  is set on the role, then the list of CIDR blocks listed here should be a 
+  secret IDs to be used from ppecific set of IP addresses. If 'bound_cidr_list'
+  is set on the role, then the list of CIDR blocks listed here should be a
   subset of the CIDR blocks listed on the role.
 
 ### Sample Payload

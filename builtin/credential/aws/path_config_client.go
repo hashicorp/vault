@@ -261,7 +261,7 @@ Configure AWS IAM credentials that are used to query instance and role details f
 `
 
 const pathConfigClientHelpDesc = `
-The aws-ec2 auth backend makes AWS API queries to retrieve information
+The aws-ec2 auth method makes AWS API queries to retrieve information
 regarding EC2 instances that perform login operations. The 'aws_secret_key' and
 'aws_access_key' parameters configured here should map to an AWS IAM user that
 has permission to make the following API queries:

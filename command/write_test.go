@@ -2,271 +2,279 @@ package command
 
 import (
 	"io"
-	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
 
-func TestWrite(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testWriteCommand(tb testing.TB) (*cli.MockUi, *WriteCommand) {
+	tb.Helper()
 
-	ui := new(cli.MockUi)
-	c := &WriteCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	ui := cli.NewMockUi()
+	return ui, &WriteCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
 		},
-	}
-
-	args := []string{
-		"-address", addr,
-		"secret/foo",
-		"value=bar",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	resp, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if resp.Data["value"] != "bar" {
-		t.Fatalf("bad: %#v", resp)
 	}
 }
 
-func TestWrite_arbitrary(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func TestWriteCommand_Run(t *testing.T) {
+	t.Parallel()
 
-	stdinR, stdinW := io.Pipe()
-	ui := new(cli.MockUi)
-	c := &WriteCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"not_enough_args",
+			[]string{},
+			"Not enough arguments",
+			1,
 		},
-
-		testStdin: stdinR,
-	}
-
-	go func() {
-		stdinW.Write([]byte(`{"foo":"bar"}`))
-		stdinW.Close()
-	}()
-
-	args := []string{
-		"-address", addr,
-		"secret/foo",
-		"-",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	resp, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if resp.Data["foo"] != "bar" {
-		t.Fatalf("bad: %#v", resp)
-	}
-}
-
-func TestWrite_escaped(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
-
-	ui := new(cli.MockUi)
-	c := &WriteCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+		{
+			"empty_kvs",
+			[]string{"secret/write/foo"},
+			"Must supply data or use -force",
+			1,
 		},
-	}
-
-	args := []string{
-		"-address", addr,
-		"secret/foo",
-		"value=\\@bar",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	resp, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if resp.Data["value"] != "@bar" {
-		t.Fatalf("bad: %#v", resp)
-	}
-}
-
-func TestWrite_file(t *testing.T) {
-	tf, err := ioutil.TempFile("", "vault")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	tf.Write([]byte(`{"foo":"bar"}`))
-	tf.Close()
-	defer os.Remove(tf.Name())
-
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
-
-	ui := new(cli.MockUi)
-	c := &WriteCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+		{
+			"force_kvs",
+			[]string{"-force", "auth/token/create"},
+			"token",
+			0,
+		},
+		{
+			"force_f_kvs",
+			[]string{"-f", "auth/token/create"},
+			"token",
+			0,
+		},
+		{
+			"kvs_no_value",
+			[]string{"secret/write/foo", "foo"},
+			"Failed to parse K=V data",
+			1,
+		},
+		{
+			"single_value",
+			[]string{"secret/write/foo", "foo=bar"},
+			"Success!",
+			0,
+		},
+		{
+			"multi_value",
+			[]string{"secret/write/foo", "foo=bar", "zip=zap"},
+			"Success!",
+			0,
+		},
+		{
+			"field",
+			[]string{
+				"-field", "token_renewable",
+				"auth/token/create", "display_name=foo",
+			},
+			"false",
+			0,
+		},
+		{
+			"field_not_found",
+			[]string{
+				"-field", "not-a-real-field",
+				"auth/token/create", "display_name=foo",
+			},
+			"not present in secret",
+			1,
 		},
 	}
 
-	args := []string{
-		"-address", addr,
-		"secret/foo",
-		"@" + tf.Name(),
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			ui, cmd := testWriteCommand(t)
+			cmd.client = client
+
+			code := cmd.Run(tc.args)
+			if code != tc.code {
+				t.Errorf("expected %d to be %d", code, tc.code)
+			}
+
+			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+			if !strings.Contains(combined, tc.out) {
+				t.Errorf("expected %q to contain %q", combined, tc.out)
+			}
+		})
 	}
 
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	t.Run("force", func(t *testing.T) {
+		t.Parallel()
 
-	resp, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		client, closer := testVaultServer(t)
+		defer closer()
 
-	if resp.Data["foo"] != "bar" {
-		t.Fatalf("bad: %#v", resp)
-	}
-}
+		if err := client.Sys().Mount("transit/", &api.MountInput{
+			Type: "transit",
+		}); err != nil {
+			t.Fatal(err)
+		}
 
-func TestWrite_fileValue(t *testing.T) {
-	tf, err := ioutil.TempFile("", "vault")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	tf.Write([]byte("foo"))
-	tf.Close()
-	defer os.Remove(tf.Name())
+		ui, cmd := testWriteCommand(t)
+		cmd.client = client
 
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+		code := cmd.Run([]string{
+			"-force",
+			"transit/keys/my-key",
+		})
+		if exp := 0; code != exp {
+			t.Fatalf("expected %d to be %d: %q", code, exp, ui.ErrorWriter.String())
+		}
 
-	ui := new(cli.MockUi)
-	c := &WriteCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
-		},
-	}
+		secret, err := client.Logical().Read("transit/keys/my-key")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil || secret.Data == nil {
+			t.Fatal("expected secret to have data")
+		}
+	})
 
-	args := []string{
-		"-address", addr,
-		"secret/foo",
-		"value=@" + tf.Name(),
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+	t.Run("stdin_full", func(t *testing.T) {
+		t.Parallel()
 
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		client, closer := testVaultServer(t)
+		defer closer()
 
-	resp, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		stdinR, stdinW := io.Pipe()
+		go func() {
+			stdinW.Write([]byte(`{"foo":"bar"}`))
+			stdinW.Close()
+		}()
 
-	if resp.Data["value"] != "foo" {
-		t.Fatalf("bad: %#v", resp)
-	}
-}
+		_, cmd := testWriteCommand(t)
+		cmd.client = client
+		cmd.testStdin = stdinR
 
-func TestWrite_Output(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+		code := cmd.Run([]string{
+			"secret/write/stdin_full", "-",
+		})
+		if code != 0 {
+			t.Fatalf("expected 0 to be %d", code)
+		}
 
-	ui := new(cli.MockUi)
-	c := &WriteCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
-		},
-	}
+		secret, err := client.Logical().Read("secret/write/stdin_full")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil || secret.Data == nil {
+			t.Fatal("expected secret to have data")
+		}
+		if exp, act := "bar", secret.Data["foo"].(string); exp != act {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+	})
 
-	args := []string{
-		"-address", addr,
-		"auth/token/create",
-		"display_name=foo",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-	if !strings.Contains(ui.OutputWriter.String(), "Key") {
-		t.Fatalf("bad: %s", ui.OutputWriter.String())
-	}
-}
+	t.Run("stdin_value", func(t *testing.T) {
+		t.Parallel()
 
-func TestWrite_force(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+		client, closer := testVaultServer(t)
+		defer closer()
 
-	ui := new(cli.MockUi)
-	c := &WriteCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
-		},
-	}
+		stdinR, stdinW := io.Pipe()
+		go func() {
+			stdinW.Write([]byte("bar"))
+			stdinW.Close()
+		}()
 
-	args := []string{
-		"-address", addr,
-		"-force",
-		"sys/rotate",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+		_, cmd := testWriteCommand(t)
+		cmd.client = client
+		cmd.testStdin = stdinR
+
+		code := cmd.Run([]string{
+			"secret/write/stdin_value", "foo=-",
+		})
+		if code != 0 {
+			t.Fatalf("expected 0 to be %d", code)
+		}
+
+		secret, err := client.Logical().Read("secret/write/stdin_value")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil || secret.Data == nil {
+			t.Fatal("expected secret to have data")
+		}
+		if exp, act := "bar", secret.Data["foo"].(string); exp != act {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+	})
+
+	t.Run("integration", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		_, cmd := testWriteCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"secret/write/integration", "foo=bar", "zip=zap",
+		})
+		if code != 0 {
+			t.Fatalf("expected 0 to be %d", code)
+		}
+
+		secret, err := client.Logical().Read("secret/write/integration")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil || secret.Data == nil {
+			t.Fatal("expected secret to have data")
+		}
+		if exp, act := "bar", secret.Data["foo"].(string); exp != act {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+		if exp, act := "zap", secret.Data["zip"].(string); exp != act {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+	})
+
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testWriteCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"foo/bar", "a=b",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error writing data to foo/bar: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testWriteCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }

@@ -8,18 +8,17 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
+	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
 
@@ -33,7 +32,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/flag-slice"
 	"github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/helper/logformat"
@@ -42,14 +40,17 @@ import (
 	"github.com/hashicorp/vault/helper/reload"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
 )
 
-// ServerCommand is a Command that starts the Vault server.
+var _ cli.Command = (*ServerCommand)(nil)
+var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
+
 type ServerCommand struct {
+	*BaseCommand
+
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
@@ -60,8 +61,6 @@ type ServerCommand struct {
 
 	WaitGroup *sync.WaitGroup
 
-	meta.Meta
-
 	logGate *gatedwriter.Writer
 	logger  log.Logger
 
@@ -69,30 +68,200 @@ type ServerCommand struct {
 
 	reloadFuncsLock *sync.RWMutex
 	reloadFuncs     *map[string][]reload.ReloadFunc
+	startedCh       chan (struct{}) // for tests
+	reloadedCh      chan (struct{}) // for tests
+
+	// new stuff
+	flagConfigs        []string
+	flagLogLevel       string
+	flagDev            bool
+	flagDevRootTokenID string
+	flagDevListenAddr  string
+
+	flagDevPluginDir     string
+	flagDevHA            bool
+	flagDevLatency       int
+	flagDevLatencyJitter int
+	flagDevLeasedKV      bool
+	flagDevSkipInit      bool
+	flagDevThreeNode     bool
+	flagDevTransactional bool
+	flagTestVerifyOnly   bool
+}
+
+func (c *ServerCommand) Synopsis() string {
+	return "Start a Vault server"
+}
+
+func (c *ServerCommand) Help() string {
+	helpText := `
+Usage: vault server [options]
+
+  This command starts a Vault server that responds to API requests. By default,
+  Vault will start in a "sealed" state. The Vault cluster must be initialized
+  before use, usually by the "vault init" command. Each Vault server must also
+  be unsealed using the "vault unseal" command or the API before the server can
+  respond to requests.
+
+  Start a server with a configuration file:
+
+      $ vault server -config=/etc/vault/config.hcl
+
+  Run in "dev" mode:
+
+      $ vault server -dev -dev-root-token-id="root"
+
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+	return strings.TrimSpace(helpText)
+}
+
+func (c *ServerCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   "config",
+		Target: &c.flagConfigs,
+		Completion: complete.PredictOr(
+			complete.PredictFiles("*.hcl"),
+			complete.PredictFiles("*.json"),
+			complete.PredictDirs("*"),
+		),
+		Usage: "Path to a configuration file or directory of configuration " +
+			"files. This flag can be specified multiple times to load multiple " +
+			"configurations. If the path is a directory, all files which end in " +
+			".hcl or .json are loaded.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "log-level",
+		Target:     &c.flagLogLevel,
+		Default:    "info",
+		EnvVar:     "VAULT_LOG_LEVEL",
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
+		Usage: "Log verbosity level. Supported values (in order of detail) are " +
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
+	})
+
+	f = set.NewFlagSet("Dev Options")
+
+	f.BoolVar(&BoolVar{
+		Name:   "dev",
+		Target: &c.flagDev,
+		Usage: "Enable development mode. In this mode, Vault runs in-memory and " +
+			"starts unsealed. As the name implies, do not run \"dev\" mode in " +
+			"production.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-root-token-id",
+		Target:  &c.flagDevRootTokenID,
+		Default: "",
+		EnvVar:  "VAULT_DEV_ROOT_TOKEN_ID",
+		Usage: "Initial root token. This only applies when running in \"dev\" " +
+			"mode.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-listen-address",
+		Target:  &c.flagDevListenAddr,
+		Default: "127.0.0.1:8200",
+		EnvVar:  "VAULT_DEV_LISTEN_ADDRESS",
+		Usage:   "Address to bind to in \"dev\" mode.",
+	})
+
+	// Internal-only flags to follow.
+	//
+	// Why hello there little source code reader! Welcome to the Vault source
+	// code. The remaining options are intentionally undocumented and come with
+	// no warranty or backwards-compatability promise. Do not use these flags
+	// in production. Do not build automation using these flags. Unless you are
+	// developing against Vault, you should not need any of these flags.
+
+	f.StringVar(&StringVar{
+		Name:       "dev-plugin-dir",
+		Target:     &c.flagDevPluginDir,
+		Default:    "",
+		Completion: complete.PredictDirs("*"),
+		Hidden:     true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-ha",
+		Target:  &c.flagDevHA,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-transactional",
+		Target:  &c.flagDevTransactional,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.IntVar(&IntVar{
+		Name:   "dev-latency",
+		Target: &c.flagDevLatency,
+		Hidden: true,
+	})
+
+	f.IntVar(&IntVar{
+		Name:   "dev-latency-jitter",
+		Target: &c.flagDevLatencyJitter,
+		Hidden: true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-leased-kv",
+		Target:  &c.flagDevLeasedKV,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-skip-init",
+		Target:  &c.flagDevSkipInit,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-three-node",
+		Target:  &c.flagDevThreeNode,
+		Default: false,
+		Hidden:  true,
+	})
+
+	// TODO: should this be a public flag?
+	f.BoolVar(&BoolVar{
+		Name:    "test-verify-only",
+		Target:  &c.flagTestVerifyOnly,
+		Default: false,
+		Hidden:  true,
+	})
+
+	// End internal-only flags.
+
+	return set
+}
+
+func (c *ServerCommand) AutocompleteArgs() complete.Predictor {
+	return complete.PredictNothing
+}
+
+func (c *ServerCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
 }
 
 func (c *ServerCommand) Run(args []string) int {
-	var dev, verifyOnly, devHA, devTransactional, devLeasedKV, devThreeNode, devSkipInit bool
-	var configPath []string
-	var logLevelFlag, devRootTokenID, devListenAddress, devPluginDir string
-	var devLatency, devLatencyJitter int
-	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
-	flags.BoolVar(&dev, "dev", false, "")
-	flags.StringVar(&devRootTokenID, "dev-root-token-id", "", "")
-	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
-	flags.StringVar(&devPluginDir, "dev-plugin-dir", "", "")
-	flags.StringVar(&logLevelFlag, "log-level", "", "")
-	flags.IntVar(&devLatency, "dev-latency", 0, "")
-	flags.IntVar(&devLatencyJitter, "dev-latency-jitter", 20, "")
-	flags.BoolVar(&verifyOnly, "verify-only", false, "")
-	flags.BoolVar(&devHA, "dev-ha", false, "")
-	flags.BoolVar(&devTransactional, "dev-transactional", false, "")
-	flags.BoolVar(&devLeasedKV, "dev-leased-kv", false, "")
-	flags.BoolVar(&devThreeNode, "dev-three-node", false, "")
-	flags.BoolVar(&devSkipInit, "dev-skip-init", false, "")
-	flags.Usage = func() { c.Ui.Output(c.Help()) }
-	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
-	if err := flags.Parse(args); err != nil {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
 		return 1
 	}
 
@@ -100,14 +269,8 @@ func (c *ServerCommand) Run(args []string) int {
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
 	var level int
-	var logLevel string
-	if os.Getenv("VAULT_LOG_LEVEL") != "" {
-		logLevel = os.Getenv("VAULT_LOG_LEVEL")
-	}
-	if logLevelFlag != "" {
-		logLevel = strings.ToLower(strings.TrimSpace(logLevelFlag))
-	}
-	switch logLevel {
+	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
+	switch c.flagLogLevel {
 	case "trace":
 		level = log.LevelTrace
 	case "debug":
@@ -121,7 +284,7 @@ func (c *ServerCommand) Run(args []string) int {
 	case "err", "error":
 		level = log.LevelError
 	default:
-		c.Ui.Output(fmt.Sprintf("Unknown log level %s", logLevel))
+		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
 		return 1
 	}
 
@@ -131,7 +294,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
-		if devThreeNode {
+		if c.flagDevThreeNode {
 			c.logger = logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
@@ -148,45 +311,37 @@ func (c *ServerCommand) Run(args []string) int {
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
 	})
 
-	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" && devRootTokenID == "" {
-		devRootTokenID = os.Getenv("VAULT_DEV_ROOT_TOKEN_ID")
-	}
-
-	if os.Getenv("VAULT_DEV_LISTEN_ADDRESS") != "" && devListenAddress == "" {
-		devListenAddress = os.Getenv("VAULT_DEV_LISTEN_ADDRESS")
-	}
-
-	if devHA || devTransactional || devLeasedKV || devThreeNode {
-		dev = true
+	// Automatically enable dev mode if other dev flags are provided.
+	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode {
+		c.flagDev = true
 	}
 
 	// Validation
-	if !dev {
+	if !c.flagDev {
 		switch {
-		case len(configPath) == 0:
-			c.Ui.Output("At least one config path must be specified with -config")
-			flags.Usage()
+		case len(c.flagConfigs) == 0:
+			c.UI.Error("Must specify at least one config path using -config")
 			return 1
-		case devRootTokenID != "":
-			c.Ui.Output("Root token ID can only be specified with -dev")
-			flags.Usage()
-			return 1
+		case c.flagDevRootTokenID != "":
+			c.UI.Warn(wrapAtLength(
+				"You cannot specify a custom root token ID outside of \"dev\" mode. " +
+					"Your request has been ignored."))
+			c.flagDevRootTokenID = ""
 		}
 	}
 
 	// Load the configuration
 	var config *server.Config
-	if dev {
-		config = server.DevConfig(devHA, devTransactional)
-		if devListenAddress != "" {
-			config.Listeners[0].Config["address"] = devListenAddress
+	if c.flagDev {
+		config = server.DevConfig(c.flagDevHA, c.flagDevTransactional)
+		if c.flagDevListenAddr != "" {
+			config.Listeners[0].Config["address"] = c.flagDevListenAddr
 		}
 	}
-	for _, path := range configPath {
+	for _, path := range c.flagConfigs {
 		current, err := server.LoadConfig(path, c.logger)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf(
-				"Error loading configuration from %s: %s", path, err))
+			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
 			return 1
 		}
 
@@ -199,49 +354,51 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Ensure at least one config was found.
 	if config == nil {
-		c.Ui.Output("No configuration files found.")
+		c.UI.Output(wrapAtLength(
+			"No configuration files found. Please provide configurations with the " +
+				"-config flag. If you are supply the path to a directory, please " +
+				"ensure the directory contains files with the .hcl or .json " +
+				"extension."))
 		return 1
 	}
 
 	// Ensure that a backend is provided
 	if config.Storage == nil {
-		c.Ui.Output("A storage backend must be specified")
+		c.UI.Output("A storage backend must be specified")
 		return 1
 	}
 
 	// If mlockall(2) isn't supported, show a warning.  We disable this
 	// in dev because it is quite scary to see when first using Vault.
-	if !dev && !mlock.Supported() {
-		c.Ui.Output("==> WARNING: mlock not supported on this system!\n")
-		c.Ui.Output("  An `mlockall(2)`-like syscall to prevent memory from being")
-		c.Ui.Output("  swapped to disk is not supported on this system. Running")
-		c.Ui.Output("  Vault on an mlockall(2) enabled system is much more secure.\n")
+	if !c.flagDev && !mlock.Supported() {
+		c.UI.Warn(wrapAtLength(
+			"WARNING! mlock is not supported on this system! An mlockall(2)-like " +
+				"syscall to prevent memory from being swapped to disk is not " +
+				"supported on this system. For better security, only run Vault on " +
+				"systems where this call is supported. If you are running Vault " +
+				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
 	if err := c.setupTelemetry(config); err != nil {
-		c.Ui.Output(fmt.Sprintf("Error initializing telemetry: %s", err))
+		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
 
 	// Initialize the backend
 	factory, exists := c.PhysicalBackends[config.Storage.Type]
 	if !exists {
-		c.Ui.Output(fmt.Sprintf(
-			"Unknown storage type %s",
-			config.Storage.Type))
+		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
 	backend, err := factory(config.Storage.Config, c.logger)
 	if err != nil {
-		c.Ui.Output(fmt.Sprintf(
-			"Error initializing storage of type %s: %s",
-			config.Storage.Type, err))
+		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
 		return 1
 	}
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = logLevel
+	info["log level"] = c.flagLogLevel
 	infoKeys = append(infoKeys, "log level")
 
 	var seal vault.Seal = &vault.DefaultSeal{}
@@ -251,13 +408,13 @@ func (c *ServerCommand) Run(args []string) int {
 		if seal != nil {
 			err = seal.Finalize()
 			if err != nil {
-				c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
 		}
 	}()
 
 	if seal == nil {
-		c.Ui.Error(fmt.Sprintf("Could not create seal; most likely proper Seal configuration information was not set, but no error was generated."))
+		c.UI.Error(fmt.Sprintf("Could not create seal! Most likely proper Seal configuration information was not set, but no error was generated."))
 		return 1
 	}
 
@@ -279,27 +436,26 @@ func (c *ServerCommand) Run(args []string) int {
 		PluginDirectory:    config.PluginDirectory,
 		EnableRaw:          config.EnableRawEndpoint,
 	}
-
-	if dev {
-		coreConfig.DevToken = devRootTokenID
-		if devLeasedKV {
+	if c.flagDev {
+		coreConfig.DevToken = c.flagDevRootTokenID
+		if c.flagDevLeasedKV {
 			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory
 		}
-		if devPluginDir != "" {
-			coreConfig.PluginDirectory = devPluginDir
+		if c.flagDevPluginDir != "" {
+			coreConfig.PluginDirectory = c.flagDevPluginDir
 		}
-		if devLatency > 0 {
-			injectLatency := time.Duration(devLatency) * time.Millisecond
+		if c.flagDevLatency > 0 {
+			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
 			if _, txnOK := backend.(physical.Transactional); txnOK {
-				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, devLatencyJitter, c.logger)
+				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
 			} else {
-				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, devLatencyJitter, c.logger)
+				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
 			}
 		}
 	}
 
-	if devThreeNode {
-		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, devListenAddress, os.Getenv("VAULT_DEV_TEMP_DIR"))
+	if c.flagDevThreeNode {
+		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	var disableClustering bool
@@ -309,26 +465,25 @@ func (c *ServerCommand) Run(args []string) int {
 	if config.HAStorage != nil {
 		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
 		if !exists {
-			c.Ui.Output(fmt.Sprintf(
-				"Unknown HA storage type %s",
-				config.HAStorage.Type))
+			c.UI.Error(fmt.Sprintf("Unknown HA storage type %s", config.HAStorage.Type))
 			return 1
+
 		}
 		habackend, err := factory(config.HAStorage.Config, c.logger)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf(
-				"Error initializing HA storage of type %s: %s",
-				config.HAStorage.Type, err))
+			c.UI.Error(fmt.Sprintf(
+				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err))
 			return 1
+
 		}
 
 		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
-			c.Ui.Output("Specified HA storage does not support HA")
+			c.UI.Error("Specified HA storage does not support HA")
 			return 1
 		}
 
 		if !coreConfig.HAPhysical.HAEnabled() {
-			c.Ui.Output("Specified HA storage has HA support disabled; please consult documentation")
+			c.UI.Error("Specified HA storage has HA support disabled; please consult documentation")
 			return 1
 		}
 
@@ -365,14 +520,14 @@ func (c *ServerCommand) Run(args []string) int {
 	if ok && coreConfig.RedirectAddr == "" {
 		redirect, err := c.detectRedirect(detect, config)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf("Error detecting redirect address: %s", err))
+			c.UI.Error(fmt.Sprintf("Error detecting redirect address: %s", err))
 		} else if redirect == "" {
-			c.Ui.Output("Failed to detect redirect address.")
+			c.UI.Error("Failed to detect redirect address.")
 		} else {
 			coreConfig.RedirectAddr = redirect
 		}
 	}
-	if coreConfig.RedirectAddr == "" && dev {
+	if coreConfig.RedirectAddr == "" && c.flagDev {
 		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Config["address"])
 	}
 
@@ -387,14 +542,15 @@ func (c *ServerCommand) Run(args []string) int {
 		switch {
 		case coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "":
 			addrToUse = coreConfig.RedirectAddr
-		case dev:
+		case c.flagDev:
 			addrToUse = fmt.Sprintf("http://%s", config.Listeners[0].Config["address"])
 		default:
 			goto CLUSTER_SYNTHESIS_COMPLETE
 		}
 		u, err := url.ParseRequestURI(addrToUse)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf("Error parsing synthesized cluster address %s: %v", addrToUse, err))
+			c.UI.Error(fmt.Sprintf(
+				"Error parsing synthesized cluster address %s: %v", addrToUse, err))
 			return 1
 		}
 		host, port, err := net.SplitHostPort(u.Host)
@@ -404,13 +560,14 @@ func (c *ServerCommand) Run(args []string) int {
 				host = u.Host
 				port = "443"
 			} else {
-				c.Ui.Output(fmt.Sprintf("Error parsing redirect address: %v", err))
+				c.UI.Error(fmt.Sprintf("Error parsing redirect address: %v", err))
 				return 1
 			}
 		}
 		nPort, err := strconv.Atoi(port)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf("Error parsing synthesized address; failed to convert %q to a numeric: %v", port, err))
+			c.UI.Error(fmt.Sprintf(
+				"Error parsing synthesized address; failed to convert %q to a numeric: %v", port, err))
 			return 1
 		}
 		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
@@ -425,8 +582,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.RedirectAddr, err))
-			return 1
+			c.UI.Error(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.RedirectAddr, err))
+			return 11
 		}
 		u.Scheme = "https"
 		coreConfig.ClusterAddr = u.String()
@@ -436,7 +593,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
 		if !errwrap.ContainsType(newCoreError, new(vault.NonFatalError)) {
-			c.Ui.Output(fmt.Sprintf("Error initializing core: %s", newCoreError))
+			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
 			return 1
 		}
 	}
@@ -447,6 +604,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Compile server information for output later
 	info["storage"] = config.Storage.Type
+	info["log level"] = c.flagLogLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())
@@ -481,11 +639,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.reloadFuncsLock.Lock()
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
-		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logGate, c.Ui)
+		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, c.logGate, c.UI)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf(
-				"Error initializing listener of type %s: %s",
-				lnConfig.Type, err))
+			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
 		}
 
@@ -505,16 +661,14 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				addr = addrRaw.(string)
 				tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 				if err != nil {
-					c.Ui.Output(fmt.Sprintf(
-						"Error resolving cluster_address: %s",
-						err))
+					c.UI.Error(fmt.Sprintf("Error resolving cluster_address: %s", err))
 					return 1
 				}
 				clusterAddrs = append(clusterAddrs, tcpAddr)
 			} else {
 				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 				if !ok {
-					c.Ui.Output("Failed to parse tcp listener")
+					c.UI.Error("Failed to parse tcp listener")
 					return 1
 				}
 				clusterAddr := &net.TCPAddr{
@@ -572,17 +726,19 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Server configuration output
 	padding := 24
 	sort.Strings(infoKeys)
-	c.Ui.Output("==> Vault server configuration:\n")
+	c.UI.Output("==> Vault server configuration:\n")
 	for _, k := range infoKeys {
-		c.Ui.Output(fmt.Sprintf(
+		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
 			strings.Repeat(" ", padding-len(k)),
 			strings.Title(k),
 			info[k]))
 	}
-	c.Ui.Output("")
+	c.UI.Output("")
 
-	if verifyOnly {
+	// Tests might not want to start a vault server and just want to verify
+	// the configuration.
+	if c.flagTestVerifyOnly {
 		return 0
 	}
 
@@ -596,7 +752,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	err = core.UnsealWithStoredKeys()
 	if err != nil {
 		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
-			c.Ui.Output(fmt.Sprintf("Error initializing core: %s", err))
+			c.UI.Error(fmt.Sprintf("Error initializing core: %s", err))
 			return 1
 		}
 	}
@@ -626,18 +782,17 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 
 			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, sealedFunc); err != nil {
-				c.Ui.Output(fmt.Sprintf("Error initializing service discovery: %v", err))
+				c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 				return 1
 			}
 		}
 	}
 
 	// If we're in Dev mode, then initialize the core
-	if dev && !devSkipInit {
+	if c.flagDev && !c.flagDevSkipInit {
 		init, err := c.enableDev(core, coreConfig)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf(
-				"Error initializing Dev mode: %s", err))
+			c.UI.Error(fmt.Sprintf("Error initializing Dev mode: %s", err))
 			return 1
 		}
 
@@ -648,38 +803,43 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			quote = ""
 		}
 
-		c.Ui.Output(fmt.Sprint(
-			"==> WARNING: Dev mode is enabled!\n\n" +
-				"In this mode, Vault is completely in-memory and unsealed.\n" +
-				"Vault is configured to only have a single unseal key. The root\n" +
-				"token has already been authenticated with the CLI, so you can\n" +
-				"immediately begin using the Vault CLI.\n\n" +
-				"The only step you need to take is to set the following\n" +
-				"environment variables:\n\n" +
-				"    " + export + " VAULT_ADDR=" + quote + "http://" + config.Listeners[0].Config["address"].(string) + quote + "\n\n" +
-				"The unseal key and root token are reproduced below in case you\n" +
-				"want to seal/unseal the Vault or play with authentication.\n",
-		))
+		// Print the big dev mode warning!
+		c.UI.Warn(wrapAtLength(
+			"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
+				"in-memory and starts unsealed with a single unseal key. The root " +
+				"token is already authenticated to the CLI, so you can immediately " +
+				"begin using Vault."))
+		c.UI.Warn("")
+		c.UI.Warn("You may need to set the following environment variable:")
+		c.UI.Warn("")
+		c.UI.Warn(fmt.Sprintf("    $ %s VAULT_ADDR=%s%s%s",
+			export, quote, "http://"+config.Listeners[0].Config["address"].(string), quote))
 
 		// Unseal key is not returned if stored shares is supported
 		if len(init.SecretShares) > 0 {
-			c.Ui.Output(fmt.Sprintf(
-				"Unseal Key: %s",
-				base64.StdEncoding.EncodeToString(init.SecretShares[0]),
-			))
+			c.UI.Warn("")
+			c.UI.Warn(wrapAtLength(
+				"The unseal key and root token are displayed below in case you want " +
+					"to seal/unseal the Vault or re-authenticate."))
+			c.UI.Warn("")
+			c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
 		}
 
 		if len(init.RecoveryShares) > 0 {
-			c.Ui.Output(fmt.Sprintf(
-				"Recovery Key: %s",
-				base64.StdEncoding.EncodeToString(init.RecoveryShares[0]),
-			))
+			c.UI.Warn("")
+			c.UI.Warn(wrapAtLength(
+				"The recovery key and root token are displayed below in case you want " +
+					"to seal/unseal the Vault or re-authenticate."))
+			c.UI.Warn("")
+			c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
 		}
 
-		c.Ui.Output(fmt.Sprintf(
-			"Root Token: %s\n",
-			init.RootToken,
-		))
+		c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
+
+		c.UI.Warn("")
+		c.UI.Warn(wrapAtLength(
+			"Development mode should NOT be used in production installations!"))
+		c.UI.Warn("")
 	}
 
 	// Initialize the HTTP servers
@@ -691,25 +851,33 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	if newCoreError != nil {
-		c.Ui.Output("==> Warning:\n\nNon-fatal error during initialization; check the logs for more information.")
-		c.Ui.Output("")
+		c.UI.Warn(wrapAtLength(
+			"WARNING! A non-fatal error occurred during initialization. Please " +
+				"check the logs for more information."))
+		c.UI.Warn("")
 	}
 
 	// Output the header that the server has started
-	c.Ui.Output("==> Vault server started! Log data will stream in below:\n")
+	c.UI.Output("==> Vault server started! Log data will stream in below:\n")
+
+	// Inform any tests that the server is ready
+	select {
+	case c.startedCh <- struct{}{}:
+	default:
+	}
 
 	// Release the log gate.
 	c.logGate.Flush()
 
 	// Write out the PID to the file now that server has successfully started
 	if err := c.storePidFile(config.PidFile); err != nil {
-		c.Ui.Output(fmt.Sprintf("Error storing PID: %v", err))
+		c.UI.Error(fmt.Sprintf("Error storing PID: %s", err))
 		return 1
 	}
 
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
-			c.Ui.Output(fmt.Sprintf("Error deleting the PID file: %v", err))
+			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
 		}
 	}()
 
@@ -719,7 +887,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	for !shutdownTriggered {
 		select {
 		case <-c.ShutdownCh:
-			c.Ui.Output("==> Vault shutdown triggered")
+			c.UI.Output("==> Vault shutdown triggered")
 
 			// Stop the listners so that we don't process further client requests.
 			c.cleanupGuard.Do(listenerCloseFunc)
@@ -728,15 +896,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			// request forwarding listeners will also be closed (and also
 			// waited for).
 			if err := core.Shutdown(); err != nil {
-				c.Ui.Output(fmt.Sprintf("Error with core shutdown: %s", err))
+				c.UI.Error(fmt.Sprintf("Error with core shutdown: %s", err))
 			}
 
 			shutdownTriggered = true
 
 		case <-c.SighupCh:
-			c.Ui.Output("==> Vault reload triggered")
-			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, configPath); err != nil {
-				c.Ui.Output(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
+			c.UI.Output("==> Vault reload triggered")
+			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
+				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
 		}
 	}
@@ -866,7 +1034,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
 	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
-		BaseListenAddress: devListenAddress,
+		BaseListenAddress: c.flagDevListenAddr,
 		RawLogger:         c.logger,
 		TempDir:           tempDir,
 	})
@@ -896,15 +1064,15 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	// Server configuration output
 	padding := 24
 	sort.Strings(infoKeys)
-	c.Ui.Output("==> Vault server configuration:\n")
+	c.UI.Output("==> Vault server configuration:\n")
 	for _, k := range infoKeys {
-		c.Ui.Output(fmt.Sprintf(
+		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
 			strings.Repeat(" ", padding-len(k)),
 			strings.Title(k),
 			info[k]))
 	}
-	c.Ui.Output("")
+	c.UI.Output("")
 
 	for _, core := range testCluster.Cores {
 		core.Server.Handler = vaulthttp.Handler(core.Core)
@@ -928,15 +1096,15 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		}
 		resp, err := testCluster.Cores[0].HandleRequest(req)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf("failed to create root token with ID %s: %s", base.DevToken, err))
+			c.UI.Error(fmt.Sprintf("failed to create root token with ID %s: %s", base.DevToken, err))
 			return 1
 		}
 		if resp == nil {
-			c.Ui.Output(fmt.Sprintf("nil response when creating root token with ID %s", base.DevToken))
+			c.UI.Error(fmt.Sprintf("nil response when creating root token with ID %s", base.DevToken))
 			return 1
 		}
 		if resp.Auth == nil {
-			c.Ui.Output(fmt.Sprintf("nil auth when creating root token with ID %s", base.DevToken))
+			c.UI.Error(fmt.Sprintf("nil auth when creating root token with ID %s", base.DevToken))
 			return 1
 		}
 
@@ -947,7 +1115,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		req.Data = nil
 		resp, err = testCluster.Cores[0].HandleRequest(req)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf("failed to revoke initial root token: %s", err))
+			c.UI.Output(fmt.Sprintf("failed to revoke initial root token: %s", err))
 			return 1
 		}
 	}
@@ -955,37 +1123,37 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	// Set the token
 	tokenHelper, err := c.TokenHelper()
 	if err != nil {
-		c.Ui.Output(fmt.Sprintf("%v", err))
+		c.UI.Error(fmt.Sprintf("Error getting token helper: %s", err))
 		return 1
 	}
 	if err := tokenHelper.Store(testCluster.RootToken); err != nil {
-		c.Ui.Output(fmt.Sprintf("%v", err))
+		c.UI.Error(fmt.Sprintf("Error storing in token helper: %s", err))
 		return 1
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0755); err != nil {
-		c.Ui.Output(fmt.Sprintf("%v", err))
+		c.UI.Error(fmt.Sprintf("Error writing token to tempfile: %s", err))
 		return 1
 	}
 
-	c.Ui.Output(fmt.Sprintf(
+	c.UI.Output(fmt.Sprintf(
 		"==> Three node dev mode is enabled\n\n" +
 			"The unseal key and root token are reproduced below in case you\n" +
 			"want to seal/unseal the Vault or play with authentication.\n",
 	))
 
 	for i, key := range testCluster.BarrierKeys {
-		c.Ui.Output(fmt.Sprintf(
+		c.UI.Output(fmt.Sprintf(
 			"Unseal Key %d: %s",
 			i+1, base64.StdEncoding.EncodeToString(key),
 		))
 	}
 
-	c.Ui.Output(fmt.Sprintf(
+	c.UI.Output(fmt.Sprintf(
 		"\nRoot Token: %s\n", testCluster.RootToken,
 	))
 
-	c.Ui.Output(fmt.Sprintf(
+	c.UI.Output(fmt.Sprintf(
 		"\nUseful env vars:\n"+
 			"VAULT_TOKEN=%s\n"+
 			"VAULT_ADDR=%s\n"+
@@ -996,7 +1164,13 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	))
 
 	// Output the header that the server has started
-	c.Ui.Output("==> Vault server started! Log data will stream in below:\n")
+	c.UI.Output("==> Vault server started! Log data will stream in below:\n")
+
+	// Inform any tests that the server is ready
+	select {
+	case c.startedCh <- struct{}{}:
+	default:
+	}
 
 	// Release the log gate.
 	c.logGate.Flush()
@@ -1007,7 +1181,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	for !shutdownTriggered {
 		select {
 		case <-c.ShutdownCh:
-			c.Ui.Output("==> Vault shutdown triggered")
+			c.UI.Output("==> Vault shutdown triggered")
 
 			// Stop the listners so that we don't process further client requests.
 			c.cleanupGuard.Do(testCluster.Cleanup)
@@ -1017,17 +1191,17 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 			// waited for).
 			for _, core := range testCluster.Cores {
 				if err := core.Shutdown(); err != nil {
-					c.Ui.Output(fmt.Sprintf("Error with core shutdown: %s", err))
+					c.UI.Error(fmt.Sprintf("Error with core shutdown: %s", err))
 				}
 			}
 
 			shutdownTriggered = true
 
 		case <-c.SighupCh:
-			c.Ui.Output("==> Vault reload triggered")
+			c.UI.Output("==> Vault reload triggered")
 			for _, core := range testCluster.Cores {
 				if err := c.Reload(core.ReloadFuncsLock, core.ReloadFuncs, nil); err != nil {
-					c.Ui.Output(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
+					c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 				}
 			}
 		}
@@ -1231,77 +1405,21 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(nil); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading file audit backend at path %s: %v", strings.TrimPrefix(k, "audit_file|"), err))
+						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading file audit device at path %s: %v", strings.TrimPrefix(k, "audit_file|"), err))
 					}
 				}
 			}
 		}
 	}
 
-	return reloadErrors.ErrorOrNil()
-}
-
-func (c *ServerCommand) Synopsis() string {
-	return "Start a Vault server"
-}
-
-func (c *ServerCommand) Help() string {
-	helpText := `
-Usage: vault server [options]
-
-  Start a Vault server.
-
-  This command starts a Vault server that responds to API requests.
-  Vault will start in a "sealed" state. The Vault must be unsealed
-  with "vault unseal" or the API before this server can respond to requests.
-  This must be done for every server.
-
-  If the server is being started against a storage backend that is
-  brand new (no existing Vault data in it), it must be initialized with
-  "vault init" or the API first.
-
-
-General Options:
-
-  -config=<path>          Path to the configuration file or directory. This can
-                          be specified multiple times. If it is a directory,
-                          all files with a ".hcl" or ".json" suffix will be
-                          loaded.
-
-  -dev                    Enables Dev mode. In this mode, Vault is completely
-                          in-memory and unsealed. Do not run the Dev server in
-                          production!
-
-  -dev-root-token-id=""   If set, the root token returned in Dev mode will have
-                          the given ID. This *only* has an effect when running
-                          in Dev mode. Can also be specified with the
-                          VAULT_DEV_ROOT_TOKEN_ID environment variable.
-
-  -dev-listen-address=""  If set, this overrides the normal Dev mode listen
-                          address of "127.0.0.1:8200". Can also be specified
-                          with the VAULT_DEV_LISTEN_ADDRESS environment
-                          variable.
-
-  -log-level=info         Log verbosity. Defaults to "info", will be output to
-                          stderr. Supported values: "trace", "debug", "info",
-                          "warn", "err". Can also be specified with  the
-                          VAULT_LOG_LEVEL environment variable.
-`
-	return strings.TrimSpace(helpText)
-}
-
-func (c *ServerCommand) AutocompleteArgs() complete.Predictor {
-	return complete.PredictNothing
-}
-
-func (c *ServerCommand) AutocompleteFlags() complete.Flags {
-	return complete.Flags{
-		"-config":             complete.PredictOr(complete.PredictFiles("*.hcl"), complete.PredictFiles("*.json")),
-		"-dev":                complete.PredictNothing,
-		"-dev-root-token-id":  complete.PredictNothing,
-		"-dev-listen-address": complete.PredictNothing,
-		"-log-level":          complete.PredictSet("trace", "debug", "info", "warn", "err"),
+	// Send a message that we reloaded. This prevents "guessing" sleep times
+	// in tests.
+	select {
+	case c.reloadedCh <- struct{}{}:
+	default:
 	}
+
+	return reloadErrors.ErrorOrNil()
 }
 
 // storePidFile is used to write out our PID to a file if necessary
@@ -1333,38 +1451,6 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
-}
-
-// MakeShutdownCh returns a channel that can be used for shutdown
-// notifications for commands. This channel will send a message for every
-// SIGINT or SIGTERM received.
-func MakeShutdownCh() chan struct{} {
-	resultCh := make(chan struct{})
-
-	shutdownCh := make(chan os.Signal, 4)
-	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-shutdownCh
-		close(resultCh)
-	}()
-	return resultCh
-}
-
-// MakeSighupCh returns a channel that can be used for SIGHUP
-// reloading. This channel will send a message for every
-// SIGHUP received.
-func MakeSighupCh() chan struct{} {
-	resultCh := make(chan struct{})
-
-	signalCh := make(chan os.Signal, 4)
-	signal.Notify(signalCh, syscall.SIGHUP)
-	go func() {
-		for {
-			<-signalCh
-			resultCh <- struct{}{}
-		}
-	}()
-	return resultCh
 }
 
 type grpclogFaker struct {

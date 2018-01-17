@@ -106,6 +106,7 @@ func (b *databaseBackend) createDBObj(ctx context.Context, s logical.Storage, na
 
 	err = db.Initialize(ctx, config.ConnectionDetails, true)
 	if err != nil {
+		db.Close()
 		return nil, err
 	}
 

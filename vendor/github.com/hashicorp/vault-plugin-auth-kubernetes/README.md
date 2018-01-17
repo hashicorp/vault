@@ -36,7 +36,7 @@ This plugin is currently built into Vault and by default is accessed
 at `auth/kubernetes`. To enable this in a running Vault server:
 
 ```sh
-$ vault auth-enable kubernetes
+$ vault auth enable kubernetes
 Successfully enabled 'kubernetes' at 'kubernetes'!
 ```
 
@@ -106,7 +106,7 @@ SHA256(.../go/bin/vault-plugin-auth-kubernetes)= 896c13c0f5305daed381952a128322e
 Enable the auth plugin backend using the Kubernetes auth plugin:
 
 ```sh
-$ vault auth-enable -plugin-name='kubernetes' plugin
+$ vault auth enable -plugin-name='kubernetes' plugin
 ...
 
 Successfully enabled 'plugin' at 'kubernetes'!

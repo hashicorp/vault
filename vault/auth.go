@@ -115,7 +115,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	// Check for the correct backend type
 	backendType := backend.Type()
 	if entry.Type == "plugin" && backendType != logical.TypeCredential {
-		return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
+		return fmt.Errorf("cannot mount '%s' of type '%s' as an auth method", entry.Config.PluginName, backendType)
 	}
 
 	if err := backend.Initialize(); err != nil {
@@ -193,7 +193,7 @@ func (c *Core) disableCredential(path string) error {
 	}
 
 	switch {
-	case entry.Local, !c.replicationState.HasState(consts.ReplicationPerformanceSecondary):
+	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearView(view); err != nil {
 			c.logger.Error("core: failed to clear view for path being unmounted", "error", err, "path", path)

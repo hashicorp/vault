@@ -359,7 +359,7 @@ type Core struct {
 	atomicPrimaryFailoverAddrs *atomic.Value
 	// replicationState keeps the current replication state cached for quick
 	// lookup
-	replicationState consts.ReplicationState
+	replicationState *uint32
 
 	// uiEnabled indicates whether Vault Web UI is enabled or not
 	uiEnabled bool
@@ -490,6 +490,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 		rawEnabled:                       conf.EnableRaw,
+		replicationState:                 new(uint32),
 		atomicPrimaryClusterAddrs:        new(atomic.Value),
 		atomicPrimaryFailoverAddrs:       new(atomic.Value),
 	}
@@ -2104,9 +2105,7 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 }
 
 func (c *Core) ReplicationState() consts.ReplicationState {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	return c.replicationState
+	return consts.ReplicationState(atomic.LoadUint32(c.replicationState))
 }
 
 func (c *Core) SealAccess() *SealAccess {

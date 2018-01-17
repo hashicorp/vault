@@ -8,95 +8,109 @@ description: |-
 
 # Introduction
 
-Plugin backends utilize the [plugin system][plugin-system] to enable 
-third-party secret and auth backends to be mounted. 
+Plugin backends utilize the [plugin system][plugin-system] to enable third-party
+secrets engines and auth methods.
 
-It is worth noting that even though [database backends][database-backend]
+It is worth noting that even though [database secrets engines][database-backend]
 operate under the same underlying plugin mechanism, they are slightly different
-in design than plugin backends demonstrated in this guide. The database backend 
-manages multiple plugins under the same backend mount point, whereas plugin
-backends are generic backends that function as either secret or auth backends. 
+in design than plugin backends demonstrated in this guide. The database secrets
+engine manages multiple plugins under the same backend mount point, whereas
+plugin backends are kv backends that function as either secret or auth methods.
 
 This guide provides steps to build, register, and mount non-database external
 plugin backends.
 
-## Setting up Vault
+## Setup Vault
 
 Set `plugin_directory` to the desired path in the Vault configuration file.
 The path should exist and have proper lockdown on access permissions.
 
-```
-$ cat vault-config.hcl
-...
-plugin_directory="/etc/vault/vault_plugins"
-...
+```hcl
+# /etc/vault/config.d/plugins.hcl
+plugin_directory = "/etc/vault/vault_plugins"
 ```
 
-## Build the Plugin Backend
+If the Vault server is already running, you will need to tell it to reload its
+configuration by sending SIGHUP. If you stop and start the Vault server, you
+will need to unseal it again.
 
-Build the custom backend binary, and move it to the `plugin_directory` path.
-In this guide, we will use `mock-plugin` that comes from Vault's 
-`logical/plugin/mock` package.
+## Compile Plugin
 
-```
-$ ls .
-main.go
+Build the custom binary, and move it inside the `plugin_directory` path
+configured above. This guide uses `mock-plugin` that comes from Vault's
+[`logical/plugin/mock`](https://github.com/hashicorp/vault/tree/master/logical/plugin/mock/mock-plugin) package.
 
-$ ls ..
-backend.go  backend_test.go  mock-plugin/  path_internal.go  path_kv.go
+Download the source (you would probably use your own plugin):
 
-$ go build -o mock-plugin main.go
-
-$ mv mock-plugin /etc/vault/vault_plugins
-```
-
-## Register the Plugin Into the Plugin Catalog
-
-Start the Vault server. Find out the sha256 sum of the compiled plugin binary,
-and use that to register the plugin into Vault's plugin catalog.
-
-```
-$ shasum -a 256 /etc/vault/vault_plugins/mock-plugin
-2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615  /etc/vault/vault_plugins/mock-plugin
-
-$ vault write sys/plugins/catalog/mock-plugin sha_256=2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615 command=mock-plugin
-Success! Data written to: sys/plugins/catalog/mock-plugin
+```sh
+$ go get -f -u -d github.com/hashicorp/vault
+# ...
+$ cd $GOPATH/src/github.com/hashicorp/vault/logical/plugin/mock/mock-plugin
 ```
 
-## Mount the Plugin
+Compile the plugin:
 
-```
-$ vault mount -path=mock -plugin-name=mock-plugin plugin
-Successfully mounted plugin 'mock-plugin' at 'mock'!
-
-$ vault mounts
-Path        Type       Accessor            Plugin       Default TTL  Max TTL  Force No Cache  Replication Behavior  Description
-cubbyhole/  cubbyhole  cubbyhole_80ef4e30  n/a          n/a          n/a      false           local                 per-token private secret storage
-mock/       plugin     plugin_10fc2cce     mock-plugin  system       system   false           replicated
-secret/     kv         kv_ef2a14ec         n/a          system       system   false           replicated            key/value secret storage
-sys/        system     system_e3a4cccd     n/a          n/a          n/a      false           replicated            system endpoints used for control, policy and debugging
+```sh
+$ go build -o my-mock-plugin
 ```
 
-## Perform operations on the mount
+Put the plugin in the directory:
 
-```
-$ vault write mock/kv/foo value=bar
-Key  	Value
----  	-----
-value	bar
+```sh
+$ mv my-mock-plugin /etc/vault/vault_plugins
 ```
 
-## Unmount the plugin
+## Register in Plugin Catalog
 
+Calculate the SHA256 sum of the compiled plugin binary, and use that to register
+the plugin into Vault's plugin catalog:
+
+```sh
+$ shasum -a 256 /etc/vault/vault_plugins/my-mock-plugin
+2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615  /etc/vault/vault_plugins/my-mock-plugin
+
+$ vault write sys/plugins/catalog/my-mock-plugin \
+    sha_256=2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615 \
+    command=my-mock-plugin
+Success! Data written to: sys/plugins/catalog/my-mock-plugin
 ```
-$ vault unmount mock
-Successfully unmounted 'mock' if it was mounted
 
-$ vault mounts
-Path        Type       Accessor            Plugin  Default TTL  Max TTL  Force No Cache  Replication Behavior  Description
-cubbyhole/  cubbyhole  cubbyhole_80ef4e30  n/a     n/a          n/a      false           local                 per-token private secret storage
-secret/     kv         kv_ef2a14ec         n/a     system       system   false           replicated            key/value secret storage
-sys/        system     system_e3a4cccd     n/a     n/a          n/a      false           replicated            system endpoints used for control, policy and debugging
+## Enable Plugin
+
+Enabling the plugin varies depending on if it's a secrets engine or auth method:
+
+```sh
+$ vault secrets enable -path=my-secrets-plugin -plugin-name=my-mock-plugin plugin
+Success! Enabled the my-mock-plugin plugin at: my-secrets-plugin/
+```
+
+If you try to mount this particular plugin as an auth method instead of a
+secrets engine, you will get an error:
+
+```sh
+$ vault auth enable -path=my-auth-plugin -plugin-name=my-mock-plugin plugin
+# ...
+* cannot mount 'my-mock-plugin' of type 'secret' as an auth method
+```
+
+## Perform Operations
+
+Each plugin responds to read, write, list, and delete as its own behavior.
+
+```text
+$ vault write my-secrets-plugin/kv/foo value=bar
+Key      Value
+---      -----
+value    bar
+```
+
+## Disable Plugin
+
+When you are done using the plugin, disable it.
+
+```text
+$ vault secrets disable my-secrets-plugin
+Success! Disabled the secrets engine (if it existed) at: my-secrets-plugin/
 ```
 
 [plugin-system]: /docs/internals/plugins.html

@@ -464,7 +464,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		}
 
 		if strutil.StrListSubset(auth.Policies, []string{"root"}) {
-			return logical.ErrorResponse("authentication backends cannot create root tokens"), nil, logical.ErrInvalidRequest
+			return logical.ErrorResponse("auth methods cannot create root tokens"), nil, logical.ErrInvalidRequest
 		}
 
 		// Determine the source of the login

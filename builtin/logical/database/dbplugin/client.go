@@ -18,6 +18,8 @@ type DatabasePluginClient struct {
 	Database
 }
 
+// This wraps the Close call and ensures we both close the database connection
+// and kill the plugin.
 func (dc *DatabasePluginClient) Close() error {
 	err := dc.Database.Close()
 	dc.client.Kill()
