@@ -25,6 +25,10 @@ const (
 )
 
 func ProtoErrToErr(e *ProtoError) error {
+	if e == nil {
+		return nil
+	}
+
 	var err error
 	switch e.ErrType {
 	case ErrTypeUnknown:
@@ -264,9 +268,12 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		return nil, err
 	}
 
-	headers := map[string][]string{}
-	for k, v := range r.Headers {
-		headers[k] = v.Header
+	var headers map[string][]string
+	if len(r.Headers) > 0 {
+		headers = make(map[string][]string, len(r.Headers))
+		for k, v := range r.Headers {
+			headers[k] = v.Header
+		}
 	}
 
 	return &logical.Request{
@@ -399,7 +406,7 @@ func LogicalResponseWrapInfoToProtoResponseWrapInfo(i *wrapping.ResponseWrapInfo
 	}, nil
 }
 
-func LogicalResponseToProtoResp(r *logical.Response) (*Response, error) {
+func LogicalResponseToProtoResponse(r *logical.Response) (*Response, error) {
 	if r == nil {
 		return nil, nil
 	}
