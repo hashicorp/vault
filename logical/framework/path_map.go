@@ -64,7 +64,7 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		}
 	}
 	if salt != nil {
-		k = salt.SaltIDHashFunc(k, "sha2-256", "-", saltpkg.SHA256Hash)
+		k = "s" + salt.SaltIDHashFunc(k, saltpkg.SHA256Hash)
 	}
 
 	finalName := fmt.Sprintf("map/%s/%s", p.Name, k)
@@ -73,7 +73,7 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		Schema: p.Schema,
 	}
 
-	if !strings.HasPrefix(origKey, "sha2-256-") && k != origKey {
+	if !strings.HasPrefix(origKey, "s") && k != origKey {
 		// Ensure that no matter what happens what is returned is the final
 		// path
 		defer func() {

@@ -178,7 +178,7 @@ func testSalting(t *testing.T, storage logical.Storage, salt *saltpkg.Salt, p *P
 	}
 
 	// Ensure the path is salted
-	expect := salt.SaltIDHashFunc("a", "sha2-256", "-", saltpkg.SHA256Hash)
+	expect := "s" + salt.SaltIDHashFunc("a", saltpkg.SHA256Hash)
 	out, err = storage.Get("struct/map/foo/" + expect)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -286,7 +286,7 @@ func testSalting(t *testing.T, storage logical.Storage, salt *saltpkg.Salt, p *P
 	}
 	found := false
 	for _, v := range list {
-		if v == salt.SaltIDHashFunc("b", "sha2-256", "-", saltpkg.SHA256Hash) {
+		if v == "s"+salt.SaltIDHashFunc("b", saltpkg.SHA256Hash) {
 			found = true
 			break
 		}
@@ -320,7 +320,7 @@ func testSalting(t *testing.T, storage logical.Storage, salt *saltpkg.Salt, p *P
 	}
 	found = false
 	for _, v := range list {
-		if v == salt.SaltIDHashFunc("b", "sha2-256", "-", saltpkg.SHA256Hash) {
+		if v == "s"+salt.SaltIDHashFunc("b", saltpkg.SHA256Hash) {
 			found = true
 			break
 		}
