@@ -3,6 +3,7 @@ package approle
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -48,12 +49,53 @@ func TestAppRole_RoleLogin(t *testing.T) {
 			RemoteAddr: "127.0.0.1",
 		},
 	}
-	resp, err = b.HandleRequest(context.Background(), loginReq)
+	loginResp, err := b.HandleRequest(context.Background(), loginReq)
+	if err != nil || (loginResp != nil && loginResp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, loginResp)
+	}
+
+	if loginResp.Auth == nil {
+		t.Fatalf("expected a non-nil auth object in the response")
+	}
+
+	// Test renewal
+	renewReq := generateRenewRequest(storage, loginResp.Auth)
+
+	resp, err = b.HandleRequest(context.Background(), renewReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	if resp.Auth == nil {
-		t.Fatalf("expected a non-nil auth object in the response")
+	if resp.Auth.TTL != 400*time.Second {
+		t.Fatalf("expected period value from response to be 400s, got: %s", resp.Auth.TTL)
 	}
+
+	// Test renewal with period
+	loginResp.Auth.Period = 600 * time.Second
+	renewReq = generateRenewRequest(storage, loginResp.Auth)
+
+	resp, err = b.HandleRequest(context.Background(), renewReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	if resp.Auth.Period != 600*time.Second {
+		t.Fatalf("expected period value from response to be 600s, got: %s", resp.Auth.Period)
+	}
+}
+
+func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Request {
+	renewReq := &logical.Request{
+		Operation: logical.RenewOperation,
+		Storage:   s,
+		Auth:      &logical.Auth{},
+	}
+	renewReq.Auth.InternalData = auth.InternalData
+	renewReq.Auth.Metadata = auth.Metadata
+	renewReq.Auth.LeaseOptions = auth.LeaseOptions
+	renewReq.Auth.Policies = auth.Policies
+	renewReq.Auth.IssueTime = time.Now()
+	renewReq.Auth.Period = auth.Period
+
+	return renewReq
 }
