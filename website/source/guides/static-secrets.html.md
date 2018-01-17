@@ -1,14 +1,14 @@
 ---
 layout: "guides"
-page_title: "Securing Secrets - Guides"
-sidebar_current: "guides-foundation-static-secrets"
+page_title: "Static Secrets - Guides"
+sidebar_current: "guides-static-secrets"
 description: |-
   Vault supports generating new unseal keys as well as rotating the underlying
   encryption keys. This guide covers rekeying and rotating Vault's encryption
   keys.
 ---
 
-# Securing secrets
+# Static Secrets
 
 Vault can be used to store any secrets in a secure manner.  The secrets may be
 SSL certificates and keys for your organization's domain, credentials to connect
@@ -45,9 +45,11 @@ securely.
 ## Solution
 
 Leverage Vault as a centralized secret storage to secure any sensitive
-information. Vault encrypts these secrets prior to writing them to persistent
-storage, so gaining access to the raw storage isn't enough to access your
-secrets.
+information. Vault encrypts these secrets using 256-bit AES in GCM mode with a
+randomly generated nonce prior to writing them to its persistent storage. The
+storage backend never sees the unencrypted value, so gaining access to the raw
+storage isn't enough to access your secrets. 
+
 
 ## Prerequisites
 

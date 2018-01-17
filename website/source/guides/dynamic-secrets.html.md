@@ -39,10 +39,16 @@ be automated.
 ## Solution
 
 The application asks Vault for database credential rather than setting them as
-environment variables. The administrator specifies the TTL for database
-credentials to enforce the validity of the secret.
+environment variables. The administrator specifies the TTL of the database
+credentials to enforce its validity so that they are automatically revoked when
+they are no longer used.
 
 ![Dynamic Secret Workflow](assets/images/vault-dynamic-secrets.png)
+
+Each app instance can get unique credentials that they don't have to share. By
+making those credentials to be short-lived, you reduced the change of the secret
+to being compromised. If an app was compromised, the credentials used by the app
+can be revoked rather than changing more global set of credentials.
 
 ## Prerequisites
 
@@ -70,6 +76,7 @@ have read permission.
 3. [Create a role](#step3)
 4. [Generate PostgreSQL credentials](#step4)
 
+Be sure to follow the [Validation](#validation) to test the outcomes.
 
 ### <a name="step1"></a>Step 1: Mount the database secret backend
 
@@ -213,6 +220,11 @@ password       	A1a-4urzp0wu92r5s1q0
 username       	v-token-readonly-9x3qrw452wwz4w6421xt-1515625519
 ```
 
+**NOTE:** Re-run the command and notice that Vault returns a different set of
+credentials each time. This means that each app instance can acquire a unique
+set of credentials.
+
+
 #### API call using cURL
 
 ```plaintext
@@ -280,8 +292,6 @@ lease_duration 	1h0m0s
 lease_renewable	true
 ```
 
-The lease duration is back to 1 hour.
-
 (4) Revoke the generated credentials.
 
 ```plaintext
@@ -295,5 +305,9 @@ Now, when you check the list of users in PostgreSQL, none of the Vault generated
 user name exists.
 
 
-
 ## Next steps
+
+This guide discussed how to generate credentials on-demand so that the access
+credentials no longer need to be written to disk. Next, learn about the
+[Tokens and Leases](/guides/lease.html) so that you can control the lifecycle of
+those credentials.
