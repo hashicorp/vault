@@ -757,20 +757,9 @@ func generateCreationBundle(b *backend,
 	}
 
 	// Set OU (organizationalUnit) values if specified in the role
-	ou := []string{}
-	{
-		if role.OU != "" {
-			ou = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.OU, ","), false)
-		}
-	}
-
+	ou := strutil.RemoveDuplicates(role.OU, false)
 	// Set O (organization) values if specified in the role
-	organization := []string{}
-	{
-		if role.Organization != "" {
-			organization = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.Organization, ","), false)
-		}
-	}
+	organization := strutil.RemoveDuplicates(role.Organization, false)
 
 	// Get the TTL and verify it against the max allowed
 	var ttl time.Duration
