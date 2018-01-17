@@ -399,3 +399,27 @@ func TestStrutil_AppendIfMissing(t *testing.T) {
 		t.Fatalf("expected slice to still contain key 'bar': %v", keys)
 	}
 }
+
+func TestStrUtil_RemoveDuplicates(t *testing.T) {
+	type tCase struct {
+		input     []string
+		expect    []string
+		lowercase bool
+	}
+
+	tCases := []tCase{
+		tCase{[]string{}, []string{}, false},
+		tCase{[]string{}, []string{}, true},
+		tCase{[]string{"a", "b", "a"}, []string{"a", "b"}, false},
+		tCase{[]string{"A", "b", "a"}, []string{"A", "a", "b"}, false},
+		tCase{[]string{"A", "b", "a"}, []string{"a", "b"}, true},
+	}
+
+	for _, tc := range tCases {
+		actual := RemoveDuplicates(tc.input, tc.lowercase)
+
+		if !reflect.DeepEqual(actual, tc.expect) {
+			t.Fatalf("Bad testcase %#v, expected %v, got %v", tc, tc.expect, actual)
+		}
+	}
+}

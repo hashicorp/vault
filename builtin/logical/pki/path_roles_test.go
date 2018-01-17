@@ -209,6 +209,114 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	}
 }
 
+func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"allowed_domains": "myvault.com",
+		"ttl":             "5h",
+		"ou":              []string{"abc", "123"},
+		"organization":    []string{"org1", "org2"},
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/testrole",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	ou := resp.Data["ou"].([]string)
+	if len(ou) != 2 {
+		t.Fatalf("ou should have 2 values")
+	}
+	organization := resp.Data["organization"].([]string)
+	if len(organization) != 2 {
+		t.Fatalf("organziation should have 2 values")
+	}
+
+	// Check that old key usage value is nil
+	var role roleEntry
+	err = mapstructure.Decode(resp.Data, &role)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if role.OUOld != "" {
+		t.Fatalf("old ou storage value should be blank")
+	}
+	if role.OrganizationOld != "" {
+		t.Fatalf("old organization storage value should be blank")
+	}
+
+	// Make it explicit
+	role.OUOld = "abc,123"
+	role.OU = nil
+	role.OrganizationOld = "org1,org2"
+	role.Organization = nil
+
+	entry, err := logical.StorageEntryJSON("role/testrole", role)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Put(entry); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reading should upgrade key_usage
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	ou = resp.Data["ou"].([]string)
+	if len(ou) != 2 {
+		t.Fatalf("ou should have 2 values")
+	}
+	organization = resp.Data["organization"].([]string)
+	if len(organization) != 2 {
+		t.Fatalf("organization should have 2 values")
+	}
+
+	// Read back from storage to ensure upgrade
+	entry, err = storage.Get("role/testrole")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if entry == nil {
+		t.Fatalf("role should not be nil")
+	}
+	var result roleEntry
+	if err := entry.DecodeJSON(&result); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if result.OUOld != "" {
+		t.Fatal("old ou value should be blank")
+	}
+	if len(result.OU) != 2 {
+		t.Fatal("ou should have 2 values")
+	}
+	if result.OrganizationOld != "" {
+		t.Fatal("old organization value should be blank")
+	}
+	if len(result.Organization) != 2 {
+		t.Fatal("organization should have 2 values")
+	}
+}
+
 func TestPki_RoleAllowedDomains(t *testing.T) {
 	var resp *logical.Response
 	var err error
