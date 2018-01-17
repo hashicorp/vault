@@ -1615,6 +1615,33 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if cachedArn == "" {
 		t.Errorf("got empty ARN back from user ID cache; expected full arn")
 	}
+
+	// Test for renewal with period
+	period := 600 * time.Second
+	loginData["period"] = period.String()
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("bad: expected valid login: resp:%#v", resp)
+	}
+
+	renewReq = generateRenewRequest(storage, resp.Auth)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error when renewing: %#v", *resp)
+	}
+
+	if resp.Auth.Period != period {
+		t.Fatalf("expected a period value of %s in the response, got: %s", period, resp.Auth.Period)
+	}
 }
 
 func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Request {
@@ -1627,6 +1654,7 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 	renewReq.Auth.LeaseOptions = auth.LeaseOptions
 	renewReq.Auth.Policies = auth.Policies
 	renewReq.Auth.IssueTime = time.Now()
+	renewReq.Auth.Period = auth.Period
 
 	return renewReq
 }
