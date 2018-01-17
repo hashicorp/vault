@@ -1102,13 +1102,17 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing command value"), nil
 	}
 
+	// For backwards compatibility, also accept args as part of command.  Don't
+	// accepts args in both command and args.
 	args := d.Get("args").([]string)
-	// For backwards compatibility, also accept args as part of command.
 	parts := strings.Split(command, " ")
 	if len(parts) <= 0 {
 		return logical.ErrorResponse("missing command value"), nil
+	} else if len(parts) > 1 && len(args) > 0 {
+		return logical.ErrorResponse("must not speficy args in command and args field"), nil
+	} else if len(parts) > 1 {
+		args = parts[1:]
 	}
-	args = append(parts[1:], args...)
 
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
@@ -1136,9 +1140,12 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		return nil, nil
 	}
 
-	command, err := filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
-	if err != nil {
-		return nil, err
+	command := ""
+	if !plugin.Builtin {
+		command, err = filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	data := map[string]interface{}{
@@ -1146,6 +1153,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		"args":    plugin.Args,
 		"command": command,
 		"sha256":  hex.EncodeToString(plugin.Sha256),
+		"builtin": plugin.Builtin,
 	}
 
 	return &logical.Response{
