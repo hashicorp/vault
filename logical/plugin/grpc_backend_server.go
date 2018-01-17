@@ -68,7 +68,7 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 	resp, respErr := b.backend.HandleRequest(ctx, logicalReq)
 
-	pbResp, err := pb.LogicalResponseToProtoResp(resp)
+	pbResp, err := pb.LogicalResponseToProtoResponse(resp)
 	if err != nil {
 		return &pb.HandleRequestReply{}, err
 	}
