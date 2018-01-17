@@ -61,7 +61,7 @@ func (m *mockPlugin) RevokeUser(_ context.Context, statements dbplugin.Statement
 	delete(m.users, username)
 	return nil
 }
-func (m *mockPlugin) RollUserCredentials(_ context.Context, statements dbplugin.Statements, username string) error {
+func (m *mockPlugin) RollUserCredential(_ context.Context, statements dbplugin.Statements, username string) error {
 	err := errors.New("err")
 	if username == "" {
 		return err
@@ -284,7 +284,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 }
 
 // Test the code is still compatible with an old netRPC plugin
-func TestPlugin_RollUserCredentials(t *testing.T) {
+func TestPlugin_RollUserCredential(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -312,7 +312,7 @@ func TestPlugin_RollUserCredentials(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	_, err = db.RollUserCredentials(context.Background(), dbplugin.Statements{}, us)
+	_, err = db.RollUserCredential(context.Background(), dbplugin.Statements{}, us)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

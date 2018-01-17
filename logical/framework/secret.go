@@ -35,6 +35,9 @@ type Secret struct {
 
 	// Revoke is the callback called to revoke this secret. This is required.
 	Revoke OperationFunc
+
+	// Revoke is the callback called to revoke this secret. This is required.
+	Roll OperationFunc
 }
 
 func (s *Secret) Renewable() bool {
@@ -85,6 +88,20 @@ func (s *Secret) HandleRevoke(ctx context.Context, req *logical.Request) (*logic
 
 	if s.Revoke != nil {
 		return s.Revoke(ctx, req, data)
+	}
+
+	return nil, logical.ErrUnsupportedOperation
+}
+
+// HandleRoll is the request handler for renewing this secret.
+func (s *Secret) HandleRoll(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	data := &FieldData{
+		Raw:    req.Data,
+		Schema: s.Fields,
+	}
+
+	if s.Revoke != nil {
+		return s.Roll(ctx, req, data)
 	}
 
 	return nil, logical.ErrUnsupportedOperation

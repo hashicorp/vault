@@ -664,6 +664,48 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	return resp, nil
 }
 
+// Roll is used to roll a secret's credentials using the given leaseID
+func (m *ExpirationManager) Roll(leaseID string) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"expire", "roll"}, time.Now())
+
+	// Load the entry
+	le, err := m.loadEntry(leaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	if le.Secret == nil {
+		if le.Auth != nil {
+			return logical.ErrorResponse("tokens cannot be rolled through this endpoint"), logical.ErrPermissionDenied
+		}
+		return logical.ErrorResponse("lease does not correspond to a secret"), nil
+	}
+
+	// Attempt to renew the entry
+	resp, err := m.rollEntry(le)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fast-path if there is no lease
+	if resp == nil || resp.Secret == nil || !resp.Secret.LeaseEnabled() {
+		return resp, nil
+	}
+
+	// Attach the LeaseID
+	resp.Secret.LeaseID = leaseID
+
+	// Update the lease entry
+	le.Data = resp.Data
+	le.Secret = resp.Secret
+	if err := m.persistEntry(le); err != nil {
+		return nil, err
+	}
+
+	// Return the response
+	return resp, nil
+}
+
 // RestoreSaltedTokenCheck verifies that the token is not expired while running
 // in restore mode.  If we are not in restore mode, the lease has already been
 // restored or the lease still has time left, it returns true.
@@ -1066,6 +1108,17 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 	resp, err := m.router.Route(m.quitContext, req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		return nil, fmt.Errorf("failed to renew entry: resp:%#v err:%s", resp, err)
+	}
+	return resp, nil
+}
+
+// rollEntry is used to attempt renew of an internal entry
+func (m *ExpirationManager) rollEntry(le *leaseEntry) (*logical.Response, error) {
+	secret := *le.Secret
+	req := logical.RollRequest(le.Path, &secret, le.Data)
+	resp, err := m.router.Route(m.quitContext, req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		return nil, fmt.Errorf("failed to roll entry: resp:%#v err:%s", resp, err)
 	}
 	return resp, nil
 }

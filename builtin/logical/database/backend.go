@@ -35,14 +35,16 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 			},
 		},
 
-		Paths: []*framework.Path{
-			pathListPluginConnection(&b),
-			pathConfigurePluginConnection(&b),
-			pathListRoles(&b),
-			pathRoles(&b),
-			pathCredsCreate(&b),
-			pathResetConnection(&b),
-		},
+		Paths: framework.PathAppend(
+			[]*framework.Path{
+				pathListPluginConnection(&b),
+				pathConfigurePluginConnection(&b),
+				pathListRoles(&b),
+				pathRoles(&b),
+				pathResetConnection(&b),
+			},
+			pathCreds(&b),
+		),
 
 		Secrets: []*framework.Secret{
 			secretCreds(&b),

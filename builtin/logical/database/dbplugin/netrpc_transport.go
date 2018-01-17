@@ -37,9 +37,9 @@ func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequestRPC, _ *str
 	return err
 }
 
-func (ds *databasePluginRPCServer) RollUserCredentials(args *RollUserCredentialsRequestRPC, resp *RollUserCredentialsResponse) error {
+func (ds *databasePluginRPCServer) RollUserCredential(args *RollUserCredentialRequestRPC, resp *RollUserCredentialResponse) error {
 	var err error
-	resp.Password, err = ds.impl.RollUserCredentials(context.Background(), args.Statements, args.Username)
+	resp.Password, err = ds.impl.RollUserCredential(context.Background(), args.Statements, args.Username)
 	return err
 }
 
@@ -103,14 +103,14 @@ func (dr *databasePluginRPCClient) RevokeUser(_ context.Context, statements Stat
 	return err
 }
 
-func (dr *databasePluginRPCClient) RollUserCredentials(_ context.Context, statements Statements, username string) (password string, err error) {
-	req := RollUserCredentialsRequestRPC{
+func (dr *databasePluginRPCClient) RollUserCredential(_ context.Context, statements Statements, username string) (password string, err error) {
+	req := RollUserCredentialRequestRPC{
 		Statements: statements,
 		Username:   username,
 	}
 
-	var resp RollUserCredentialsResponse
-	err = dr.client.Call("Plugin.RollUserCredentials", req, &resp)
+	var resp RollUserCredentialResponse
+	err = dr.client.Call("Plugin.RollUserCredential", req, &resp)
 
 	return resp.Password, err
 }
@@ -156,7 +156,7 @@ type RevokeUserRequestRPC struct {
 	Username   string
 }
 
-type RollUserCredentialsRequestRPC struct {
+type RollUserCredentialRequestRPC struct {
 	Statements Statements
 	Username   string
 }

@@ -57,10 +57,17 @@ func pathRoles(b *databaseBackend) *framework.Path {
 			"rollback_statements": {
 				Type: framework.TypeString,
 				Description: `Specifies the database statements to be executed
-				rollback a create operation in the event of an error. Not every
-				plugin type will support this functionality. See the plugin's
-				API page for more information on support and formatting for this
-				parameter.`,
+				to rollback a create operation in the event of an error. Not 
+				every plugin type will support this functionality. See the 
+				plugin's API page for more information on support and formatting
+				for this parameter.`,
+			},
+			"roll_credential_statements": {
+				Type: framework.TypeString,
+				Description: `Specifies the database statements to be executed
+				to roll a database users' credentials. Not every plugin type 
+				will support this functionality. See the plugin's API page for 
+				more information on support and formatting for this parameter.`,
 			},
 
 			"default_ttl": {
@@ -108,13 +115,14 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"db_name":               role.DBName,
-				"creation_statements":   role.Statements.CreationStatements,
-				"revocation_statements": role.Statements.RevocationStatements,
-				"rollback_statements":   role.Statements.RollbackStatements,
-				"renew_statements":      role.Statements.RenewStatements,
-				"default_ttl":           role.DefaultTTL.Seconds(),
-				"max_ttl":               role.MaxTTL.Seconds(),
+				"db_name":                    role.DBName,
+				"creation_statements":        role.Statements.CreationStatements,
+				"revocation_statements":      role.Statements.RevocationStatements,
+				"rollback_statements":        role.Statements.RollbackStatements,
+				"renew_statements":           role.Statements.RenewStatements,
+				"roll_credential_statements": role.Statements.RollCredentialStatements,
+				"default_ttl":                role.DefaultTTL.Seconds(),
+				"max_ttl":                    role.MaxTTL.Seconds(),
 			},
 		}, nil
 	}
@@ -230,4 +238,6 @@ The "renew_statements" parameter customizes the statement string used to renew a
 user.
 The "rollback_statements' parameter customizes the statement string used to
 rollback a change if needed.
+The "roll_credential_statements' parameter customizes the statement string used
+to roll a users' credentials.
 `

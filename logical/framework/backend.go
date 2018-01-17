@@ -175,10 +175,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	// Check for special cased global operations. These don't route
 	// to a specific Path.
 	switch req.Operation {
-	case logical.RenewOperation:
-		fallthrough
-	case logical.RevokeOperation:
-		return b.handleRevokeRenew(ctx, req)
+	case logical.RenewOperation, logical.RevokeOperation, logical.RollOperation:
+		return b.handleRevokeRenewRoll(ctx, req)
 	case logical.RollbackOperation:
 		return b.handleRollback(req)
 	}
@@ -436,7 +434,7 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 	return logical.HelpResponse(help, nil), nil
 }
 
-func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+func (b *Backend) handleRevokeRenewRoll(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// Special case renewal of authentication for credential backends
 	if req.Operation == logical.RenewOperation && req.Auth != nil {
 		return b.handleAuthRenew(ctx, req)
@@ -465,6 +463,8 @@ func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (
 		return secret.HandleRenew(ctx, req)
 	case logical.RevokeOperation:
 		return secret.HandleRevoke(ctx, req)
+	case logical.RollOperation:
+		return secret.HandleRoll(ctx, req)
 	default:
 		return nil, fmt.Errorf(
 			"invalid operation for revoke/renew: %s", req.Operation)

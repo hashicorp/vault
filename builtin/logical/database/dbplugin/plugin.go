@@ -19,7 +19,7 @@ type Database interface {
 	CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
 	RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error
 	RevokeUser(ctx context.Context, statements Statements, username string) error
-	RollUserCredentials(ctx context.Context, statements Statements, username string) (password string, err error)
+	RollUserCredential(ctx context.Context, statements Statements, username string) (password string, err error)
 
 	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error
 	Close() error

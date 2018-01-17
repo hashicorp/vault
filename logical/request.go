@@ -209,6 +209,16 @@ func RenewRequest(path string, secret *Secret, data map[string]interface{}) *Req
 	}
 }
 
+// RollRequest creates the structure of the renew request.
+func RollRequest(path string, secret *Secret, data map[string]interface{}) *Request {
+	return &Request{
+		Operation: RollOperation,
+		Path:      path,
+		Data:      data,
+		Secret:    secret,
+	}
+}
+
 // RenewAuthRequest creates the structure of the renew request for an auth.
 func RenewAuthRequest(path string, auth *Auth, data map[string]interface{}) *Request {
 	return &Request{
@@ -255,6 +265,7 @@ const (
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
 	RenewOperation              = "renew"
+	RollOperation               = "roll"
 	RollbackOperation           = "rollback"
 )
 

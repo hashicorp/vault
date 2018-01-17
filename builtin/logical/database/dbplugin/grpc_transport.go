@@ -61,9 +61,9 @@ func (s *gRPCServer) RevokeUser(ctx context.Context, req *RevokeUserRequest) (*E
 	return &Empty{}, err
 }
 
-func (s *gRPCServer) RollUserCredentials(ctx context.Context, req *RollUserCredentialsRequest) (*RollUserCredentialsResponse, error) {
-	p, err := s.impl.RollUserCredentials(ctx, *req.Statements, req.Username)
-	return &RollUserCredentialsResponse{
+func (s *gRPCServer) RollUserCredential(ctx context.Context, req *RollUserCredentialRequest) (*RollUserCredentialResponse, error) {
+	p, err := s.impl.RollUserCredential(ctx, *req.Statements, req.Username)
+	return &RollUserCredentialResponse{
 		Password: p,
 	}, err
 }
@@ -170,14 +170,14 @@ func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, user
 	return err
 }
 
-func (c *gRPCClient) RollUserCredentials(ctx context.Context, statements Statements, username string) (password string, err error) {
+func (c *gRPCClient) RollUserCredential(ctx context.Context, statements Statements, username string) (password string, err error) {
 	switch c.clientConn.GetState() {
 	case connectivity.Ready, connectivity.Idle:
 	default:
 		return "", ErrPluginShutdown
 	}
 
-	resp, err := c.client.RollUserCredentials(ctx, &RollUserCredentialsRequest{
+	resp, err := c.client.RollUserCredential(ctx, &RollUserCredentialRequest{
 		Statements: &statements,
 		Username:   username,
 	})
