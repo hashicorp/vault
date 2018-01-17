@@ -1618,7 +1618,14 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 
 	// Test for renewal with period
 	period := 600 * time.Second
-	loginData["period"] = period.String()
+	roleData["period"] = period.String()
+	roleRequest.Path = "role/" + testValidRoleName
+	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to create wildcard role: resp:%#v\nerr:%v", resp, err)
+	}
+
+	loginData["role"] = testValidRoleName
 	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
