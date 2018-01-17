@@ -3,11 +3,27 @@ package salt
 import (
 	"crypto/sha1"
 	"crypto/sha256"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestSaltIDHashFunc(t *testing.T) {
+	inm := &logical.InmemStorage{}
+	conf := &Config{}
+
+	salt, err := NewSalt(inm, conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	saltedID := salt.SaltIDHashFunc("sampletext", "sha2-256", "-", SHA256Hash)
+	if !strings.HasPrefix(saltedID, "sha2-256-") {
+		t.Fatalf("bad prefix; expected a prefix of %q; actual value: %#v", "sha2-256-", saltedID)
+	}
+}
 
 func TestSalt(t *testing.T) {
 	inm := &logical.InmemStorage{}
