@@ -271,7 +271,7 @@ func (c *Core) mountInternal(entry *MountEntry) error {
 
 	// Call initialize; this takes care of init tasks that must be run after
 	// the ignore paths are collected
-	if err := backend.Initialize(); err != nil {
+	if err := backend.Initialize(c.requestContext); err != nil {
 		return err
 	}
 
@@ -351,11 +351,11 @@ func (c *Core) unmountInternal(path string) error {
 		}
 
 		// Call cleanup function if it exists
-		backend.Cleanup()
+		backend.Cleanup(c.requestContext)
 	}
 
 	// Unmount the backend entirely
-	if err := c.router.Unmount(path); err != nil {
+	if err := c.router.Unmount(c.requestContext, path); err != nil {
 		return err
 	}
 
@@ -771,7 +771,7 @@ func (c *Core) setupMounts() error {
 			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 		}
 
-		if err := backend.Initialize(); err != nil {
+		if err := backend.Initialize(c.requestContext); err != nil {
 			return err
 		}
 
@@ -808,7 +808,7 @@ func (c *Core) unloadMounts() error {
 		for _, e := range mountTable.Entries {
 			backend := c.router.MatchingBackend(e.Path)
 			if backend != nil {
-				backend.Cleanup()
+				backend.Cleanup(c.requestContext)
 			}
 		}
 	}
@@ -836,7 +836,7 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 		System:      sysView,
 	}
 
-	b, err := f(config)
+	b, err := f(c.requestContext, config)
 	if err != nil {
 		return nil, err
 	}

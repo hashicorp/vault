@@ -1,6 +1,7 @@
 package logical
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -47,7 +48,7 @@ type SystemView interface {
 
 	// LookupPlugin looks into the plugin catalog for a plugin with the given
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
-	LookupPlugin(string) (*pluginutil.PluginRunner, error)
+	LookupPlugin(context.Context, string) (*pluginutil.PluginRunner, error)
 
 	// MlockEnabled returns the configuration setting for enabling mlock on
 	// plugins.
@@ -93,7 +94,7 @@ func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time
 	return nil, errors.New("ResponseWrapData is not implemented in StaticSystemView")
 }
 
-func (d StaticSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+func (d StaticSystemView) LookupPlugin(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
 	return nil, errors.New("LookupPlugin is not implemented in StaticSystemView")
 }
 

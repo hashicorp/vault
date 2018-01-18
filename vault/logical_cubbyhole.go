@@ -12,7 +12,7 @@ import (
 )
 
 // CubbyholeBackendFactory constructs a new cubbyhole backend
-func CubbyholeBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+func CubbyholeBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	var b CubbyholeBackend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(cubbyholeHelp),
@@ -40,7 +40,7 @@ func CubbyholeBackendFactory(conf *logical.BackendConfig) (logical.Backend, erro
 	if conf == nil {
 		return nil, fmt.Errorf("Configuation passed into backend is nil")
 	}
-	b.Backend.Setup(conf)
+	b.Backend.Setup(ctx, conf)
 
 	return &b, nil
 }

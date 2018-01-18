@@ -105,7 +105,7 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create a logical backend.
-type Factory func(*BackendConfig) (Backend, error)
+type Factory func(context.Context, *BackendConfig) (Backend, error)
 
 // Paths is the structure of special paths that is used for SpecialPaths.
 type Paths struct {

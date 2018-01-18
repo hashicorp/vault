@@ -572,16 +572,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		logicalBackends["kv"] = PassthroughBackendFactory
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
-	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+	logicalBackends["system"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		b := NewSystemBackend(c)
-		if err := b.Setup(config); err != nil {
+		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
 		return b, nil
 	}
 
-	logicalBackends["identity"] = func(config *logical.BackendConfig) (logical.Backend, error) {
-		return NewIdentityStore(c, config)
+	logicalBackends["identity"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return NewIdentityStore(ctx, c, config)
 	}
 
 	c.logicalBackends = logicalBackends
@@ -590,8 +590,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
 	}
-	credentialBackends["token"] = func(config *logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(c, config)
+	credentialBackends["token"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return NewTokenStore(ctx, c, config)
 	}
 	c.credentialBackends = credentialBackends
 
@@ -744,7 +744,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 	tokenPolicies = append(tokenPolicies, derivedPolicies...)
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(tokenPolicies...)
+	acl, err := c.policyStore.ACL(c.requestContext, tokenPolicies...)
 	if err != nil {
 		c.logger.Error("core: failed to construct ACL", "error", err)
 		return nil, nil, nil, ErrInternalError
@@ -1021,7 +1021,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	}
 
 	// Get the barrier seal configuration
-	config, err := c.seal.BarrierConfig()
+	config, err := c.seal.BarrierConfig(c.requestContext)
 	if err != nil {
 		return false, err
 	}
@@ -1061,8 +1061,8 @@ func (c *Core) UnsealWithRecoveryKeys(key []byte) (bool, error) {
 
 	var config *SealConfig
 	// If recovery keys are supported then use recovery seal config to unseal
-	if c.seal.RecoveryKeySupported() {
-		config, err = c.seal.RecoveryConfig()
+	if c.seal.RecoveryKeySupported(c.requestContext) {
+		config, err = c.seal.RecoveryConfig(c.requestContext)
 		if err != nil {
 			return false, err
 		}
@@ -1138,9 +1138,9 @@ func (c *Core) unsealPart(config *SealConfig, key []byte, useRecoveryKeys bool) 
 		}
 	}
 
-	if c.seal.RecoveryKeySupported() && useRecoveryKeys {
+	if c.seal.RecoveryKeySupported(c.requestContext) && useRecoveryKeys {
 		// Verify recovery key
-		if err := c.seal.VerifyRecoveryKey(recoveredKey); err != nil {
+		if err := c.seal.VerifyRecoveryKey(c.requestContext, recoveredKey); err != nil {
 			return nil, err
 		}
 
@@ -1150,8 +1150,8 @@ func (c *Core) unsealPart(config *SealConfig, key []byte, useRecoveryKeys bool) 
 		// If insuffiencient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
 		var masterKey []byte
-		if c.seal.StoredKeysSupported() {
-			masterKeyShares, err := c.seal.GetStoredKeys()
+		if c.seal.StoredKeysSupported(c.requestContext) {
+			masterKeyShares, err := c.seal.GetStoredKeys(c.requestContext)
 			if err != nil {
 				return nil, fmt.Errorf("unable to retrieve stored keys: %v", err)
 			}
@@ -1217,8 +1217,8 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	c.sealed = false
 
 	// Force a cache bust here, which will also run migration code
-	if c.seal.RecoveryKeySupported() {
-		c.seal.SetRecoveryConfig(nil)
+	if c.seal.RecoveryKeySupported(c.requestContext) {
+		c.seal.SetRecoveryConfig(c.requestContext, nil)
 	}
 
 	if c.ha != nil {
@@ -1554,9 +1554,9 @@ func (c *Core) postUnseal() (retErr error) {
 	}
 
 	// Purge these for safety in case of a rekey
-	c.seal.SetBarrierConfig(nil)
-	if c.seal.RecoveryKeySupported() {
-		c.seal.SetRecoveryConfig(nil)
+	c.seal.SetBarrierConfig(c.requestContext, nil)
+	if c.seal.RecoveryKeySupported(c.requestContext) {
+		c.seal.SetRecoveryConfig(c.requestContext, nil)
 	}
 
 	c.requestContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
@@ -1748,9 +1748,9 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			c.seal.SetBarrierConfig(nil)
-			if c.seal.RecoveryKeySupported() {
-				c.seal.SetRecoveryConfig(nil)
+			c.seal.SetBarrierConfig(c.requestContext, nil)
+			if c.seal.RecoveryKeySupported(c.requestContext) {
+				c.seal.SetRecoveryConfig(c.requestContext, nil)
 			}
 
 			if err := c.performKeyUpgrades(); err != nil {

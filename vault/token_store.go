@@ -108,7 +108,7 @@ type TokenStore struct {
 
 // NewTokenStore is used to construct a token store that is
 // backed by the given barrier view.
-func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) {
+func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) (*TokenStore, error) {
 	// Create a sub-view
 	view := c.systemBarrierView.SubView(tokenSubPath)
 
@@ -478,12 +478,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		Init: t.Initialize,
 	}
 
-	t.Backend.Setup(config)
+	t.Backend.Setup(ctx, config)
 
 	return t, nil
 }
 
-func (ts *TokenStore) Initialize() error {
+func (ts *TokenStore) Initialize(ctx context.Context) error {
 	ts.saltLock.Lock()
 
 	// Setup the salt config
@@ -497,7 +497,7 @@ func (ts *TokenStore) Initialize() error {
 	return nil
 }
 
-func (ts *TokenStore) Invalidate(key string) {
+func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
 	//ts.logger.Trace("token: invalidating key", "key", key)
 
 	switch key {

@@ -39,7 +39,7 @@ func (c *Core) Initialized() (bool, error) {
 	}
 
 	// Verify the seal configuration
-	sealConf, err := c.seal.BarrierConfig()
+	sealConf, err := c.seal.BarrierConfig(c.requestContext)
 	if err != nil {
 		return false, err
 	}
@@ -47,8 +47,8 @@ func (c *Core) Initialized() (bool, error) {
 		return false, fmt.Errorf("core: barrier reports initialized but no seal configuration found")
 	}
 
-	if c.seal.RecoveryKeySupported() {
-		sealConf, err = c.seal.RecoveryConfig()
+	if c.seal.RecoveryKeySupported(c.requestContext) {
+		sealConf, err = c.seal.RecoveryConfig(c.requestContext)
 		if err != nil {
 			return false, err
 		}
@@ -102,7 +102,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	barrierConfig := initParams.BarrierConfig
 	recoveryConfig := initParams.RecoveryConfig
 
-	if c.seal.RecoveryKeySupported() {
+	if c.seal.RecoveryKeySupported(c.requestContext) {
 		if recoveryConfig == nil {
 			return nil, fmt.Errorf("recovery configuration must be supplied")
 		}
@@ -137,7 +137,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		return nil, ErrAlreadyInit
 	}
 
-	err = c.seal.Init()
+	err = c.seal.Init(c.requestContext)
 	if err != nil {
 		c.logger.Error("core: failed to initialize seal", "error", err)
 		return nil, fmt.Errorf("error initializing seal: %v", err)
@@ -174,7 +174,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		}
 	}()
 
-	err = c.seal.SetBarrierConfig(barrierConfig)
+	err = c.seal.SetBarrierConfig(c.requestContext, barrierConfig)
 	if err != nil {
 		c.logger.Error("core: failed to save barrier configuration", "error", err)
 		return nil, fmt.Errorf("barrier configuration saving failed: %v", err)
@@ -188,7 +188,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 			keysToStore = append(keysToStore, barrierUnsealKeys[0])
 			barrierUnsealKeys = barrierUnsealKeys[1:]
 		}
-		if err := c.seal.SetStoredKeys(keysToStore); err != nil {
+		if err := c.seal.SetStoredKeys(c.requestContext, keysToStore); err != nil {
 			c.logger.Error("core: failed to store keys", "error", err)
 			return nil, fmt.Errorf("failed to store keys: %v", err)
 		}
@@ -211,8 +211,8 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	// Save the configuration regardless, but only generate a key if it's not
 	// disabled. When using recovery keys they are stored in the barrier, so
 	// this must happen post-unseal.
-	if c.seal.RecoveryKeySupported() {
-		err = c.seal.SetRecoveryConfig(recoveryConfig)
+	if c.seal.RecoveryKeySupported(c.requestContext) {
+		err = c.seal.SetRecoveryConfig(c.requestContext, recoveryConfig)
 		if err != nil {
 			c.logger.Error("core: failed to save recovery configuration", "error", err)
 			return nil, fmt.Errorf("recovery configuration saving failed: %v", err)
@@ -225,7 +225,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 				return nil, err
 			}
 
-			err = c.seal.SetRecoveryKey(recoveryKey)
+			err = c.seal.SetRecoveryKey(c.requestContext, recoveryKey)
 			if err != nil {
 				return nil, err
 			}
@@ -263,7 +263,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 
 // UnsealWithStoredKeys performs auto-unseal using stored keys.
 func (c *Core) UnsealWithStoredKeys() error {
-	if !c.seal.StoredKeysSupported() {
+	if !c.seal.StoredKeysSupported(c.requestContext) {
 		return nil
 	}
 
@@ -277,7 +277,7 @@ func (c *Core) UnsealWithStoredKeys() error {
 	}
 
 	c.logger.Info("core: stored unseal keys supported, attempting fetch")
-	keys, err := c.seal.GetStoredKeys()
+	keys, err := c.seal.GetStoredKeys(c.requestContext)
 	if err != nil {
 		c.logger.Error("core: fetching stored unseal keys failed", "error", err)
 		return &NonFatalError{Err: fmt.Errorf("fetching stored unseal keys failed: %v", err)}

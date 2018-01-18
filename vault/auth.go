@@ -118,7 +118,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		return fmt.Errorf("cannot mount '%s' of type '%s' as an auth method", entry.Config.PluginName, backendType)
 	}
 
-	if err := backend.Initialize(); err != nil {
+	if err := backend.Initialize(c.requestContext); err != nil {
 		return err
 	}
 
@@ -184,11 +184,11 @@ func (c *Core) disableCredential(path string) error {
 		}
 
 		// Call cleanup function if it exists
-		backend.Cleanup()
+		backend.Cleanup(c.requestContext)
 	}
 
 	// Unmount the backend
-	if err := c.router.Unmount(fullPath); err != nil {
+	if err := c.router.Unmount(c.requestContext, fullPath); err != nil {
 		return err
 	}
 
@@ -478,7 +478,7 @@ func (c *Core) setupCredentials() error {
 			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 		}
 
-		if err := backend.Initialize(); err != nil {
+		if err := backend.Initialize(c.requestContext); err != nil {
 			return err
 		}
 	ROUTER_MOUNT:
@@ -523,7 +523,7 @@ func (c *Core) teardownCredentials() error {
 		for _, e := range authTable.Entries {
 			backend := c.router.MatchingBackend(credentialRoutePrefix + e.Path)
 			if backend != nil {
-				backend.Cleanup()
+				backend.Cleanup(c.requestContext)
 			}
 		}
 	}
@@ -551,7 +551,7 @@ func (c *Core) newCredentialBackend(
 		System:      sysView,
 	}
 
-	b, err := f(config)
+	b, err := f(c.requestContext, config)
 	if err != nil {
 		return nil, err
 	}

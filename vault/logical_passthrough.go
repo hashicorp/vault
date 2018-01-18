@@ -15,19 +15,19 @@ import (
 
 // PassthroughBackendFactory returns a PassthroughBackend
 // with leases switched off
-func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, false)
+func PassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	return LeaseSwitchedPassthroughBackend(ctx, conf, false)
 }
 
 // LeasedPassthroughBackendFactory returns a PassthroughBackend
 // with leases switched on
-func LeasedPassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, true)
+func LeasedPassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	return LeaseSwitchedPassthroughBackend(ctx, conf, true)
 }
 
 // LeaseSwitchedPassthroughBackend returns a PassthroughBackend
 // with leases switched on or off
-func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
+func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
 	var b PassthroughBackend
 	b.generateLeases = leases
 	b.Backend = &framework.Backend{
@@ -71,7 +71,7 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (
 	if conf == nil {
 		return nil, fmt.Errorf("Configuation passed into backend is nil")
 	}
-	b.Backend.Setup(conf)
+	b.Backend.Setup(ctx, conf)
 
 	return &b, nil
 }

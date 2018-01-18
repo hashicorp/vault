@@ -189,13 +189,13 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string, strategy GenerateRoo
 	// Get the seal configuration
 	var config *SealConfig
 	var err error
-	if c.seal.RecoveryKeySupported() {
-		config, err = c.seal.RecoveryConfig()
+	if c.seal.RecoveryKeySupported(c.requestContext) {
+		config, err = c.seal.RecoveryConfig(c.requestContext)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		config, err = c.seal.BarrierConfig()
+		config, err = c.seal.BarrierConfig(c.requestContext)
 		if err != nil {
 			return nil, err
 		}
@@ -269,8 +269,8 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string, strategy GenerateRoo
 	}
 
 	// Verify the master key
-	if c.seal.RecoveryKeySupported() {
-		if err := c.seal.VerifyRecoveryKey(masterKey); err != nil {
+	if c.seal.RecoveryKeySupported(c.requestContext) {
+		if err := c.seal.VerifyRecoveryKey(c.requestContext, masterKey); err != nil {
 			c.logger.Error("core: root generation aborted, recovery key verification failed", "error", err)
 			return nil, err
 		}

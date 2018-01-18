@@ -64,10 +64,10 @@ func (c *Core) RekeyThreshold(recovery bool) (int, error) {
 	// If we are rekeying the recovery key, or if the seal supports
 	// recovery keys and we are rekeying the barrier key, we use the
 	// recovery config as the threshold instead.
-	if recovery || c.seal.RecoveryKeySupported() {
-		config, err = c.seal.RecoveryConfig()
+	if recovery || c.seal.RecoveryKeySupported(c.requestContext) {
+		config, err = c.seal.RecoveryConfig(c.requestContext)
 	} else {
-		config, err = c.seal.BarrierConfig()
+		config, err = c.seal.BarrierConfig(c.requestContext)
 	}
 	if err != nil {
 		return 0, err
@@ -137,7 +137,7 @@ func (c *Core) RekeyInit(config *SealConfig, recovery bool) error {
 // BarrierRekeyInit is used to initialize the rekey settings for the barrier key
 func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 	if config.StoredShares > 0 {
-		if !c.seal.StoredKeysSupported() {
+		if !c.seal.StoredKeysSupported(c.requestContext) {
 			return fmt.Errorf("storing keys not supported by barrier seal")
 		}
 		if len(config.PGPKeys) > 0 {
@@ -148,7 +148,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 		}
 	}
 
-	if c.seal.RecoveryKeySupported() && c.seal.RecoveryType() == config.Type {
+	if c.seal.RecoveryKeySupported(c.requestContext) && c.seal.RecoveryType(c.requestContext) == config.Type {
 		c.logger.Debug("core: using recovery seal configuration to rekey barrier key")
 	}
 
@@ -204,7 +204,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 		return fmt.Errorf("invalid recovery configuration: %v", err)
 	}
 
-	if !c.seal.RecoveryKeySupported() {
+	if !c.seal.RecoveryKeySupported(c.requestContext) {
 		return fmt.Errorf("recovery keys not supported")
 	}
 
@@ -283,11 +283,11 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	var existingConfig *SealConfig
 	var err error
 	var useRecovery bool // Determines whether recovery key is being used to rekey the master key
-	if c.seal.StoredKeysSupported() && c.seal.RecoveryKeySupported() {
-		existingConfig, err = c.seal.RecoveryConfig()
+	if c.seal.StoredKeysSupported(c.requestContext) && c.seal.RecoveryKeySupported(c.requestContext) {
+		existingConfig, err = c.seal.RecoveryConfig(c.requestContext)
 		useRecovery = true
 	} else {
-		existingConfig, err = c.seal.BarrierConfig()
+		existingConfig, err = c.seal.BarrierConfig(c.requestContext)
 	}
 	if err != nil {
 		return nil, err
@@ -339,7 +339,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	}
 
 	if useRecovery {
-		if err := c.seal.VerifyRecoveryKey(recoveredKey); err != nil {
+		if err := c.seal.VerifyRecoveryKey(c.requestContext, recoveredKey); err != nil {
 			c.logger.Error("core: rekey aborted, recovery key verification failed", "error", err)
 			return nil, err
 		}
@@ -377,7 +377,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	// If we are storing any shares, add them to the shares to store and remove
 	// from the returned keys
 	var keysToStore [][]byte
-	if c.seal.StoredKeysSupported() && c.barrierRekeyConfig.StoredShares > 0 {
+	if c.seal.StoredKeysSupported(c.requestContext) && c.barrierRekeyConfig.StoredShares > 0 {
 		for i := 0; i < c.barrierRekeyConfig.StoredShares; i++ {
 			keysToStore = append(keysToStore, results.SecretShares[0])
 			results.SecretShares = results.SecretShares[1:]
@@ -420,7 +420,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 				Key:   coreBarrierUnsealKeysBackupPath,
 				Value: buf,
 			}
-			if err = c.physical.Put(pe); err != nil {
+			if err = c.physical.Put(c.requestContext, pe); err != nil {
 				c.logger.Error("core: failed to save unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
@@ -428,28 +428,28 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	}
 
 	if keysToStore != nil {
-		if err := c.seal.SetStoredKeys(keysToStore); err != nil {
+		if err := c.seal.SetStoredKeys(c.requestContext, keysToStore); err != nil {
 			c.logger.Error("core: failed to store keys", "error", err)
 			return nil, fmt.Errorf("failed to store keys: %v", err)
 		}
 	}
 
 	// Rekey the barrier
-	if err := c.barrier.Rekey(newMasterKey); err != nil {
+	if err := c.barrier.Rekey(c.requestContext, newMasterKey); err != nil {
 		c.logger.Error("core: failed to rekey barrier", "error", err)
 		return nil, fmt.Errorf("failed to rekey barrier: %v", err)
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: security barrier rekeyed", "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
 	}
-	if err := c.seal.SetBarrierConfig(c.barrierRekeyConfig); err != nil {
+	if err := c.seal.SetBarrierConfig(c.requestContext, c.barrierRekeyConfig); err != nil {
 		c.logger.Error("core: error saving rekey seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(&Entry{
+	if err := c.barrier.Put(c.requestContext, &Entry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.barrierRekeyConfig.Nonce),
 	}); err != nil {
@@ -489,7 +489,7 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 	defer c.rekeyLock.Unlock()
 
 	// Get the seal configuration
-	existingConfig, err := c.seal.RecoveryConfig()
+	existingConfig, err := c.seal.RecoveryConfig(c.requestContext)
 	if err != nil {
 		return nil, err
 	}
@@ -540,7 +540,7 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 	}
 
 	// Verify the recovery key
-	if err := c.seal.VerifyRecoveryKey(recoveryKey); err != nil {
+	if err := c.seal.VerifyRecoveryKey(c.requestContext, recoveryKey); err != nil {
 		c.logger.Error("core: rekey aborted, recovery key verification failed", "error", err)
 		return nil, err
 	}
@@ -603,26 +603,26 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 				Key:   coreRecoveryUnsealKeysBackupPath,
 				Value: buf,
 			}
-			if err = c.physical.Put(pe); err != nil {
+			if err = c.physical.Put(c.requestContext, pe); err != nil {
 				c.logger.Error("core: failed to save unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
 	}
 
-	if err := c.seal.SetRecoveryKey(newMasterKey); err != nil {
+	if err := c.seal.SetRecoveryKey(c.requestContext, newMasterKey); err != nil {
 		c.logger.Error("core: failed to set recovery key", "error", err)
 		return nil, fmt.Errorf("failed to set recovery key: %v", err)
 	}
 
-	if err := c.seal.SetRecoveryConfig(c.recoveryRekeyConfig); err != nil {
+	if err := c.seal.SetRecoveryConfig(c.requestContext, c.recoveryRekeyConfig); err != nil {
 		c.logger.Error("core: error saving rekey seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(&Entry{
+	if err := c.barrier.Put(c.requestContext, &Entry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.recoveryRekeyConfig.Nonce),
 	}); err != nil {
@@ -679,9 +679,9 @@ func (c *Core) RekeyRetrieveBackup(recovery bool) (*RekeyBackup, error) {
 	var entry *physical.Entry
 	var err error
 	if recovery {
-		entry, err = c.physical.Get(coreRecoveryUnsealKeysBackupPath)
+		entry, err = c.physical.Get(c.requestContext, coreRecoveryUnsealKeysBackupPath)
 	} else {
-		entry, err = c.physical.Get(coreBarrierUnsealKeysBackupPath)
+		entry, err = c.physical.Get(c.requestContext, coreBarrierUnsealKeysBackupPath)
 	}
 	if err != nil {
 		return nil, err
@@ -714,7 +714,7 @@ func (c *Core) RekeyDeleteBackup(recovery bool) error {
 	defer c.rekeyLock.Unlock()
 
 	if recovery {
-		return c.physical.Delete(coreRecoveryUnsealKeysBackupPath)
+		return c.physical.Delete(c.requestContext, coreRecoveryUnsealKeysBackupPath)
 	}
-	return c.physical.Delete(coreBarrierUnsealKeysBackupPath)
+	return c.physical.Delete(c.requestContext, coreBarrierUnsealKeysBackupPath)
 }

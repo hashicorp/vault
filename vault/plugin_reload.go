@@ -94,7 +94,7 @@ func (c *Core) reloadPluginCommon(entry *MountEntry, isAuth bool) error {
 	// Only call Cleanup if backend is initialized
 	if re.backend != nil {
 		// Call backend's Cleanup routine
-		re.backend.Cleanup()
+		re.backend.Cleanup(c.requestContext)
 	}
 
 	view := re.storageView
@@ -122,7 +122,7 @@ func (c *Core) reloadPluginCommon(entry *MountEntry, isAuth bool) error {
 
 	// Call initialize; this takes care of init tasks that must be run after
 	// the ignore paths are collected.
-	if err := backend.Initialize(); err != nil {
+	if err := backend.Initialize(c.requestContext); err != nil {
 		return err
 	}
 

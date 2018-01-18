@@ -1052,7 +1052,7 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 	return nil, err
 }
 
-func (b *SystemBackend) invalidate(key string) {
+func (b *SystemBackend) invalidate(ctx context.Context, key string) {
 	/*
 		if b.Core.logger.IsTrace() {
 			b.Core.logger.Trace("sys: invalidating key", "key", key)
@@ -1063,13 +1063,13 @@ func (b *SystemBackend) invalidate(key string) {
 		b.Core.stateLock.RLock()
 		defer b.Core.stateLock.RUnlock()
 		if b.Core.policyStore != nil {
-			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policyACLSubPath), PolicyTypeACL)
+			b.Core.policyStore.invalidate(ctx, strings.TrimPrefix(key, policyACLSubPath), PolicyTypeACL)
 		}
 	case strings.HasPrefix(key, tokenSubPath):
 		b.Core.stateLock.RLock()
 		defer b.Core.stateLock.RUnlock()
 		if b.Core.tokenStore != nil {
-			b.Core.tokenStore.Invalidate(key)
+			b.Core.tokenStore.Invalidate(ctx, key)
 		}
 	}
 }
@@ -2032,7 +2032,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 // handlePolicyList handles the "policy" endpoint to provide the enabled policies
 func (b *SystemBackend) handlePolicyList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the configured policies
-	policies, err := b.Core.policyStore.ListPolicies(PolicyTypeACL)
+	policies, err := b.Core.policyStore.ListPolicies(ctx, PolicyTypeACL)
 
 	// Add the special "root" policy
 	policies = append(policies, "root")
@@ -2046,7 +2046,7 @@ func (b *SystemBackend) handlePolicyList(ctx context.Context, req *logical.Reque
 
 func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		policies, err := b.Core.policyStore.ListPolicies(policyType)
+		policies, err := b.Core.policyStore.ListPolicies(ctx, policyType)
 		if err != nil {
 			return nil, err
 		}
@@ -2067,7 +2067,7 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
-		policy, err := b.Core.policyStore.GetPolicy(name, policyType)
+		policy, err := b.Core.policyStore.GetPolicy(ctx, name, policyType)
 		if err != nil {
 			return handleError(err)
 		}
@@ -2091,7 +2091,7 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 func (b *SystemBackend) handlePolicyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	policy, err := b.Core.policyStore.GetPolicy(name, PolicyTypeACL)
+	policy, err := b.Core.policyStore.GetPolicy(ctx, name, PolicyTypeACL)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2142,7 +2142,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		}
 
 		// Update the policy
-		if err := b.Core.policyStore.SetPolicy(policy); err != nil {
+		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 			return handleError(err)
 		}
 		return nil, nil
@@ -2181,7 +2181,7 @@ func (b *SystemBackend) handlePolicySet(ctx context.Context, req *logical.Reques
 	policy.Paths = p.Paths
 
 	// Update the policy
-	if err := b.Core.policyStore.SetPolicy(policy); err != nil {
+	if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 		return handleError(err)
 	}
 	return resp, nil
@@ -2191,7 +2191,7 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
-		if err := b.Core.policyStore.DeletePolicy(name, policyType); err != nil {
+		if err := b.Core.policyStore.DeletePolicy(ctx, name, policyType); err != nil {
 			return handleError(err)
 		}
 		return nil, nil
@@ -2202,7 +2202,7 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 func (b *SystemBackend) handlePolicyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	if err := b.Core.policyStore.DeletePolicy(name, PolicyTypeACL); err != nil {
+	if err := b.Core.policyStore.DeletePolicy(ctx, name, PolicyTypeACL); err != nil {
 		return handleError(err)
 	}
 	return nil, nil
