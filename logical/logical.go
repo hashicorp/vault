@@ -69,20 +69,20 @@ type Backend interface {
 
 	// Cleanup is invoked during an unmount of a backend to allow it to
 	// handle any cleanup like connection closing or releasing of file handles.
-	Cleanup()
+	Cleanup(context.Context)
 
 	// Initialize is invoked after a backend is created. It is the place to run
 	// any operations requiring storage; these should not be in the factory.
-	Initialize() error
+	Initialize(context.Contex) error
 
 	// InvalidateKey may be invoked when an object is modified that belongs
 	// to the backend. The backend can use this to clear any caches or reset
 	// internal state as needed.
-	InvalidateKey(key string)
+	InvalidateKey(context.Context, string)
 
 	// Setup is used to set up the backend based on the provided backend
 	// configuration.
-	Setup(*BackendConfig) error
+	Setup(context.Context, *BackendConfig) error
 
 	// Type returns the BackendType for the particular backend
 	Type() BackendType
