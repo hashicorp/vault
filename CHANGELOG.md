@@ -23,6 +23,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * identity: Delete group alias when an external group is deleted [GH-3773]
+ * secret/database: Fix a location where a lock could potentially not be
+   released, leading to deadlock [GH-3774]
 
 ## 0.9.1 (December 21st, 2017)
 
