@@ -129,7 +129,13 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		"username": username,
 		"role":     name,
 	})
-	resp.Secret.TTL = lease.Lease
+
+	ttl := lease.Lease
+	if ttl == 0 || (lease.LeaseMax > 0 && ttl > lease.LeaseMax) {
+		ttl = lease.LeaseMax
+	}
+	resp.Secret.TTL = ttl
+
 	return resp, nil
 }
 

@@ -74,7 +74,12 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			}
 		}
 
-		expiration := time.Now().Add(role.DefaultTTL)
+		ttl := role.DefaultTTL
+		if ttl == 0 || (role.MaxTTL > 0 && ttl > role.MaxTTL) {
+			ttl = role.MaxTTL
+		}
+
+		expiration := time.Now().Add(ttl)
 
 		usernameConfig := dbplugin.UsernameConfig{
 			DisplayName: req.DisplayName,
@@ -96,7 +101,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			"username": username,
 			"role":     name,
 		})
-		resp.Secret.TTL = role.DefaultTTL
+		resp.Secret.TTL = ttl
 
 		unlockFunc()
 		return resp, nil
