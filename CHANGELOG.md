@@ -25,6 +25,9 @@ FEATURES:
  * **Brand New CLI**: Vault has a brand new CLI interface that is significantly
    streamlined, supports autocomplete, and is almost entirely backwards
    compatible.
+ * **UI: PKI Secret Backend (Enterprise)**: Configure PKI secret backends, 
+   create and browse roles and certificates, and issue and sign certificates via
+   the listed roles.
 
 IMPROVEMENTS:
 
