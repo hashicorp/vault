@@ -17,7 +17,6 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
@@ -1787,14 +1786,15 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	actualRespData := resp.Data
-
-	expectedBuiltin := &pluginutil.PluginRunner{
-		Name:    "mysql-database-plugin",
-		Builtin: true,
+	expectedRespData := map[string]interface{}{
+		"name":    "mysql-database-plugin",
+		"command": "",
+		"args":    []string(nil),
+		"sha256":  "",
+		"builtin": true,
 	}
-	expectedRespData := structs.New(expectedBuiltin).Map()
-
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
 	}
@@ -1806,13 +1806,24 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 	defer file.Close()
 
+	// Check we can only specify args in one of command or args.
 	command := fmt.Sprintf("%s --test", filepath.Base(file.Name()))
 	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/test-plugin")
+	req.Data["args"] = []string{"--foo"}
 	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
 	req.Data["command"] = command
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+	if resp.Error().Error() != "must not speficy args in command and args field" {
+		t.Fatalf("err: %v", resp.Error())
+	}
+
+	delete(req.Data, "args")
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/test-plugin")
@@ -1820,17 +1831,15 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	actual := resp.Data
-
-	expectedRunner := &pluginutil.PluginRunner{
-		Name:    "test-plugin",
-		Command: filepath.Join(sym, filepath.Base(file.Name())),
-		Args:    []string{"--test"},
-		Sha256:  []byte{'1'},
-		Builtin: false,
+	expected := map[string]interface{}{
+		"name":    "test-plugin",
+		"command": filepath.Base(file.Name()),
+		"args":    []string{"--test"},
+		"sha256":  "31",
+		"builtin": false,
 	}
-	expected := structs.New(expectedRunner).Map()
-
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
 	}

@@ -7,6 +7,12 @@ DEPRECATIONS/CHANGES:
    comma-separated string or an array of strings. Reading a role will 
    now return arrays for these parameters.
 
+FEATURES:
+
+ * **Brand New CLI**: Vault has a brand new CLI interface that is significantly
+   streamlined, supports autocomplete, and is almost entirely backwards
+   compatible.
+
 IMPROVEMENTS:
 
  * auth/aws: Handle IAM headers produced by clients that formulate numbers as
@@ -14,12 +20,17 @@ IMPROVEMENTS:
  * auth/okta: Support JSON lists when specifying groups and policies [GH-3801]
  * physical/s3: Allow using paths with S3 for non-AWS deployments [GH-3730]
  * physical/s3: Add ability to disable SSL for non-AWS deployments [GH-3730]
+ * plugins: Args for plugins can now be specified separately from the command,
+   allowing the same output format and input format for plugin information
+   [GH-3778]
  * secret/pki: `ou` and `organization` can now be specified as a 
    comma-separated string or an array of strings [GH-3804]
 
 BUG FIXES:
 
  * identity: Delete group alias when an external group is deleted [GH-3773]
+ * secret/database: Fix a location where a lock could potentially not be
+   released, leading to deadlock [GH-3774]
 
 ## 0.9.1 (December 21st, 2017)
 

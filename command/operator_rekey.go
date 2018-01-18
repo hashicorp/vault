@@ -261,22 +261,19 @@ func (c *OperatorRekeyCommand) Run(args []string) int {
 	if c.flagDelete {
 		c.UI.Warn(wrapAtLength(
 			"WARNING! The -delete flag is deprecated. Please use -backup-delete " +
-				"instead. This flag will be removed in the next major release of " +
-				"Vault."))
+				"instead. This flag will be removed in Vault 0.11 (or later)."))
 		c.flagBackupDelete = true
 	}
 	if c.flagRetrieve {
 		c.UI.Warn(wrapAtLength(
 			"WARNING! The -retrieve flag is deprecated. Please use -backup-retrieve " +
-				"instead. This flag will be removed in the next major release of " +
-				"Vault."))
+				"instead. This flag will be removed in Vault 0.11 (or later)."))
 		c.flagBackupRetrieve = true
 	}
 	if c.flagRecoveryKey {
 		c.UI.Warn(wrapAtLength(
 			"WARNING! The -recovery-key flag is deprecated. Please use -target=recovery " +
-				"instead. This flag will be removed in the next major release of " +
-				"Vault."))
+				"instead. This flag will be removed in Vault 0.11 (or later)."))
 		c.flagTarget = "recovery"
 	}
 
