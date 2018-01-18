@@ -43,8 +43,8 @@ func pathDuoAccess() *framework.Path {
 	}
 }
 
-func GetDuoAuthClient(req *logical.Request, config *DuoConfig) (AuthClient, error) {
-	entry, err := req.Storage.Get("duo/access")
+func GetDuoAuthClient(ctx context.Context, req *logical.Request, config *DuoConfig) (AuthClient, error) {
+	entry, err := req.Storage.Get(ctx, "duo/access")
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func pathDuoAccessWrite(ctx context.Context, req *logical.Request, d *framework.
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

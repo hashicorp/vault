@@ -84,7 +84,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	userId := data.Get("user_id").(string)
 
 	var displayName string
-	if dispName, resp, err := b.verifyCredentials(req, appId, userId); err != nil {
+	if dispName, resp, err := b.verifyCredentials(ctx, req, appId, userId); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
