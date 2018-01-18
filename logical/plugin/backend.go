@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"net/rpc"
 
 	"google.golang.org/grpc"
@@ -33,15 +34,18 @@ func (b BackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) err
 	pb.RegisterBackendServer(s, &backendGRPCPluginServer{
 		broker:  broker,
 		factory: b.Factory,
-		logger:  logbridge.NewLogger(b.Logger).LogxiLogger(),
+		// We pass the logger down into the backend so go-plugin will forward
+		// logs for us.
+		logger: logbridge.NewLogger(b.Logger).LogxiLogger(),
 	})
 	return nil
 }
 
-func (p *BackendPlugin) GRPCClient(broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *BackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &backendGRPCPluginClient{
 		client:     pb.NewBackendClient(c),
 		clientConn: c,
 		broker:     broker,
+		doneCtx:    ctx,
 	}, nil
 }

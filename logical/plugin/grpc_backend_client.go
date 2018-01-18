@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
 	log "github.com/mgutz/logxi/v1"
@@ -31,6 +32,7 @@ type backendGRPCPluginClient struct {
 	// clientConn is the underlying grpc connection to the server, we store it
 	// so it can be cleaned up.
 	clientConn *grpc.ClientConn
+	doneCtx    context.Context
 }
 
 func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
@@ -38,20 +40,24 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 		return nil, ErrClientInMetadataMode
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
+	defer close(quitCh)
+	defer cancel()
+
 	protoReq, err := pb.LogicalRequestToProtoRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	switch b.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return nil, ErrPluginShutdown
-	}
 	reply, err := b.client.HandleRequest(ctx, &pb.HandleRequestArgs{
 		Request: protoReq,
 	})
 	if err != nil {
+		if b.doneCtx.Err() != nil {
+			return nil, ErrPluginShutdown
+		}
+
 		return nil, err
 	}
 	resp, err := pb.ProtoResponseToLogicalResponse(reply.Response)
@@ -66,17 +72,8 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 }
 
 func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
-	// If we have a bad connection return an empty set.
-	switch b.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return &logical.Paths{}
-	}
-
 	// Timeout the connection
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	reply, err := b.client.SpecialPaths(ctx, &pb.Empty{})
+	reply, err := b.client.SpecialPaths(b.doneCtx, &pb.Empty{})
 	if err != nil {
 		return nil
 	}
@@ -111,16 +108,17 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 		return false, false, err
 	}
 
-	// Make sure the connection is in a good state.
-	switch b.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return false, false, ErrPluginShutdown
-	}
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
+	defer close(quitCh)
+	defer cancel()
 	reply, err := b.client.HandleExistenceCheck(ctx, &pb.HandleExistenceCheckArgs{
 		Request: protoReq,
 	})
 	if err != nil {
+		if b.doneCtx.Err() != nil {
+			return false, false, ErrPluginShutdown
+		}
 		return false, false, err
 	}
 	if reply.Err != nil {
@@ -133,7 +131,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 func (b *backendGRPCPluginClient) Cleanup() {
 	// Timout the connection incase we have a bad connection. We can't block on
 	// shutdown.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(b.doneCtx, time.Second)
 	defer cancel()
 	b.client.Cleanup(ctx, &pb.Empty{})
 	if b.server != nil {
@@ -147,17 +145,7 @@ func (b *backendGRPCPluginClient) Initialize() error {
 		return ErrClientInMetadataMode
 	}
 
-	// Make sure we have a healthy connection.
-	switch b.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return ErrPluginShutdown
-	}
-
-	// Timeout the call.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	_, err := b.client.Initialize(ctx, &pb.Empty{})
+	_, err := b.client.Initialize(b.doneCtx, &pb.Empty{})
 	return err
 }
 
@@ -165,9 +153,7 @@ func (b *backendGRPCPluginClient) InvalidateKey(key string) {
 	if b.metadataMode {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	b.client.InvalidateKey(ctx, &pb.InvalidateKeyArgs{
+	b.client.InvalidateKey(b.doneCtx, &pb.InvalidateKeyArgs{
 		Key: key,
 	})
 }
@@ -207,11 +193,6 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 		Config:   config.Config,
 	}
 
-	switch b.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return ErrPluginShutdown
-	}
 	reply, err := b.client.Setup(context.Background(), args)
 	if err != nil {
 		return err
