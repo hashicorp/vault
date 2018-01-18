@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"bufio"
+	"context"
 	"crypto/subtle"
 	"crypto/tls"
 	"errors"
@@ -79,6 +80,7 @@ type Client struct {
 	client      ClientProtocol
 	protocol    Protocol
 	logger      hclog.Logger
+	doneCtx     context.Context
 }
 
 // ClientConfig is the configuration used to initialize a new
@@ -310,7 +312,7 @@ func (c *Client) Client() (ClientProtocol, error) {
 		c.client, err = newRPCClient(c)
 
 	case ProtocolGRPC:
-		c.client, err = newGRPCClient(c)
+		c.client, err = newGRPCClient(c.doneCtx, c)
 
 	default:
 		return nil, fmt.Errorf("unknown server protocol: %s", c.protocol)
@@ -423,6 +425,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	// Create the logging channel for when we kill
 	c.doneLogging = make(chan struct{})
+	// Create a context for when we kill
+	var ctxCancel context.CancelFunc
+	c.doneCtx, ctxCancel = context.WithCancel(context.Background())
 
 	if c.config.Reattach != nil {
 		// Verify the process still exists. If not, then it is an error
@@ -457,6 +462,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 			// Close the logging channel since that doesn't work on reattach
 			close(c.doneLogging)
+			// Cancel the context
+			ctxCancel()
 		}(p.Pid)
 
 		// Set the address and process
@@ -534,6 +541,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 		// Mark that we exited
 		close(exitCh)
+		// Cancel the context, marking that we exited
+		ctxCancel()
 
 		// Set that we exited, which takes a lock
 		c.l.Lock()

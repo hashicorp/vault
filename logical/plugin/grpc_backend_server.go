@@ -142,14 +142,3 @@ func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.Ty
 		Type: uint32(b.backend.Type()),
 	}, nil
 }
-
-func (b *backendGRPCPluginServer) RegisterLicense(ctx context.Context, _ *pb.RegisterLicenseArgs) (*pb.RegisterLicenseReply, error) {
-	if inMetadataMode() {
-		return &pb.RegisterLicenseReply{}, ErrServerInMetadataMode
-	}
-
-	err := b.backend.RegisterLicense(struct{}{})
-	return &pb.RegisterLicenseReply{
-		Err: pb.ErrToString(err),
-	}, nil
-}

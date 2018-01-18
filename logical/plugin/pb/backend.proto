@@ -338,15 +338,6 @@ message InvalidateKeyArgs {
     string key = 1;
 }
 
-// RegisterLicenseArgs is the args for the RegisterLicense method.
-message RegisterLicenseArgs {
-}
-
-// RegisterLicenseReply is the reply for the RegisterLicense method.
-message RegisterLicenseReply {
-	string err = 1;
-}
-
 service Backend {
     rpc HandleRequest(HandleRequestArgs) returns (HandleRequestReply);
     rpc SpecialPaths(Empty) returns (SpecialPathsReply);
@@ -356,7 +347,6 @@ service Backend {
     rpc InvalidateKey(InvalidateKeyArgs) returns (Empty);
     rpc Setup(SetupArgs) returns (SetupReply);
     rpc Type(Empty) returns (TypeReply);
-    rpc RegisterLicense(RegisterLicenseArgs) returns (RegisterLicenseReply);
 }
 
 message StorageEntry {

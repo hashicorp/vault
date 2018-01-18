@@ -97,12 +97,3 @@ func (b *backendTracingMiddleware) Type() logical.BackendType {
 	b.logger.Trace("plugin.Type", "status", "started", "type", b.typeStr, "transport", b.transport)
 	return b.next.Type()
 }
-
-func (b *backendTracingMiddleware) RegisterLicense(license interface{}) (err error) {
-	defer func(then time.Time) {
-		b.logger.Trace("plugin.RegisterLicense", "status", "finished", "type", b.typeStr, "transport", b.transport, "err", err, "took", time.Since(then))
-	}(time.Now())
-
-	b.logger.Trace("plugin.RegisterLicense", "status", "started", "type", b.typeStr, "transport", b.transport)
-	return b.next.RegisterLicense(license)
-}
