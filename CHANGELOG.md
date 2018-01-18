@@ -9,10 +9,10 @@ DEPRECATIONS/CHANGES:
    could cause health checks on LBs to decide that the node was acceptable for
    traffic even though DR secondaries cannot handle normal Vault traffic. (In
    other words, the bool could only convey "yes" or "no" but not "not sure
-   yet".) This has been replaced by `replication_dr_state` and
-   `replication_performance_state` which are string values that convey the
-   current state of the node; a value of `disabled` indicates that replication
-   is disabled or the state is still being discovered. As a result, an LB check
+   yet".) This has been replaced by `replication_dr_mode` and
+   `replication_perf_mode` which are string values that convey the current
+   state of the node; a value of `disabled` indicates that replication is
+   disabled or the state is still being discovered. As a result, an LB check
    can positively verify that the node is both not `disabled` and is not a DR
    secondary, and avoid sending traffic to it if either is true.
  * PKI Secret Backend Roles parameter types: For `ou` and `organization` 
