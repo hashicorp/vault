@@ -80,7 +80,7 @@ func (*Empty) ProtoMessage()               {}
 func (*Empty) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
 type Header struct {
-	Header []string `protobuf:"bytes,1,rep,name=header" json:"header,omitempty"`
+	Header []string `sentinel:"" protobuf:"bytes,1,rep,name=header" json:"header,omitempty"`
 }
 
 func (m *Header) Reset()                    { *m = Header{} }
@@ -96,9 +96,9 @@ func (m *Header) GetHeader() []string {
 }
 
 type ProtoError struct {
-	ErrType uint32 `protobuf:"varint,1,opt,name=err_type,json=errType" json:"err_type,omitempty"`
-	ErrMsg  string `protobuf:"bytes,2,opt,name=err_msg,json=errMsg" json:"err_msg,omitempty"`
-	ErrCode int64  `protobuf:"varint,3,opt,name=err_code,json=errCode" json:"err_code,omitempty"`
+	ErrType uint32 `sentinel:"" protobuf:"varint,1,opt,name=err_type,json=errType" json:"err_type,omitempty"`
+	ErrMsg  string `sentinel:"" protobuf:"bytes,2,opt,name=err_msg,json=errMsg" json:"err_msg,omitempty"`
+	ErrCode int64  `sentinel:"" protobuf:"varint,3,opt,name=err_code,json=errCode" json:"err_code,omitempty"`
 }
 
 func (m *ProtoError) Reset()                    { *m = ProtoError{} }
@@ -130,16 +130,16 @@ func (m *ProtoError) GetErrCode() int64 {
 // Paths is the structure of special paths that is used for SpecialPaths.
 type Paths struct {
 	// Root are the paths that require a root token to access
-	Root []string `protobuf:"bytes,1,rep,name=root" json:"root,omitempty"`
+	Root []string `sentinel:"" protobuf:"bytes,1,rep,name=root" json:"root,omitempty"`
 	// Unauthenticated are the paths that can be accessed without any auth.
-	Unauthenticated []string `protobuf:"bytes,2,rep,name=unauthenticated" json:"unauthenticated,omitempty"`
+	Unauthenticated []string `sentinel:"" protobuf:"bytes,2,rep,name=unauthenticated" json:"unauthenticated,omitempty"`
 	// LocalStorage are paths (prefixes) that are local to this instance; this
 	// indicates that these paths should not be replicated
-	LocalStorage []string `protobuf:"bytes,3,rep,name=local_storage,json=localStorage" json:"local_storage,omitempty"`
+	LocalStorage []string `sentinel:"" protobuf:"bytes,3,rep,name=local_storage,json=localStorage" json:"local_storage,omitempty"`
 	// SealWrapStorage are storage paths that, when using a capable seal,
 	// should be seal wrapped with extra encryption. It is exact matching
 	// unless it ends with '/' in which case it will be treated as a prefix.
-	SealWrapStorage []string `protobuf:"bytes,4,rep,name=seal_wrap_storage,json=sealWrapStorage" json:"seal_wrap_storage,omitempty"`
+	SealWrapStorage []string `sentinel:"" protobuf:"bytes,4,rep,name=seal_wrap_storage,json=sealWrapStorage" json:"seal_wrap_storage,omitempty"`
 }
 
 func (m *Paths) Reset()                    { *m = Paths{} }
@@ -176,68 +176,68 @@ func (m *Paths) GetSealWrapStorage() []string {
 }
 
 type Request struct {
-	// Id is the uuid associated with each request
-	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	// ID is the uuid associated with each request
+	ID string `sentinel:"" protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 	// If set, the name given to the replication secondary where this request
 	// originated
-	ReplicationCluster string `protobuf:"bytes,2,opt,name=ReplicationCluster" json:"ReplicationCluster,omitempty"`
+	ReplicationCluster string `sentinel:"" protobuf:"bytes,2,opt,name=ReplicationCluster" json:"ReplicationCluster,omitempty"`
 	// Operation is the requested operation type
-	Operation string `protobuf:"bytes,3,opt,name=operation" json:"operation,omitempty"`
+	Operation string `sentinel:"" protobuf:"bytes,3,opt,name=operation" json:"operation,omitempty"`
 	// Path is the part of the request path not consumed by the
 	// routing. As an example, if the original request path is "prod/aws/foo"
 	// and the AWS logical backend is mounted at "prod/aws/", then the
 	// final path is "foo" since the mount prefix is trimmed.
-	Path string `protobuf:"bytes,4,opt,name=path" json:"path,omitempty"`
+	Path string `sentinel:"" protobuf:"bytes,4,opt,name=path" json:"path,omitempty"`
 	// Request data is an opaque map that must have string keys.
-	Data []byte `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
+	Data []byte `sentinel:"" protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
 	// Secret will be non-nil only for Revoke and Renew operations
 	// to represent the secret that was returned prior.
-	Secret *Secret `protobuf:"bytes,6,opt,name=secret" json:"secret,omitempty"`
+	Secret *Secret `sentinel:"" protobuf:"bytes,6,opt,name=secret" json:"secret,omitempty"`
 	// Auth will be non-nil only for Renew operations
 	// to represent the auth that was returned prior.
-	Auth *Auth `protobuf:"bytes,7,opt,name=auth" json:"auth,omitempty"`
+	Auth *Auth `sentinel:"" protobuf:"bytes,7,opt,name=auth" json:"auth,omitempty"`
 	// Headers will contain the http headers from the request. This value will
 	// be used in the audit broker to ensure we are auditing only the allowed
 	// headers.
-	Headers map[string]*Header `protobuf:"bytes,8,rep,name=headers" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Headers map[string]*Header `sentinel:"" protobuf:"bytes,8,rep,name=headers" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// ClientToken is provided to the core so that the identity
 	// can be verified and ACLs applied. This value is passed
 	// through to the logical backends but after being salted and
 	// hashed.
-	ClientToken string `protobuf:"bytes,9,opt,name=client_token,json=clientToken" json:"client_token,omitempty"`
+	ClientToken string `sentinel:"" protobuf:"bytes,9,opt,name=client_token,json=clientToken" json:"client_token,omitempty"`
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
-	ClientTokenAccessor string `protobuf:"bytes,10,opt,name=client_token_accessor,json=clientTokenAccessor" json:"client_token_accessor,omitempty"`
+	ClientTokenAccessor string `sentinel:"" protobuf:"bytes,10,opt,name=client_token_accessor,json=clientTokenAccessor" json:"client_token_accessor,omitempty"`
 	// DisplayName is provided to the logical backend to help associate
 	// dynamic secrets with the source entity. This is not a sensitive
 	// name, but is useful for operators.
-	DisplayName string `protobuf:"bytes,11,opt,name=display_name,json=displayName" json:"display_name,omitempty"`
+	DisplayName string `sentinel:"" protobuf:"bytes,11,opt,name=display_name,json=displayName" json:"display_name,omitempty"`
 	// MountPoint is provided so that a logical backend can generate
 	// paths relative to itself. The `Path` is effectively the client
 	// request path with the MountPoint trimmed off.
-	MountPoint string `protobuf:"bytes,12,opt,name=mount_point,json=mountPoint" json:"mount_point,omitempty"`
+	MountPoint string `sentinel:"" protobuf:"bytes,12,opt,name=mount_point,json=mountPoint" json:"mount_point,omitempty"`
 	// MountType is provided so that a logical backend can make decisions
 	// based on the specific mount type (e.g., if a mount type has different
 	// aliases, generating different defaults depending on the alias)
-	MountType string `protobuf:"bytes,13,opt,name=mount_type,json=mountType" json:"mount_type,omitempty"`
+	MountType string `sentinel:"" protobuf:"bytes,13,opt,name=mount_type,json=mountType" json:"mount_type,omitempty"`
 	// MountAccessor is provided so that identities returned by the authentication
 	// backends can be tied to the mount it belongs to.
-	MountAccessor string `protobuf:"bytes,14,opt,name=mount_accessor,json=mountAccessor" json:"mount_accessor,omitempty"`
+	MountAccessor string `sentinel:"" protobuf:"bytes,14,opt,name=mount_accessor,json=mountAccessor" json:"mount_accessor,omitempty"`
 	// WrapInfo contains requested response wrapping parameters
-	WrapInfo *RequestWrapInfo `protobuf:"bytes,15,opt,name=wrap_info,json=wrapInfo" json:"wrap_info,omitempty"`
+	WrapInfo *RequestWrapInfo `sentinel:"" protobuf:"bytes,15,opt,name=wrap_info,json=wrapInfo" json:"wrap_info,omitempty"`
 	// ClientTokenRemainingUses represents the allowed number of uses left on the
 	// token supplied
-	ClientTokenRemainingUses int64 `protobuf:"varint,16,opt,name=client_token_remaining_uses,json=clientTokenRemainingUses" json:"client_token_remaining_uses,omitempty"`
+	ClientTokenRemainingUses int64 `sentinel:"" protobuf:"varint,16,opt,name=client_token_remaining_uses,json=clientTokenRemainingUses" json:"client_token_remaining_uses,omitempty"`
 	// EntityID is the identity of the caller extracted out of the token used
 	// to make this request
-	EntityId string `protobuf:"bytes,17,opt,name=entity_id,json=entityId" json:"entity_id,omitempty"`
+	EntityID string `sentinel:"" protobuf:"bytes,17,opt,name=entity_id,json=entityId" json:"entity_id,omitempty"`
 	// PolicyOverride indicates that the requestor wishes to override
 	// soft-mandatory Sentinel policies
-	PolicyOverride bool `protobuf:"varint,18,opt,name=policy_override,json=policyOverride" json:"policy_override,omitempty"`
+	PolicyOverride bool `sentinel:"" protobuf:"varint,18,opt,name=policy_override,json=policyOverride" json:"policy_override,omitempty"`
 	// Whether the request is unauthenticated, as in, had no client token
 	// attached. Useful in some situations where the client token is not made
 	// accessible.
-	Unauthenticated bool `protobuf:"varint,19,opt,name=unauthenticated" json:"unauthenticated,omitempty"`
+	Unauthenticated bool `sentinel:"" protobuf:"varint,19,opt,name=unauthenticated" json:"unauthenticated,omitempty"`
 }
 
 func (m *Request) Reset()                    { *m = Request{} }
@@ -245,9 +245,9 @@ func (m *Request) String() string            { return proto.CompactTextString(m)
 func (*Request) ProtoMessage()               {}
 func (*Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
-func (m *Request) GetId() string {
+func (m *Request) GetID() string {
 	if m != nil {
-		return m.Id
+		return m.ID
 	}
 	return ""
 }
@@ -357,9 +357,9 @@ func (m *Request) GetClientTokenRemainingUses() int64 {
 	return 0
 }
 
-func (m *Request) GetEntityId() string {
+func (m *Request) GetEntityID() string {
 	if m != nil {
-		return m.EntityId
+		return m.EntityID
 	}
 	return ""
 }
@@ -380,12 +380,12 @@ func (m *Request) GetUnauthenticated() bool {
 
 type Alias struct {
 	// MountType is the backend mount's type to which this identity belongs
-	MountType string `protobuf:"bytes,1,opt,name=mount_type,json=mountType" json:"mount_type,omitempty"`
+	MountType string `sentinel:"" protobuf:"bytes,1,opt,name=mount_type,json=mountType" json:"mount_type,omitempty"`
 	// MountAccessor is the identifier of the mount entry to which this
 	// identity belongs
-	MountAccessor string `protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor" json:"mount_accessor,omitempty"`
+	MountAccessor string `sentinel:"" protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor" json:"mount_accessor,omitempty"`
 	// Name is the identifier of this identity in its authentication source
-	Name string `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
+	Name string `sentinel:"" protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
 }
 
 func (m *Alias) Reset()                    { *m = Alias{} }
@@ -415,52 +415,52 @@ func (m *Alias) GetName() string {
 }
 
 type Auth struct {
-	LeaseOptions *LeaseOptions `protobuf:"bytes,1,opt,name=lease_options,json=leaseOptions" json:"lease_options,omitempty"`
+	LeaseOptions *LeaseOptions `sentinel:"" protobuf:"bytes,1,opt,name=lease_options,json=leaseOptions" json:"lease_options,omitempty"`
 	// InternalData is JSON-encodable data that is stored with the auth struct.
 	// This will be sent back during a Renew/Revoke for storing internal data
 	// used for those operations.
-	InternalData []byte `protobuf:"bytes,2,opt,name=internal_data,json=internalData,proto3" json:"internal_data,omitempty"`
+	InternalData []byte `sentinel:"" protobuf:"bytes,2,opt,name=internal_data,json=internalData,proto3" json:"internal_data,omitempty"`
 	// DisplayName is a non-security sensitive identifier that is
 	// applicable to this Auth. It is used for logging and prefixing
 	// of dynamic secrets. For example, DisplayName may be "armon" for
 	// the github credential backend. If the client token is used to
 	// generate a SQL credential, the user may be "github-armon-uuid".
 	// This is to help identify the source without using audit tables.
-	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName" json:"display_name,omitempty"`
+	DisplayName string `sentinel:"" protobuf:"bytes,3,opt,name=display_name,json=displayName" json:"display_name,omitempty"`
 	// Policies is the list of policies that the authenticated user
 	// is associated with.
-	Policies []string `protobuf:"bytes,4,rep,name=policies" json:"policies,omitempty"`
+	Policies []string `sentinel:"" protobuf:"bytes,4,rep,name=policies" json:"policies,omitempty"`
 	// Metadata is used to attach arbitrary string-type metadata to
 	// an authenticated user. This metadata will be outputted into the
 	// audit log.
-	Metadata map[string]string `protobuf:"bytes,5,rep,name=metadata" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata map[string]string `sentinel:"" protobuf:"bytes,5,rep,name=metadata" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// ClientToken is the token that is generated for the authentication.
 	// This will be filled in by Vault core when an auth structure is
 	// returned. Setting this manually will have no effect.
-	ClientToken string `protobuf:"bytes,6,opt,name=client_token,json=clientToken" json:"client_token,omitempty"`
+	ClientToken string `sentinel:"" protobuf:"bytes,6,opt,name=client_token,json=clientToken" json:"client_token,omitempty"`
 	// Accessor is the identifier for the ClientToken. This can be used
 	// to perform management functionalities (especially revocation) when
 	// ClientToken in the audit logs are obfuscated. Accessor can be used
 	// to revoke a ClientToken and to lookup the capabilities of the ClientToken,
 	// both without actually knowing the ClientToken.
-	Accessor string `protobuf:"bytes,7,opt,name=accessor" json:"accessor,omitempty"`
+	Accessor string `sentinel:"" protobuf:"bytes,7,opt,name=accessor" json:"accessor,omitempty"`
 	// Period indicates that the token generated using this Auth object
 	// should never expire. The token should be renewed within the duration
 	// specified by this period.
-	Period int64 `protobuf:"varint,8,opt,name=period" json:"period,omitempty"`
+	Period int64 `sentinel:"" protobuf:"varint,8,opt,name=period" json:"period,omitempty"`
 	// Number of allowed uses of the issued token
-	NumUses int64 `protobuf:"varint,9,opt,name=num_uses,json=numUses" json:"num_uses,omitempty"`
+	NumUses int64 `sentinel:"" protobuf:"varint,9,opt,name=num_uses,json=numUses" json:"num_uses,omitempty"`
 	// EntityID is the identifier of the entity in identity store to which the
 	// identity of the authenticating client belongs to.
-	EntityId string `protobuf:"bytes,10,opt,name=entity_id,json=entityId" json:"entity_id,omitempty"`
+	EntityID string `sentinel:"" protobuf:"bytes,10,opt,name=entity_id,json=entityId" json:"entity_id,omitempty"`
 	// Alias is the information about the authenticated client returned by
 	// the auth backend
-	Alias *Alias `protobuf:"bytes,11,opt,name=alias" json:"alias,omitempty"`
+	Alias *Alias `sentinel:"" protobuf:"bytes,11,opt,name=alias" json:"alias,omitempty"`
 	// GroupAliases are the informational mappings of external groups which an
 	// authenticated user belongs to. This is used to check if there are
 	// mappings groups for the group aliases in identity store. For all the
 	// matching groups, the entity ID of the user will be added.
-	GroupAliases []*Alias `protobuf:"bytes,12,rep,name=group_aliases,json=groupAliases" json:"group_aliases,omitempty"`
+	GroupAliases []*Alias `sentinel:"" protobuf:"bytes,12,rep,name=group_aliases,json=groupAliases" json:"group_aliases,omitempty"`
 }
 
 func (m *Auth) Reset()                    { *m = Auth{} }
@@ -531,9 +531,9 @@ func (m *Auth) GetNumUses() int64 {
 	return 0
 }
 
-func (m *Auth) GetEntityId() string {
+func (m *Auth) GetEntityID() string {
 	if m != nil {
-		return m.EntityId
+		return m.EntityID
 	}
 	return ""
 }
@@ -553,10 +553,10 @@ func (m *Auth) GetGroupAliases() []*Alias {
 }
 
 type LeaseOptions struct {
-	TTL       int64                      `protobuf:"varint,1,opt,name=TTL" json:"TTL,omitempty"`
-	Renewable bool                       `protobuf:"varint,2,opt,name=renewable" json:"renewable,omitempty"`
-	Increment int64                      `protobuf:"varint,3,opt,name=increment" json:"increment,omitempty"`
-	IssueTime *google_protobuf.Timestamp `protobuf:"bytes,4,opt,name=issue_time,json=issueTime" json:"issue_time,omitempty"`
+	TTL       int64                      `sentinel:"" protobuf:"varint,1,opt,name=TTL" json:"TTL,omitempty"`
+	Renewable bool                       `sentinel:"" protobuf:"varint,2,opt,name=renewable" json:"renewable,omitempty"`
+	Increment int64                      `sentinel:"" protobuf:"varint,3,opt,name=increment" json:"increment,omitempty"`
+	IssueTime *google_protobuf.Timestamp `sentinel:"" protobuf:"bytes,4,opt,name=issue_time,json=issueTime" json:"issue_time,omitempty"`
 }
 
 func (m *LeaseOptions) Reset()                    { *m = LeaseOptions{} }
@@ -593,15 +593,15 @@ func (m *LeaseOptions) GetIssueTime() *google_protobuf.Timestamp {
 }
 
 type Secret struct {
-	LeaseOptions *LeaseOptions `protobuf:"bytes,1,opt,name=lease_options,json=leaseOptions" json:"lease_options,omitempty"`
+	LeaseOptions *LeaseOptions `sentinel:"" protobuf:"bytes,1,opt,name=lease_options,json=leaseOptions" json:"lease_options,omitempty"`
 	// InternalData is JSON-encodable data that is stored with the secret.
 	// This will be sent back during a Renew/Revoke for storing internal data
 	// used for those operations.
-	InternalData []byte `protobuf:"bytes,2,opt,name=internal_data,json=internalData,proto3" json:"internal_data,omitempty"`
+	InternalData []byte `sentinel:"" protobuf:"bytes,2,opt,name=internal_data,json=internalData,proto3" json:"internal_data,omitempty"`
 	// LeaseID is the ID returned to the user to manage this secret.
 	// This is generated by Vault core. Any set value will be ignored.
 	// For requests, this will always be blank.
-	LeaseId string `protobuf:"bytes,3,opt,name=lease_id,json=leaseId" json:"lease_id,omitempty"`
+	LeaseID string `sentinel:"" protobuf:"bytes,3,opt,name=lease_id,json=leaseId" json:"lease_id,omitempty"`
 }
 
 func (m *Secret) Reset()                    { *m = Secret{} }
@@ -623,34 +623,34 @@ func (m *Secret) GetInternalData() []byte {
 	return nil
 }
 
-func (m *Secret) GetLeaseId() string {
+func (m *Secret) GetLeaseID() string {
 	if m != nil {
-		return m.LeaseId
+		return m.LeaseID
 	}
 	return ""
 }
 
 type Response struct {
 	// Secret, if not nil, denotes that this response represents a secret.
-	Secret *Secret `protobuf:"bytes,1,opt,name=secret" json:"secret,omitempty"`
+	Secret *Secret `sentinel:"" protobuf:"bytes,1,opt,name=secret" json:"secret,omitempty"`
 	// Auth, if not nil, contains the authentication information for
 	// this response. This is only checked and means something for
 	// credential backends.
-	Auth *Auth `protobuf:"bytes,2,opt,name=auth" json:"auth,omitempty"`
+	Auth *Auth `sentinel:"" protobuf:"bytes,2,opt,name=auth" json:"auth,omitempty"`
 	// Response data is an opaque map that must have string keys. For
 	// secrets, this data is sent down to the user as-is. To store internal
 	// data that you don't want the user to see, store it in
 	// Secret.InternalData.
-	Data []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	Data []byte `sentinel:"" protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
 	// Redirect is an HTTP URL to redirect to for further authentication.
 	// This is only valid for credential backends. This will be blanked
 	// for any logical backend and ignored.
-	Redirect string `protobuf:"bytes,4,opt,name=redirect" json:"redirect,omitempty"`
+	Redirect string `sentinel:"" protobuf:"bytes,4,opt,name=redirect" json:"redirect,omitempty"`
 	// Warnings allow operations or backends to return warnings in response
 	// to user actions without failing the action outright.
-	Warnings []string `protobuf:"bytes,5,rep,name=warnings" json:"warnings,omitempty"`
+	Warnings []string `sentinel:"" protobuf:"bytes,5,rep,name=warnings" json:"warnings,omitempty"`
 	// Information for wrapping the response in a cubbyhole
-	WrapInfo *ResponseWrapInfo `protobuf:"bytes,6,opt,name=wrap_info,json=wrapInfo" json:"wrap_info,omitempty"`
+	WrapInfo *ResponseWrapInfo `sentinel:"" protobuf:"bytes,6,opt,name=wrap_info,json=wrapInfo" json:"wrap_info,omitempty"`
 }
 
 func (m *Response) Reset()                    { *m = Response{} }
@@ -703,27 +703,27 @@ func (m *Response) GetWrapInfo() *ResponseWrapInfo {
 type ResponseWrapInfo struct {
 	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
-	TTL int64 `protobuf:"varint,1,opt,name=TTL" json:"TTL,omitempty"`
+	TTL int64 `sentinel:"" protobuf:"varint,1,opt,name=TTL" json:"TTL,omitempty"`
 	// The token containing the wrapped response
-	Token string `protobuf:"bytes,2,opt,name=token" json:"token,omitempty"`
+	Token string `sentinel:"" protobuf:"bytes,2,opt,name=token" json:"token,omitempty"`
 	// The token accessor for the wrapped response token
-	Accessor string `protobuf:"bytes,3,opt,name=accessor" json:"accessor,omitempty"`
+	Accessor string `sentinel:"" protobuf:"bytes,3,opt,name=accessor" json:"accessor,omitempty"`
 	// The creation time. This can be used with the TTL to figure out an
 	// expected expiration.
-	CreationTime *google_protobuf.Timestamp `protobuf:"bytes,4,opt,name=creation_time,json=creationTime" json:"creation_time,omitempty"`
+	CreationTime *google_protobuf.Timestamp `sentinel:"" protobuf:"bytes,4,opt,name=creation_time,json=creationTime" json:"creation_time,omitempty"`
 	// If the contained response is the output of a token creation call, the
 	// created token's accessor will be accessible here
-	WrappedAccessor string `protobuf:"bytes,5,opt,name=wrapped_accessor,json=wrappedAccessor" json:"wrapped_accessor,omitempty"`
+	WrappedAccessor string `sentinel:"" protobuf:"bytes,5,opt,name=wrapped_accessor,json=wrappedAccessor" json:"wrapped_accessor,omitempty"`
 	// WrappedEntityID is the entity identifier of the caller who initiated the
 	// wrapping request
-	WrappedEntityId string `protobuf:"bytes,6,opt,name=wrapped_entity_id,json=wrappedEntityId" json:"wrapped_entity_id,omitempty"`
+	WrappedEntityID string `sentinel:"" protobuf:"bytes,6,opt,name=wrapped_entity_id,json=wrappedEntityID" json:"wrapped_entity_id,omitempty"`
 	// The format to use. This doesn't get returned, it's only internal.
-	Format string `protobuf:"bytes,7,opt,name=format" json:"format,omitempty"`
+	Format string `sentinel:"" protobuf:"bytes,7,opt,name=format" json:"format,omitempty"`
 	// CreationPath is the original request path that was used to create
 	// the wrapped response.
-	CreationPath string `protobuf:"bytes,8,opt,name=creation_path,json=creationPath" json:"creation_path,omitempty"`
+	CreationPath string `sentinel:"" protobuf:"bytes,8,opt,name=creation_path,json=creationPath" json:"creation_path,omitempty"`
 	// Controls seal wrapping behavior downstream for specific use cases
-	SealWrap bool `protobuf:"varint,9,opt,name=seal_wrap,json=sealWrap" json:"seal_wrap,omitempty"`
+	SealWrap bool `sentinel:"" protobuf:"varint,9,opt,name=seal_wrap,json=sealWrap" json:"seal_wrap,omitempty"`
 }
 
 func (m *ResponseWrapInfo) Reset()                    { *m = ResponseWrapInfo{} }
@@ -766,9 +766,9 @@ func (m *ResponseWrapInfo) GetWrappedAccessor() string {
 	return ""
 }
 
-func (m *ResponseWrapInfo) GetWrappedEntityId() string {
+func (m *ResponseWrapInfo) GetWrappedEntityID() string {
 	if m != nil {
-		return m.WrappedEntityId
+		return m.WrappedEntityID
 	}
 	return ""
 }
@@ -797,13 +797,13 @@ func (m *ResponseWrapInfo) GetSealWrap() bool {
 type RequestWrapInfo struct {
 	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
-	TTL int64 `protobuf:"varint,1,opt,name=TTL" json:"TTL,omitempty"`
+	TTL int64 `sentinel:"" protobuf:"varint,1,opt,name=TTL" json:"TTL,omitempty"`
 	// The format to use for the wrapped response; if not specified it's a bare
 	// token
-	Format string `protobuf:"bytes,2,opt,name=format" json:"format,omitempty"`
+	Format string `sentinel:"" protobuf:"bytes,2,opt,name=format" json:"format,omitempty"`
 	// A flag to conforming backends that data for a given request should be
 	// seal wrapped
-	SealWrap bool `protobuf:"varint,3,opt,name=seal_wrap,json=sealWrap" json:"seal_wrap,omitempty"`
+	SealWrap bool `sentinel:"" protobuf:"varint,3,opt,name=seal_wrap,json=sealWrap" json:"seal_wrap,omitempty"`
 }
 
 func (m *RequestWrapInfo) Reset()                    { *m = RequestWrapInfo{} }
@@ -834,8 +834,8 @@ func (m *RequestWrapInfo) GetSealWrap() bool {
 
 // HandleRequestArgs is the args for HandleRequest method.
 type HandleRequestArgs struct {
-	StorageId uint32   `protobuf:"varint,1,opt,name=storage_id,json=storageId" json:"storage_id,omitempty"`
-	Request   *Request `protobuf:"bytes,2,opt,name=request" json:"request,omitempty"`
+	StorageID uint32   `sentinel:"" protobuf:"varint,1,opt,name=storage_id,json=storageId" json:"storage_id,omitempty"`
+	Request   *Request `sentinel:"" protobuf:"bytes,2,opt,name=request" json:"request,omitempty"`
 }
 
 func (m *HandleRequestArgs) Reset()                    { *m = HandleRequestArgs{} }
@@ -843,9 +843,9 @@ func (m *HandleRequestArgs) String() string            { return proto.CompactTex
 func (*HandleRequestArgs) ProtoMessage()               {}
 func (*HandleRequestArgs) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
 
-func (m *HandleRequestArgs) GetStorageId() uint32 {
+func (m *HandleRequestArgs) GetStorageID() uint32 {
 	if m != nil {
-		return m.StorageId
+		return m.StorageID
 	}
 	return 0
 }
@@ -859,8 +859,8 @@ func (m *HandleRequestArgs) GetRequest() *Request {
 
 // HandleRequestReply is the reply for HandleRequest method.
 type HandleRequestReply struct {
-	Response *Response   `protobuf:"bytes,1,opt,name=response" json:"response,omitempty"`
-	Err      *ProtoError `protobuf:"bytes,2,opt,name=err" json:"err,omitempty"`
+	Response *Response   `sentinel:"" protobuf:"bytes,1,opt,name=response" json:"response,omitempty"`
+	Err      *ProtoError `sentinel:"" protobuf:"bytes,2,opt,name=err" json:"err,omitempty"`
 }
 
 func (m *HandleRequestReply) Reset()                    { *m = HandleRequestReply{} }
@@ -884,7 +884,7 @@ func (m *HandleRequestReply) GetErr() *ProtoError {
 
 // SpecialPathsReply is the reply for SpecialPaths method.
 type SpecialPathsReply struct {
-	Paths *Paths `protobuf:"bytes,1,opt,name=paths" json:"paths,omitempty"`
+	Paths *Paths `sentinel:"" protobuf:"bytes,1,opt,name=paths" json:"paths,omitempty"`
 }
 
 func (m *SpecialPathsReply) Reset()                    { *m = SpecialPathsReply{} }
@@ -901,8 +901,8 @@ func (m *SpecialPathsReply) GetPaths() *Paths {
 
 // HandleExistenceCheckArgs is the args for HandleExistenceCheck method.
 type HandleExistenceCheckArgs struct {
-	StorageId uint32   `protobuf:"varint,1,opt,name=storage_id,json=storageId" json:"storage_id,omitempty"`
-	Request   *Request `protobuf:"bytes,2,opt,name=request" json:"request,omitempty"`
+	StorageID uint32   `sentinel:"" protobuf:"varint,1,opt,name=storage_id,json=storageId" json:"storage_id,omitempty"`
+	Request   *Request `sentinel:"" protobuf:"bytes,2,opt,name=request" json:"request,omitempty"`
 }
 
 func (m *HandleExistenceCheckArgs) Reset()                    { *m = HandleExistenceCheckArgs{} }
@@ -910,9 +910,9 @@ func (m *HandleExistenceCheckArgs) String() string            { return proto.Com
 func (*HandleExistenceCheckArgs) ProtoMessage()               {}
 func (*HandleExistenceCheckArgs) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
 
-func (m *HandleExistenceCheckArgs) GetStorageId() uint32 {
+func (m *HandleExistenceCheckArgs) GetStorageID() uint32 {
 	if m != nil {
-		return m.StorageId
+		return m.StorageID
 	}
 	return 0
 }
@@ -926,9 +926,9 @@ func (m *HandleExistenceCheckArgs) GetRequest() *Request {
 
 // HandleExistenceCheckReply is the reply for HandleExistenceCheck method.
 type HandleExistenceCheckReply struct {
-	CheckFound bool        `protobuf:"varint,1,opt,name=check_found,json=checkFound" json:"check_found,omitempty"`
-	Exists     bool        `protobuf:"varint,2,opt,name=exists" json:"exists,omitempty"`
-	Err        *ProtoError `protobuf:"bytes,3,opt,name=err" json:"err,omitempty"`
+	CheckFound bool        `sentinel:"" protobuf:"varint,1,opt,name=check_found,json=checkFound" json:"check_found,omitempty"`
+	Exists     bool        `sentinel:"" protobuf:"varint,2,opt,name=exists" json:"exists,omitempty"`
+	Err        *ProtoError `sentinel:"" protobuf:"bytes,3,opt,name=err" json:"err,omitempty"`
 }
 
 func (m *HandleExistenceCheckReply) Reset()                    { *m = HandleExistenceCheckReply{} }
@@ -959,8 +959,8 @@ func (m *HandleExistenceCheckReply) GetErr() *ProtoError {
 
 // SetupArgs is the args for Setup method.
 type SetupArgs struct {
-	BrokerId uint32            `protobuf:"varint,1,opt,name=broker_id,json=brokerId" json:"broker_id,omitempty"`
-	Config   map[string]string `protobuf:"bytes,2,rep,name=Config" json:"Config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	BrokerID uint32            `sentinel:"" protobuf:"varint,1,opt,name=broker_id,json=brokerId" json:"broker_id,omitempty"`
+	Config   map[string]string `sentinel:"" protobuf:"bytes,2,rep,name=Config" json:"Config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 func (m *SetupArgs) Reset()                    { *m = SetupArgs{} }
@@ -968,9 +968,9 @@ func (m *SetupArgs) String() string            { return proto.CompactTextString(
 func (*SetupArgs) ProtoMessage()               {}
 func (*SetupArgs) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{17} }
 
-func (m *SetupArgs) GetBrokerId() uint32 {
+func (m *SetupArgs) GetBrokerID() uint32 {
 	if m != nil {
-		return m.BrokerId
+		return m.BrokerID
 	}
 	return 0
 }
@@ -984,7 +984,7 @@ func (m *SetupArgs) GetConfig() map[string]string {
 
 // SetupReply is the reply for Setup method.
 type SetupReply struct {
-	Err string `protobuf:"bytes,1,opt,name=err" json:"err,omitempty"`
+	Err string `sentinel:"" protobuf:"bytes,1,opt,name=err" json:"err,omitempty"`
 }
 
 func (m *SetupReply) Reset()                    { *m = SetupReply{} }
@@ -1001,7 +1001,7 @@ func (m *SetupReply) GetErr() string {
 
 // TypeReply is the reply for the Type method.
 type TypeReply struct {
-	Type uint32 `protobuf:"varint,1,opt,name=type" json:"type,omitempty"`
+	Type uint32 `sentinel:"" protobuf:"varint,1,opt,name=type" json:"type,omitempty"`
 }
 
 func (m *TypeReply) Reset()                    { *m = TypeReply{} }
@@ -1017,7 +1017,7 @@ func (m *TypeReply) GetType() uint32 {
 }
 
 type InvalidateKeyArgs struct {
-	Key string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
+	Key string `sentinel:"" protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
 }
 
 func (m *InvalidateKeyArgs) Reset()                    { *m = InvalidateKeyArgs{} }
@@ -1033,9 +1033,9 @@ func (m *InvalidateKeyArgs) GetKey() string {
 }
 
 type StorageEntry struct {
-	Key      string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
-	Value    []byte `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	SealWrap bool   `protobuf:"varint,3,opt,name=seal_wrap,json=sealWrap" json:"seal_wrap,omitempty"`
+	Key      string `sentinel:"" protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
+	Value    []byte `sentinel:"" protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	SealWrap bool   `sentinel:"" protobuf:"varint,3,opt,name=seal_wrap,json=sealWrap" json:"seal_wrap,omitempty"`
 }
 
 func (m *StorageEntry) Reset()                    { *m = StorageEntry{} }
@@ -1065,7 +1065,7 @@ func (m *StorageEntry) GetSealWrap() bool {
 }
 
 type StorageListArgs struct {
-	Prefix string `protobuf:"bytes,1,opt,name=prefix" json:"prefix,omitempty"`
+	Prefix string `sentinel:"" protobuf:"bytes,1,opt,name=prefix" json:"prefix,omitempty"`
 }
 
 func (m *StorageListArgs) Reset()                    { *m = StorageListArgs{} }
@@ -1081,8 +1081,8 @@ func (m *StorageListArgs) GetPrefix() string {
 }
 
 type StorageListReply struct {
-	Keys []string `protobuf:"bytes,1,rep,name=keys" json:"keys,omitempty"`
-	Err  string   `protobuf:"bytes,2,opt,name=err" json:"err,omitempty"`
+	Keys []string `sentinel:"" protobuf:"bytes,1,rep,name=keys" json:"keys,omitempty"`
+	Err  string   `sentinel:"" protobuf:"bytes,2,opt,name=err" json:"err,omitempty"`
 }
 
 func (m *StorageListReply) Reset()                    { *m = StorageListReply{} }
@@ -1105,7 +1105,7 @@ func (m *StorageListReply) GetErr() string {
 }
 
 type StorageGetArgs struct {
-	Key string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
+	Key string `sentinel:"" protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
 }
 
 func (m *StorageGetArgs) Reset()                    { *m = StorageGetArgs{} }
@@ -1121,8 +1121,8 @@ func (m *StorageGetArgs) GetKey() string {
 }
 
 type StorageGetReply struct {
-	Entry *StorageEntry `protobuf:"bytes,1,opt,name=entry" json:"entry,omitempty"`
-	Err   string        `protobuf:"bytes,2,opt,name=err" json:"err,omitempty"`
+	Entry *StorageEntry `sentinel:"" protobuf:"bytes,1,opt,name=entry" json:"entry,omitempty"`
+	Err   string        `sentinel:"" protobuf:"bytes,2,opt,name=err" json:"err,omitempty"`
 }
 
 func (m *StorageGetReply) Reset()                    { *m = StorageGetReply{} }
@@ -1145,7 +1145,7 @@ func (m *StorageGetReply) GetErr() string {
 }
 
 type StoragePutArgs struct {
-	Entry *StorageEntry `protobuf:"bytes,1,opt,name=entry" json:"entry,omitempty"`
+	Entry *StorageEntry `sentinel:"" protobuf:"bytes,1,opt,name=entry" json:"entry,omitempty"`
 }
 
 func (m *StoragePutArgs) Reset()                    { *m = StoragePutArgs{} }
@@ -1161,7 +1161,7 @@ func (m *StoragePutArgs) GetEntry() *StorageEntry {
 }
 
 type StoragePutReply struct {
-	Err string `protobuf:"bytes,1,opt,name=err" json:"err,omitempty"`
+	Err string `sentinel:"" protobuf:"bytes,1,opt,name=err" json:"err,omitempty"`
 }
 
 func (m *StoragePutReply) Reset()                    { *m = StoragePutReply{} }
@@ -1177,7 +1177,7 @@ func (m *StoragePutReply) GetErr() string {
 }
 
 type StorageDeleteArgs struct {
-	Key string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
+	Key string `sentinel:"" protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
 }
 
 func (m *StorageDeleteArgs) Reset()                    { *m = StorageDeleteArgs{} }
@@ -1193,7 +1193,7 @@ func (m *StorageDeleteArgs) GetKey() string {
 }
 
 type StorageDeleteReply struct {
-	Err string `protobuf:"bytes,1,opt,name=err" json:"err,omitempty"`
+	Err string `sentinel:"" protobuf:"bytes,1,opt,name=err" json:"err,omitempty"`
 }
 
 func (m *StorageDeleteReply) Reset()                    { *m = StorageDeleteReply{} }
@@ -1209,7 +1209,7 @@ func (m *StorageDeleteReply) GetErr() string {
 }
 
 type TTLReply struct {
-	TTL int64 `protobuf:"varint,1,opt,name=TTL" json:"TTL,omitempty"`
+	TTL int64 `sentinel:"" protobuf:"varint,1,opt,name=TTL" json:"TTL,omitempty"`
 }
 
 func (m *TTLReply) Reset()                    { *m = TTLReply{} }
@@ -1225,8 +1225,8 @@ func (m *TTLReply) GetTTL() int64 {
 }
 
 type SudoPrivilegeArgs struct {
-	Path  string `protobuf:"bytes,1,opt,name=path" json:"path,omitempty"`
-	Token string `protobuf:"bytes,2,opt,name=token" json:"token,omitempty"`
+	Path  string `sentinel:"" protobuf:"bytes,1,opt,name=path" json:"path,omitempty"`
+	Token string `sentinel:"" protobuf:"bytes,2,opt,name=token" json:"token,omitempty"`
 }
 
 func (m *SudoPrivilegeArgs) Reset()                    { *m = SudoPrivilegeArgs{} }
@@ -1249,7 +1249,7 @@ func (m *SudoPrivilegeArgs) GetToken() string {
 }
 
 type SudoPrivilegeReply struct {
-	Sudo bool `protobuf:"varint,1,opt,name=sudo" json:"sudo,omitempty"`
+	Sudo bool `sentinel:"" protobuf:"varint,1,opt,name=sudo" json:"sudo,omitempty"`
 }
 
 func (m *SudoPrivilegeReply) Reset()                    { *m = SudoPrivilegeReply{} }
@@ -1265,7 +1265,7 @@ func (m *SudoPrivilegeReply) GetSudo() bool {
 }
 
 type TaintedReply struct {
-	Tainted bool `protobuf:"varint,1,opt,name=tainted" json:"tainted,omitempty"`
+	Tainted bool `sentinel:"" protobuf:"varint,1,opt,name=tainted" json:"tainted,omitempty"`
 }
 
 func (m *TaintedReply) Reset()                    { *m = TaintedReply{} }
@@ -1281,7 +1281,7 @@ func (m *TaintedReply) GetTainted() bool {
 }
 
 type CachingDisabledReply struct {
-	Disabled bool `protobuf:"varint,1,opt,name=disabled" json:"disabled,omitempty"`
+	Disabled bool `sentinel:"" protobuf:"varint,1,opt,name=disabled" json:"disabled,omitempty"`
 }
 
 func (m *CachingDisabledReply) Reset()                    { *m = CachingDisabledReply{} }
@@ -1297,7 +1297,7 @@ func (m *CachingDisabledReply) GetDisabled() bool {
 }
 
 type ReplicationStateReply struct {
-	State int32 `protobuf:"varint,1,opt,name=state" json:"state,omitempty"`
+	State int32 `sentinel:"" protobuf:"varint,1,opt,name=state" json:"state,omitempty"`
 }
 
 func (m *ReplicationStateReply) Reset()                    { *m = ReplicationStateReply{} }
@@ -1313,9 +1313,9 @@ func (m *ReplicationStateReply) GetState() int32 {
 }
 
 type ResponseWrapDataArgs struct {
-	Data []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-	TTL  int64  `protobuf:"varint,2,opt,name=TTL" json:"TTL,omitempty"`
-	JWT  bool   `protobuf:"varint,3,opt,name=JWT" json:"JWT,omitempty"`
+	Data []byte `sentinel:"" protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	TTL  int64  `sentinel:"" protobuf:"varint,2,opt,name=TTL" json:"TTL,omitempty"`
+	JWT  bool   `sentinel:"" protobuf:"varint,3,opt,name=JWT" json:"JWT,omitempty"`
 }
 
 func (m *ResponseWrapDataArgs) Reset()                    { *m = ResponseWrapDataArgs{} }
@@ -1345,8 +1345,8 @@ func (m *ResponseWrapDataArgs) GetJWT() bool {
 }
 
 type ResponseWrapDataReply struct {
-	WrapInfo *ResponseWrapInfo `protobuf:"bytes,1,opt,name=wrap_info,json=wrapInfo" json:"wrap_info,omitempty"`
-	Err      string            `protobuf:"bytes,2,opt,name=err" json:"err,omitempty"`
+	WrapInfo *ResponseWrapInfo `sentinel:"" protobuf:"bytes,1,opt,name=wrap_info,json=wrapInfo" json:"wrap_info,omitempty"`
+	Err      string            `sentinel:"" protobuf:"bytes,2,opt,name=err" json:"err,omitempty"`
 }
 
 func (m *ResponseWrapDataReply) Reset()                    { *m = ResponseWrapDataReply{} }
@@ -1369,7 +1369,7 @@ func (m *ResponseWrapDataReply) GetErr() string {
 }
 
 type MlockEnabledReply struct {
-	Enabled bool `protobuf:"varint,1,opt,name=enabled" json:"enabled,omitempty"`
+	Enabled bool `sentinel:"" protobuf:"varint,1,opt,name=enabled" json:"enabled,omitempty"`
 }
 
 func (m *MlockEnabledReply) Reset()                    { *m = MlockEnabledReply{} }

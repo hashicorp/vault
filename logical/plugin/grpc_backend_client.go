@@ -188,7 +188,7 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 	go b.broker.AcceptAndServe(brokerID, serverFunc)
 
 	args := &pb.SetupArgs{
-		BrokerId: brokerID,
+		BrokerID: brokerID,
 		Config:   config.Config,
 	}
 

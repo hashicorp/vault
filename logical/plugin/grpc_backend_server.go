@@ -26,7 +26,7 @@ type backendGRPCPluginServer struct {
 // backend through its factory func for the server side of the plugin.
 func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs) (*pb.SetupReply, error) {
 	// Dial for storage
-	brokeredClient, err := b.broker.Dial(args.BrokerId)
+	brokeredClient, err := b.broker.Dial(args.BrokerID)
 	if err != nil {
 		return &pb.SetupReply{}, err
 	}
