@@ -667,7 +667,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 	}
 
 	// Check if the index from the role_id to role already exists
-	roleIDIndex, err := b.roleIDEntry(s, role.RoleID)
+	roleIDIndex, err := b.roleIDEntry(ctx, s, role.RoleID)
 	if err != nil {
 		return fmt.Errorf("failed to read role_id index: %v", err)
 	}
@@ -680,7 +680,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 	// When role_id is getting updated, delete the old index before
 	// a new one is created
 	if previousRoleID != "" && previousRoleID != role.RoleID {
-		if err = b.roleIDEntryDelete(s, previousRoleID); err != nil {
+		if err = b.roleIDEntryDelete(ctx, s, previousRoleID); err != nil {
 			return fmt.Errorf("failed to delete previous role ID index")
 		}
 	}
@@ -902,7 +902,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 
 	// For sanity, verify that the index still exists. If the index is missing,
 	// add one and return a warning so it can be reported.
-	roleIDIndex, err := b.roleIDEntry(req.Storage, role.RoleID)
+	roleIDIndex, err := b.roleIDEntry(ctx, req.Storage, role.RoleID)
 	if err != nil {
 		lockRelease()
 		return nil, err
@@ -915,7 +915,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		lockRelease = lock.Unlock
 
 		// Check again if the index is missing
-		roleIDIndex, err = b.roleIDEntry(req.Storage, role.RoleID)
+		roleIDIndex, err = b.roleIDEntry(ctx, req.Storage, role.RoleID)
 		if err != nil {
 			lockRelease()
 			return nil, err
@@ -923,7 +923,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 
 		if roleIDIndex == nil {
 			// Create a new index
-			err = b.setRoleIDEntry(req.Storage, role.RoleID, &roleIDStorageEntry{
+			err = b.setRoleIDEntry(ctx, req.Storage, role.RoleID, &roleIDStorageEntry{
 				Name: roleName,
 			})
 			if err != nil {
@@ -964,7 +964,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	}
 
 	// Delete the reverse mapping from RoleID to the role
-	if err = b.roleIDEntryDelete(req.Storage, role.RoleID); err != nil {
+	if err = b.roleIDEntryDelete(ctx, req.Storage, role.RoleID); err != nil {
 		return nil, fmt.Errorf("failed to delete the mapping from RoleID to role %q: %v", roleName, err)
 	}
 
@@ -1020,10 +1020,10 @@ func (b *backend) pathRoleSecretIDLookupUpdate(ctx context.Context, req *logical
 	// Create the index at which the secret_id would've been stored
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
 
-	return b.secretIDCommon(req.Storage, entryIndex, secretIDHMAC)
+	return b.secretIDCommon(ctx, req.Storage, entryIndex, secretIDHMAC)
 }
 
-func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC string) (*logical.Response, error) {
+func (b *backend) secretIDCommon(ctx context.Context, s logical.Storage, entryIndex, secretIDHMAC string) (*logical.Response, error) {
 	lock := b.secretIDLock(secretIDHMAC)
 	lock.RLock()
 	defer lock.RUnlock()
@@ -1165,7 +1165,7 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(ctx context.Context, req 
 
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, accessorEntry.SecretIDHMAC)
 
-	return b.secretIDCommon(req.Storage, entryIndex, accessorEntry.SecretIDHMAC)
+	return b.secretIDCommon(ctx, req.Storage, entryIndex, accessorEntry.SecretIDHMAC)
 }
 
 func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1257,7 +1257,7 @@ func (b *backend) pathRoleBoundCIDRListUpdate(ctx context.Context, req *logical.
 		}
 	}
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRoleBoundCIDRListRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1304,7 +1304,7 @@ func (b *backend) pathRoleBoundCIDRListDelete(ctx context.Context, req *logical.
 	// Deleting a field implies setting the value to it's default value.
 	role.BoundCIDRList = data.GetDefaultOrZero("bound_cidr_list").(string)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRoleBindSecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1327,7 +1327,7 @@ func (b *backend) pathRoleBindSecretIDUpdate(ctx context.Context, req *logical.R
 
 	if bindSecretIDRaw, ok := data.GetOk("bind_secret_id"); ok {
 		role.BindSecretID = bindSecretIDRaw.(bool)
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing bind_secret_id"), nil
 	}
@@ -1377,7 +1377,7 @@ func (b *backend) pathRoleBindSecretIDDelete(ctx context.Context, req *logical.R
 	// Deleting a field implies setting the value to it's default value.
 	role.BindSecretID = data.GetDefaultOrZero("bind_secret_id").(bool)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRolePoliciesUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1405,7 +1405,7 @@ func (b *backend) pathRolePoliciesUpdate(ctx context.Context, req *logical.Reque
 
 	role.Policies = policyutil.ParsePolicies(policiesRaw)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRolePoliciesRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1451,7 +1451,7 @@ func (b *backend) pathRolePoliciesDelete(ctx context.Context, req *logical.Reque
 
 	role.Policies = []string{}
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRoleSecretIDNumUsesUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1477,7 +1477,7 @@ func (b *backend) pathRoleSecretIDNumUsesUpdate(ctx context.Context, req *logica
 		if role.SecretIDNumUses < 0 {
 			return logical.ErrorResponse("secret_id_num_uses cannot be negative"), nil
 		}
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing secret_id_num_uses"), nil
 	}
@@ -1507,7 +1507,7 @@ func (b *backend) pathRoleRoleIDUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing role_id"), nil
 	}
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, previousRoleID)
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, previousRoleID)
 }
 
 func (b *backend) pathRoleRoleIDRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1576,7 +1576,7 @@ func (b *backend) pathRoleSecretIDNumUsesDelete(ctx context.Context, req *logica
 
 	role.SecretIDNumUses = data.GetDefaultOrZero("secret_id_num_uses").(int)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRoleSecretIDTTLUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1599,7 +1599,7 @@ func (b *backend) pathRoleSecretIDTTLUpdate(ctx context.Context, req *logical.Re
 
 	if secretIDTTLRaw, ok := data.GetOk("secret_id_ttl"); ok {
 		role.SecretIDTTL = time.Second * time.Duration(secretIDTTLRaw.(int))
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing secret_id_ttl"), nil
 	}
@@ -1649,7 +1649,7 @@ func (b *backend) pathRoleSecretIDTTLDelete(ctx context.Context, req *logical.Re
 
 	role.SecretIDTTL = time.Second * time.Duration(data.GetDefaultOrZero("secret_id_ttl").(int))
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRolePeriodUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1675,7 +1675,7 @@ func (b *backend) pathRolePeriodUpdate(ctx context.Context, req *logical.Request
 		if role.Period > b.System().MaxLeaseTTL() {
 			return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", role.Period.String(), b.System().MaxLeaseTTL().String())), nil
 		}
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing period"), nil
 	}
@@ -1725,7 +1725,7 @@ func (b *backend) pathRolePeriodDelete(ctx context.Context, req *logical.Request
 
 	role.Period = time.Second * time.Duration(data.GetDefaultOrZero("period").(int))
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRoleTokenNumUsesUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1748,7 +1748,7 @@ func (b *backend) pathRoleTokenNumUsesUpdate(ctx context.Context, req *logical.R
 
 	if tokenNumUsesRaw, ok := data.GetOk("token_num_uses"); ok {
 		role.TokenNumUses = tokenNumUsesRaw.(int)
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing token_num_uses"), nil
 	}
@@ -1797,7 +1797,7 @@ func (b *backend) pathRoleTokenNumUsesDelete(ctx context.Context, req *logical.R
 
 	role.TokenNumUses = data.GetDefaultOrZero("token_num_uses").(int)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRoleTokenTTLUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1823,7 +1823,7 @@ func (b *backend) pathRoleTokenTTLUpdate(ctx context.Context, req *logical.Reque
 		if role.TokenMaxTTL > time.Duration(0) && role.TokenTTL > role.TokenMaxTTL {
 			return logical.ErrorResponse("token_ttl should not be greater than token_max_ttl"), nil
 		}
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing token_ttl"), nil
 	}
@@ -1873,7 +1873,7 @@ func (b *backend) pathRoleTokenTTLDelete(ctx context.Context, req *logical.Reque
 
 	role.TokenTTL = time.Second * time.Duration(data.GetDefaultOrZero("token_ttl").(int))
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRoleTokenMaxTTLUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1899,7 +1899,7 @@ func (b *backend) pathRoleTokenMaxTTLUpdate(ctx context.Context, req *logical.Re
 		if role.TokenMaxTTL > time.Duration(0) && role.TokenTTL > role.TokenMaxTTL {
 			return logical.ErrorResponse("token_max_ttl should be greater than or equal to token_ttl"), nil
 		}
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing token_max_ttl"), nil
 	}
@@ -1949,7 +1949,7 @@ func (b *backend) pathRoleTokenMaxTTLDelete(ctx context.Context, req *logical.Re
 
 	role.TokenMaxTTL = time.Second * time.Duration(data.GetDefaultOrZero("token_max_ttl").(int))
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
 func (b *backend) pathRoleSecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -2026,7 +2026,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		roleName = strings.ToLower(roleName)
 	}
 
-	if secretIDStorage, err = b.registerSecretIDEntry(req.Storage, roleName, secretID, role.HMACKey, secretIDStorage); err != nil {
+	if secretIDStorage, err = b.registerSecretIDEntry(ctx, req.Storage, roleName, secretID, role.HMACKey, secretIDStorage); err != nil {
 		return nil, fmt.Errorf("failed to store secret_id: %v", err)
 	}
 
@@ -2062,14 +2062,14 @@ func (b *backend) setRoleIDEntry(ctx context.Context, s logical.Storage, roleID 
 	if err != nil {
 		return err
 	}
-	if err = req.Storage.Put(ctx, entry); err != nil {
+	if err = s.Put(ctx, entry); err != nil {
 		return err
 	}
 	return nil
 }
 
 // roleIDEntry is used to read the storage entry that maps RoleID to Role
-func (b *backend) roleIDEntry(s logical.Storage, roleID string) (*roleIDStorageEntry, error) {
+func (b *backend) roleIDEntry(ctx context.Context, s logical.Storage, roleID string) (*roleIDStorageEntry, error) {
 	if roleID == "" {
 		return nil, fmt.Errorf("missing roleID")
 	}
@@ -2099,7 +2099,7 @@ func (b *backend) roleIDEntry(s logical.Storage, roleID string) (*roleIDStorageE
 
 // roleIDEntryDelete is used to remove the secondary index that maps the
 // RoleID to the Role itself.
-func (b *backend) roleIDEntryDelete(s logical.Storage, roleID string) error {
+func (b *backend) roleIDEntryDelete(ctx context.Context, s logical.Storage, roleID string) error {
 	if roleID == "" {
 		return fmt.Errorf("missing roleID")
 	}

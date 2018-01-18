@@ -128,14 +128,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 }
 
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	config, err := b.Config(req.Storage)
+	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	if !config.DisableBinding {
 		var matched *ParsedCert
-		if verifyResp, resp, err := b.verifyCredentials(req, d); err != nil {
+		if verifyResp, resp, err := b.verifyCredentials(ctx, req, d); err != nil {
 			return nil, err
 		} else if resp != nil {
 			return resp, nil
@@ -162,7 +162,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 
 	}
 	// Get the cert and use its TTL
-	cert, err := b.Cert(req.Storage, req.Auth.Metadata["cert_name"])
+	cert, err := b.Cert(ctx, req.Storage, req.Auth.Metadata["cert_name"])
 	if err != nil {
 		return nil, err
 	}

@@ -134,7 +134,7 @@ func (b *backend) pathCertList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	cert, err := b.Cert(req.Storage, strings.ToLower(d.Get("name").(string)))
+	cert, err := b.Cert(ctx, req.Storage, strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
 	}

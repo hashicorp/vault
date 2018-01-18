@@ -57,7 +57,7 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 	}
 
 	// Get our connection
-	session, err := b.DB(req.Storage)
+	session, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
