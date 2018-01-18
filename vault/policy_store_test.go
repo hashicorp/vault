@@ -4,13 +4,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func mockPolicyStore(t *testing.T) *PolicyStore {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(view, logical.TestSystemView())
+	p := NewPolicyStore(view, logical.TestSystemView(), logformat.NewVaultLogger(log.LevelTrace))
 	return p
 }
 
@@ -19,7 +21,7 @@ func mockPolicyStoreNoCache(t *testing.T) *PolicyStore {
 	sysView.CachingDisabledVal = true
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(view, sysView)
+	p := NewPolicyStore(view, sysView, logformat.NewVaultLogger(log.LevelTrace))
 	return p
 }
 

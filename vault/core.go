@@ -109,9 +109,6 @@ var (
 	startReplication     = startReplicationImpl
 	stopReplication      = stopReplicationImpl
 	LastRemoteWAL        = lastRemoteWALImpl
-	// A package-available logger function, mainly to have access in ACL for
-	// error conditions
-	vlogger log.Logger
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -468,7 +465,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.Logger == nil {
 		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
-	vlogger = conf.Logger
 
 	// Setup the core
 	c := &Core{
