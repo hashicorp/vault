@@ -1075,7 +1075,7 @@ func (b *SystemBackend) invalidate(key string) {
 }
 
 func (b *SystemBackend) handlePluginCatalogList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	plugins, err := b.Core.pluginCatalog.List()
+	plugins, err := b.Core.pluginCatalog.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1119,7 +1119,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(pluginName, parts[0], args, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginName, parts[0], args, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -1132,7 +1132,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName)
 	if err != nil {
 		return nil, err
 	}
@@ -1166,7 +1166,7 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	err := b.Core.pluginCatalog.Delete(pluginName)
+	err := b.Core.pluginCatalog.Delete(ctx, pluginName)
 	if err != nil {
 		return nil, err
 	}
