@@ -394,7 +394,7 @@ func (lm *LockManager) getPolicyCommon(ctx context.Context, req PolicyRequest, l
 			p.ConvergentVersion = 2
 		}
 
-		err = p.Rotate(req.Storage)
+		err = p.Rotate(ctx, req.Storage)
 		if err != nil {
 			lm.UnlockPolicy(lock, lockType)
 			return nil, nil, false, err

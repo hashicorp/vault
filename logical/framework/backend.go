@@ -97,7 +97,7 @@ type Backend struct {
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.
 // This can be utilized by the backends to do anything it wants.
-type periodicFunc func(*logical.Request) error
+type periodicFunc func(context.Context, *logical.Request) error
 
 // OperationFunc is the callback called for an operation on a path.
 type OperationFunc func(context.Context, *logical.Request, *FieldData) (*logical.Response, error)
@@ -106,19 +106,16 @@ type OperationFunc func(context.Context, *logical.Request, *FieldData) (*logical
 type ExistenceFunc func(context.Context, *logical.Request, *FieldData) (bool, error)
 
 // WALRollbackFunc is the callback for rollbacks.
-type WALRollbackFunc func(*logical.Request, string, interface{}) error
+type WALRollbackFunc func(context.Context, *logical.Request, string, interface{}) error
 
 // CleanupFunc is the callback for backend unload.
-type CleanupFunc func()
+type CleanupFunc func(context.Context)
 
 // InitializeFunc is the callback for backend creation.
-type InitializeFunc func() error
+type InitializeFunc func(context.Context) error
 
 // InvalidateFunc is the callback for backend key invalidation.
-type InvalidateFunc func(string)
-
-// LicenseRegistrationFunc is the callback for backend license registration.
-type LicenseRegistrationFunc func(interface{}) error
+type InvalidateFunc func(context.Context, string)
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -241,30 +238,30 @@ func (b *Backend) SpecialPaths() *logical.Paths {
 }
 
 // Cleanup is used to release resources and prepare to stop the backend
-func (b *Backend) Cleanup() {
+func (b *Backend) Cleanup(ctx context.Context) {
 	if b.Clean != nil {
-		b.Clean()
+		b.Clean(ctx)
 	}
 }
 
 // Initialize calls the backend's Init func if set.
-func (b *Backend) Initialize() error {
+func (b *Backend) Initialize(ctx context.Context) error {
 	if b.Init != nil {
-		return b.Init()
+		return b.Init(ctx)
 	}
 
 	return nil
 }
 
 // InvalidateKey is used to clear caches and reset internal state on key changes
-func (b *Backend) InvalidateKey(key string) {
+func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 	if b.Invalidate != nil {
-		b.Invalidate(key)
+		b.Invalidate(ctx, key)
 	}
 }
 
 // Setup is used to initialize the backend with the initial backend configuration
-func (b *Backend) Setup(config *logical.BackendConfig) error {
+func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
 	return nil
@@ -467,7 +464,7 @@ func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (
 func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// Response is not expected from the periodic operation.
 	if b.PeriodicFunc != nil {
-		if err := b.PeriodicFunc(req); err != nil {
+		if err := b.PeriodicFunc(ctx, req); err != nil {
 			return nil, err
 		}
 	}
@@ -524,7 +521,7 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 		}
 
 		// Attempt a WAL rollback
-		err = b.WALRollback(req, entry.Kind, entry.Data)
+		err = b.WALRollback(ctx, req, entry.Kind, entry.Data)
 		if err != nil {
 			err = fmt.Errorf(
 				"Error rolling back '%s' entry: %s", entry.Kind, err)

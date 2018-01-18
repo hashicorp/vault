@@ -1075,7 +1075,7 @@ func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (string, e
 
 	// Load the archive only after persisting the policy as the archive can get
 	// adjusted while persisting the policy
-	archivedKeys, err := p.LoadArchive(storage)
+	archivedKeys, err := p.LoadArchive(ctx, storage)
 	if err != nil {
 		return "", err
 	}
