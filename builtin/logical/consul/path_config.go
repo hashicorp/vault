@@ -40,7 +40,7 @@ func pathConfigAccess() *framework.Path {
 	}
 }
 
-func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
+func readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConfig, error, error) {
 	entry, err := storage.Get(ctx, "config/access")
 	if err != nil {
 		return nil, nil, err
@@ -60,7 +60,7 @@ func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
 }
 
 func pathConfigAccessRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, userErr, intErr := readConfigAccess(req.Storage)
+	conf, userErr, intErr := readConfigAccess(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}
