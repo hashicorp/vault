@@ -17,6 +17,7 @@ message EchoRequest {
 message EchoReply {
 	string message = 1;
 	repeated string cluster_addrs = 2;
+	uint32 replication_state = 3;
 }
 
 service RequestForwarding {

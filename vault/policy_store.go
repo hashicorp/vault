@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
+	log "github.com/mgutz/logxi/v1"
 )
 
 const (
@@ -143,6 +144,8 @@ type PolicyStore struct {
 	modifyLock *sync.RWMutex
 	// Stores whether a token policy is ACL or RGP
 	policyTypeMap sync.Map
+	// logger is the server logger copied over from core
+	logger log.Logger
 }
 
 // PolicyEntry is used to store a policy by name
@@ -154,10 +157,11 @@ type PolicyEntry struct {
 
 // NewPolicyStore creates a new PolicyStore that is backed
 // using a given view. It used used to durable store and manage named policy.
-func NewPolicyStore(baseView *BarrierView, system logical.SystemView) *PolicyStore {
+func NewPolicyStore(baseView *BarrierView, system logical.SystemView, logger log.Logger) *PolicyStore {
 	ps := &PolicyStore{
 		aclView:    baseView.SubView(policyACLSubPath),
 		modifyLock: new(sync.RWMutex),
+		logger:     logger,
 	}
 	if !system.CachingDisabled() {
 		cache, _ := lru.New2Q(policyCacheSize)
@@ -166,7 +170,7 @@ func NewPolicyStore(baseView *BarrierView, system logical.SystemView) *PolicySto
 
 	keys, err := logical.CollectKeys(ps.aclView)
 	if err != nil {
-		vlogger.Error("error collecting acl policy keys", "error", err)
+		ps.logger.Error("policy: error collecting acl policy keys", "error", err)
 		return nil
 	}
 	for _, key := range keys {
@@ -182,9 +186,9 @@ func NewPolicyStore(baseView *BarrierView, system logical.SystemView) *PolicySto
 func (c *Core) setupPolicyStore() error {
 	// Create the policy store
 	sysView := &dynamicSystemView{core: c}
-	c.policyStore = NewPolicyStore(c.systemBarrierView, sysView)
+	c.policyStore = NewPolicyStore(c.systemBarrierView, sysView, c.logger)
 
-	if c.replicationState.HasState(consts.ReplicationPerformanceSecondary) {
+	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		// Policies will sync from the primary
 		return nil
 	}
@@ -228,7 +232,7 @@ func (ps *PolicyStore) invalidate(name string, policyType PolicyType) {
 	// Force a reload
 	_, err := ps.GetPolicy(name, policyType)
 	if err != nil {
-		vlogger.Error("policy: error fetching policy after invalidation", "name", saneName)
+		ps.logger.Error("policy: error fetching policy after invalidation", "name", saneName)
 	}
 }
 

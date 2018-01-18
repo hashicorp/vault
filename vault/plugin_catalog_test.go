@@ -50,8 +50,8 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 	defer file.Close()
 
-	command := fmt.Sprintf("%s --test", filepath.Base(file.Name()))
-	err = core.pluginCatalog.Set("mysql-database-plugin", command, []byte{'1'})
+	command := fmt.Sprintf("%s", filepath.Base(file.Name()))
+	err = core.pluginCatalog.Set("mysql-database-plugin", command, []string{"--test"}, []byte{'1'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,14 +139,14 @@ func TestPluginCatalog_List(t *testing.T) {
 	}
 	defer file.Close()
 
-	command := fmt.Sprintf("%s --test", filepath.Base(file.Name()))
-	err = core.pluginCatalog.Set("mysql-database-plugin", command, []byte{'1'})
+	command := filepath.Base(file.Name())
+	err = core.pluginCatalog.Set("mysql-database-plugin", command, []string{"--test"}, []byte{'1'})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Set another plugin
-	err = core.pluginCatalog.Set("aaaaaaa", command, []byte{'1'})
+	err = core.pluginCatalog.Set("aaaaaaa", command, []string{"--test"}, []byte{'1'})
 	if err != nil {
 		t.Fatal(err)
 	}

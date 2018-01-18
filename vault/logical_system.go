@@ -10,12 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/fatih/structs"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -860,6 +860,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
 					},
+					"args": &framework.FieldSchema{
+						Type:        framework.TypeStringSlice,
+						Description: strings.TrimSpace(sysHelp["plugin-catalog_args"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1098,12 +1102,24 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing command value"), nil
 	}
 
+	// For backwards compatibility, also accept args as part of command.  Don't
+	// accepts args in both command and args.
+	args := d.Get("args").([]string)
+	parts := strings.Split(command, " ")
+	if len(parts) <= 0 {
+		return logical.ErrorResponse("missing command value"), nil
+	} else if len(parts) > 1 && len(args) > 0 {
+		return logical.ErrorResponse("must not speficy args in command and args field"), nil
+	} else if len(parts) > 1 {
+		args = parts[1:]
+	}
+
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(pluginName, command, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(pluginName, parts[0], args, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -1124,8 +1140,21 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		return nil, nil
 	}
 
-	// Create a map of data to be returned and remove sensitive information from it
-	data := structs.New(plugin).Map()
+	command := ""
+	if !plugin.Builtin {
+		command, err = filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	data := map[string]interface{}{
+		"name":    plugin.Name,
+		"args":    plugin.Args,
+		"command": command,
+		"sha256":  hex.EncodeToString(plugin.Sha256),
+		"builtin": plugin.Builtin,
+	}
 
 	return &logical.Response{
 		Data: data,
@@ -1382,7 +1411,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 
 // handleMount is used to mount a new path
 func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
@@ -1511,7 +1540,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 	path := data.Get("path").(string)
 	path = sanitizeMountPath(path)
 
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(path)
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
@@ -1535,7 +1564,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 
 // handleRemount is used to remount a path
 func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 
 	// Get the paths
 	fromPath := data.Get("from").(string)
@@ -1641,7 +1670,7 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 
 // handleTuneWriteCommon is used to set config settings on a path
 func (b *SystemBackend) handleTuneWriteCommon(path string, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 
 	path = sanitizeMountPath(path)
 
@@ -1904,7 +1933,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
@@ -1979,7 +2008,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 
 	fullPath := credentialRoutePrefix + path
 
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(fullPath)
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
@@ -2225,7 +2254,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 
 // handleEnableAudit is used to enable a new audit backend
 func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
@@ -2387,7 +2416,7 @@ func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Reques
 
 // handleRotate is used to trigger a key rotation
 func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	if repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
 	}
@@ -3330,6 +3359,10 @@ command field. This should be HEX encoded.`,
 		`The command used to start the plugin. The
 executable defined in this command must exist in vault's
 plugin directory.`,
+		"",
+	},
+	"plugin-catalog_args": {
+		`The args passed to plugin command.`,
 		"",
 	},
 	"leases": {

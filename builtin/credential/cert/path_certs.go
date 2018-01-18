@@ -144,12 +144,13 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"certificate":  cert.Certificate,
-			"display_name": cert.DisplayName,
-			"policies":     cert.Policies,
-			"ttl":          cert.TTL / time.Second,
-			"max_ttl":      cert.MaxTTL / time.Second,
-			"period":       cert.Period / time.Second,
+			"certificate":   cert.Certificate,
+			"display_name":  cert.DisplayName,
+			"policies":      cert.Policies,
+			"ttl":           cert.TTL / time.Second,
+			"max_ttl":       cert.MaxTTL / time.Second,
+			"period":        cert.Period / time.Second,
+			"allowed_names": cert.AllowedNames,
 		},
 	}, nil
 }

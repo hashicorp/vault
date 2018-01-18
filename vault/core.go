@@ -109,9 +109,6 @@ var (
 	startReplication     = startReplicationImpl
 	stopReplication      = stopReplicationImpl
 	LastRemoteWAL        = lastRemoteWALImpl
-	// A package-available logger function, mainly to have access in ACL for
-	// error conditions
-	vlogger log.Logger
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -359,7 +356,7 @@ type Core struct {
 	atomicPrimaryFailoverAddrs *atomic.Value
 	// replicationState keeps the current replication state cached for quick
 	// lookup
-	replicationState consts.ReplicationState
+	replicationState *uint32
 
 	// uiEnabled indicates whether Vault Web UI is enabled or not
 	uiEnabled bool
@@ -468,7 +465,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.Logger == nil {
 		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
-	vlogger = conf.Logger
 
 	// Setup the core
 	c := &Core{
@@ -487,9 +483,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterName:                      conf.ClusterName,
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
-		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
+		clusterPeerClusterAddrsCache:     cache.New(3*HeartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 		rawEnabled:                       conf.EnableRaw,
+		replicationState:                 new(uint32),
 		atomicPrimaryClusterAddrs:        new(atomic.Value),
 		atomicPrimaryFailoverAddrs:       new(atomic.Value),
 	}
@@ -2104,9 +2101,7 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 }
 
 func (c *Core) ReplicationState() consts.ReplicationState {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	return c.replicationState
+	return consts.ReplicationState(atomic.LoadUint32(c.replicationState))
 }
 
 func (c *Core) SealAccess() *SealAccess {
