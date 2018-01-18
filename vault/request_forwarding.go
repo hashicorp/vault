@@ -21,8 +21,12 @@ import (
 
 const (
 	clusterListenerAcceptDeadline = 500 * time.Millisecond
-	heartbeatInterval             = 30 * time.Second
 	requestForwardingALPN         = "req_fw_sb-act_v1"
+)
+
+var (
+	// Making this a package var allows tests to modify
+	RequestForwardingHeartbeatInterval = 30 * time.Second
 )
 
 // Starts the listeners and servers necessary to handle forwarded requests
@@ -58,7 +62,7 @@ func (c *Core) startForwarding() error {
 
 	c.rpcServer = grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time: 2 * heartbeatInterval,
+			Time: 2 * RequestForwardingHeartbeatInterval,
 		}),
 	)
 
@@ -264,7 +268,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		grpc.WithDialer(c.getGRPCDialer(requestForwardingALPN, "", nil)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time: 2 * heartbeatInterval,
+			Time: 2 * RequestForwardingHeartbeatInterval,
 		}))
 	if err != nil {
 		cancelFunc()
@@ -276,7 +280,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	c.rpcForwardingClient = &forwardingClient{
 		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
 		core:        c,
-		echoTicker:  time.NewTicker(heartbeatInterval),
+		echoTicker:  time.NewTicker(RequestForwardingHeartbeatInterval),
 		echoContext: ctx,
 	}
 	c.rpcForwardingClient.startHeartbeat()
