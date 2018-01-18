@@ -56,7 +56,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		// Grab the read lock
 		b.RLock()
-		var unlockFunc func() = b.RUnlock
+		unlockFunc := b.RUnlock
 
 		// Get the Database object
 		db, ok := b.getDBObj(role.DBName)
@@ -83,9 +83,8 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		// Create the user
 		username, password, err := db.CreateUser(ctx, role.Statements, usernameConfig, expiration)
-		// Unlock
-		unlockFunc()
 		if err != nil {
+			unlockFunc()
 			b.closeIfShutdown(role.DBName, err)
 			return nil, err
 		}
@@ -98,6 +97,8 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			"role":     name,
 		})
 		resp.Secret.TTL = role.DefaultTTL
+
+		unlockFunc()
 		return resp, nil
 	}
 }
