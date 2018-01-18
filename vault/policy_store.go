@@ -170,7 +170,7 @@ func NewPolicyStore(baseView *BarrierView, system logical.SystemView, logger log
 
 	keys, err := logical.CollectKeys(ps.aclView)
 	if err != nil {
-		ps.logger.Error("vault: error collecting acl policy keys", "error", err)
+		ps.logger.Error("policy: error collecting acl policy keys", "error", err)
 		return nil
 	}
 	for _, key := range keys {
