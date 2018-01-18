@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -23,10 +24,11 @@ func TestSysHealth_get(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"replication_dr_secondary": false,
-		"initialized":              false,
-		"sealed":                   true,
-		"standby":                  true,
+		"replication_perf_mode": consts.ReplicationDisabled.String(),
+		"replication_dr_mode":   consts.ReplicationDisabled.String(),
+		"initialized":           false,
+		"sealed":                true,
+		"standby":               true,
 	}
 	testResponseStatus(t, resp, 501)
 	testResponseBody(t, resp, &actual)
@@ -54,10 +56,11 @@ func TestSysHealth_get(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"replication_dr_secondary": false,
-		"initialized":              true,
-		"sealed":                   true,
-		"standby":                  true,
+		"replication_perf_mode": consts.ReplicationDisabled.String(),
+		"replication_dr_mode":   consts.ReplicationDisabled.String(),
+		"initialized":           true,
+		"sealed":                true,
+		"standby":               true,
 	}
 	testResponseStatus(t, resp, 503)
 	testResponseBody(t, resp, &actual)
@@ -89,10 +92,11 @@ func TestSysHealth_get(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"replication_dr_secondary": false,
-		"initialized":              true,
-		"sealed":                   false,
-		"standby":                  false,
+		"replication_perf_mode": consts.ReplicationDisabled.String(),
+		"replication_dr_mode":   consts.ReplicationDisabled.String(),
+		"initialized":           true,
+		"sealed":                false,
+		"standby":               false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -130,10 +134,11 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"replication_dr_secondary": false,
-		"initialized":              false,
-		"sealed":                   true,
-		"standby":                  true,
+		"replication_perf_mode": consts.ReplicationDisabled.String(),
+		"replication_dr_mode":   consts.ReplicationDisabled.String(),
+		"initialized":           false,
+		"sealed":                true,
+		"standby":               true,
 	}
 	testResponseStatus(t, resp, 581)
 	testResponseBody(t, resp, &actual)
@@ -162,10 +167,11 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"replication_dr_secondary": false,
-		"initialized":              true,
-		"sealed":                   true,
-		"standby":                  true,
+		"replication_perf_mode": consts.ReplicationDisabled.String(),
+		"replication_dr_mode":   consts.ReplicationDisabled.String(),
+		"initialized":           true,
+		"sealed":                true,
+		"standby":               true,
 	}
 	testResponseStatus(t, resp, 523)
 	testResponseBody(t, resp, &actual)
@@ -198,10 +204,11 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"replication_dr_secondary": false,
-		"initialized":              true,
-		"sealed":                   false,
-		"standby":                  false,
+		"replication_perf_mode": consts.ReplicationDisabled.String(),
+		"replication_dr_mode":   consts.ReplicationDisabled.String(),
+		"initialized":           true,
+		"sealed":                false,
+		"standby":               false,
 	}
 	testResponseStatus(t, resp, 202)
 	testResponseBody(t, resp, &actual)
