@@ -30,7 +30,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		// Override the output
 		stdout := h.testStdout
 		if stdout == nil {
-			stdout = os.Stdout
+			stdout = os.Stderr
 		}
 
 		var err error

@@ -211,12 +211,6 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 	// Load the trusted certificates
 	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage, certName)
 
-	// Get the list of full chains matching the connection
-	trustedChains, err := validateConnState(roots, connState)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
 	if len(trustedNonCAs) != 0 {
@@ -231,6 +225,11 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 		}
 	}
 
+	// Get the list of full chains matching the connection
+	trustedChains, err := validateConnState(roots, connState)
+	if err != nil {
+		return nil, nil, err
+	}
 	// If no trusted chain was found, client is not authenticated
 	if len(trustedChains) == 0 {
 		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
@@ -420,15 +419,18 @@ func parsePEM(raw []byte) (certs []*x509.Certificate) {
 // verification logic here:  http://golang.org/src/crypto/tls/handshake_server.go
 // The trusted chains are returned.
 func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509.Certificate, error) {
+	certs := cs.PeerCertificates
+	if len(certs) == 0 {
+		return nil, nil
+	}
+	if certs[0].IsCA {
+		return nil, nil
+	}
+
 	opts := x509.VerifyOptions{
 		Roots:         roots,
 		Intermediates: x509.NewCertPool(),
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-	}
-
-	certs := cs.PeerCertificates
-	if len(certs) == 0 {
-		return nil, nil
 	}
 
 	if len(certs) > 1 {
