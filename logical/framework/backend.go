@@ -180,7 +180,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	case logical.RevokeOperation:
 		return b.handleRevokeRenew(ctx, req)
 	case logical.RollbackOperation:
-		return b.handleRollback(req)
+		return b.handleRollback(ctx, req)
 	}
 
 	// If the path is empty and it is a help operation, handle that.
@@ -472,7 +472,7 @@ func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (
 }
 
 // handleRollback invokes the PeriodicFunc set on the backend. It also does a WAL rollback operation.
-func (b *Backend) handleRollback(req *logical.Request) (*logical.Response, error) {
+func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// Response is not expected from the periodic operation.
 	if b.PeriodicFunc != nil {
 		if err := b.PeriodicFunc(req); err != nil {
@@ -480,7 +480,7 @@ func (b *Backend) handleRollback(req *logical.Request) (*logical.Response, error
 		}
 	}
 
-	return b.handleWALRollback(req)
+	return b.handleWALRollback(ctx, req)
 }
 
 func (b *Backend) handleAuthRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
@@ -491,14 +491,13 @@ func (b *Backend) handleAuthRenew(ctx context.Context, req *logical.Request) (*l
 	return b.AuthRenew(ctx, req, nil)
 }
 
-func (b *Backend) handleWALRollback(
-	req *logical.Request) (*logical.Response, error) {
+func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if b.WALRollback == nil {
 		return nil, logical.ErrUnsupportedOperation
 	}
 
 	var merr error
-	keys, err := ListWAL(req.Storage)
+	keys, err := ListWAL(ctx, req.Storage)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -518,7 +517,7 @@ func (b *Backend) handleWALRollback(
 	}
 
 	for _, k := range keys {
-		entry, err := GetWAL(req.Storage, k)
+		entry, err := GetWAL(ctx, req.Storage, k)
 		if err != nil {
 			merr = multierror.Append(merr, err)
 			continue
@@ -539,7 +538,7 @@ func (b *Backend) handleWALRollback(
 				"Error rolling back '%s' entry: %s", entry.Kind, err)
 		}
 		if err == nil {
-			err = DeleteWAL(req.Storage, k)
+			err = DeleteWAL(ctx, req.Storage, k)
 		}
 		if err != nil {
 			merr = multierror.Append(merr, err)

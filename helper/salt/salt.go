@@ -1,6 +1,7 @@
 package salt
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -75,7 +76,7 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 	var raw *logical.StorageEntry
 	var err error
 	if view != nil {
-		raw, err = view.Get(config.Location)
+		raw, err = view.Get(context.Background(), config.Location)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read salt: %v", err)
 		}
@@ -98,7 +99,7 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 				Key:   config.Location,
 				Value: []byte(s.salt),
 			}
-			if err := view.Put(raw); err != nil {
+			if err := view.Put(context.Background(), raw); err != nil {
 				return nil, fmt.Errorf("failed to persist salt: %v", err)
 			}
 		}

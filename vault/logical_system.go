@@ -1180,7 +1180,7 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 	}
 
 	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.add(header, hmac)
+	err := headerConfig.add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -1196,7 +1196,7 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 	}
 
 	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.remove(header)
+	err := headerConfig.remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -1794,7 +1794,7 @@ func (b *SystemBackend) handleLeaseLookupList(ctx context.Context, req *logical.
 		prefix = prefix + "/"
 	}
 
-	keys, err := b.Core.expiration.idView.List(prefix)
+	keys, err := b.Core.expiration.idView.List(ctx, prefix)
 	if err != nil {
 		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
 		return handleError(err)
@@ -2290,7 +2290,7 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	entry, err := b.Core.barrier.Get(path)
+	entry, err := b.Core.barrier.Get(ctx, path)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2322,7 +2322,7 @@ func (b *SystemBackend) handleRawWrite(ctx context.Context, req *logical.Request
 		Key:   path,
 		Value: []byte(value),
 	}
-	if err := b.Core.barrier.Put(entry); err != nil {
+	if err := b.Core.barrier.Put(ctx, entry); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -2340,7 +2340,7 @@ func (b *SystemBackend) handleRawDelete(ctx context.Context, req *logical.Reques
 		}
 	}
 
-	if err := b.Core.barrier.Delete(path); err != nil {
+	if err := b.Core.barrier.Delete(ctx, path); err != nil {
 		return handleError(err)
 	}
 	return nil, nil
@@ -2361,7 +2361,7 @@ func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	keys, err := b.Core.barrier.List(path)
+	keys, err := b.Core.barrier.List(ctx, path)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2393,7 +2393,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 	}
 
 	// Rotate to the new term
-	newTerm, err := b.Core.barrier.Rotate()
+	newTerm, err := b.Core.barrier.Rotate(ctx)
 	if err != nil {
 		b.Backend.Logger().Error("sys: failed to create new encryption key", "error", err)
 		return handleError(err)
@@ -2403,13 +2403,13 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 	// In HA mode, we need to an upgrade path for the standby instances
 	if b.Core.ha != nil {
 		// Create the upgrade path to the new term
-		if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
+		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
 			b.Backend.Logger().Error("sys: failed to create new upgrade", "term", newTerm, "error", err)
 		}
 
 		// Schedule the destroy of the upgrade path
 		time.AfterFunc(keyRotateGracePeriod, func() {
-			if err := b.Core.barrier.DestroyUpgrade(newTerm); err != nil {
+			if err := b.Core.barrier.DestroyUpgrade(ctx, newTerm); err != nil {
 				b.Backend.Logger().Error("sys: failed to destroy upgrade", "term", newTerm, "error", err)
 			}
 		})
@@ -2417,7 +2417,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := b.Core.barrier.Put(&Entry{
+	if err := b.Core.barrier.Put(ctx, &Entry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
 	}); err != nil {

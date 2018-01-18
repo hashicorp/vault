@@ -60,7 +60,7 @@ func (c *Core) Cluster() (*Cluster, error) {
 	var cluster Cluster
 
 	// Fetch the storage entry. This call fails when Vault is sealed.
-	entry, err := c.barrier.Get(coreLocalClusterInfoPath)
+	entry, err := c.barrier.Get(c.requestContext, coreLocalClusterInfoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +269,7 @@ func (c *Core) setupCluster() error {
 		}
 
 		// Store it
-		err = c.barrier.Put(&Entry{
+		err = c.barrier.Put(c.requestContext, &Entry{
 			Key:   coreLocalClusterInfoPath,
 			Value: rawCluster,
 		})

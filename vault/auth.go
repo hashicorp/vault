@@ -195,7 +195,7 @@ func (c *Core) disableCredential(path string) error {
 	switch {
 	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
-		if err := logical.ClearView(view); err != nil {
+		if err := logical.ClearView(c.requestContext, view); err != nil {
 			c.logger.Error("core: failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
@@ -285,12 +285,12 @@ func (c *Core) loadCredentials() error {
 	localAuthTable := &MountTable{}
 
 	// Load the existing mount table
-	raw, err := c.barrier.Get(coreAuthConfigPath)
+	raw, err := c.barrier.Get(c.requestContext, coreAuthConfigPath)
 	if err != nil {
 		c.logger.Error("core: failed to read auth table", "error", err)
 		return errLoadAuthFailed
 	}
-	rawLocal, err := c.barrier.Get(coreLocalAuthConfigPath)
+	rawLocal, err := c.barrier.Get(c.requestContext, coreLocalAuthConfigPath)
 	if err != nil {
 		c.logger.Error("core: failed to read local auth table", "error", err)
 		return errLoadAuthFailed
@@ -401,7 +401,7 @@ func (c *Core) persistAuth(table *MountTable, localOnly bool) error {
 		}
 
 		// Write to the physical backend
-		if err := c.barrier.Put(entry); err != nil {
+		if err := c.barrier.Put(c.requestContext, entry); err != nil {
 			c.logger.Error("core: failed to persist auth table", "error", err)
 			return err
 		}
@@ -419,7 +419,7 @@ func (c *Core) persistAuth(table *MountTable, localOnly bool) error {
 		Value: compressedBytes,
 	}
 
-	if err := c.barrier.Put(entry); err != nil {
+	if err := c.barrier.Put(c.requestContext, entry); err != nil {
 		c.logger.Error("core: failed to persist local auth table", "error", err)
 		return err
 	}

@@ -1,6 +1,7 @@
 package zookeeper
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -198,7 +199,7 @@ func (c *ZooKeeperBackend) nodePath(key string) string {
 }
 
 // Put is used to insert or update an entry
-func (c *ZooKeeperBackend) Put(entry *physical.Entry) error {
+func (c *ZooKeeperBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"zookeeper", "put"}, time.Now())
 
 	// Attempt to set the full path
@@ -213,7 +214,7 @@ func (c *ZooKeeperBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch an entry
-func (c *ZooKeeperBackend) Get(key string) (*physical.Entry, error) {
+func (c *ZooKeeperBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"zookeeper", "get"}, time.Now())
 
 	// Attempt to read the full path
@@ -240,7 +241,7 @@ func (c *ZooKeeperBackend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (c *ZooKeeperBackend) Delete(key string) error {
+func (c *ZooKeeperBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"zookeeper", "delete"}, time.Now())
 
 	if key == "" {
@@ -263,7 +264,7 @@ func (c *ZooKeeperBackend) Delete(key string) error {
 
 // List is used ot list all the keys under a given
 // prefix, up to the next prefix.
-func (c *ZooKeeperBackend) List(prefix string) ([]string, error) {
+func (c *ZooKeeperBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"zookeeper", "list"}, time.Now())
 
 	// Query the children at the full path

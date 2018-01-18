@@ -925,7 +925,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	}
 
 	key := coreLeaderPrefix + leaderUUID
-	entry, err := c.barrier.Get(key)
+	entry, err := c.barrier.Get(c.requestContext, key)
 	if err != nil {
 		return false, "", "", err
 	}
@@ -1183,7 +1183,7 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	defer memzero(masterKey)
 
 	// Attempt to unlock
-	if err := c.barrier.Unseal(masterKey); err != nil {
+	if err := c.barrier.Unseal(c.requestContext, masterKey); err != nil {
 		return false, err
 	}
 	if c.logger.IsInfo() {
@@ -1554,7 +1554,7 @@ func (c *Core) postUnseal() (retErr error) {
 
 	// Purge the backend if supported
 	if purgable, ok := c.physical.(physical.Purgable); ok {
-		purgable.Purge()
+		purgable.Purge(c.requestContext)
 	}
 
 	// Purge these for safety in case of a rekey
@@ -1666,7 +1666,7 @@ func (c *Core) preSeal() error {
 
 	// Purge the backend if supported
 	if purgable, ok := c.physical.(physical.Purgable); ok {
-		purgable.Purge()
+		purgable.Purge(c.requestContext)
 	}
 	c.logger.Info("core: pre-seal teardown complete")
 	return result
@@ -1890,7 +1890,7 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 			// Check for a poison pill. If we can read it, it means we have stale
 			// keys (e.g. from replication being activated) and we need to seal to
 			// be unsealed again.
-			entry, _ := c.barrier.Get(poisonPillPath)
+			entry, _ := c.barrier.Get(c.requestContext, poisonPillPath)
 			if entry != nil && len(entry.Value) > 0 {
 				c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
 				go c.Shutdown()
@@ -1911,7 +1911,7 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 func (c *Core) checkKeyUpgrades() error {
 	for {
 		// Check for an upgrade
-		didUpgrade, newTerm, err := c.barrier.CheckUpgrade()
+		didUpgrade, newTerm, err := c.barrier.CheckUpgrade(c.requestContext)
 		if err != nil {
 			return err
 		}
@@ -1931,7 +1931,7 @@ func (c *Core) checkKeyUpgrades() error {
 // are cleaned up in a timely manner if a leader failover takes place
 func (c *Core) scheduleUpgradeCleanup() error {
 	// List the upgrades
-	upgrades, err := c.barrier.List(keyringUpgradePrefix)
+	upgrades, err := c.barrier.List(c.requestContext, keyringUpgradePrefix)
 	if err != nil {
 		return fmt.Errorf("failed to list upgrades: %v", err)
 	}
@@ -1954,7 +1954,7 @@ func (c *Core) scheduleUpgradeCleanup() error {
 		}
 		for _, upgrade := range upgrades {
 			path := fmt.Sprintf("%s%s", keyringUpgradePrefix, upgrade)
-			if err := c.barrier.Delete(path); err != nil {
+			if err := c.barrier.Delete(c.requestContext, path); err != nil {
 				c.logger.Error("core: failed to cleanup upgrade", "path", path, "error", err)
 			}
 		}
@@ -1967,11 +1967,11 @@ func (c *Core) performKeyUpgrades() error {
 		return errwrap.Wrapf("error checking for key upgrades: {{err}}", err)
 	}
 
-	if err := c.barrier.ReloadMasterKey(); err != nil {
+	if err := c.barrier.ReloadMasterKey(c.requestContext); err != nil {
 		return errwrap.Wrapf("error reloading master key: {{err}}", err)
 	}
 
-	if err := c.barrier.ReloadKeyring(); err != nil {
+	if err := c.barrier.ReloadKeyring(c.requestContext); err != nil {
 		return errwrap.Wrapf("error reloading keyring: {{err}}", err)
 	}
 
@@ -2035,7 +2035,7 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 		Key:   coreLeaderPrefix + uuid,
 		Value: val,
 	}
-	err = c.barrier.Put(ent)
+	err = c.barrier.Put(c.requestContext, ent)
 	if err != nil {
 		return err
 	}
@@ -2052,7 +2052,7 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 }
 
 func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
-	keys, err := c.barrier.List(coreLeaderPrefix)
+	keys, err := c.barrier.List(c.requestContext, coreLeaderPrefix)
 	if err != nil {
 		c.logger.Error("core: failed to list entries in core/leader", "error", err)
 		return
@@ -2061,7 +2061,7 @@ func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
 		select {
 		case <-time.After(leaderPrefixCleanDelay):
 			if keys[0] != uuid {
-				c.barrier.Delete(coreLeaderPrefix + keys[0])
+				c.barrier.Delete(c.requestContext, coreLeaderPrefix+keys[0])
 			}
 			keys = keys[1:]
 		case <-leaderLostCh:
@@ -2073,7 +2073,7 @@ func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
-	err := c.barrier.Delete(key)
+	err := c.barrier.Delete(c.requestContext, key)
 
 	// Advertise ourselves as a standby
 	sd, ok := c.ha.(physical.ServiceDiscovery)

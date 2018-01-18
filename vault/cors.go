@@ -52,7 +52,7 @@ func (c *Core) saveCORSConfig() error {
 		return fmt.Errorf("failed to create CORS config entry: %v", err)
 	}
 
-	if err := view.Put(entry); err != nil {
+	if err := view.Put(c.requestContext, entry); err != nil {
 		return fmt.Errorf("failed to save CORS config: %v", err)
 	}
 
@@ -64,7 +64,7 @@ func (c *Core) loadCORSConfig() error {
 	view := c.systemBarrierView.SubView("config/")
 
 	// Load the config in
-	out, err := view.Get("cors")
+	out, err := view.Get(c.requestContext, "cors")
 	if err != nil {
 		return fmt.Errorf("failed to read CORS config: %v", err)
 	}

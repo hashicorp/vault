@@ -362,7 +362,7 @@ func (c *Core) unmountInternal(path string) error {
 	switch {
 	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
 		// Have writable storage, remove the whole thing
-		if err := logical.ClearView(view); err != nil {
+		if err := logical.ClearView(c.requestContext, view); err != nil {
 			c.logger.Error("core: failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
@@ -544,12 +544,12 @@ func (c *Core) loadMounts() error {
 	mountTable := &MountTable{}
 	localMountTable := &MountTable{}
 	// Load the existing mount table
-	raw, err := c.barrier.Get(coreMountConfigPath)
+	raw, err := c.barrier.Get(c.requestContext, coreMountConfigPath)
 	if err != nil {
 		c.logger.Error("core: failed to read mount table", "error", err)
 		return errLoadMountsFailed
 	}
-	rawLocal, err := c.barrier.Get(coreLocalMountConfigPath)
+	rawLocal, err := c.barrier.Get(c.requestContext, coreLocalMountConfigPath)
 	if err != nil {
 		c.logger.Error("core: failed to read local mount table", "error", err)
 		return errLoadMountsFailed
@@ -694,7 +694,7 @@ func (c *Core) persistMounts(table *MountTable, localOnly bool) error {
 		}
 
 		// Write to the physical backend
-		if err := c.barrier.Put(entry); err != nil {
+		if err := c.barrier.Put(c.requestContext, entry); err != nil {
 			c.logger.Error("core: failed to persist mount table", "error", err)
 			return err
 		}
@@ -712,7 +712,7 @@ func (c *Core) persistMounts(table *MountTable, localOnly bool) error {
 		Value: compressedBytes,
 	}
 
-	if err := c.barrier.Put(entry); err != nil {
+	if err := c.barrier.Put(c.requestContext, entry); err != nil {
 		c.logger.Error("core: failed to persist local mount table", "error", err)
 		return err
 	}

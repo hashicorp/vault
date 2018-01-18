@@ -1,6 +1,7 @@
 package inmem
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/logformat"
@@ -33,16 +34,16 @@ func TestCache_Purge(t *testing.T) {
 		Key:   "foo",
 		Value: []byte("bar"),
 	}
-	err = cache.Put(ent)
+	err = cache.Put(context.Background(), ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Delete from under
-	inm.Delete("foo")
+	inm.Delete(context.Background(), "foo")
 
 	// Read should work
-	out, err := cache.Get("foo")
+	out, err := cache.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestCache_Purge(t *testing.T) {
 	cache.Purge()
 
 	// Read should fail
-	out, err = cache.Get("foo")
+	out, err = cache.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -80,17 +81,17 @@ func TestCache_ExcludeCore(t *testing.T) {
 		Key:   "foo",
 		Value: []byte("bar"),
 	}
-	if err := cache.Put(ent); err != nil {
+	if err := cache.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
 	ent = &physical.Entry{
 		Key:   "foo",
 		Value: []byte("foobar"),
 	}
-	if err := inm.Put(ent); err != nil {
+	if err := inm.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
-	ent, err = cache.Get("foo")
+	ent, err = cache.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,17 +104,17 @@ func TestCache_ExcludeCore(t *testing.T) {
 		Key:   "core/foo",
 		Value: []byte("bar"),
 	}
-	if err := cache.Put(ent); err != nil {
+	if err := cache.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
 	ent = &physical.Entry{
 		Key:   "core/foo",
 		Value: []byte("foobar"),
 	}
-	if err := inm.Put(ent); err != nil {
+	if err := inm.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
-	ent, err = cache.Get("core/foo")
+	ent, err = cache.Get(context.Background(), "core/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,10 +127,10 @@ func TestCache_ExcludeCore(t *testing.T) {
 		Key:   "core/zip",
 		Value: []byte("zap"),
 	}
-	if err := inm.Put(ent); err != nil {
+	if err := inm.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
-	ent, err = cache.Get("core/zip")
+	ent, err = cache.Get(context.Background(), "core/zip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,10 +141,10 @@ func TestCache_ExcludeCore(t *testing.T) {
 		Key:   "core/zip",
 		Value: []byte("zipzap"),
 	}
-	if err := inm.Put(ent); err != nil {
+	if err := inm.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
-	ent, err = cache.Get("core/zip")
+	ent, err = cache.Get(context.Background(), "core/zip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +173,7 @@ func TestCache_ExcludeCoreTransactional(t *testing.T) {
 			Value: []byte("bar"),
 		},
 	}
-	if err := cache.Transaction([]*physical.TxnEntry{ent}); err != nil {
+	if err := cache.Transaction(context.Background(), []*physical.TxnEntry{ent}); err != nil {
 		t.Fatal(err)
 	}
 	ent = &physical.TxnEntry{
@@ -182,10 +183,10 @@ func TestCache_ExcludeCoreTransactional(t *testing.T) {
 			Value: []byte("foobar"),
 		},
 	}
-	if err := inm.(physical.Transactional).Transaction([]*physical.TxnEntry{ent}); err != nil {
+	if err := inm.(physical.Transactional).Transaction(context.Background(), []*physical.TxnEntry{ent}); err != nil {
 		t.Fatal(err)
 	}
-	entry, err = cache.Get("foo")
+	entry, err = cache.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +202,7 @@ func TestCache_ExcludeCoreTransactional(t *testing.T) {
 			Value: []byte("bar"),
 		},
 	}
-	if err := cache.Transaction([]*physical.TxnEntry{ent}); err != nil {
+	if err := cache.Transaction(context.Background(), []*physical.TxnEntry{ent}); err != nil {
 		t.Fatal(err)
 	}
 	ent = &physical.TxnEntry{
@@ -211,10 +212,10 @@ func TestCache_ExcludeCoreTransactional(t *testing.T) {
 			Value: []byte("foobar"),
 		},
 	}
-	if err := inm.(physical.Transactional).Transaction([]*physical.TxnEntry{ent}); err != nil {
+	if err := inm.(physical.Transactional).Transaction(context.Background(), []*physical.TxnEntry{ent}); err != nil {
 		t.Fatal(err)
 	}
-	entry, err = cache.Get("core/foo")
+	entry, err = cache.Get(context.Background(), "core/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,17 +241,17 @@ func TestCache_CoreExceptions(t *testing.T) {
 		Key:   "core/foo",
 		Value: []byte("bar"),
 	}
-	if err := cache.Put(ent); err != nil {
+	if err := cache.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
 	ent = &physical.Entry{
 		Key:   "core/foo",
 		Value: []byte("foobar"),
 	}
-	if err := inm.Put(ent); err != nil {
+	if err := inm.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
-	ent, err = cache.Get("core/foo")
+	ent, err = cache.Get(context.Background(), "core/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,17 +264,17 @@ func TestCache_CoreExceptions(t *testing.T) {
 		Key:   "core/bar",
 		Value: []byte("bar"),
 	}
-	if err := cache.Put(ent); err != nil {
+	if err := cache.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
 	ent = &physical.Entry{
 		Key:   "core/bar",
 		Value: []byte("foobar"),
 	}
-	if err := inm.Put(ent); err != nil {
+	if err := inm.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
-	ent, err = cache.Get("core/bar")
+	ent, err = cache.Get(context.Background(), "core/bar")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,17 +287,17 @@ func TestCache_CoreExceptions(t *testing.T) {
 		Key:   "core/baz/aaa",
 		Value: []byte("bar"),
 	}
-	if err := cache.Put(ent); err != nil {
+	if err := cache.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
 	ent = &physical.Entry{
 		Key:   "core/baz/aaa",
 		Value: []byte("foobar"),
 	}
-	if err := inm.Put(ent); err != nil {
+	if err := inm.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
-	ent, err = cache.Get("core/baz/aaa")
+	ent, err = cache.Get(context.Background(), "core/baz/aaa")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,17 +310,17 @@ func TestCache_CoreExceptions(t *testing.T) {
 		Key:   "core/baz/zzz",
 		Value: []byte("bar"),
 	}
-	if err := cache.Put(ent); err != nil {
+	if err := cache.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
 	ent = &physical.Entry{
 		Key:   "core/baz/zzz",
 		Value: []byte("foobar"),
 	}
-	if err := inm.Put(ent); err != nil {
+	if err := inm.Put(context.Background(), ent); err != nil {
 		t.Fatal(err)
 	}
-	ent, err = cache.Get("core/baz/zzz")
+	ent, err = cache.Get(context.Background(), "core/baz/zzz")
 	if err != nil {
 		t.Fatal(err)
 	}

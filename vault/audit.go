@@ -163,12 +163,12 @@ func (c *Core) loadAudits() error {
 	localAuditTable := &MountTable{}
 
 	// Load the existing audit table
-	raw, err := c.barrier.Get(coreAuditConfigPath)
+	raw, err := c.barrier.Get(c.requestContext, coreAuditConfigPath)
 	if err != nil {
 		c.logger.Error("core: failed to read audit table", "error", err)
 		return errLoadAuditFailed
 	}
-	rawLocal, err := c.barrier.Get(coreLocalAuditConfigPath)
+	rawLocal, err := c.barrier.Get(c.requestContext, coreLocalAuditConfigPath)
 	if err != nil {
 		c.logger.Error("core: failed to read local audit table", "error", err)
 		return errLoadAuditFailed
@@ -278,7 +278,7 @@ func (c *Core) persistAudit(table *MountTable, localOnly bool) error {
 		}
 
 		// Write to the physical backend
-		if err := c.barrier.Put(entry); err != nil {
+		if err := c.barrier.Put(c.requestContext, entry); err != nil {
 			c.logger.Error("core: failed to persist audit table", "error", err)
 			return err
 		}
@@ -296,7 +296,7 @@ func (c *Core) persistAudit(table *MountTable, localOnly bool) error {
 		Value: compressedBytes,
 	}
 
-	if err := c.barrier.Put(entry); err != nil {
+	if err := c.barrier.Put(c.requestContext, entry); err != nil {
 		c.logger.Error("core: failed to persist local audit table", "error", err)
 		return err
 	}

@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"database/sql"
@@ -172,7 +173,7 @@ func (m *MySQLBackend) prepare(name, query string) error {
 }
 
 // Put is used to insert or update an entry.
-func (m *MySQLBackend) Put(entry *physical.Entry) error {
+func (m *MySQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"mysql", "put"}, time.Now())
 
 	m.permitPool.Acquire()
@@ -186,7 +187,7 @@ func (m *MySQLBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch and entry.
-func (m *MySQLBackend) Get(key string) (*physical.Entry, error) {
+func (m *MySQLBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"mysql", "get"}, time.Now())
 
 	m.permitPool.Acquire()
@@ -209,7 +210,7 @@ func (m *MySQLBackend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (m *MySQLBackend) Delete(key string) error {
+func (m *MySQLBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"mysql", "delete"}, time.Now())
 
 	m.permitPool.Acquire()
@@ -224,7 +225,7 @@ func (m *MySQLBackend) Delete(key string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (m *MySQLBackend) List(prefix string) ([]string, error) {
+func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"mysql", "list"}, time.Now())
 
 	m.permitPool.Acquire()

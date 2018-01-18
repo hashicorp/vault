@@ -28,7 +28,7 @@ type InitResult struct {
 // Initialized checks if the Vault is already initialized
 func (c *Core) Initialized() (bool, error) {
 	// Check the barrier first
-	init, err := c.barrier.Initialized()
+	init, err := c.barrier.Initialized(c.requestContext)
 	if err != nil {
 		c.logger.Error("core: barrier init check failed", "error", err)
 		return false, err
@@ -150,7 +150,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Initialize the barrier
-	if err := c.barrier.Initialize(barrierKey); err != nil {
+	if err := c.barrier.Initialize(c.requestContext, barrierKey); err != nil {
 		c.logger.Error("core: failed to initialize barrier", "error", err)
 		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
 	}
@@ -159,7 +159,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Unseal the barrier
-	if err := c.barrier.Unseal(barrierKey); err != nil {
+	if err := c.barrier.Unseal(c.requestContext, barrierKey); err != nil {
 		c.logger.Error("core: failed to unseal barrier", "error", err)
 		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
 	}
