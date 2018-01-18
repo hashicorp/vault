@@ -707,17 +707,28 @@ func (c *Client) Protocol() Protocol {
 	return c.protocol
 }
 
+func netAddrDialer(addr net.Addr) func(string, time.Duration) (net.Conn, error) {
+	return func(_ string, _ time.Duration) (net.Conn, error) {
+		// Connect to the client
+		conn, err := net.Dial(addr.Network(), addr.String())
+		if err != nil {
+			return nil, err
+		}
+		if tcpConn, ok := conn.(*net.TCPConn); ok {
+			// Make sure to set keep alive so that the connection doesn't die
+			tcpConn.SetKeepAlive(true)
+		}
+
+		return conn, nil
+	}
+}
+
 // dialer is compatible with grpc.WithDialer and creates the connection
 // to the plugin.
 func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
-	// Connect to the client
-	conn, err := net.Dial(c.address.Network(), c.address.String())
+	conn, err := netAddrDialer(c.address)("", timeout)
 	if err != nil {
 		return nil, err
-	}
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		// Make sure to set keep alive so that the connection doesn't die
-		tcpConn.SetKeepAlive(true)
 	}
 
 	// If we have a TLS config we wrap our connection. We only do this

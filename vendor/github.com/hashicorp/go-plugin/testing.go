@@ -110,10 +110,15 @@ func TestPluginGRPCConn(t testing.T, ps map[string]Plugin) (*GRPCClient, *GRPCSe
 	// Connection successful, close the listener
 	l.Close()
 
+	brokerGRPCClient := newGRPCBrokerClient(conn)
+	broker := newGRPCBroker(brokerGRPCClient, nil)
+	go broker.Run()
+	go brokerGRPCClient.StartStream()
 	// Create the client
 	client := &GRPCClient{
 		Conn:    conn,
 		Plugins: ps,
+		broker:  broker,
 	}
 
 	return client, server

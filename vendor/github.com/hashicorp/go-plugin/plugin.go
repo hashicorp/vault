@@ -33,11 +33,11 @@ type GRPCPlugin interface {
 	// GRPCServer should register this plugin for serving with the
 	// given GRPCServer. Unlike Plugin.Server, this is only called once
 	// since gRPC plugins serve singletons.
-	GRPCServer(*grpc.Server) error
+	GRPCServer(*GRPCBroker, *grpc.Server) error
 
 	// GRPCClient should return the interface implementation for the plugin
 	// you're serving via gRPC.
-	GRPCClient(*grpc.ClientConn) (interface{}, error)
+	GRPCClient(*GRPCBroker, *grpc.ClientConn) (interface{}, error)
 }
 
 // NetRPCUnsupportedPlugin implements Plugin but returns errors for the
