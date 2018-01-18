@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -189,7 +188,7 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 	go b.broker.AcceptAndServe(brokerID, serverFunc)
 
 	args := &pb.SetupArgs{
-		BrokerId: brokerID,
+		BrokerID: brokerID,
 		Config:   config.Config,
 	}
 
@@ -217,30 +216,4 @@ func (b *backendGRPCPluginClient) Type() logical.BackendType {
 	}
 
 	return logical.BackendType(reply.Type)
-}
-
-func (b *backendGRPCPluginClient) RegisterLicense(license interface{}) error {
-	if b.metadataMode {
-		return ErrClientInMetadataMode
-	}
-
-	args := &pb.RegisterLicenseArgs{
-	//		License: license,
-	}
-
-	switch b.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return ErrPluginShutdown
-	}
-
-	reply, err := b.client.RegisterLicense(context.Background(), args)
-	if err != nil {
-		return err
-	}
-	if reply.Err != "" {
-		return errors.New(reply.Err)
-	}
-
-	return nil
 }

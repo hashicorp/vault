@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
 )
@@ -111,7 +112,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	// Check system status
 	sealed, _ := core.Sealed()
 	standby, _ := core.Standby()
-	drSecondary := core.IsDRSecondary()
+	replicationState := core.ReplicationState()
 	init, err := core.Initialized()
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
@@ -124,7 +125,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = uninitCode
 	case sealed:
 		code = sealedCode
-	case drSecondary:
+	case replicationState.HasState(consts.ReplicationDRSecondary):
 		code = drSecondaryCode
 	case !standbyOK && standby:
 		code = standbyCode
@@ -146,25 +147,27 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 
 	// Format the body
 	body := &HealthResponse{
-		Initialized:            init,
-		Sealed:                 sealed,
-		Standby:                standby,
-		ReplicationDRSecondary: drSecondary,
-		ServerTimeUTC:          time.Now().UTC().Unix(),
-		Version:                version.GetVersion().VersionNumber(),
-		ClusterName:            clusterName,
-		ClusterID:              clusterID,
+		Initialized:         init,
+		Sealed:              sealed,
+		Standby:             standby,
+		ReplicationPerfMode: replicationState.GetPerformanceString(),
+		ReplicationDRMode:   replicationState.GetDRString(),
+		ServerTimeUTC:       time.Now().UTC().Unix(),
+		Version:             version.GetVersion().VersionNumber(),
+		ClusterName:         clusterName,
+		ClusterID:           clusterID,
 	}
 	return code, body, nil
 }
 
 type HealthResponse struct {
-	Initialized            bool   `json:"initialized"`
-	Sealed                 bool   `json:"sealed"`
-	Standby                bool   `json:"standby"`
-	ReplicationDRSecondary bool   `json:"replication_dr_secondary"`
-	ServerTimeUTC          int64  `json:"server_time_utc"`
-	Version                string `json:"version"`
-	ClusterName            string `json:"cluster_name,omitempty"`
-	ClusterID              string `json:"cluster_id,omitempty"`
+	Initialized         bool   `json:"initialized"`
+	Sealed              bool   `json:"sealed"`
+	Standby             bool   `json:"standby"`
+	ReplicationPerfMode string `json:"replication_perf_mode"`
+	ReplicationDRMode   string `json:"replication_dr_mode"`
+	ServerTimeUTC       int64  `json:"server_time_utc"`
+	Version             string `json:"version"`
+	ClusterName         string `json:"cluster_name,omitempty"`
+	ClusterID           string `json:"cluster_id,omitempty"`
 }

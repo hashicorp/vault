@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -270,6 +271,71 @@ func TestBackend_basic(t *testing.T) {
 	data = map[string]interface{}{
 		"db_name":             "plugin-test",
 		"creation_statements": testRole,
+		"max_ttl":             "10m",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	// Get creds
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+	// Test for #3812
+	if credsResp.Secret.TTL != 10*time.Minute {
+		t.Fatalf("unexpected TTL of %d", credsResp.Secret.TTL)
+	}
+	// Update the role with no max ttl
+	data = map[string]interface{}{
+		"db_name":             "plugin-test",
+		"creation_statements": testRole,
+		"default_ttl":         "5m",
+		"max_ttl":             0,
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	// Get creds
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+	// Test for #3812
+	if credsResp.Secret.TTL != 5*time.Minute {
+		t.Fatalf("unexpected TTL of %d", credsResp.Secret.TTL)
+	}
+	// Update the role with a max ttl
+	data = map[string]interface{}{
+		"db_name":             "plugin-test",
+		"creation_statements": testRole,
 		"default_ttl":         "5m",
 		"max_ttl":             "10m",
 	}
@@ -283,7 +349,6 @@ func TestBackend_basic(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
-
 	// Get creds
 	data = map[string]interface{}{}
 	req = &logical.Request{
@@ -292,11 +357,14 @@ func TestBackend_basic(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      data,
 	}
-	credsResp, err := b.HandleRequest(context.Background(), req)
+	credsResp, err = b.HandleRequest(context.Background(), req)
 	if err != nil || (credsResp != nil && credsResp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
-
+	// Test for #3812
+	if credsResp.Secret.TTL != 5*time.Minute {
+		t.Fatalf("unexpected TTL of %d", credsResp.Secret.TTL)
+	}
 	if !testCredsExist(t, credsResp, connURL) {
 		t.Fatalf("Creds should exist")
 	}

@@ -975,12 +975,17 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	resp, err := framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(ctx, req, data)
-	if err != nil {
-		return nil, err
+	// If a period is provided, set that as part of resp.Auth.Period and return a
+	// response immediately. Let expiration manager handle renewal from there on.
+	if roleEntry.Period > time.Duration(0) {
+		resp := &logical.Response{
+			Auth: req.Auth,
+		}
+		resp.Auth.Period = roleEntry.Period
+		return resp, nil
 	}
-	resp.Auth.Period = roleEntry.Period
-	return resp, nil
+
+	return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(ctx, req, data)
 }
 
 func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1060,12 +1065,17 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 		return nil, err
 	}
 
-	resp, err := framework.LeaseExtend(roleEntry.TTL, shortestMaxTTL, b.System())(ctx, req, data)
-	if err != nil {
-		return nil, err
+	// If a period is provided, set that as part of resp.Auth.Period and return a
+	// response immediately. Let expiration manager handle renewal from there on.
+	if roleEntry.Period > time.Duration(0) {
+		resp := &logical.Response{
+			Auth: req.Auth,
+		}
+		resp.Auth.Period = roleEntry.Period
+		return resp, nil
 	}
-	resp.Auth.Period = roleEntry.Period
-	return resp, nil
+
+	return framework.LeaseExtend(roleEntry.TTL, shortestMaxTTL, b.System())(ctx, req, data)
 }
 
 func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

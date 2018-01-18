@@ -171,18 +171,3 @@ func (b *backendPluginServer) Type(_ interface{}, reply *TypeReply) error {
 
 	return nil
 }
-
-func (b *backendPluginServer) RegisterLicense(args *RegisterLicenseArgs, reply *RegisterLicenseReply) error {
-	if inMetadataMode() {
-		return ErrServerInMetadataMode
-	}
-
-	err := b.backend.RegisterLicense(args.License)
-	if err != nil {
-		*reply = RegisterLicenseReply{
-			Error: wrapError(err),
-		}
-	}
-
-	return nil
-}

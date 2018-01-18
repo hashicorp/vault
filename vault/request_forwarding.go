@@ -21,8 +21,12 @@ import (
 
 const (
 	clusterListenerAcceptDeadline = 500 * time.Millisecond
-	heartbeatInterval             = 30 * time.Second
 	requestForwardingALPN         = "req_fw_sb-act_v1"
+)
+
+var (
+	// Making this a package var allows tests to modify
+	HeartbeatInterval = 30 * time.Second
 )
 
 // Starts the listeners and servers necessary to handle forwarded requests
@@ -58,7 +62,7 @@ func (c *Core) startForwarding() error {
 
 	c.rpcServer = grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time: 2 * heartbeatInterval,
+			Time: 2 * HeartbeatInterval,
 		}),
 	)
 
@@ -264,7 +268,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		grpc.WithDialer(c.getGRPCDialer(requestForwardingALPN, "", nil)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time: 2 * heartbeatInterval,
+			Time: 2 * HeartbeatInterval,
 		}))
 	if err != nil {
 		cancelFunc()
@@ -276,7 +280,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	c.rpcForwardingClient = &forwardingClient{
 		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
 		core:        c,
-		echoTicker:  time.NewTicker(heartbeatInterval),
+		echoTicker:  time.NewTicker(HeartbeatInterval),
 		echoContext: ctx,
 	}
 	c.rpcForwardingClient.startHeartbeat()
@@ -394,7 +398,7 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 				const size = 64 << 10
 				buf := make([]byte, size)
 				buf = buf[:runtime.Stack(buf, false)]
-				s.core.logger.Error("forwarding: panic serving request", "path", req.URL.Path, "error", err, "stacktrace", buf)
+				s.core.logger.Error("forwarding: panic serving request", "path", req.URL.Path, "error", err, "stacktrace", string(buf))
 			}
 		}()
 		s.handler.ServeHTTP(w, req)
@@ -421,7 +425,8 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
 	}
 	return &EchoReply{
-		Message: "pong",
+		Message:          "pong",
+		ReplicationState: uint32(s.core.ReplicationState()),
 	}, nil
 }
 
@@ -461,6 +466,9 @@ func (c *forwardingClient) startHeartbeat() {
 				c.core.logger.Debug("forwarding: unexpected echo response from active node", "message", resp.Message)
 				return
 			}
+			// Store the active node's replication state to display in
+			// sys/health calls
+			atomic.StoreUint32(c.core.replicationState, resp.ReplicationState)
 			c.core.logger.Trace("forwarding: successful heartbeat")
 		}
 

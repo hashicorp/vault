@@ -172,7 +172,7 @@ func ProtoSecretToLogicalSecret(s *Secret) (*logical.Secret, error) {
 	return &logical.Secret{
 		LeaseOptions: lease,
 		InternalData: data,
-		LeaseID:      s.LeaseId,
+		LeaseID:      s.LeaseID,
 	}, nil
 }
 
@@ -194,7 +194,7 @@ func LogicalSecretToProtoSecret(s *logical.Secret) (*Secret, error) {
 	return &Secret{
 		LeaseOptions: lease,
 		InternalData: buf,
-		LeaseId:      s.LeaseID,
+		LeaseID:      s.LeaseID,
 	}, err
 }
 
@@ -224,7 +224,7 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 	}
 
 	return &Request{
-		Id:                       r.ID,
+		ID:                       r.ID,
 		ReplicationCluster:       r.ReplicationCluster,
 		Operation:                string(r.Operation),
 		Path:                     r.Path,
@@ -241,7 +241,7 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 		WrapInfo:                 LogicalRequestWrapInfoToProtoRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int64(r.ClientTokenRemainingUses),
 		//MFACreds: MFACreds,
-		EntityId:        r.EntityID,
+		EntityID:        r.EntityID,
 		PolicyOverride:  r.PolicyOverride,
 		Unauthenticated: r.Unauthenticated,
 	}, nil
@@ -277,7 +277,7 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 	}
 
 	return &logical.Request{
-		ID:                       r.Id,
+		ID:                       r.ID,
 		ReplicationCluster:       r.ReplicationCluster,
 		Operation:                logical.Operation(r.Operation),
 		Path:                     r.Path,
@@ -294,7 +294,7 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		WrapInfo:                 ProtoRequestWrapInfoToLogicalRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int(r.ClientTokenRemainingUses),
 		//MFACreds: MFACreds,
-		EntityID:        r.EntityId,
+		EntityID:        r.EntityID,
 		PolicyOverride:  r.PolicyOverride,
 		Unauthenticated: r.Unauthenticated,
 	}, nil
@@ -376,7 +376,7 @@ func ProtoResponseWrapInfoToLogicalResponseWrapInfo(i *ResponseWrapInfo) (*wrapp
 		Accessor:        i.Accessor,
 		CreationTime:    t,
 		WrappedAccessor: i.WrappedAccessor,
-		WrappedEntityID: i.WrappedEntityId,
+		WrappedEntityID: i.WrappedEntityID,
 		Format:          i.Format,
 		CreationPath:    i.CreationPath,
 		SealWrap:        i.SealWrap,
@@ -399,7 +399,7 @@ func LogicalResponseWrapInfoToProtoResponseWrapInfo(i *wrapping.ResponseWrapInfo
 		Accessor:        i.Accessor,
 		CreationTime:    t,
 		WrappedAccessor: i.WrappedAccessor,
-		WrappedEntityId: i.WrappedEntityID,
+		WrappedEntityID: i.WrappedEntityID,
 		Format:          i.Format,
 		CreationPath:    i.CreationPath,
 		SealWrap:        i.SealWrap,
@@ -495,7 +495,7 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 		Accessor:     a.Accessor,
 		Period:       int64(a.Period),
 		NumUses:      int64(a.NumUses),
-		EntityId:     a.EntityID,
+		EntityID:     a.EntityID,
 		Alias:        LogicalAliasToProtoAlias(a.Alias),
 		GroupAliases: groupAliases,
 	}, nil
@@ -532,7 +532,7 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		Accessor:     a.Accessor,
 		Period:       time.Duration(a.Period),
 		NumUses:      int(a.NumUses),
-		EntityID:     a.EntityId,
+		EntityID:     a.EntityID,
 		Alias:        ProtoAliasToLogicalAlias(a.Alias),
 		GroupAliases: groupAliases,
 	}, nil

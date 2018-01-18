@@ -86,7 +86,7 @@ func (c *PluginCatalog) Get(ctx context.Context, name string) (*pluginutil.Plugi
 
 // Set registers a new external plugin with the catalog, or updates an existing
 // external plugin. It takes the name, command and SHA256 of the plugin.
-func (c *PluginCatalog) Set(ctx context.Context, name, command string, sha256 []byte) error {
+func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []string, sha256 []byte) error {
 	if c.directory == "" {
 		return ErrDirectoryNotConfigured
 	}
@@ -101,11 +101,9 @@ func (c *PluginCatalog) Set(ctx context.Context, name, command string, sha256 []
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	parts := strings.Split(command, " ")
-
 	// Best effort check to make sure the command isn't breaking out of the
 	// configured plugin directory.
-	commandFull := filepath.Join(c.directory, parts[0])
+	commandFull := filepath.Join(c.directory, command)
 	sym, err := filepath.EvalSymlinks(commandFull)
 	if err != nil {
 		return fmt.Errorf("error while validating the command path: %v", err)
@@ -121,8 +119,8 @@ func (c *PluginCatalog) Set(ctx context.Context, name, command string, sha256 []
 
 	entry := &pluginutil.PluginRunner{
 		Name:    name,
-		Command: parts[0],
-		Args:    parts[1:],
+		Command: command,
+		Args:    args,
 		Sha256:  sha256,
 		Builtin: false,
 	}

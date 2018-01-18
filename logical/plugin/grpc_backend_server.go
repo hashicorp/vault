@@ -26,7 +26,7 @@ type backendGRPCPluginServer struct {
 // backend through its factory func for the server side of the plugin.
 func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs) (*pb.SetupReply, error) {
 	// Dial for storage
-	brokeredClient, err := b.broker.Dial(args.BrokerId)
+	brokeredClient, err := b.broker.Dial(args.BrokerID)
 	if err != nil {
 		return &pb.SetupReply{}, err
 	}
@@ -140,16 +140,5 @@ func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.In
 func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.TypeReply, error) {
 	return &pb.TypeReply{
 		Type: uint32(b.backend.Type()),
-	}, nil
-}
-
-func (b *backendGRPCPluginServer) RegisterLicense(ctx context.Context, _ *pb.RegisterLicenseArgs) (*pb.RegisterLicenseReply, error) {
-	if inMetadataMode() {
-		return &pb.RegisterLicenseReply{}, ErrServerInMetadataMode
-	}
-
-	err := b.backend.RegisterLicense(struct{}{})
-	return &pb.RegisterLicenseReply{
-		Err: pb.ErrToString(err),
 	}, nil
 }
