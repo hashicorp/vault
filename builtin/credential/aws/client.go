@@ -91,7 +91,7 @@ func (b *backend) getClientConfig(s logical.Storage, region, stsRole, accountID,
 	if stsRole != "" {
 		assumedCredentials := stscreds.NewCredentials(session.New(stsConfig), stsRole)
 		// Test that we actually have permissions to assume the role
-		if _, err = assumedCredentials.Get(); err != nil {
+		if _, err = assumedCredentials.Get(ctx); err != nil {
 			return nil, err
 		}
 		config.Credentials = assumedCredentials

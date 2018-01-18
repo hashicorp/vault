@@ -33,7 +33,7 @@ func (b *backend) tidySecretID(s logical.Storage) error {
 		return fmt.Errorf("SecretID tidy operation already running")
 	}
 
-	roleNameHMACs, err := s.List("secret_id/")
+	roleNameHMACs, err := s.List(ctx, "secret_id/")
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (b *backend) tidySecretID(s logical.Storage) error {
 	var result error
 	for _, roleNameHMAC := range roleNameHMACs {
 		// roleNameHMAC will already have a '/' suffix. Don't append another one.
-		secretIDHMACs, err := s.List(fmt.Sprintf("secret_id/%s", roleNameHMAC))
+		secretIDHMACs, err := s.List(ctx, fmt.Sprintf("secret_id/%s", roleNameHMAC))
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (b *backend) tidySecretID(s logical.Storage) error {
 			lock.Lock()
 			// roleNameHMAC will already have a '/' suffix. Don't append another one.
 			entryIndex := fmt.Sprintf("secret_id/%s%s", roleNameHMAC, secretIDHMAC)
-			secretIDEntry, err := s.Get(entryIndex)
+			secretIDEntry, err := s.Get(ctx, entryIndex)
 			if err != nil {
 				lock.Unlock()
 				return fmt.Errorf("error fetching SecretID %s: %s", secretIDHMAC, err)
@@ -77,7 +77,7 @@ func (b *backend) tidySecretID(s logical.Storage) error {
 
 			// ExpirationTime not being set indicates non-expiring SecretIDs
 			if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
-				if err := s.Delete(entryIndex); err != nil {
+				if err := s.Delete(ctx, entryIndex); err != nil {
 					lock.Unlock()
 					return fmt.Errorf("error deleting SecretID %s from storage: %s", secretIDHMAC, err)
 				}

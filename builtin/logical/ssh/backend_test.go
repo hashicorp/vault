@@ -466,7 +466,7 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 			testConfigZeroAddressRead(t, resp1),
 			testRoleDelete(t, testOTPRoleName),
 			testConfigZeroAddressRead(t, resp3),
-			testConfigZeroAddressDelete(t),
+			testConfigZeroAddres.Delete(ctx, t),
 		},
 	})
 }
@@ -505,7 +505,7 @@ func TestSSHBackend_CredsForZeroAddressRoles(t *testing.T) {
 			testCredsWrite(t, testDynamicRoleName, data, true),
 			testConfigZeroAddressWrite(t, req2),
 			testCredsWrite(t, testDynamicRoleName, data, false),
-			testConfigZeroAddressDelete(t),
+			testConfigZeroAddres.Delete(ctx, t),
 			testCredsWrite(t, testOTPRoleName, data, true),
 			testCredsWrite(t, testDynamicRoleName, data, true),
 		},

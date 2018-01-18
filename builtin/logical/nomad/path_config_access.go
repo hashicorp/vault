@@ -46,7 +46,7 @@ func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) readConfigAccess(storage logical.Storage) (*accessConfig, error) {
-	entry, err := storage.Get(configAccessKey)
+	entry, err := storage.Get(ctx, configAccessKey)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -108,7 +108,7 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) pathConfigAccessDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if err := req.Storage.Delete(configAccessKey); err != nil {
+	if err := req.Storage.Delete(ctx, configAccessKey); err != nil {
 		return nil, err
 	}
 	return nil, nil

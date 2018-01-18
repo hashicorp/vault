@@ -174,7 +174,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	}
 
 	// Get the user
-	user, _, err := client.Users.Get(context.Background(), "")
+	user, _, err := client.Users.Get(ctx, context.Background(), "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -188,7 +188,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 
 	var allOrgs []*github.Organization
 	for {
-		orgs, resp, err := client.Organizations.List(context.Background(), "", orgOpt)
+		orgs, resp, err := client.Organizations.List(ctx, context.Background(), "", orgOpt)
 		if err != nil {
 			return nil, nil, err
 		}

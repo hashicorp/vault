@@ -111,13 +111,13 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 }
 
 func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, req.Storage.Delete("config/ca_bundle")
+	return nil, req.Storage.Delete(ctx, "config/ca_bundle")
 }
 
 func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	entry, err := req.Storage.Get("config/ca_bundle")
+	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, err
 	}
@@ -199,14 +199,14 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
-	err = req.Storage.Put(&logical.StorageEntry{
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 		Value: parsedBundle.CertificateBytes,
 	})
@@ -218,7 +218,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// location
 	entry.Key = "ca"
 	entry.Value = parsedBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	err = req.Storage.Put(&logical.StorageEntry{
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 		Value: parsedBundle.CertificateBytes,
 	})

@@ -50,7 +50,7 @@ func (b *backend) pathRoletagBlacklistsList(ctx context.Context, req *logical.Re
 	b.blacklistMutex.RLock()
 	defer b.blacklistMutex.RUnlock()
 
-	tags, err := req.Storage.List("blacklist/roletag/")
+	tags, err := req.Storage.List(ctx, "blacklist/roletag/")
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (b *backend) lockedBlacklistRoleTagEntry(s logical.Storage, tag string) (*r
 }
 
 func (b *backend) nonLockedBlacklistRoleTagEntry(s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
-	entry, err := s.Get("blacklist/roletag/" + base64.StdEncoding.EncodeToString([]byte(tag)))
+	entry, err := s.Get(ctx, "blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)))
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (b *backend) pathRoletagBlacklistDelete(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("missing role_tag"), nil
 	}
 
-	return nil, req.Storage.Delete("blacklist/roletag/" + base64.StdEncoding.EncodeToString([]byte(tag)))
+	return nil, req.Storage.Delete(ctx, "blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)))
 }
 
 // If the given role tag is blacklisted, returns the details of the blacklist entry.
@@ -211,7 +211,7 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 	}
 
 	// Store the blacklist entry.
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

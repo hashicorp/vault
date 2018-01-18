@@ -70,7 +70,7 @@ func pathConfig(b *backend) *framework.Path {
 
 // Config returns the configuration for this backend.
 func (b *backend) Config(s logical.Storage) (*ConfigEntry, error) {
-	entry, err := s.Get("config")
+	entry, err := s.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(jsonCfg); err != nil {
+	if err := req.Storage.Put(ctx, jsonCfg); err != nil {
 		return nil, err
 	}
 

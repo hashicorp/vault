@@ -114,7 +114,7 @@ func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error)
 		return false, fmt.Errorf("missing ip")
 	}
 
-	roleEntry, err := s.Get(fmt.Sprintf("roles/%s", roleName))
+	roleEntry, err := s.Get(ctx, fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
 		return false, fmt.Errorf("error retrieving role %v", err)
 	}

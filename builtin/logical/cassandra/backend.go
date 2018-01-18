@@ -86,7 +86,7 @@ func (b *backend) DB(s logical.Storage) (*gocql.Session, error) {
 		return b.session, nil
 	}
 
-	entry, err := s.Get("config/connection")
+	entry, err := s.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, err
 	}

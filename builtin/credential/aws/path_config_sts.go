@@ -78,7 +78,7 @@ func (b *backend) pathConfigStsExistenceCheck(ctx context.Context, req *logical.
 func (b *backend) pathStsList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
-	sts, err := req.Storage.List("config/sts/")
+	sts, err := req.Storage.List(ctx, "config/sts/")
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (b *backend) nonLockedSetAwsStsEntry(s logical.Storage, accountID string, s
 		return fmt.Errorf("failed to create storage entry for AWS STS configuration")
 	}
 
-	return s.Put(entry)
+	return req.Storage.Put(ctx, entry)
 }
 
 // lockedSetAwsStsEntry creates or updates an STS role association with the given accountID
@@ -130,7 +130,7 @@ func (b *backend) lockedSetAwsStsEntry(s logical.Storage, accountID string, stsE
 // This method does not acquire the read lock before returning information. If locking is
 // desired, use lockedAwsStsEntry instead
 func (b *backend) nonLockedAwsStsEntry(s logical.Storage, accountID string) (*awsStsEntry, error) {
-	entry, err := s.Get("config/sts/" + accountID)
+	entry, err := s.Get(ctx, "config/sts/"+accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +223,7 @@ func (b *backend) pathConfigStsDelete(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("missing account id"), nil
 	}
 
-	return nil, req.Storage.Delete("config/sts/" + accountID)
+	return nil, req.Storage.Delete(ctx, "config/sts/"+accountID)
 }
 
 const pathConfigStsSyn = `

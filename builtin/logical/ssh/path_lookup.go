@@ -37,7 +37,7 @@ func (b *backend) pathLookupWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	// Get all the roles created in the backend.
-	keys, err := req.Storage.List("roles/")
+	keys, err := req.Storage.List(ctx, "roles/")
 	if err != nil {
 		return nil, err
 	}

@@ -60,7 +60,7 @@ func (b *backend) lockedConfigTidyIdentities(s logical.Storage) (*tidyWhitelistI
 }
 
 func (b *backend) nonLockedConfigTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
-	entry, err := s.Get(identityWhitelistConfigPath)
+	entry, err := s.Get(ctx, identityWhitelistConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(ctx context.Contex
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -131,7 +131,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistDelete(ctx context.Context, req
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return nil, req.Storage.Delete(identityWhitelistConfigPath)
+	return nil, req.Storage.Delete(ctx, identityWhitelistConfigPath)
 }
 
 type tidyWhitelistIdentityConfig struct {

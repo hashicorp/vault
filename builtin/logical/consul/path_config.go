@@ -41,7 +41,7 @@ func pathConfigAccess() *framework.Path {
 }
 
 func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
-	entry, err := storage.Get("config/access")
+	entry, err := storage.Get(ctx, "config/access")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -89,7 +89,7 @@ func pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *fram
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

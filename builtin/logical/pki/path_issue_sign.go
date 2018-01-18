@@ -273,7 +273,7 @@ func (b *backend) pathIssueSignCert(req *logical.Request, data *framework.FieldD
 	}
 
 	if !role.NoStore {
-		err = req.Storage.Put(&logical.StorageEntry{
+		err = req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 			Value: parsedBundle.CertificateBytes,
 		})

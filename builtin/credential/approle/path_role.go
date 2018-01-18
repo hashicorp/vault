@@ -538,7 +538,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *
 	lock.RLock()
 	defer lock.RUnlock()
 
-	roles, err := req.Storage.List("role/")
+	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -580,7 +580,7 @@ func (b *backend) pathRoleSecretIDList(ctx context.Context, req *logical.Request
 
 	// Listing works one level at a time. Get the first level of data
 	// which could then be used to get the actual SecretID storage entries.
-	secretIDHMACs, err := req.Storage.List(fmt.Sprintf("secret_id/%s/", roleNameHMAC))
+	secretIDHMACs, err := req.Storage.List(ctx, fmt.Sprintf("secret_id/%s/", roleNameHMAC))
 	if err != nil {
 		return nil, err
 	}
@@ -606,7 +606,7 @@ func (b *backend) pathRoleSecretIDList(ctx context.Context, req *logical.Request
 		secretIDLock.RLock()
 
 		result := secretIDStorageEntry{}
-		if entry, err := req.Storage.Get(entryIndex); err != nil {
+		if entry, err := req.Storage.Get(ctx, entryIndex); err != nil {
 			secretIDLock.RUnlock()
 			return nil, err
 		} else if entry == nil {
@@ -686,7 +686,7 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 	}
 
 	// Save the role entry only after all the validations
-	if err = s.Put(entry); err != nil {
+	if err = req.Storage.Put(ctx, entry); err != nil {
 		return err
 	}
 
@@ -710,7 +710,7 @@ func (b *backend) roleEntry(s logical.Storage, roleName string) (*roleStorageEnt
 
 	var role roleStorageEntry
 
-	if entry, err := s.Get("role/" + strings.ToLower(roleName)); err != nil {
+	if entry, err := s.Get(ctx, "role/"+strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -969,7 +969,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	}
 
 	// After deleting the SecretIDs and the RoleID, delete the role itself
-	if err = req.Storage.Delete("role/" + strings.ToLower(roleName)); err != nil {
+	if err = req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName)); err != nil {
 		return nil, err
 	}
 
@@ -1029,7 +1029,7 @@ func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC str
 	defer lock.RUnlock()
 
 	result := secretIDStorageEntry{}
-	if entry, err := s.Get(entryIndex); err != nil {
+	if entry, err := s.Get(ctx, entryIndex); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -1100,7 +1100,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 	defer lock.Unlock()
 
 	result := secretIDStorageEntry{}
-	if entry, err := req.Storage.Get(entryIndex); err != nil {
+	if entry, err := req.Storage.Get(ctx, entryIndex); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -1114,7 +1114,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 	}
 
 	// Delete the storage entry that corresponds to the SecretID
-	if err := req.Storage.Delete(entryIndex); err != nil {
+	if err := req.Storage.Delete(ctx, entryIndex); err != nil {
 		return nil, fmt.Errorf("failed to delete secret_id: %v", err)
 	}
 
@@ -1216,7 +1216,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 	}
 
 	// Delete the storage entry that corresponds to the SecretID
-	if err := req.Storage.Delete(entryIndex); err != nil {
+	if err := req.Storage.Delete(ctx, entryIndex); err != nil {
 		return nil, fmt.Errorf("failed to delete secret_id: %v", err)
 	}
 
@@ -2062,7 +2062,7 @@ func (b *backend) setRoleIDEntry(s logical.Storage, roleID string, roleIDEntry *
 	if err != nil {
 		return err
 	}
-	if err = s.Put(entry); err != nil {
+	if err = req.Storage.Put(ctx, entry); err != nil {
 		return err
 	}
 	return nil
@@ -2086,7 +2086,7 @@ func (b *backend) roleIDEntry(s logical.Storage, roleID string) (*roleIDStorageE
 	}
 	entryIndex := "role_id/" + salt.SaltID(roleID)
 
-	if entry, err := s.Get(entryIndex); err != nil {
+	if entry, err := s.Get(ctx, entryIndex); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -2114,7 +2114,7 @@ func (b *backend) roleIDEntryDelete(s logical.Storage, roleID string) error {
 	}
 	entryIndex := "role_id/" + salt.SaltID(roleID)
 
-	return s.Delete(entryIndex)
+	return s.Delete(ctx, entryIndex)
 }
 
 var roleHelp = map[string][2]string{

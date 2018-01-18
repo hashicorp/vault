@@ -54,7 +54,7 @@ func validateURLs(urls []string) string {
 }
 
 func getURLs(req *logical.Request) (*urlEntries, error) {
-	entry, err := req.Storage.Get("urls")
+	entry, err := req.Storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func writeURLs(req *logical.Request, entries *urlEntries) error {
 		return fmt.Errorf("Unable to marshal entry into JSON")
 	}
 
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return err
 	}

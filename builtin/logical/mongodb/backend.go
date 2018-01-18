@@ -70,7 +70,7 @@ func (b *backend) Session(s logical.Storage) (*mgo.Session, error) {
 		b.session.Close()
 	}
 
-	connConfigJSON, err := s.Get("config/connection")
+	connConfigJSON, err := s.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (b *backend) invalidate(key string) {
 
 // LeaseConfig returns the lease configuration
 func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err
 	}

@@ -121,7 +121,7 @@ func (p *PathMap) pathStruct(ctx context.Context, s logical.Storage, k string) (
 		// Set the path struct to use the SHA1 hash suffixed path name
 		ps.Name = sha1SuffixedName
 
-		val, err = ps.Get(s)
+		val, err = ps.Get(ctx, s)
 		if err != nil {
 			return nil, err
 		}
@@ -129,13 +129,13 @@ func (p *PathMap) pathStruct(ctx context.Context, s logical.Storage, k string) (
 		if val != nil {
 			// Set the path struct to use the desired final name
 			ps.Name = finalName
-			err = ps.Put(s, val)
+			err = ps.Put(ctx, s, val)
 			if err != nil {
 				return nil, err
 			}
 			// Set it back to the old path and delete
 			ps.Name = sha1SuffixedName
-			err = ps.Delete(s)
+			err = ps.Delete(ctx, s)
 			if err != nil {
 				return nil, err
 			}

@@ -17,7 +17,7 @@ func getRootConfig(s logical.Storage, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
 	var endpoint string
 
-	entry, err := s.Get("config/root")
+	entry, err := s.Get(ctx, "config/root")
 	if err != nil {
 		return nil, err
 	}

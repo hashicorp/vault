@@ -50,7 +50,7 @@ func pathRoles(b *backend) *framework.Path {
 
 // Reads the role configuration from the storage
 func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + n)
+	entry, err := s.Get(ctx, "role/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 		return logical.ErrorResponse("missing name"), nil
 	}
 
-	return nil, req.Storage.Delete("role/" + name)
+	return nil, req.Storage.Delete(ctx, "role/"+name)
 }
 
 // Reads an existing role
@@ -98,7 +98,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 
 // Lists all the roles registered with the backend
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roles, err := req.Storage.List("role/")
+	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (b *backend) pathRoleUpdate(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

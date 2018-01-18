@@ -116,7 +116,7 @@ func (b *databaseBackend) createDBObj(ctx context.Context, s logical.Storage, na
 }
 
 func (b *databaseBackend) DatabaseConfig(s logical.Storage, name string) (*DatabaseConfig, error) {
-	entry, err := s.Get(fmt.Sprintf("config/%s", name))
+	entry, err := s.Get(ctx, fmt.Sprintf("config/%s", name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read connection configuration: %s", err)
 	}
@@ -148,7 +148,7 @@ type upgradeCheck struct {
 }
 
 func (b *databaseBackend) Role(s logical.Storage, roleName string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + roleName)
+	entry, err := s.Get(ctx, "role/"+roleName)
 	if err != nil {
 		return nil, err
 	}

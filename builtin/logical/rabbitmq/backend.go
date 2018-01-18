@@ -72,7 +72,7 @@ func (b *backend) Client(s logical.Storage) (*rabbithole.Client, error) {
 	b.lock.RUnlock()
 
 	// Otherwise, attempt to make connection
-	entry, err := s.Get("config/connection")
+	entry, err := s.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (b *backend) invalidate(key string) {
 
 // Lease returns the lease information
 func (b *backend) Lease(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err
 	}

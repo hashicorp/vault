@@ -34,7 +34,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 	policyName := d.Get("name").(string)
 
 	// Read the policy
-	policy, err := req.Storage.Get("policy/" + policyName)
+	policy, err := req.Storage.Get(ctx, "policy/"+policyName)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}

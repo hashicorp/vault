@@ -44,7 +44,7 @@ func (b *backend) pathLeaseUpdate(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -52,7 +52,7 @@ func (b *backend) pathLeaseUpdate(ctx context.Context, req *logical.Request, d *
 }
 
 func (b *backend) pathLeaseDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	if err := req.Storage.Delete(leaseConfigKey); err != nil {
+	if err := req.Storage.Delete(ctx, leaseConfigKey); err != nil {
 		return nil, err
 	}
 
@@ -79,7 +79,7 @@ func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data 
 
 // Lease returns the lease information
 func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get(leaseConfigKey)
+	entry, err := s.Get(ctx, leaseConfigKey)
 	if err != nil {
 		return nil, err
 	}

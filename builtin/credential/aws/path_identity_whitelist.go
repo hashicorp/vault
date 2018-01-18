@@ -46,7 +46,7 @@ func pathListIdentityWhitelist(b *backend) *framework.Path {
 // pathWhitelistIdentitiesList is used to list all the instance IDs that are present
 // in the identity whitelist. This will list both valid and expired entries.
 func (b *backend) pathWhitelistIdentitiesList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	identities, err := req.Storage.List("whitelist/identity/")
+	identities, err := req.Storage.List(ctx, "whitelist/identity/")
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (b *backend) pathWhitelistIdentitiesList(ctx context.Context, req *logical.
 
 // Fetch an item from the whitelist given an instance ID.
 func whitelistIdentityEntry(s logical.Storage, instanceID string) (*whitelistIdentity, error) {
-	entry, err := s.Get("whitelist/identity/" + instanceID)
+	entry, err := s.Get(ctx, "whitelist/identity/"+instanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func setWhitelistIdentityEntry(s logical.Storage, instanceID string, identity *w
 		return err
 	}
 
-	if err := s.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return err
 	}
 	return nil
@@ -91,7 +91,7 @@ func (b *backend) pathIdentityWhitelistDelete(ctx context.Context, req *logical.
 		return logical.ErrorResponse("missing instance_id"), nil
 	}
 
-	return nil, req.Storage.Delete("whitelist/identity/" + instanceID)
+	return nil, req.Storage.Delete(ctx, "whitelist/identity/"+instanceID)
 }
 
 // pathIdentityWhitelistRead is used to view an entry in the identity whitelist given an instance ID.

@@ -241,7 +241,7 @@ func (b *backend) validateBindSecretID(req *logical.Request, roleName, secretID,
 		if err := b.deleteSecretIDAccessorEntry(req.Storage, result.SecretIDAccessor); err != nil {
 			return false, nil, err
 		}
-		if err := req.Storage.Delete(entryIndex); err != nil {
+		if err := req.Storage.Delete(ctx, entryIndex); err != nil {
 			return false, nil, fmt.Errorf("failed to delete secret ID: %v", err)
 		}
 	} else {
@@ -250,7 +250,7 @@ func (b *backend) validateBindSecretID(req *logical.Request, roleName, secretID,
 		result.LastUpdatedTime = time.Now()
 		if entry, err := logical.StorageEntryJSON(entryIndex, &result); err != nil {
 			return false, nil, fmt.Errorf("failed to decrement the use count for secret ID %q", secretID)
-		} else if err = req.Storage.Put(entry); err != nil {
+		} else if err = req.Storage.Put(ctx, entry); err != nil {
 			return false, nil, fmt.Errorf("failed to decrement the use count for secret ID %q", secretID)
 		}
 	}
@@ -332,7 +332,7 @@ func (b *backend) nonLockedSecretIDStorageEntry(s logical.Storage, roleNameHMAC,
 	// Prepare the storage index at which the secret ID will be stored
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
 
-	entry, err := s.Get(entryIndex)
+	entry, err := s.Get(ctx, entryIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ func (b *backend) nonLockedSetSecretIDStorageEntry(s logical.Storage, roleNameHM
 
 	if entry, err := logical.StorageEntryJSON(entryIndex, secretEntry); err != nil {
 		return err
-	} else if err = s.Put(entry); err != nil {
+	} else if err = req.Storage.Put(ctx, entry); err != nil {
 		return err
 	}
 
@@ -488,7 +488,7 @@ func (b *backend) secretIDAccessorEntry(s logical.Storage, secretIDAccessor stri
 	accessorLock.RLock()
 	defer accessorLock.RUnlock()
 
-	if entry, err := s.Get(entryIndex); err != nil {
+	if entry, err := s.Get(ctx, entryIndex); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -525,7 +525,7 @@ func (b *backend) createSecretIDAccessorEntry(s logical.Storage, entry *secretID
 		SecretIDHMAC: secretIDHMAC,
 	}); err != nil {
 		return err
-	} else if err = s.Put(entry); err != nil {
+	} else if err = req.Storage.Put(ctx, entry); err != nil {
 		return fmt.Errorf("failed to persist accessor index entry: %v", err)
 	}
 
@@ -545,7 +545,7 @@ func (b *backend) deleteSecretIDAccessorEntry(s logical.Storage, secretIDAccesso
 	defer accessorLock.Unlock()
 
 	// Delete the accessor of the SecretID first
-	if err := s.Delete(accessorEntryIndex); err != nil {
+	if err := s.Delete(ctx, accessorEntryIndex); err != nil {
 		return fmt.Errorf("failed to delete accessor storage entry: %v", err)
 	}
 
@@ -564,7 +564,7 @@ func (b *backend) flushRoleSecrets(s logical.Storage, roleName, hmacKey string) 
 	b.secretIDListingLock.RLock()
 	defer b.secretIDListingLock.RUnlock()
 
-	secretIDHMACs, err := s.List(fmt.Sprintf("secret_id/%s/", roleNameHMAC))
+	secretIDHMACs, err := s.List(ctx, fmt.Sprintf("secret_id/%s/", roleNameHMAC))
 	if err != nil {
 		return err
 	}
@@ -573,7 +573,7 @@ func (b *backend) flushRoleSecrets(s logical.Storage, roleName, hmacKey string) 
 		lock := b.secretIDLock(secretIDHMAC)
 		lock.Lock()
 		entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
-		if err := s.Delete(entryIndex); err != nil {
+		if err := s.Delete(ctx, entryIndex); err != nil {
 			lock.Unlock()
 			return fmt.Errorf("error deleting SecretID %q from storage: %v", secretIDHMAC, err)
 		}

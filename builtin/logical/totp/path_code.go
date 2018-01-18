@@ -86,7 +86,7 @@ func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, da
 
 	usedName := fmt.Sprintf("%s_%s", name, code)
 
-	_, ok := b.usedCodes.Get(usedName)
+	_, ok := b.usedCodes.Get(ctx, usedName)
 	if ok {
 		return logical.ErrorResponse("code already used; wait until the next time period"), nil
 	}

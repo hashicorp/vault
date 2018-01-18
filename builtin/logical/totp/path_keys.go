@@ -120,7 +120,7 @@ func pathKeys(b *backend) *framework.Path {
 }
 
 func (b *backend) Key(s logical.Storage, n string) (*keyEntry, error) {
-	entry, err := s.Get("key/" + n)
+	entry, err := s.Get(ctx, "key/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (b *backend) Key(s logical.Storage, n string) (*keyEntry, error) {
 }
 
 func (b *backend) pathKeyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("key/" + data.Get("name").(string))
+	err := req.Storage.Delete(ctx, "key/"+data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (b *backend) pathKeyRead(ctx context.Context, req *logical.Request, data *f
 }
 
 func (b *backend) pathKeyList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("key/")
+	entries, err := req.Storage.List(ctx, "key/")
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +394,7 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

@@ -36,7 +36,7 @@ func pathConfigLease(b *backend) *framework.Path {
 
 // Lease returns the lease information
 func (b *backend) Lease(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

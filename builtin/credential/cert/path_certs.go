@@ -102,7 +102,7 @@ TTL will be set to the value of this parameter.`,
 }
 
 func (b *backend) Cert(s logical.Storage, n string) (*CertEntry, error) {
-	entry, err := s.Get("cert/" + strings.ToLower(n))
+	entry, err := s.Get(ctx, "cert/"+strings.ToLower(n))
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (b *backend) Cert(s logical.Storage, n string) (*CertEntry, error) {
 }
 
 func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("cert/" + strings.ToLower(d.Get("name").(string)))
+	err := req.Storage.Delete(ctx, "cert/"+strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathCertList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	certs, err := req.Storage.List("cert/")
+	certs, err := req.Storage.List(ctx, "cert/")
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +245,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

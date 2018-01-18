@@ -44,7 +44,7 @@ func (b *backend) pathLeaseUpdate(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

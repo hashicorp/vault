@@ -42,13 +42,13 @@ func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) er
 
 	bufferDuration := time.Duration(safety_buffer) * time.Second
 
-	identities, err := s.List("whitelist/identity/")
+	identities, err := s.List(ctx, "whitelist/identity/")
 	if err != nil {
 		return err
 	}
 
 	for _, instanceID := range identities {
-		identityEntry, err := s.Get("whitelist/identity/" + instanceID)
+		identityEntry, err := s.Get(ctx, "whitelist/identity/"+instanceID)
 		if err != nil {
 			return fmt.Errorf("error fetching identity of instanceID %s: %s", instanceID, err)
 		}
@@ -67,7 +67,7 @@ func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) er
 		}
 
 		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-			if err := s.Delete("whitelist/identity" + instanceID); err != nil {
+			if err := s.Delete(ctx, "whitelist/identity"+instanceID); err != nil {
 				return fmt.Errorf("error deleting identity of instanceID %s from storage: %s", instanceID, err)
 			}
 		}

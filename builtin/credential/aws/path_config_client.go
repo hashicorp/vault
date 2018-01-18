@@ -83,7 +83,7 @@ func (b *backend) lockedClientConfigEntry(s logical.Storage) (*clientConfig, err
 
 // Fetch the client configuration required to access the AWS API.
 func (b *backend) nonLockedClientConfigEntry(s logical.Storage) (*clientConfig, error) {
-	entry, err := s.Get("config/client")
+	entry, err := s.Get(ctx, "config/client")
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (b *backend) pathConfigClientDelete(ctx context.Context, req *logical.Reque
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	if err := req.Storage.Delete("config/client"); err != nil {
+	if err := req.Storage.Delete(ctx, "config/client"); err != nil {
 		return nil, err
 	}
 
@@ -231,7 +231,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	}
 
 	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
-		if err := req.Storage.Put(entry); err != nil {
+		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 	}

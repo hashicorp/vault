@@ -45,7 +45,7 @@ func (b *backend) pathSTSRead(ctx context.Context, req *logical.Request, d *fram
 	ttl := int64(d.Get("ttl").(int))
 
 	// Read the policy
-	policy, err := req.Storage.Get("policy/" + policyName)
+	policy, err := req.Storage.Get(ctx, "policy/"+policyName)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}

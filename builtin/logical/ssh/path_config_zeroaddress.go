@@ -36,7 +36,7 @@ func pathConfigZeroAddress(b *backend) *framework.Path {
 }
 
 func (b *backend) pathConfigZeroAddressDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("config/zeroaddress")
+	err := req.Storage.Delete(ctx, "config/zeroaddress")
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (b *backend) putZeroAddressRoles(s logical.Storage, roles []string) error {
 	if err != nil {
 		return err
 	}
-	if err := s.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return err
 	}
 	return nil
@@ -101,7 +101,7 @@ func (b *backend) putZeroAddressRoles(s logical.Storage, roles []string) error {
 
 // Retrieves the list of roles from the zeroaddress endpoint.
 func (b *backend) getZeroAddressRoles(s logical.Storage) (*zeroAddressRoles, error) {
-	entry, err := s.Get("config/zeroaddress")
+	entry, err := s.Get(ctx, "config/zeroaddress")
 	if err != nil {
 		return nil, err
 	}

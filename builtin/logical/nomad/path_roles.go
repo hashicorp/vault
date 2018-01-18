@@ -75,7 +75,7 @@ func (b *backend) Role(storage logical.Storage, name string) (*roleConfig, error
 		return nil, errors.New("invalid role name")
 	}
 
-	entry, err := storage.Get("role/" + name)
+	entry, err := storage.Get(ctx, "role/"+name)
 	if err != nil {
 		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
@@ -91,7 +91,7 @@ func (b *backend) Role(storage logical.Storage, name string) (*roleConfig, error
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -173,7 +173,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 
 func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	if err := req.Storage.Delete("role/" + name); err != nil {
+	if err := req.Storage.Delete(ctx, "role/"+name); err != nil {
 		return nil, err
 	}
 	return nil, nil

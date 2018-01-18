@@ -82,7 +82,7 @@ func (b *backend) user(s logical.Storage, username string) (*UserEntry, error) {
 		return nil, fmt.Errorf("missing username")
 	}
 
-	entry, err := s.Get("user/" + strings.ToLower(username))
+	entry, err := s.Get(ctx, "user/"+strings.ToLower(username))
 	if err != nil {
 		return nil, err
 	}
@@ -104,11 +104,11 @@ func (b *backend) setUser(s logical.Storage, username string, userEntry *UserEnt
 		return err
 	}
 
-	return s.Put(entry)
+	return req.Storage.Put(ctx, entry)
 }
 
 func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	users, err := req.Storage.List("user/")
+	users, err := req.Storage.List(ctx, "user/")
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("user/" + strings.ToLower(d.Get("username").(string)))
+	err := req.Storage.Delete(ctx, "user/"+strings.ToLower(d.Get("username").(string)))
 	if err != nil {
 		return nil, err
 	}

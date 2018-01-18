@@ -108,7 +108,7 @@ return the public key for the given context.`,
 }
 
 func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("policy/")
+	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}

@@ -294,7 +294,7 @@ func (b *backend) nonLockedSetAWSRole(s logical.Storage, roleName string,
 		return err
 	}
 
-	if err := s.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return err
 	}
 
@@ -354,7 +354,7 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	entry, err := s.Get("role/" + strings.ToLower(roleName))
+	entry, err := s.Get(ctx, "role/"+strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	return nil, req.Storage.Delete("role/" + strings.ToLower(roleName))
+	return nil, req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
 }
 
 // pathRoleList is used to list all the AMI IDs registered with Vault.
@@ -388,7 +388,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *
 	b.roleMutex.RLock()
 	defer b.roleMutex.RUnlock()
 
-	roles, err := req.Storage.List("role/")
+	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}

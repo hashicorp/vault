@@ -143,7 +143,7 @@ func (b *backend) pathCertificatesList(ctx context.Context, req *logical.Request
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	certs, err := req.Storage.List("config/certificate/")
+	certs, err := req.Storage.List(ctx, "config/certificate/")
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (b *backend) awsPublicCertificates(s logical.Storage, isPkcs bool) ([]*x509
 	certs = append(certs, decodedCert)
 
 	// Get the list of all the registered certificates
-	registeredCerts, err := s.List("config/certificate/")
+	registeredCerts, err := s.List(ctx, "config/certificate/")
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func (b *backend) nonLockedSetAWSPublicCertificateEntry(s logical.Storage, certN
 		return fmt.Errorf("failed to create storage entry for AWS public key certificate")
 	}
 
-	return s.Put(entry)
+	return req.Storage.Put(ctx, entry)
 }
 
 // lockedAWSPublicCertificateEntry is used to get the configured AWS Public Key
@@ -278,7 +278,7 @@ func (b *backend) lockedAWSPublicCertificateEntry(s logical.Storage, certName st
 // the storage. This method does not acquire lock before reading the storage.
 // If locking is desired, use lockedAWSPublicCertificateEntry instead.
 func (b *backend) nonLockedAWSPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
-	entry, err := s.Get("config/certificate/" + certName)
+	entry, err := s.Get(ctx, "config/certificate/"+certName)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func (b *backend) pathConfigCertificateDelete(ctx context.Context, req *logical.
 		return logical.ErrorResponse("missing cert_name"), nil
 	}
 
-	return nil, req.Storage.Delete("config/certificate/" + certName)
+	return nil, req.Storage.Delete(ctx, "config/certificate/"+certName)
 }
 
 // pathConfigCertificateRead is used to view the configured AWS Public Key that

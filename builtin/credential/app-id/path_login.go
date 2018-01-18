@@ -93,7 +93,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	}
 
 	// Get the policies associated with the app
-	policies, err := b.MapAppId.Policies(req.Storage, appId)
+	policies, err := b.MapAppId.Policies(ctx, req.Storage, appId)
 	if err != nil {
 		return nil, err
 	}

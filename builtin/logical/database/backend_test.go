@@ -133,7 +133,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := storage.Put(entry); err != nil {
+	if err := storage.Put(ctx, entry); err != nil {
 		t.Fatal(err)
 	}
 
@@ -152,7 +152,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 		Key:   "role/test",
 		Value: []byte(badJSON),
 	}
-	if err := storage.Put(entry); err != nil {
+	if err := storage.Put(ctx, entry); err != nil {
 		t.Fatal(err)
 	}
 

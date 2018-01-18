@@ -147,7 +147,7 @@ func validateKeyTypeLength(keyType string, keyBits int) *logical.Response {
 // Fetches the CA info. Unlike other certificates, the CA info is stored
 // in the backend as a CertBundle, because we are storing its private key
 func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
-	bundleEntry, err := req.Storage.Get("config/ca_bundle")
+	bundleEntry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
 	}
@@ -212,7 +212,7 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 		path = "certs/" + hyphenSerial
 	}
 
-	certEntry, err = req.Storage.Get(path)
+	certEntry, err = req.Storage.Get(ctx, path)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
 	}
@@ -229,7 +229,7 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 	}
 
 	// Retrieve the old-style path
-	certEntry, err = req.Storage.Get(legacyPath)
+	certEntry, err = req.Storage.Get(ctx, legacyPath)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
 	}
@@ -242,10 +242,10 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 
 	// Update old-style paths to new-style paths
 	certEntry.Key = path
-	if err = req.Storage.Put(certEntry); err != nil {
+	if err = req.Storage.Put(ctx, certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
 	}
-	if err = req.Storage.Delete(legacyPath); err != nil {
+	if err = req.Storage.Delete(ctx, legacyPath); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
 

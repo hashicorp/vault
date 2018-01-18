@@ -73,7 +73,7 @@ type Backend interface {
 
 	// Initialize is invoked after a backend is created. It is the place to run
 	// any operations requiring storage; these should not be in the factory.
-	Initialize(context.Contex) error
+	Initialize(context.Context) error
 
 	// InvalidateKey may be invoked when an object is modified that belongs
 	// to the backend. The backend can use this to clear any caches or reset

@@ -169,7 +169,7 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 // Generates a RSA key pair and installs it in the remote target
 func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole, username, ip string) (string, string, error) {
 	// Fetch the host key to be used for dynamic key installation
-	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
+	keyEntry, err := req.Storage.Get(ctx, fmt.Sprintf("keys/%s", role.KeyName))
 	if err != nil {
 		return "", "", fmt.Errorf("key %q not found. err: %v", role.KeyName, err)
 	}
@@ -245,7 +245,7 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, sshOTPEntry *sshOT
 	if err != nil {
 		return "", err
 	}
-	if err := req.Storage.Put(newEntry); err != nil {
+	if err := req.Storage.Put(ctx, newEntry); err != nil {
 		return "", err
 	}
 	return otp, nil

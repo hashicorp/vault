@@ -38,7 +38,7 @@ func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d 
 		return framework.LeaseExtend(0, 0, b.System())(ctx, req, d)
 	}
 
-	entry, err := req.Storage.Get("policy/" + role)
+	entry, err := req.Storage.Get(ctx, "policy/"+role)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}

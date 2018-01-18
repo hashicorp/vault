@@ -77,7 +77,7 @@ func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request
  */
 func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 
-	storedConfig, err := req.Storage.Get("config")
+	storedConfig, err := req.Storage.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

@@ -52,18 +52,18 @@ func pathGroups(b *backend) *framework.Path {
 // but case-insensitive for comparisons
 func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, string, error) {
 	canonicalName := n
-	entry, err := s.Get("group/" + n)
+	entry, err := s.Get(ctx, "group/"+n)
 	if err != nil {
 		return nil, "", err
 	}
 	if entry == nil {
-		entries, err := s.List("group/")
+		entries, err := s.List(ctx, "group/")
 		if err != nil {
 			return nil, "", err
 		}
 		for _, groupName := range entries {
 			if strings.ToLower(groupName) == strings.ToLower(n) {
-				entry, err = s.Get("group/" + groupName)
+				entry, err = s.Get(ctx, "group/"+groupName)
 				if err != nil {
 					return nil, "", err
 				}
@@ -95,7 +95,7 @@ func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 	if entry != nil {
-		err := req.Storage.Delete("group/" + canonicalName)
+		err := req.Storage.Delete(ctx, "group/"+canonicalName)
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +149,7 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -157,7 +157,7 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groups, err := req.Storage.List("group/")
+	groups, err := req.Storage.List(ctx, "group/")
 	if err != nil {
 		return nil, err
 	}

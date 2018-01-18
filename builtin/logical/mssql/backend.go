@@ -74,7 +74,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 	}
 
 	// Otherwise, attempt to make connection
-	entry, err := s.Get("config/connection")
+	entry, err := s.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (b *backend) invalidate(key string) {
 
 // LeaseConfig returns the lease configuration
 func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
+	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err
 	}

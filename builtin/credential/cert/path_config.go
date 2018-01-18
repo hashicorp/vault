@@ -35,7 +35,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -43,7 +43,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 
 // Config returns the configuration for this backend.
 func (b *backend) Config(s logical.Storage) (*config, error) {
-	entry, err := s.Get("config")
+	entry, err := s.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}

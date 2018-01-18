@@ -62,7 +62,7 @@ func (b *backend) lockedConfigTidyRoleTags(s logical.Storage) (*tidyBlacklistRol
 }
 
 func (b *backend) nonLockedConfigTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
-	entry, err := s.Get(roletagBlacklistConfigPath)
+	entry, err := s.Get(ctx, roletagBlacklistConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(ctx context.Context
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -132,7 +132,7 @@ func (b *backend) pathConfigTidyRoletagBlacklistDelete(ctx context.Context, req 
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return nil, req.Storage.Delete(roletagBlacklistConfigPath)
+	return nil, req.Storage.Delete(ctx, roletagBlacklistConfigPath)
 }
 
 type tidyBlacklistRoleTagConfig struct {

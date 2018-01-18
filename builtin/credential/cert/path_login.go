@@ -60,7 +60,7 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var matched *ParsedCert
-	if verifyResp, resp, err := b.verifyCredentials(req, data); err != nil {
+	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -188,7 +188,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	return framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(ctx, req, d)
 }
 
-func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
+func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
 	// Get the connection state
 	if req.Connection == nil || req.Connection.ConnState == nil {
 		return nil, logical.ErrorResponse("tls connection required"), nil
@@ -209,7 +209,7 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 	}
 
 	// Load the trusted certificates
-	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage, certName)
+	roots, trusted, trustedNonCAs := b.loadTrustedCerts(ctx, req.Storage, certName)
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
@@ -328,11 +328,11 @@ func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, conf
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(store logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
+func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
 	pool = x509.NewCertPool()
 	trusted = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
-	names, err := store.List("cert/")
+	names, err := storage.List(ctx, "cert/")
 	if err != nil {
 		b.Logger().Error("cert: failed to list trusted certs", "error", err)
 		return

@@ -368,7 +368,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 		if keyName == "" {
 			return logical.ErrorResponse("missing key name"), nil
 		}
-		keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", keyName))
+		keyEntry, err := req.Storage.Get(ctx, fmt.Sprintf("keys/%s", keyName))
 		if err != nil || keyEntry == nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid 'key': %q", keyName)), nil
 		}
@@ -427,7 +427,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -473,7 +473,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 }
 
 func (b *backend) getRole(s logical.Storage, n string) (*sshRole, error) {
-	entry, err := s.Get("roles/" + n)
+	entry, err := s.Get(ctx, "roles/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -559,7 +559,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("roles/")
+	entries, err := req.Storage.List(ctx, "roles/")
 	if err != nil {
 		return nil, err
 	}
@@ -630,7 +630,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
-	err = req.Storage.Delete(fmt.Sprintf("roles/%s", roleName))
+	err = req.Storage.Delete(ctx, fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
 		return nil, err
 	}

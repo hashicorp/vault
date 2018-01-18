@@ -91,7 +91,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 			return nil, fmt.Errorf("Error creating revocation entry")
 		}
 
-		err = req.Storage.Put(revEntry)
+		err = req.Storage.Put(ctx, revEntry)
 		if err != nil {
 			return nil, fmt.Errorf("Error saving revoked certificate to new location")
 		}
@@ -120,7 +120,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
 func buildCRL(b *backend, req *logical.Request) error {
-	revokedSerials, err := req.Storage.List("revoked/")
+	revokedSerials, err := req.Storage.List(ctx, "revoked/")
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("Error fetching list of revoked certs: %s", err)}
 	}
@@ -128,7 +128,7 @@ func buildCRL(b *backend, req *logical.Request) error {
 	revokedCerts := []pkix.RevokedCertificate{}
 	var revInfo revocationInfo
 	for _, serial := range revokedSerials {
-		revokedEntry, err := req.Storage.Get("revoked/" + serial)
+		revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("Unable to fetch revoked cert with serial %s: %s", serial, err)}
 		}
@@ -191,7 +191,7 @@ func buildCRL(b *backend, req *logical.Request) error {
 		return errutil.InternalError{Err: fmt.Sprintf("Error creating new CRL: %s", err)}
 	}
 
-	err = req.Storage.Put(&logical.StorageEntry{
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "crl",
 		Value: crlBytes,
 	})

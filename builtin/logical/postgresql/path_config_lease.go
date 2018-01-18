@@ -57,7 +57,7 @@ func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

@@ -41,13 +41,13 @@ func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) err
 	}
 
 	bufferDuration := time.Duration(safety_buffer) * time.Second
-	tags, err := s.List("blacklist/roletag/")
+	tags, err := s.List(ctx, "blacklist/roletag/")
 	if err != nil {
 		return err
 	}
 
 	for _, tag := range tags {
-		tagEntry, err := s.Get("blacklist/roletag/" + tag)
+		tagEntry, err := s.Get(ctx, "blacklist/roletag/"+tag)
 		if err != nil {
 			return fmt.Errorf("error fetching tag %s: %s", tag, err)
 		}
@@ -66,7 +66,7 @@ func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) err
 		}
 
 		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-			if err := s.Delete("blacklist/roletag" + tag); err != nil {
+			if err := s.Delete(ctx, "blacklist/roletag"+tag); err != nil {
 				return fmt.Errorf("error deleting tag %s from storage: %s", tag, err)
 			}
 		}

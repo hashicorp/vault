@@ -1,6 +1,7 @@
 package keysutil
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -151,8 +152,8 @@ func (lm *LockManager) UpdateCache(name string, policy *Policy) {
 // Get the policy with a read lock. If we get an error saying an exclusive lock
 // is needed (for instance, for an upgrade/migration), give up the read lock,
 // call again with an exclusive lock, then swap back out for a read lock.
-func (lm *LockManager) GetPolicyShared(storage logical.Storage, name string) (*Policy, *sync.RWMutex, error) {
-	p, lock, _, err := lm.getPolicyCommon(PolicyRequest{
+func (lm *LockManager) GetPolicyShared(ctx context.Context, storage logical.Storage, name string) (*Policy, *sync.RWMutex, error) {
+	p, lock, _, err := lm.getPolicyCommon(ctx, PolicyRequest{
 		Storage: storage,
 		Name:    name,
 	}, shared)
@@ -162,7 +163,7 @@ func (lm *LockManager) GetPolicyShared(storage logical.Storage, name string) (*P
 	}
 
 	// Try again while asking for an exlusive lock
-	p, lock, _, err = lm.getPolicyCommon(PolicyRequest{
+	p, lock, _, err = lm.getPolicyCommon(ctx, PolicyRequest{
 		Storage: storage,
 		Name:    name,
 	}, exclusive)
@@ -172,7 +173,7 @@ func (lm *LockManager) GetPolicyShared(storage logical.Storage, name string) (*P
 
 	lock.Unlock()
 
-	p, lock, _, err = lm.getPolicyCommon(PolicyRequest{
+	p, lock, _, err = lm.getPolicyCommon(ctx, PolicyRequest{
 		Storage: storage,
 		Name:    name,
 	}, shared)
@@ -180,8 +181,8 @@ func (lm *LockManager) GetPolicyShared(storage logical.Storage, name string) (*P
 }
 
 // Get the policy with an exclusive lock
-func (lm *LockManager) GetPolicyExclusive(storage logical.Storage, name string) (*Policy, *sync.RWMutex, error) {
-	p, lock, _, err := lm.getPolicyCommon(PolicyRequest{
+func (lm *LockManager) GetPolicyExclusive(ctx context.Context, storage logical.Storage, name string) (*Policy, *sync.RWMutex, error) {
+	p, lock, _, err := lm.getPolicyCommon(ctx, PolicyRequest{
 		Storage: storage,
 		Name:    name,
 	}, exclusive)
@@ -191,17 +192,17 @@ func (lm *LockManager) GetPolicyExclusive(storage logical.Storage, name string) 
 // Get the policy with a read lock; if it returns that an exclusive lock is
 // needed, retry. If successful, call one more time to get a read lock and
 // return the value.
-func (lm *LockManager) GetPolicyUpsert(req PolicyRequest) (*Policy, *sync.RWMutex, bool, error) {
+func (lm *LockManager) GetPolicyUpsert(ctx context.Context, req PolicyRequest) (*Policy, *sync.RWMutex, bool, error) {
 	req.Upsert = true
 
-	p, lock, _, err := lm.getPolicyCommon(req, shared)
+	p, lock, _, err := lm.getPolicyCommon(ctx, req, shared)
 	if err == nil ||
 		(err != nil && err != errNeedExclusiveLock) {
 		return p, lock, false, err
 	}
 
 	// Try again while asking for an exlusive lock
-	p, lock, upserted, err := lm.getPolicyCommon(req, exclusive)
+	p, lock, upserted, err := lm.getPolicyCommon(ctx, req, exclusive)
 	if err != nil || p == nil || lock == nil {
 		return p, lock, upserted, err
 	}
@@ -209,14 +210,14 @@ func (lm *LockManager) GetPolicyUpsert(req PolicyRequest) (*Policy, *sync.RWMute
 
 	req.Upsert = false
 	// Now get a shared lock for the return, but preserve the value of upserted
-	p, lock, _, err = lm.getPolicyCommon(req, shared)
+	p, lock, _, err = lm.getPolicyCommon(ctx, req, shared)
 
 	return p, lock, upserted, err
 }
 
 // RestorePolicy acquires an exclusive lock on the policy name and restores the
 // given policy along with the archive.
-func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup string) error {
+func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string) error {
 	var p *Policy
 	var err error
 
@@ -254,7 +255,7 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup strin
 	}
 
 	// If the policy exists in storage, error out
-	p, err = lm.getStoredPolicy(storage, name)
+	p, err = lm.getStoredPolicy(ctx, storage, name)
 	if err != nil {
 		return err
 	}
@@ -264,7 +265,7 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup strin
 
 	// Restore the archived keys
 	if keyData.ArchivedKeys != nil {
-		err = keyData.Policy.storeArchive(keyData.ArchivedKeys, storage)
+		err = keyData.Policy.storeArchive(ctx, storage, keyData.ArchivedKeys)
 		if err != nil {
 			return fmt.Errorf("failed to restore archived keys for policy %q: %v", name, err)
 		}
@@ -277,7 +278,7 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup strin
 	}
 
 	// Restore the policy. This will also attempt to adjust the archive.
-	err = keyData.Policy.Persist(storage)
+	err = keyData.Policy.Persist(ctx, storage)
 	if err != nil {
 		return fmt.Errorf("failed to restore the policy %q: %v", name, err)
 	}
@@ -288,8 +289,8 @@ func (lm *LockManager) RestorePolicy(storage logical.Storage, name, backup strin
 	return nil
 }
 
-func (lm *LockManager) BackupPolicy(storage logical.Storage, name string) (string, error) {
-	p, lock, err := lm.GetPolicyExclusive(storage, name)
+func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage, name string) (string, error) {
+	p, lock, err := lm.GetPolicyExclusive(ctx, storage, name)
 	if lock != nil {
 		defer lock.Unlock()
 	}
@@ -300,7 +301,7 @@ func (lm *LockManager) BackupPolicy(storage logical.Storage, name string) (strin
 		return "", fmt.Errorf("invalid key %q", name)
 	}
 
-	backup, err := p.Backup(storage)
+	backup, err := p.Backup(ctx, storage)
 	if err != nil {
 		return "", err
 	}
@@ -313,7 +314,7 @@ func (lm *LockManager) BackupPolicy(storage logical.Storage, name string) (strin
 
 // When the function returns, a lock will be held on the policy if err == nil.
 // It is the caller's responsibility to unlock.
-func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Policy, *sync.RWMutex, bool, error) {
+func (lm *LockManager) getPolicyCommon(ctx context.Context, req PolicyRequest, lockType bool) (*Policy, *sync.RWMutex, bool, error) {
 	lock := lm.policyLock(req.Name, lockType)
 
 	var p *Policy
@@ -331,7 +332,7 @@ func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Polic
 	}
 
 	// Load it from storage
-	p, err = lm.getStoredPolicy(req.Storage, req.Name)
+	p, err = lm.getStoredPolicy(ctx, req.Storage, req.Name)
 	if err != nil {
 		lm.UnlockPolicy(lock, lockType)
 		return nil, nil, false, err
@@ -425,7 +426,7 @@ func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Polic
 			return nil, nil, false, errNeedExclusiveLock
 		}
 
-		err = p.Upgrade(req.Storage)
+		err = p.Upgrade(ctx, req.Storage)
 		if err != nil {
 			lm.UnlockPolicy(lock, lockType)
 			return nil, nil, false, err
@@ -451,7 +452,7 @@ func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Polic
 	return p, lock, false, nil
 }
 
-func (lm *LockManager) DeletePolicy(storage logical.Storage, name string) error {
+func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage, name string) error {
 	lm.cacheMutex.Lock()
 	lock := lm.policyLock(name, exclusive)
 	defer lock.Unlock()
@@ -464,7 +465,7 @@ func (lm *LockManager) DeletePolicy(storage logical.Storage, name string) error 
 		p = lm.cache[name]
 	}
 	if p == nil {
-		p, err = lm.getStoredPolicy(storage, name)
+		p, err = lm.getStoredPolicy(ctx, storage, name)
 		if err != nil {
 			return err
 		}
@@ -477,12 +478,12 @@ func (lm *LockManager) DeletePolicy(storage logical.Storage, name string) error 
 		return fmt.Errorf("deletion is not allowed for this policy")
 	}
 
-	err = storage.Delete("policy/" + name)
+	err = storage.Delete(ctx, "policy/"+name)
 	if err != nil {
 		return fmt.Errorf("error deleting policy %s: %s", name, err)
 	}
 
-	err = storage.Delete("archive/" + name)
+	err = storage.Delete(ctx, "archive/"+name)
 	if err != nil {
 		return fmt.Errorf("error deleting archive %s: %s", name, err)
 	}
@@ -494,9 +495,9 @@ func (lm *LockManager) DeletePolicy(storage logical.Storage, name string) error 
 	return nil
 }
 
-func (lm *LockManager) getStoredPolicy(storage logical.Storage, name string) (*Policy, error) {
+func (lm *LockManager) getStoredPolicy(ctx context.Context, storage logical.Storage, name string) (*Policy, error) {
 	// Check if the policy already exists
-	raw, err := storage.Get("policy/" + name)
+	raw, err := storage.Get(ctx, "policy/"+name)
 	if err != nil {
 		return nil, err
 	}
