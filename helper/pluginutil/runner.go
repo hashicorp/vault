@@ -1,6 +1,7 @@
 package pluginutil
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/tls"
 	"flag"
@@ -167,4 +168,19 @@ func (f *APIClientMeta) GetTLSConfig() *api.TLSConfig {
 	}
 
 	return nil
+}
+
+// CancelIfCanceled takes a context cancel func and a context. If the context is
+// shutdown the cancelfunc is called. This is useful for merging two cancel
+// functions.
+func CtxCancelIfCanceled(f context.CancelFunc, ctxCanceler context.Context) chan struct{} {
+	quitCh := make(chan struct{})
+	go func() {
+		select {
+		case <-quitCh:
+		case <-ctxCanceler.Done():
+			f()
+		}
+	}()
+	return quitCh
 }

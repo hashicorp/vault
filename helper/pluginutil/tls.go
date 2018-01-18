@@ -97,6 +97,8 @@ func createClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      clientCertPool,
+		ClientCAs:    clientCertPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ServerName:   clientCert.Subject.CommonName,
 		MinVersion:   tls.VersionTLS12,
 	}
@@ -234,6 +236,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 			// TLS 1.2 minimum
 			MinVersion:   tls.VersionTLS12,
 			Certificates: []tls.Certificate{cert},
+			ServerName:   serverCert.Subject.CommonName,
 		}
 		tlsConfig.BuildNameToCertificate()
 

@@ -1021,10 +1021,10 @@
 			"revisionTime": "2017-06-22T06:09:55Z"
 		},
 		{
-			"checksumSHA1": "QSH/KjHRLljyZDXMmkd9fdqbr3I=",
+			"checksumSHA1": "fqYiU+mDu70k2aeHdYZrZbCnUjM=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "e37881a3f1a07fce82b3d99ce0342a72e53386bc",
-			"revisionTime": "2018-01-11T18:21:30Z"
+			"revision": "4b3b29102a1e16e60f22e79904ef3490f210f58d",
+			"revisionTime": "2018-01-18T02:43:51Z"
 		},
 		{
 			"checksumSHA1": "yzoWV7yrS/TvOrKy5ZrdUjsYaOA=",
@@ -1375,6 +1375,12 @@
 			"path": "github.com/ncw/swift",
 			"revision": "c95c6e5c2d1a3d37fc44c8c6dc9e231c7500667d",
 			"revisionTime": "2017-10-19T11:44:56Z"
+		},
+		{
+			"checksumSHA1": "Sfxv8SV6j8m6YD+hwvlMJjq2zfg=",
+			"path": "github.com/oklog/run",
+			"revision": "4dadeb3030eda0273a12382bb2348ffc7c9d1a39",
+			"revisionTime": "2017-11-14T00:29:35Z"
 		},
 		{
 			"checksumSHA1": "OFNit1Qx2DdWhotfREKodDNUwCM=",

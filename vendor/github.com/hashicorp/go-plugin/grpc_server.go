@@ -51,6 +51,7 @@ type GRPCServer struct {
 
 	config GRPCServerConfig
 	server *grpc.Server
+	broker *GRPCBroker
 }
 
 // ServerProtocol impl.
@@ -68,6 +69,12 @@ func (s *GRPCServer) Init() error {
 		GRPCServiceName, grpc_health_v1.HealthCheckResponse_SERVING)
 	grpc_health_v1.RegisterHealthServer(s.server, healthCheck)
 
+	// Register the broker service
+	brokerServer := newGRPCBrokerServer()
+	RegisterGRPCBrokerServer(s.server, brokerServer)
+	s.broker = newGRPCBroker(brokerServer, s.TLS)
+	go s.broker.Run()
+
 	// Register all our plugins onto the gRPC server.
 	for k, raw := range s.Plugins {
 		p, ok := raw.(GRPCPlugin)
@@ -75,7 +82,7 @@ func (s *GRPCServer) Init() error {
 			return fmt.Errorf("%q is not a GRPC-compatibile plugin", k)
 		}
 
-		if err := p.GRPCServer(s.server); err != nil {
+		if err := p.GRPCServer(s.broker, s.server); err != nil {
 			return fmt.Errorf("error registring %q: %s", k, err)
 		}
 	}
