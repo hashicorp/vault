@@ -2,6 +2,18 @@
 
 DEPRECATIONS/CHANGES:
 
+ * `sys/health` DR Secondary Reporting: The `replication_dr_secondary` bool
+   returned by `sys/health` could be misleading since it would be `false` both
+   when a cluster was not a DR secondary but also when the node is a standby in
+   the cluster and has not yet fully received state from the active node. This
+   could cause health checks on LBs to decide that the node was acceptable for
+   traffic even though DR secondaries cannot handle normal Vault traffic. This
+   has been replaced by `replication_dr_state` and
+   `replication_performance_state` which are string values that convey the
+   current state of the node; a value of `disabled` indicates that replication
+   is disabled or the state is still being discovered. As a result, an LB check
+   can positively verify that the node is both not `disabled` and is not a DR
+   secondary, and avoid sending traffic to it in both cases.
  * PKI Secret Backend Roles parameter types: For `ou` and `organization` 
    in role definitions in the PKI secret backend, input can now be a 
    comma-separated string or an array of strings. Reading a role will 
