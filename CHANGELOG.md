@@ -33,6 +33,7 @@ IMPROVEMENTS:
  * auth/okta: Support JSON lists when specifying groups and policies [GH-3801]
  * autoseal/hsm: Attempt reconnecting to the HSM on certain kinds of errors
    (Enterprise)
+ * core: Report replication status in `sys/health` [GH-3810]
  * physical/s3: Allow using paths with S3 for non-AWS deployments [GH-3730]
  * physical/s3: Add ability to disable SSL for non-AWS deployments [GH-3730]
  * plugins: Args for plugins can now be specified separately from the command,
