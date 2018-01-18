@@ -130,7 +130,7 @@ func (b *backend) pathConfigCertificateExistenceCheck(ctx context.Context, req *
 		return false, fmt.Errorf("missing cert_name")
 	}
 
-	entry, err := b.lockedAWSPublicCertificateEntry(req.Storage, certName)
+	entry, err := b.lockedAWSPublicCertificateEntry(ctx, req.Storage, certName)
 	if err != nil {
 		return false, err
 	}
@@ -260,7 +260,7 @@ func (b *backend) nonLockedSetAWSPublicCertificateEntry(ctx context.Context, s l
 		return fmt.Errorf("failed to create storage entry for AWS public key certificate")
 	}
 
-	return req.Storage.Put(ctx, entry)
+	return s.Put(ctx, entry)
 }
 
 // lockedAWSPublicCertificateEntry is used to get the configured AWS Public Key

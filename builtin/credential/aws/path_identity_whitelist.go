@@ -54,7 +54,7 @@ func (b *backend) pathWhitelistIdentitiesList(ctx context.Context, req *logical.
 }
 
 // Fetch an item from the whitelist given an instance ID.
-func whitelistIdentityEntry(s logical.Storage, instanceID string) (*whitelistIdentity, error) {
+func whitelistIdentityEntry(ctx context.Context, s logical.Storage, instanceID string) (*whitelistIdentity, error) {
 	entry, err := s.Get(ctx, "whitelist/identity/"+instanceID)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func whitelistIdentityEntry(s logical.Storage, instanceID string) (*whitelistIde
 
 // Stores an instance ID and the information required to validate further login/renewal attempts from
 // the same instance ID.
-func setWhitelistIdentityEntry(s logical.Storage, instanceID string, identity *whitelistIdentity) error {
+func setWhitelistIdentityEntry(ctx context.Context, s logical.Storage, instanceID string, identity *whitelistIdentity) error {
 	entry, err := logical.StorageEntryJSON("whitelist/identity/"+instanceID, identity)
 	if err != nil {
 		return err

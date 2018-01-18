@@ -34,7 +34,7 @@ func GenerateLoginData(accessKey, secretKey, sessionToken, headerValue string) (
 		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
 	}
 
-	_, err = creds.Get(ctx)
+	_, err = creds.Get()
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve credentials from credential chain: %v", err)
 	}
