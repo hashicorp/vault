@@ -290,14 +290,6 @@ func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
 }
 
-// RegisterLicense performs backend license registration.
-func (b *Backend) RegisterLicense(license interface{}) error {
-	if b.LicenseRegistration == nil {
-		return nil
-	}
-	return b.LicenseRegistration(license)
-}
-
 // SanitizeTTLStr takes in the TTL and MaxTTL values provided by the user,
 // compares those with the SystemView values. If they are empty a value of 0 is
 // set, which will cause initial secret or LeaseExtend operations to use the

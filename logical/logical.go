@@ -86,9 +86,6 @@ type Backend interface {
 
 	// Type returns the BackendType for the particular backend
 	Type() BackendType
-
-	// RegisterLicense performs backend license registration
-	RegisterLicense(interface{}) error
 }
 
 // BackendConfig is provided to the factory to initialize the backend

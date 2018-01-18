@@ -103,8 +103,13 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return nil, err
 	}
+
 	if lease != nil {
-		resp.Secret.TTL = lease.TTL
+		ttl := lease.TTL
+		if ttl == 0 || (lease.MaxTTL > 0 && ttl > lease.MaxTTL) {
+			ttl = lease.MaxTTL
+		}
+		resp.Secret.TTL = ttl
 	}
 
 	return resp, nil

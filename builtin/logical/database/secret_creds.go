@@ -50,7 +50,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 
 		// Grab the read lock
 		b.RLock()
-		var unlockFunc func() = b.RUnlock
+		unlockFunc := b.RUnlock
 
 		// Get the Database object
 		db, ok := b.getDBObj(role.DBName)
@@ -71,14 +71,14 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		// Make sure we increase the VALID UNTIL endpoint for this user.
 		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
 			err := db.RenewUser(ctx, role.Statements, username, expireTime)
-			// Unlock
-			unlockFunc()
 			if err != nil {
+				unlockFunc()
 				b.closeIfShutdown(role.DBName, err)
 				return nil, err
 			}
 		}
 
+		unlockFunc()
 		return resp, nil
 	}
 }
@@ -109,7 +109,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 
 		// Grab the read lock
 		b.RLock()
-		var unlockFunc func() = b.RUnlock
+		unlockFunc := b.RUnlock
 
 		// Get our connection
 		db, ok := b.getDBObj(role.DBName)
@@ -127,14 +127,13 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			}
 		}
 
-		err = db.RevokeUser(ctx, role.Statements, username)
-		// Unlock
-		unlockFunc()
-		if err != nil {
+		if err := db.RevokeUser(ctx, role.Statements, username); err != nil {
+			unlockFunc()
 			b.closeIfShutdown(role.DBName, err)
 			return nil, err
 		}
 
+		unlockFunc()
 		return resp, nil
 	}
 }

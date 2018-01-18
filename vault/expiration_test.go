@@ -790,7 +790,119 @@ func TestExpiration_RenewToken(t *testing.T) {
 	}
 
 	if auth.ClientToken != out.Auth.ClientToken {
-		t.Fatalf("Bad: %#v", out)
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
+func TestExpiration_RenewToken_period(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.rootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Register a token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+		Period: time.Minute,
+	}
+	err = exp.RegisterAuth("auth/token/login", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Renew the token
+	out, err := exp.RenewToken(&logical.Request{}, "auth/token/login", root.ID, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if auth.ClientToken != out.Auth.ClientToken {
+		t.Fatalf("bad: %#v", out)
+	}
+
+	if out.Auth.TTL > time.Minute {
+		t.Fatalf("expected TTL to be less than 1 minute, got: %s", out.Auth.TTL)
+	}
+}
+
+func TestExpiration_RenewToken_period_backend(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.rootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Mount a noop backend
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Auth: &logical.Auth{
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       10 * time.Second,
+					Renewable: true,
+				},
+				Period: 5 * time.Second,
+			},
+		},
+		DefaultLeaseTTL: 5 * time.Second,
+		MaxLeaseTTL:     5 * time.Second,
+	}
+
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, credentialBarrierPrefix)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register a token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       10 * time.Second,
+			Renewable: true,
+			IssueTime: time.Now(),
+		},
+		Period: 5 * time.Second,
+	}
+
+	err = exp.RegisterAuth("auth/foo/login", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Wait 3 seconds
+	time.Sleep(3 * time.Second)
+	resp, err := exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("expected a response")
+	}
+	if resp.Auth.TTL > 5*time.Second {
+		t.Fatalf("expected TTL to be less than or equal to period, got: %s", resp.Auth.TTL)
+	}
+
+	// Wait another 3 seconds. If period works correctly, this should not fail
+	time.Sleep(3 * time.Second)
+	resp, err = exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("expected a response")
+	}
+	if resp.Auth.TTL < 4*time.Second || resp.Auth.TTL > 5*time.Second {
+		t.Fatalf("expected TTL to be around period's value, got: %s", resp.Auth.TTL)
 	}
 }
 
@@ -1222,7 +1334,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		},
 	}
 	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "auth/foo/")
+	view := NewBarrierView(barrier, "auth/")
 	meUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
