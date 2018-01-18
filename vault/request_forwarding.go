@@ -421,7 +421,8 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
 	}
 	return &EchoReply{
-		Message: "pong",
+		Message:          "pong",
+		ReplicationState: uint32(s.core.ReplicationState()),
 	}, nil
 }
 
@@ -461,6 +462,9 @@ func (c *forwardingClient) startHeartbeat() {
 				c.core.logger.Debug("forwarding: unexpected echo response from active node", "message", resp.Message)
 				return
 			}
+			// Store the active node's replication state to display in
+			// sys/health calls
+			atomic.StoreUint32(c.core.replicationState, resp.ReplicationState)
 			c.core.logger.Trace("forwarding: successful heartbeat")
 		}
 
