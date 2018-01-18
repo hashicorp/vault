@@ -115,7 +115,13 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 	}, map[string]interface{}{
 		"username": username,
 	})
-	resp.Secret.TTL = leaseConfig.TTL
+
+	ttl := leaseConfig.TTL
+	if ttl == 0 || (leaseConfig.TTLMax > 0 && ttl > leaseConfig.TTLMax) {
+		ttl = leaseConfig.TTLMax
+	}
+	resp.Secret.TTL = ttl
+
 	return resp, nil
 }
 
