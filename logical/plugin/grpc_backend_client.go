@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"errors"
-	"time"
 
 	"google.golang.org/grpc"
 
@@ -14,7 +13,7 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
-var ErrPluginShutdown = errors.New("plugin is shutdown")
+var ErrPluginShutdown = errors.New("plugin is shut down")
 
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
@@ -128,11 +127,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 }
 
 func (b *backendGRPCPluginClient) Cleanup() {
-	// Timout the connection incase we have a bad connection. We can't block on
-	// shutdown.
-	ctx, cancel := context.WithTimeout(b.doneCtx, time.Second)
-	defer cancel()
-	b.client.Cleanup(ctx, &pb.Empty{})
+	b.client.Cleanup(b.doneCtx, &pb.Empty{})
 	if b.server != nil {
 		b.server.GracefulStop()
 	}
@@ -192,7 +187,7 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 		Config:   config.Config,
 	}
 
-	reply, err := b.client.Setup(context.Background(), args)
+	reply, err := b.client.Setup(b.doneCtx, args)
 	if err != nil {
 		return err
 	}
@@ -208,9 +203,7 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 }
 
 func (b *backendGRPCPluginClient) Type() logical.BackendType {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	reply, err := b.client.Type(ctx, &pb.Empty{})
+	reply, err := b.client.Type(b.doneCtx, &pb.Empty{})
 	if err != nil {
 		return logical.TypeUnknown
 	}

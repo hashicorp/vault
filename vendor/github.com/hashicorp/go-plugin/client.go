@@ -462,6 +462,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 			// Close the logging channel since that doesn't work on reattach
 			close(c.doneLogging)
+
 			// Cancel the context
 			ctxCancel()
 		}(p.Pid)
@@ -541,6 +542,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 		// Mark that we exited
 		close(exitCh)
+
 		// Cancel the context, marking that we exited
 		ctxCancel()
 
