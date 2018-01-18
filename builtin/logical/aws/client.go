@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func getRootConfig(s logical.Storage, clientType string) (*aws.Config, error) {
+func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
 	var endpoint string
 
@@ -63,8 +64,8 @@ func getRootConfig(s logical.Storage, clientType string) (*aws.Config, error) {
 	}, nil
 }
 
-func clientIAM(s logical.Storage) (*iam.IAM, error) {
-	awsConfig, err := getRootConfig(s, "iam")
+func clientIAM(ctx context.Context, s logical.Storage) (*iam.IAM, error) {
+	awsConfig, err := getRootConfig(ctx, s, "iam")
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +78,8 @@ func clientIAM(s logical.Storage) (*iam.IAM, error) {
 	return client, nil
 }
 
-func clientSTS(s logical.Storage) (*sts.STS, error) {
-	awsConfig, err := getRootConfig(s, "sts")
+func clientSTS(ctx context.Context, s logical.Storage) (*sts.STS, error) {
+	awsConfig, err := getRootConfig(ctx, s, "sts")
 	if err != nil {
 		return nil, err
 	}

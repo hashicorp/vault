@@ -239,7 +239,7 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 	// requests to use the same SecretID will fail.
 	if result.SecretIDNumUses == 1 {
 		// Delete the secret IDs accessor first
-		if err := b.deleteSecretIDAccessorEntry(req.Storage, result.SecretIDAccessor); err != nil {
+		if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, result.SecretIDAccessor); err != nil {
 			return false, nil, err
 		}
 		if err := req.Storage.Delete(ctx, entryIndex); err != nil {
@@ -361,7 +361,7 @@ func (b *backend) nonLockedSecretIDStorageEntry(ctx context.Context, s logical.S
 	}
 
 	if persistNeeded {
-		if err := b.nonLockedSetSecretIDStorageEntry(s, roleNameHMAC, secretIDHMAC, &result); err != nil {
+		if err := b.nonLockedSetSecretIDStorageEntry(ctx, s, roleNameHMAC, secretIDHMAC, &result); err != nil {
 			return nil, fmt.Errorf("failed to upgrade role storage entry %s", err)
 		}
 	}
@@ -458,11 +458,11 @@ func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, 
 	}
 
 	// Before storing the SecretID, store its accessor.
-	if err := b.createSecretIDAccessorEntry(s, secretEntry, secretIDHMAC); err != nil {
+	if err := b.createSecretIDAccessorEntry(ctx, s, secretEntry, secretIDHMAC); err != nil {
 		return nil, err
 	}
 
-	if err := b.nonLockedSetSecretIDStorageEntry(s, roleNameHMAC, secretIDHMAC, secretEntry); err != nil {
+	if err := b.nonLockedSetSecretIDStorageEntry(ctx, s, roleNameHMAC, secretIDHMAC, secretEntry); err != nil {
 		return nil, err
 	}
 
@@ -526,7 +526,7 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 		SecretIDHMAC: secretIDHMAC,
 	}); err != nil {
 		return err
-	} else if err = req.Storage.Put(ctx, entry); err != nil {
+	} else if err = s.Put(ctx, entry); err != nil {
 		return fmt.Errorf("failed to persist accessor index entry: %v", err)
 	}
 

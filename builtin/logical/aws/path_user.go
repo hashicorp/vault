@@ -48,7 +48,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 		req.Storage, req.DisplayName, policyName, string(policy.Value))
 }
 
-func pathUserRollback(req *logical.Request, _kind string, data interface{}) error {
+func pathUserRollback(ctx context.Context, req *logical.Request, _kind string, data interface{}) error {
 	var entry walUser
 	if err := mapstructure.Decode(data, &entry); err != nil {
 		return err
@@ -56,7 +56,7 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 	username := entry.UserName
 
 	// Get the client
-	client, err := clientIAM(req.Storage)
+	client, err := clientIAM(ctx, req.Storage)
 	if err != nil {
 		return err
 	}
