@@ -47,6 +47,9 @@ BUG FIXES:
  * identity: Delete group alias when an external group is deleted [GH-3773]
  * secret/database: Fix a location where a lock could potentially not be
    released, leading to deadlock [GH-3774]
+ * secret/(all databases) Fix behavior where if a max TTL was specified but no
+   default TTL was specified the system/mount default TTL would be used but not
+   be capped by the local max TTL [GH-3814]
 
 ## 0.9.1 (December 21st, 2017)
 
