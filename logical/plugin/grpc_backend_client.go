@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"errors"
-	"time"
 
 	"google.golang.org/grpc"
 
@@ -128,11 +127,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 }
 
 func (b *backendGRPCPluginClient) Cleanup() {
-	// Timout the connection incase we have a bad connection. We can't block on
-	// shutdown.
-	ctx, cancel := context.WithTimeout(b.doneCtx, time.Second)
-	defer cancel()
-	b.client.Cleanup(ctx, &pb.Empty{})
+	b.client.Cleanup(b.doneCtx, &pb.Empty{})
 	if b.server != nil {
 		b.server.GracefulStop()
 	}
