@@ -13,7 +13,7 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
-var ErrPluginShutdown = errors.New("plugin is shutdown")
+var ErrPluginShutdown = errors.New("plugin is shut down")
 
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
