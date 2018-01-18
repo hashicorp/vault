@@ -706,10 +706,6 @@ func (n *rawHTTP) Type() logical.BackendType {
 	return logical.TypeUnknown
 }
 
-func (n *rawHTTP) RegisterLicense(license interface{}) error {
-	return nil
-}
-
 func GenerateRandBytes(length int) ([]byte, error) {
 	if length < 0 {
 		return nil, fmt.Errorf("length must be >= 0")
