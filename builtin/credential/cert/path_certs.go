@@ -101,7 +101,7 @@ TTL will be set to the value of this parameter.`,
 	}
 }
 
-func (b *backend) Cert(s logical.Storage, n string) (*CertEntry, error) {
+func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertEntry, error) {
 	entry, err := s.Get(ctx, "cert/"+strings.ToLower(n))
 	if err != nil {
 		return nil, err

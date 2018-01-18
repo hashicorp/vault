@@ -25,7 +25,7 @@ func pathTidySecretID(b *backend) *framework.Path {
 }
 
 // tidySecretID is used to delete entries in the whitelist that are expired.
-func (b *backend) tidySecretID(s logical.Storage) error {
+func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 	grabbed := atomic.CompareAndSwapUint32(&b.tidySecretIDCASGuard, 0, 1)
 	if grabbed {
 		defer atomic.StoreUint32(&b.tidySecretIDCASGuard, 0)
@@ -90,7 +90,7 @@ func (b *backend) tidySecretID(s logical.Storage) error {
 
 // pathTidySecretIDUpdate is used to delete the expired SecretID entries
 func (b *backend) pathTidySecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, b.tidySecretID(req.Storage)
+	return nil, b.tidySecretID(ctx, req.Storage)
 }
 
 const pathTidySecretIDSyn = "Trigger the clean-up of expired SecretID entries."

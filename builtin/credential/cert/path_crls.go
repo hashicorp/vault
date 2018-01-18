@@ -160,7 +160,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, d *fram
 		return logical.ErrorResponse(`"name" parameter must be set`), nil
 	}
 
-	if err := b.populateCRLs(req.Storage); err != nil {
+	if err := b.populateCRLs(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
@@ -198,7 +198,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("parsed CRL is nil"), nil
 	}
 
-	if err := b.populateCRLs(req.Storage); err != nil {
+	if err := b.populateCRLs(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 

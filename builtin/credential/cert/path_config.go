@@ -42,7 +42,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 }
 
 // Config returns the configuration for this backend.
-func (b *backend) Config(s logical.Storage) (*config, error) {
+func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error) {
 	entry, err := s.Get(ctx, "config")
 	if err != nil {
 		return nil, err
