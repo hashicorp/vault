@@ -409,8 +409,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 	c.pluginDirectory = directoryPath
 	c.pluginCatalog.directory = directoryPath
 
-	command := fmt.Sprintf("%s --test.run=%s", filepath.Base(os.Args[0]), testFunc)
-	err = c.pluginCatalog.Set(name, command, sum)
+	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
+	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
+	err = c.pluginCatalog.Set(name, command, args, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -472,8 +473,9 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir stri
 	c.pluginDirectory = fullPath
 	c.pluginCatalog.directory = fullPath
 
-	command := fmt.Sprintf("%s --test.run=%s", filepath.Base(os.Args[0]), testFunc)
-	err = c.pluginCatalog.Set(name, command, sum)
+	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
+	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
+	err = c.pluginCatalog.Set(name, command, args, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
