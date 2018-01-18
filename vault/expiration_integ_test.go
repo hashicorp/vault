@@ -1,6 +1,7 @@
 package vault_test
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -106,6 +107,28 @@ func TestExpiration_RenewToken_TestCluster(t *testing.T) {
 		t.Fatal("expected a response for renew")
 	}
 
+	// Perform token lookup and verify TTL
+	resp, err = client.Auth().Token().Lookup(roleToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected a response for token lookup")
+	}
+
+	ttlRaw, ok := resp.Data["ttl"].(json.Number)
+	if !ok {
+		t.Fatal("no ttl value found in data object")
+	}
+	ttlInt, err := ttlRaw.Int64()
+	if err != nil {
+		t.Fatalf("unable to convert ttl to int: %s", err)
+	}
+	ttl := time.Duration(ttlInt) * time.Second
+	if ttl < 4*time.Second {
+		t.Fatal("expected ttl value to be around 5s")
+	}
+
 	// Wait 3 seconds
 	time.Sleep(3 * time.Second)
 
@@ -119,4 +142,27 @@ func TestExpiration_RenewToken_TestCluster(t *testing.T) {
 	if resp == nil {
 		t.Fatal("expected a response for renew")
 	}
+
+	// Perform token lookup and verify TTL
+	resp, err = client.Auth().Token().Lookup(roleToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected a response for token lookup")
+	}
+
+	ttlRaw, ok = resp.Data["ttl"].(json.Number)
+	if !ok {
+		t.Fatal("no ttl value found in data object")
+	}
+	ttlInt, err = ttlRaw.Int64()
+	if err != nil {
+		t.Fatalf("unable to convert ttl to int: %s", err)
+	}
+	ttl = time.Duration(ttlInt) * time.Second
+	if ttl < 4*time.Second {
+		t.Fatal("expected ttl value to be around 5s")
+	}
+
 }
