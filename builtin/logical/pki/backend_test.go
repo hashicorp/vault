@@ -1492,7 +1492,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.ParseDedupLowercaseAndSortStrings(role.OU, ",")
+			expected := strutil.RemoveDuplicates(role.OU, true)
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
 			}
@@ -1513,7 +1513,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.ParseDedupLowercaseAndSortStrings(role.Organization, ",")
+			expected := strutil.RemoveDuplicates(role.Organization, true)
 			if !reflect.DeepEqual(cert.Subject.Organization, expected) {
 				return fmt.Errorf("Error: returned certificate has Organization of %s but %s was specified in the role.", cert.Subject.Organization, expected)
 			}
@@ -1798,18 +1798,18 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// OU tests
 	{
-		roleVals.OU = "foo"
+		roleVals.OU = []string{"foo"}
 		addTests(getOuCheck(roleVals))
 
-		roleVals.OU = "foo,bar"
+		roleVals.OU = []string{"foo", "bar"}
 		addTests(getOuCheck(roleVals))
 	}
 	// Organization tests
 	{
-		roleVals.Organization = "system:masters"
+		roleVals.Organization = []string{"system:masters"}
 		addTests(getOrganizationCheck(roleVals))
 
-		roleVals.Organization = "foo,bar"
+		roleVals.Organization = []string{"foo", "bar"}
 		addTests(getOrganizationCheck(roleVals))
 	}
 	// IP SAN tests

@@ -185,15 +185,13 @@ include the Common Name (cn). Defaults to true.`,
 			},
 
 			"ou": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "",
+				Type: framework.TypeCommaStringSlice,
 				Description: `If set, the OU (OrganizationalUnit) will be set to
 this value in certificates issued by this role.`,
 			},
 
 			"organization": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "",
+				Type: framework.TypeCommaStringSlice,
 				Description: `If set, the O (Organization) will be set to
 this value in certificates issued by this role.`,
 			},
@@ -303,6 +301,20 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		modified = true
 	}
 
+	// Upgrade OU
+	if result.OUOld != "" {
+		result.OU = strings.Split(result.OUOld, ",")
+		result.OUOld = ""
+		modified = true
+	}
+
+	// Upgrade Organization
+	if result.OrganizationOld != "" {
+		result.Organization = strings.Split(result.OrganizationOld, ",")
+		result.OrganizationOld = ""
+		modified = true
+	}
+
 	if modified {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
@@ -394,8 +406,8 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:          data.Get("use_csr_sans").(bool),
 		KeyUsage:            data.Get("key_usage").([]string),
-		OU:                  data.Get("ou").(string),
-		Organization:        data.Get("organization").(string),
+		OU:                  data.Get("ou").([]string),
+		Organization:        data.Get("organization").([]string),
 		GenerateLease:       new(bool),
 		NoStore:             data.Get("no_store").(bool),
 	}
@@ -522,8 +534,10 @@ type roleEntry struct {
 	MaxPathLength         *int     `json:",omitempty" mapstructure:"max_path_length"`
 	KeyUsageOld           string   `json:"key_usage,omitempty"`
 	KeyUsage              []string `json:"key_usage_list" mapstructure:"key_usage"`
-	OU                    string   `json:"ou" mapstructure:"ou"`
-	Organization          string   `json:"organization" mapstructure:"organization"`
+	OUOld                 string   `json:"ou,omitempty"`
+	OU                    []string `json:"ou_list" mapstructure:"ou"`
+	OrganizationOld       string   `json:"organization,omitempty"`
+	Organization          []string `json:"organization_list" mapstructure:"organization"`
 	GenerateLease         *bool    `json:"generate_lease,omitempty"`
 	NoStore               bool     `json:"no_store" mapstructure:"no_store"`
 
