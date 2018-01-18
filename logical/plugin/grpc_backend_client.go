@@ -192,7 +192,7 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 		Config:   config.Config,
 	}
 
-	reply, err := b.client.Setup(context.Background(), args)
+	reply, err := b.client.Setup(b.doneCtx, args)
 	if err != nil {
 		return err
 	}
@@ -208,9 +208,7 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 }
 
 func (b *backendGRPCPluginClient) Type() logical.BackendType {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	reply, err := b.client.Type(ctx, &pb.Empty{})
+	reply, err := b.client.Type(b.doneCtx, &pb.Empty{})
 	if err != nil {
 		return logical.TypeUnknown
 	}
