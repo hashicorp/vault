@@ -49,17 +49,12 @@ like any other tokens so that the risk of unauthorized access can be minimized.
 ## Prerequisites
 
 To perform the tasks described in this guide, you need to have a Vault
-environment.  You can follow the [Getting Started][getting-started] guide to
-[install Vault][install-vault]. Alternatively, if you are familiar with
-[Vagrant](https://www.vagrantup.com/), you can spin up a
-[HashiStack](https://github.com/hashicorp/vault-guides/tree/master/provision/hashistack/vagrant)
-virtual machine.
+environment.  Refer to the [Getting
+Started](/intro/getting-started/install.html) guide to install Vault.
 
-Make sure that your Vault server has been [initialized and unsealed][initialize].
+Make sure that your Vault server has been [initialized and
+unsealed](/intro/getting-started/deploy.html).
 
-[getting-started]: /intro/getting-started/install.html
-[install-vault]: /intro/getting-started/install.html
-[initialize]: /intro/getting-started/deploy.html
 
 ## Steps
 
@@ -99,6 +94,19 @@ wrapped_accessor:            	195763a9-3f26-1fcf-6a1a-ee0a11e76cb1
 ```
 
 #### API call using cURL
+
+Before begin, create the following environment variables for your convenience:
+
+- **VAULT_ADDR** is set to your Vault server address
+- **VAULT_TOKEN** is set to your Vault token
+
+**Example:**
+
+```plaintext
+$ export VAULT_ADDR=http://127.0.0.1:8201
+
+$ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
+```
 
 Response wrapping is per-request and is triggered by providing to Vault the
 desired TTL for a response-wrapping token for that request. This is set using
@@ -150,10 +158,13 @@ Or
 VAULT_TOKEN=<WRAPPING_TOKEN> vault unwrap
 ```
 
+In this scenario, the wrapped secret is a Vault token. Therefore, it probably
+makes better sense to use the second option.
+
 **Example:**
 
 ```shell
-$ vault unwrap 9ac59985-094f-a2de-aed8-bf688e436fbc
+$ VAULT_TOKEN=9ac59985-094f-a2de-aed8-bf688e436fbc vault unwrap
 
 Key            	Value
 ---            	-----
@@ -194,7 +205,7 @@ curl -X POST -H "X-Vault-Token: $WRAPPING_TOKEN" $VAULT_ADDR/v1/sys/wrapping/unw
 ```
 
 
-## Reference Content
+## Additional Discussion
 
 Similar to the key/value secret backend, the cubbyhole backend is mounted at the
 **`cubbyhole/`** prefix by default. The secrets you store in the `cubbyhole/` path

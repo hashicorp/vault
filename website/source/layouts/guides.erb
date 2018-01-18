@@ -2,12 +2,17 @@
   <% content_for :sidebar do %>
     <ul class="nav docs-sidenav">
 
+
+      <li<%= sidebar_current("guides-policy") %>>
+        <a href="/guides/policies.html">Policies</a>
+      </li>
+
       <li<%= sidebar_current("guides-authentication") %>>
-        <a href="/guides/authentication.html">Authenticatication - AppRole</a>
+        <a href="/guides/authentication.html">AppRole Pull Authentication</a>
       </li>
 
       <li<%= sidebar_current("guides-static-secrets") %>>
-        <a href="/guides/static-secrets.html">Securing Secrets</a>
+        <a href="/guides/static-secrets.html">Static Secrets</a>
       </li>
 
       <li<%= sidebar_current("guides-dynamic-secrets") %>>
@@ -21,6 +26,8 @@
       <li<%= sidebar_current("guides-cubbyhole") %>>
         <a href="/guides/cubbyhole.html">Cubbyhole Response Wrapping</a>
       </li>
+
+
 
       <li<%= sidebar_current("guides-production-hardening") %>>
         <a href="/guides/production.html">Production Hardening</a>

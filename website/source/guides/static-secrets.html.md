@@ -48,27 +48,17 @@ Leverage Vault as a centralized secret storage to secure any sensitive
 information. Vault encrypts these secrets using 256-bit AES in GCM mode with a
 randomly generated nonce prior to writing them to its persistent storage. The
 storage backend never sees the unencrypted value, so gaining access to the raw
-storage isn't enough to access your secrets. 
+storage isn't enough to access your secrets.
 
 
 ## Prerequisites
 
 To perform the tasks described in this guide, you need to have a Vault
-environment.  You can follow the [Getting Started][getting-started] guide to
-[install Vault][install-vault]. Alternatively, if you are familiar with
-[Vagrant](https://www.vagrantup.com/), you can spin up a
-[HashiStack](https://github.com/hashicorp/vault-guides/tree/master/provision/hashistack/vagrant)
-virtual machine.
+environment.  Refer to the [Getting
+Started](/intro/getting-started/install.html) guide to install Vault.
 
-Make sure that your Vault server has been [initialized and unsealed][initialize].
-
-**NOTE:** The Vault server can be running in a [dev
-mode](/intro/getting-started/dev-server.html) to perform the tasks described in
-this guide.
-
-[getting-started]: /intro/getting-started/install.html
-[install-vault]: /intro/getting-started/install.html
-[initialize]: /intro/getting-started/deploy.html
+Make sure that your Vault server has been [initialized and
+unsealed](/intro/getting-started/deploy.html).
 
 
 ## Steps
@@ -121,6 +111,19 @@ Success! Data written to: secret/eng/apikey/Google
 
 #### API call using cURL
 
+Before begin, create the following environment variables for your convenience:
+
+- **VAULT_ADDR** is set to your Vault server address
+- **VAULT_TOKEN** is set to your Vault token
+
+**Example:**
+
+```plaintext
+$ export VAULT_ADDR=http://127.0.0.1:8201
+
+$ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
+```
+
 To perform the same task using the Vault API, pass the token in the request header.
 
 **Example:**
@@ -131,7 +134,43 @@ curl $VAULT_ADDR/v1/secret/eng/apikey/Google -X POST \
 ```
 
 
+
 ### <a name="step2"></a>Step 2: Store the root certificate for MySQL
+
+For the purpose of this guide, generate a new self-sign certificate using [OpenSSL](https://www.openssl.org/source/).
+
+```shell
+openssl req -x509 -sha256 -nodes -newkey rsa:2048 -keyout selfsigned.key -out cert.pem
+```
+
+Generated `cert.pem` file:
+
+```plaintext
+-----BEGIN CERTIFICATE-----
+MIIDSjCCAjICCQC47CQCg4u0kDANBgkqhkiG9w0BAQsFADBnMQswCQYDVQQGEwJV
+UzELMAkGA1UECAwCQ0ExFjAUBgNVBAcMDVNhbiBGcmFuY2lzY28xFDASBgNVBAMM
+C2V4YW1wbGUuY29tMR0wGwYJKoZIhvcNAQkBFg5tZUBleGFtcGxlLmNvbTAeFw0x
+ODAxMTcwMTMzNThaFw0xODAyMTYwMTMzNThaMGcxCzAJBgNVBAYTAlVTMQswCQYD
+VQQIDAJDQTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzEUMBIGA1UEAwwLZXhhbXBs
+ZS5jb20xHTAbBgkqhkiG9w0BCQEWDm1lQGV4YW1wbGUuY29tMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1cPTXpnOeUXU4tgblNLSS2rcA7eIqzc6gnMY
+Sh76WxOaN8VncyJw89/28QYOSYeWRn4fYywbPhHpFmrY6+1gW/8y0+Yoj7TL2Mvs
+5m1ZH9eOS6kcnnX/lr+HCfJpTHokKk/Vxr0/p6agkdZq0OYMPAmiuw1M4afd5abm
+8s5R99b4DgQyNvRYJp+JMddz2cM8t2AKQH4rq2NEf/GBHqHpHKmaxTyX5Rh7zg/g
+WJQ/DjxUVLpbRy+soiUJTZzamrO0iu9fcww+1Q4TZsMWizA4ChQFI7uegKkZ2Alv
+SNItsv01FQH3IB7pNWuna3IXXY789R0Qp0Ha5ScryVc9syg4cQIDAQABMA0GCSqG
+SIb3DQEBCwUAA4IBAQBtUcuwL0rS/uhk4v53ALF+ryRoLF93wT+O9KOvK15Pi1dX
+oZ9yxu5GOGi59womsrDs1vNrBuIQNVQ69dbUYu1LkhgQGDUWQb8JpCp++WHWTIeP
+YTJ5C/Q1B3rXeQrVWPvO0bMCig+/G5DGtzZmKWMQGHhfOvSwrkA58YAwjC+rqexl
+skA+hQ2JiU4bzIxvlPLBOUA/p+TgUKtdzPY3lxyDO2p7+8ZD56B0PoW87zNJYRcu
+VdSr7er8UkUr5nVjcw/6MJeptmx6QaiHgTUSFf2HjFfzsBa/IY1VGr/8bOII+IFN
+iYQTLBNG0/q/PZGeMX/RHxmCzZz/7wE0CDPMLbyf
+-----END CERTIFICATE-----
+```
+
+**NOTE:** If you don't have OpenSSL, simply copy the above certificate and
+save it as `cert.pem`.
+
 
 #### CLI command
 
@@ -140,7 +179,7 @@ The command is basically the same as the Google API key example.
 **Example:**
 
 ```shell
-vault write secret/prod/cert/mysql cert=@root_cert.pem
+vault write secret/prod/cert/mysql cert=@cert.pem
 ```
 
 **NOTE:** Any value begins with "@" is loaded from a file.
@@ -162,7 +201,7 @@ To perform the same task using the Vault API, pass the token in the request head
 
 ```shell
 curl $VAULT_ADDR/v1/secret/eng/apikey/Google -X POST \
- -H "X-Vault-Token: $VAULT_TOKEN" --data @root_cert.pem
+ -H "X-Vault-Token: $VAULT_TOKEN" --data @cert.pem
 ```
 
 
@@ -240,7 +279,7 @@ curl $VAULT_ADDR/v1/secret/prod/cert/mysql -X GET \
  -H "X-Vault-Token: $VAULT_TOKEN" | jq ".data.cert"
 ```
 
-## Reference Content
+## Additional Discussion
 
 ### Q: How do I enter my secrets without appearing in history?
 

@@ -53,17 +53,33 @@ can be revoked rather than changing more global set of credentials.
 ## Prerequisites
 
 To perform the tasks described in this guide, you need to have a Vault
-environment.  You can follow the [Getting Started][getting-started] guide to
-[install Vault][install-vault]. Alternatively, if you are familiar with
-[Vagrant](https://www.vagrantup.com/), you can spin up a
-[HashiStack](https://github.com/hashicorp/vault-guides/tree/master/provision/hashistack/vagrant)
-virtual machine.
+environment.  Refer to the [Getting
+Started](/intro/getting-started/install.html) guide to install Vault.
 
-Make sure that your Vault server has been [initialized and unsealed][initialize].
+Make sure that your Vault server has been [initialized and
+unsealed](/intro/getting-started/deploy.html).
 
-[getting-started]: /intro/getting-started/install.html
-[install-vault]: /intro/getting-started/install.html
-[initialize]: /intro/getting-started/deploy.html
+
+#### PostgreSQL
+
+This guide assumes that you have [PostgreSQL
+installed](https://www.postgresql.org/download/), and have a database named
+`myapp` created.
+
+**Example on Ubuntu:**
+
+```shell
+# Install PostgreSQL
+$ sudo apt-get install -y postgresql postgresql-contrib
+
+# Switch to postgres user
+$ su - postgres
+
+# Create myapp database
+$ psql -U postgres -c 'CREATE DATABASE myapp;'
+```
+
+
 
 ## Steps
 
@@ -91,6 +107,21 @@ vault mount database
 
 #### API call using cURL
 
+Before begin, create the following environment variables for your convenience:
+
+- **VAULT_ADDR** is set to your Vault server address
+- **VAULT_TOKEN** is set to your Vault token
+
+**Example:**
+
+```plaintext
+$ export VAULT_ADDR=http://127.0.0.1:8201
+
+$ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
+```
+
+Now, mount the `database` backend using API:
+
 ```text
 $ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d @postgres.json \
     $VAULT_ADDR/v1/sys/mounts/database
@@ -111,6 +142,17 @@ common to give Vault the **root** credentials and let Vault manage the auditing
 and lifecycle credentials; it's much better than having one person manage the
 credentials.
 
+
+The following command configures the database secret backend using
+`postgresql-database-plugin` where the database connection URL is
+`postgresql://root:rootpassword@localhost:5432/myapp`.  The allowed role is
+`readonly` which you will create in [Step 3](#step3).
+
+**NOTE:** If your
+database connection URL is different from this example, be sure to replace the
+command with correct URL to match your environment.
+
+
 #### CLI command
 
 **Example:**
@@ -119,6 +161,7 @@ credentials.
 vault write database/config/postgresql plugin_name=postgresql-database-plugin \
   allowed_roles=readonly connection_url=postgresql://root:rootpassword@localhost:5432/myapp
 ```
+
 
 #### API call using cURL
 
@@ -162,7 +205,7 @@ if Vault is offline or unable to communicate with it.
 **Example:**
 
 ```plaintext
-vault write database/roles/readonly db_name=postgresql creation_statements=@readonly.SQL \
+vault write database/roles/readonly db_name=postgresql creation_statements=@readonly.sql \
     default_ttl=1h max_ttl=24h
 ```
 

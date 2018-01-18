@@ -1,6 +1,6 @@
 ---
 layout: "guides"
-page_title: "Authentication using AppRole - Guides"
+page_title: "AppRole Pull Authentication - Guides"
 sidebar_current: "guides-authentication"
 description: |-
   Authentication is a process in Vault by which user or machine-supplied
@@ -10,7 +10,7 @@ description: |-
 # Authentication
 
 Before a client can interact with Vault, it must authenticate against an [**auth
-backend**][auth-backend] to acquire a token. This token has policies attached so
+backend**](/docs/auth/index.html) to acquire a token. This token has policies attached so
 that the behavior of the client can be governed.
 
 Since tokens are the core method for authentication within Vault, there is a
@@ -48,30 +48,37 @@ This guide focuses on generating tokens for machines or apps by enabling
 
 Think of a scenario where a DevOps team wants to configure Jenkins to read
 secrets from Vault so that it can inject the secrets to app's environment
-variables at deployment time.
+variables at deployment time. For example, Jenkins configures
+`WORDPRESS_DB_HOST`, `WORDPRESS_DB_USER`, `WORDPRESS_DB_PASSWORD`, and
+`WORDPRESS_DB_NAME` environment variables when deploying WordPress.
 
-How to generate a token for the Jenkins server use?
+To retrieve database connection information from Vault, Jenkins must
+authenticate with Vault first.   
+
+![Vault communication](/assets/images/vault-approle.png)
+
+As a user, you can authenticate with Vault using your LDAP credentials, and
+Vault would generate a token once it's verified. How can an app programmatically
+request a token so that it can interact with Vault?  
+
 
 ## Solution
 
-Needless to say, you don't want to pass your token to the Jenkins server. Enable
-**AppRole** auth backend so that the Jenkins server can obtains a Vault token
-with appropriate policies attached.
+Enable **AppRole** auth backend so that the Jenkins
+server can obtain a Vault token with appropriate policies attached.
 
 ## Prerequisites
 
 To perform the tasks described in this guide, you need to have a Vault
-environment.  You can follow the [Getting Started][getting-started] guide to
-[install Vault][install-vault]. Alternatively, if you are familiar with
-[Vagrant](https://www.vagrantup.com/), you can spin up a
-[HashiStack](https://github.com/hashicorp/vault-guides/tree/master/provision/hashistack/vagrant)
-virtual machine.
+environment.  Refer to the [Getting
+Started](/intro/getting-started/install.html) guide to install Vault.
 
-Make sure that your Vault server has been [initialized and unsealed][initialize].
+Make sure that your Vault server has been [initialized and
+unsealed](/intro/getting-started/deploy.html).
 
-[getting-started]: /intro/getting-started/install.html
-[install-vault]: /intro/getting-started/install.html
-[initialize]: /intro/getting-started/deploy.html
+Complete the [policies](/guides/policies.html) guide so that you have policies
+to work with.
+
 
 ## Steps
 
@@ -79,14 +86,14 @@ Vault supports a number of authentication backends, and most auth backends must
 be enabled first including AppRole.
 
 The overall workflow is:
-[![AppRole auth backend workflow](assets/images/vault-approle-workflow.png)](assets/images/vault-approle-workflow.png)
+![AppRole auth backend workflow](assets/images/vault-approle-workflow.png)
 
 In this guide, you are going to perform the following steps:
 
 1. [Enable AppRole auth backend](#step1)
 2. [Create a role with policy attached](#step2)
 3. [Get Role ID and Secret ID](#step3)
-4. [Acquire token using Role ID & Secret ID](#step4)
+4. [Login with Role ID & Secret ID](#step4)
 
 
 ### <a name="step1"></a>Step 1: Enable AppRole auth backend
@@ -103,7 +110,20 @@ vault auth-enable approle
 
 #### API call using cURL
 
-To enable the AppRole auth backend via API:
+Before begin, create the following environment variables for your convenience:
+
+- **VAULT_ADDR** is set to your Vault server address
+- **VAULT_TOKEN** is set to your Vault token
+
+**Example:**
+
+```plaintext
+$ export VAULT_ADDR=http://127.0.0.1:8201
+
+$ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
+```
+
+Now, enable the AppRole auth backend via API:
 
 ```text
 curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" --data '{"type": "approle"}' \
@@ -116,6 +136,9 @@ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" --data '{"type": "approle"}' \
 When you enabled AppRole auth backend, it gets mounted at the
 **`/auth/approle`** path. In this example, you are going to create a role for
 Jenkins server.
+
+-> Policies created in the [policies](/guides/policies.html) guide are
+referenced in this step.
 
 #### CLI command
 
@@ -213,7 +236,7 @@ curl -X LIST -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/auth/approle/role/j
 ```
 
 
-### <a name="step4"></a>Step 4: Acquire token using Role ID & Secret ID
+### <a name="step4"></a>Step 4: Login with Role ID & Secret ID
 
 To get a Vault token for the `jenkins` role, you need to pass the role ID and
 secret ID you obtained previously to the client (in this case, Jenkins).
@@ -257,7 +280,7 @@ $ curl -X POST -d @jenkins.json $VAULT_ADDR/v1/auth/approle/login | jq
 that token.
 
 
-## Reference Content
+## Advanced Features
 
 To keep the Secret ID confidential, use [**response
 wrapping**](/docs/concepts/response-wrapping.html) so that the only expected
@@ -306,6 +329,5 @@ b07d7a47-1d0d-741d-20b4-ae0de7c6d964
 
 ## Next steps
 
-
-
-[auth-backend]: /docs/auth/index.html
+To learn more about response wrapping, go to [Cubbyhole Response
+Wrapping](/guides/cubbyhole.html) guide.

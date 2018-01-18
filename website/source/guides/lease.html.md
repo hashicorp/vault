@@ -72,17 +72,11 @@ intrusion. This also allows for organizations to plan and train for various
 ## Prerequisites
 
 To perform the tasks described in this guide, you need to have a Vault
-environment.  You can follow the [Getting Started][getting-started] guide to
-[install Vault][install-vault]. Alternatively, if you are familiar with
-[Vagrant](https://www.vagrantup.com/), you can spin up a
-[HashiStack](https://github.com/hashicorp/vault-guides/tree/master/provision/hashistack/vagrant)
-virtual machine.
+environment.  Refer to the [Getting
+Started](/intro/getting-started/install.html) guide to install Vault.
 
-Make sure that your Vault server has been [initialized and unsealed][initialize].
-
-[getting-started]: /intro/getting-started/install.html
-[install-vault]: /intro/getting-started/install.html
-[initialize]: /intro/getting-started/deploy.html
+Make sure that your Vault server has been [initialized and
+unsealed](/intro/getting-started/deploy.html).
 
 ## Steps
 
@@ -139,6 +133,19 @@ max_lease_ttl    	2764800
 ```
 
 #### API call using cURL
+
+Before begin, create the following environment variables for your convenience:
+
+- **VAULT_ADDR** is set to your Vault server address
+- **VAULT_TOKEN** is set to your Vault token
+
+**Example:**
+
+```plaintext
+$ export VAULT_ADDR=http://127.0.0.1:8201
+
+$ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
+```
 
 Read the default TTL settings for **token** auth backend:
 
@@ -636,7 +643,7 @@ $ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" $VAULT_ADDR/v1/sys/leases/revoke-
 ```
 
 
-## Reference Content
+## Advanced Features
 
 It is important to understand the lease configuration to avoid having your
 secret leases expiring earlier than you expected.
