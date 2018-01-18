@@ -7,6 +7,12 @@ DEPRECATIONS/CHANGES:
    comma-separated string or an array of strings. Reading a role will 
    now return arrays for these parameters.
 
+FEATURES:
+
+ * **Brand New CLI**: Vault has a brand new CLI interface that is significantly
+   streamlined, supports autocomplete, and is almost entirely backwards
+   compatible.
+
 IMPROVEMENTS:
 
  * auth/aws: Handle IAM headers produced by clients that formulate numbers as
