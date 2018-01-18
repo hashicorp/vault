@@ -139,6 +139,12 @@ func (s *Salt) DidGenerate() bool {
 	return s.generated
 }
 
+// SaltIDHashFunc uses the supplied hash function instead of the configured
+// hash func in the salt.
+func (s *Salt) SaltIDHashFunc(id string, hashFunc HashFunc) string {
+	return SaltID(s.salt, id, hashFunc)
+}
+
 // SaltID is used to apply a salt and hash function to an ID to make sure
 // it is not reversible
 func SaltID(salt, id string, hash HashFunc) string {

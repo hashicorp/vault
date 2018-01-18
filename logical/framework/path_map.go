@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/vault/helper/salt"
+	saltpkg "github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -21,8 +21,8 @@ type PathMap struct {
 	Name          string
 	Schema        map[string]*FieldSchema
 	CaseSensitive bool
-	Salt          *salt.Salt
-	SaltFunc      func() (*salt.Salt, error)
+	Salt          *saltpkg.Salt
+	SaltFunc      func() (*saltpkg.Salt, error)
 
 	once sync.Once
 }
@@ -64,7 +64,7 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		}
 	}
 	if salt != nil {
-		k = salt.SaltID(k)
+		k = "s" + salt.SaltIDHashFunc(k, saltpkg.SHA256Hash)
 	}
 
 	finalName := fmt.Sprintf("map/%s/%s", p.Name, k)
@@ -73,17 +73,22 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		Schema: p.Schema,
 	}
 
-	// Check for unsalted version and upgrade if so
-	if k != origKey {
-		// Generate the unsalted name
-		unsaltedName := fmt.Sprintf("map/%s/%s", p.Name, origKey)
-		// Set the path struct to use the unsalted name
-		ps.Name = unsaltedName
+	if !strings.HasPrefix(origKey, "s") && k != origKey {
 		// Ensure that no matter what happens what is returned is the final
 		// path
 		defer func() {
 			ps.Name = finalName
 		}()
+
+		//
+		// Check for unsalted version and upgrade if so
+		//
+
+		// Generate the unsalted name
+		unsaltedName := fmt.Sprintf("map/%s/%s", p.Name, origKey)
+		// Set the path struct to use the unsalted name
+		ps.Name = unsaltedName
+
 		val, err := ps.Get(s)
 		if err != nil {
 			return nil, err
@@ -98,6 +103,38 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 			}
 			// Set it back to the old path and delete
 			ps.Name = unsaltedName
+			err = ps.Delete(s)
+			if err != nil {
+				return nil, err
+			}
+			// We'll set this in the deferred function but doesn't hurt here
+			ps.Name = finalName
+		}
+
+		//
+		// Check for SHA1 hashed version and upgrade if so
+		//
+
+		// Generate the SHA1 hash suffixed path name
+		sha1SuffixedName := fmt.Sprintf("map/%s/%s", p.Name, salt.SaltID(origKey))
+
+		// Set the path struct to use the SHA1 hash suffixed path name
+		ps.Name = sha1SuffixedName
+
+		val, err = ps.Get(s)
+		if err != nil {
+			return nil, err
+		}
+		// If not nil, we have an SHA1 hash suffixed entry -- upgrade it
+		if val != nil {
+			// Set the path struct to use the desired final name
+			ps.Name = finalName
+			err = ps.Put(s, val)
+			if err != nil {
+				return nil, err
+			}
+			// Set it back to the old path and delete
+			ps.Name = sha1SuffixedName
 			err = ps.Delete(s)
 			if err != nil {
 				return nil, err
