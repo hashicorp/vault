@@ -31,8 +31,8 @@ import (
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
-	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
-	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
+	//credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
+	//credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -411,18 +411,18 @@ func init() {
 					"syslog": auditSyslog.Factory,
 				},
 				CredentialBackends: map[string]logical.Factory{
-					"app-id":     credAppId.Factory,
-					"approle":    credAppRole.Factory,
-					"aws":        credAws.Factory,
-					"cert":       credCert.Factory,
-					"gcp":        credGcp.Factory,
-					"github":     credGitHub.Factory,
-					"kubernetes": credKube.Factory,
-					"ldap":       credLdap.Factory,
-					"okta":       credOkta.Factory,
-					"plugin":     plugin.Factory,
-					"radius":     credRadius.Factory,
-					"userpass":   credUserpass.Factory,
+					"app-id":  credAppId.Factory,
+					"approle": credAppRole.Factory,
+					"aws":     credAws.Factory,
+					"cert":    credCert.Factory,
+					//"gcp":        credGcp.Factory,
+					"github": credGitHub.Factory,
+					//"kubernetes": credKube.Factory,
+					"ldap":     credLdap.Factory,
+					"okta":     credOkta.Factory,
+					"plugin":   plugin.Factory,
+					"radius":   credRadius.Factory,
+					"userpass": credUserpass.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":        aws.Factory,

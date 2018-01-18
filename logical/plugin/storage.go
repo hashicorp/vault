@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"net/rpc"
 
 	"github.com/hashicorp/vault/logical"
@@ -12,7 +13,7 @@ type StorageClient struct {
 	client *rpc.Client
 }
 
-func (s *StorageClient) List(prefix string) ([]string, error) {
+func (s *StorageClient) List(_ context.Context, prefix string) ([]string, error) {
 	var reply StorageListReply
 	err := s.client.Call("Plugin.List", prefix, &reply)
 	if err != nil {
@@ -24,7 +25,7 @@ func (s *StorageClient) List(prefix string) ([]string, error) {
 	return reply.Keys, nil
 }
 
-func (s *StorageClient) Get(key string) (*logical.StorageEntry, error) {
+func (s *StorageClient) Get(_ context.Context, key string) (*logical.StorageEntry, error) {
 	var reply StorageGetReply
 	err := s.client.Call("Plugin.Get", key, &reply)
 	if err != nil {
@@ -36,7 +37,7 @@ func (s *StorageClient) Get(key string) (*logical.StorageEntry, error) {
 	return reply.StorageEntry, nil
 }
 
-func (s *StorageClient) Put(entry *logical.StorageEntry) error {
+func (s *StorageClient) Put(_ context.Context, entry *logical.StorageEntry) error {
 	var reply StoragePutReply
 	err := s.client.Call("Plugin.Put", entry, &reply)
 	if err != nil {
@@ -48,7 +49,7 @@ func (s *StorageClient) Put(entry *logical.StorageEntry) error {
 	return nil
 }
 
-func (s *StorageClient) Delete(key string) error {
+func (s *StorageClient) Delete(_ context.Context, key string) error {
 	var reply StorageDeleteReply
 	err := s.client.Call("Plugin.Delete", key, &reply)
 	if err != nil {
@@ -121,18 +122,18 @@ type StorageDeleteReply struct {
 // backend plugin in metadata mode.
 type NOOPStorage struct{}
 
-func (s *NOOPStorage) List(prefix string) ([]string, error) {
+func (s *NOOPStorage) List(_ context.Context, prefix string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (s *NOOPStorage) Get(key string) (*logical.StorageEntry, error) {
+func (s *NOOPStorage) Get(_ context.Context, key string) (*logical.StorageEntry, error) {
 	return nil, nil
 }
 
-func (s *NOOPStorage) Put(entry *logical.StorageEntry) error {
+func (s *NOOPStorage) Put(_ context.Context, entry *logical.StorageEntry) error {
 	return nil
 }
 
-func (s *NOOPStorage) Delete(key string) error {
+func (s *NOOPStorage) Delete(_ context.Context, key string) error {
 	return nil
 }

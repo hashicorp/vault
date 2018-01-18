@@ -83,9 +83,6 @@ type Backend struct {
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
 	AuthRenew OperationFunc
 
-	// LicenseRegistration is called to register the license for a backend.
-	LicenseRegistration LicenseRegistrationFunc
-
 	// Type is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
