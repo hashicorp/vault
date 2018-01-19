@@ -218,7 +218,7 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, clusterAddrs []*ne
 		SecretThreshold: 3,
 	}
 
-	result, err := core.Initialize(&InitParams{
+	result, err := core.Initialize(context.Background(), &InitParams{
 		BarrierConfig:  barrierConfig,
 		RecoveryConfig: recoveryConfig,
 	})
@@ -1354,7 +1354,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		//
 		// Set test cluster core(s) and test cluster
 		//
-		cluster, err := cores[0].Cluster()
+		cluster, err := cores[0].Cluster(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

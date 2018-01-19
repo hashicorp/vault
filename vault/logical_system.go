@@ -1034,13 +1034,13 @@ func (b *SystemBackend) handleCORSUpdate(ctx context.Context, req *logical.Reque
 	origins := d.Get("allowed_origins").([]string)
 	headers := d.Get("allowed_headers").([]string)
 
-	return nil, b.Core.corsConfig.Enable(origins, headers)
+	return nil, b.Core.corsConfig.Enable(ctx, origins, headers)
 }
 
 // handleCORSDelete sets the CORS enabled flag to false and clears the list of
 // allowed origins & headers.
 func (b *SystemBackend) handleCORSDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return nil, b.Core.corsConfig.Disable()
+	return nil, b.Core.corsConfig.Disable(ctx)
 }
 
 func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1270,7 +1270,7 @@ func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Req
 	if token == "" {
 		token = req.ClientToken
 	}
-	capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
+	capabilities, err := b.Core.Capabilities(ctx, token, d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -1295,7 +1295,7 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 		return nil, err
 	}
 
-	capabilities, err := b.Core.Capabilities(aEntry.TokenID, d.Get("path").(string))
+	capabilities, err := b.Core.Capabilities(ctx, aEntry.TokenID, d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}

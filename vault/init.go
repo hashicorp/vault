@@ -99,11 +99,9 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 
 // Initialize is used to initialize the Vault with the given
 // configurations.
-func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
+func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
 	barrierConfig := initParams.BarrierConfig
 	recoveryConfig := initParams.RecoveryConfig
-
-	ctx := context.Background()
 
 	if c.seal.RecoveryKeySupported(ctx) {
 		if recoveryConfig == nil {
@@ -202,7 +200,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Perform initial setup
-	if err := c.setupCluster(); err != nil {
+	if err := c.setupCluster(ctx); err != nil {
 		c.logger.Error("core: cluster setup failed during init", "error", err)
 		return nil, err
 	}
@@ -214,8 +212,8 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	// Save the configuration regardless, but only generate a key if it's not
 	// disabled. When using recovery keys they are stored in the barrier, so
 	// this must happen post-unseal.
-	if c.seal.RecoveryKeySupported(c.requestContext) {
-		err = c.seal.SetRecoveryConfig(c.requestContext, recoveryConfig)
+	if c.seal.RecoveryKeySupported(ctx) {
+		err = c.seal.SetRecoveryConfig(ctx, recoveryConfig)
 		if err != nil {
 			c.logger.Error("core: failed to save recovery configuration", "error", err)
 			return nil, fmt.Errorf("recovery configuration saving failed: %v", err)
@@ -228,7 +226,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 				return nil, err
 			}
 
-			err = c.seal.SetRecoveryKey(c.requestContext, recoveryKey)
+			err = c.seal.SetRecoveryKey(ctx, recoveryKey)
 			if err != nil {
 				return nil, err
 			}
@@ -238,7 +236,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Generate a new root token
-	rootToken, err := c.tokenStore.rootToken(c.requestContext)
+	rootToken, err := c.tokenStore.rootToken(ctx)
 	if err != nil {
 		c.logger.Error("core: root token generation failed", "error", err)
 		return nil, err

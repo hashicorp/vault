@@ -194,7 +194,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	// Fetch the local cluster name and identifier
 	var clusterName, clusterID string
 	if !sealed {
-		cluster, err := core.Cluster()
+		cluster, err := core.Cluster(ctx)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return

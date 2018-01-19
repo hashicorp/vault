@@ -110,11 +110,13 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		drSecondaryCode = code
 	}
 
+	ctx := context.Background()
+
 	// Check system status
 	sealed, _ := core.Sealed()
 	standby, _ := core.Standby()
 	replicationState := core.ReplicationState()
-	init, err := core.Initialized(context.Background())
+	init, err := core.Initialized(ctx)
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
 	}
@@ -135,7 +137,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	// Fetch the local cluster name and identifier
 	var clusterName, clusterID string
 	if !sealed {
-		cluster, err := core.Cluster()
+		cluster, err := core.Cluster(ctx)
 		if err != nil {
 			return http.StatusInternalServerError, nil, err
 		}

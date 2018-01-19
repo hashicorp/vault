@@ -936,7 +936,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Initialize it with a basic single key
-	init, err := core.Initialize(&vault.InitParams{
+	init, err := core.Initialize(ctx, &vault.InitParams{
 		BarrierConfig:  barrierConfig,
 		RecoveryConfig: recoveryConfig,
 	})

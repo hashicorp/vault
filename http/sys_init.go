@@ -110,7 +110,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		RootTokenPGPKey: req.RootTokenPGPKey,
 	}
 
-	result, initErr := core.Initialize(initParams)
+	result, initErr := core.Initialize(ctx, initParams)
 	if initErr != nil {
 		if !errwrap.ContainsType(initErr, new(vault.NonFatalError)) {
 			respondError(w, http.StatusBadRequest, initErr)

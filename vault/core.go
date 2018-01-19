@@ -1200,7 +1200,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 	if c.ha == nil {
 		// We still need to set up cluster info even if it's not part of a
 		// cluster right now. This also populates the cached cluster object.
-		if err := c.setupCluster(); err != nil {
+		if err := c.setupCluster(ctx); err != nil {
 			c.logger.Error("core: cluster setup failed", "error", err)
 			c.barrier.Seal()
 			c.logger.Warn("core: vault is sealed")
@@ -1591,7 +1591,7 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupPolicyStore(); err != nil {
 		return err
 	}
-	if err := c.loadCORSConfig(); err != nil {
+	if err := c.loadCORSConfig(c.requestContext); err != nil {
 		return err
 	}
 	if err := c.loadCredentials(c.requestContext); err != nil {
@@ -1790,7 +1790,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		c.localClusterPrivateKey = nil
 		c.clusterParamsLock.Unlock()
 
-		if err := c.setupCluster(); err != nil {
+		if err := c.setupCluster(ctx); err != nil {
 			c.stateLock.Unlock()
 			c.logger.Error("core: cluster setup failed", "error", err)
 			lock.Unlock()
