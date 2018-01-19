@@ -211,6 +211,13 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	// Load the trusted certificates
 	roots, trusted, trustedNonCAs := b.loadTrustedCerts(ctx, req.Storage, certName)
 
+	// Get the list of full chains matching the connection and validates the
+	// certificate itself
+	trustedChains, err := validateConnState(roots, connState)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
 	if len(trustedNonCAs) != 0 {
@@ -225,12 +232,8 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	// Get the list of full chains matching the connection
-	trustedChains, err := validateConnState(roots, connState)
-	if err != nil {
-		return nil, nil, err
-	}
 	// If no trusted chain was found, client is not authenticated
+	// This check happens after checking for a matching configured non-CA certs
 	if len(trustedChains) == 0 {
 		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
@@ -421,9 +424,6 @@ func parsePEM(raw []byte) (certs []*x509.Certificate) {
 func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509.Certificate, error) {
 	certs := cs.PeerCertificates
 	if len(certs) == 0 {
-		return nil, nil
-	}
-	if certs[0].IsCA {
 		return nil, nil
 	}
 
