@@ -65,10 +65,10 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 	return
 }
 
-func (b *backend) secretTokenCreate(s logical.Storage,
+func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
-	STSClient, err := clientSTS(s)
+	STSClient, err := clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -110,10 +110,10 @@ func (b *backend) secretTokenCreate(s logical.Storage,
 	return resp, nil
 }
 
-func (b *backend) assumeRole(s logical.Storage,
+func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
-	STSClient, err := clientSTS(s)
+	STSClient, err := clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -159,7 +159,7 @@ func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
 	displayName, policyName string, policy string) (*logical.Response, error) {
-	client, err := clientIAM(s)
+	client, err := clientIAM(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -222,7 +222,7 @@ func (b *backend) secretAccessKeysCreate(
 	// Remove the WAL entry, we succeeded! If we fail, we don't return
 	// the secret because it'll get rolled back anyways, so we have to return
 	// an error here.
-	if err := framework.DeleteWAL(s, walId); err != nil {
+	if err := framework.DeleteWAL(ctx, s, walId); err != nil {
 		return nil, fmt.Errorf("Failed to commit WAL entry: %s", err)
 	}
 

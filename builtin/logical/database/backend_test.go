@@ -177,7 +177,7 @@ func TestBackend_config_connection(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +241,7 @@ func TestBackend_basic(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +399,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -544,7 +544,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -656,7 +656,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}

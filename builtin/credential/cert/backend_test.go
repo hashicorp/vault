@@ -306,7 +306,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +366,7 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -449,7 +449,7 @@ func TestBackend_CRLs(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -75,7 +75,7 @@ template values are '{{username}}' and
 	}
 }
 
-func getRole(s logical.Storage, n string) (*roleEntry, error) {
+func getRole(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
 	entry, err := s.Get(ctx, "role/"+n)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 }
 
 func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := getRole(req.Storage, data.Get("name").(string))
+	role, err := getRole(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}

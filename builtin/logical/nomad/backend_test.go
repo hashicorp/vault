@@ -110,7 +110,7 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 func TestBackend_config_access(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func TestBackend_config_access(t *testing.T) {
 func TestBackend_renew_revoke(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 func TestBackend_CredsCreateEnvVar(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}

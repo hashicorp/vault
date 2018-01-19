@@ -75,8 +75,7 @@ func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request
 /*
  * Construct ConfigEntry struct using stored configuration.
  */
-func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
-
+func (b *backend) Config(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
 	storedConfig, err := req.Storage.Get(ctx, "config")
 	if err != nil {
 		return nil, err
@@ -113,7 +112,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Build a ConfigEntry struct out of the supplied FieldData
-	cfg, err := b.Config(req)
+	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, err
 	}

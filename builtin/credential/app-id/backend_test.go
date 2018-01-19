@@ -20,7 +20,7 @@ func TestBackend_basic(t *testing.T) {
 			t.Fatal(err)
 		}
 		storage = conf.StorageView
-		if err := b.Setup(conf); err != nil {
+		if err := b.Setup(ctx, conf); err != nil {
 			return nil, err
 		}
 		return b, nil

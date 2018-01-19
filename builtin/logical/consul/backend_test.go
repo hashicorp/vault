@@ -83,7 +83,7 @@ func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
 func TestBackend_config_access(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestBackend_config_access(t *testing.T) {
 func TestBackend_basic(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestBackend_basic(t *testing.T) {
 func TestBackend_renew_revoke(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 func TestBackend_management(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}

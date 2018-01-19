@@ -47,7 +47,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Get the consul client
-	c, userErr, intErr := client(req.Storage)
+	c, userErr, intErr := client(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}

@@ -18,7 +18,7 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = b.Setup(config)
+	err = b.Setup(ctx, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
