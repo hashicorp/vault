@@ -1576,7 +1576,7 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
 	}
-	if err := c.ensureWrappingKey(); err != nil {
+	if err := c.ensureWrappingKey(c.requestContext); err != nil {
 		return err
 	}
 	if err := c.setupPluginCatalog(); err != nil {
@@ -1612,10 +1612,10 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupAudits(); err != nil {
 		return err
 	}
-	if err := c.loadIdentityStoreArtifacts(); err != nil {
+	if err := c.loadIdentityStoreArtifacts(c.requestContext); err != nil {
 		return err
 	}
-	if err := c.setupAuditedHeadersConfig(); err != nil {
+	if err := c.setupAuditedHeadersConfig(c.requestContext); err != nil {
 		return err
 	}
 

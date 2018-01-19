@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -23,15 +24,15 @@ var (
 // GenerateRootStrategy allows us to swap out the strategy we want to use to
 // create a token upon completion of the generate root process.
 type GenerateRootStrategy interface {
-	generate(*Core) (string, func(), error)
+	generate(context.Context, *Core) (string, func(), error)
 }
 
 // generateStandardRootToken implements the GenerateRootStrategy and is in
 // charge of creating standard root tokens.
 type generateStandardRootToken struct{}
 
-func (g generateStandardRootToken) generate(c *Core) (string, func(), error) {
-	te, err := c.tokenStore.rootToken(c.requestContext)
+func (g generateStandardRootToken) generate(ctx context.Context, c *Core) (string, func(), error) {
+	te, err := c.tokenStore.rootToken(ctx)
 	if err != nil {
 		c.logger.Error("core: root token generation failed", "error", err)
 		return "", nil, err
@@ -42,7 +43,7 @@ func (g generateStandardRootToken) generate(c *Core) (string, func(), error) {
 	}
 
 	cleanupFunc := func() {
-		c.tokenStore.Revoke(c.requestContext, te.ID)
+		c.tokenStore.Revoke(ctx, te.ID)
 	}
 
 	return te.ID, cleanupFunc, nil
@@ -175,7 +176,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 }
 
 // GenerateRootUpdate is used to provide a new key part
-func (c *Core) GenerateRootUpdate(key []byte, nonce string, strategy GenerateRootStrategy) (*GenerateRootResult, error) {
+func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string, strategy GenerateRootStrategy) (*GenerateRootResult, error) {
 	// Verify the key length
 	min, max := c.barrier.KeyLength()
 	max += shamir.ShareOverhead
@@ -189,13 +190,13 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string, strategy GenerateRoo
 	// Get the seal configuration
 	var config *SealConfig
 	var err error
-	if c.seal.RecoveryKeySupported(c.requestContext) {
-		config, err = c.seal.RecoveryConfig(c.requestContext)
+	if c.seal.RecoveryKeySupported(ctx) {
+		config, err = c.seal.RecoveryConfig(ctx)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		config, err = c.seal.BarrierConfig(c.requestContext)
+		config, err = c.seal.BarrierConfig(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -269,8 +270,8 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string, strategy GenerateRoo
 	}
 
 	// Verify the master key
-	if c.seal.RecoveryKeySupported(c.requestContext) {
-		if err := c.seal.VerifyRecoveryKey(c.requestContext, masterKey); err != nil {
+	if c.seal.RecoveryKeySupported(ctx) {
+		if err := c.seal.VerifyRecoveryKey(ctx, masterKey); err != nil {
 			c.logger.Error("core: root generation aborted, recovery key verification failed", "error", err)
 			return nil, err
 		}
@@ -282,7 +283,7 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string, strategy GenerateRoo
 	}
 
 	// Run the generate strategy
-	tokenUUID, cleanupFunc, err := strategy.generate(c)
+	tokenUUID, cleanupFunc, err := strategy.generate(ctx, c)
 	if err != nil {
 		return nil, err
 	}

@@ -127,12 +127,12 @@ func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc
 }
 
 // Initalize the headers config by loading from the barrier view
-func (c *Core) setupAuditedHeadersConfig() error {
+func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 	// Create a sub-view
 	view := c.systemBarrierView.SubView(auditedHeadersSubPath)
 
 	// Create the config
-	out, err := view.Get(c.requestContext, auditedHeadersEntry)
+	out, err := view.Get(ctx, auditedHeadersEntry)
 	if err != nil {
 		return fmt.Errorf("failed to read config: %v", err)
 	}

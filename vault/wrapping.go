@@ -24,8 +24,8 @@ const (
 	coreWrappingJWTKeyPath = "core/wrapping/jwtkey"
 )
 
-func (c *Core) ensureWrappingKey() error {
-	entry, err := c.barrier.Get(c.requestContext, coreWrappingJWTKeyPath)
+func (c *Core) ensureWrappingKey(ctx context.Context) error {
+	entry, err := c.barrier.Get(ctx, coreWrappingJWTKeyPath)
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func (c *Core) ensureWrappingKey() error {
 			Key:   coreWrappingJWTKeyPath,
 			Value: val,
 		}
-		if err = c.barrier.Put(c.requestContext, entry); err != nil {
+		if err = c.barrier.Put(ctx, entry); err != nil {
 			return errwrap.Wrapf("failed to store wrapping key: {{err}}", err)
 		}
 	}

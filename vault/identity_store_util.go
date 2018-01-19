@@ -17,18 +17,18 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func (c *Core) loadIdentityStoreArtifacts() error {
+func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	var err error
 	if c.identityStore == nil {
 		return fmt.Errorf("identity store is not setup")
 	}
 
-	err = c.identityStore.loadEntities(c.requestContext)
+	err = c.identityStore.loadEntities(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = c.identityStore.loadGroups(c.requestContext)
+	err = c.identityStore.loadGroups(ctx)
 	if err != nil {
 		return err
 	}
