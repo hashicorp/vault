@@ -67,7 +67,7 @@ type StorageServer struct {
 }
 
 func (s *StorageServer) List(prefix string, reply *StorageListReply) error {
-	keys, err := s.impl.List(prefix)
+	keys, err := s.impl.List(context.Background(), prefix)
 	*reply = StorageListReply{
 		Keys:  keys,
 		Error: wrapError(err),
@@ -76,7 +76,7 @@ func (s *StorageServer) List(prefix string, reply *StorageListReply) error {
 }
 
 func (s *StorageServer) Get(key string, reply *StorageGetReply) error {
-	storageEntry, err := s.impl.Get(key)
+	storageEntry, err := s.impl.Get(context.Background(), key)
 	*reply = StorageGetReply{
 		StorageEntry: storageEntry,
 		Error:        wrapError(err),
@@ -85,7 +85,7 @@ func (s *StorageServer) Get(key string, reply *StorageGetReply) error {
 }
 
 func (s *StorageServer) Put(entry *logical.StorageEntry, reply *StoragePutReply) error {
-	err := s.impl.Put(entry)
+	err := s.impl.Put(context.Background(), entry)
 	*reply = StoragePutReply{
 		Error: wrapError(err),
 	}
@@ -93,7 +93,7 @@ func (s *StorageServer) Put(entry *logical.StorageEntry, reply *StoragePutReply)
 }
 
 func (s *StorageServer) Delete(key string, reply *StorageDeleteReply) error {
-	err := s.impl.Delete(key)
+	err := s.impl.Delete(context.Background(), key)
 	*reply = StorageDeleteReply{
 		Error: wrapError(err),
 	}

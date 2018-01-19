@@ -112,7 +112,7 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 }
 
 func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb.Empty, error) {
-	b.backend.Cleanup()
+	b.backend.Cleanup(ctx)
 
 	// Close rpc clients
 	b.brokeredClient.Close()
@@ -124,7 +124,7 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Empty) (
 		return &pb.Empty{}, ErrServerInMetadataMode
 	}
 
-	err := b.backend.Initialize()
+	err := b.backend.Initialize(ctx)
 	return &pb.Empty{}, err
 }
 
@@ -133,7 +133,7 @@ func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.In
 		return &pb.Empty{}, ErrServerInMetadataMode
 	}
 
-	b.backend.InvalidateKey(args.Key)
+	b.backend.InvalidateKey(ctx, args.Key)
 	return &pb.Empty{}, nil
 }
 

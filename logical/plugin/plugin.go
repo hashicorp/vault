@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/gob"
@@ -50,8 +51,8 @@ type BackendPluginClient struct {
 
 // Cleanup calls the RPC client's Cleanup() func and also calls
 // the go-plugin's client Kill() func
-func (b *BackendPluginClient) Cleanup() {
-	b.Backend.Cleanup()
+func (b *BackendPluginClient) Cleanup(ctx context.Context) {
+	b.Backend.Cleanup(ctx)
 	b.client.Kill()
 }
 

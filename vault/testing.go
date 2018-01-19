@@ -684,20 +684,20 @@ func (n *rawHTTP) Logger() log.Logger {
 	return logformat.NewVaultLogger(log.LevelTrace)
 }
 
-func (n *rawHTTP) Cleanup() {
+func (n *rawHTTP) Cleanup(ctx context.Context) {
 	// noop
 }
 
-func (n *rawHTTP) Initialize() error {
+func (n *rawHTTP) Initialize(ctx context.Context) error {
 	// noop
 	return nil
 }
 
-func (n *rawHTTP) InvalidateKey(string) {
+func (n *rawHTTP) InvalidateKey(context.Context, string) {
 	// noop
 }
 
-func (n *rawHTTP) Setup(config *logical.BackendConfig) error {
+func (n *rawHTTP) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	// noop
 	return nil
 }

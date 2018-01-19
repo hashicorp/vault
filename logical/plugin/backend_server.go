@@ -39,7 +39,7 @@ func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *Hand
 	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
 
-	resp, err := b.backend.HandleRequest(context.TODO(), args.Request)
+	resp, err := b.backend.HandleRequest(context.Background(), args.Request)
 	*reply = HandleRequestReply{
 		Response: resp,
 		Error:    wrapError(err),
@@ -74,7 +74,7 @@ func (b *backendPluginServer) HandleExistenceCheck(args *HandleExistenceCheckArg
 }
 
 func (b *backendPluginServer) Cleanup(_ interface{}, _ *struct{}) error {
-	b.backend.Cleanup()
+	b.backend.Cleanup(context.Background())
 
 	// Close rpc clients
 	b.loggerClient.Close()
@@ -88,7 +88,7 @@ func (b *backendPluginServer) Initialize(_ interface{}, _ *struct{}) error {
 		return ErrServerInMetadataMode
 	}
 
-	err := b.backend.Initialize()
+	err := b.backend.Initialize(context.Background())
 	return err
 }
 
@@ -97,7 +97,7 @@ func (b *backendPluginServer) InvalidateKey(args string, _ *struct{}) error {
 		return ErrServerInMetadataMode
 	}
 
-	b.backend.InvalidateKey(args)
+	b.backend.InvalidateKey(context.Background(), args)
 	return nil
 }
 
