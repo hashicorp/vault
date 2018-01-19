@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/keysutil"
@@ -62,7 +63,7 @@ type backend struct {
 	lm *keysutil.LockManager
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(_ context.Context, key string) {
 	if b.Logger().IsTrace() {
 		b.Logger().Trace("transit: invalidating key", "key", key)
 	}

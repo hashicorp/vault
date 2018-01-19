@@ -73,7 +73,7 @@ func pathRoles(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
+func (b *backend) Role(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
 	entry, err := s.Get(ctx, "role/"+n)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 }
 
 func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := b.Role(req.Storage, data.Get("name").(string))
+	role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	name := data.Get("name").(string)
 
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -18,7 +19,7 @@ type revocationInfo struct {
 }
 
 // Revokes a cert, and tries to be smart about error recovery
-func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool) (*logical.Response, error) {
+func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial string, fromLease bool) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
 	// third parties to manage users or resources, if the mount is tainted,
 	// revocation doesn't matter anyways -- the CRL that would be written will
@@ -98,7 +99,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 
 	}
 
-	crlErr := buildCRL(b, req)
+	crlErr := buildCRL(ctx, b, req)
 	switch crlErr.(type) {
 	case errutil.UserError:
 		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
@@ -119,7 +120,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
-func buildCRL(b *backend, req *logical.Request) error {
+func buildCRL(ctx context.Context, b *backend, req *logical.Request) error {
 	revokedSerials, err := req.Storage.List(ctx, "revoked/")
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("Error fetching list of revoked certs: %s", err)}

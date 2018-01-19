@@ -33,7 +33,7 @@ func secretCreds(b *backend) *framework.Secret {
 
 func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the lease information
-	leaseConfig, err := b.LeaseConfig(req.Storage)
+	leaseConfig, err := b.LeaseConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	username, ok := usernameRaw.(string)
 
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
