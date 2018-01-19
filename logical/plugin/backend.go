@@ -15,7 +15,7 @@ import (
 
 // BackendPlugin is the plugin.Plugin implementation
 type BackendPlugin struct {
-	Factory      func(*logical.BackendConfig) (logical.Backend, error)
+	Factory      logical.Factory
 	metadataMode bool
 	Logger       hclog.Logger
 }

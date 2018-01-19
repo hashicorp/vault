@@ -290,7 +290,7 @@ func TestRouter_Unmount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = r.Unmount("prod/aws/")
+	err = r.Unmount(context.Background(), "prod/aws/")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

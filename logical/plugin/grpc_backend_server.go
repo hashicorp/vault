@@ -14,7 +14,7 @@ type backendGRPCPluginServer struct {
 	broker  *plugin.GRPCBroker
 	backend logical.Backend
 
-	factory func(*logical.BackendConfig) (logical.Backend, error)
+	factory logical.Factory
 
 	brokeredClient *grpc.ClientConn
 
@@ -43,7 +43,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 
 	// Call the underlying backend factory after shims have been created
 	// to set b.backend
-	backend, err := b.factory(config)
+	backend, err := b.factory(ctx, config)
 	if err != nil {
 		return &pb.SetupReply{
 			Err: pb.ErrToString(err),

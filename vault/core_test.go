@@ -1246,7 +1246,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Step down core
-	err = core.StepDown(context.Background(), req)
+	err = core.StepDown(req)
 	if err != nil {
 		t.Fatal("error stepping down core 1")
 	}
@@ -1288,7 +1288,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Step down core2
-	err = core2.StepDown(context.Background(), req)
+	err = core2.StepDown(req)
 	if err != nil {
 		t.Fatal("error stepping down core 1")
 	}
