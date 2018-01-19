@@ -19,9 +19,16 @@ DEPRECATIONS/CHANGES:
    in role definitions in the PKI secret backend, input can now be a 
    comma-separated string or an array of strings. Reading a role will 
    now return arrays for these parameters.
+ * Plugin API Changes: The plugin API has been updated to utilize golang's
+   context.Context package. Many function signatures now accept a context
+   object as the first parameter. Existing plugins will need to pull in the
+   latest Vault code and update their function signatures to begin using 
+   context and the new gRPC transport.
 
 FEATURES:
 
+ * **gRPC Backend Plugins**: Backend plugins now use gRPC for transport, 
+   allowing them to be written in other languages.
  * **Brand New CLI**: Vault has a brand new CLI interface that is significantly
    streamlined, supports autocomplete, and is almost entirely backwards
    compatible.
