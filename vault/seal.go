@@ -72,12 +72,12 @@ type Seal interface {
 	SetStoredKeys(context.Context, [][]byte) error
 	GetStoredKeys(context.Context) ([][]byte, error)
 
-	BarrierType(context.Context) string
+	BarrierType() string
 	BarrierConfig(context.Context) (*SealConfig, error)
 	SetBarrierConfig(context.Context, *SealConfig) error
 
 	RecoveryKeySupported(context.Context) bool
-	RecoveryType(context.Context) string
+	RecoveryType() string
 	RecoveryConfig(context.Context) (*SealConfig, error)
 	SetRecoveryConfig(context.Context, *SealConfig) error
 	SetRecoveryKey(context.Context, []byte) error
@@ -108,7 +108,7 @@ func (d *DefaultSeal) Finalize(ctx context.Context) error {
 	return nil
 }
 
-func (d *DefaultSeal) BarrierType(ctx context.Context) string {
+func (d *DefaultSeal) BarrierType() string {
 	return SealTypeShamir
 }
 
@@ -161,11 +161,11 @@ func (d *DefaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	switch conf.Type {
 	// This case should not be valid for other types as only this is the default
 	case "":
-		conf.Type = d.BarrierType(ctx)
-	case d.BarrierType(ctx):
+		conf.Type = d.BarrierType()
+	case d.BarrierType():
 	default:
-		d.core.logger.Error("core: barrier seal type does not match loaded type", "barrier_seal_type", conf.Type, "loaded_seal_type", d.BarrierType(ctx))
-		return nil, fmt.Errorf("barrier seal type of %s does not match loaded type of %s", conf.Type, d.BarrierType(ctx))
+		d.core.logger.Error("core: barrier seal type does not match loaded type", "barrier_seal_type", conf.Type, "loaded_seal_type", d.BarrierType())
+		return nil, fmt.Errorf("barrier seal type of %s does not match loaded type of %s", conf.Type, d.BarrierType())
 	}
 
 	// Check for a valid seal configuration
@@ -190,7 +190,7 @@ func (d *DefaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 		return nil
 	}
 
-	config.Type = d.BarrierType(ctx)
+	config.Type = d.BarrierType()
 
 	// Encode the seal configuration
 	buf, err := json.Marshal(config)
@@ -214,7 +214,7 @@ func (d *DefaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 	return nil
 }
 
-func (d *DefaultSeal) RecoveryType(ctx context.Context) string {
+func (d *DefaultSeal) RecoveryType() string {
 	return RecoveryTypeUnsupported
 }
 

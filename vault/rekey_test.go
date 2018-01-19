@@ -145,9 +145,9 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	// Start a rekey
 	var expType string
 	if recovery {
-		expType = c.seal.RecoveryType(context.Background())
+		expType = c.seal.RecoveryType()
 	} else {
-		expType = c.seal.BarrierType(context.Background())
+		expType = c.seal.BarrierType()
 	}
 
 	newConf := &SealConfig{

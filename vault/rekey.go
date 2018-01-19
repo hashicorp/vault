@@ -149,7 +149,7 @@ func (c *Core) BarrierRekeyInit(ctx context.Context, config *SealConfig) error {
 		}
 	}
 
-	if c.seal.RecoveryKeySupported(ctx) && c.seal.RecoveryType(ctx) == config.Type {
+	if c.seal.RecoveryKeySupported(ctx) && c.seal.RecoveryType() == config.Type {
 		c.logger.Debug("core: using recovery seal configuration to rekey barrier key")
 	}
 
