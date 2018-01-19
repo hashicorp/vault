@@ -95,7 +95,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	config, err := b.Config(req.Storage)
+	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 }
 
 // Config returns the configuration for this backend.
-func (b *backend) Config(s logical.Storage) (*config, error) {
+func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error) {
 	entry, err := s.Get(ctx, "config")
 	if err != nil {
 		return nil, err

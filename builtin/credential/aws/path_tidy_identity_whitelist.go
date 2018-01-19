@@ -32,7 +32,7 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyWhitelistIdentity is used to delete entries in the whitelist that are expired.
-func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) error {
+func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, safety_buffer int) error {
 	grabbed := atomic.CompareAndSwapUint32(&b.tidyWhitelistCASGuard, 0, 1)
 	if grabbed {
 		defer atomic.StoreUint32(&b.tidyWhitelistCASGuard, 0)
@@ -78,7 +78,7 @@ func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) er
 
 // pathTidyIdentityWhitelistUpdate is used to delete entries in the whitelist that are expired.
 func (b *backend) pathTidyIdentityWhitelistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, b.tidyWhitelistIdentity(req.Storage, data.Get("safety_buffer").(int))
+	return nil, b.tidyWhitelistIdentity(ctx, req.Storage, data.Get("safety_buffer").(int))
 }
 
 const pathTidyIdentityWhitelistSyn = `

@@ -78,7 +78,7 @@ func setWhitelistIdentityEntry(ctx context.Context, s logical.Storage, instanceI
 		return err
 	}
 
-	if err := req.Storage.Put(ctx, entry); err != nil {
+	if err := s.Put(ctx, entry); err != nil {
 		return err
 	}
 	return nil
@@ -101,7 +101,7 @@ func (b *backend) pathIdentityWhitelistRead(ctx context.Context, req *logical.Re
 		return logical.ErrorResponse("missing instance_id"), nil
 	}
 
-	entry, err := whitelistIdentityEntry(req.Storage, instanceID)
+	entry, err := whitelistIdentityEntry(ctx, req.Storage, instanceID)
 	if err != nil {
 		return nil, err
 	}

@@ -53,7 +53,7 @@ func pathUsers(b *backend) *framework.Path {
 }
 
 func (b *backend) userExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	userEntry, err := b.user(req.Storage, data.Get("name").(string))
+	userEntry, err := b.user(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return false, err
 	}
@@ -61,7 +61,7 @@ func (b *backend) userExistenceCheck(ctx context.Context, req *logical.Request, 
 	return userEntry != nil, nil
 }
 
-func (b *backend) user(s logical.Storage, username string) (*UserEntry, error) {
+func (b *backend) user(ctx context.Context, s logical.Storage, username string) (*UserEntry, error) {
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
@@ -92,7 +92,7 @@ func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.user(req.Storage, d.Get("name").(string))
+	user, err := b.user(ctx, req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}

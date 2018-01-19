@@ -32,7 +32,7 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
-func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) error {
+func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, safety_buffer int) error {
 	grabbed := atomic.CompareAndSwapUint32(&b.tidyBlacklistCASGuard, 0, 1)
 	if grabbed {
 		defer atomic.StoreUint32(&b.tidyBlacklistCASGuard, 0)
@@ -77,7 +77,7 @@ func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) err
 
 // pathTidyRoletagBlacklistUpdate is used to clean-up the entries in the role tag blacklist.
 func (b *backend) pathTidyRoletagBlacklistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, b.tidyBlacklistRoleTag(req.Storage, data.Get("safety_buffer").(int))
+	return nil, b.tidyBlacklistRoleTag(ctx, req.Storage, data.Get("safety_buffer").(int))
 }
 
 const pathTidyRoletagBlacklistSyn = `

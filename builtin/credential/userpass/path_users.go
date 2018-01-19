@@ -69,7 +69,7 @@ func pathUsers(b *backend) *framework.Path {
 }
 
 func (b *backend) userExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	userEntry, err := b.user(req.Storage, data.Get("username").(string))
+	userEntry, err := b.user(ctx, req.Storage, data.Get("username").(string))
 	if err != nil {
 		return false, err
 	}
@@ -77,7 +77,7 @@ func (b *backend) userExistenceCheck(ctx context.Context, req *logical.Request, 
 	return userEntry != nil, nil
 }
 
-func (b *backend) user(s logical.Storage, username string) (*UserEntry, error) {
+func (b *backend) user(ctx context.Context, s logical.Storage, username string) (*UserEntry, error) {
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
@@ -98,13 +98,13 @@ func (b *backend) user(s logical.Storage, username string) (*UserEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) setUser(s logical.Storage, username string, userEntry *UserEntry) error {
+func (b *backend) setUser(ctx context.Context, s logical.Storage, username string, userEntry *UserEntry) error {
 	entry, err := logical.StorageEntryJSON("user/"+username, userEntry)
 	if err != nil {
 		return err
 	}
 
-	return req.Storage.Put(ctx, entry)
+	return s.Put(ctx, entry)
 }
 
 func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -125,7 +125,7 @@ func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.user(req.Storage, strings.ToLower(d.Get("username").(string)))
+	user, err := b.user(ctx, req.Storage, strings.ToLower(d.Get("username").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 
 func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := strings.ToLower(d.Get("username").(string))
-	userEntry, err := b.user(req.Storage, username)
+	userEntry, err := b.user(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
 	}
 
-	return nil, b.setUser(req.Storage, username, userEntry)
+	return nil, b.setUser(ctx, req.Storage, username, userEntry)
 }
 
 func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

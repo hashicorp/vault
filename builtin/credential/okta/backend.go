@@ -1,6 +1,7 @@
 package okta
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/chrismalek/oktasdk-go/okta"
@@ -9,9 +10,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -54,8 +55,8 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) Login(req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
-	cfg, err := b.Config(req.Storage)
+func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
+	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -110,7 +111,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	// Import the custom added groups from okta backend
-	user, err := b.User(req.Storage, username)
+	user, err := b.User(ctx, req.Storage, username)
 	if err != nil {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/okta: error looking up user", "error", err)
@@ -126,7 +127,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// Retrieve policies
 	var policies []string
 	for _, groupName := range allGroups {
-		entry, _, err := b.Group(req.Storage, groupName)
+		entry, _, err := b.Group(ctx, req.Storage, groupName)
 		if err != nil {
 			if b.Logger().IsDebug() {
 				b.Logger().Debug("auth/okta: error looking up group policies", "error", err)

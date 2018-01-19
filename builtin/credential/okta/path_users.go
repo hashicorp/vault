@@ -51,7 +51,7 @@ func pathUsers(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
+func (b *backend) User(ctx context.Context, s logical.Storage, n string) (*UserEntry, error) {
 	entry, err := s.Get(ctx, "user/"+n)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("Error empty name"), nil
 	}
 
-	user, err := b.User(req.Storage, name)
+	user, err := b.User(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
