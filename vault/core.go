@@ -1551,7 +1551,7 @@ func (c *Core) postUnseal() (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 
 	// Create a new request context
-	c.activeContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
+	c.activeContext, c.activeContextCancelFunc = context.WithCancel(context.Background())
 
 	defer func() {
 		if retErr != nil {
