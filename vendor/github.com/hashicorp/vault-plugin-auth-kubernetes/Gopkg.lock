@@ -36,8 +36,8 @@
     ".",
     "log"
   ]
-  revision = "5741799b275a3c4a5a9623a993576d7545cf7b5c"
-  version = "v2.4.0"
+  revision = "2dd44038f0b95ae693b266c5f87593b5d2fdd78d"
+  version = "v2.5.0"
 
 [[projects]]
   name = "github.com/fatih/structs"
@@ -136,7 +136,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-plugin"
   packages = ["."]
-  revision = "e2fbc6864d18d3c37b6cde4297ec9fca266d28f1"
+  revision = "1fc09c47b843b73705f51ffb0520e3ac1bfecf99"
 
 [[projects]]
   branch = "master"
@@ -176,6 +176,7 @@
     "helper/consts",
     "helper/errutil",
     "helper/jsonutil",
+    "helper/logbridge",
     "helper/logformat",
     "helper/mlock",
     "helper/parseutil",
@@ -186,9 +187,10 @@
     "helper/wrapping",
     "logical",
     "logical/framework",
-    "logical/plugin"
+    "logical/plugin",
+    "logical/plugin/pb"
   ]
-  revision = "78adac0a24fbefa644fc775bae70b46482af0ea9"
+  revision = "ca2306860b836a2727a3f36619a3a628b450552f"
 
 [[projects]]
   branch = "master"
@@ -246,7 +248,13 @@
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "06020f85339e21b2478f756a78e295255ffa4d6a"
+  revision = "b4575eea38cca1123ec2dc90c26529b5c5acfcff"
+
+[[projects]]
+  name = "github.com/oklog/run"
+  packages = ["."]
+  revision = "4dadeb3030eda0273a12382bb2348ffc7c9d1a39"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/ryanuber/go-glob"
@@ -278,13 +286,13 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "434ec0c7fe3742c984919a691b2018a6e9694425"
+  revision = "5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "1792d66dc88e503d3cb2400578221cdf1f7fe26f"
+  revision = "2c42eef0765b9837fbdab12011af7830f55f88f0"
 
 [[projects]]
   branch = "master"
@@ -342,8 +350,8 @@
     "tap",
     "transport"
   ]
-  revision = "f3955b8e9e244dd4dd4bc4f7b7a23a8445400a76"
-  version = "v1.9.0"
+  revision = "7cea4cc846bcf00cbb27595b07da5de875ef7de9"
+  version = "v1.9.1"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -355,7 +363,7 @@
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "1244d3ce02e3e1c16820ada0bae506b6c479f106"
+  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
 
 [[projects]]
   branch = "release-1.8"
@@ -395,7 +403,7 @@
   branch = "master"
   name = "k8s.io/kube-openapi"
   packages = ["pkg/common"]
-  revision = "b16ebc07f5cad97831f961e4b5a9cc1caed33b7e"
+  revision = "a07b7bbb58e7fdc5144f8d7046331d29fc9ad3b3"
 
 [solve-meta]
   analyzer-name = "dep"

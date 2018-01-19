@@ -70,7 +70,7 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 		b.l.RLock()
 		defer b.l.RUnlock()
 
-		role, err := b.role(req.Storage, roleName)
+		role, err := b.role(ctx, req.Storage, roleName)
 		if err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("invalid role name \"%s\"", roleName)), nil
 		}
 
-		config, err := b.config(req.Storage)
+		config, err := b.config(ctx, req.Storage)
 		if err != nil {
 			return nil, err
 		}
@@ -321,7 +321,7 @@ func (b *kubeAuthBackend) pathLoginRenew() framework.OperationFunc {
 		defer b.l.RUnlock()
 
 		// Ensure that the Role still exists.
-		role, err := b.role(req.Storage, roleName)
+		role, err := b.role(ctx, req.Storage, roleName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to validate role %s during renewal:%s", roleName, err)
 		}
