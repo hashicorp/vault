@@ -37,7 +37,7 @@ func pathConfigAccess(b *backend) *framework.Path {
 }
 
 func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.readConfigAccess(req.Storage)
+	entry, err := b.readConfigAccess(ctx, req.Storage)
 	if err != nil {
 		return false, err
 	}
@@ -45,7 +45,7 @@ func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request
 	return entry != nil, nil
 }
 
-func (b *backend) readConfigAccess(storage logical.Storage) (*accessConfig, error) {
+func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConfig, error) {
 	entry, err := storage.Get(ctx, configAccessKey)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (b *backend) readConfigAccess(storage logical.Storage) (*accessConfig, erro
 }
 
 func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, err := b.readConfigAccess(req.Storage)
+	conf, err := b.readConfigAccess(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, err := b.readConfigAccess(req.Storage)
+	conf, err := b.readConfigAccess(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

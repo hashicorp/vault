@@ -53,7 +53,7 @@ func TestBackend_config_connection(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	b, _ := Factory(logical.TestBackendConfig())
+	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,

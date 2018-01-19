@@ -61,7 +61,7 @@ func (b *backend) pathLeaseDelete(ctx context.Context, req *logical.Request, d *
 
 // Returns the lease configuration parameters
 func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	lease, err := b.LeaseConfig(req.Storage)
+	lease, err := b.LeaseConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data 
 }
 
 // Lease returns the lease information
-func (b *backend) LeaseConfig(s logical.Storage) (*configLease, error) {
+func (b *backend) LeaseConfig(ctx context.Context, s logical.Storage) (*configLease, error) {
 	entry, err := s.Get(ctx, leaseConfigKey)
 	if err != nil {
 		return nil, err

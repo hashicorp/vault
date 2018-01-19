@@ -289,7 +289,7 @@ func TestBackend_management(t *testing.T) {
 }
 
 func TestBackend_crud(t *testing.T) {
-	b, _ := Factory(logical.TestBackendConfig())
+	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
@@ -304,7 +304,7 @@ func TestBackend_crud(t *testing.T) {
 }
 
 func TestBackend_role_lease(t *testing.T) {
-	b, _ := Factory(logical.TestBackendConfig())
+	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{

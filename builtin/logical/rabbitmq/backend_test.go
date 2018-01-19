@@ -24,7 +24,7 @@ func TestBackend_basic(t *testing.T) {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
-	b, _ := Factory(logical.TestBackendConfig())
+	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
@@ -43,7 +43,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 		return
 	}
-	b, _ := Factory(logical.TestBackendConfig())
+	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,

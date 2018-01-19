@@ -14,7 +14,7 @@ func TestBackend_config_lease_RU(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b := Backend()
-	if err = b.Setup(ctx, config); err != nil {
+	if err = b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
 

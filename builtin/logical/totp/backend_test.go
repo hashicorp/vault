@@ -1,6 +1,7 @@
 package totp
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/url"

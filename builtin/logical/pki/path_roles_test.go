@@ -14,7 +14,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 
 	var err error
 	b := Backend()
-	err = b.Setup(ctx, config)
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := storage.Put(ctx, entry); err != nil {
+	if err := storage.Put(context.Background(), entry); err != nil {
 		t.Fatal(err)
 	}
 
@@ -173,7 +173,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := storage.Put(ctx, entry); err != nil {
+	if err := storage.Put(context.Background(), entry); err != nil {
 		t.Fatal(err)
 	}
 
@@ -189,7 +189,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	}
 
 	// Read back from storage to ensure upgrade
-	entry, err = storage.Get(ctx, "role/testrole")
+	entry, err = storage.Get(context.Background(), "role/testrole")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -271,7 +271,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := storage.Put(ctx, entry); err != nil {
+	if err := storage.Put(context.Background(), entry); err != nil {
 		t.Fatal(err)
 	}
 
@@ -291,7 +291,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 	}
 
 	// Read back from storage to ensure upgrade
-	entry, err = storage.Get(ctx, "role/testrole")
+	entry, err = storage.Get(context.Background(), "role/testrole")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := storage.Put(ctx, entry); err != nil {
+	if err := storage.Put(context.Background(), entry); err != nil {
 		t.Fatal(err)
 	}
 
@@ -384,7 +384,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	}
 
 	// Read back from storage to ensure upgrade
-	entry, err = storage.Get(ctx, "role/testrole")
+	entry, err = storage.Get(context.Background(), "role/testrole")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

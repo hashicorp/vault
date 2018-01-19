@@ -107,11 +107,11 @@ func TestBackend_allowed_users(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(ctx, config)
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Initialize()
+	err = b.Initialize(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func testingFactory(ctx context.Context, conf *logical.BackendConfig) (logical.B
 	}
 	defaultLeaseTTLVal := 2 * time.Minute
 	maxLeaseTTLVal := 10 * time.Minute
-	return Factory(&logical.BackendConfig{
+	return Factory(context.Background(), &logical.BackendConfig{
 		Logger:      nil,
 		StorageView: &logical.InmemStorage{},
 		System: &logical.StaticSystemView{
@@ -466,7 +466,7 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 			testConfigZeroAddressRead(t, resp1),
 			testRoleDelete(t, testOTPRoleName),
 			testConfigZeroAddressRead(t, resp3),
-			testConfigZeroAddres.Delete(ctx, t),
+			testConfigZeroAddressDelete(t),
 		},
 	})
 }
@@ -505,7 +505,7 @@ func TestSSHBackend_CredsForZeroAddressRoles(t *testing.T) {
 			testCredsWrite(t, testDynamicRoleName, data, true),
 			testConfigZeroAddressWrite(t, req2),
 			testCredsWrite(t, testDynamicRoleName, data, false),
-			testConfigZeroAddres.Delete(ctx, t),
+			testConfigZeroAddressDelete(t),
 			testCredsWrite(t, testOTPRoleName, data, true),
 			testCredsWrite(t, testDynamicRoleName, data, true),
 		},

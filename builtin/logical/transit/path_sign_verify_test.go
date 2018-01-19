@@ -38,7 +38,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	}
 
 	// Now, change the key value to something we control
-	p, lock, err := b.lm.GetPolicyShared(storage, "foo")
+	p, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 		t.Fatal("could not set D")
 	}
 	p.Keys[strconv.Itoa(p.LatestVersion)] = keyEntry
-	if err = p.Persist(storage); err != nil {
+	if err = p.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
 	req.Data = map[string]interface{}{
@@ -189,17 +189,17 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	signRequest(req, true, "")
 
 	// Rotate and set min decryption version
-	err = p.Rotate(storage)
+	err = p.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = p.Rotate(storage)
+	err = p.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	p.MinDecryptionVersion = 2
-	if err = p.Persist(storage); err != nil {
+	if err = p.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
 
@@ -252,14 +252,14 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	}
 
 	// Get the keys for later
-	fooP, lock, err := b.lm.GetPolicyShared(storage, "foo")
+	fooP, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	// We don't care as we're the only one using this
 	lock.RUnlock()
 
-	barP, lock, err := b.lm.GetPolicyShared(storage, "bar")
+	barP, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "bar")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,28 +383,28 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	v1sig := sig
 
 	// Rotate and set min decryption version
-	err = fooP.Rotate(storage)
+	err = fooP.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = fooP.Rotate(storage)
+	err = fooP.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fooP.MinDecryptionVersion = 2
-	if err = fooP.Persist(storage); err != nil {
+	if err = fooP.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
-	err = barP.Rotate(storage)
+	err = barP.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = barP.Rotate(storage)
+	err = barP.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 	barP.MinDecryptionVersion = 2
-	if err = barP.Persist(storage); err != nil {
+	if err = barP.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
 
