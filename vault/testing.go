@@ -135,7 +135,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 	noopAudits := map[string]audit.Factory{
 		"noop": func(config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
-			view.Put(&logical.StorageEntry{
+			view.Put(context.Background(), &logical.StorageEntry{
 				Key:   "salt",
 				Value: []byte("foo"),
 			})
@@ -151,12 +151,12 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 	}
 
 	noopBackends := make(map[string]logical.Factory)
-	noopBackends["noop"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+	noopBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		b := new(framework.Backend)
-		b.Setup(config)
+		b.Setup(ctx, config)
 		return b, nil
 	}
-	noopBackends["http"] = func(config *logical.BackendConfig) (logical.Backend, error) {
+	noopBackends["http"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		return new(rawHTTP), nil
 	}
 
@@ -209,7 +209,7 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, clusterAddrs []*ne
 	}
 
 	// If we support storing barrier keys, then set that to equal the min threshold to unseal
-	if core.seal.StoredKeysSupported() {
+	if core.seal.StoredKeysSupported(context.Background()) {
 		barrierConfig.StoredShares = barrierConfig.SecretThreshold
 	}
 
@@ -323,12 +323,12 @@ func testTokenStore(t testing.T, c *Core) *TokenStore {
 	sysView := c.mountEntrySysView(me)
 
 	tokenstore, _ := c.newCredentialBackend("token", sysView, view, nil)
-	if err := tokenstore.Initialize(); err != nil {
+	if err := tokenstore.Initialize(context.Background()); err != nil {
 		panic(err)
 	}
 	ts := tokenstore.(*TokenStore)
 
-	err = c.router.Unmount("auth/token/")
+	err = c.router.Unmount(context.Background(), "auth/token/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +411,7 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 
 	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(name, command, args, sum)
+	err = c.pluginCatalog.Set(context.Background(), name, command, args, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -475,7 +475,7 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir stri
 
 	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(name, command, args, sum)
+	err = c.pluginCatalog.Set(context.Background(), name, command, args, sum)
 	if err != nil {
 		t.Fatal(err)
 	}

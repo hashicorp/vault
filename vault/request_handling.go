@@ -131,7 +131,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	if te != nil {
 		// Attempt to use the token (decrement NumUses)
 		var err error
-		te, err = c.tokenStore.UseToken(te)
+		te, err = c.tokenStore.UseToken(ctx, te)
 		if err != nil {
 			c.logger.Error("core: failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -147,7 +147,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			// valid request (this is the token's final use). We pass the ID in
 			// directly just to be safe in case something else modifies te later.
 			defer func(id string) {
-				err = c.tokenStore.Revoke(id)
+				err = c.tokenStore.Revoke(ctx, id)
 				if err != nil {
 					c.logger.Error("core: failed to revoke token", "error", err)
 					retResp = nil
@@ -317,7 +317,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 		// Register with the expiration manager. We use the token's actual path
 		// here because roles allow suffixes.
-		te, err := c.tokenStore.Lookup(resp.Auth.ClientToken)
+		te, err := c.tokenStore.Lookup(ctx, resp.Auth.ClientToken)
 		if err != nil {
 			c.logger.Error("core: failed to look up token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -325,7 +325,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if err := c.expiration.RegisterAuth(te.Path, resp.Auth); err != nil {
-			c.tokenStore.Revoke(te.ID)
+			c.tokenStore.Revoke(ctx, te.ID)
 			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
@@ -525,7 +525,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 		}
 
-		if err := c.tokenStore.create(&te); err != nil {
+		if err := c.tokenStore.create(ctx, &te); err != nil {
 			c.logger.Error("core: failed to create token", "error", err)
 			return nil, auth, ErrInternalError
 		}
@@ -538,7 +538,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
-			c.tokenStore.Revoke(te.ID)
+			c.tokenStore.Revoke(ctx, te.ID)
 			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError
 		}

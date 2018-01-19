@@ -16,7 +16,7 @@ func (c *Core) Capabilities(token, path string) ([]string, error) {
 		return nil, &logical.StatusBadRequest{Err: "missing token"}
 	}
 
-	te, err := c.tokenStore.Lookup(token)
+	te, err := c.tokenStore.Lookup(c.requestContext, token)
 	if err != nil {
 		return nil, err
 	}

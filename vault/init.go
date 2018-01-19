@@ -235,7 +235,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Generate a new root token
-	rootToken, err := c.tokenStore.rootToken()
+	rootToken, err := c.tokenStore.rootToken(c.requestContext)
 	if err != nil {
 		c.logger.Error("core: root token generation failed", "error", err)
 		return nil, err

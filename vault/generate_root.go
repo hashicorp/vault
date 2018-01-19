@@ -31,7 +31,7 @@ type GenerateRootStrategy interface {
 type generateStandardRootToken struct{}
 
 func (g generateStandardRootToken) generate(c *Core) (string, func(), error) {
-	te, err := c.tokenStore.rootToken()
+	te, err := c.tokenStore.rootToken(c.requestContext)
 	if err != nil {
 		c.logger.Error("core: root token generation failed", "error", err)
 		return "", nil, err
@@ -42,7 +42,7 @@ func (g generateStandardRootToken) generate(c *Core) (string, func(), error) {
 	}
 
 	cleanupFunc := func() {
-		c.tokenStore.Revoke(te.ID)
+		c.tokenStore.Revoke(c.requestContext, te.ID)
 	}
 
 	return te.ID, cleanupFunc, nil

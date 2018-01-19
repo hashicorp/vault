@@ -1290,7 +1290,7 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 		return logical.ErrorResponse("missing accessor"), nil
 	}
 
-	aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor, false)
+	aEntry, err := b.Core.tokenStore.lookupByAccessor(ctx, accessor, false)
 	if err != nil {
 		return nil, err
 	}
@@ -2506,7 +2506,7 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	// by handleRequest(), this happens when it's a normal response wrapping
 	// request and the token was provided "first party". We want to inspect the
 	// token policies but will not use this token entry for anything else.
-	te, err := b.Core.tokenStore.lookupTainted(token)
+	te, err := b.Core.tokenStore.lookupTainted(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -2550,12 +2550,12 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string, thirdParty bool) (string, error) {
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseTokenByID(token)
+		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
 			return "", fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
 		}
 
-		defer b.Core.tokenStore.Revoke(token)
+		defer b.Core.tokenStore.Revoke(ctx, token)
 	}
 
 	cubbyReq := &logical.Request{
@@ -2661,11 +2661,11 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseTokenByID(token)
+		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
 			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
 		}
-		defer b.Core.tokenStore.Revoke(token)
+		defer b.Core.tokenStore.Revoke(ctx, token)
 	}
 
 	// Fetch the original TTL

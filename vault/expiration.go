@@ -221,7 +221,7 @@ func (m *ExpirationManager) Tidy() error {
 			}
 			lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
 			lock.RLock()
-			te, err := m.tokenStore.lookupSalted(saltedID, true)
+			te, err := m.tokenStore.lookupSalted(m.quitContext, saltedID, true)
 			lock.RUnlock()
 
 			if err != nil {
@@ -1040,7 +1040,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	// Revocation of login tokens is special since we can by-pass the
 	// backend and directly interact with the token store
 	if le.Auth != nil {
-		if err := m.tokenStore.RevokeTree(le.ClientToken); err != nil {
+		if err := m.tokenStore.RevokeTree(m.quitContext, le.ClientToken); err != nil {
 			return fmt.Errorf("failed to revoke token: %v", err)
 		}
 

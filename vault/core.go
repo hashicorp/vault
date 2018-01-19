@@ -655,7 +655,7 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 		return nil, nil
 	}
 
-	return c.tokenStore.Lookup(token)
+	return c.tokenStore.Lookup(c.requestContext, token)
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
@@ -723,7 +723,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 	}
 
 	// Resolve the token policy
-	te, err := c.tokenStore.Lookup(clientToken)
+	te, err := c.tokenStore.Lookup(c.requestContext, clientToken)
 	if err != nil {
 		c.logger.Error("core: failed to lookup token", "error", err)
 		return nil, nil, nil, ErrInternalError
@@ -1236,7 +1236,7 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 
 // SealWithRequest takes in a logical.Request, acquires the lock, and passes
 // through to sealInternal
-func (c *Core) SealWithRequest(req *logical.Request) error {
+func (c *Core) SealWithRequest(ctx context.Context, req *logical.Request) error {
 	defer metrics.MeasureSince([]string{"core", "seal-with-request"}, time.Now())
 
 	c.stateLock.RLock()
@@ -1247,7 +1247,7 @@ func (c *Core) SealWithRequest(req *logical.Request) error {
 	}
 
 	// This will unlock the read lock
-	return c.sealInitCommon(req)
+	return c.sealInitCommon(ctx, req)
 }
 
 // Seal takes in a token and creates a logical.Request, acquires the lock, and
@@ -1269,13 +1269,13 @@ func (c *Core) Seal(token string) error {
 	}
 
 	// This will unlock the read lock
-	return c.sealInitCommon(req)
+	return c.sealInitCommon(c.requestContext, req)
 }
 
 // sealInitCommon is common logic for Seal and SealWithRequest and is used to
 // re-seal the Vault. This requires the Vault to be unsealed again to perform
 // any further operations. Note: this function will read-unlock the state lock.
-func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
+func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "seal-internal"}, time.Now())
 
 	if req == nil {
@@ -1322,7 +1322,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	// Attempt to use the token (decrement num_uses)
 	// On error bail out; if the token has been revoked, bail out too
 	if te != nil {
-		te, err = c.tokenStore.UseToken(te)
+		te, err = c.tokenStore.UseToken(ctx, te)
 		if err != nil {
 			c.logger.Error("core: failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -1355,7 +1355,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	if te != nil && te.NumUses == -1 {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		err = c.tokenStore.Revoke(te.ID)
+		err = c.tokenStore.Revoke(c.requestContext, te.ID)
 		if err != nil {
 			c.logger.Error("core: token needed revocation before seal but failed to revoke", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -1387,7 +1387,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 }
 
 // StepDown is used to step down from leadership
-func (c *Core) StepDown(req *logical.Request) (retErr error) {
+func (c *Core) StepDown(ctx context.Context, req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
 
 	if req == nil {
@@ -1427,7 +1427,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 	// Attempt to use the token (decrement num_uses)
 	if te != nil {
-		te, err = c.tokenStore.UseToken(te)
+		te, err = c.tokenStore.UseToken(ctx, te)
 		if err != nil {
 			c.logger.Error("core: failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -1456,7 +1456,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	if te != nil && te.NumUses == -1 {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		err = c.tokenStore.Revoke(te.ID)
+		err = c.tokenStore.Revoke(c.requestContext, te.ID)
 		if err != nil {
 			c.logger.Error("core: token needed revocation before step-down but failed to revoke", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)

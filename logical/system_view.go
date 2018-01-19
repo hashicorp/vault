@@ -23,7 +23,7 @@ type SystemView interface {
 
 	// SudoPrivilege returns true if given path has sudo privileges
 	// for the given client token
-	SudoPrivilege(path string, token string) bool
+	SudoPrivilege(ctx context.Context, path string, token string) bool
 
 	// Returns true if the mount is tainted. A mount is tainted if it is in the
 	// process of being unmounted. This should only be used in special
@@ -44,7 +44,7 @@ type SystemView interface {
 
 	// ResponseWrapData wraps the given data in a cubbyhole and returns the
 	// token used to unwrap.
-	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
+	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 
 	// LookupPlugin looks into the plugin catalog for a plugin with the given
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
@@ -74,7 +74,7 @@ func (d StaticSystemView) MaxLeaseTTL() time.Duration {
 	return d.MaxLeaseTTLVal
 }
 
-func (d StaticSystemView) SudoPrivilege(path string, token string) bool {
+func (d StaticSystemView) SudoPrivilege(ctx context.Context, path string, token string) bool {
 	return d.SudoPrivilegeVal
 }
 
@@ -90,7 +90,7 @@ func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
 }
 
-func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (d StaticSystemView) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	return nil, errors.New("ResponseWrapData is not implemented in StaticSystemView")
 }
 

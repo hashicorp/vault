@@ -28,9 +28,9 @@ func (d dynamicSystemView) MaxLeaseTTL() time.Duration {
 	return max
 }
 
-func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
+func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token string) bool {
 	// Resolve the token policy
-	te, err := d.core.tokenStore.Lookup(token)
+	te, err := d.core.tokenStore.Lookup(ctx, token)
 	if err != nil {
 		d.core.logger.Error("core: failed to lookup token", "error", err)
 		return false
@@ -43,7 +43,7 @@ func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
 	}
 
 	// Construct the corresponding ACL object
-	acl, err := d.core.policyStore.ACL(te.Policies...)
+	acl, err := d.core.policyStore.ACL(ctx, te.Policies...)
 	if err != nil {
 		d.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
 		return false
@@ -93,7 +93,7 @@ func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
 
 // ResponseWrapData wraps the given data in a cubbyhole and returns the
 // token used to unwrap.
-func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	req := &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "sys/wrapping/wrap",
@@ -110,7 +110,7 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 		resp.WrapInfo.Format = "jwt"
 	}
 
-	_, err := d.core.wrapInCubbyhole(context.TODO(), req, resp, nil)
+	_, err := d.core.wrapInCubbyhole(ctx, req, resp, nil)
 	if err != nil {
 		return nil, err
 	}
