@@ -35,7 +35,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		name := data.Get("name").(string)
 
 		// Get the role
-		role, err := b.Role(req.Storage, name)
+		role, err := b.Role(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 		}
 
-		dbConfig, err := b.DatabaseConfig(req.Storage, role.DBName)
+		dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
 		}

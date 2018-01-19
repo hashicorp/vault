@@ -226,7 +226,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			AllowedRoles:      allowedRoles,
 		}
 
-		db, err := dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
+		db, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
