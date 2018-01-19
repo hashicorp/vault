@@ -275,13 +275,13 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		c.logger.Error("core: err setting up forwarding rpc client", "error", err)
 		return err
 	}
-	c.rpcClientConnContext = ctx
+	c.rpcClientConnContext = dctx
 	c.rpcClientConnCancelFunc = cancelFunc
 	c.rpcForwardingClient = &forwardingClient{
 		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
 		core:        c,
 		echoTicker:  time.NewTicker(HeartbeatInterval),
-		echoContext: ctx,
+		echoContext: dctx,
 	}
 	c.rpcForwardingClient.startHeartbeat()
 
