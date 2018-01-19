@@ -25,12 +25,12 @@ var (
 func TestClusterFetching(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	err := c.setupCluster()
+	err := c.setupCluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cluster, err := c.Cluster()
+	cluster, err := c.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestClusterHAFetching(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, c)
 
-	cluster, err := c.Cluster()
+	cluster, err := c.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
