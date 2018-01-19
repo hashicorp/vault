@@ -67,6 +67,13 @@ the value specified by this parameter. The value is prefix-matched
 (as though it were a glob ending in '*'). This is only applicable when
 auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
+			"bound_ec2_instance_id": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, defines a constraint on the EC2 instances to have one of the
+given instance IDs. Can be a list or comma-separated string of EC2 instance
+IDs. This is only applicable when auth_type is ec2 or inferred_entity_type is
+ec2_instance.`,
+			},
 			"resolve_aws_unique_ids": {
 				Type:    framework.TypeBool,
 				Default: true,
@@ -493,6 +500,10 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		roleEntry.BoundIamInstanceProfileARN = boundIamInstanceProfileARNRaw.(string)
 	}
 
+	if boundEc2InstanceIDsRaw, ok := data.GetOk("bound_ec2_instance_id"); ok {
+		roleEntry.BoundEc2InstanceID = boundEc2InstanceIDsRaw.([]string)
+	}
+
 	if boundIamPrincipalARNRaw, ok := data.GetOk("bound_iam_principal_arn"); ok {
 		principalARN := boundIamPrincipalARNRaw.(string)
 		roleEntry.BoundIamPrincipalARN = principalARN
@@ -596,6 +607,13 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if roleEntry.BoundIamInstanceProfileARN != "" {
 		if !allowEc2Binds {
 			return logical.ErrorResponse(fmt.Sprintf("specified bound_iam_instance_profile_arn but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
+		}
+		numBinds++
+	}
+
+	if len(roleEntry.BoundEc2InstanceID) > 0 {
+		if !allowEc2Binds {
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_ec2_instance_id but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
@@ -751,6 +769,7 @@ type awsRoleEntry struct {
 	BoundIamPrincipalID        string        `json:"bound_iam_principal_id" structs:"bound_iam_principal_id" mapstructure:"bound_iam_principal_id"`
 	BoundIamRoleARN            string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
+	BoundEc2InstanceID         []string      `json:"bound_ec2_instance_id" structs:"bound_ec2_instance_id" mapstructure:"bound_ec2_instance_id"`
 	BoundRegion                string        `json:"bound_region" structs:"bound_region" mapstructure:"bound_region"`
 	BoundSubnetID              string        `json:"bound_subnet_id" structs:"bound_subnet_id" mapstructure:"bound_subnet_id"`
 	BoundVpcID                 string        `json:"bound_vpc_id" structs:"bound_vpc_id" mapstructure:"bound_vpc_id"`
