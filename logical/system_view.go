@@ -74,7 +74,7 @@ func (d StaticSystemView) MaxLeaseTTL() time.Duration {
 	return d.MaxLeaseTTLVal
 }
 
-func (d StaticSystemView) SudoPrivilege(ctx context.Context, path string, token string) bool {
+func (d StaticSystemView) SudoPrivilege(_ context.Context, path string, token string) bool {
 	return d.SudoPrivilegeVal
 }
 
@@ -90,11 +90,11 @@ func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
 }
 
-func (d StaticSystemView) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (d StaticSystemView) ResponseWrapData(_ context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	return nil, errors.New("ResponseWrapData is not implemented in StaticSystemView")
 }
 
-func (d StaticSystemView) LookupPlugin(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
+func (d StaticSystemView) LookupPlugin(_ context.Context, name string) (*pluginutil.PluginRunner, error) {
 	return nil, errors.New("LookupPlugin is not implemented in StaticSystemView")
 }
 

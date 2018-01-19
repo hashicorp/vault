@@ -15,7 +15,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 
 	b := Backend()
-	if err := b.Setup(config); err != nil {
+	if err := b.Setup(ctx, config); err != nil {
 		t.Fatal(err)
 	}
 

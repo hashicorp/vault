@@ -20,6 +20,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -509,6 +510,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -635,6 +637,7 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)

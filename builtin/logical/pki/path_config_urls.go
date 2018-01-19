@@ -53,7 +53,7 @@ func validateURLs(urls []string) string {
 	return ""
 }
 
-func getURLs(req *logical.Request) (*urlEntries, error) {
+func getURLs(ctx context.Context, req *logical.Request) (*urlEntries, error) {
 	entry, err := req.Storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func getURLs(req *logical.Request) (*urlEntries, error) {
 	return &entries, nil
 }
 
-func writeURLs(req *logical.Request, entries *urlEntries) error {
+func writeURLs(ctx context.Context, req *logical.Request, entries *urlEntries) error {
 	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func writeURLs(req *logical.Request, entries *urlEntries) error {
 }
 
 func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(req)
+	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, data *f
 }
 
 func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(req)
+	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		}
 	}
 
-	return nil, writeURLs(req, entries)
+	return nil, writeURLs(ctx, req, entries)
 }
 
 type urlEntries struct {

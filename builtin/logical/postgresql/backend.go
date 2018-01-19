@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -12,9 +13,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend(conf)
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -62,7 +63,7 @@ type backend struct {
 }
 
 // DB returns the database connection.
-func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
+func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
 	b.logger.Trace("postgres/db: enter")
 	defer b.logger.Trace("postgres/db: exit")
 
@@ -124,7 +125,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 }
 
 // ResetDB forces a connection next time DB() is called.
-func (b *backend) ResetDB() {
+func (b *backend) ResetDB(_ context.Context) {
 	b.logger.Trace("postgres/resetdb: enter")
 	defer b.logger.Trace("postgres/resetdb: exit")
 
@@ -138,10 +139,10 @@ func (b *backend) ResetDB() {
 	b.db = nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "config/connection":
-		b.ResetDB()
+		b.ResetDB(ctx)
 	}
 }
 

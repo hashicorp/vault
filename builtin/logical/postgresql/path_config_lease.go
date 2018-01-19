@@ -65,7 +65,7 @@ func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 
 	if err != nil {
 		return nil, err

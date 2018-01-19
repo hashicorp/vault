@@ -76,7 +76,6 @@ func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request
  * Construct ConfigEntry struct using stored configuration.
  */
 func (b *backend) Config(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
-
 	storedConfig, err := req.Storage.Get(ctx, "config")
 	if err != nil {
 		return nil, err

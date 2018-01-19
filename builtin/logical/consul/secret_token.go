@@ -55,7 +55,7 @@ func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d 
 }
 
 func secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	c, userErr, intErr := client(req.Storage)
+	c, userErr, intErr := client(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}

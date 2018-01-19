@@ -91,7 +91,7 @@ func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request,
 	}
 
 	// Reset the Session
-	b.ResetSession()
+	b.ResetSession(ctx)
 
 	resp := &logical.Response{}
 	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the connection URI as it is, including passwords, if any.")

@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -108,7 +107,12 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 	config.MaxTTL /= time.Second
 
 	resp := &logical.Response{
-		Data: structs.New(config).Map(),
+		Data: map[string]interface{}{
+			"organization": config.Organization,
+			"base_url":     config.BaseURL,
+			"ttl":          config.TTL,
+			"max_ttl":      config.MaxTTL,
+		},
 	}
 	return resp, nil
 }

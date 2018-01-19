@@ -2,6 +2,7 @@ package socket
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 	"strconv"
@@ -15,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
+func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}

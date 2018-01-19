@@ -111,7 +111,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	// Get the policy
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, d.Get("name").(string))
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, d.Get("name").(string))
 	if lock != nil {
 		defer lock.RUnlock()
 	}

@@ -36,7 +36,7 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 	name := data.Get("name").(string)
 
 	// Get the role
-	role, err := getRole(req.Storage, name)
+	role, err := getRole(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
