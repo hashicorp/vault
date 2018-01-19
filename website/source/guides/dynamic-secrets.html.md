@@ -27,6 +27,13 @@ you through the generation of dynamic AWS credentials.
 
 10 minutes
 
+## Personas
+
+The end-to-end scenario described in this guide involves two personas:
+
+- **`admin`** with privileged permissions to configure secret backends
+- **`app`** is the requester of credentials
+
 ## Challenge
 
 Data protection is a top priority which means that the database credential
@@ -54,23 +61,25 @@ can be revoked rather than changing more global set of credentials.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment.  Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault.
-
-Make sure that your Vault server has been [initialized and
+Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy.html).
 
+### PostgreSQL
 
-#### PostgreSQL
-
-This guide assumes that you have [PostgreSQL
-installed](https://www.postgresql.org/download/), and have a database named
-`myapp` created.
+This guide requires that you have PostgreSQL that you can connect to,
+and have a database named **`myapp`**. You can download and install
+[PostgreSQL](https://www.postgresql.org/download/) locally, or connect to a
+remote host.
 
 **Example on Ubuntu:**
 
 ```shell
 # Install PostgreSQL
 $ sudo apt-get install -y postgresql postgresql-contrib
+
+# Initialize PostgreSQL
+$ sudo postgresql-setup initdb
 
 # Switch to postgres user
 $ su - postgres
@@ -79,7 +88,39 @@ $ su - postgres
 $ psql -U postgres -c 'CREATE DATABASE myapp;'
 ```
 
+[PostgreSQL Wiki](https://wiki.postgresql.org/wiki/First_steps) gives you a
+summary of basic commands to get started.
 
+### <a name="policy"></a>Policy requirements
+
+To perform all tasks demonstrated in this guide, you need to be able to
+authenticate with Vault as an **`admin`** user. The `admin` user's policy must
+include the following permissions:
+
+```shell
+# Mount secret backends
+path "sys/mounts/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+
+# Configure the database backend and create roles
+path "database/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+
+# Write ACL policies
+path "sys/policy/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+```
+
+-> **NOTE:** For the purpose of this guide, you can use **`root`** token. However,
+Vault team recommends that root tokens are only used for just enough initial
+setup or in emergencies. As a best practice, use tokens with appropriate
+set of policies based on your role in the organization.
+
+If you are not familiar with policies, complete the
+[policies](/guides/policies.html) guide.
 
 ## Steps
 
@@ -88,13 +129,17 @@ a read-only database role. The Vault generated PostgreSQL credentials will only
 have read permission.
 
 1. [Mount the database secret backend](#step1)
-2. [Configure the PostgreSQL backend](#step2)
+2. [Configure PostgreSQL backend](#step2)
 3. [Create a role](#step3)
-4. [Generate PostgreSQL credentials](#step4)
+4. [Request PostgreSQL credentials](#step4)
+5. [Validation](#validation)
 
-Be sure to follow the [Validation](#validation) to test the outcomes.
+Step 1 through 3 need to be performed by an `admin` user.  Step 4 describes
+the commands that an `app` runs to get a database credentials from Vault.
+
 
 ### <a name="step1"></a>Step 1: Mount the database secret backend
+(**Persona:** admin)
 
 As most of the secret backends, the [database backend](/docs/secrets/databases/index.html)
 must be mounted.
@@ -122,20 +167,14 @@ $ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
 
 Now, mount the `database` backend using API:
 
-```text
-$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d @postgres.json \
+```shell
+curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d '{"type":"database"}' \
     $VAULT_ADDR/v1/sys/mounts/database
-
-$ cat postgres.json
-
-{
-	"type": "database",
-	"description": "Database secret backend"
-}
 ```
 
 
-### <a name="step1"></a>Step 2: Configure the PostgreSQL backend
+### <a name="step1"></a>Step 2: Configure PostgreSQL backend
+(**Persona:** admin)
 
 The PostgreSQL backend needs to be configured with valid credentials. It is very
 common to give Vault the **root** credentials and let Vault manage the auditing
@@ -180,9 +219,10 @@ $ cat postgres-config.json
 ```
 
 ### <a name="step3"></a>Step 3: Create a role
+(**Persona:** admin)
 
 In Step 2, you configured the PostgreSQL backend by passing **`readonly`** role
-as an allowed member. The next step is to define this `readonly` role. A role is
+as an allowed member. The next step is to define the `readonly` role. A role is
 a logical name that maps to a policy used to generate credentials.
 
 -> Vault does not know what kind of PostgreSQL users you want to create. So,
@@ -232,27 +272,61 @@ $ cat role-payload.JSON
 }
 ```
 
-The `db_name`, `creation_statements`, `default_ttl`, and `max_ttl` are set in the `role-payload.json`.
+The `db_name`, `creation_statements`, `default_ttl`, and `max_ttl` are set in
+the `role-payload.json`.
 
 
-### <a name="step4"></a>Step 4: Generate PostgreSQL credentials
+### <a name="step4"></a>Step 4: Request PostgreSQL credentials
+(**Persona:** app)
 
-To generate a new set of PostgreSQL credentials, simply **read** from the `readonly` role endpoint.
+Now, you are switching to [`app` persona](#personas). To get a new set of
+PostgreSQL credentials, the client app needs to be able to **read** from the
+`readonly` role endpoint. Therefore, the app's token must have a policy granting
+the read permission.
 
-**NOTE:** Typically, an administrator performs [Step 1](#step1) through
-[Step3](step3).  In order for the client app to get the database credentials
-from Vault, the client's policy must include the following:
+`apps-policy.hcl`
 
-```text
+```shell
+# Get credentials from the database backend
 path "database/creds/readonly" {
-  capabilities = ["read"]
+  capabilities = [ "read" ]
 }
 ```
 
 #### CLI command
 
+First create an `apps` policy, and generate a token so that you can authenticate
+as an `app` persona.
+
+**Example:**
+
 ```shell
-vault read database/creds/readonly
+$ vault policy-write apps apps-policy.hcl
+Policy 'apps' written.
+
+$ vault token-create -policy="apps"
+Key            	Value
+---            	-----
+token          	e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
+token_accessor 	54700b7e-d828-a6c4-6141-96e71e002bd7
+token_duration 	768h0m0s
+token_renewable	true
+token_policies 	[apps default]
+```
+
+Use the returned token to perform the remaining.
+
+**NOTE:** [AppRole Pull Authentication](/guides/authentication.html) guide
+demonstrates more sophisticated way of generating a token for your apps.
+
+```shell
+$ vault auth e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
+Successfully authenticated! You are now logged in.
+token: e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
+token_duration: 2764277
+token_policies: [apps default]
+
+$ vault read database/creds/readonly
 
 Key            	Value
 ---            	-----
@@ -270,9 +344,51 @@ set of credentials.
 
 #### API call using cURL
 
-```plaintext
-curl -X GET -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/database/creds/readonly | jq
+First create an `apps` policy, and generate a token so that you can authenticate
+as an `app` persona.
 
+```text
+$ curl -X PUT -H "X-Vault-Token: $VAULT_TOKEN" -d @payload.json \
+    $VAULT_ADDR/v1/sys/policy/apps
+
+$ cat payload.json
+{
+  "policy": "path \"database/creds/readonly\" {capabilities = [ \"read\" ]}"
+}
+
+$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d '{"policies": ["apps"]}' \
+   $VAULT_ADDR/v1/auth/token/create | jq
+{
+ "request_id": "e1737bc8-7e51-3943-42a0-2dbd6cb40e3e",
+ "lease_id": "",
+ "renewable": false,
+ "lease_duration": 0,
+ "data": null,
+ "wrap_info": null,
+ "warnings": null,
+ "auth": {
+   "client_token": "1c97b03a-6098-31cf-9d8b-b404e52dcb4a",
+   "accessor": "b10a3eb7-15fe-1924-600e-403cfda34c28",
+   "policies": [
+     "apps",
+     "default"
+   ],
+   "metadata": null,
+   "lease_duration": 2764800,
+   "renewable": true,
+   "entity_id": ""
+ }
+}
+```
+
+Be sure to use the returned token to perform the remaining.
+
+**NOTE:** [AppRole Pull Authentication](/guides/authentication.html) guide
+demonstrates more sophisticated way of generating a token for your apps.
+
+```shell
+curl -X GET -H "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
+    $VAULT_ADDR/v1/database/creds/readonly | jq
 {
   "request_id": "e0e5a6c1-5e69-5cf3-c9d2-020af192de36",
   "lease_id": "database/creds/readonly/7aa462ab-98cb-fdcb-b226-f0a0d37644cc",

@@ -44,40 +44,83 @@ This guide focuses on generating tokens for machines or apps by enabling
 
 10 minutes
 
+## Personas
+
+The end-to-end scenario described in this guide involves two personas:
+
+- **`admin`** with privileged permissions to configure an auth backend
+- **`app`** is the consumer of secrets stored in Vault
+
 ## Challenge
 
 Think of a scenario where a DevOps team wants to configure Jenkins to read
 secrets from Vault so that it can inject the secrets to app's environment
-variables at deployment time. For example, Jenkins configures
-`WORDPRESS_DB_HOST`, `WORDPRESS_DB_USER`, `WORDPRESS_DB_PASSWORD`, and
-`WORDPRESS_DB_NAME` environment variables when deploying WordPress.
+variables (e.g. `MYSQL_DB_HOST`) at deployment time.
 
-To retrieve database connection information from Vault, Jenkins must
-authenticate with Vault first.   
+Instead of hardcoding secrets in each build script as a plaintext, Jenkins
+retrieves secrets from Vault.
 
 ![Vault communication](/assets/images/vault-approle.png)
 
 As a user, you can authenticate with Vault using your LDAP credentials, and
-Vault would generate a token once it's verified. How can an app programmatically
-request a token so that it can interact with Vault?  
+Vault generates a token. This token has policies granting you to perform
+appropriate operations.
+
+How can a Jenkins server programmatically request a token so that it can read
+secrets from Vault?  
 
 
 ## Solution
 
-Enable **AppRole** auth backend so that the Jenkins
-server can obtain a Vault token with appropriate policies attached.
+Enable **AppRole** auth backend so that the Jenkins server can obtain a Vault
+token with appropriate policies attached. Since each AppRole has attached
+policies, you can write fine-grained policies limiting which app can access
+which path.  
+
 
 ## Prerequisites
 
 To perform the tasks described in this guide, you need to have a Vault
 environment.  Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault.
-
-Make sure that your Vault server has been [initialized and
+Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy.html).
 
-Complete the [policies](/guides/policies.html) guide so that you have policies
-to work with.
+### <a name="policy"></a>Policy requirements
+
+To perform all tasks demonstrated in this guide, you need to be able to
+authenticate with Vault as an **`admin`** user. The `admin` user's policy must
+include the following permissions:
+
+```shell
+# Mount the AppRole auth backend
+path "sys/auth/approle/*" {
+  capabilities = [ "create", "read", "update", "delete" ]
+}
+
+# Create and manage roles
+path "auth/approle/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+
+# Write ACL policies
+path "sys/policy/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+
+# Write test data
+path "secret/mysql/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+```
+
+-> **NOTE:** For the purpose of this guide, you can use **`root`** token. However,
+Vault team recommends that root tokens are only used for just enough initial
+setup or in emergencies. As a best practice, use tokens with appropriate
+set of policies based on your role in the organization.
+
+If you are not familiar with policies, complete the
+[policies](/guides/policies.html) guide.
 
 
 ## Steps
@@ -94,9 +137,14 @@ In this guide, you are going to perform the following steps:
 2. [Create a role with policy attached](#step2)
 3. [Get Role ID and Secret ID](#step3)
 4. [Login with Role ID & Secret ID](#step4)
+5. [Read secrets using the AppRole token](#step5)
+
+Step 1 through 3 need to be performed by an `admin` user.  Step 4 and 5 describe
+the commands that an `app` runs to get a token and read secrets from Vault.
 
 
 ### <a name="step1"></a>Step 1: Enable AppRole auth backend
+(**Persona:** admin)
 
 [AppRole](/docs/auth/approle.html) is an authentication mechanism within Vault
 to allow machines or apps to acquire a token to interact with Vault. It uses
@@ -132,33 +180,53 @@ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" --data '{"type": "approle"}' \
 
 
 ### <a name="step2"></a>Step 2: Create a role with policy attached
+(**Persona:** admin)
 
 When you enabled AppRole auth backend, it gets mounted at the
 **`/auth/approle`** path. In this example, you are going to create a role for
 Jenkins server.
 
--> Policies created in the [policies](/guides/policies.html) guide are
-referenced in this step.
+The scenario in this guide requires the **`app`** persona (Jenkins) to have the
+following policy (`jenkins-pol.hcl`):
+
+```shell
+# Login with AppRole
+path "auth/approle/login" {
+  capabilities = [ "create", "read" ]
+}
+
+# Read test data
+path "secret/mysql/*" {
+  capabilities = [ "read" ]
+}
+```
 
 #### CLI command
 
-To create a role for machines or apps, run:
+Before creating a role, create `jenkins` policy:
+
+```shell
+vault policy-write jenkins jenkins-pol.hcl
+```
+
+The command to create a new AppRole:
 
 ```plaintext
 vault write auth/approle/role/<ROLE_NAME> [args]
 ```
 
 There are a number of [parameters](/api/auth/approle/index.html) that you can
-set. Most importantly, you want to set policies for the role. You are going to
-create a role operates in **pull** mode in this example.
+set. Most importantly, you want to specify the policies when you create a role.
+
 
 **Example:**
 
-The following example creates a role named `jenkins` with `dev-pol` and
-`devops-pol` policies attached.
+The following example creates a role named `jenkins` with `jenkins` policy
+attached. (NOTE: This example creates a role operates in [**pull**
+mode](/docs/auth/approle.html).)
 
 ```plaintext
-$ vault write auth/approle/role/jenkins policies="dev-pol,devops-pol"
+$ vault write auth/approle/role/jenkins policies="jenkins"
 
 $ vault read auth/approle/role/jenkins
 
@@ -167,7 +235,7 @@ $ vault read auth/approle/role/jenkins
   bind_secret_id    	true
   bound_cidr_list
   period            	0
-  policies          	[dev-pol devops-pol]
+  policies          	[jenkins]
   secret_id_num_uses	0
   secret_id_ttl     	0
   token_max_ttl     	0
@@ -175,20 +243,79 @@ $ vault read auth/approle/role/jenkins
   token_ttl         	0
 ```
 
-**NOTE:** If desired, the token use limits, TTL and settings can be specified
-during the role creation.
+**NOTE:** To attach multiple policies, pass the policy names as a comma
+separated string.
+
+```shell
+vault write auth/approle/role/jenkins policies="jenkins,anotherpolicy"
+````
 
 #### API call using cURL
 
-**Example:**
+Before creating a role, create `jenkins` policy:
 
 ```text
-curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"dev-pol,devops-pol"}' \
-    $VAULT_ADDR/v1/auth/approle/role/jenkins
+$ curl -X PUT -H "X-Vault-Token: $VAULT_TOKEN" -d @payload.json \
+    $VAULT_ADDR/v1/sys/policy/jenkins
+
+$ cat payload.json
+{
+  "policy": "path \"auth/approle/login\" {  capabilities = [ \"create\", \"read\" ] } ... }"
+}
 ```
 
+There are a number of [parameters](/api/auth/approle/index.html) that you can
+set. Most importantly, you want to specify the policies when you create a role.
+
+You are going to create a role operates in [**pull** mode](/docs/auth/approle.html)
+in this example.
+
+**Example:**
+
+The following example creates a role named `jenkins` with `jenkins` policy
+attached. (NOTE: This example creates a role operates in [**pull**
+mode](/docs/auth/approle.html).)
+
+```text
+$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"jenkins"}' \
+    $VAULT_ADDR/v1/auth/approle/role/jenkins
+
+$ curl -X GET -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/auth/approle/role/jenkins | jq
+
+{
+  "request_id": "b18054ad-1ab5-8d83-eeed-193d97026ee7",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "bind_secret_id": true,
+    "bound_cidr_list": "",
+    "period": 0,
+    "policies": [
+      "jenkins"
+    ],
+    "secret_id_num_uses": 0,
+    "secret_id_ttl": 0,
+    "token_max_ttl": 0,
+    "token_num_uses": 0,
+    "token_ttl": 0
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+**NOTE:** To attach multiple policies, pass the policy names as a comma
+separated string.
+
+```shell
+$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"jenkins,anotherpolicy"}' \
+    $VAULT_ADDR/v1/auth/approle/role/jenkins
+````
 
 ### <a name="step3"></a>Step 3: Get Role ID and Secret ID
+(**Persona:** admin)
 
 Since the example created a `jenkins` role which operates in pull mode, Vault
 will generate the Secret ID. Similarly to tokens, you can set properties such as
@@ -237,9 +364,13 @@ curl -X LIST -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/auth/approle/role/j
 
 
 ### <a name="step4"></a>Step 4: Login with Role ID & Secret ID
+(**Persona:** app)
 
 To get a Vault token for the `jenkins` role, you need to pass the role ID and
 secret ID you obtained previously to the client (in this case, Jenkins).
+
+-> Refer to the [Advanced Features](#advanced-features) section for securely
+distributing the role ID and secret ID to the client app.
 
 #### CLI command
 
@@ -255,14 +386,17 @@ vault write auth/approle/login role_id="675a50e7-cfe0-be76-e35f-49ec009731ea" \
   token_accessor      	fcee5d4e-7281-8bb0-2901-e743c52e0502
   token_duration      	768h0m0s
   token_renewable     	true
-  token_policies      	[dev-pol devops-pol]
+  token_policies      	[jenkins]
   token_meta_role_name	"jenkins"
 ```
+
+Now you have a client token with `default` and `jenkins` policies attached.
+
 
 #### API call using cURL
 
 Notice that the following API call passes the role ID and secret ID in the
-request payload. Upon a successful login, a token will be returned.
+request payload.
 
 **Example:**
 
@@ -274,10 +408,126 @@ $ cat jenkins.json
   }
 
 $ curl -X POST -d @jenkins.json $VAULT_ADDR/v1/auth/approle/login | jq
+
+{
+  "request_id": "fccae32b-1e6a-9a9c-7666-f5cb07805c1e",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "wrap_info": null,
+  "warnings": null,
+  "auth": {
+    "client_token": "3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e",
+    "accessor": "375c077e-bf02-a09b-c864-63d7f967e86b",
+    "policies": [
+      "default",
+      "jenkins"
+    ],
+    "metadata": {
+      "role_name": "jenkins"
+    },
+    "lease_duration": 2764800,
+    "renewable": true,
+    "entity_id": "54e0b765-6daf-0ff5-70b9-32c0d491f473"
+  }
+}
 ```
 
--> Once the client acquired the token, the future requests can be made using
+Now you have a client token with `default` and `jenkins` policies attached.
+
+
+### <a name="step5"></a>Step 5: Read secrets using the AppRole token
+(**Persona:** app)
+
+Once the client acquired the token, the future requests can be made using
 that token.
+
+#### CLI command
+
+**Example:**
+
+You can pass the `client_token` returned in [Step 4](#step4) as a part of the
+CLI command.
+
+```shell
+VAULT_TOKEN=3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e vault read secret/mysql/webapp
+No value found at secret/mysql/webapp
+```
+
+Alternatively, you can first authenticate with Vault using the `client_token`.
+
+```shell
+$ vault auth 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e
+Successfully authenticated! You are now logged in.
+token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e
+token_duration: 2762013
+token_policies: [default jenkins]
+
+$ vault read secret/mysql/webapp
+No value found at secret/mysql/webapp
+```
+
+Since there is no value in the `secret/mysql/webapp`, it returne "no value
+found" message.
+
+**Optional:** Using the `admin` user's token, you can store some secrets in the
+`secret/mysql/webapp` backend.
+
+```shell
+$ vault write secret/dev/config/mongodb @mysqldb.txt
+
+$ cat mysqldb.txt
+{
+  "url": "foo.example.com:35533",
+  "db_name": "users",
+  "username": "admin",
+  "password": "pa$$w0rd"
+}
+```
+
+Now, try to read secrets from `secret/mysql/webapp` using `client_token` again.
+This time, it should return the values you just created.
+
+
+#### API call using cURL
+
+You can now pass the `client_token` returned in [Step 4](#step4) in the
+**`X-Vault-Token`** header.
+
+**Example:**
+
+```plaintext
+curl -X GET -H "X-Vault-Token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e" \
+    $VAULT_ADDR/v1/secret/mysql/webapp | jq
+
+{
+  "errors": []
+}
+```
+
+Since there is no value in the `secret/mysql/webapp`, it returns an empty array.
+
+**Optional:** Using the `admin` user's token, you can store some secrets in the
+`secret/mysql/webapp` backend.
+
+```shell
+$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" --data @mysqldb.txt \
+    $VAULT_ADDR/v1/secret/mysql/webapp
+
+$ cat mysqldb.text
+{
+  "url": "foo.example.com:35533",
+  "db_name": "users",
+  "username": "admin",
+  "password": "p@ssw0rd"
+}
+```
+
+Now, try to read secrets from `secret/mysql/webapp` using `client_token` again.
+This time, it should return the values you just created.
+
+
 
 
 ## Advanced Features
