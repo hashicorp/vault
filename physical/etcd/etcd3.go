@@ -41,6 +41,11 @@ const (
 	etcd3RequestTimeout = 5 * time.Second
 )
 
+// Verify interfaces are satisfied
+var _ physical.Backend = &EtcdBackend{}
+var _ physical.HABackend = &EtcdBackend{}
+var _ physical.Lock = &EtcdLock{}
+
 // newEtcd3Backend constructs a etcd3 backend.
 func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	// Get the etcd path form the configuration.
@@ -140,7 +145,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	}, nil
 }
 
-func (c *EtcdBackend) Put(entry *physical.Entry) error {
+func (c *EtcdBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"etcd", "put"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -152,7 +157,7 @@ func (c *EtcdBackend) Put(entry *physical.Entry) error {
 	return err
 }
 
-func (c *EtcdBackend) Get(key string) (*physical.Entry, error) {
+func (c *EtcdBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"etcd", "get"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -177,7 +182,7 @@ func (c *EtcdBackend) Get(key string) (*physical.Entry, error) {
 	}, nil
 }
 
-func (c *EtcdBackend) Delete(key string) error {
+func (c *EtcdBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"etcd", "delete"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -192,7 +197,7 @@ func (c *EtcdBackend) Delete(key string) error {
 	return nil
 }
 
-func (c *EtcdBackend) List(prefix string) ([]string, error) {
+func (c *EtcdBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"etcd", "list"}, time.Now())
 
 	c.permitPool.Acquire()

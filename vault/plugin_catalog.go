@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,14 +49,14 @@ func (c *Core) setupPluginCatalog() error {
 // Get retrieves a plugin with the specified name from the catalog. It first
 // looks for external plugins with this name and then looks for builtin plugins.
 // It returns a PluginRunner or an error if no plugin was found.
-func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
+func (c *PluginCatalog) Get(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	// If the directory isn't set only look for builtin plugins.
 	if c.directory != "" {
 		// Look for external plugins in the barrier
-		out, err := c.catalogView.Get(name)
+		out, err := c.catalogView.Get(ctx, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve plugin \"%s\": %v", name, err)
 		}
@@ -85,7 +86,7 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 
 // Set registers a new external plugin with the catalog, or updates an existing
 // external plugin. It takes the name, command and SHA256 of the plugin.
-func (c *PluginCatalog) Set(name, command string, args []string, sha256 []byte) error {
+func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []string, sha256 []byte) error {
 	if c.directory == "" {
 		return ErrDirectoryNotConfigured
 	}
@@ -133,7 +134,7 @@ func (c *PluginCatalog) Set(name, command string, args []string, sha256 []byte) 
 		Key:   name,
 		Value: buf,
 	}
-	if err := c.catalogView.Put(&logicalEntry); err != nil {
+	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
 		return fmt.Errorf("failed to persist plugin entry: %v", err)
 	}
 	return nil
@@ -141,21 +142,21 @@ func (c *PluginCatalog) Set(name, command string, args []string, sha256 []byte) 
 
 // Delete is used to remove an external plugin from the catalog. Builtin plugins
 // can not be deleted.
-func (c *PluginCatalog) Delete(name string) error {
+func (c *PluginCatalog) Delete(ctx context.Context, name string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	return c.catalogView.Delete(name)
+	return c.catalogView.Delete(ctx, name)
 }
 
 // List returns a list of all the known plugin names. If an external and builtin
 // plugin share the same name, only one instance of the name will be returned.
-func (c *PluginCatalog) List() ([]string, error) {
+func (c *PluginCatalog) List(ctx context.Context) ([]string, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	// Collect keys for external plugins in the barrier.
-	keys, err := logical.CollectKeys(c.catalogView)
+	keys, err := logical.CollectKeys(ctx, c.catalogView)
 	if err != nil {
 		return nil, err
 	}

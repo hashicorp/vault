@@ -144,7 +144,7 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 		EntityID: entityID,
 	}
 
-	if err := ts.create(te); err != nil {
+	if err := ts.create(context.Background(), te); err != nil {
 		t.Fatal(err)
 	}
 
@@ -184,7 +184,7 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 		EntityID: "testentityid",
 	}
 
-	if err := ts.create(te); err != nil {
+	if err := ts.create(context.Background(), te); err != nil {
 		t.Fatal(err)
 	}
 
@@ -253,7 +253,7 @@ func testIdentityStoreWithGithubAuthRoot(t *testing.T) (*IdentityStore, string, 
 		Description: "github auth",
 	}
 
-	err = c.enableCredential(meGH)
+	err = c.enableCredential(context.Background(), meGH)
 	if err != nil {
 		t.Fatal(err)
 	}

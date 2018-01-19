@@ -2,6 +2,7 @@ package aws
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,7 +23,7 @@ import (
 )
 
 func getBackend(t *testing.T) logical.Backend {
-	be, _ := Factory(logical.TestBackendConfig())
+	be, _ := Factory(context.Background(), logical.TestBackendConfig())
 	return be
 }
 

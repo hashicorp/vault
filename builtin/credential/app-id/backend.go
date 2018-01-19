@@ -1,6 +1,7 @@
 package appId
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hashicorp/vault/helper/salt"
@@ -8,12 +9,12 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
 	if err != nil {
 		return nil, err
 	}
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -115,7 +116,7 @@ func (b *backend) Salt() (*salt.Salt, error) {
 	return salt, nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(_ context.Context, key string) {
 	switch key {
 	case salt.DefaultLocation:
 		b.SaltMutex.Lock()

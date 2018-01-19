@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -16,18 +17,18 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func (c *Core) loadIdentityStoreArtifacts() error {
+func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	var err error
 	if c.identityStore == nil {
 		return fmt.Errorf("identity store is not setup")
 	}
 
-	err = c.identityStore.loadEntities()
+	err = c.identityStore.loadEntities(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = c.identityStore.loadGroups()
+	err = c.identityStore.loadGroups(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,9 +36,9 @@ func (c *Core) loadIdentityStoreArtifacts() error {
 	return nil
 }
 
-func (i *IdentityStore) loadGroups() error {
+func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("identity loading groups")
-	existing, err := i.groupPacker.View().List(groupBucketsPrefix)
+	existing, err := i.groupPacker.View().List(ctx, groupBucketsPrefix)
 	if err != nil {
 		return fmt.Errorf("failed to scan for groups: %v", err)
 	}
@@ -88,10 +89,10 @@ func (i *IdentityStore) loadGroups() error {
 	return nil
 }
 
-func (i *IdentityStore) loadEntities() error {
+func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	// Accumulate existing entities
 	i.logger.Debug("identity: loading entities")
-	existing, err := i.entityPacker.View().List(storagepacker.StoragePackerBucketsPrefix)
+	existing, err := i.entityPacker.View().List(ctx, storagepacker.StoragePackerBucketsPrefix)
 	if err != nil {
 		return fmt.Errorf("failed to scan for entities: %v", err)
 	}

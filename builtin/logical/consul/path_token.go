@@ -29,7 +29,7 @@ func pathToken(b *backend) *framework.Path {
 func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	role := d.Get("role").(string)
 
-	entry, err := req.Storage.Get("policy/" + role)
+	entry, err := req.Storage.Get(ctx, "policy/"+role)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
@@ -47,7 +47,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Get the consul client
-	c, userErr, intErr := client(req.Storage)
+	c, userErr, intErr := client(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -406,7 +407,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Ensure that the seal finalizer is called, even if using verify-only
 	defer func() {
 		if seal != nil {
-			err = seal.Finalize()
+			err = seal.Finalize(context.Background())
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
@@ -749,7 +750,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(handler)
 
-	err = core.UnsealWithStoredKeys()
+	err = core.UnsealWithStoredKeys(context.Background())
 	if err != nil {
 		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", err))
@@ -921,19 +922,21 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		SecretThreshold: 1,
 	}
 
-	if core.SealAccess().RecoveryKeySupported() {
+	ctx := context.Background()
+
+	if core.SealAccess().RecoveryKeySupported(ctx) {
 		recoveryConfig = &vault.SealConfig{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		}
 	}
 
-	if core.SealAccess().StoredKeysSupported() {
+	if core.SealAccess().StoredKeysSupported(ctx) {
 		barrierConfig.StoredShares = 1
 	}
 
 	// Initialize it with a basic single key
-	init, err := core.Initialize(&vault.InitParams{
+	init, err := core.Initialize(ctx, &vault.InitParams{
 		BarrierConfig:  barrierConfig,
 		RecoveryConfig: recoveryConfig,
 	})
@@ -942,8 +945,8 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Handle unseal with stored keys
-	if core.SealAccess().StoredKeysSupported() {
-		err := core.UnsealWithStoredKeys()
+	if core.SealAccess().StoredKeysSupported(ctx) {
+		err := core.UnsealWithStoredKeys(ctx)
 		if err != nil {
 			return nil, err
 		}

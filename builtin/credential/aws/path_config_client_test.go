@@ -16,7 +16,8 @@ func TestBackend_pathConfigClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}

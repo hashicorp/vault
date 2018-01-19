@@ -27,8 +27,8 @@ func pathMFAConfig(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) MFAConfig(req *logical.Request) (*MFAConfig, error) {
-	entry, err := req.Storage.Get("mfa_config")
+func (b *backend) MFAConfig(ctx context.Context, req *logical.Request) (*MFAConfig, error) {
+	entry, err := req.Storage.Get(ctx, "mfa_config")
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (b *backend) pathMFAConfigWrite(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -58,7 +58,7 @@ func (b *backend) pathMFAConfigWrite(ctx context.Context, req *logical.Request, 
 }
 
 func (b *backend) pathMFAConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	config, err := b.MFAConfig(req)
+	config, err := b.MFAConfig(ctx, req)
 	if err != nil {
 		return nil, err
 	}

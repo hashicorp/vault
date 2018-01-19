@@ -38,7 +38,7 @@ func (b *backend) secretOTPRevoke(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Delete("otp/" + salt.SaltID(otp))
+	err = req.Storage.Delete(ctx, "otp/"+salt.SaltID(otp))
 	if err != nil {
 		return nil, err
 	}

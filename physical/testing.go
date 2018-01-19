@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"testing"
@@ -10,7 +11,7 @@ import (
 func ExerciseBackend(t *testing.T, b Backend) {
 	t.Helper()
 	// Should be empty
-	keys, err := b.List("")
+	keys, err := b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -19,13 +20,13 @@ func ExerciseBackend(t *testing.T, b Backend) {
 	}
 
 	// Delete should work if it does not exist
-	err = b.Delete("foo")
+	err = b.Delete(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Get should fail
-	out, err := b.Get("foo")
+	out, err := b.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -35,13 +36,13 @@ func ExerciseBackend(t *testing.T, b Backend) {
 
 	// Make an entry
 	e := &Entry{Key: "foo", Value: []byte("test")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Get should work
-	out, err = b.Get("foo")
+	out, err = b.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -50,7 +51,7 @@ func ExerciseBackend(t *testing.T, b Backend) {
 	}
 
 	// List should not be empty
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -62,13 +63,13 @@ func ExerciseBackend(t *testing.T, b Backend) {
 	}
 
 	// Delete should work
-	err = b.Delete("foo")
+	err = b.Delete(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should be empty
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -77,7 +78,7 @@ func ExerciseBackend(t *testing.T, b Backend) {
 	}
 
 	// Get should fail
-	out, err = b.Get("foo")
+	out, err = b.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -87,24 +88,24 @@ func ExerciseBackend(t *testing.T, b Backend) {
 
 	// Multiple Puts should work; GH-189
 	e = &Entry{Key: "foo", Value: []byte("test")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	e = &Entry{Key: "foo", Value: []byte("test")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Make a nested entry
 	e = &Entry{Key: "foo/bar", Value: []byte("baz")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -117,13 +118,13 @@ func ExerciseBackend(t *testing.T, b Backend) {
 	}
 
 	// Delete with children should work
-	err = b.Delete("foo")
+	err = b.Delete(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Get should return the child
-	out, err = b.Get("foo/bar")
+	out, err = b.Get(context.Background(), "foo/bar")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -133,17 +134,17 @@ func ExerciseBackend(t *testing.T, b Backend) {
 
 	// Removal of nested secret should not leave artifacts
 	e = &Entry{Key: "foo/nested1/nested2/nested3", Value: []byte("baz")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = b.Delete("foo/nested1/nested2/nested3")
+	err = b.Delete(context.Background(), "foo/nested1/nested2/nested3")
 	if err != nil {
 		t.Fatalf("failed to remove nested secret: %v", err)
 	}
 
-	keys, err = b.List("foo/")
+	keys, err = b.List(context.Background(), "foo/")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -159,18 +160,18 @@ func ExerciseBackend(t *testing.T, b Backend) {
 
 	// Make a second nested entry to test prefix removal
 	e = &Entry{Key: "foo/zip", Value: []byte("zap")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Delete should not remove the prefix
-	err = b.Delete("foo/bar")
+	err = b.Delete(context.Background(), "foo/bar")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -182,12 +183,12 @@ func ExerciseBackend(t *testing.T, b Backend) {
 	}
 
 	// Delete should remove the prefix
-	err = b.Delete("foo/zip")
+	err = b.Delete(context.Background(), "foo/zip")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -203,26 +204,26 @@ func ExerciseBackend_ListPrefix(t *testing.T, b Backend) {
 	e3 := &Entry{Key: "foo/bar/baz", Value: []byte("test")}
 
 	defer func() {
-		b.Delete("foo")
-		b.Delete("foo/bar")
-		b.Delete("foo/bar/baz")
+		b.Delete(context.Background(), "foo")
+		b.Delete(context.Background(), "foo/bar")
+		b.Delete(context.Background(), "foo/bar/baz")
 	}()
 
-	err := b.Put(e1)
+	err := b.Put(context.Background(), e1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = b.Put(e2)
+	err = b.Put(context.Background(), e2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = b.Put(e3)
+	err = b.Put(context.Background(), e3)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Scan the root
-	keys, err := b.List("")
+	keys, err := b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -238,7 +239,7 @@ func ExerciseBackend_ListPrefix(t *testing.T, b Backend) {
 	}
 
 	// Scan foo/
-	keys, err = b.List("foo/")
+	keys, err = b.List(context.Background(), "foo/")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -254,7 +255,7 @@ func ExerciseBackend_ListPrefix(t *testing.T, b Backend) {
 	}
 
 	// Scan foo/bar/
-	keys, err = b.List("foo/bar/")
+	keys, err = b.List(context.Background(), "foo/bar/")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -353,11 +354,11 @@ func ExerciseTransactionalBackend(t *testing.T, b Backend) {
 
 	txns := SetupTestingTransactions(t, b)
 
-	if err := tb.Transaction(txns); err != nil {
+	if err := tb.Transaction(context.Background(), txns); err != nil {
 		t.Fatal(err)
 	}
 
-	keys, err := b.List("")
+	keys, err := b.List(context.Background(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +371,7 @@ func ExerciseTransactionalBackend(t *testing.T, b Backend) {
 		t.Fatalf("mismatch: expected\n%#v\ngot\n%#v\n", expected, keys)
 	}
 
-	entry, err := b.Get("foo")
+	entry, err := b.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,7 +385,7 @@ func ExerciseTransactionalBackend(t *testing.T, b Backend) {
 		t.Fatal("updates did not apply correctly")
 	}
 
-	entry, err = b.Get("zip")
+	entry, err = b.Get(context.Background(), "zip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -402,24 +403,24 @@ func ExerciseTransactionalBackend(t *testing.T, b Backend) {
 func SetupTestingTransactions(t *testing.T, b Backend) []*TxnEntry {
 	t.Helper()
 	// Add a few keys so that we test rollback with deletion
-	if err := b.Put(&Entry{
+	if err := b.Put(context.Background(), &Entry{
 		Key:   "foo",
 		Value: []byte("bar"),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := b.Put(&Entry{
+	if err := b.Put(context.Background(), &Entry{
 		Key:   "zip",
 		Value: []byte("zap"),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := b.Put(&Entry{
+	if err := b.Put(context.Background(), &Entry{
 		Key: "deleteme",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := b.Put(&Entry{
+	if err := b.Put(context.Background(), &Entry{
 		Key: "deleteme2",
 	}); err != nil {
 		t.Fatal(err)

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -24,7 +25,7 @@ func handleSysInit(core *vault.Core) http.Handler {
 }
 
 func handleSysInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	init, err := core.Initialized()
+	init, err := core.Initialized(context.Background())
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -36,6 +37,8 @@ func handleSysInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
 	// Parse the request
 	var req InitRequest
 	if err := parseRequest(r, w, &req); err != nil {
@@ -65,7 +68,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	// which means both that the shares will be different *AND* there would
 	// need to be a way to actually allow fetching of the generated keys by
 	// operators.
-	if core.SealAccess().StoredKeysSupported() {
+	if core.SealAccess().StoredKeysSupported(ctx) {
 		if barrierConfig.SecretShares != 1 {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("secret shares must be 1"))
 			return
@@ -94,7 +97,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if core.SealAccess().RecoveryKeySupported() {
+	if core.SealAccess().RecoveryKeySupported(ctx) {
 		if len(recoveryConfig.PGPKeys) > 0 && len(recoveryConfig.PGPKeys) != recoveryConfig.SecretShares-recoveryConfig.StoredShares {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for recovery"))
 			return
@@ -107,7 +110,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		RootTokenPGPKey: req.RootTokenPGPKey,
 	}
 
-	result, initErr := core.Initialize(initParams)
+	result, initErr := core.Initialize(ctx, initParams)
 	if initErr != nil {
 		if !errwrap.ContainsType(initErr, new(vault.NonFatalError)) {
 			respondError(w, http.StatusBadRequest, initErr)
@@ -141,7 +144,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	core.UnsealWithStoredKeys()
+	core.UnsealWithStoredKeys(ctx)
 
 	respondOk(w, resp)
 }

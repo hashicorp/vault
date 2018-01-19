@@ -133,11 +133,11 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := storage.Put(entry); err != nil {
+	if err := storage.Put(context.Background(), entry); err != nil {
 		t.Fatal(err)
 	}
 
-	role, err := backend.Role(storage, "test")
+	role, err := backend.Role(context.Background(), storage, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,11 +152,11 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 		Key:   "role/test",
 		Value: []byte(badJSON),
 	}
-	if err := storage.Put(entry); err != nil {
+	if err := storage.Put(context.Background(), entry); err != nil {
 		t.Fatal(err)
 	}
 
-	role, err = backend.Role(storage, "test")
+	role, err = backend.Role(context.Background(), storage, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,11 +177,11 @@ func TestBackend_config_connection(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Cleanup()
+	defer b.Cleanup(context.Background())
 
 	configData := map[string]interface{}{
 		"connection_url":    "sample_connection_url",
@@ -241,11 +241,11 @@ func TestBackend_basic(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Cleanup()
+	defer b.Cleanup(context.Background())
 
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
@@ -399,11 +399,11 @@ func TestBackend_connectionCrud(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Cleanup()
+	defer b.Cleanup(context.Background())
 
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
@@ -544,11 +544,11 @@ func TestBackend_roleCrud(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Cleanup()
+	defer b.Cleanup(context.Background())
 
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()
@@ -656,11 +656,11 @@ func TestBackend_allowedRoles(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Cleanup()
+	defer b.Cleanup(context.Background())
 
 	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
 	defer cleanup()

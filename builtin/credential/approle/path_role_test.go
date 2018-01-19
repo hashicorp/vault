@@ -26,7 +26,7 @@ func TestApprole_RoleNameLowerCasing(t *testing.T) {
 		Policies:     []string{"default"},
 		BindSecretID: true,
 	}
-	err = b.setRoleEntry(storage, "testRoleName", role, "")
+	err = b.setRoleEntry(context.Background(), storage, "testRoleName", role, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ func TestAppRole_RoleReadSetIndex(t *testing.T) {
 	roleID := resp.Data["role_id"].(string)
 
 	// Delete the role ID index
-	err = b.roleIDEntryDelete(storage, roleID)
+	err = b.roleIDEntryDelete(context.Background(), storage, roleID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +225,7 @@ func TestAppRole_RoleReadSetIndex(t *testing.T) {
 		t.Fatalf("bad: expected a warning in the response")
 	}
 
-	roleIDIndex, err := b.roleIDEntry(storage, roleID)
+	roleIDIndex, err := b.roleIDEntry(context.Background(), storage, roleID)
 	if err != nil {
 		t.Fatal(err)
 	}

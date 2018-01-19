@@ -154,9 +154,9 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 
 // validateInstance queries the status of the EC2 instance using AWS EC2 API
 // and checks if the instance is running and is healthy
-func (b *backend) validateInstance(s logical.Storage, instanceID, region, accountID string) (*ec2.Instance, error) {
+func (b *backend) validateInstance(ctx context.Context, s logical.Storage, instanceID, region, accountID string) (*ec2.Instance, error) {
 	// Create an EC2 client to pull the instance information
-	ec2Client, err := b.clientEC2(s, region, accountID)
+	ec2Client, err := b.clientEC2(ctx, s, region, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 // Verifies the integrity of the instance identity document using its SHA256
 // RSA signature. After verification, returns the unmarshaled instance identity
 // document.
-func (b *backend) verifyInstanceIdentitySignature(s logical.Storage, identityBytes, signatureBytes []byte) (*identityDocument, error) {
+func (b *backend) verifyInstanceIdentitySignature(ctx context.Context, s logical.Storage, identityBytes, signatureBytes []byte) (*identityDocument, error) {
 	if len(identityBytes) == 0 {
 		return nil, fmt.Errorf("missing instance identity document")
 	}
@@ -270,7 +270,7 @@ func (b *backend) verifyInstanceIdentitySignature(s logical.Storage, identityByt
 	// certificate and all the registered certificates via
 	// 'config/certificate/<cert_name>' endpoint, for verifying the RSA
 	// digest.
-	publicCerts, err := b.awsPublicCertificates(s, false)
+	publicCerts, err := b.awsPublicCertificates(ctx, s, false)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (b *backend) verifyInstanceIdentitySignature(s logical.Storage, identityByt
 // Verifies the correctness of the authenticated attributes present in the PKCS#7
 // signature. After verification, extracts the instance identity document from the
 // signature, parses it and returns it.
-func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*identityDocument, error) {
+func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, pkcs7B64 string) (*identityDocument, error) {
 	// Insert the header and footer for the signature to be able to pem decode it
 	pkcs7B64 = fmt.Sprintf("-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----", pkcs7B64)
 
@@ -316,7 +316,7 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 	// Get the public certificates that are used to verify the signature.
 	// This returns a slice of certificates containing the default certificate
 	// and all the registered certificates via 'config/certificate/<cert_name>' endpoint
-	publicCerts, err := b.awsPublicCertificates(s, true)
+	publicCerts, err := b.awsPublicCertificates(ctx, s, true)
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +372,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 // error that means the instance doesn't meet the role requirements
 // The second error return value indicates whether there's an error in even
 // trying to validate those requirements
-func (b *backend) verifyInstanceMeetsRoleRequirements(
+func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	s logical.Storage, instance *ec2.Instance, roleEntry *awsRoleEntry, roleName string, identityDoc *identityDocument) (error, error) {
 
 	switch {
@@ -470,7 +470,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
-		iamClient, err := b.clientIAM(s, identityDoc.Region, identityDoc.AccountID)
+		iamClient, err := b.clientIAM(ctx, s, identityDoc.Region, identityDoc.AccountID)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch IAM client: %v", err)
 		} else if iamClient == nil {
@@ -530,7 +530,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	// Verify the signature of the identity document and unmarshal it
 	var identityDocParsed *identityDocument
 	if pkcs7B64 != "" {
-		identityDocParsed, err = b.parseIdentityDocument(req.Storage, pkcs7B64)
+		identityDocParsed, err = b.parseIdentityDocument(ctx, req.Storage, pkcs7B64)
 		if err != nil {
 			return nil, err
 		}
@@ -538,7 +538,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 			return logical.ErrorResponse("failed to verify the instance identity document using pkcs7"), nil
 		}
 	} else {
-		identityDocParsed, err = b.verifyInstanceIdentitySignature(req.Storage, identityDocBytes, signatureBytes)
+		identityDocParsed, err = b.verifyInstanceIdentitySignature(ctx, req.Storage, identityDocBytes, signatureBytes)
 		if err != nil {
 			return nil, err
 		}
@@ -566,7 +566,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	}
 
 	// Get the entry for the role used by the instance
-	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
+	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -581,7 +581,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	// Validate the instance ID by making a call to AWS EC2 DescribeInstances API
 	// and fetching the instance description. Validation succeeds only if the
 	// instance is in 'running' state.
-	instance, err := b.validateInstance(req.Storage, identityDocParsed.InstanceID, identityDocParsed.Region, identityDocParsed.AccountID)
+	instance, err := b.validateInstance(ctx, req.Storage, identityDocParsed.InstanceID, identityDocParsed.Region, identityDocParsed.AccountID)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %v", err)), nil
 	}
@@ -592,7 +592,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse(fmt.Sprintf("Region %q does not satisfy the constraint on role %q", identityDocParsed.Region, roleName)), nil
 	}
 
-	validationError, err := b.verifyInstanceMeetsRoleRequirements(req.Storage, instance, roleEntry, roleName, identityDocParsed)
+	validationError, err := b.verifyInstanceMeetsRoleRequirements(ctx, req.Storage, instance, roleEntry, roleName, identityDocParsed)
 	if err != nil {
 		return nil, err
 	}
@@ -601,7 +601,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	}
 
 	// Get the entry from the identity whitelist, if there is one
-	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDocParsed.InstanceID)
+	storedIdentity, err := whitelistIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -682,7 +682,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	rTagMaxTTL := time.Duration(0)
 	var roleTagResp *roleTagLoginResponse
 	if roleEntry.RoleTag != "" {
-		roleTagResp, err := b.handleRoleTagLogin(req.Storage, roleName, roleEntry, instance)
+		roleTagResp, err := b.handleRoleTagLogin(ctx, req.Storage, roleName, roleEntry, instance)
 		if err != nil {
 			return nil, err
 		}
@@ -750,7 +750,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
 	}
 
-	if err = setWhitelistIdentityEntry(req.Storage, identityDocParsed.InstanceID, storedIdentity); err != nil {
+	if err = setWhitelistIdentityEntry(ctx, req.Storage, identityDocParsed.InstanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
@@ -800,7 +800,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 // handleRoleTagLogin is used to fetch the role tag of the instance and
 // verifies it to be correct.  Then the policies for the login request will be
 // set off of the role tag, if certain creteria satisfies.
-func (b *backend) handleRoleTagLogin(s logical.Storage, roleName string, roleEntry *awsRoleEntry, instance *ec2.Instance) (*roleTagLoginResponse, error) {
+func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry, instance *ec2.Instance) (*roleTagLoginResponse, error) {
 	if roleEntry == nil {
 		return nil, fmt.Errorf("nil role entry")
 	}
@@ -832,7 +832,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, roleName string, roleEnt
 	}
 
 	// Parse the role tag into a struct, extract the plaintext part of it and verify its HMAC
-	rTag, err := b.parseAndVerifyRoleTagValue(s, rTagValue)
+	rTag, err := b.parseAndVerifyRoleTagValue(ctx, s, rTagValue)
 	if err != nil {
 		return nil, err
 	}
@@ -849,7 +849,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, roleName string, roleEnt
 	}
 
 	// Check if the role tag is blacklisted
-	blacklistEntry, err := b.lockedBlacklistRoleTagEntry(s, rTagValue)
+	blacklistEntry, err := b.lockedBlacklistRoleTagEntry(ctx, s, rTagValue)
 	if err != nil {
 		return nil, err
 	}
@@ -896,7 +896,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 	if roleName == "" {
 		return nil, fmt.Errorf("error retrieving role_name during renewal")
 	}
-	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
+	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -924,7 +924,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 			if !ok {
 				return nil, fmt.Errorf("no inferred AWS region in auth metadata")
 			}
-			_, err := b.validateInstance(req.Storage, instanceID, instanceRegion, req.Auth.Metadata["account_id"])
+			_, err := b.validateInstance(ctx, req.Storage, instanceID, instanceRegion, req.Auth.Metadata["account_id"])
 			if err != nil {
 				return nil, fmt.Errorf("failed to verify instance ID %q: %v", instanceID, err)
 			}
@@ -956,7 +956,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 				if err != nil {
 					return nil, fmt.Errorf("error parsing ARN %q: %v", canonicalArn, err)
 				}
-				fullArn, err = b.fullArn(entity, req.Storage)
+				fullArn, err = b.fullArn(ctx, entity, req.Storage)
 				if err != nil {
 					return nil, fmt.Errorf("error looking up full ARN of entity %v: %v", entity, err)
 				}
@@ -1008,12 +1008,12 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 	}
 
 	// Cross check that the instance is still in 'running' state
-	_, err := b.validateInstance(req.Storage, instanceID, region, accountID)
+	_, err := b.validateInstance(ctx, req.Storage, instanceID, region, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify instance ID %q: %q", instanceID, err)
 	}
 
-	storedIdentity, err := whitelistIdentityEntry(req.Storage, instanceID)
+	storedIdentity, err := whitelistIdentityEntry(ctx, req.Storage, instanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -1022,7 +1022,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 	}
 
 	// Ensure that role entry is not deleted
-	roleEntry, err := b.lockedAWSRole(req.Storage, storedIdentity.Role)
+	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, storedIdentity.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -1061,7 +1061,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 
 	// Updating the expiration time is required for the tidy operation on the
 	// whitelist identity storage items
-	if err = setWhitelistIdentityEntry(req.Storage, instanceID, storedIdentity); err != nil {
+	if err = setWhitelistIdentityEntry(ctx, req.Storage, instanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
@@ -1127,7 +1127,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("nil response when parsing iam_request_headers"), nil
 	}
 
-	config, err := b.lockedClientConfigEntry(req.Storage)
+	config, err := b.lockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return logical.ErrorResponse("error getting configuration"), nil
 	}
@@ -1175,7 +1175,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		roleName = entity.FriendlyName
 	}
 
-	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
+	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -1200,7 +1200,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		if strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
 			fullArn := b.getCachedUserId(callerUniqueId)
 			if fullArn == "" {
-				fullArn, err = b.fullArn(entity, req.Storage)
+				fullArn, err = b.fullArn(ctx, entity, req.Storage)
 				if err != nil {
 					return logical.ErrorResponse(fmt.Sprintf("error looking up full ARN of entity %v: %v", entity, err)), nil
 				}
@@ -1224,7 +1224,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	inferredEntityType := ""
 	inferredEntityID := ""
 	if roleEntry.InferredEntityType == ec2EntityType {
-		instance, err := b.validateInstance(req.Storage, entity.SessionInfo, roleEntry.InferredAWSRegion, callerID.Account)
+		instance, err := b.validateInstance(ctx, req.Storage, entity.SessionInfo, roleEntry.InferredAWSRegion, callerID.Account)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to verify %s as a valid EC2 instance in region %s", entity.SessionInfo, roleEntry.InferredAWSRegion)), nil
 		}
@@ -1239,7 +1239,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			PendingTime: instance.LaunchTime.Format(time.RFC3339),
 		}
 
-		validationError, err := b.verifyInstanceMeetsRoleRequirements(req.Storage, instance, roleEntry, roleName, identityDoc)
+		validationError, err := b.verifyInstanceMeetsRoleRequirements(ctx, req.Storage, instance, roleEntry, roleName, identityDoc)
 		if err != nil {
 			return nil, err
 		}
@@ -1587,9 +1587,9 @@ func (e *iamEntity) canonicalArn() string {
 }
 
 // This returns the "full" ARN of an iamEntity, how it would be referred to in AWS proper
-func (b *backend) fullArn(e *iamEntity, s logical.Storage) (string, error) {
+func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) (string, error) {
 	// Not assuming path is reliable for any entity types
-	client, err := b.clientIAM(s, getAnyRegionForAwsPartition(e.Partition).ID(), e.AccountNumber)
+	client, err := b.clientIAM(ctx, s, getAnyRegionForAwsPartition(e.Partition).ID(), e.AccountNumber)
 	if err != nil {
 		return "", fmt.Errorf("error creating IAM client: %v", err)
 	}

@@ -57,7 +57,7 @@ func testPathLoginHandler(ctx context.Context, req *logical.Request, d *framewor
 	}, nil
 }
 
-func testMFAHandler(req *logical.Request, d *framework.FieldData, resp *logical.Response) (
+func testMFAHandler(ctx context.Context, req *logical.Request, d *framework.FieldData, resp *logical.Response) (
 	*logical.Response, error) {
 	if d.Get("method").(string) != "accept" {
 		return logical.ErrorResponse("Deny access"), nil

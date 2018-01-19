@@ -59,7 +59,7 @@ Defaults to 'client'.`,
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("policy/")
+	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get("policy/" + name)
+	entry, err := req.Storage.Get(ctx, "policy/"+name)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -151,7 +151,7 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 
 func pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	if err := req.Storage.Delete("policy/" + name); err != nil {
+	if err := req.Storage.Delete(ctx, "policy/"+name); err != nil {
 		return nil, err
 	}
 	return nil, nil

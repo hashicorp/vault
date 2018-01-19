@@ -107,11 +107,11 @@ func TestBackend_allowed_users(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Initialize()
+	err = b.Initialize(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,14 +217,14 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 }
 
-func testingFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+func testingFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	_, err := vault.StartSSHHostTestServer()
 	if err != nil {
 		panic(fmt.Sprintf("error starting mock server:%s", err))
 	}
 	defaultLeaseTTLVal := 2 * time.Minute
 	maxLeaseTTLVal := 10 * time.Minute
-	return Factory(&logical.BackendConfig{
+	return Factory(context.Background(), &logical.BackendConfig{
 		Logger:      nil,
 		StorageView: &logical.InmemStorage{},
 		System: &logical.StaticSystemView{
@@ -516,7 +516,7 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -552,7 +552,7 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -590,7 +590,7 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -633,7 +633,7 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -681,7 +681,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 func TestBackend_CustomKeyIDFormat(t *testing.T) {
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -730,7 +730,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}

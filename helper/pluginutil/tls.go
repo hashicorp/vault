@@ -1,6 +1,7 @@
 package pluginutil
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -110,13 +111,13 @@ func createClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config
 
 // wrapServerConfig is used to create a server certificate and private key, then
 // wrap them in an unwrap token for later retrieval by the plugin.
-func wrapServerConfig(sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
+func wrapServerConfig(ctx context.Context, sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
 	rawKey, err := x509.MarshalECPrivateKey(key)
 	if err != nil {
 		return "", err
 	}
 
-	wrapInfo, err := sys.ResponseWrapData(map[string]interface{}{
+	wrapInfo, err := sys.ResponseWrapData(ctx, map[string]interface{}{
 		"ServerCert": certBytes,
 		"ServerKey":  rawKey,
 	}, time.Second*60, true)

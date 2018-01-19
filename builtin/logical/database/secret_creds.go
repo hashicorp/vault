@@ -34,7 +34,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
 		}
 
-		role, err := b.Role(req.Storage, roleNameRaw.(string))
+		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +99,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			return nil, fmt.Errorf("no role name was provided")
 		}
 
-		role, err := b.Role(req.Storage, roleNameRaw.(string))
+		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
 			return nil, err
 		}

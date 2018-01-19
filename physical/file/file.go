@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,10 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/physical"
 )
+
+// Verify interfaces are satisfied
+var _ physical.Backend = &FileBackend{}
+var _ physical.Transactional = &TransactionalFileBackend{}
 
 // FileBackend is a physical backend that stores data on disk
 // at a given file path. It can be used for durable single server
@@ -68,17 +73,17 @@ func NewTransactionalFileBackend(conf map[string]string, logger log.Logger) (phy
 	}, nil
 }
 
-func (b *FileBackend) Delete(path string) error {
+func (b *FileBackend) Delete(ctx context.Context, path string) error {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
 	b.Lock()
 	defer b.Unlock()
 
-	return b.DeleteInternal(path)
+	return b.DeleteInternal(ctx, path)
 }
 
-func (b *FileBackend) DeleteInternal(path string) error {
+func (b *FileBackend) DeleteInternal(ctx context.Context, path string) error {
 	if path == "" {
 		return nil
 	}
@@ -137,17 +142,17 @@ func (b *FileBackend) cleanupLogicalPath(path string) error {
 	return nil
 }
 
-func (b *FileBackend) Get(k string) (*physical.Entry, error) {
+func (b *FileBackend) Get(ctx context.Context, k string) (*physical.Entry, error) {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
 	b.RLock()
 	defer b.RUnlock()
 
-	return b.GetInternal(k)
+	return b.GetInternal(ctx, k)
 }
 
-func (b *FileBackend) GetInternal(k string) (*physical.Entry, error) {
+func (b *FileBackend) GetInternal(ctx context.Context, k string) (*physical.Entry, error) {
 	if err := b.validatePath(k); err != nil {
 		return nil, err
 	}
@@ -178,17 +183,17 @@ func (b *FileBackend) GetInternal(k string) (*physical.Entry, error) {
 	}, nil
 }
 
-func (b *FileBackend) Put(entry *physical.Entry) error {
+func (b *FileBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
 	b.Lock()
 	defer b.Unlock()
 
-	return b.PutInternal(entry)
+	return b.PutInternal(ctx, entry)
 }
 
-func (b *FileBackend) PutInternal(entry *physical.Entry) error {
+func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) error {
 	if err := b.validatePath(entry.Key); err != nil {
 		return err
 	}
@@ -217,7 +222,7 @@ func (b *FileBackend) PutInternal(entry *physical.Entry) error {
 	})
 }
 
-func (b *FileBackend) List(prefix string) ([]string, error) {
+func (b *FileBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
@@ -288,12 +293,12 @@ func (b *FileBackend) validatePath(path string) error {
 	return nil
 }
 
-func (b *TransactionalFileBackend) Transaction(txns []*physical.TxnEntry) error {
+func (b *TransactionalFileBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
 	b.Lock()
 	defer b.Unlock()
 
-	return physical.GenericTransactionHandler(b, txns)
+	return physical.GenericTransactionHandler(ctx, b, txns)
 }

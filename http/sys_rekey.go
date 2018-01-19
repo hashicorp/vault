@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -27,13 +28,16 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 			return
 		}
 
+		ctx, cancel := core.GetContext()
+		defer cancel()
+
 		switch {
-		case recovery && !core.SealAccess().RecoveryKeySupported():
+		case recovery && !core.SealAccess().RecoveryKeySupported(ctx):
 			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"))
 		case r.Method == "GET":
-			handleSysRekeyInitGet(core, recovery, w, r)
+			handleSysRekeyInitGet(ctx, core, recovery, w, r)
 		case r.Method == "POST" || r.Method == "PUT":
-			handleSysRekeyInitPut(core, recovery, w, r)
+			handleSysRekeyInitPut(ctx, core, recovery, w, r)
 		case r.Method == "DELETE":
 			handleSysRekeyInitDelete(core, recovery, w, r)
 		default:
@@ -42,8 +46,8 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 	})
 }
 
-func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	barrierConfig, err := core.SealAccess().BarrierConfig()
+func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -68,7 +72,7 @@ func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWrite
 		return
 	}
 
-	sealThreshold, err := core.RekeyThreshold(recovery)
+	sealThreshold, err := core.RekeyThreshold(ctx, recovery)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -100,7 +104,7 @@ func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWrite
 	respondOk(w, status)
 }
 
-func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req RekeyRequest
 	if err := parseRequest(r, w, &req); err != nil {
@@ -115,7 +119,7 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 
 	// If the seal supports recovery keys and stored keys, then we allow rekeying the barrier key
 	// iff the secret shares, secret threshold, and stored shares are set to 1.
-	if !recovery && core.SealAccess().RecoveryKeySupported() && core.SealAccess().StoredKeysSupported() {
+	if !recovery && core.SealAccess().RecoveryKeySupported(ctx) && core.SealAccess().StoredKeysSupported(ctx) {
 		if req.SecretShares != 1 || req.SecretThreshold != 1 || req.StoredShares != 1 {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("secret shares, secret threshold, and stored shares must be set to 1"))
 			return
@@ -128,7 +132,7 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 	}
 
 	// Initialize the rekey
-	err := core.RekeyInit(&vault.SealConfig{
+	err := core.RekeyInit(ctx, &vault.SealConfig{
 		SecretShares:    req.SecretShares,
 		SecretThreshold: req.SecretThreshold,
 		StoredShares:    req.StoredShares,
@@ -140,7 +144,7 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 		return
 	}
 
-	handleSysRekeyInitGet(core, recovery, w, r)
+	handleSysRekeyInitGet(ctx, core, recovery, w, r)
 }
 
 func handleSysRekeyInitDelete(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
@@ -189,8 +193,11 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			}
 		}
 
+		ctx, cancel := core.GetContext()
+		defer cancel()
+
 		// Use the key to make progress on rekey
-		result, err := core.RekeyUpdate(key, req.Nonce, recovery)
+		result, err := core.RekeyUpdate(ctx, key, req.Nonce, recovery)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
@@ -215,7 +222,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			resp.KeysB64 = keysB64
 			respondOk(w, resp)
 		} else {
-			handleSysRekeyInitGet(core, recovery, w, r)
+			handleSysRekeyInitGet(ctx, core, recovery, w, r)
 		}
 	})
 }

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -12,11 +13,13 @@ func TestPolicyMap(t *testing.T) {
 	p.PathMap.Name = "foo"
 	s := new(logical.InmemStorage)
 
-	p.Put(s, "foo", map[string]interface{}{"value": "bar"})
-	p.Put(s, "bar", map[string]interface{}{"value": "foo,baz "})
+	ctx := context.Background()
+
+	p.Put(ctx, s, "foo", map[string]interface{}{"value": "bar"})
+	p.Put(ctx, s, "bar", map[string]interface{}{"value": "foo,baz "})
 
 	// Read via API
-	actual, err := p.Policies(s, "foo", "bar")
+	actual, err := p.Policies(ctx, s, "foo", "bar")
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
 	}

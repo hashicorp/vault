@@ -1,6 +1,7 @@
 package inmem
 
 import (
+	"context"
 	"strings"
 	"sync"
 
@@ -9,6 +10,13 @@ import (
 
 	"github.com/armon/go-radix"
 )
+
+// Verify interfaces are satisfied
+var _ physical.Backend = &InmemBackend{}
+var _ physical.HABackend = &InmemHABackend{}
+var _ physical.Lock = &InmemLock{}
+var _ physical.Transactional = &TransactionalInmemBackend{}
+var _ physical.Transactional = &TransactionalInmemHABackend{}
 
 // InmemBackend is an in-memory only physical backend. It is useful
 // for testing and development situations where the data is not
@@ -48,33 +56,33 @@ func NewTransactionalInmem(_ map[string]string, logger log.Logger) (physical.Bac
 }
 
 // Put is used to insert or update an entry
-func (i *InmemBackend) Put(entry *physical.Entry) error {
+func (i *InmemBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
 
 	i.Lock()
 	defer i.Unlock()
 
-	return i.PutInternal(entry)
+	return i.PutInternal(ctx, entry)
 }
 
-func (i *InmemBackend) PutInternal(entry *physical.Entry) error {
+func (i *InmemBackend) PutInternal(ctx context.Context, entry *physical.Entry) error {
 	i.root.Insert(entry.Key, entry.Value)
 	return nil
 }
 
 // Get is used to fetch an entry
-func (i *InmemBackend) Get(key string) (*physical.Entry, error) {
+func (i *InmemBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
 
 	i.RLock()
 	defer i.RUnlock()
 
-	return i.GetInternal(key)
+	return i.GetInternal(ctx, key)
 }
 
-func (i *InmemBackend) GetInternal(key string) (*physical.Entry, error) {
+func (i *InmemBackend) GetInternal(ctx context.Context, key string) (*physical.Entry, error) {
 	if raw, ok := i.root.Get(key); ok {
 		return &physical.Entry{
 			Key:   key,
@@ -85,24 +93,24 @@ func (i *InmemBackend) GetInternal(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (i *InmemBackend) Delete(key string) error {
+func (i *InmemBackend) Delete(ctx context.Context, key string) error {
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
 
 	i.Lock()
 	defer i.Unlock()
 
-	return i.DeleteInternal(key)
+	return i.DeleteInternal(ctx, key)
 }
 
-func (i *InmemBackend) DeleteInternal(key string) error {
+func (i *InmemBackend) DeleteInternal(ctx context.Context, key string) error {
 	i.root.Delete(key)
 	return nil
 }
 
 // List is used ot list all the keys under a given
 // prefix, up to the next prefix.
-func (i *InmemBackend) List(prefix string) ([]string, error) {
+func (i *InmemBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
 
@@ -135,12 +143,12 @@ func (i *InmemBackend) ListInternal(prefix string) ([]string, error) {
 }
 
 // Implements the transaction interface
-func (t *TransactionalInmemBackend) Transaction(txns []*physical.TxnEntry) error {
+func (t *TransactionalInmemBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	t.permitPool.Acquire()
 	defer t.permitPool.Release()
 
 	t.Lock()
 	defer t.Unlock()
 
-	return physical.GenericTransactionHandler(t, txns)
+	return physical.GenericTransactionHandler(ctx, t, txns)
 }

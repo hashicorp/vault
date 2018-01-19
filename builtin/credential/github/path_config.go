@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -87,7 +86,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -95,7 +94,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	config, err := b.Config(req.Storage)
+	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -108,14 +107,19 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 	config.MaxTTL /= time.Second
 
 	resp := &logical.Response{
-		Data: structs.New(config).Map(),
+		Data: map[string]interface{}{
+			"organization": config.Organization,
+			"base_url":     config.BaseURL,
+			"ttl":          config.TTL,
+			"max_ttl":      config.MaxTTL,
+		},
 	}
 	return resp, nil
 }
 
 // Config returns the configuration for this backend.
-func (b *backend) Config(s logical.Storage) (*config, error) {
-	entry, err := s.Get("config")
+func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error) {
+	entry, err := s.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}

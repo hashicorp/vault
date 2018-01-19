@@ -2,6 +2,7 @@ package s3
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -141,7 +142,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 }
 
 // Put is used to insert or update an entry
-func (s *S3Backend) Put(entry *physical.Entry) error {
+func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"s3", "put"}, time.Now())
 
 	s.permitPool.Acquire()
@@ -161,7 +162,7 @@ func (s *S3Backend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch an entry
-func (s *S3Backend) Get(key string) (*physical.Entry, error) {
+func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"s3", "get"}, time.Now())
 
 	s.permitPool.Acquire()
@@ -200,7 +201,7 @@ func (s *S3Backend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (s *S3Backend) Delete(key string) error {
+func (s *S3Backend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"s3", "delete"}, time.Now())
 
 	s.permitPool.Acquire()
@@ -220,7 +221,7 @@ func (s *S3Backend) Delete(key string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (s *S3Backend) List(prefix string) ([]string, error) {
+func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"s3", "list"}, time.Now())
 
 	s.permitPool.Acquire()

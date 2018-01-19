@@ -63,19 +63,19 @@ Defaults to 'client'.`,
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) rolesExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	entry, err := b.Role(req.Storage, name)
+	entry, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-func (b *backend) Role(storage logical.Storage, name string) (*roleConfig, error) {
+func (b *backend) Role(ctx context.Context, storage logical.Storage, name string) (*roleConfig, error) {
 	if name == "" {
 		return nil, errors.New("invalid role name")
 	}
 
-	entry, err := storage.Get("role/" + name)
+	entry, err := storage.Get(ctx, "role/"+name)
 	if err != nil {
 		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
@@ -91,7 +91,7 @@ func (b *backend) Role(storage logical.Storage, name string) (*roleConfig, error
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -173,7 +173,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 
 func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	if err := req.Storage.Delete("role/" + name); err != nil {
+	if err := req.Storage.Delete(ctx, "role/"+name); err != nil {
 		return nil, err
 	}
 	return nil, nil

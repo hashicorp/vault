@@ -27,7 +27,7 @@ func (b *backend) pathBackup() *framework.Path {
 }
 
 func (b *backend) pathBackupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	backup, err := b.lm.BackupPolicy(req.Storage, d.Get("name").(string))
+	backup, err := b.lm.BackupPolicy(ctx, req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}

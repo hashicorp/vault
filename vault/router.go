@@ -135,7 +135,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 }
 
 // Unmount is used to remove a logical backend from a given prefix
-func (r *Router) Unmount(prefix string) error {
+func (r *Router) Unmount(ctx context.Context, prefix string) error {
 	r.l.Lock()
 	defer r.l.Unlock()
 
@@ -148,7 +148,7 @@ func (r *Router) Unmount(prefix string) error {
 	// Call backend's Cleanup routine
 	re := raw.(*routeEntry)
 	if re.backend != nil {
-		re.backend.Cleanup()
+		re.backend.Cleanup(ctx)
 	}
 
 	// Purge from the radix trees

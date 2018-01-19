@@ -99,14 +99,14 @@ func TestGRPCBackendPlugin_Cleanup(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
 
-	b.Cleanup()
+	b.Cleanup(context.Background())
 }
 
 func TestGRPCBackendPlugin_Initialize(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
 
-	err := b.Initialize()
+	err := b.Initialize(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,9 @@ func TestGRPCBackendPlugin_InvalidateKey(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
 
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	ctx := context.Background()
+
+	resp, err := b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "internal",
 	})
@@ -127,9 +129,9 @@ func TestGRPCBackendPlugin_InvalidateKey(t *testing.T) {
 		t.Fatalf("bad: %#v, expected non-empty value", resp)
 	}
 
-	b.InvalidateKey("internal")
+	b.InvalidateKey(ctx, "internal")
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "internal",
 	})
@@ -170,7 +172,7 @@ func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 	}
 	b := raw.(logical.Backend)
 
-	err = b.Setup(&logical.BackendConfig{
+	err = b.Setup(context.Background(), &logical.BackendConfig{
 		Logger: logformat.NewVaultLogger(log.LevelTrace),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 300 * time.Second,

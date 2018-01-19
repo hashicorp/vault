@@ -306,7 +306,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +366,7 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -449,7 +449,7 @@ func TestBackend_CRLs(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -586,7 +586,7 @@ func TestBackend_CRLs(t *testing.T) {
 }
 
 func testFactory(t *testing.T) logical.Backend {
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 1000 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,
@@ -1135,7 +1135,7 @@ func testConnState(certPath, keyPath, rootCertPath string) (tls.ConnectionState,
 func Test_Renew(t *testing.T) {
 	storage := &logical.InmemStorage{}
 
-	lb, err := Factory(&logical.BackendConfig{
+	lb, err := Factory(context.Background(), &logical.BackendConfig{
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 300 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,

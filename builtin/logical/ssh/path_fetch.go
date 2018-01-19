@@ -21,7 +21,7 @@ func pathFetchPublicKey(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchPublicKey(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	publicKeyEntry, err := caKey(req.Storage, caPublicKey)
+	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
 	if err != nil {
 		return nil, err
 	}

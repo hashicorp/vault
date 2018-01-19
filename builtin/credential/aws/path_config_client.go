@@ -66,7 +66,7 @@ func pathConfigClient(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathConfigClientExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.lockedClientConfigEntry(req.Storage)
+	entry, err := b.lockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return false, err
 	}
@@ -74,16 +74,16 @@ func (b *backend) pathConfigClientExistenceCheck(ctx context.Context, req *logic
 }
 
 // Fetch the client configuration required to access the AWS API, after acquiring an exclusive lock.
-func (b *backend) lockedClientConfigEntry(s logical.Storage) (*clientConfig, error) {
+func (b *backend) lockedClientConfigEntry(ctx context.Context, s logical.Storage) (*clientConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.nonLockedClientConfigEntry(s)
+	return b.nonLockedClientConfigEntry(ctx, s)
 }
 
 // Fetch the client configuration required to access the AWS API.
-func (b *backend) nonLockedClientConfigEntry(s logical.Storage) (*clientConfig, error) {
-	entry, err := s.Get("config/client")
+func (b *backend) nonLockedClientConfigEntry(ctx context.Context, s logical.Storage) (*clientConfig, error) {
+	entry, err := s.Get(ctx, "config/client")
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (b *backend) nonLockedClientConfigEntry(s logical.Storage) (*clientConfig, 
 }
 
 func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := b.lockedClientConfigEntry(req.Storage)
+	clientConfig, err := b.lockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (b *backend) pathConfigClientDelete(ctx context.Context, req *logical.Reque
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	if err := req.Storage.Delete("config/client"); err != nil {
+	if err := req.Storage.Delete(ctx, "config/client"); err != nil {
 		return nil, err
 	}
 
@@ -139,7 +139,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.nonLockedClientConfigEntry(req.Storage)
+	configEntry, err := b.nonLockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	}
 
 	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
-		if err := req.Storage.Put(entry); err != nil {
+		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 	}

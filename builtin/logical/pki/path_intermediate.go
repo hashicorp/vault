@@ -121,7 +121,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Re
 	}
 
 	cb := &certutil.CertBundle{}
-	entry, err := req.Storage.Get("config/ca_bundle")
+	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, err
 	}
@@ -197,14 +197,14 @@ func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Re
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	entry.Key = "certs/" + normalizeSerial(cb.SerialNumber)
 	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -213,13 +213,13 @@ func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Re
 	// location
 	entry.Key = "ca"
 	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	// Build a fresh CRL
-	err = buildCRL(b, req)
+	err = buildCRL(ctx, b, req)
 
 	return nil, err
 }
