@@ -36,19 +36,19 @@ path "secret/sample" {
 `
 	// Create the above policies
 	policy, _ := ParseACLPolicy(policy1)
-	err = c.policyStore.SetPolicy(policy)
+	err = c.policyStore.SetPolicy(context.Background(), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	policy, _ = ParseACLPolicy(policy2)
-	err = c.policyStore.SetPolicy(policy)
+	err = c.policyStore.SetPolicy(context.Background(), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	policy, _ = ParseACLPolicy(policy3)
-	err = c.policyStore.SetPolicy(policy)
+	err = c.policyStore.SetPolicy(context.Background(), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -74,7 +74,7 @@ path "secret/sample" {
 		Policies: []string{"policy2"},
 		EntityID: entityID,
 	}
-	if err := c.tokenStore.create(ent); err != nil {
+	if err := c.tokenStore.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -129,7 +129,7 @@ func TestCapabilities(t *testing.T) {
 
 	// Create a policy
 	policy, _ := ParseACLPolicy(aclPolicy)
-	err = c.policyStore.SetPolicy(policy)
+	err = c.policyStore.SetPolicy(context.Background(), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestCapabilities(t *testing.T) {
 		Path:     "testpath",
 		Policies: []string{"dev"},
 	}
-	if err := c.tokenStore.create(ent); err != nil {
+	if err := c.tokenStore.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 

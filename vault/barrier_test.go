@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -8,7 +9,7 @@ import (
 
 func testBarrier(t *testing.T, b SecurityBarrier) {
 	// Should not be initialized
-	init, err := b.Initialized()
+	init, err := b.Initialized(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -32,16 +33,16 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 
 	// All operations should fail
 	e := &Entry{Key: "test", Value: []byte("test")}
-	if err := b.Put(e); err != ErrBarrierSealed {
+	if err := b.Put(context.Background(), e); err != ErrBarrierSealed {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := b.Get("test"); err != ErrBarrierSealed {
+	if _, err := b.Get(context.Background(), "test"); err != ErrBarrierSealed {
 		t.Fatalf("err: %v", err)
 	}
-	if err := b.Delete("test"); err != ErrBarrierSealed {
+	if err := b.Delete(context.Background(), "test"); err != ErrBarrierSealed {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := b.List(""); err != ErrBarrierSealed {
+	if _, err := b.List(context.Background(), ""); err != ErrBarrierSealed {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -61,22 +62,22 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Unseal should not work
-	if err := b.Unseal(key); err != ErrBarrierNotInit {
+	if err := b.Unseal(context.Background(), key); err != ErrBarrierNotInit {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Initialize the vault
-	if err := b.Initialize(key); err != nil {
+	if err := b.Initialize(context.Background(), key); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Double Initialize should fail
-	if err := b.Initialize(key); err != ErrBarrierAlreadyInit {
+	if err := b.Initialize(context.Background(), key); err != ErrBarrierAlreadyInit {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should be initialized
-	init, err = b.Initialized()
+	init, err = b.Initialized(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -94,12 +95,12 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Unseal should work
-	if err := b.Unseal(key); err != nil {
+	if err := b.Unseal(context.Background(), key); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Unseal should no-op when done twice
-	if err := b.Unseal(key); err != nil {
+	if err := b.Unseal(context.Background(), key); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -118,7 +119,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Operations should work
-	out, err := b.Get("test")
+	out, err := b.Get(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -127,7 +128,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// List should have only "core/"
-	keys, err := b.List("")
+	keys, err := b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -136,12 +137,12 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Try to write
-	if err := b.Put(e); err != nil {
+	if err := b.Put(context.Background(), e); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should be equal
-	out, err = b.Get("test")
+	out, err = b.Get(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -150,7 +151,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// List should show the items
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -162,19 +163,19 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Delete should clear
-	err = b.Delete("test")
+	err = b.Delete(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Double Delete is fine
-	err = b.Delete("test")
+	err = b.Delete(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should be nil
-	out, err = b.Get("test")
+	out, err = b.Get(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -183,7 +184,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// List should have nothing
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -192,7 +193,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Add the item back
-	if err := b.Put(e); err != nil {
+	if err := b.Put(context.Background(), e); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -202,17 +203,17 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// No access allowed
-	if _, err := b.Get("test"); err != ErrBarrierSealed {
+	if _, err := b.Get(context.Background(), "test"); err != ErrBarrierSealed {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Unseal should work
-	if err := b.Unseal(key); err != nil {
+	if err := b.Unseal(context.Background(), key); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should be equal
-	out, err = b.Get("test")
+	out, err = b.Get(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -221,7 +222,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Final cleanup
-	err = b.Delete("test")
+	err = b.Delete(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -235,7 +236,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	key[0]++
 
 	// Unseal should fail
-	if err := b.Unseal(key); err != ErrBarrierInvalidKey {
+	if err := b.Unseal(context.Background(), key); err != ErrBarrierInvalidKey {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -243,8 +244,8 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	// Initialize the barrier
 	key, _ := b.GenerateKey()
-	b.Initialize(key)
-	err := b.Unseal(key)
+	b.Initialize(context.Background(), key)
+	err := b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -264,12 +265,12 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 
 	// Write a key
 	e1 := &Entry{Key: "test", Value: []byte("test")}
-	if err := b.Put(e1); err != nil {
+	if err := b.Put(context.Background(), e1); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Rotate the encryption key
-	newTerm, err := b.Rotate()
+	newTerm, err := b.Rotate(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -291,12 +292,12 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 
 	// Write another key
 	e2 := &Entry{Key: "foo", Value: []byte("test")}
-	if err := b.Put(e2); err != nil {
+	if err := b.Put(context.Background(), e2); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Reading both should work
-	out, err := b.Get(e1.Key)
+	out, err := b.Get(context.Background(), e1.Key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -304,7 +305,7 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	out, err = b.Get(e2.Key)
+	out, err = b.Get(context.Background(), e2.Key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -317,13 +318,13 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = b.Unseal(key)
+	err = b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Reading both should work
-	out, err = b.Get(e1.Key)
+	out, err = b.Get(context.Background(), e1.Key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -331,7 +332,7 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	out, err = b.Get(e2.Key)
+	out, err = b.Get(context.Background(), e2.Key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -340,7 +341,7 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Should be fine to reload keyring
-	err = b.ReloadKeyring()
+	err = b.ReloadKeyring(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -349,15 +350,15 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	// Initialize the barrier
 	key, _ := b.GenerateKey()
-	b.Initialize(key)
-	err := b.Unseal(key)
+	b.Initialize(context.Background(), key)
+	err := b.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Write a key
 	e1 := &Entry{Key: "test", Value: []byte("test")}
-	if err := b.Put(e1); err != nil {
+	if err := b.Put(context.Background(), e1); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -368,7 +369,7 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 
 	// Rekey to a new key
 	newKey, _ := b.GenerateKey()
-	err = b.Rekey(newKey)
+	err = b.Rekey(context.Background(), newKey)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -384,7 +385,7 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Reading should work
-	out, err := b.Get(e1.Key)
+	out, err := b.Get(context.Background(), e1.Key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -399,19 +400,19 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Unseal with old key should fail
-	err = b.Unseal(key)
+	err = b.Unseal(context.Background(), key)
 	if err == nil {
 		t.Fatalf("unseal should fail")
 	}
 
 	// Unseal with new keys should work
-	err = b.Unseal(newKey)
+	err = b.Unseal(context.Background(), newKey)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Reading should work
-	out, err = b.Get(e1.Key)
+	out, err = b.Get(context.Background(), e1.Key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -420,7 +421,7 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Should be fine to reload keyring
-	err = b.ReloadKeyring()
+	err = b.ReloadKeyring(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -429,30 +430,30 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 	// Initialize the barrier
 	key, _ := b1.GenerateKey()
-	b1.Initialize(key)
-	err := b1.Unseal(key)
+	b1.Initialize(context.Background(), key)
+	err := b1.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = b2.Unseal(key)
+	err = b2.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Rotate the encryption key
-	newTerm, err := b1.Rotate()
+	newTerm, err := b1.Rotate(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Create upgrade path
-	err = b1.CreateUpgrade(newTerm)
+	err = b1.CreateUpgrade(context.Background(), newTerm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Check for an upgrade
-	did, updated, err := b2.CheckUpgrade()
+	did, updated, err := b2.CheckUpgrade(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -461,7 +462,7 @@ func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 	}
 
 	// Should have no upgrades pending
-	did, updated, err = b2.CheckUpgrade()
+	did, updated, err = b2.CheckUpgrade(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -470,25 +471,25 @@ func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 	}
 
 	// Rotate the encryption key
-	newTerm, err = b1.Rotate()
+	newTerm, err = b1.Rotate(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Create upgrade path
-	err = b1.CreateUpgrade(newTerm)
+	err = b1.CreateUpgrade(context.Background(), newTerm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Destroy upgrade path
-	err = b1.DestroyUpgrade(newTerm)
+	err = b1.DestroyUpgrade(context.Background(), newTerm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should have no upgrades pending
-	did, updated, err = b2.CheckUpgrade()
+	did, updated, err = b2.CheckUpgrade(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -500,31 +501,31 @@ func testBarrier_Upgrade(t *testing.T, b1, b2 SecurityBarrier) {
 func testBarrier_Upgrade_Rekey(t *testing.T, b1, b2 SecurityBarrier) {
 	// Initialize the barrier
 	key, _ := b1.GenerateKey()
-	b1.Initialize(key)
-	err := b1.Unseal(key)
+	b1.Initialize(context.Background(), key)
+	err := b1.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = b2.Unseal(key)
+	err = b2.Unseal(context.Background(), key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Rekey to a new key
 	newKey, _ := b1.GenerateKey()
-	err = b1.Rekey(newKey)
+	err = b1.Rekey(context.Background(), newKey)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Reload the master key
-	err = b2.ReloadMasterKey()
+	err = b2.ReloadMasterKey(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Reload the keyring
-	err = b2.ReloadKeyring()
+	err = b2.ReloadKeyring(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

@@ -71,15 +71,15 @@ func (n *NoopBackend) System() logical.SystemView {
 	}
 }
 
-func (n *NoopBackend) Cleanup() {
+func (n *NoopBackend) Cleanup(ctx context.Context) {
 	// noop
 }
 
-func (n *NoopBackend) InvalidateKey(k string) {
+func (n *NoopBackend) InvalidateKey(ctx context.Context, k string) {
 	n.Invalidations = append(n.Invalidations, k)
 }
 
-func (n *NoopBackend) Setup(config *logical.BackendConfig) error {
+func (n *NoopBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	return nil
 }
 
@@ -87,7 +87,7 @@ func (n *NoopBackend) Logger() log.Logger {
 	return logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.LevelOff)
 }
 
-func (n *NoopBackend) Initialize() error {
+func (n *NoopBackend) Initialize(ctx context.Context) error {
 	return nil
 }
 
