@@ -17,9 +17,6 @@ import (
 
 func handleSysSeal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := core.GetContext()
-		defer cancel()
-
 		req, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
@@ -34,7 +31,8 @@ func handleSysSeal(core *vault.Core) http.Handler {
 		}
 
 		// Seal with the token above
-		if err := core.SealWithRequest(ctx, req); err != nil {
+		// We use context.Background since there won't be a request context if the node isn't active
+		if err := core.SealWithRequest(req); err != nil {
 			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 				respondError(w, http.StatusForbidden, err)
 				return
@@ -50,8 +48,6 @@ func handleSysSeal(core *vault.Core) http.Handler {
 
 func handleSysStepDown(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := core.GetContext()
-		defer cancel()
 		req, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
@@ -66,7 +62,7 @@ func handleSysStepDown(core *vault.Core) http.Handler {
 		}
 
 		// Seal with the token above
-		if err := core.StepDown(ctx, req); err != nil {
+		if err := core.StepDown(req); err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}

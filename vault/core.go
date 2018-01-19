@@ -1246,7 +1246,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 
 // SealWithRequest takes in a logical.Request, acquires the lock, and passes
 // through to sealInternal
-func (c *Core) SealWithRequest(ctx context.Context, req *logical.Request) error {
+func (c *Core) SealWithRequest(req *logical.Request) error {
 	defer metrics.MeasureSince([]string{"core", "seal-with-request"}, time.Now())
 
 	c.stateLock.RLock()
@@ -1257,7 +1257,8 @@ func (c *Core) SealWithRequest(ctx context.Context, req *logical.Request) error 
 	}
 
 	// This will unlock the read lock
-	return c.sealInitCommon(ctx, req)
+	// We use background context since we may not be active
+	return c.sealInitCommon(context.Background(), req)
 }
 
 // Seal takes in a token and creates a logical.Request, acquires the lock, and
@@ -1279,7 +1280,8 @@ func (c *Core) Seal(token string) error {
 	}
 
 	// This will unlock the read lock
-	return c.sealInitCommon(c.requestContext, req)
+	// We use background context since we may not be active
+	return c.sealInitCommon(context.Background(), req)
 }
 
 // sealInitCommon is common logic for Seal and SealWithRequest and is used to
@@ -1397,7 +1399,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 }
 
 // StepDown is used to step down from leadership
-func (c *Core) StepDown(ctx context.Context, req *logical.Request) (retErr error) {
+func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
 
 	if req == nil {
@@ -1413,6 +1415,8 @@ func (c *Core) StepDown(ctx context.Context, req *logical.Request) (retErr error
 	if c.ha == nil || c.standby {
 		return nil
 	}
+
+	ctx := c.requestContext
 
 	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
@@ -1588,7 +1592,7 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupMounts(c.requestContext); err != nil {
 		return err
 	}
-	if err := c.setupPolicyStore(); err != nil {
+	if err := c.setupPolicyStore(c.requestContext); err != nil {
 		return err
 	}
 	if err := c.loadCORSConfig(c.requestContext); err != nil {

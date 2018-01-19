@@ -184,10 +184,10 @@ func NewPolicyStore(ctx context.Context, baseView *BarrierView, system logical.S
 
 // setupPolicyStore is used to initialize the policy store
 // when the vault is being unsealed.
-func (c *Core) setupPolicyStore() error {
+func (c *Core) setupPolicyStore(ctx context.Context) error {
 	// Create the policy store
 	sysView := &dynamicSystemView{core: c}
-	c.policyStore = NewPolicyStore(c.requestContext, c.systemBarrierView, sysView, c.logger)
+	c.policyStore = NewPolicyStore(ctx, c.systemBarrierView, sysView, c.logger)
 
 	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		// Policies will sync from the primary
@@ -195,11 +195,11 @@ func (c *Core) setupPolicyStore() error {
 	}
 
 	// Ensure that the default policy exists, and if not, create it
-	if err := c.policyStore.loadACLPolicy(c.requestContext, defaultPolicyName, defaultPolicy); err != nil {
+	if err := c.policyStore.loadACLPolicy(ctx, defaultPolicyName, defaultPolicy); err != nil {
 		return err
 	}
 	// Ensure that the response wrapping policy exists
-	if err := c.policyStore.loadACLPolicy(c.requestContext, responseWrappingPolicyName, responseWrappingPolicy); err != nil {
+	if err := c.policyStore.loadACLPolicy(ctx, responseWrappingPolicyName, responseWrappingPolicy); err != nil {
 		return err
 	}
 

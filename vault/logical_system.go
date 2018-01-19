@@ -1310,10 +1310,11 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 // handleRekeyRetrieve returns backed-up, PGP-encrypted unseal keys from a
 // rekey operation
 func (b *SystemBackend) handleRekeyRetrieve(
+	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
 	recovery bool) (*logical.Response, error) {
-	backup, err := b.Core.RekeyRetrieveBackup(recovery)
+	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up backed-up keys: %v", err)
 	}
@@ -1350,20 +1351,21 @@ func (b *SystemBackend) handleRekeyRetrieve(
 }
 
 func (b *SystemBackend) handleRekeyRetrieveBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyRetrieve(req, data, false)
+	return b.handleRekeyRetrieve(ctx, req, data, false)
 }
 
 func (b *SystemBackend) handleRekeyRetrieveRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyRetrieve(req, data, true)
+	return b.handleRekeyRetrieve(ctx, req, data, true)
 }
 
 // handleRekeyDelete deletes backed-up, PGP-encrypted unseal keys from a rekey
 // operation
 func (b *SystemBackend) handleRekeyDelete(
+	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
 	recovery bool) (*logical.Response, error) {
-	err := b.Core.RekeyDeleteBackup(recovery)
+	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("error during deletion of backed-up keys: %v", err)
 	}
@@ -1372,11 +1374,11 @@ func (b *SystemBackend) handleRekeyDelete(
 }
 
 func (b *SystemBackend) handleRekeyDeleteBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyDelete(req, data, false)
+	return b.handleRekeyDelete(ctx, req, data, false)
 }
 
 func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyDelete(req, data, true)
+	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
 // handleMountTable handles the "mounts" endpoint to provide the mount table
