@@ -318,7 +318,7 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 		return false, consts.ErrStandby
 	}
 
-	te, err := c.tokenStore.Lookup(c.requestContext, token)
+	te, err := c.tokenStore.Lookup(c.activeContext, token)
 	if err != nil {
 		return false, err
 	}

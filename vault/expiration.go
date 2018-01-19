@@ -92,7 +92,7 @@ func NewExpirationManager(c *Core, view *BarrierView) *ExpirationManager {
 		quitCh:       make(chan struct{}),
 
 		coreStateLock: &c.stateLock,
-		quitContext:   c.requestContext,
+		quitContext:   c.activeContext,
 	}
 
 	if exp.logger == nil {

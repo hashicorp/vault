@@ -374,8 +374,8 @@ type Core struct {
 
 	// This can be used to trigger operations to stop running when Vault is
 	// going to be shut down, stepped down, or sealed
-	requestContext           context.Context
-	requestContextCancelFunc context.CancelFunc
+	activeContext           context.Context
+	activeContextCancelFunc context.CancelFunc
 }
 
 // CoreConfig is used to parameterize a core
@@ -611,8 +611,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 func (c *Core) Shutdown() error {
 	c.stateLock.RLock()
 	// Tell any requests that know about this to stop
-	if c.requestContextCancelFunc != nil {
-		c.requestContextCancelFunc()
+	if c.activeContextCancelFunc != nil {
+		c.activeContextCancelFunc()
 	}
 	c.stateLock.RUnlock()
 
@@ -636,7 +636,7 @@ func (c *Core) GetContext() (context.Context, context.CancelFunc) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 
-	return context.WithCancel(c.requestContext)
+	return context.WithCancel(c.activeContext)
 }
 
 // LookupToken returns the properties of the token from the token store. This
@@ -662,7 +662,7 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 		return nil, nil
 	}
 
-	return c.tokenStore.Lookup(c.requestContext, token)
+	return c.tokenStore.Lookup(c.activeContext, token)
 }
 
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
@@ -730,7 +730,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 	}
 
 	// Resolve the token policy
-	te, err := c.tokenStore.Lookup(c.requestContext, clientToken)
+	te, err := c.tokenStore.Lookup(c.activeContext, clientToken)
 	if err != nil {
 		c.logger.Error("core: failed to lookup token", "error", err)
 		return nil, nil, nil, ErrInternalError
@@ -751,7 +751,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(clientToken string) (*ACL, *TokenEntr
 	tokenPolicies = append(tokenPolicies, derivedPolicies...)
 
 	// Construct the corresponding ACL object
-	acl, err := c.policyStore.ACL(c.requestContext, tokenPolicies...)
+	acl, err := c.policyStore.ACL(c.activeContext, tokenPolicies...)
 	if err != nil {
 		c.logger.Error("core: failed to construct ACL", "error", err)
 		return nil, nil, nil, ErrInternalError
@@ -1367,7 +1367,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	if te != nil && te.NumUses == -1 {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		err = c.tokenStore.Revoke(c.requestContext, te.ID)
+		err = c.tokenStore.Revoke(c.activeContext, te.ID)
 		if err != nil {
 			c.logger.Error("core: token needed revocation before seal but failed to revoke", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -1375,8 +1375,8 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	}
 
 	// Tell any requests that know about this to stop
-	if c.requestContextCancelFunc != nil {
-		c.requestContextCancelFunc()
+	if c.activeContextCancelFunc != nil {
+		c.activeContextCancelFunc()
 	}
 
 	// Unlock from the request handling
@@ -1416,7 +1416,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		return nil
 	}
 
-	ctx := c.requestContext
+	ctx := c.activeContext
 
 	acl, te, entity, err := c.fetchACLTokenEntryAndEntity(req.ClientToken)
 	if err != nil {
@@ -1470,7 +1470,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	if te != nil && te.NumUses == -1 {
 		// Token needs to be revoked. We do this immediately here because
 		// we won't have a token store after sealing.
-		err = c.tokenStore.Revoke(c.requestContext, te.ID)
+		err = c.tokenStore.Revoke(c.activeContext, te.ID)
 		if err != nil {
 			c.logger.Error("core: token needed revocation before step-down but failed to revoke", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -1551,11 +1551,11 @@ func (c *Core) postUnseal() (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 
 	// Create a new request context
-	c.requestContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
+	c.activeContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
 
 	defer func() {
 		if retErr != nil {
-			c.requestContextCancelFunc()
+			c.activeContextCancelFunc()
 			c.preSeal()
 		}
 	}()
@@ -1568,40 +1568,40 @@ func (c *Core) postUnseal() (retErr error) {
 
 	// Purge the backend if supported
 	if purgable, ok := c.physical.(physical.Purgable); ok {
-		purgable.Purge(c.requestContext)
+		purgable.Purge(c.activeContext)
 	}
 
 	// Purge these for safety in case of a rekey
-	c.seal.SetBarrierConfig(c.requestContext, nil)
-	if c.seal.RecoveryKeySupported(c.requestContext) {
-		c.seal.SetRecoveryConfig(c.requestContext, nil)
+	c.seal.SetBarrierConfig(c.activeContext, nil)
+	if c.seal.RecoveryKeySupported(c.activeContext) {
+		c.seal.SetRecoveryConfig(c.activeContext, nil)
 	}
 
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
 	}
-	if err := c.ensureWrappingKey(c.requestContext); err != nil {
+	if err := c.ensureWrappingKey(c.activeContext); err != nil {
 		return err
 	}
 	if err := c.setupPluginCatalog(); err != nil {
 		return err
 	}
-	if err := c.loadMounts(c.requestContext); err != nil {
+	if err := c.loadMounts(c.activeContext); err != nil {
 		return err
 	}
-	if err := c.setupMounts(c.requestContext); err != nil {
+	if err := c.setupMounts(c.activeContext); err != nil {
 		return err
 	}
-	if err := c.setupPolicyStore(c.requestContext); err != nil {
+	if err := c.setupPolicyStore(c.activeContext); err != nil {
 		return err
 	}
-	if err := c.loadCORSConfig(c.requestContext); err != nil {
+	if err := c.loadCORSConfig(c.activeContext); err != nil {
 		return err
 	}
-	if err := c.loadCredentials(c.requestContext); err != nil {
+	if err := c.loadCredentials(c.activeContext); err != nil {
 		return err
 	}
-	if err := c.setupCredentials(c.requestContext); err != nil {
+	if err := c.setupCredentials(c.activeContext); err != nil {
 		return err
 	}
 	if err := c.startRollback(); err != nil {
@@ -1610,16 +1610,16 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupExpiration(); err != nil {
 		return err
 	}
-	if err := c.loadAudits(c.requestContext); err != nil {
+	if err := c.loadAudits(c.activeContext); err != nil {
 		return err
 	}
-	if err := c.setupAudits(c.requestContext); err != nil {
+	if err := c.setupAudits(c.activeContext); err != nil {
 		return err
 	}
-	if err := c.loadIdentityStoreArtifacts(c.requestContext); err != nil {
+	if err := c.loadIdentityStoreArtifacts(c.activeContext); err != nil {
 		return err
 	}
-	if err := c.setupAuditedHeadersConfig(c.requestContext); err != nil {
+	if err := c.setupAuditedHeadersConfig(c.activeContext); err != nil {
 		return err
 	}
 
@@ -1660,7 +1660,7 @@ func (c *Core) preSeal() error {
 	if err := c.stopExpiration(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping expiration: {{err}}", err))
 	}
-	if err := c.teardownCredentials(c.requestContext); err != nil {
+	if err := c.teardownCredentials(c.activeContext); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down credentials: {{err}}", err))
 	}
 	if err := c.teardownPolicyStore(); err != nil {
@@ -1669,7 +1669,7 @@ func (c *Core) preSeal() error {
 	if err := c.stopRollback(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping rollback: {{err}}", err))
 	}
-	if err := c.unloadMounts(c.requestContext); err != nil {
+	if err := c.unloadMounts(c.activeContext); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error unloading mounts: {{err}}", err))
 	}
 	if err := enterprisePreSeal(c); err != nil {
@@ -1678,7 +1678,7 @@ func (c *Core) preSeal() error {
 
 	// Purge the backend if supported
 	if purgable, ok := c.physical.(physical.Purgable); ok {
-		purgable.Purge(c.requestContext)
+		purgable.Purge(c.activeContext)
 	}
 	c.logger.Info("core: pre-seal teardown complete")
 	return result
@@ -1846,8 +1846,8 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		}
 
 		// Tell any requests that know about this to stop
-		if c.requestContextCancelFunc != nil {
-			c.requestContextCancelFunc()
+		if c.activeContextCancelFunc != nil {
+			c.activeContextCancelFunc()
 		}
 
 		// Attempt the pre-seal process
@@ -2088,7 +2088,7 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
-	err := c.barrier.Delete(c.requestContext, key)
+	err := c.barrier.Delete(c.activeContext, key)
 
 	// Advertise ourselves as a standby
 	sd, ok := c.ha.(physical.ServiceDiscovery)

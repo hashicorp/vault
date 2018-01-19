@@ -32,7 +32,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		return nil, consts.ErrStandby
 	}
 
-	ctx, cancel := context.WithCancel(c.requestContext)
+	ctx, cancel := context.WithCancel(c.activeContext)
 	defer cancel()
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
