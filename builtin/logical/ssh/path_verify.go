@@ -25,7 +25,7 @@ func pathVerify(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) getOTP(s logical.Storage, n string) (*sshOTP, error) {
+func (b *backend) getOTP(ctx context.Context, s logical.Storage, n string) (*sshOTP, error) {
 	entry, err := s.Get(ctx, "otp/"+n)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	otpSalted := salt.SaltID(otp)
 
 	// Return nil if there is no entry found for the OTP
-	otpEntry, err := b.getOTP(req.Storage, otpSalted)
+	otpEntry, err := b.getOTP(ctx, req.Storage, otpSalted)
 	if err != nil {
 		return nil, err
 	}

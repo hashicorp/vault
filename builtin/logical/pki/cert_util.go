@@ -2,6 +2,7 @@ package pki
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -146,7 +147,7 @@ func validateKeyTypeLength(keyType string, keyBits int) *logical.Response {
 
 // Fetches the CA info. Unlike other certificates, the CA info is stored
 // in the backend as a CertBundle, because we are storing its private key
-func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
+func fetchCAInfo(ctx context.Context, req *logical.Request) (*caInfoBundle, error) {
 	bundleEntry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
@@ -171,7 +172,7 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 
 	caInfo := &caInfoBundle{*parsedBundle, nil}
 
-	entries, err := getURLs(req)
+	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 	}
@@ -189,7 +190,7 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 
 // Allows fetching certificates from the backend; it handles the slightly
 // separate pathing for CA, CRL, and revoked certificates.
-func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
+func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
 	var path, legacyPath string
 	var err error
 	var certEntry *logical.StorageEntry
@@ -419,7 +420,8 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 	return ""
 }
 
-func generateCert(b *backend,
+func generateCert(ctx context.Context,
+	b *backend,
 	role *roleEntry,
 	signingBundle *caInfoBundle,
 	isCA bool,
@@ -442,7 +444,7 @@ func generateCert(b *backend,
 
 		if signingBundle == nil {
 			// Generating a self-signed root certificate
-			entries, err := getURLs(req)
+			entries, err := getURLs(ctx, req)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 			}

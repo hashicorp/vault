@@ -36,7 +36,7 @@ valid; defaults to 72 hours`,
 	}
 }
 
-func (b *backend) CRL(s logical.Storage) (*crlConfig, error) {
+func (b *backend) CRL(ctx context.Context, s logical.Storage) (*crlConfig, error) {
 	entry, err := s.Get(ctx, "config/crl")
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (b *backend) CRL(s logical.Storage) (*crlConfig, error) {
 }
 
 func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	config, err := b.CRL(req.Storage)
+	config, err := b.CRL(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

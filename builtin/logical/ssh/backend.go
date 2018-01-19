@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"strings"
 	"sync"
 
@@ -97,7 +98,7 @@ func (b *backend) Salt() (*salt.Salt, error) {
 	return salt, nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(_ context.Context, key string) {
 	switch key {
 	case salt.DefaultLocation:
 		b.saltMutex.Lock()

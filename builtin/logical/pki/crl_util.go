@@ -32,7 +32,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	alreadyRevoked := false
 	var revInfo revocationInfo
 
-	revEntry, err := fetchCertBySerial(req, "revoked/", serial)
+	revEntry, err := fetchCertBySerial(ctx, req, "revoked/", serial)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -51,7 +51,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 
 	if !alreadyRevoked {
-		certEntry, err := fetchCertBySerial(req, "certs/", serial)
+		certEntry, err := fetchCertBySerial(ctx, req, "certs/", serial)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -166,7 +166,7 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request) error {
 		revokedCerts = append(revokedCerts, newRevCert)
 	}
 
-	signingBundle, caErr := fetchCAInfo(req)
+	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return errutil.UserError{Err: fmt.Sprintf("Could not fetch the CA certificate: %s", caErr)}
@@ -175,7 +175,7 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request) error {
 	}
 
 	crlLifetime := b.crlLifetime
-	crlInfo, err := b.CRL(req.Storage)
+	crlInfo, err := b.CRL(ctx, req.Storage)
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("Error fetching CRL config information: %s", err)}
 	}

@@ -46,13 +46,13 @@ func (b *backend) pathLookupWrite(ctx context.Context, req *logical.Request, d *
 	// and create a list out of it.
 	var matchingRoles []string
 	for _, role := range keys {
-		if contains, _ := roleContainsIP(req.Storage, role, ip.String()); contains {
+		if contains, _ := roleContainsIP(ctx, req.Storage, role, ip.String()); contains {
 			matchingRoles = append(matchingRoles, role)
 		}
 	}
 
 	// Add roles that are allowed to accept any IP address.
-	zeroAddressEntry, err := b.getZeroAddressRoles(req.Storage)
+	zeroAddressEntry, err := b.getZeroAddressRoles(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

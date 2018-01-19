@@ -79,7 +79,7 @@ func (b *backend) pathCAWrite(ctx context.Context, req *logical.Request, data *f
 		return nil, err
 	}
 
-	err = buildCRL(b, req)
+	err = buildCRL(ctx, b, req)
 
 	return nil, err
 }

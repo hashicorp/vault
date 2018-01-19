@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -406,7 +407,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Ensure that the seal finalizer is called, even if using verify-only
 	defer func() {
 		if seal != nil {
-			err = seal.Finalize()
+			err = seal.Finalize(context.Background())
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
@@ -921,14 +922,14 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		SecretThreshold: 1,
 	}
 
-	if core.SealAccess().RecoveryKeySupported() {
+	if core.SealAccess().RecoveryKeySupported(context.Background()) {
 		recoveryConfig = &vault.SealConfig{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		}
 	}
 
-	if core.SealAccess().StoredKeysSupported() {
+	if core.SealAccess().StoredKeysSupported(context.Background()) {
 		barrierConfig.StoredShares = 1
 	}
 
@@ -942,8 +943,8 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Handle unseal with stored keys
-	if core.SealAccess().StoredKeysSupported() {
-		err := core.UnsealWithStoredKeys()
+	if core.SealAccess().StoredKeysSupported(context.Background()) {
+		err := core.UnsealWithStoredKeys(context.Background())
 		if err != nil {
 			return nil, err
 		}

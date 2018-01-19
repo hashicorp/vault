@@ -49,7 +49,7 @@ func pathRoles(b *backend) *framework.Path {
 }
 
 // Reads the role configuration from the storage
-func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
+func (b *backend) Role(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
 	entry, err := s.Get(ctx, "role/"+n)
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("missing name"), nil
 	}
 
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}

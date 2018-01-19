@@ -136,7 +136,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		role.MaxPathLength = &maxPathLength
 	}
 
-	parsedBundle, err := generateCert(b, role, nil, true, req, data)
+	parsedBundle, err := generateCert(ctx, b, role, nil, true, req, data)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -224,7 +224,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Build a fresh CRL
-	err = buildCRL(b, req)
+	err = buildCRL(ctx, b, req)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(req)
+	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(
@@ -382,7 +382,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(req)
+	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(

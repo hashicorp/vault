@@ -36,7 +36,7 @@ func pathKeys(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) getKey(s logical.Storage, n string) (*sshHostKey, error) {
+func (b *backend) getKey(ctx context.Context, s logical.Storage, n string) (*sshHostKey, error) {
 	entry, err := s.Get(ctx, "keys/"+n)
 	if err != nil {
 		return nil, err

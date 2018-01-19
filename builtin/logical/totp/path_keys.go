@@ -119,7 +119,7 @@ func pathKeys(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Key(s logical.Storage, n string) (*keyEntry, error) {
+func (b *backend) Key(ctx context.Context, s logical.Storage, n string) (*keyEntry, error) {
 	entry, err := s.Get(ctx, "key/"+n)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (b *backend) pathKeyDelete(ctx context.Context, req *logical.Request, data 
 }
 
 func (b *backend) pathKeyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	key, err := b.Key(req.Storage, data.Get("name").(string))
+	key, err := b.Key(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}

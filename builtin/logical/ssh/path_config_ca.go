@@ -63,7 +63,7 @@ Read operations will return the public key, if already stored/generated.`,
 }
 
 func (b *backend) pathConfigCARead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	publicKeyEntry, err := caKey(req.Storage, caPublicKey)
+	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA public key: %v", err)
 	}
@@ -91,7 +91,7 @@ func (b *backend) pathConfigCADelete(ctx context.Context, req *logical.Request, 
 	return nil, nil
 }
 
-func caKey(storage logical.Storage, keyType string) (*keyStorageEntry, error) {
+func caKey(ctx context.Context, storage logical.Storage, keyType string) (*keyStorageEntry, error) {
 	var path, deprecatedPath string
 	switch keyType {
 	case caPrivateKey:
@@ -200,12 +200,12 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 		return nil, fmt.Errorf("failed to generate or parse the keys")
 	}
 
-	publicKeyEntry, err := caKey(req.Storage, caPublicKey)
+	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA public key: %v", err)
 	}
 
-	privateKeyEntry, err := caKey(req.Storage, caPrivateKey)
+	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA private key: %v", err)
 	}

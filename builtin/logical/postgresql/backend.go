@@ -147,7 +147,7 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 }
 
 // Lease returns the lease information
-func (b *backend) Lease(s logical.Storage) (*configLease, error) {
+func (b *backend) Lease(ctx context.Context, s logical.Storage) (*configLease, error) {
 	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err

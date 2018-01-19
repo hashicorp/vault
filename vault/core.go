@@ -928,7 +928,8 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	}
 
 	key := coreLeaderPrefix + leaderUUID
-	entry, err := c.barrier.Get(c.requestContext, key)
+	// Use background because postUnseal isn't run on standby
+	entry, err := c.barrier.Get(context.Background(), key)
 	if err != nil {
 		return false, "", "", err
 	}
@@ -1028,7 +1029,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	}
 
 	// Get the barrier seal configuration
-	config, err := c.seal.BarrierConfig(c.requestContext)
+	config, err := c.seal.BarrierConfig(context.Background())
 	if err != nil {
 		return false, err
 	}
@@ -1051,14 +1052,14 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 // UnsealWithRecoveryKeys is used to provide one of the recovery key shares to
 // unseal the Vault.
-func (c *Core) UnsealWithRecoveryKeys(key []byte) (bool, error) {
+func (c *Core) UnsealWithRecoveryKeys(ctx context.Context, key []byte) (bool, error) {
 	defer metrics.MeasureSince([]string{"core", "unseal_with_recovery_keys"}, time.Now())
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 
 	// Explicitly check for init status
-	init, err := c.Initialized()
+	init, err := c.Initialized(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -1068,8 +1069,8 @@ func (c *Core) UnsealWithRecoveryKeys(key []byte) (bool, error) {
 
 	var config *SealConfig
 	// If recovery keys are supported then use recovery seal config to unseal
-	if c.seal.RecoveryKeySupported(c.requestContext) {
-		config, err = c.seal.RecoveryConfig(c.requestContext)
+	if c.seal.RecoveryKeySupported(ctx) {
+		config, err = c.seal.RecoveryConfig(ctx)
 		if err != nil {
 			return false, err
 		}
@@ -1080,7 +1081,7 @@ func (c *Core) UnsealWithRecoveryKeys(key []byte) (bool, error) {
 		return true, nil
 	}
 
-	masterKey, err := c.unsealPart(config, key, true)
+	masterKey, err := c.unsealPart(ctx, config, key, true)
 	if err != nil {
 		return false, err
 	}
@@ -1093,7 +1094,7 @@ func (c *Core) UnsealWithRecoveryKeys(key []byte) (bool, error) {
 
 // unsealPart takes in a key share, and returns the master key if the threshold
 // is met. If recovery keys are supported, recovery key shares may be provided.
-func (c *Core) unsealPart(config *SealConfig, key []byte, useRecoveryKeys bool) ([]byte, error) {
+func (c *Core) unsealPart(ctx context.Context, config *SealConfig, key []byte, useRecoveryKeys bool) ([]byte, error) {
 	// Check if we already have this piece
 	if c.unlockInfo != nil {
 		for _, existing := range c.unlockInfo.Parts {
@@ -1145,9 +1146,9 @@ func (c *Core) unsealPart(config *SealConfig, key []byte, useRecoveryKeys bool) 
 		}
 	}
 
-	if c.seal.RecoveryKeySupported(c.requestContext) && useRecoveryKeys {
+	if c.seal.RecoveryKeySupported(ctx) && useRecoveryKeys {
 		// Verify recovery key
-		if err := c.seal.VerifyRecoveryKey(c.requestContext, recoveredKey); err != nil {
+		if err := c.seal.VerifyRecoveryKey(ctx, recoveredKey); err != nil {
 			return nil, err
 		}
 
@@ -1157,8 +1158,8 @@ func (c *Core) unsealPart(config *SealConfig, key []byte, useRecoveryKeys bool) 
 		// If insuffiencient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
 		var masterKey []byte
-		if c.seal.StoredKeysSupported(c.requestContext) {
-			masterKeyShares, err := c.seal.GetStoredKeys(c.requestContext)
+		if c.seal.StoredKeysSupported(ctx) {
+			masterKeyShares, err := c.seal.GetStoredKeys(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("unable to retrieve stored keys: %v", err)
 			}
@@ -1182,11 +1183,11 @@ func (c *Core) unsealPart(config *SealConfig, key []byte, useRecoveryKeys bool) 
 
 // unsealInternal takes in the master key and attempts to unseal the barrier.
 // N.B.: This must be called with the state write lock held.
-func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
+func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, error) {
 	defer memzero(masterKey)
 
 	// Attempt to unlock
-	if err := c.barrier.Unseal(c.requestContext, masterKey); err != nil {
+	if err := c.barrier.Unseal(ctx, masterKey); err != nil {
 		return false, err
 	}
 	if c.logger.IsInfo() {
@@ -1224,8 +1225,8 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	c.sealed = false
 
 	// Force a cache bust here, which will also run migration code
-	if c.seal.RecoveryKeySupported(c.requestContext) {
-		c.seal.SetRecoveryConfig(c.requestContext, nil)
+	if c.seal.RecoveryKeySupported(ctx) {
+		c.seal.SetRecoveryConfig(ctx, nil)
 	}
 
 	if c.ha != nil {
@@ -1542,6 +1543,10 @@ func (c *Core) sealInternal() error {
 // credential stores, etc.
 func (c *Core) postUnseal() (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
+
+	// Create a new request context
+	c.requestContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
+
 	defer func() {
 		if retErr != nil {
 			c.requestContextCancelFunc()
@@ -1565,8 +1570,6 @@ func (c *Core) postUnseal() (retErr error) {
 	if c.seal.RecoveryKeySupported(c.requestContext) {
 		c.seal.SetRecoveryConfig(c.requestContext, nil)
 	}
-
-	c.requestContext, c.requestContextCancelFunc = context.WithCancel(context.Background())
 
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
@@ -1755,12 +1758,14 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			c.seal.SetBarrierConfig(c.requestContext, nil)
-			if c.seal.RecoveryKeySupported(c.requestContext) {
-				c.seal.SetRecoveryConfig(c.requestContext, nil)
+			// We haven't run postUnseal yet so we have nothing meaningful to use here
+			ctx := context.Background()
+			c.seal.SetBarrierConfig(ctx, nil)
+			if c.seal.RecoveryKeySupported(ctx) {
+				c.seal.SetRecoveryConfig(ctx, nil)
 			}
 
-			if err := c.performKeyUpgrades(); err != nil {
+			if err := c.performKeyUpgrades(ctx); err != nil {
 				// We call this in a goroutine so that we can give up the
 				// statelock and have this shut us down; sealInternal has a
 				// workflow where it watches for the stopCh to close so we want
@@ -1893,7 +1898,7 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 			// Check for a poison pill. If we can read it, it means we have stale
 			// keys (e.g. from replication being activated) and we need to seal to
 			// be unsealed again.
-			entry, _ := c.barrier.Get(c.requestContext, poisonPillPath)
+			entry, _ := c.barrier.Get(context.Background(), poisonPillPath)
 			if entry != nil && len(entry.Value) > 0 {
 				c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
 				go c.Shutdown()
@@ -1911,10 +1916,10 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 
 // checkKeyUpgrades is used to check if there have been any key rotations
 // and if there is a chain of upgrades available
-func (c *Core) checkKeyUpgrades() error {
+func (c *Core) checkKeyUpgrades(ctx context.Context) error {
 	for {
 		// Check for an upgrade
-		didUpgrade, newTerm, err := c.barrier.CheckUpgrade(c.requestContext)
+		didUpgrade, newTerm, err := c.barrier.CheckUpgrade(ctx)
 		if err != nil {
 			return err
 		}
@@ -1932,9 +1937,9 @@ func (c *Core) checkKeyUpgrades() error {
 
 // scheduleUpgradeCleanup is used to ensure that all the upgrade paths
 // are cleaned up in a timely manner if a leader failover takes place
-func (c *Core) scheduleUpgradeCleanup() error {
+func (c *Core) scheduleUpgradeCleanup(ctx context.Context) error {
 	// List the upgrades
-	upgrades, err := c.barrier.List(c.requestContext, keyringUpgradePrefix)
+	upgrades, err := c.barrier.List(ctx, keyringUpgradePrefix)
 	if err != nil {
 		return fmt.Errorf("failed to list upgrades: %v", err)
 	}
@@ -1957,7 +1962,7 @@ func (c *Core) scheduleUpgradeCleanup() error {
 		}
 		for _, upgrade := range upgrades {
 			path := fmt.Sprintf("%s%s", keyringUpgradePrefix, upgrade)
-			if err := c.barrier.Delete(c.requestContext, path); err != nil {
+			if err := c.barrier.Delete(ctx, path); err != nil {
 				c.logger.Error("core: failed to cleanup upgrade", "path", path, "error", err)
 			}
 		}
@@ -1965,20 +1970,20 @@ func (c *Core) scheduleUpgradeCleanup() error {
 	return nil
 }
 
-func (c *Core) performKeyUpgrades() error {
-	if err := c.checkKeyUpgrades(); err != nil {
+func (c *Core) performKeyUpgrades(ctx context.Context) error {
+	if err := c.checkKeyUpgrades(ctx); err != nil {
 		return errwrap.Wrapf("error checking for key upgrades: {{err}}", err)
 	}
 
-	if err := c.barrier.ReloadMasterKey(c.requestContext); err != nil {
+	if err := c.barrier.ReloadMasterKey(ctx); err != nil {
 		return errwrap.Wrapf("error reloading master key: {{err}}", err)
 	}
 
-	if err := c.barrier.ReloadKeyring(c.requestContext); err != nil {
+	if err := c.barrier.ReloadKeyring(ctx); err != nil {
 		return errwrap.Wrapf("error reloading keyring: {{err}}", err)
 	}
 
-	if err := c.scheduleUpgradeCleanup(); err != nil {
+	if err := c.scheduleUpgradeCleanup(ctx); err != nil {
 		return errwrap.Wrapf("error scheduling upgrade cleanup: {{err}}", err)
 	}
 
@@ -2005,8 +2010,8 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 }
 
 // advertiseLeader is used to advertise the current node as leader
-func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error {
-	go c.cleanLeaderPrefix(uuid, leaderLostCh)
+func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-chan struct{}) error {
+	go c.cleanLeaderPrefix(ctx, uuid, leaderLostCh)
 
 	var key *ecdsa.PrivateKey
 	switch c.localClusterPrivateKey.(type) {
@@ -2038,7 +2043,7 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 		Key:   coreLeaderPrefix + uuid,
 		Value: val,
 	}
-	err = c.barrier.Put(c.requestContext, ent)
+	err = c.barrier.Put(ctx, ent)
 	if err != nil {
 		return err
 	}
@@ -2055,7 +2060,7 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 }
 
 func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
-	keys, err := c.barrier.List(c.requestContext, coreLeaderPrefix)
+	keys, err := c.barrier.List(ctx, coreLeaderPrefix)
 	if err != nil {
 		c.logger.Error("core: failed to list entries in core/leader", "error", err)
 		return
@@ -2064,7 +2069,7 @@ func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
 		select {
 		case <-time.After(leaderPrefixCleanDelay):
 			if keys[0] != uuid {
-				c.barrier.Delete(c.requestContext, coreLeaderPrefix+keys[0])
+				c.barrier.Delete(ctx, coreLeaderPrefix+keys[0])
 			}
 			keys = keys[1:]
 		case <-leaderLostCh:

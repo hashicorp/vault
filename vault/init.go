@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -26,9 +27,9 @@ type InitResult struct {
 }
 
 // Initialized checks if the Vault is already initialized
-func (c *Core) Initialized() (bool, error) {
+func (c *Core) Initialized(ctx context.Context) (bool, error) {
 	// Check the barrier first
-	init, err := c.barrier.Initialized(c.requestContext)
+	init, err := c.barrier.Initialized(ctx)
 	if err != nil {
 		c.logger.Error("core: barrier init check failed", "error", err)
 		return false, err
@@ -39,7 +40,7 @@ func (c *Core) Initialized() (bool, error) {
 	}
 
 	// Verify the seal configuration
-	sealConf, err := c.seal.BarrierConfig(c.requestContext)
+	sealConf, err := c.seal.BarrierConfig(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -47,8 +48,8 @@ func (c *Core) Initialized() (bool, error) {
 		return false, fmt.Errorf("core: barrier reports initialized but no seal configuration found")
 	}
 
-	if c.seal.RecoveryKeySupported(c.requestContext) {
-		sealConf, err = c.seal.RecoveryConfig(c.requestContext)
+	if c.seal.RecoveryKeySupported(ctx) {
+		sealConf, err = c.seal.RecoveryConfig(ctx)
 		if err != nil {
 			return false, err
 		}
@@ -262,8 +263,8 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 }
 
 // UnsealWithStoredKeys performs auto-unseal using stored keys.
-func (c *Core) UnsealWithStoredKeys() error {
-	if !c.seal.StoredKeysSupported(c.requestContext) {
+func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
+	if !c.seal.StoredKeysSupported(ctx) {
 		return nil
 	}
 
@@ -277,7 +278,7 @@ func (c *Core) UnsealWithStoredKeys() error {
 	}
 
 	c.logger.Info("core: stored unseal keys supported, attempting fetch")
-	keys, err := c.seal.GetStoredKeys(c.requestContext)
+	keys, err := c.seal.GetStoredKeys(ctx)
 	if err != nil {
 		c.logger.Error("core: fetching stored unseal keys failed", "error", err)
 		return &NonFatalError{Err: fmt.Errorf("fetching stored unseal keys failed: %v", err)}
@@ -288,7 +289,7 @@ func (c *Core) UnsealWithStoredKeys() error {
 		unsealed := false
 		keysUsed := 0
 		for _, key := range keys {
-			unsealed, err = c.Unseal(key)
+			unsealed, err = c.Unseal(ctx, key)
 			if err != nil {
 				c.logger.Error("core: unseal with stored unseal key failed", "error", err)
 				return &NonFatalError{Err: fmt.Errorf("unseal with stored key failed: %v", err)}

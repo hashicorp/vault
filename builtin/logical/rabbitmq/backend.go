@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -60,7 +61,7 @@ type backend struct {
 }
 
 // DB returns the database connection.
-func (b *backend) Client(s logical.Storage) (*rabbithole.Client, error) {
+func (b *backend) Client(ctx context.Context, s logical.Storage) (*rabbithole.Client, error) {
 	b.lock.RLock()
 
 	// If we already have a client, return it
@@ -104,22 +105,22 @@ func (b *backend) Client(s logical.Storage) (*rabbithole.Client, error) {
 }
 
 // resetClient forces a connection next time Client() is called.
-func (b *backend) resetClient() {
+func (b *backend) resetClient(_ context.Context) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.client = nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "config/connection":
-		b.resetClient()
+		b.resetClient(ctx)
 	}
 }
 
 // Lease returns the lease information
-func (b *backend) Lease(s logical.Storage) (*configLease, error) {
+func (b *backend) Lease(ctx context.Context, s logical.Storage) (*configLease, error) {
 	entry, err := s.Get(ctx, "config/lease")
 	if err != nil {
 		return nil, err

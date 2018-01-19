@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -105,7 +106,7 @@ func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port 
 
 // Takes an IP address and role name and checks if the IP is part
 // of CIDR blocks belonging to the role.
-func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error) {
+func roleContainsIP(ctx context.Context, s logical.Storage, roleName string, ip string) (bool, error) {
 	if roleName == "" {
 		return false, fmt.Errorf("missing role name")
 	}

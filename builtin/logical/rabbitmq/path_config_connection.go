@@ -86,7 +86,7 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 	}
 
 	// Reset the client connection
-	b.resetClient()
+	b.resetClient(ctx)
 
 	return nil, nil
 }
