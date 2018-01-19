@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/base64"
 	"testing"
 
@@ -17,7 +18,7 @@ func TestCore_GenerateRoot_Lifecycle(t *testing.T) {
 
 func testCore_GenerateRoot_Lifecycle_Common(t *testing.T, c *Core, keys [][]byte) {
 	// Verify update not allowed
-	if _, err := c.GenerateRootUpdate(keys[0], "", GenerateStandardRootTokenStrategy); err == nil {
+	if _, err := c.GenerateRootUpdate(context.Background(), keys[0], "", GenerateStandardRootTokenStrategy); err == nil {
 		t.Fatalf("no root generation in progress")
 	}
 
@@ -136,14 +137,14 @@ func testCore_GenerateRoot_InvalidMasterNonce_Common(t *testing.T, c *Core, keys
 	}
 
 	// Provide the nonce (invalid)
-	_, err = c.GenerateRootUpdate(keys[0], "abcd", GenerateStandardRootTokenStrategy)
+	_, err = c.GenerateRootUpdate(context.Background(), keys[0], "abcd", GenerateStandardRootTokenStrategy)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 
 	// Provide the master (invalid)
 	for _, key := range keys {
-		_, err = c.GenerateRootUpdate(key, rgconf.Nonce, GenerateStandardRootTokenStrategy)
+		_, err = c.GenerateRootUpdate(context.Background(), key, rgconf.Nonce, GenerateStandardRootTokenStrategy)
 	}
 	if err == nil {
 		t.Fatalf("expected error")
@@ -181,7 +182,7 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 	// Provide the keys
 	var result *GenerateRootResult
 	for _, key := range keys {
-		result, err = c.GenerateRootUpdate(key, rkconf.Nonce, GenerateStandardRootTokenStrategy)
+		result, err = c.GenerateRootUpdate(context.Background(), key, rkconf.Nonce, GenerateStandardRootTokenStrategy)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -220,7 +221,7 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 	}
 
 	// Ensure that the token is a root token
-	te, err := c.tokenStore.Lookup(token)
+	te, err := c.tokenStore.Lookup(context.Background(), token)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -258,7 +259,7 @@ func testCore_GenerateRoot_Update_PGP_Common(t *testing.T, c *Core, keys [][]byt
 	// Provide the keys
 	var result *GenerateRootResult
 	for _, key := range keys {
-		result, err = c.GenerateRootUpdate(key, rkconf.Nonce, GenerateStandardRootTokenStrategy)
+		result, err = c.GenerateRootUpdate(context.Background(), key, rkconf.Nonce, GenerateStandardRootTokenStrategy)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -298,7 +299,7 @@ func testCore_GenerateRoot_Update_PGP_Common(t *testing.T, c *Core, keys [][]byt
 	token := ptBuf.String()
 
 	// Ensure that the token is a root token
-	te, err := c.tokenStore.Lookup(token)
+	te, err := c.tokenStore.Lookup(context.Background(), token)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
