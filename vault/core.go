@@ -355,8 +355,9 @@ type Core struct {
 
 	atomicPrimaryFailoverAddrs *atomic.Value
 	// replicationState keeps the current replication state cached for quick
-	// lookup
-	replicationState *uint32
+	// lookup; activeNodeReplicationState stores the active value on standbys
+	replicationState           *uint32
+	activeNodeReplicationState *uint32
 
 	// uiEnabled indicates whether Vault Web UI is enabled or not
 	uiEnabled bool
@@ -489,6 +490,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		replicationState:                 new(uint32),
 		atomicPrimaryClusterAddrs:        new(atomic.Value),
 		atomicPrimaryFailoverAddrs:       new(atomic.Value),
+		activeNodeReplicationState:       new(uint32),
 	}
 
 	if conf.ClusterCipherSuites != "" {
@@ -2123,6 +2125,10 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 
 func (c *Core) ReplicationState() consts.ReplicationState {
 	return consts.ReplicationState(atomic.LoadUint32(c.replicationState))
+}
+
+func (c *Core) ActiveNodeReplicationState() consts.ReplicationState {
+	return consts.ReplicationState(atomic.LoadUint32(c.activeNodeReplicationState))
 }
 
 func (c *Core) SealAccess() *SealAccess {
