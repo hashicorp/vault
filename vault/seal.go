@@ -68,7 +68,7 @@ type Seal interface {
 	Init(context.Context) error
 	Finalize(context.Context) error
 
-	StoredKeysSupported(context.Context) bool
+	StoredKeysSupported() bool
 	SetStoredKeys(context.Context, [][]byte) error
 	GetStoredKeys(context.Context) ([][]byte, error)
 
@@ -76,7 +76,7 @@ type Seal interface {
 	BarrierConfig(context.Context) (*SealConfig, error)
 	SetBarrierConfig(context.Context, *SealConfig) error
 
-	RecoveryKeySupported(context.Context) bool
+	RecoveryKeySupported() bool
 	RecoveryType() string
 	RecoveryConfig(context.Context) (*SealConfig, error)
 	SetRecoveryConfig(context.Context, *SealConfig) error
@@ -112,11 +112,11 @@ func (d *DefaultSeal) BarrierType() string {
 	return SealTypeShamir
 }
 
-func (d *DefaultSeal) StoredKeysSupported(ctx context.Context) bool {
+func (d *DefaultSeal) StoredKeysSupported() bool {
 	return false
 }
 
-func (d *DefaultSeal) RecoveryKeySupported(ctx context.Context) bool {
+func (d *DefaultSeal) RecoveryKeySupported() bool {
 	return false
 }
 

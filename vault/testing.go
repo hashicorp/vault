@@ -209,7 +209,7 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, clusterAddrs []*ne
 	}
 
 	// If we support storing barrier keys, then set that to equal the min threshold to unseal
-	if core.seal.StoredKeysSupported(context.Background()) {
+	if core.seal.StoredKeysSupported() {
 		barrierConfig.StoredShares = barrierConfig.SecretThreshold
 	}
 

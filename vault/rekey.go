@@ -65,7 +65,7 @@ func (c *Core) RekeyThreshold(ctx context.Context, recovery bool) (int, error) {
 	// If we are rekeying the recovery key, or if the seal supports
 	// recovery keys and we are rekeying the barrier key, we use the
 	// recovery config as the threshold instead.
-	if recovery || c.seal.RecoveryKeySupported(ctx) {
+	if recovery || c.seal.RecoveryKeySupported() {
 		config, err = c.seal.RecoveryConfig(ctx)
 	} else {
 		config, err = c.seal.BarrierConfig(ctx)
@@ -128,17 +128,17 @@ func (c *Core) RekeyConfig(recovery bool) (*SealConfig, error) {
 
 // RekeyInit will either initialize the rekey of barrier or recovery key.
 // recovery determines whether this is a rekey on the barrier or recovery key.
-func (c *Core) RekeyInit(ctx context.Context, config *SealConfig, recovery bool) error {
+func (c *Core) RekeyInit(config *SealConfig, recovery bool) error {
 	if recovery {
-		return c.RecoveryRekeyInit(ctx, config)
+		return c.RecoveryRekeyInit(config)
 	}
-	return c.BarrierRekeyInit(ctx, config)
+	return c.BarrierRekeyInit(config)
 }
 
 // BarrierRekeyInit is used to initialize the rekey settings for the barrier key
-func (c *Core) BarrierRekeyInit(ctx context.Context, config *SealConfig) error {
+func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 	if config.StoredShares > 0 {
-		if !c.seal.StoredKeysSupported(ctx) {
+		if !c.seal.StoredKeysSupported() {
 			return fmt.Errorf("storing keys not supported by barrier seal")
 		}
 		if len(config.PGPKeys) > 0 {
@@ -149,7 +149,7 @@ func (c *Core) BarrierRekeyInit(ctx context.Context, config *SealConfig) error {
 		}
 	}
 
-	if c.seal.RecoveryKeySupported(ctx) && c.seal.RecoveryType() == config.Type {
+	if c.seal.RecoveryKeySupported() && c.seal.RecoveryType() == config.Type {
 		c.logger.Debug("core: using recovery seal configuration to rekey barrier key")
 	}
 
@@ -194,7 +194,7 @@ func (c *Core) BarrierRekeyInit(ctx context.Context, config *SealConfig) error {
 }
 
 // RecoveryRekeyInit is used to initialize the rekey settings for the recovery key
-func (c *Core) RecoveryRekeyInit(ctx context.Context, config *SealConfig) error {
+func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 	if config.StoredShares > 0 {
 		return fmt.Errorf("stored shares not supported by recovery key")
 	}
@@ -205,7 +205,7 @@ func (c *Core) RecoveryRekeyInit(ctx context.Context, config *SealConfig) error 
 		return fmt.Errorf("invalid recovery configuration: %v", err)
 	}
 
-	if !c.seal.RecoveryKeySupported(ctx) {
+	if !c.seal.RecoveryKeySupported() {
 		return fmt.Errorf("recovery keys not supported")
 	}
 
@@ -284,7 +284,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	var existingConfig *SealConfig
 	var err error
 	var useRecovery bool // Determines whether recovery key is being used to rekey the master key
-	if c.seal.StoredKeysSupported(ctx) && c.seal.RecoveryKeySupported(ctx) {
+	if c.seal.StoredKeysSupported() && c.seal.RecoveryKeySupported() {
 		existingConfig, err = c.seal.RecoveryConfig(ctx)
 		useRecovery = true
 	} else {
@@ -378,7 +378,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	// If we are storing any shares, add them to the shares to store and remove
 	// from the returned keys
 	var keysToStore [][]byte
-	if c.seal.StoredKeysSupported(ctx) && c.barrierRekeyConfig.StoredShares > 0 {
+	if c.seal.StoredKeysSupported() && c.barrierRekeyConfig.StoredShares > 0 {
 		for i := 0; i < c.barrierRekeyConfig.StoredShares; i++ {
 			keysToStore = append(keysToStore, results.SecretShares[0])
 			results.SecretShares = results.SecretShares[1:]

@@ -32,7 +32,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 		defer cancel()
 
 		switch {
-		case recovery && !core.SealAccess().RecoveryKeySupported(ctx):
+		case recovery && !core.SealAccess().RecoveryKeySupported():
 			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"))
 		case r.Method == "GET":
 			handleSysRekeyInitGet(ctx, core, recovery, w, r)
@@ -119,7 +119,7 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 
 	// If the seal supports recovery keys and stored keys, then we allow rekeying the barrier key
 	// iff the secret shares, secret threshold, and stored shares are set to 1.
-	if !recovery && core.SealAccess().RecoveryKeySupported(ctx) && core.SealAccess().StoredKeysSupported(ctx) {
+	if !recovery && core.SealAccess().RecoveryKeySupported() && core.SealAccess().StoredKeysSupported() {
 		if req.SecretShares != 1 || req.SecretThreshold != 1 || req.StoredShares != 1 {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("secret shares, secret threshold, and stored shares must be set to 1"))
 			return
@@ -132,7 +132,7 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 	}
 
 	// Initialize the rekey
-	err := core.RekeyInit(ctx, &vault.SealConfig{
+	err := core.RekeyInit(&vault.SealConfig{
 		SecretShares:    req.SecretShares,
 		SecretThreshold: req.SecretThreshold,
 		StoredShares:    req.StoredShares,

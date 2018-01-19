@@ -124,7 +124,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 
 			// Attempt the unseal
 			ctx := context.Background()
-			if core.SealAccess().RecoveryKeySupported(ctx) {
+			if core.SealAccess().RecoveryKeySupported() {
 				_, err = core.UnsealWithRecoveryKeys(ctx, key)
 			} else {
 				_, err = core.Unseal(key)
@@ -171,7 +171,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	}
 
 	var sealConfig *vault.SealConfig
-	if core.SealAccess().RecoveryKeySupported(ctx) {
+	if core.SealAccess().RecoveryKeySupported() {
 		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
 	} else {
 		sealConfig, err = core.SealAccess().BarrierConfig(ctx)

@@ -42,7 +42,7 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 	}
 
 	sealConfig := barrierConfig
-	if core.SealAccess().RecoveryKeySupported(ctx) {
+	if core.SealAccess().RecoveryKeySupported() {
 		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)

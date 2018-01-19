@@ -922,18 +922,18 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		SecretThreshold: 1,
 	}
 
-	ctx := context.Background()
-
-	if core.SealAccess().RecoveryKeySupported(ctx) {
+	if core.SealAccess().RecoveryKeySupported() {
 		recoveryConfig = &vault.SealConfig{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		}
 	}
 
-	if core.SealAccess().StoredKeysSupported(ctx) {
+	if core.SealAccess().StoredKeysSupported() {
 		barrierConfig.StoredShares = 1
 	}
+
+	ctx := context.Background()
 
 	// Initialize it with a basic single key
 	init, err := core.Initialize(ctx, &vault.InitParams{
@@ -945,7 +945,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Handle unseal with stored keys
-	if core.SealAccess().StoredKeysSupported(ctx) {
+	if core.SealAccess().StoredKeysSupported() {
 		err := core.UnsealWithStoredKeys(ctx)
 		if err != nil {
 			return nil, err

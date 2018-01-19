@@ -190,7 +190,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	// Get the seal configuration
 	var config *SealConfig
 	var err error
-	if c.seal.RecoveryKeySupported(ctx) {
+	if c.seal.RecoveryKeySupported() {
 		config, err = c.seal.RecoveryConfig(ctx)
 		if err != nil {
 			return nil, err
@@ -270,7 +270,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	}
 
 	// Verify the master key
-	if c.seal.RecoveryKeySupported(ctx) {
+	if c.seal.RecoveryKeySupported() {
 		if err := c.seal.VerifyRecoveryKey(ctx, masterKey); err != nil {
 			c.logger.Error("core: root generation aborted, recovery key verification failed", "error", err)
 			return nil, err

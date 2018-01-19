@@ -1071,7 +1071,7 @@ func (c *Core) UnsealWithRecoveryKeys(ctx context.Context, key []byte) (bool, er
 
 	var config *SealConfig
 	// If recovery keys are supported then use recovery seal config to unseal
-	if c.seal.RecoveryKeySupported(ctx) {
+	if c.seal.RecoveryKeySupported() {
 		config, err = c.seal.RecoveryConfig(ctx)
 		if err != nil {
 			return false, err
@@ -1148,7 +1148,7 @@ func (c *Core) unsealPart(ctx context.Context, config *SealConfig, key []byte, u
 		}
 	}
 
-	if c.seal.RecoveryKeySupported(ctx) && useRecoveryKeys {
+	if c.seal.RecoveryKeySupported() && useRecoveryKeys {
 		// Verify recovery key
 		if err := c.seal.VerifyRecoveryKey(ctx, recoveredKey); err != nil {
 			return nil, err
@@ -1160,7 +1160,7 @@ func (c *Core) unsealPart(ctx context.Context, config *SealConfig, key []byte, u
 		// If insuffiencient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
 		var masterKey []byte
-		if c.seal.StoredKeysSupported(ctx) {
+		if c.seal.StoredKeysSupported() {
 			masterKeyShares, err := c.seal.GetStoredKeys(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("unable to retrieve stored keys: %v", err)
@@ -1227,7 +1227,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 	c.sealed = false
 
 	// Force a cache bust here, which will also run migration code
-	if c.seal.RecoveryKeySupported(ctx) {
+	if c.seal.RecoveryKeySupported() {
 		c.seal.SetRecoveryConfig(ctx, nil)
 	}
 
@@ -1573,7 +1573,7 @@ func (c *Core) postUnseal() (retErr error) {
 
 	// Purge these for safety in case of a rekey
 	c.seal.SetBarrierConfig(c.activeContext, nil)
-	if c.seal.RecoveryKeySupported(c.activeContext) {
+	if c.seal.RecoveryKeySupported() {
 		c.seal.SetRecoveryConfig(c.activeContext, nil)
 	}
 
@@ -1768,7 +1768,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// seal, as there's little we can do.
 		{
 			c.seal.SetBarrierConfig(ctx, nil)
-			if c.seal.RecoveryKeySupported(ctx) {
+			if c.seal.RecoveryKeySupported() {
 				c.seal.SetRecoveryConfig(ctx, nil)
 			}
 

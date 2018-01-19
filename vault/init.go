@@ -93,7 +93,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	barrierConfig := initParams.BarrierConfig
 	recoveryConfig := initParams.RecoveryConfig
 
-	if c.seal.RecoveryKeySupported(ctx) {
+	if c.seal.RecoveryKeySupported() {
 		if recoveryConfig == nil {
 			return nil, fmt.Errorf("recovery configuration must be supplied")
 		}
@@ -202,7 +202,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// Save the configuration regardless, but only generate a key if it's not
 	// disabled. When using recovery keys they are stored in the barrier, so
 	// this must happen post-unseal.
-	if c.seal.RecoveryKeySupported(ctx) {
+	if c.seal.RecoveryKeySupported() {
 		err = c.seal.SetRecoveryConfig(ctx, recoveryConfig)
 		if err != nil {
 			c.logger.Error("core: failed to save recovery configuration", "error", err)
@@ -254,7 +254,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 // UnsealWithStoredKeys performs auto-unseal using stored keys.
 func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
-	if !c.seal.StoredKeysSupported(ctx) {
+	if !c.seal.StoredKeysSupported() {
 		return nil
 	}
 

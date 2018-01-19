@@ -13,16 +13,16 @@ func NewSealAccess(seal Seal) *SealAccess {
 	return &SealAccess{seal: seal}
 }
 
-func (s *SealAccess) StoredKeysSupported(ctx context.Context) bool {
-	return s.seal.StoredKeysSupported(ctx)
+func (s *SealAccess) StoredKeysSupported() bool {
+	return s.seal.StoredKeysSupported()
 }
 
 func (s *SealAccess) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	return s.seal.BarrierConfig(ctx)
 }
 
-func (s *SealAccess) RecoveryKeySupported(ctx context.Context) bool {
-	return s.seal.RecoveryKeySupported(ctx)
+func (s *SealAccess) RecoveryKeySupported() bool {
+	return s.seal.RecoveryKeySupported()
 }
 
 func (s *SealAccess) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
@@ -35,7 +35,7 @@ func (s *SealAccess) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 
 func (s *SealAccess) ClearCaches(ctx context.Context) {
 	s.seal.SetBarrierConfig(ctx, nil)
-	if s.RecoveryKeySupported(ctx) {
+	if s.RecoveryKeySupported() {
 		s.seal.SetRecoveryConfig(ctx, nil)
 	}
 }

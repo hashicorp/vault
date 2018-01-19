@@ -69,7 +69,7 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, masterKeys [][]byte,
 		SecretThreshold: 3,
 		SecretShares:    5,
 	}
-	err = c.RekeyInit(context.Background(), newConf, recovery)
+	err = c.RekeyInit(newConf, recovery)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -111,7 +111,7 @@ func testCore_Rekey_Init_Common(t *testing.T, c *Core, recovery bool) {
 		SecretThreshold: 5,
 		SecretShares:    1,
 	}
-	err := c.RekeyInit(context.Background(), badConf, recovery)
+	err := c.RekeyInit(badConf, recovery)
 	if err == nil {
 		t.Fatalf("should fail")
 	}
@@ -121,13 +121,13 @@ func testCore_Rekey_Init_Common(t *testing.T, c *Core, recovery bool) {
 		SecretThreshold: 3,
 		SecretShares:    5,
 	}
-	err = c.RekeyInit(context.Background(), newConf, recovery)
+	err = c.RekeyInit(newConf, recovery)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Second should fail
-	err = c.RekeyInit(context.Background(), newConf, recovery)
+	err = c.RekeyInit(newConf, recovery)
 	if err == nil {
 		t.Fatalf("should fail")
 	}
@@ -155,7 +155,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		SecretThreshold: 3,
 		SecretShares:    5,
 	}
-	err := c.RekeyInit(context.Background(), newConf, recovery)
+	err := c.RekeyInit(newConf, recovery)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -242,7 +242,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	// Skip this step if we are rekeying the barrier key with
 	// recovery keys, since a new rekey should still be using
 	// the same set of recovery keys.
-	if !recovery && c.seal.RecoveryKeySupported(context.Background()) {
+	if !recovery && c.seal.RecoveryKeySupported() {
 		return
 	}
 
@@ -251,7 +251,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		SecretThreshold: 1,
 		SecretShares:    1,
 	}
-	err = c.RekeyInit(context.Background(), newConf, recovery)
+	err = c.RekeyInit(newConf, recovery)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -332,7 +332,7 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 		SecretThreshold: 3,
 		SecretShares:    5,
 	}
-	err := c.RekeyInit(context.Background(), newConf, recovery)
+	err := c.RekeyInit(newConf, recovery)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -420,7 +420,7 @@ func TestCore_Standby_Rekey(t *testing.T) {
 		SecretShares:    1,
 		SecretThreshold: 1,
 	}
-	err = core.RekeyInit(context.Background(), newConf, false)
+	err = core.RekeyInit(newConf, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -453,7 +453,7 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	TestWaitActive(t, core2)
 
 	// Rekey the master key again
-	err = core2.RekeyInit(context.Background(), newConf, false)
+	err = core2.RekeyInit(newConf, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
