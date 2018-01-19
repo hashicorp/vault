@@ -632,6 +632,13 @@ func (c *Core) CORSConfig() *CORSConfig {
 	return c.corsConfig
 }
 
+func (c *Core) GetContext() (context.Context, context.CancelFunc) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	return context.WithCancel(c.requestContext)
+}
+
 // LookupToken returns the properties of the token from the token store. This
 // is particularly useful to fetch the accessor of the client token and get it
 // populated in the logical request along with the client token. The accessor

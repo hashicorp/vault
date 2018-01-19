@@ -16,6 +16,9 @@ import (
 
 func handleSysSeal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := core.GetContext()
+		defer cancel()
+
 		req, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
@@ -30,7 +33,7 @@ func handleSysSeal(core *vault.Core) http.Handler {
 		}
 
 		// Seal with the token above
-		if err := core.SealWithRequest(req); err != nil {
+		if err := core.SealWithRequest(ctx, req); err != nil {
 			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 				respondError(w, http.StatusForbidden, err)
 				return
@@ -46,6 +49,8 @@ func handleSysSeal(core *vault.Core) http.Handler {
 
 func handleSysStepDown(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := core.GetContext()
+		defer cancel()
 		req, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
@@ -60,7 +65,7 @@ func handleSysStepDown(core *vault.Core) http.Handler {
 		}
 
 		// Seal with the token above
-		if err := core.StepDown(req); err != nil {
+		if err := core.StepDown(ctx, req); err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -71,6 +76,9 @@ func handleSysStepDown(core *vault.Core) http.Handler {
 
 func handleSysUnseal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := core.GetContext()
+		defer cancel()
+
 		switch r.Method {
 		case "PUT":
 		case "POST":
@@ -121,7 +129,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			}
 
 			// Attempt the unseal
-			if core.SealAccess().RecoveryKeySupported() {
+			if core.SealAccess().RecoveryKeySupported(ctx) {
 				_, err = core.UnsealWithRecoveryKeys(key)
 			} else {
 				_, err = core.Unseal(key)
@@ -159,6 +167,9 @@ func handleSysSealStatus(core *vault.Core) http.Handler {
 }
 
 func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := core.GetContext()
+	defer cancel()
+
 	sealed, err := core.Sealed()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
@@ -166,10 +177,10 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	}
 
 	var sealConfig *vault.SealConfig
-	if core.SealAccess().RecoveryKeySupported() {
-		sealConfig, err = core.SealAccess().RecoveryConfig()
+	if core.SealAccess().RecoveryKeySupported(ctx) {
+		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
 	} else {
-		sealConfig, err = core.SealAccess().BarrierConfig()
+		sealConfig, err = core.SealAccess().BarrierConfig(ctx)
 	}
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)

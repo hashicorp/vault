@@ -14,6 +14,9 @@ import (
 
 func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := core.GetContext()
+		defer cancel()
+
 		standby, _ := core.Standby()
 		if standby {
 			respondStandby(core, w, r.URL)
@@ -28,7 +31,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 		}
 
 		switch {
-		case recovery && !core.SealAccess().RecoveryKeySupported():
+		case recovery && !core.SealAccess().RecoveryKeySupported(ctx):
 			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"))
 		case r.Method == "GET":
 			handleSysRekeyInitGet(core, recovery, w, r)
@@ -43,7 +46,10 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 }
 
 func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	barrierConfig, err := core.SealAccess().BarrierConfig()
+	ctx, cancel := core.GetContext()
+	defer cancel()
+
+	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -101,6 +107,9 @@ func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWrite
 }
 
 func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := core.GetContext()
+	defer cancel()
+
 	// Parse the request
 	var req RekeyRequest
 	if err := parseRequest(r, w, &req); err != nil {
@@ -115,7 +124,7 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 
 	// If the seal supports recovery keys and stored keys, then we allow rekeying the barrier key
 	// iff the secret shares, secret threshold, and stored shares are set to 1.
-	if !recovery && core.SealAccess().RecoveryKeySupported() && core.SealAccess().StoredKeysSupported() {
+	if !recovery && core.SealAccess().RecoveryKeySupported(ctx) && core.SealAccess().StoredKeysSupported(ctx) {
 		if req.SecretShares != 1 || req.SecretThreshold != 1 || req.StoredShares != 1 {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("secret shares, secret threshold, and stored shares must be set to 1"))
 			return

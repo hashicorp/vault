@@ -26,8 +26,11 @@ func handleSysGenerateRootAttempt(core *vault.Core, generateStrategy vault.Gener
 }
 
 func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := core.GetContext()
+	defer cancel()
+
 	// Get the current seal configuration
-	barrierConfig, err := core.SealAccess().BarrierConfig()
+	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -39,8 +42,8 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 	}
 
 	sealConfig := barrierConfig
-	if core.SealAccess().RecoveryKeySupported() {
-		sealConfig, err = core.SealAccess().RecoveryConfig()
+	if core.SealAccess().RecoveryKeySupported(ctx) {
+		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
