@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -242,7 +243,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rawLocal, err := c.barrier.Get(coreLocalAuditConfigPath)
+	rawLocal, err := c.barrier.Get(context.Background(), coreLocalAuditConfigPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +263,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rawLocal, err = c.barrier.Get(coreLocalAuditConfigPath)
+	rawLocal, err = c.barrier.Get(context.Background(), coreLocalAuditConfigPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -604,8 +605,8 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	headersConf := &AuditedHeadersConfig{
 		view: view,
 	}
-	headersConf.add("X-Test-Header", false)
-	headersConf.add("X-Vault-Header", false)
+	headersConf.add(context.Background(), "X-Test-Header", false)
+	headersConf.add(context.Background(), "X-Vault-Header", false)
 
 	err = b.LogRequest(auth, reqCopy, headersConf, respErr)
 	if err != nil {
