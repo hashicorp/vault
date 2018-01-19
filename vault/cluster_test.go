@@ -396,7 +396,7 @@ func TestCluster_CustomCipherSuites(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, core.Core)
 
-	tlsConf, err := core.Core.ClusterTLSConfig()
+	tlsConf, err := core.Core.ClusterTLSConfig(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

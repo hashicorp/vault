@@ -30,7 +30,7 @@ var (
 )
 
 // Starts the listeners and servers necessary to handle forwarded requests
-func (c *Core) startForwarding() error {
+func (c *Core) startForwarding(ctx context.Context) error {
 	c.logger.Trace("core: cluster listener setup function")
 	defer c.logger.Trace("core: leaving cluster listener setup function")
 
@@ -43,7 +43,7 @@ func (c *Core) startForwarding() error {
 	ha := c.ha != nil
 
 	// Get our TLS config
-	tlsConfig, err := c.ClusterTLSConfig()
+	tlsConfig, err := c.ClusterTLSConfig(ctx)
 	if err != nil {
 		c.logger.Error("core: failed to get tls configuration when starting forwarding", "error", err)
 		return err
@@ -238,7 +238,7 @@ func (c *Core) startForwarding() error {
 // refreshRequestForwardingConnection ensures that the client/transport are
 // alive and that the current active address value matches the most
 // recently-known address.
-func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
+func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAddr string) error {
 	c.logger.Trace("core: refreshing forwarding connection")
 	defer c.logger.Trace("core: done refreshing forwarding connection")
 
@@ -263,9 +263,9 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	// It's not really insecure, but we have to dial manually to get the
 	// ALPN header right. It's just "insecure" because GRPC isn't managing
 	// the TLS state.
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host,
-		grpc.WithDialer(c.getGRPCDialer(requestForwardingALPN, "", nil)),
+	dctx, cancelFunc := context.WithCancel(ctx)
+	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host,
+		grpc.WithDialer(c.getGRPCDialer(ctx, requestForwardingALPN, "", nil)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time: 2 * HeartbeatInterval,
@@ -344,9 +344,9 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 // getGRPCDialer is used to return a dialer that has the correct TLS
 // configuration. Otherwise gRPC tries to be helpful and stomps all over our
 // NextProtos.
-func (c *Core) getGRPCDialer(alpnProto, serverName string, caCert *x509.Certificate) func(string, time.Duration) (net.Conn, error) {
+func (c *Core) getGRPCDialer(ctx context.Context, alpnProto, serverName string, caCert *x509.Certificate) func(string, time.Duration) (net.Conn, error) {
 	return func(addr string, timeout time.Duration) (net.Conn, error) {
-		tlsConfig, err := c.ClusterTLSConfig()
+		tlsConfig, err := c.ClusterTLSConfig(ctx)
 		if err != nil {
 			c.logger.Error("core: failed to get tls configuration", "error", err)
 			return nil, err

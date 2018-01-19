@@ -959,7 +959,9 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 
 		// This will ensure that we both have a connection at the ready and that
 		// the address is the current known value
-		err = c.refreshRequestForwardingConnection(adv.ClusterAddr)
+		// Since this is standby, we don't use the active context. Later we may
+		// use a process-scoped context
+		err = c.refreshRequestForwardingConnection(context.Background(), adv.ClusterAddr)
 		if err != nil {
 			return false, "", "", err
 		}
@@ -1624,7 +1626,7 @@ func (c *Core) postUnseal() (retErr error) {
 	}
 
 	if c.ha != nil {
-		if err := c.startClusterListener(); err != nil {
+		if err := c.startClusterListener(c.activeContext); err != nil {
 			return err
 		}
 	}

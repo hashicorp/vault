@@ -287,7 +287,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 // is assumed that the state lock is held while this is run. Right now this
 // only starts forwarding listeners; it's TBD whether other request types will
 // be built in the same mechanism or started independently.
-func (c *Core) startClusterListener() error {
+func (c *Core) startClusterListener(ctx context.Context) error {
 	if c.clusterAddr == "" {
 		c.logger.Info("core: clustering disabled, not starting listeners")
 		return nil
@@ -300,7 +300,7 @@ func (c *Core) startClusterListener() error {
 
 	c.logger.Trace("core: starting cluster listeners")
 
-	err := c.startForwarding()
+	err := c.startForwarding(ctx)
 	if err != nil {
 		return err
 	}
@@ -338,7 +338,7 @@ func (c *Core) stopClusterListener() {
 
 // ClusterTLSConfig generates a TLS configuration based on the local/replicated
 // cluster key and cert.
-func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
+func (c *Core) ClusterTLSConfig(ctx context.Context) (*tls.Config, error) {
 	// Using lookup functions allows just-in-time lookup of the current state
 	// of clustering as connections come and go
 
