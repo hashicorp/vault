@@ -33,6 +33,8 @@ type TransactionalCache struct {
 	Transactional
 }
 
+var _ Purgable = &Cache{}
+
 // NewCache returns a physical cache of the given size.
 // If no size is provided, the default size is used.
 func NewCache(b Backend, size int, coreExceptions []string, logger log.Logger) *Cache {
@@ -72,7 +74,7 @@ func NewTransactionalCache(b Backend, size int, coreExceptions []string, logger 
 }
 
 // Purge is used to clear the cache
-func (c *Cache) Purge() {
+func (c *Cache) Purge(ctx context.Context) {
 	// Lock the world
 	for _, lock := range c.locks {
 		lock.Lock()

@@ -52,7 +52,7 @@ func TestCache_Purge(t *testing.T) {
 	}
 
 	// Clear the cache
-	cache.Purge()
+	cache.Purge(context.Background())
 
 	// Read should fail
 	out, err = cache.Get(context.Background(), "foo")
