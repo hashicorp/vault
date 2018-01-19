@@ -849,7 +849,7 @@ func (b *AESGCMBarrier) decryptKeyring(path string, cipher []byte) ([]byte, erro
 }
 
 // Encrypt is used to encrypt in-memory for the BarrierEncryptor interface
-func (b *AESGCMBarrier) Encrypt(key string, plaintext []byte) ([]byte, error) {
+func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 	if b.sealed {
@@ -867,7 +867,7 @@ func (b *AESGCMBarrier) Encrypt(key string, plaintext []byte) ([]byte, error) {
 }
 
 // Decrypt is used to decrypt in-memory for the BarrierEncryptor interface
-func (b *AESGCMBarrier) Decrypt(key string, ciphertext []byte) ([]byte, error) {
+func (b *AESGCMBarrier) Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 	if b.sealed {

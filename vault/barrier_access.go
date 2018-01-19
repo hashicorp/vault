@@ -16,9 +16,9 @@ func NewBarrierEncryptorAccess(barrierEncryptor BarrierEncryptor) *BarrierEncryp
 }
 
 func (b *BarrierEncryptorAccess) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
-	return b.barrierEncryptor.Encrypt(key, plaintext)
+	return b.barrierEncryptor.Encrypt(ctx, key, plaintext)
 }
 
 func (b *BarrierEncryptorAccess) Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error) {
-	return b.barrierEncryptor.Decrypt(key, ciphertext)
+	return b.barrierEncryptor.Decrypt(ctx, key, ciphertext)
 }

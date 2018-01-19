@@ -488,12 +488,12 @@ func TestEncrypt_BarrierEncryptor(t *testing.T) {
 	b.Initialize(context.Background(), key)
 	b.Unseal(context.Background(), key)
 
-	cipher, err := b.Encrypt("foo", []byte("quick brown fox"))
+	cipher, err := b.Encrypt(context.Background(), "foo", []byte("quick brown fox"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	plain, err := b.Decrypt("foo", cipher)
+	plain, err := b.Decrypt(context.Background(), "foo", cipher)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
