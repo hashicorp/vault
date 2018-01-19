@@ -116,7 +116,7 @@ func (b *Backend) GetHash(data string) (string, error) {
 	return audit.HashString(salt, data), nil
 }
 
-func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
+func (b *Backend) LogRequest(_ context.Context, auth *logical.Auth, req *logical.Request, outerErr error) error {
 	var buf bytes.Buffer
 	if err := b.formatter.FormatRequest(&buf, b.formatConfig, auth, req, outerErr); err != nil {
 		return err
@@ -127,7 +127,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 	return err
 }
 
-func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request, resp *logical.Response, err error) error {
+func (b *Backend) LogResponse(_ context.Context, auth *logical.Auth, req *logical.Request, resp *logical.Response, err error) error {
 	var buf bytes.Buffer
 	if err := b.formatter.FormatResponse(&buf, b.formatConfig, auth, req, resp, err); err != nil {
 		return err
@@ -138,7 +138,7 @@ func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request, resp *lo
 	return err
 }
 
-func (b *Backend) Reload() error {
+func (b *Backend) Reload(_ context.Context) error {
 	return nil
 }
 
@@ -162,7 +162,7 @@ func (b *Backend) Salt() (*salt.Salt, error) {
 	return salt, nil
 }
 
-func (b *Backend) Invalidate() {
+func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt = nil

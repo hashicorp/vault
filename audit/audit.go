@@ -1,6 +1,8 @@
 package audit
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
@@ -14,13 +16,13 @@ type Backend interface {
 	// request is authorized but before the request is executed. The arguments
 	// MUST not be modified in anyway. They should be deep copied if this is
 	// a possibility.
-	LogRequest(*logical.Auth, *logical.Request, error) error
+	LogRequest(context.Context, *logical.Auth, *logical.Request, error) error
 
 	// LogResponse is used to synchronously log a response. This is done after
 	// the request is processed but before the response is sent. The arguments
 	// MUST not be modified in anyway. They should be deep copied if this is
 	// a possibility.
-	LogResponse(*logical.Auth, *logical.Request, *logical.Response, error) error
+	LogResponse(context.Context, *logical.Auth, *logical.Request, *logical.Response, error) error
 
 	// GetHash is used to return the given data with the backend's hash,
 	// so that a caller can determine if a value in the audit log matches
@@ -28,10 +30,10 @@ type Backend interface {
 	GetHash(string) (string, error)
 
 	// Reload is called on SIGHUP for supporting backends.
-	Reload() error
+	Reload(context.Context) error
 
 	// Invalidate is called for path invalidation
-	Invalidate()
+	Invalidate(context.Context)
 }
 
 type BackendConfig struct {
@@ -46,4 +48,4 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(*BackendConfig) (Backend, error)
+type Factory func(context.Context, *BackendConfig) (Backend, error)

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -76,9 +77,6 @@ func handleSysStepDown(core *vault.Core) http.Handler {
 
 func handleSysUnseal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := core.GetContext()
-		defer cancel()
-
 		switch r.Method {
 		case "PUT":
 		case "POST":
@@ -129,8 +127,9 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			}
 
 			// Attempt the unseal
+			ctx := context.Background()
 			if core.SealAccess().RecoveryKeySupported(ctx) {
-				_, err = core.UnsealWithRecoveryKeys(key)
+				_, err = core.UnsealWithRecoveryKeys(ctx, key)
 			} else {
 				_, err = core.Unseal(key)
 			}
@@ -167,8 +166,7 @@ func handleSysSealStatus(core *vault.Core) http.Handler {
 }
 
 func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := core.GetContext()
-	defer cancel()
+	ctx := context.Background()
 
 	sealed, err := core.Sealed()
 	if err != nil {

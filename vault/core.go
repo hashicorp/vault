@@ -1008,9 +1008,11 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 
+	ctx := context.Background()
+
 	// Explicitly check for init status. This also checks if the seal
 	// configuration is valid (i.e. non-nil).
-	init, err := c.Initialized()
+	init, err := c.Initialized(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -1029,7 +1031,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	}
 
 	// Get the barrier seal configuration
-	config, err := c.seal.BarrierConfig(context.Background())
+	config, err := c.seal.BarrierConfig(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -1039,12 +1041,12 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		return true, nil
 	}
 
-	masterKey, err := c.unsealPart(config, key, false)
+	masterKey, err := c.unsealPart(ctx, config, key, false)
 	if err != nil {
 		return false, err
 	}
 	if masterKey != nil {
-		return c.unsealInternal(masterKey)
+		return c.unsealInternal(ctx, masterKey)
 	}
 
 	return false, nil
@@ -1086,7 +1088,7 @@ func (c *Core) UnsealWithRecoveryKeys(ctx context.Context, key []byte) (bool, er
 		return false, err
 	}
 	if masterKey != nil {
-		return c.unsealInternal(masterKey)
+		return c.unsealInternal(ctx, masterKey)
 	}
 
 	return false, nil
@@ -1320,7 +1322,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		EntityID:    te.EntityID,
 	}
 
-	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
 		c.stateLock.RUnlock()
@@ -1427,7 +1429,7 @@ func (c *Core) StepDown(ctx context.Context, req *logical.Request) (retErr error
 		EntityID:    te.EntityID,
 	}
 
-	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
 		return retErr
@@ -1705,7 +1707,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	// Monitor for key rotation
 	keyRotateDone := make(chan struct{})
 	keyRotateStop := make(chan struct{})
-	go c.periodicCheckKeyUpgrade(keyRotateDone, keyRotateStop)
+	go c.periodicCheckKeyUpgrade(context.Background(), keyRotateDone, keyRotateStop)
 	// Monitor for new leadership
 	checkLeaderDone := make(chan struct{})
 	checkLeaderStop := make(chan struct{})
@@ -1754,12 +1756,13 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// before advertising;
 		c.stateLock.Lock()
 
+		// We haven't run postUnseal yet so we have nothing meaningful to use here
+		ctx := context.Background()
+
 		// This block is used to wipe barrier/seal state and verify that
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			// We haven't run postUnseal yet so we have nothing meaningful to use here
-			ctx := context.Background()
 			c.seal.SetBarrierConfig(ctx, nil)
 			if c.seal.RecoveryKeySupported(ctx) {
 				c.seal.SetRecoveryConfig(ctx, nil)
@@ -1796,7 +1799,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		}
 
 		// Advertise as leader
-		if err := c.advertiseLeader(uuid, leaderLostCh); err != nil {
+		if err := c.advertiseLeader(ctx, uuid, leaderLostCh); err != nil {
 			c.stateLock.Unlock()
 			c.logger.Error("core: leader advertisement setup failed", "error", err)
 			lock.Unlock()
@@ -1882,7 +1885,7 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 }
 
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
-func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
+func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	for {
 		select {
@@ -1898,14 +1901,14 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 			// Check for a poison pill. If we can read it, it means we have stale
 			// keys (e.g. from replication being activated) and we need to seal to
 			// be unsealed again.
-			entry, _ := c.barrier.Get(context.Background(), poisonPillPath)
+			entry, _ := c.barrier.Get(ctx, poisonPillPath)
 			if entry != nil && len(entry.Value) > 0 {
 				c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
 				go c.Shutdown()
 				continue
 			}
 
-			if err := c.checkKeyUpgrades(); err != nil {
+			if err := c.checkKeyUpgrades(ctx); err != nil {
 				c.logger.Error("core: key rotation periodic upgrade check failed", "error", err)
 			}
 		case <-stopCh:
@@ -2059,7 +2062,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	return nil
 }
 
-func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
+func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh <-chan struct{}) {
 	keys, err := c.barrier.List(ctx, coreLeaderPrefix)
 	if err != nil {
 		c.logger.Error("core: failed to list entries in core/leader", "error", err)

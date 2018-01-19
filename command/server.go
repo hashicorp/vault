@@ -750,7 +750,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(handler)
 
-	err = core.UnsealWithStoredKeys()
+	err = core.UnsealWithStoredKeys(context.Background())
 	if err != nil {
 		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", err))
@@ -922,14 +922,16 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		SecretThreshold: 1,
 	}
 
-	if core.SealAccess().RecoveryKeySupported(context.Background()) {
+	ctx := context.Background()
+
+	if core.SealAccess().RecoveryKeySupported(ctx) {
 		recoveryConfig = &vault.SealConfig{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		}
 	}
 
-	if core.SealAccess().StoredKeysSupported(context.Background()) {
+	if core.SealAccess().StoredKeysSupported(ctx) {
 		barrierConfig.StoredShares = 1
 	}
 
@@ -943,8 +945,8 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Handle unseal with stored keys
-	if core.SealAccess().StoredKeysSupported(context.Background()) {
-		err := core.UnsealWithStoredKeys(context.Background())
+	if core.SealAccess().StoredKeysSupported(ctx) {
+		err := core.UnsealWithStoredKeys(ctx)
 		if err != nil {
 			return nil, err
 		}

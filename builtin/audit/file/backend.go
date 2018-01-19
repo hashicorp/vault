@@ -169,7 +169,12 @@ func (b *Backend) GetHash(data string) (string, error) {
 	return audit.HashString(salt, data), nil
 }
 
-func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
+func (b *Backend) LogRequest(
+	_ context.Context,
+	auth *logical.Auth,
+	req *logical.Request,
+	outerErr error) error {
+
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
@@ -200,6 +205,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 }
 
 func (b *Backend) LogResponse(
+	_ context.Context,
 	auth *logical.Auth,
 	req *logical.Request,
 	resp *logical.Response,
@@ -265,7 +271,7 @@ func (b *Backend) open() error {
 	return nil
 }
 
-func (b *Backend) Reload() error {
+func (b *Backend) Reload(_ context.Context) error {
 	switch b.path {
 	case "stdout", "discard":
 		return nil
@@ -289,7 +295,7 @@ func (b *Backend) Reload() error {
 	return b.open()
 }
 
-func (b *Backend) Invalidate() {
+func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt = nil

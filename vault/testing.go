@@ -133,7 +133,7 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
 	t.Helper()
 	noopAudits := map[string]audit.Factory{
-		"noop": func(config *audit.BackendConfig) (audit.Backend, error) {
+		"noop": func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
 			view.Put(context.Background(), &logical.StorageEntry{
 				Key:   "salt",
@@ -233,7 +233,7 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 }
 
 func TestCoreUnsealWithRecoveryKeys(core *Core, key []byte) (bool, error) {
-	return core.UnsealWithRecoveryKeys(key)
+	return core.UnsealWithRecoveryKeys(context.Background(), key)
 }
 
 // TestCoreUnsealed returns a pure in-memory core that is already
@@ -290,7 +290,7 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 		}
 	}
 
-	if err := core.UnsealWithStoredKeys(); err != nil {
+	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -615,19 +615,19 @@ func (n *noopAudit) GetHash(data string) (string, error) {
 	return salt.GetIdentifiedHMAC(data), nil
 }
 
-func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request, e error) error {
+func (n *noopAudit) LogRequest(_ context.Context, _ *logical.Auth, _ *logical.Request, _ error) error {
 	return nil
 }
 
-func (n *noopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical.Response, err error) error {
+func (n *noopAudit) LogResponse(_ context.Context, _ *logical.Auth, _ *logical.Request, _ *logical.Response, _ error) error {
 	return nil
 }
 
-func (n *noopAudit) Reload() error {
+func (n *noopAudit) Reload(_ context.Context) error {
 	return nil
 }
 
-func (n *noopAudit) Invalidate() {
+func (n *noopAudit) Invalidate(_ context.Context) {
 	n.saltMutex.Lock()
 	defer n.saltMutex.Unlock()
 	n.salt = nil
@@ -827,7 +827,7 @@ func (c *TestCluster) ensureCoresSealed() error {
 // UnsealWithStoredKeys uses stored keys to unseal the test cluster cores
 func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
 	for _, core := range c.Cores {
-		if err := core.UnsealWithStoredKeys(); err != nil {
+		if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
 			return err
 		}
 		timeout := time.Now().Add(60 * time.Second)
@@ -1300,9 +1300,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			}
 		}
 
+		ctx := context.Background()
+
 		// If stored keys is supported, the above will no no-op, so trigger auto-unseal
 		// using stored keys to try to unseal
-		if err := cores[0].UnsealWithStoredKeys(); err != nil {
+		if err := cores[0].UnsealWithStoredKeys(ctx); err != nil {
 			t.Fatal(err)
 		}
 
@@ -1328,7 +1330,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 				// If stored keys is supported, the above will no no-op, so trigger auto-unseal
 				// using stored keys
-				if err := cores[i].UnsealWithStoredKeys(); err != nil {
+				if err := cores[i].UnsealWithStoredKeys(ctx); err != nil {
 					t.Fatal(err)
 				}
 			}

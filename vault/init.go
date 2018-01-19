@@ -103,7 +103,9 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	barrierConfig := initParams.BarrierConfig
 	recoveryConfig := initParams.RecoveryConfig
 
-	if c.seal.RecoveryKeySupported(c.requestContext) {
+	ctx := context.Background()
+
+	if c.seal.RecoveryKeySupported(ctx) {
 		if recoveryConfig == nil {
 			return nil, fmt.Errorf("recovery configuration must be supplied")
 		}
@@ -130,7 +132,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	defer c.stateLock.Unlock()
 
 	// Check if we are initialized
-	init, err := c.Initialized()
+	init, err := c.Initialized(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +140,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		return nil, ErrAlreadyInit
 	}
 
-	err = c.seal.Init(c.requestContext)
+	err = c.seal.Init(ctx)
 	if err != nil {
 		c.logger.Error("core: failed to initialize seal", "error", err)
 		return nil, fmt.Errorf("error initializing seal: %v", err)
@@ -151,7 +153,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Initialize the barrier
-	if err := c.barrier.Initialize(c.requestContext, barrierKey); err != nil {
+	if err := c.barrier.Initialize(ctx, barrierKey); err != nil {
 		c.logger.Error("core: failed to initialize barrier", "error", err)
 		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
 	}
@@ -160,7 +162,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Unseal the barrier
-	if err := c.barrier.Unseal(c.requestContext, barrierKey); err != nil {
+	if err := c.barrier.Unseal(ctx, barrierKey); err != nil {
 		c.logger.Error("core: failed to unseal barrier", "error", err)
 		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
 	}
@@ -175,7 +177,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		}
 	}()
 
-	err = c.seal.SetBarrierConfig(c.requestContext, barrierConfig)
+	err = c.seal.SetBarrierConfig(ctx, barrierConfig)
 	if err != nil {
 		c.logger.Error("core: failed to save barrier configuration", "error", err)
 		return nil, fmt.Errorf("barrier configuration saving failed: %v", err)
@@ -189,7 +191,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 			keysToStore = append(keysToStore, barrierUnsealKeys[0])
 			barrierUnsealKeys = barrierUnsealKeys[1:]
 		}
-		if err := c.seal.SetStoredKeys(c.requestContext, keysToStore); err != nil {
+		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
 			c.logger.Error("core: failed to store keys", "error", err)
 			return nil, fmt.Errorf("failed to store keys: %v", err)
 		}
@@ -289,7 +291,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 		unsealed := false
 		keysUsed := 0
 		for _, key := range keys {
-			unsealed, err = c.Unseal(ctx, key)
+			unsealed, err = c.Unseal(key)
 			if err != nil {
 				c.logger.Error("core: unseal with stored unseal key failed", "error", err)
 				return &NonFatalError{Err: fmt.Errorf("unseal with stored key failed: %v", err)}

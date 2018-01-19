@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -113,7 +114,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	sealed, _ := core.Sealed()
 	standby, _ := core.Standby()
 	replicationState := core.ReplicationState()
-	init, err := core.Initialized()
+	init, err := core.Initialized(context.Background())
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
 	}

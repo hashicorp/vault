@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"context"
+
 	"github.com/mitchellh/go-testing-interface"
 )
 
@@ -28,7 +30,7 @@ func testCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealCon
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	err = core.UnsealWithStoredKeys()
+	err = core.UnsealWithStoredKeys(context.Background())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

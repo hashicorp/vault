@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -24,7 +25,7 @@ func handleSysInit(core *vault.Core) http.Handler {
 }
 
 func handleSysInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	init, err := core.Initialized()
+	init, err := core.Initialized(context.Background())
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -36,8 +37,7 @@ func handleSysInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := core.GetContext()
-	defer cancel()
+	ctx := context.Background()
 
 	// Parse the request
 	var req InitRequest
@@ -144,7 +144,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	core.UnsealWithStoredKeys()
+	core.UnsealWithStoredKeys(ctx)
 
 	respondOk(w, resp)
 }
