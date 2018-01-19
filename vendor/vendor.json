@@ -451,6 +451,18 @@
 			"revisionTime": "2017-10-07T11:45:50Z"
 		},
 		{
+			"checksumSHA1": "K8OA7Gq9EDgWN52jOkWFI84CHAE=",
+			"path": "github.com/centrify/cloud-golang-sdk/oauth",
+			"revision": "9067a9f81a511edbaa879586740e2b4ee79fd647",
+			"revisionTime": "2017-12-06T22:18:58Z"
+		},
+		{
+			"checksumSHA1": "hQuaxxdKR13A1/LOAQeb9wFGXI0=",
+			"path": "github.com/centrify/cloud-golang-sdk/restapi",
+			"revision": "9067a9f81a511edbaa879586740e2b4ee79fd647",
+			"revisionTime": "2017-12-06T22:18:58Z"
+		},
+		{
 			"checksumSHA1": "sFjc2R+KS9AeXIPMV4KCw+GwX5I=",
 			"path": "github.com/chrismalek/oktasdk-go/okta",
 			"revision": "ae553c909ca06a4c34eb41ee435e83871a7c2496",
@@ -1151,6 +1163,12 @@
 			"path": "github.com/hashicorp/serf/coordinate",
 			"revision": "c20a0b1b1ea9eb8168bcdec0116688fa9254e449",
 			"revisionTime": "2017-10-22T02:00:50Z"
+		},
+		{
+			"checksumSHA1": "79lZZZCBawKk80SjL1toOFKxU9M=",
+			"path": "github.com/hashicorp/vault-plugin-auth-centrify",
+			"revision": "8091c91cd9df635c07bce4d31d123ca3a89c24aa",
+			"revisionTime": "2018-01-19T10:58:34Z"
 		},
 		{
 			"checksumSHA1": "eVlMWanJ2W+/9c1kz72iefRcrYM=",
