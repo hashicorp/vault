@@ -48,16 +48,6 @@ func (c *Core) Initialized(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("core: barrier reports initialized but no seal configuration found")
 	}
 
-	if c.seal.RecoveryKeySupported(ctx) {
-		sealConf, err = c.seal.RecoveryConfig(ctx)
-		if err != nil {
-			return false, err
-		}
-		if sealConf == nil {
-			return false, fmt.Errorf("core: barrier reports initialized but no recovery seal configuration found")
-		}
-	}
-
 	return true, nil
 }
 
