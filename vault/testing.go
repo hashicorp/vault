@@ -322,7 +322,7 @@ func testTokenStore(t testing.T, c *Core) *TokenStore {
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+me.UUID+"/")
 	sysView := c.mountEntrySysView(me)
 
-	tokenstore, _ := c.newCredentialBackend("token", sysView, view, nil)
+	tokenstore, _ := c.newCredentialBackend(context.Background(), "token", sysView, view, nil)
 	if err := tokenstore.Initialize(context.Background()); err != nil {
 		panic(err)
 	}

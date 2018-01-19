@@ -1186,12 +1186,12 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	}
 
 	if pluginName != "" {
-		err := b.Core.reloadMatchingPlugin(pluginName)
+		err := b.Core.reloadMatchingPlugin(ctx, pluginName)
 		if err != nil {
 			return nil, err
 		}
 	} else if len(pluginMounts) > 0 {
-		err := b.Core.reloadMatchingPluginMounts(pluginMounts)
+		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts)
 		if err != nil {
 			return nil, err
 		}
@@ -1516,7 +1516,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	// Attempt mount
-	if err := b.Core.mount(me); err != nil {
+	if err := b.Core.mount(ctx, me); err != nil {
 		b.Backend.Logger().Error("sys: mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -1554,7 +1554,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 	}
 
 	// Attempt unmount
-	if err := b.Core.unmount(path); err != nil {
+	if err := b.Core.unmount(ctx, path); err != nil {
 		b.Backend.Logger().Error("sys: unmount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -1584,7 +1584,7 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	}
 
 	// Attempt remount
-	if err := b.Core.remount(fromPath, toPath); err != nil {
+	if err := b.Core.remount(ctx, fromPath, toPath); err != nil {
 		b.Backend.Logger().Error("sys: remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
 		return handleError(err)
 	}
@@ -1652,7 +1652,7 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 		return logical.ErrorResponse("path must be specified as a string"),
 			logical.ErrInvalidRequest
 	}
-	return b.handleTuneWriteCommon("auth/"+path, data)
+	return b.handleTuneWriteCommon(ctx, "auth/"+path, data)
 }
 
 // handleMountTuneWrite is used to set config settings on a backend
@@ -1665,11 +1665,11 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	// This call will write both logical backend's configuration as well as auth methods'.
 	// Retaining this behavior for backward compatibility. If this behavior is not desired,
 	// an error can be returned if path has a prefix of "auth/".
-	return b.handleTuneWriteCommon(path, data)
+	return b.handleTuneWriteCommon(ctx, path, data)
 }
 
 // handleTuneWriteCommon is used to set config settings on a path
-func (b *SystemBackend) handleTuneWriteCommon(path string, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
 	path = sanitizeMountPath(path)
@@ -1746,7 +1746,7 @@ func (b *SystemBackend) handleTuneWriteCommon(path string, data *framework.Field
 		if newDefault != mountEntry.Config.DefaultLeaseTTL ||
 			newMax != mountEntry.Config.MaxLeaseTTL {
 
-			if err := b.tuneMountTTLs(path, mountEntry, newDefault, newMax); err != nil {
+			if err := b.tuneMountTTLs(ctx, path, mountEntry, newDefault, newMax); err != nil {
 				b.Backend.Logger().Error("sys: tuning failed", "path", path, "error", err)
 				return handleError(err)
 			}
@@ -1762,9 +1762,9 @@ func (b *SystemBackend) handleTuneWriteCommon(path string, data *framework.Field
 		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(b.Core.auth, mountEntry.Local)
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
 		default:
-			err = b.Core.persistMounts(b.Core.mounts, mountEntry.Local)
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
 		}
 		if err != nil {
 			mountEntry.Description = oldDesc
@@ -1994,7 +1994,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	// Attempt enabling
-	if err := b.Core.enableCredential(me); err != nil {
+	if err := b.Core.enableCredential(ctx, me); err != nil {
 		b.Backend.Logger().Error("sys: enable auth mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -2022,7 +2022,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 	}
 
 	// Attempt disable
-	if err := b.Core.disableCredential(path); err != nil {
+	if err := b.Core.disableCredential(ctx, path); err != nil {
 		b.Backend.Logger().Error("sys: disable auth mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -2288,7 +2288,7 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	}
 
 	// Attempt enabling
-	if err := b.Core.enableAudit(me); err != nil {
+	if err := b.Core.enableAudit(ctx, me); err != nil {
 		b.Backend.Logger().Error("sys: enable audit mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -2300,7 +2300,7 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	path := data.Get("path").(string)
 
 	// Attempt disable
-	if existed, err := b.Core.disableAudit(path); existed && err != nil {
+	if existed, err := b.Core.disableAudit(ctx, path); existed && err != nil {
 		b.Backend.Logger().Error("sys: disable audit mount failed", "path", path, "error", err)
 		return handleError(err)
 	}

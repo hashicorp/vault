@@ -1582,10 +1582,10 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupPluginCatalog(); err != nil {
 		return err
 	}
-	if err := c.loadMounts(); err != nil {
+	if err := c.loadMounts(c.requestContext); err != nil {
 		return err
 	}
-	if err := c.setupMounts(); err != nil {
+	if err := c.setupMounts(c.requestContext); err != nil {
 		return err
 	}
 	if err := c.setupPolicyStore(); err != nil {
@@ -1594,10 +1594,10 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.loadCORSConfig(); err != nil {
 		return err
 	}
-	if err := c.loadCredentials(); err != nil {
+	if err := c.loadCredentials(c.requestContext); err != nil {
 		return err
 	}
-	if err := c.setupCredentials(); err != nil {
+	if err := c.setupCredentials(c.requestContext); err != nil {
 		return err
 	}
 	if err := c.startRollback(); err != nil {
@@ -1606,10 +1606,10 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupExpiration(); err != nil {
 		return err
 	}
-	if err := c.loadAudits(); err != nil {
+	if err := c.loadAudits(c.requestContext); err != nil {
 		return err
 	}
-	if err := c.setupAudits(); err != nil {
+	if err := c.setupAudits(c.requestContext); err != nil {
 		return err
 	}
 	if err := c.loadIdentityStoreArtifacts(c.requestContext); err != nil {
@@ -1656,7 +1656,7 @@ func (c *Core) preSeal() error {
 	if err := c.stopExpiration(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping expiration: {{err}}", err))
 	}
-	if err := c.teardownCredentials(); err != nil {
+	if err := c.teardownCredentials(c.requestContext); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down credentials: {{err}}", err))
 	}
 	if err := c.teardownPolicyStore(); err != nil {
@@ -1665,7 +1665,7 @@ func (c *Core) preSeal() error {
 	if err := c.stopRollback(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping rollback: {{err}}", err))
 	}
-	if err := c.unloadMounts(); err != nil {
+	if err := c.unloadMounts(c.requestContext); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error unloading mounts: {{err}}", err))
 	}
 	if err := enterprisePreSeal(c); err != nil {
