@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -10,8 +11,10 @@ import (
 func TestWAL(t *testing.T) {
 	s := new(logical.InmemStorage)
 
+	ctx := context.Background()
+
 	// WAL should be empty to start
-	keys, err := ListWAL(s)
+	keys, err := ListWAL(ctx, s)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -20,13 +23,13 @@ func TestWAL(t *testing.T) {
 	}
 
 	// Write an entry to the WAL
-	id, err := PutWAL(s, "foo", "bar")
+	id, err := PutWAL(ctx, s, "foo", "bar")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	// The key should be in the WAL
-	keys, err = ListWAL(s)
+	keys, err = ListWAL(ctx, s)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -35,7 +38,7 @@ func TestWAL(t *testing.T) {
 	}
 
 	// Should be able to get the value
-	entry, err := GetWAL(s, id)
+	entry, err := GetWAL(ctx, s, id)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -47,10 +50,10 @@ func TestWAL(t *testing.T) {
 	}
 
 	// Should be able to delete the value
-	if err := DeleteWAL(s, id); err != nil {
+	if err := DeleteWAL(ctx, s, id); err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	entry, err = GetWAL(s, id)
+	entry, err = GetWAL(ctx, s, id)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
