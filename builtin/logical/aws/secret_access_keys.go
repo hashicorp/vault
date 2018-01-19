@@ -156,6 +156,7 @@ func (b *backend) assumeRole(s logical.Storage,
 }
 
 func (b *backend) secretAccessKeysCreate(
+	ctx context.Context,
 	s logical.Storage,
 	displayName, policyName string, policy string) (*logical.Response, error) {
 	client, err := clientIAM(s)
@@ -169,7 +170,7 @@ func (b *backend) secretAccessKeysCreate(
 	// the user is created because if switch the order then the WAL put
 	// can fail, which would put us in an awkward position: we have a user
 	// we need to rollback but can't put the WAL entry to do the rollback.
-	walId, err := framework.PutWAL(s, "user", &walUser{
+	walId, err := framework.PutWAL(ctx, s, "user", &walUser{
 		UserName: username,
 	})
 	if err != nil {
@@ -236,7 +237,7 @@ func (b *backend) secretAccessKeysCreate(
 		"is_sts":   false,
 	})
 
-	lease, err := b.Lease(s)
+	lease, err := b.Lease(ctx, s)
 	if err != nil || lease == nil {
 		lease = &configLease{}
 	}
@@ -262,7 +263,7 @@ func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Reques
 		}
 	}
 
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +303,7 @@ func secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framew
 	}
 
 	// Use the user rollback mechanism to delete this user
-	err := pathUserRollback(req, "user", map[string]interface{}{
+	err := pathUserRollback(ctx, req, "user", map[string]interface{}{
 		"username": username,
 	})
 	if err != nil {
