@@ -156,8 +156,8 @@ type BarrierStorage interface {
 // use the underlying barrier. It is used for lower level modules like the
 // Write-Ahead-Log and Merkle index to allow them to use the barrier.
 type BarrierEncryptor interface {
-	Encrypt(key string, plaintext []byte) ([]byte, error)
-	Decrypt(key string, ciphertext []byte) ([]byte, error)
+	Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error)
+	Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error)
 }
 
 // Entry is used to represent data stored by the security barrier
