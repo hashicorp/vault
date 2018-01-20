@@ -20,8 +20,8 @@ import (
 	"google.golang.org/api/option"
 )
 
-// Verify interfaces are satisfied
-var _ physical.Backend = &GCSBackend{}
+// Verify GCSBackend satisfies the correct interfaces
+var _ physical.Backend = (*GCSBackend)(nil)
 
 // GCSBackend is a physical backend that stores data
 // within an Google Cloud Storage bucket.

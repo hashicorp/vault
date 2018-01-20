@@ -22,6 +22,9 @@ import (
 	"github.com/hashicorp/vault/physical"
 )
 
+// Verify MySQLBackend satisfies the correct interfaces
+var _ physical.Backend = (*MySQLBackend)(nil)
+
 // Unreserved tls key
 // Reserved values are "true", "false", "skip-verify"
 const mysqlTLSKey = "default"

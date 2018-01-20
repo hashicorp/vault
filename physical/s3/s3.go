@@ -27,6 +27,9 @@ import (
 	"github.com/hashicorp/vault/physical"
 )
 
+// Verify S3Backend satisfies the correct interfaces
+var _ physical.Backend = (*S3Backend)(nil)
+
 // S3Backend is a physical backend that stores data
 // within an S3 bucket.
 type S3Backend struct {

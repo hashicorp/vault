@@ -69,6 +69,11 @@ const (
 	DynamoDBWatchRetryInterval = 5 * time.Second
 )
 
+// Verify DynamoDBBackend satisfies the correct interfaces
+var _ physical.Backend = (*DynamoDBBackend)(nil)
+var _ physical.HABackend = (*DynamoDBBackend)(nil)
+var _ physical.Lock = (*DynamoDBLock)(nil)
+
 // DynamoDBBackend is a physical backend that stores data in
 // a DynamoDB table. It can be run in high-availability mode
 // as DynamoDB has locking capabilities.

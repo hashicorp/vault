@@ -17,6 +17,9 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
+// Verify MSSQLBackend satisfies the correct interfaces
+var _ physical.Backend = (*MSSQLBackend)(nil)
+
 type MSSQLBackend struct {
 	dbTable    string
 	client     *sql.DB

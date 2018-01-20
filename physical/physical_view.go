@@ -16,6 +16,9 @@ type View struct {
 	prefix  string
 }
 
+// Verify View satisfies the correct interfaces
+var _ Backend = (*View)(nil)
+
 // NewView takes an underlying physical backend and returns
 // a view of it that can only operate with the given prefix.
 func NewView(backend Backend, prefix string) *View {

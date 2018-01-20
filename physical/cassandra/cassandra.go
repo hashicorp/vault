@@ -26,6 +26,9 @@ type CassandraBackend struct {
 	logger log.Logger
 }
 
+// Verify CassandraBackend satisfies the correct interfaces
+var _ physical.Backend = (*CassandraBackend)(nil)
+
 // NewCassandraBackend constructs a Cassandra backend using a pre-existing
 // keyspace and table.
 func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {

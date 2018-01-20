@@ -28,6 +28,10 @@ type TransactionalLatencyInjector struct {
 	Transactional
 }
 
+// Verify LatencyInjector satisfies the correct interfaces
+var _ Backend = (*LatencyInjector)(nil)
+var _ Transactional = (*TransactionalLatencyInjector)(nil)
+
 // NewLatencyInjector returns a wrapped physical backend to simulate latency
 func NewLatencyInjector(b Backend, latency time.Duration, jitter int, logger log.Logger) *LatencyInjector {
 	if jitter < 0 || jitter > 100 {
