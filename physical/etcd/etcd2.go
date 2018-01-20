@@ -55,10 +55,10 @@ type Etcd2Backend struct {
 	haEnabled  bool
 }
 
-// Verify interfaces are satisfied
-var _ physical.Backend = &Etcd2Backend{}
-var _ physical.HABackend = &Etcd2Backend{}
-var _ physical.Lock = &Etcd2Lock{}
+// Verify Etcd2Backend satisfies the correct interfaces
+var _ physical.Backend = (*Etcd2Backend)(nil)
+var _ physical.HABackend = (*Etcd2Backend)(nil)
+var _ physical.Lock = (*Etcd2Lock)(nil)
 
 func newEtcd2Backend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	// Get the etcd path form the configuration.

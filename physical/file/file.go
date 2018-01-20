@@ -17,9 +17,10 @@ import (
 	"github.com/hashicorp/vault/physical"
 )
 
-// Verify interfaces are satisfied
-var _ physical.Backend = &FileBackend{}
-var _ physical.Transactional = &TransactionalFileBackend{}
+// Verify FileBackend satisfies the correct interfaces
+var _ physical.Backend = (*FileBackend)(nil)
+var _ physical.Transactional = (*TransactionalFileBackend)(nil)
+var _ physical.PseudoTransactional = (*FileBackend)(nil)
 
 // FileBackend is a physical backend that stores data on disk
 // at a given file path. It can be used for durable single server

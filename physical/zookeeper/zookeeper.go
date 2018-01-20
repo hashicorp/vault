@@ -24,6 +24,11 @@ const (
 	ZKNodeFilePrefix = "_"
 )
 
+// Verify ZooKeeperBackend satisfies the correct interfaces
+var _ physical.Backend = (*ZooKeeperBackend)(nil)
+var _ physical.HABackend = (*ZooKeeperBackend)(nil)
+var _ physical.Lock = (*ZooKeeperHALock)(nil)
+
 // ZooKeeperBackend is a physical backend that stores data at specific
 // prefix within ZooKeeper. It is used in production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.

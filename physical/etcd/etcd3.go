@@ -41,10 +41,10 @@ const (
 	etcd3RequestTimeout = 5 * time.Second
 )
 
-// Verify interfaces are satisfied
-var _ physical.Backend = &EtcdBackend{}
-var _ physical.HABackend = &EtcdBackend{}
-var _ physical.Lock = &EtcdLock{}
+// Verify EtcdBackend satisfies the correct interfaces
+var _ physical.Backend = (*EtcdBackend)(nil)
+var _ physical.HABackend = (*EtcdBackend)(nil)
+var _ physical.Lock = (*EtcdLock)(nil)
 
 // newEtcd3Backend constructs a etcd3 backend.
 func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backend, error) {

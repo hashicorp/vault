@@ -16,6 +16,9 @@ import (
 	"github.com/lib/pq"
 )
 
+// Verify PostgreSQLBackend satisfies the correct interfaces
+var _ physical.Backend = (*PostgreSQLBackend)(nil)
+
 // PostgreSQL Backend is a physical backend that stores data
 // within a PostgreSQL database.
 type PostgreSQLBackend struct {

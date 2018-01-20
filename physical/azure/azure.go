@@ -32,6 +32,9 @@ type AzureBackend struct {
 	permitPool *physical.PermitPool
 }
 
+// Verify AzureBackend satisfies the correct interfaces
+var _ physical.Backend = (*AzureBackend)(nil)
+
 // NewAzureBackend constructs an Azure backend using a pre-existing
 // bucket. Credentials can be provided to the backend, sourced
 // from the environment, AWS credential files or by IAM role.

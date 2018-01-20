@@ -12,11 +12,12 @@ import (
 )
 
 // Verify interfaces are satisfied
-var _ physical.Backend = &InmemBackend{}
-var _ physical.HABackend = &InmemHABackend{}
-var _ physical.Lock = &InmemLock{}
-var _ physical.Transactional = &TransactionalInmemBackend{}
-var _ physical.Transactional = &TransactionalInmemHABackend{}
+var _ physical.Backend = (*InmemBackend)(nil)
+var _ physical.HABackend = (*InmemHABackend)(nil)
+var _ physical.HABackend = (*TransactionalInmemHABackend)(nil)
+var _ physical.Lock = (*InmemLock)(nil)
+var _ physical.Transactional = (*TransactionalInmemBackend)(nil)
+var _ physical.Transactional = (*TransactionalInmemHABackend)(nil)
 
 // InmemBackend is an in-memory only physical backend. It is useful
 // for testing and development situations where the data is not

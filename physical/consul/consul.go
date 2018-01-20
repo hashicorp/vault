@@ -67,11 +67,11 @@ const (
 
 type notifyEvent struct{}
 
-// Verify interfaces are satisfied
-var _ physical.Backend = &ConsulBackend{}
-var _ physical.HABackend = &ConsulBackend{}
-var _ physical.Lock = &ConsulLock{}
-var _ physical.Transactional = &ConsulBackend{}
+// Verify ConsulBackend satisfies the correct interfaces
+var _ physical.Backend = (*ConsulBackend)(nil)
+var _ physical.HABackend = (*ConsulBackend)(nil)
+var _ physical.Lock = (*ConsulLock)(nil)
+var _ physical.Transactional = (*ConsulBackend)(nil)
 
 // ConsulBackend is a physical backend that stores data at specific
 // prefix within Consul. It is used for most production situations as

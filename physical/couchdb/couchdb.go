@@ -27,6 +27,11 @@ type CouchDBBackend struct {
 	permitPool *physical.PermitPool
 }
 
+// Verify CouchDBBackend satisfies the correct interfaces
+var _ physical.Backend = (*CouchDBBackend)(nil)
+var _ physical.PseudoTransactional = (*CouchDBBackend)(nil)
+var _ physical.PseudoTransactional = (*TransactionalCouchDBBackend)(nil)
+
 type couchDBClient struct {
 	endpoint string
 	username string
@@ -253,8 +258,6 @@ func (m *CouchDBBackend) List(ctx context.Context, prefix string) ([]string, err
 	}
 	return out, nil
 }
-
-var _ physical.PseudoTransactional = &TransactionalCouchDBBackend{}
 
 // TransactionalCouchDBBackend creates a couchdb backend that forces all operations to happen
 // in serial

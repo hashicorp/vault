@@ -20,7 +20,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var _ physical.Transactional = &CockroachDBBackend{}
+// Verify CockroachDBBackend satisfies the correct interfaces
+var _ physical.Backend = (*CockroachDBBackend)(nil)
+var _ physical.Transactional = (*CockroachDBBackend)(nil)
 
 // CockroachDBBackend Backend is a physical backend that stores data
 // within a CockroachDB database.

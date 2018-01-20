@@ -19,6 +19,9 @@ import (
 	"github.com/ncw/swift"
 )
 
+// Verify SwiftBackend satisfies the correct interfaces
+var _ physical.Backend = (*SwiftBackend)(nil)
+
 // SwiftBackend is a physical backend that stores data
 // within an OpenStack Swift container.
 type SwiftBackend struct {
