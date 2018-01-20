@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
@@ -26,7 +27,7 @@ const (
 
 var (
 	// Making this a package var allows tests to modify
-	HeartbeatInterval = 30 * time.Second
+	HeartbeatInterval = 5 * time.Second
 )
 
 // Starts the listeners and servers necessary to handle forwarded requests
@@ -468,8 +469,8 @@ func (c *forwardingClient) startHeartbeat() {
 			}
 			// Store the active node's replication state to display in
 			// sys/health calls
-			atomic.StoreUint32(c.core.replicationState, resp.ReplicationState)
-			c.core.logger.Trace("forwarding: successful heartbeat")
+			atomic.StoreUint32(c.core.activeNodeReplicationState, resp.ReplicationState)
+			//c.core.logger.Trace("forwarding: successful heartbeat")
 		}
 
 		tick()
@@ -479,6 +480,7 @@ func (c *forwardingClient) startHeartbeat() {
 			case <-c.echoContext.Done():
 				c.echoTicker.Stop()
 				c.core.logger.Trace("forwarding: stopping heartbeating")
+				atomic.StoreUint32(c.core.activeNodeReplicationState, uint32(consts.ReplicationDisabled))
 				return
 			case <-c.echoTicker.C:
 				tick()
