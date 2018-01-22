@@ -108,6 +108,14 @@ func init() {
 		},
 	}
 
+	serverCmdUi := &cli.ColoredUi{
+		ErrorColor: cli.UiColorRed,
+		WarnColor:  cli.UiColorYellow,
+		Ui: &cli.BasicUi{
+			Writer: os.Stdout,
+		},
+	}
+
 	loginHandlers := map[string]LoginHandler{
 		"aws":    &credAws.CLIHandler{},
 		"cert":   &credCert.CLIHandler{},
@@ -403,7 +411,7 @@ func init() {
 		"server": func() (cli.Command, error) {
 			return &ServerCommand{
 				BaseCommand: &BaseCommand{
-					UI: ui,
+					UI: serverCmdUi,
 				},
 				AuditBackends: map[string]audit.Factory{
 					"file":   auditFile.Factory,
