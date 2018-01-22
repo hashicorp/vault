@@ -9,10 +9,7 @@ description: |-
 # Authentication
 
 Now that we know how to use the basics of Vault, it is important to understand
-how to authenticate to Vault itself. Up to this point, we have not "logged in"
-to Vault. When starting the Vault server in `dev` mode, it automatically logs
-you in as the root user with admin permissions. In a non-dev setup, you would
-have had to authenticate first.
+how to authenticate to Vault itself.
 
 On this page, we'll talk specifically about authentication. On the next page, we
 talk about [authorization](/intro/getting-started/policies.html). Authentication
