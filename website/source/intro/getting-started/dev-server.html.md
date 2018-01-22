@@ -79,7 +79,7 @@ With the dev server running, do the following three things before anything else:
   3. Save the unseal key somewhere. Don't worry about _how_ to save this
      securely. For now, just save it anywhere.
 
-  4. Do the same as step 3, but with the root token. We'll use this later.
+  4. Run `vault auth` and use the `Root Token` that was displayed to authenticate.
 
 ## Verify the Server is Running
 
