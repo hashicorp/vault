@@ -39,6 +39,9 @@ cover paths in more detail later, but for now it is important that the
 path is prefixed with `secret/`, otherwise this example won't work. The
 `secret/` prefix is where arbitrary secrets can be read and written.
 
+If you got a `missing client token` error, then first run `vault auth` to authenticate,
+you may use the Root Token from [Starting the Dev Server](/intro/getting-started/dev-server.html).
+
 You can even write multiple pieces of data, if you want:
 
 ```text
