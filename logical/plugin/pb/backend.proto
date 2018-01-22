@@ -131,7 +131,7 @@ message Alias {
 message Auth {
     LeaseOptions lease_options = 1;
 
-    // InternalData is JSON object that is stored with the auth struct.
+    // InternalData is a JSON object that is stored with the auth struct.
 	// This will be sent back during a Renew/Revoke for storing internal data
 	// used for those operations.
 	string internal_data = 2;
@@ -201,7 +201,7 @@ message LeaseOptions {
 message Secret {
     LeaseOptions lease_options = 1;
 
-	// InternalData is JSON object that is stored with the secret.
+	// InternalData is a JSON object that is stored with the secret.
 	// This will be sent back during a Renew/Revoke for storing internal data
 	// used for those operations.
 	string internal_data = 2;
@@ -221,7 +221,7 @@ message Response {
 	// credential backends.
 	Auth auth = 2;
 
-	// Response data is JSON object that must have string keys. For
+	// Response data is a JSON object that must have string keys. For
 	// secrets, this data is sent down to the user as-is. To store internal
 	// data that you don't want the user to see, store it in
 	// Secret.InternalData.
