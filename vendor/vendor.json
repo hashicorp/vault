@@ -1033,10 +1033,10 @@
 			"revisionTime": "2017-06-22T06:09:55Z"
 		},
 		{
-			"checksumSHA1": "RdPN+LDHyjZjzWwzrlaizPe0DS8=",
+			"checksumSHA1": "nXiRUJCOdf3j8HaJ6RIttK8TZnI=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "1fc09c47b843b73705f51ffb0520e3ac1bfecf99",
-			"revisionTime": "2018-01-18T22:21:37Z"
+			"revision": "4812fde368935ee7d8bf9866bdca3d98ecddd30a",
+			"revisionTime": "2018-01-23T22:48:23Z"
 		},
 		{
 			"checksumSHA1": "yzoWV7yrS/TvOrKy5ZrdUjsYaOA=",
