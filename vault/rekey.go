@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -46,7 +47,7 @@ type RekeyBackup struct {
 // the recovery key threshold, depending on whether rekey is being
 // performed on the recovery key, or whether the seal supports
 // recovery keys.
-func (c *Core) RekeyThreshold(recovery bool) (int, error) {
+func (c *Core) RekeyThreshold(ctx context.Context, recovery bool) (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -65,9 +66,9 @@ func (c *Core) RekeyThreshold(recovery bool) (int, error) {
 	// recovery keys and we are rekeying the barrier key, we use the
 	// recovery config as the threshold instead.
 	if recovery || c.seal.RecoveryKeySupported() {
-		config, err = c.seal.RecoveryConfig()
+		config, err = c.seal.RecoveryConfig(ctx)
 	} else {
-		config, err = c.seal.BarrierConfig()
+		config, err = c.seal.BarrierConfig(ctx)
 	}
 	if err != nil {
 		return 0, err
@@ -243,11 +244,11 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 }
 
 // RekeyUpdate is used to provide a new key part for the barrier or recovery key.
-func (c *Core) RekeyUpdate(key []byte, nonce string, recovery bool) (*RekeyResult, error) {
+func (c *Core) RekeyUpdate(ctx context.Context, key []byte, nonce string, recovery bool) (*RekeyResult, error) {
 	if recovery {
-		return c.RecoveryRekeyUpdate(key, nonce)
+		return c.RecoveryRekeyUpdate(ctx, key, nonce)
 	}
-	return c.BarrierRekeyUpdate(key, nonce)
+	return c.BarrierRekeyUpdate(ctx, key, nonce)
 }
 
 // BarrierRekeyUpdate is used to provide a new key part. Barrier rekey can be done
@@ -255,7 +256,7 @@ func (c *Core) RekeyUpdate(key []byte, nonce string, recovery bool) (*RekeyResul
 // key.
 //
 // N.B.: If recovery keys are used to rekey, the new barrier key shares are not returned.
-func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error) {
+func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string) (*RekeyResult, error) {
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -284,10 +285,10 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	var err error
 	var useRecovery bool // Determines whether recovery key is being used to rekey the master key
 	if c.seal.StoredKeysSupported() && c.seal.RecoveryKeySupported() {
-		existingConfig, err = c.seal.RecoveryConfig()
+		existingConfig, err = c.seal.RecoveryConfig(ctx)
 		useRecovery = true
 	} else {
-		existingConfig, err = c.seal.BarrierConfig()
+		existingConfig, err = c.seal.BarrierConfig(ctx)
 	}
 	if err != nil {
 		return nil, err
@@ -339,7 +340,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	}
 
 	if useRecovery {
-		if err := c.seal.VerifyRecoveryKey(recoveredKey); err != nil {
+		if err := c.seal.VerifyRecoveryKey(ctx, recoveredKey); err != nil {
 			c.logger.Error("core: rekey aborted, recovery key verification failed", "error", err)
 			return nil, err
 		}
@@ -420,7 +421,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 				Key:   coreBarrierUnsealKeysBackupPath,
 				Value: buf,
 			}
-			if err = c.physical.Put(pe); err != nil {
+			if err = c.physical.Put(ctx, pe); err != nil {
 				c.logger.Error("core: failed to save unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
@@ -428,28 +429,28 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	}
 
 	if keysToStore != nil {
-		if err := c.seal.SetStoredKeys(keysToStore); err != nil {
+		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
 			c.logger.Error("core: failed to store keys", "error", err)
 			return nil, fmt.Errorf("failed to store keys: %v", err)
 		}
 	}
 
 	// Rekey the barrier
-	if err := c.barrier.Rekey(newMasterKey); err != nil {
+	if err := c.barrier.Rekey(ctx, newMasterKey); err != nil {
 		c.logger.Error("core: failed to rekey barrier", "error", err)
 		return nil, fmt.Errorf("failed to rekey barrier: %v", err)
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: security barrier rekeyed", "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
 	}
-	if err := c.seal.SetBarrierConfig(c.barrierRekeyConfig); err != nil {
+	if err := c.seal.SetBarrierConfig(ctx, c.barrierRekeyConfig); err != nil {
 		c.logger.Error("core: error saving rekey seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(&Entry{
+	if err := c.barrier.Put(ctx, &Entry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.barrierRekeyConfig.Nonce),
 	}); err != nil {
@@ -464,7 +465,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 }
 
 // RecoveryRekeyUpdate is used to provide a new key part
-func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, error) {
+func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string) (*RekeyResult, error) {
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
@@ -489,7 +490,7 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 	defer c.rekeyLock.Unlock()
 
 	// Get the seal configuration
-	existingConfig, err := c.seal.RecoveryConfig()
+	existingConfig, err := c.seal.RecoveryConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -540,7 +541,7 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 	}
 
 	// Verify the recovery key
-	if err := c.seal.VerifyRecoveryKey(recoveryKey); err != nil {
+	if err := c.seal.VerifyRecoveryKey(ctx, recoveryKey); err != nil {
 		c.logger.Error("core: rekey aborted, recovery key verification failed", "error", err)
 		return nil, err
 	}
@@ -603,26 +604,26 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 				Key:   coreRecoveryUnsealKeysBackupPath,
 				Value: buf,
 			}
-			if err = c.physical.Put(pe); err != nil {
+			if err = c.physical.Put(ctx, pe); err != nil {
 				c.logger.Error("core: failed to save unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
 	}
 
-	if err := c.seal.SetRecoveryKey(newMasterKey); err != nil {
+	if err := c.seal.SetRecoveryKey(ctx, newMasterKey); err != nil {
 		c.logger.Error("core: failed to set recovery key", "error", err)
 		return nil, fmt.Errorf("failed to set recovery key: %v", err)
 	}
 
-	if err := c.seal.SetRecoveryConfig(c.recoveryRekeyConfig); err != nil {
+	if err := c.seal.SetRecoveryConfig(ctx, c.recoveryRekeyConfig); err != nil {
 		c.logger.Error("core: error saving rekey seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(&Entry{
+	if err := c.barrier.Put(ctx, &Entry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.recoveryRekeyConfig.Nonce),
 	}); err != nil {
@@ -663,7 +664,7 @@ func (c *Core) RekeyCancel(recovery bool) error {
 
 // RekeyRetrieveBackup is used to retrieve any backed-up PGP-encrypted unseal
 // keys
-func (c *Core) RekeyRetrieveBackup(recovery bool) (*RekeyBackup, error) {
+func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBackup, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -679,9 +680,9 @@ func (c *Core) RekeyRetrieveBackup(recovery bool) (*RekeyBackup, error) {
 	var entry *physical.Entry
 	var err error
 	if recovery {
-		entry, err = c.physical.Get(coreRecoveryUnsealKeysBackupPath)
+		entry, err = c.physical.Get(ctx, coreRecoveryUnsealKeysBackupPath)
 	} else {
-		entry, err = c.physical.Get(coreBarrierUnsealKeysBackupPath)
+		entry, err = c.physical.Get(ctx, coreBarrierUnsealKeysBackupPath)
 	}
 	if err != nil {
 		return nil, err
@@ -700,7 +701,7 @@ func (c *Core) RekeyRetrieveBackup(recovery bool) (*RekeyBackup, error) {
 }
 
 // RekeyDeleteBackup is used to delete any backed-up PGP-encrypted unseal keys
-func (c *Core) RekeyDeleteBackup(recovery bool) error {
+func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -714,7 +715,7 @@ func (c *Core) RekeyDeleteBackup(recovery bool) error {
 	defer c.rekeyLock.Unlock()
 
 	if recovery {
-		return c.physical.Delete(coreRecoveryUnsealKeysBackupPath)
+		return c.physical.Delete(ctx, coreRecoveryUnsealKeysBackupPath)
 	}
-	return c.physical.Delete(coreBarrierUnsealKeysBackupPath)
+	return c.physical.Delete(ctx, coreBarrierUnsealKeysBackupPath)
 }

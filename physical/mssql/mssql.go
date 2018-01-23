@@ -1,6 +1,7 @@
 package mssql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sort"
@@ -15,6 +16,9 @@ import (
 	"github.com/hashicorp/vault/physical"
 	log "github.com/mgutz/logxi/v1"
 )
+
+// Verify MSSQLBackend satisfies the correct interfaces
+var _ physical.Backend = (*MSSQLBackend)(nil)
 
 type MSSQLBackend struct {
 	dbTable    string
@@ -168,7 +172,7 @@ func (m *MSSQLBackend) prepare(name, query string) error {
 	return nil
 }
 
-func (m *MSSQLBackend) Put(entry *physical.Entry) error {
+func (m *MSSQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"mssql", "put"}, time.Now())
 
 	m.permitPool.Acquire()
@@ -182,7 +186,7 @@ func (m *MSSQLBackend) Put(entry *physical.Entry) error {
 	return nil
 }
 
-func (m *MSSQLBackend) Get(key string) (*physical.Entry, error) {
+func (m *MSSQLBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"mssql", "get"}, time.Now())
 
 	m.permitPool.Acquire()
@@ -206,7 +210,7 @@ func (m *MSSQLBackend) Get(key string) (*physical.Entry, error) {
 	return ent, nil
 }
 
-func (m *MSSQLBackend) Delete(key string) error {
+func (m *MSSQLBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"mssql", "delete"}, time.Now())
 
 	m.permitPool.Acquire()
@@ -220,7 +224,7 @@ func (m *MSSQLBackend) Delete(key string) error {
 	return nil
 }
 
-func (m *MSSQLBackend) List(prefix string) ([]string, error) {
+func (m *MSSQLBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"mssql", "list"}, time.Now())
 
 	m.permitPool.Acquire()

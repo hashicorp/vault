@@ -65,7 +65,7 @@ func (b *backend) pathCAWrite(ctx context.Context, req *logical.Request, data *f
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -74,12 +74,12 @@ func (b *backend) pathCAWrite(ctx context.Context, req *logical.Request, data *f
 	// location, plus a fresh CRL
 	entry.Key = "ca"
 	entry.Value = parsedBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
-	err = buildCRL(b, req)
+	err = buildCRL(ctx, b, req)
 
 	return nil, err
 }

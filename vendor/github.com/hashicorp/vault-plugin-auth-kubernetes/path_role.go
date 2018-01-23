@@ -86,7 +86,7 @@ func (b *kubeAuthBackend) pathRoleExistenceCheck() framework.ExistenceFunc {
 		b.l.RLock()
 		defer b.l.RUnlock()
 
-		role, err := b.role(req.Storage, data.Get("name").(string))
+		role, err := b.role(ctx, req.Storage, data.Get("name").(string))
 		if err != nil {
 			return false, err
 		}
@@ -100,7 +100,7 @@ func (b *kubeAuthBackend) pathRoleList() framework.OperationFunc {
 		b.l.RLock()
 		defer b.l.RUnlock()
 
-		roles, err := req.Storage.List("role/")
+		roles, err := req.Storage.List(ctx, "role/")
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +119,7 @@ func (b *kubeAuthBackend) pathRoleRead() framework.OperationFunc {
 		b.l.RLock()
 		defer b.l.RUnlock()
 
-		role, err := b.role(req.Storage, roleName)
+		role, err := b.role(ctx, req.Storage, roleName)
 		if err != nil {
 			return nil, err
 		}
@@ -162,7 +162,7 @@ func (b *kubeAuthBackend) pathRoleDelete() framework.OperationFunc {
 		defer b.l.Unlock()
 
 		// Delete the role itself
-		if err := req.Storage.Delete("role/" + strings.ToLower(roleName)); err != nil {
+		if err := req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName)); err != nil {
 			return nil, err
 		}
 
@@ -183,7 +183,7 @@ func (b *kubeAuthBackend) pathRoleCreateUpdate() framework.OperationFunc {
 		defer b.l.Unlock()
 
 		// Check if the role already exists
-		role, err := b.role(req.Storage, roleName)
+		role, err := b.role(ctx, req.Storage, roleName)
 		if err != nil {
 			return nil, err
 		}
@@ -284,7 +284,7 @@ func (b *kubeAuthBackend) pathRoleCreateUpdate() framework.OperationFunc {
 		if entry == nil {
 			return nil, fmt.Errorf("failed to create storage entry for role %s", roleName)
 		}
-		if err = req.Storage.Put(entry); err != nil {
+		if err = req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 

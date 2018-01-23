@@ -48,5 +48,5 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(b, req, serialInt.(string), true)
+	return revokeCert(ctx, b, req, serialInt.(string), true)
 }

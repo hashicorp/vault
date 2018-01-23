@@ -76,7 +76,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return logical.ErrorResponse("password cannot be empty"), nil
 	}
 
-	policies, resp, err := b.RadiusLogin(req, username, password)
+	policies, resp, err := b.RadiusLogin(ctx, req, username, password)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	var resp *logical.Response
 	var loginPolicies []string
 
-	loginPolicies, resp, err = b.RadiusLogin(req, username, password)
+	loginPolicies, resp, err = b.RadiusLogin(ctx, req, username, password)
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}
@@ -129,9 +129,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	return framework.LeaseExtend(0, 0, b.System())(ctx, req, d)
 }
 
-func (b *backend) RadiusLogin(req *logical.Request, username string, password string) ([]string, *logical.Response, error) {
+func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, error) {
 
-	cfg, err := b.Config(req)
+	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -163,7 +163,7 @@ func (b *backend) RadiusLogin(req *logical.Request, username string, password st
 
 	var policies []string
 	// Retrieve user entry from storage
-	user, err := b.user(req.Storage, username)
+	user, err := b.user(ctx, req.Storage, username)
 	if err != nil {
 		return policies, logical.ErrorResponse("could not retrieve user entry from storage"), err
 	}

@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -62,8 +63,10 @@ func TestSystem_GRPC_sudoPrivilege(t *testing.T) {
 	defer client.Close()
 	testSystemView := newGRPCSystemView(client)
 
-	expected := sys.SudoPrivilege("foo", "bar")
-	actual := testSystemView.SudoPrivilege("foo", "bar")
+	ctx := context.Background()
+
+	expected := sys.SudoPrivilege(ctx, "foo", "bar")
+	actual := testSystemView.SudoPrivilege(ctx, "foo", "bar")
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
 	}
@@ -138,7 +141,7 @@ func TestSystem_GRPC_lookupPlugin(t *testing.T) {
 
 	testSystemView := newGRPCSystemView(client)
 
-	if _, err := testSystemView.LookupPlugin("foo"); err == nil {
+	if _, err := testSystemView.LookupPlugin(context.Background(), "foo"); err == nil {
 		t.Fatal("LookPlugin(): expected error on due to unsupported call from plugin")
 	}
 }

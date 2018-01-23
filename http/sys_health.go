@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -41,6 +42,7 @@ func fetchStatusCode(r *http.Request, field string) (int, bool, bool) {
 func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	code, body, err := getSysHealth(core, r)
 	if err != nil {
+		core.Logger().Error("error checking health", "error", err)
 		respondError(w, http.StatusInternalServerError, nil)
 		return
 	}
@@ -109,11 +111,19 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		drSecondaryCode = code
 	}
 
+	ctx := context.Background()
+
 	// Check system status
 	sealed, _ := core.Sealed()
 	standby, _ := core.Standby()
-	replicationState := core.ReplicationState()
-	init, err := core.Initialized()
+	var replicationState consts.ReplicationState
+	if standby {
+		replicationState = core.ActiveNodeReplicationState()
+	} else {
+		replicationState = core.ReplicationState()
+	}
+
+	init, err := core.Initialized(ctx)
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
 	}
@@ -134,7 +144,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	// Fetch the local cluster name and identifier
 	var clusterName, clusterID string
 	if !sealed {
-		cluster, err := core.Cluster()
+		cluster, err := core.Cluster(ctx)
 		if err != nil {
 			return http.StatusInternalServerError, nil, err
 		}

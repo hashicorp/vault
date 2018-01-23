@@ -43,7 +43,7 @@ func (p *PathMap) init() {
 }
 
 // pathStruct returns the pathStruct for this mapping
-func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
+func (p *PathMap) pathStruct(ctx context.Context, s logical.Storage, k string) (*PathStruct, error) {
 	p.once.Do(p.init)
 
 	// If we don't care about casing, store everything lowercase
@@ -89,7 +89,7 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		// Set the path struct to use the unsalted name
 		ps.Name = unsaltedName
 
-		val, err := ps.Get(s)
+		val, err := ps.Get(ctx, s)
 		if err != nil {
 			return nil, err
 		}
@@ -97,13 +97,13 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		if val != nil {
 			// Set the path struct to use the desired final name
 			ps.Name = finalName
-			err = ps.Put(s, val)
+			err = ps.Put(ctx, s, val)
 			if err != nil {
 				return nil, err
 			}
 			// Set it back to the old path and delete
 			ps.Name = unsaltedName
-			err = ps.Delete(s)
+			err = ps.Delete(ctx, s)
 			if err != nil {
 				return nil, err
 			}
@@ -121,7 +121,7 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		// Set the path struct to use the SHA1 hash suffixed path name
 		ps.Name = sha1SuffixedName
 
-		val, err = ps.Get(s)
+		val, err = ps.Get(ctx, s)
 		if err != nil {
 			return nil, err
 		}
@@ -129,13 +129,13 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		if val != nil {
 			// Set the path struct to use the desired final name
 			ps.Name = finalName
-			err = ps.Put(s, val)
+			err = ps.Put(ctx, s, val)
 			if err != nil {
 				return nil, err
 			}
 			// Set it back to the old path and delete
 			ps.Name = sha1SuffixedName
-			err = ps.Delete(s)
+			err = ps.Delete(ctx, s)
 			if err != nil {
 				return nil, err
 			}
@@ -148,37 +148,37 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 }
 
 // Get reads a value out of the mapping
-func (p *PathMap) Get(s logical.Storage, k string) (map[string]interface{}, error) {
-	ps, err := p.pathStruct(s, k)
+func (p *PathMap) Get(ctx context.Context, s logical.Storage, k string) (map[string]interface{}, error) {
+	ps, err := p.pathStruct(ctx, s, k)
 	if err != nil {
 		return nil, err
 	}
-	return ps.Get(s)
+	return ps.Get(ctx, s)
 }
 
 // Put writes a value into the mapping
-func (p *PathMap) Put(s logical.Storage, k string, v map[string]interface{}) error {
-	ps, err := p.pathStruct(s, k)
+func (p *PathMap) Put(ctx context.Context, s logical.Storage, k string, v map[string]interface{}) error {
+	ps, err := p.pathStruct(ctx, s, k)
 	if err != nil {
 		return err
 	}
-	return ps.Put(s, v)
+	return ps.Put(ctx, s, v)
 }
 
 // Delete removes a value from the mapping
-func (p *PathMap) Delete(s logical.Storage, k string) error {
-	ps, err := p.pathStruct(s, k)
+func (p *PathMap) Delete(ctx context.Context, s logical.Storage, k string) error {
+	ps, err := p.pathStruct(ctx, s, k)
 	if err != nil {
 		return err
 	}
-	return ps.Delete(s)
+	return ps.Delete(ctx, s)
 }
 
 // List reads the keys under a given path
-func (p *PathMap) List(s logical.Storage, prefix string) ([]string, error) {
+func (p *PathMap) List(ctx context.Context, s logical.Storage, prefix string) ([]string, error) {
 	stripPrefix := fmt.Sprintf("struct/map/%s/", p.Name)
 	fullPrefix := fmt.Sprintf("%s%s", stripPrefix, prefix)
-	out, err := s.List(fullPrefix)
+	out, err := s.List(ctx, fullPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func (p *PathMap) Paths() []*Path {
 
 func (p *PathMap) pathList() OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
-		keys, err := p.List(req.Storage, "")
+		keys, err := p.List(ctx, req.Storage, "")
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +247,7 @@ func (p *PathMap) pathList() OperationFunc {
 
 func (p *PathMap) pathSingleRead() OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
-		v, err := p.Get(req.Storage, d.Get("key").(string))
+		v, err := p.Get(ctx, req.Storage, d.Get("key").(string))
 		if err != nil {
 			return nil, err
 		}
@@ -260,21 +260,21 @@ func (p *PathMap) pathSingleRead() OperationFunc {
 
 func (p *PathMap) pathSingleWrite() OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
-		err := p.Put(req.Storage, d.Get("key").(string), d.Raw)
+		err := p.Put(ctx, req.Storage, d.Get("key").(string), d.Raw)
 		return nil, err
 	}
 }
 
 func (p *PathMap) pathSingleDelete() OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
-		err := p.Delete(req.Storage, d.Get("key").(string))
+		err := p.Delete(ctx, req.Storage, d.Get("key").(string))
 		return nil, err
 	}
 }
 
 func (p *PathMap) pathSingleExistenceCheck() ExistenceFunc {
 	return func(ctx context.Context, req *logical.Request, d *FieldData) (bool, error) {
-		v, err := p.Get(req.Storage, d.Get("key").(string))
+		v, err := p.Get(ctx, req.Storage, d.Get("key").(string))
 		if err != nil {
 			return false, err
 		}

@@ -14,11 +14,10 @@ import (
 // dispensed rom the plugin server.
 const BackendPluginName = "backend"
 
-type BackendFactoryFunc func(*logical.BackendConfig) (logical.Backend, error)
 type TLSProdiverFunc func() (*tls.Config, error)
 
 type ServeOpts struct {
-	BackendFactoryFunc BackendFactoryFunc
+	BackendFactoryFunc logical.Factory
 	TLSProviderFunc    TLSProdiverFunc
 	Logger             hclog.Logger
 }

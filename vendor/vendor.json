@@ -451,6 +451,18 @@
 			"revisionTime": "2017-10-07T11:45:50Z"
 		},
 		{
+			"checksumSHA1": "K8OA7Gq9EDgWN52jOkWFI84CHAE=",
+			"path": "github.com/centrify/cloud-golang-sdk/oauth",
+			"revision": "9067a9f81a511edbaa879586740e2b4ee79fd647",
+			"revisionTime": "2017-12-06T22:18:58Z"
+		},
+		{
+			"checksumSHA1": "hQuaxxdKR13A1/LOAQeb9wFGXI0=",
+			"path": "github.com/centrify/cloud-golang-sdk/restapi",
+			"revision": "9067a9f81a511edbaa879586740e2b4ee79fd647",
+			"revisionTime": "2017-12-06T22:18:58Z"
+		},
+		{
 			"checksumSHA1": "sFjc2R+KS9AeXIPMV4KCw+GwX5I=",
 			"path": "github.com/chrismalek/oktasdk-go/okta",
 			"revision": "ae553c909ca06a4c34eb41ee435e83871a7c2496",
@@ -1021,10 +1033,10 @@
 			"revisionTime": "2017-06-22T06:09:55Z"
 		},
 		{
-			"checksumSHA1": "OXsLoRHjxAP1sE4O++egu1a5cZw=",
+			"checksumSHA1": "RdPN+LDHyjZjzWwzrlaizPe0DS8=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "485ef4598d8790d43a3fc65595d4693d542b280d",
-			"revisionTime": "2018-01-18T20:53:48Z"
+			"revision": "1fc09c47b843b73705f51ffb0520e3ac1bfecf99",
+			"revisionTime": "2018-01-18T22:21:37Z"
 		},
 		{
 			"checksumSHA1": "yzoWV7yrS/TvOrKy5ZrdUjsYaOA=",
@@ -1153,30 +1165,28 @@
 			"revisionTime": "2017-10-22T02:00:50Z"
 		},
 		{
-			"checksumSHA1": "3XuxkFWZCrjakXvVWn5GMdZcMgE=",
+			"checksumSHA1": "79lZZZCBawKk80SjL1toOFKxU9M=",
+			"path": "github.com/hashicorp/vault-plugin-auth-centrify",
+			"revision": "8091c91cd9df635c07bce4d31d123ca3a89c24aa",
+			"revisionTime": "2018-01-19T10:58:34Z"
+		},
+		{
+			"checksumSHA1": "eVlMWanJ2W+/9c1kz72iefRcrYM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "d6371c9426008300cb28fcaac2e303cf1991ac0f",
-			"revisionTime": "2018-01-08T19:26:24Z"
+			"revision": "df746b4f8912cf84b3edf13475bac76006693c6f",
+			"revisionTime": "2018-01-19T10:49:13Z"
 		},
 		{
 			"checksumSHA1": "ffJQvzbQvmCG/PdaElGSfGnDgNM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/util",
-			"revision": "f45fc9303c8075b5fb0ec5c8dda32e6dac5859ed",
-			"revisionTime": "2017-12-21T13:29:36Z"
+			"revision": "df746b4f8912cf84b3edf13475bac76006693c6f",
+			"revisionTime": "2018-01-19T10:49:13Z"
 		},
 		{
-			"checksumSHA1": "qztTbChbXCzE8wHJn3uw8eXP0qY=",
+			"checksumSHA1": "NnSdNOHOujCaSud8yq/T4fOpG1s=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "20d5b585bfc96abf8aa07bd10a834df415eb165f",
-			"revisionTime": "2018-01-08T18:57:08Z"
-		},
-		{
-			"path": "github.com/hashicorp/vault-plugin/auth-gcp/plugin",
-			"revision": ""
-		},
-		{
-			"path": "github.com/hashicorp/vault-pluginauth-gcp/plugin",
-			"revision": ""
+			"revision": "3fcdd1101cbbe227f9480175a20a499494100ec3",
+			"revisionTime": "2018-01-19T10:55:13Z"
 		},
 		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",

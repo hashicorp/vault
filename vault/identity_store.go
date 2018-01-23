@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -22,7 +23,7 @@ func (c *Core) IdentityStore() *IdentityStore {
 }
 
 // NewIdentityStore creates a new identity store
-func NewIdentityStore(core *Core, config *logical.BackendConfig) (*IdentityStore, error) {
+func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig) (*IdentityStore, error) {
 	var err error
 
 	// Create a new in-memory database for the identity store
@@ -62,7 +63,7 @@ func NewIdentityStore(core *Core, config *logical.BackendConfig) (*IdentityStore
 		Invalidate: iStore.Invalidate,
 	}
 
-	err = iStore.Setup(config)
+	err = iStore.Setup(ctx, config)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func NewIdentityStore(core *Core, config *logical.BackendConfig) (*IdentityStore
 // the given key is updated. In identity store's case, it would be the entity
 // storage entries that get updated. The value needs to be read and MemDB needs
 // to be updated accordingly.
-func (i *IdentityStore) Invalidate(key string) {
+func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	i.logger.Debug("identity: invalidate notification received", "key", key)
 
 	switch {

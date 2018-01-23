@@ -228,7 +228,7 @@ func pathsRole(b *GcpAuthBackend) []*framework.Path {
 }
 
 func (b *GcpAuthBackend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.role(req.Storage, data.Get("name").(string))
+	entry, err := b.role(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return false, err
 	}
@@ -241,7 +241,7 @@ func (b *GcpAuthBackend) pathRoleDelete(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse(errEmptyRoleName), nil
 	}
 
-	if err := req.Storage.Delete(fmt.Sprintf("role/%s", name)); err != nil {
+	if err := req.Storage.Delete(ctx, fmt.Sprintf("role/%s", name)); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -253,7 +253,7 @@ func (b *GcpAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(errEmptyRoleName), nil
 	}
 
-	role, err := b.role(req.Storage, name)
+	role, err := b.role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	} else if role == nil {
@@ -297,7 +297,7 @@ func (b *GcpAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 		return logical.ErrorResponse(errEmptyRoleName), nil
 	}
 
-	role, err := b.role(req.Storage, name)
+	role, err := b.role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -308,11 +308,11 @@ func (b *GcpAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 	if err := role.updateRole(b.System(), req.Operation, data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
-	return b.storeRole(req.Storage, name, role)
+	return b.storeRole(ctx, req.Storage, name, role)
 }
 
 func (b *GcpAuthBackend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roles, err := req.Storage.List("role/")
+	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func (b *GcpAuthBackend) pathRoleEditIamServiceAccounts(ctx context.Context, req
 		return logical.ErrorResponse("must provide at least one value to add or remove"), nil
 	}
 
-	role, err := b.role(req.Storage, roleName)
+	role, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +352,7 @@ func (b *GcpAuthBackend) pathRoleEditIamServiceAccounts(ctx context.Context, req
 	}
 	role.BoundServiceAccounts = editStringValues(role.BoundServiceAccounts, toAdd, toRemove)
 
-	return b.storeRole(req.Storage, roleName, role)
+	return b.storeRole(ctx, req.Storage, roleName, role)
 }
 
 func editStringValues(initial []string, toAdd []string, toRemove []string) []string {
@@ -392,7 +392,7 @@ func (b *GcpAuthBackend) pathRoleEditGceLabels(ctx context.Context, req *logical
 		return logical.ErrorResponse("must provide at least one value to add or remove"), nil
 	}
 
-	role, err := b.role(req.Storage, roleName)
+	role, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -413,12 +413,12 @@ func (b *GcpAuthBackend) pathRoleEditGceLabels(ctx context.Context, req *logical
 		delete(role.BoundLabels, k)
 	}
 
-	return b.storeRole(req.Storage, roleName, role)
+	return b.storeRole(ctx, req.Storage, roleName, role)
 }
 
 // role reads a gcpRole from storage. This assumes the caller has already obtained the role lock.
-func (b *GcpAuthBackend) role(s logical.Storage, name string) (*gcpRole, error) {
-	entry, err := s.Get(fmt.Sprintf("role/%s", strings.ToLower(name)))
+func (b *GcpAuthBackend) role(ctx context.Context, s logical.Storage, name string) (*gcpRole, error) {
+	entry, err := s.Get(ctx, fmt.Sprintf("role/%s", strings.ToLower(name)))
 
 	if err != nil {
 		return nil, err
@@ -438,7 +438,7 @@ func (b *GcpAuthBackend) role(s logical.Storage, name string) (*gcpRole, error) 
 // storeRole saves the gcpRole to storage.
 // The returned response may contain either warnings or an error response,
 // but will be nil if error is not nil
-func (b *GcpAuthBackend) storeRole(s logical.Storage, roleName string, role *gcpRole) (*logical.Response, error) {
+func (b *GcpAuthBackend) storeRole(ctx context.Context, s logical.Storage, roleName string, role *gcpRole) (*logical.Response, error) {
 	var resp *logical.Response
 	warnings, err := role.validate(b.System())
 
@@ -455,7 +455,7 @@ func (b *GcpAuthBackend) storeRole(s logical.Storage, roleName string, role *gcp
 		return nil, err
 	}
 
-	if err := s.Put(entry); err != nil {
+	if err := s.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -516,10 +516,11 @@ func (role *gcpRole) updateRole(sys logical.SystemView, op logical.Operation, da
 	// Set role type
 	roleTypeRaw, ok := data.GetOk("type")
 	if ok {
-		if op == logical.UpdateOperation {
+		roleType := roleTypeRaw.(string)
+		if role.RoleType != roleType && op == logical.UpdateOperation {
 			return errors.New("role type cannot be changed for an existing role")
 		}
-		role.RoleType = roleTypeRaw.(string)
+		role.RoleType = roleType
 	} else if op == logical.CreateOperation {
 		return errors.New(errEmptyRoleType)
 	}

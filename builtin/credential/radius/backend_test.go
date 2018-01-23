@@ -1,6 +1,7 @@
 package radius
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -17,7 +18,7 @@ const (
 )
 
 func TestBackend_Config(t *testing.T) {
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: testSysTTL,
@@ -70,7 +71,7 @@ func TestBackend_Config(t *testing.T) {
 }
 
 func TestBackend_users(t *testing.T) {
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: testSysTTL,
@@ -98,7 +99,7 @@ func TestBackend_acceptance(t *testing.T) {
 		return
 	}
 
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: testSysTTL,

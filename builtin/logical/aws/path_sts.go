@@ -45,7 +45,7 @@ func (b *backend) pathSTSRead(ctx context.Context, req *logical.Request, d *fram
 	ttl := int64(d.Get("ttl").(int))
 
 	// Read the policy
-	policy, err := req.Storage.Get("policy/" + policyName)
+	policy, err := req.Storage.Get(ctx, "policy/"+policyName)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
@@ -57,6 +57,7 @@ func (b *backend) pathSTSRead(ctx context.Context, req *logical.Request, d *fram
 	if strings.HasPrefix(policyValue, "arn:") {
 		if strings.Contains(policyValue, ":role/") {
 			return b.assumeRole(
+				ctx,
 				req.Storage,
 				req.DisplayName, policyName, policyValue,
 				ttl,
@@ -69,6 +70,7 @@ func (b *backend) pathSTSRead(ctx context.Context, req *logical.Request, d *fram
 	}
 	// Use the helper to create the secret
 	return b.secretTokenCreate(
+		ctx,
 		req.Storage,
 		req.DisplayName, policyName, policyValue,
 		ttl,

@@ -103,7 +103,7 @@ func pathFetchListCerts(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	entries, err := req.Storage.List("certs/")
+	entries, err := req.Storage.List(ctx, "certs/")
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	}
 
 	if serial == "ca_chain" {
-		caInfo, err := fetchCAInfo(req)
+		caInfo, err := fetchCAInfo(ctx, req)
 		switch err.(type) {
 		case errutil.UserError:
 			response = logical.ErrorResponse(err.Error())
@@ -178,7 +178,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		goto reply
 	}
 
-	certEntry, funcErr = fetchCertBySerial(req, req.Path, serial)
+	certEntry, funcErr = fetchCertBySerial(ctx, req, req.Path, serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -204,7 +204,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		certificate = pem.EncodeToMemory(&block)
 	}
 
-	revokedEntry, funcErr = fetchCertBySerial(req, "revoked/", serial)
+	revokedEntry, funcErr = fetchCertBySerial(ctx, req, "revoked/", serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:

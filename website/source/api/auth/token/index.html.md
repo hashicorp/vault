@@ -595,8 +595,8 @@ creating tokens that allow token functionality that is otherwise not
 available or would require `sudo`/root privileges to access. Role
 parameters, when set, override any provided options to the `create`
 endpoints. The role name is also included in the token path, allowing all
-tokens created against a role to be revoked using the `sys/revoke-prefix`
-endpoint.
+tokens created against a role to be revoked using the
+`/sys/leases/revoke-prefix` endpoint.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -637,7 +637,7 @@ endpoint.
   future but revoking all tokens created against it before some point in time.
   The suffix can be changed, allowing new callers to have the new suffix as part
   of their path, and then tokens with the old suffix can be revoked via
-  `sys/revoke-prefix`.
+  `/sys/leases/revoke-prefix`.
 
 ### Sample Payload
 

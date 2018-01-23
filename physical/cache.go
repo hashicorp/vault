@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"context"
 	"strings"
 
 	iradix "github.com/hashicorp/go-immutable-radix"
@@ -31,6 +32,12 @@ type TransactionalCache struct {
 	*Cache
 	Transactional
 }
+
+// Verify Cache satisfies the correct interfaces
+var _ Purgable = (*Cache)(nil)
+var _ Backend = (*Cache)(nil)
+var _ Transactional = (*TransactionalCache)(nil)
+var _ Purgable = (*TransactionalCache)(nil)
 
 // NewCache returns a physical cache of the given size.
 // If no size is provided, the default size is used.
@@ -71,7 +78,7 @@ func NewTransactionalCache(b Backend, size int, coreExceptions []string, logger 
 }
 
 // Purge is used to clear the cache
-func (c *Cache) Purge() {
+func (c *Cache) Purge(ctx context.Context) {
 	// Lock the world
 	for _, lock := range c.locks {
 		lock.Lock()
@@ -81,19 +88,19 @@ func (c *Cache) Purge() {
 	c.lru.Purge()
 }
 
-func (c *Cache) Put(entry *Entry) error {
+func (c *Cache) Put(ctx context.Context, entry *Entry) error {
 	lock := locksutil.LockForKey(c.locks, entry.Key)
 	lock.Lock()
 	defer lock.Unlock()
 
-	err := c.backend.Put(entry)
+	err := c.backend.Put(ctx, entry)
 	if err == nil && c.shouldCache(entry.Key) {
 		c.lru.Add(entry.Key, entry)
 	}
 	return err
 }
 
-func (c *Cache) Get(key string) (*Entry, error) {
+func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 	lock := locksutil.LockForKey(c.locks, key)
 	lock.RLock()
 	defer lock.RUnlock()
@@ -103,7 +110,7 @@ func (c *Cache) Get(key string) (*Entry, error) {
 	// with the HA mode, we could potentially negatively cache the leader entry
 	// and cause leader discovery to fail.
 	if !c.shouldCache(key) {
-		return c.backend.Get(key)
+		return c.backend.Get(ctx, key)
 	}
 
 	// Check the LRU first
@@ -115,7 +122,7 @@ func (c *Cache) Get(key string) (*Entry, error) {
 	}
 
 	// Read from the underlying backend
-	ent, err := c.backend.Get(key)
+	ent, err := c.backend.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -128,26 +135,26 @@ func (c *Cache) Get(key string) (*Entry, error) {
 	return ent, nil
 }
 
-func (c *Cache) Delete(key string) error {
+func (c *Cache) Delete(ctx context.Context, key string) error {
 	lock := locksutil.LockForKey(c.locks, key)
 	lock.Lock()
 	defer lock.Unlock()
 
-	err := c.backend.Delete(key)
+	err := c.backend.Delete(ctx, key)
 	if err == nil && c.shouldCache(key) {
 		c.lru.Remove(key)
 	}
 	return err
 }
 
-func (c *Cache) List(prefix string) ([]string, error) {
+func (c *Cache) List(ctx context.Context, prefix string) ([]string, error) {
 	// Always pass-through as this would be difficult to cache. For the same
 	// reason we don't lock as we can't reasonably know which locks to readlock
 	// ahead of time.
-	return c.backend.List(prefix)
+	return c.backend.List(ctx, prefix)
 }
 
-func (c *TransactionalCache) Transaction(txns []*TxnEntry) error {
+func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) error {
 	// Collect keys that need to be locked
 	var keys []string
 	for _, curr := range txns {
@@ -159,7 +166,7 @@ func (c *TransactionalCache) Transaction(txns []*TxnEntry) error {
 		defer l.Unlock()
 	}
 
-	if err := c.Transactional.Transaction(txns); err != nil {
+	if err := c.Transactional.Transaction(ctx, txns); err != nil {
 		return err
 	}
 

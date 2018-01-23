@@ -50,20 +50,20 @@ func pathGroups(b *backend) *framework.Path {
 
 // We look up groups in a case-insensitive manner since Okta is case-preserving
 // but case-insensitive for comparisons
-func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, string, error) {
+func (b *backend) Group(ctx context.Context, s logical.Storage, n string) (*GroupEntry, string, error) {
 	canonicalName := n
-	entry, err := s.Get("group/" + n)
+	entry, err := s.Get(ctx, "group/"+n)
 	if err != nil {
 		return nil, "", err
 	}
 	if entry == nil {
-		entries, err := s.List("group/")
+		entries, err := s.List(ctx, "group/")
 		if err != nil {
 			return nil, "", err
 		}
 		for _, groupName := range entries {
 			if strings.ToLower(groupName) == strings.ToLower(n) {
-				entry, err = s.Get("group/" + groupName)
+				entry, err = s.Get(ctx, "group/"+groupName)
 				if err != nil {
 					return nil, "", err
 				}
@@ -90,12 +90,12 @@ func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse("'name' must be supplied"), nil
 	}
 
-	entry, canonicalName, err := b.Group(req.Storage, name)
+	entry, canonicalName, err := b.Group(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
 	if entry != nil {
-		err := req.Storage.Delete("group/" + canonicalName)
+		err := req.Storage.Delete(ctx, "group/"+canonicalName)
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +110,7 @@ func (b *backend) pathGroupRead(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse("'name' must be supplied"), nil
 	}
 
-	group, _, err := b.Group(req.Storage, name)
+	group, _, err := b.Group(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 
 	// Check for an existing group, possibly lowercased so that we keep using
 	// existing user set values
-	_, canonicalName, err := b.Group(req.Storage, name)
+	_, canonicalName, err := b.Group(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -157,7 +157,7 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groups, err := req.Storage.List("group/")
+	groups, err := req.Storage.List(ctx, "group/")
 	if err != nil {
 		return nil, err
 	}

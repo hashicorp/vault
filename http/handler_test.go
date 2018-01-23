@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -22,7 +23,7 @@ func TestHandler_cors(t *testing.T) {
 
 	// Enable CORS and allow from any origin for testing.
 	corsConfig := core.CORSConfig()
-	err := corsConfig.Enable([]string{addr}, nil)
+	err := corsConfig.Enable(context.Background(), []string{addr}, nil)
 	if err != nil {
 		t.Fatalf("Error enabling CORS: %s", err)
 	}

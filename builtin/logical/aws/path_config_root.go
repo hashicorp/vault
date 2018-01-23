@@ -60,7 +60,7 @@ func pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framew
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
