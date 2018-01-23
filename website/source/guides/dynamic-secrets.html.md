@@ -1,14 +1,14 @@
 ---
 layout: "guides"
 page_title: "Secret as a Service - Guides"
-sidebar_current: "guides-dynamic-secrets"
+sidebar_current: "guides--dataynamic-secrets"
 description: |-
-  Vault can dynamically generate secrets on-demand for some systems.
+  Vault can dynamically generate secrets on--dataemand for some systems.
 ---
 
 # Secret as a Service: Dynamic Secrets
 
-Vault can generate secrets on-demand for some systems. For example, when an app
+Vault can generate secrets on--dataemand for some systems. For example, when an app
 needs to access an Amazon S3 bucket, it asks Vault for AWS credentials. Vault
 will generate an AWS credential granting permissions to access the S3 bucket. In
 addition, Vault will automatically revoke this credential after the TTL is
@@ -94,8 +94,14 @@ summary of basic commands to get started.
 ### <a name="policy"></a>Policy requirements
 
 To perform all tasks demonstrated in this guide, you need to be able to
-authenticate with Vault as an **`admin`** user. The `admin` user's policy must
-include the following permissions:
+authenticate with Vault as an [**`admin`** user](#personas).
+
+-> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
+with Vault. However, it is recommended that root tokens are only used for just
+enough initial setup or in emergencies. As a best practice, use tokens with
+appropriate set of policies based on your role in the organization.
+
+The `admin` policy must include the following permissions:
 
 ```shell
 # Mount secret backends
@@ -113,11 +119,6 @@ path "sys/policy/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
 ```
-
--> **NOTE:** For the purpose of this guide, you can use **`root`** token. However,
-Vault team recommends that root tokens are only used for just enough initial
-setup or in emergencies. As a best practice, use tokens with appropriate
-set of policies based on your role in the organization.
 
 If you are not familiar with policies, complete the
 [policies](/guides/policies.html) guide.
@@ -152,24 +153,28 @@ vault mount database
 
 #### API call using cURL
 
-Before begin, create the following environment variables for your convenience:
+Mount `database` secret backend using `/sys/mounts` endpoint:
 
-- **VAULT_ADDR** is set to your Vault server address
-- **VAULT_TOKEN** is set to your Vault token
+```shell
+$ curl --header "X-Vault-Token: <TOKEN>" \
+       --request POST \
+       --data <PARAMETERS> \
+       <VAULT_ADDRESS>/v1/sys/mounts/database
+```
+
+Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
+parameters](/api/system/mounts.html#mount-secret-backend) of the backend.
 
 **Example:**
 
-```plaintext
-$ export VAULT_ADDR=http://127.0.0.1:8201
-
-$ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
-```
-
-Now, mount the `database` backend using API:
+The following example mounts database backend at `sys/mounts/database` path, and
+passed the backend type ("database") in the request payload.
 
 ```shell
-curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d '{"type":"database"}' \
-    $VAULT_ADDR/v1/sys/mounts/database
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data '{"type":"database"}' \
+       https://$ vault.rocks/v1/sys/mounts/database
 ```
 
 
@@ -197,7 +202,7 @@ command with correct URL to match your environment.
 **Example:**
 
 ```shell
-vault write database/config/postgresql plugin_name=postgresql-database-plugin \
+$ vault write database/config/postgresql plugin_name=postgresql-database-plugin \
   allowed_roles=readonly connection_url=postgresql://root:rootpassword@localhost:5432/myapp
 ```
 
@@ -206,9 +211,9 @@ vault write database/config/postgresql plugin_name=postgresql-database-plugin \
 
 **Example:**
 
-```text
-$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d @postgres-config.json \
-    $VAULT_ADDR/v1/database/config/postgresql
+```shell
+$ curl --header "X-Vault-Token: ..." --request POST --data @postgres-config.json \
+    https://vault.rocks/v1/database/config/postgresql
 
 $ cat postgres-config.json
 {
@@ -221,7 +226,7 @@ $ cat postgres-config.json
 ### <a name="step3"></a>Step 3: Create a role
 (**Persona:** admin)
 
-In Step 2, you configured the PostgreSQL backend by passing **`readonly`** role
+In [Step 2](#step2), you configured the PostgreSQL backend by passing **`readonly`** role
 as an allowed member. The next step is to define the `readonly` role. A role is
 a logical name that maps to a policy used to generate credentials.
 
@@ -245,7 +250,7 @@ if Vault is offline or unable to communicate with it.
 **Example:**
 
 ```plaintext
-vault write database/roles/readonly db_name=postgresql creation_statements=@readonly.sql \
+$ vault write database/roles/readonly db_name=postgresql creation_statements=@readonly.sql \
     default_ttl=1h max_ttl=24h
 ```
 
@@ -257,12 +262,11 @@ statement is passed as the role creation statement.
 
 **Example:**
 
-```text
-$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d @role-payload.json \
-    $VAULT_ADDR/v1/database/roles/readonly
+```shell
+$ curl --header "X-Vault-Token: ..." --request POST --data @role-payload.json \
+    https://vault.rocks/v1/database/roles/readonly
 
-$ cat role-payload.JSON
-
+$ cat role-payload.json
 {
 	"db_name": "postgres",
 	"creation_statements": "CREATE ROLE '{{name}}' WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
@@ -308,7 +312,7 @@ $ vault token-create -policy="apps"
 Key            	Value
 ---            	-----
 token          	e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
-token_accessor 	54700b7e-d828-a6c4-6141-96e71e002bd7
+token_accessor 	54700b7e--data828-a6c4-6141-96e71e002bd7
 token_duration 	768h0m0s
 token_renewable	true
 token_policies 	[apps default]
@@ -330,7 +334,7 @@ $ vault read database/creds/readonly
 
 Key            	Value
 ---            	-----
-lease_id       	database/creds/readonly/4b5c6e82-df88-0dec-c0cb-f07eee8f0329
+lease_id       	database/creds/readonly/4b5c6e82--dataf88-0dec-c0cb-f07eee8f0329
 lease_duration 	1h0m0s
 lease_renewable	true
 password       	A1a-4urzp0wu92r5s1q0
@@ -347,17 +351,19 @@ set of credentials.
 First create an `apps` policy, and generate a token so that you can authenticate
 as an `app` persona.
 
-```text
-$ curl -X PUT -H "X-Vault-Token: $VAULT_TOKEN" -d @payload.json \
-    $VAULT_ADDR/v1/sys/policy/apps
+```shell
+$ curl --header "X-Vault-Token: ..." --request PUT \
+       --data @payload.json \
+       https://vault.rocks/v1/sys/policy/apps
 
 $ cat payload.json
 {
   "policy": "path \"database/creds/readonly\" {capabilities = [ \"read\" ]}"
 }
 
-$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d '{"policies": ["apps"]}' \
-   $VAULT_ADDR/v1/auth/token/create | jq
+$ curl --header "X-Vault-Token: ..." --request POST \
+       --data '{"policies": ["apps"]}' \
+       https://vault.rocks/v1/auth/token/create | jq
 {
  "request_id": "e1737bc8-7e51-3943-42a0-2dbd6cb40e3e",
  "lease_id": "",
@@ -387,8 +393,9 @@ Be sure to use the returned token to perform the remaining.
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
-curl -X GET -H "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
-    $VAULT_ADDR/v1/database/creds/readonly | jq
+$ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
+       --request GET \
+       https://vault.rocks/v1/database/creds/readonly | jq
 {
   "request_id": "e0e5a6c1-5e69-5cf3-c9d2-020af192de36",
   "lease_id": "database/creds/readonly/7aa462ab-98cb-fdcb-b226-f0a0d37644cc",
@@ -409,7 +416,7 @@ curl -X GET -H "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
 (1) Generate a new set of credentials.
 
 ```plaintext
-vault read database/creds/readonly
+$ vault read database/creds/readonly
 
 Key            	Value
 ---            	-----
@@ -442,7 +449,7 @@ The `\du` command lists all users. You should be able to verify that the usernam
 (3) Renew the lease for this credential by passing its **`lease_id`**.
 
 ```plaintext
-vault renew database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
+$ vault renew database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
 
 Key            	Value
 ---            	-----
@@ -454,7 +461,7 @@ lease_renewable	true
 (4) Revoke the generated credentials.
 
 ```plaintext
-vault revoke database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
+$ vault revoke database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
 ```
 
 **NOTE:** If you run the command with **`-prefix=true`** flag, it revokes all
@@ -466,7 +473,7 @@ user name exists.
 
 ## Next steps
 
-This guide discussed how to generate credentials on-demand so that the access
+This guide discussed how to generate credentials on--dataemand so that the access
 credentials no longer need to be written to disk. Next, learn about the
 [Tokens and Leases](/guides/lease.html) so that you can control the lifecycle of
 those credentials.
