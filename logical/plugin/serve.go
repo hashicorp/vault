@@ -68,7 +68,7 @@ func Serve(opts *ServeOpts) error {
 			return err
 		}
 
-		contraint, err := gversion.NewConstraint("< 0.9.2")
+		constraint, err := gversion.NewConstraint("< 0.9.2")
 		if err != nil {
 			return err
 		}
