@@ -3,7 +3,7 @@ package pluginutil
 import (
 	"os"
 
-	gversion "github.com/hashicorp/go-version"
+	"github.com/hashicorp/go-version"
 )
 
 var (
@@ -12,23 +12,29 @@ var (
 	PluginVaultVersionEnv = "VAULT_VERSION"
 )
 
-// GRPCSupport returns true if Vault can support GRPC transport, false otherwise
+// GRPCSupport defaults to returning true, unless VAULT_VERSION is missing or
+// it fails to meet the version constraint.
 func GRPCSupport() bool {
 	verString := os.Getenv(PluginVaultVersionEnv)
 
-	if verString != "" && verString != "unknown" {
-		ver, err := gversion.NewVersion(verString)
+	// If the env var is empty, we fall back to netrpc for backward compatibility.
+	if verString == "" {
+		return false
+	}
+
+	if verString != "unknown" {
+		ver, err := version.NewVersion(verString)
 		if err != nil {
-			return false
+			return true
 		}
 
-		constraint, err := gversion.NewConstraint(">= 0.9.2")
+		constraint, err := version.NewConstraint(">= 0.9.2")
 		if err != nil {
-			return false
+			return true
 		}
 
 		return constraint.Check(ver)
 	}
 
-	return false
+	return true
 }
