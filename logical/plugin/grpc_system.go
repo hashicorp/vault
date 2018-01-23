@@ -91,7 +91,7 @@ func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[st
 	}
 
 	reply, err := s.client.ResponseWrapData(ctx, &pb.ResponseWrapDataArgs{
-		Data: buf,
+		Data: string(buf[:]),
 		TTL:  int64(ttl),
 		JWT:  false,
 	})
@@ -171,7 +171,7 @@ func (s *gRPCSystemViewServer) ReplicationState(ctx context.Context, _ *pb.Empty
 
 func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.ResponseWrapDataArgs) (*pb.ResponseWrapDataReply, error) {
 	data := map[string]interface{}{}
-	err := json.Unmarshal(args.Data, &data)
+	err := json.Unmarshal([]byte(args.Data), &data)
 	if err != nil {
 		return &pb.ResponseWrapDataReply{}, err
 	}
