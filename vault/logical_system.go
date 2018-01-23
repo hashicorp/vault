@@ -40,7 +40,6 @@ var (
 				Pattern: "replication/status",
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-						var state consts.ReplicationState
 						resp := &logical.Response{
 							Data: map[string]interface{}{
 								"mode": "disabled",
