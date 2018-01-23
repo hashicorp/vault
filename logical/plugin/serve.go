@@ -6,10 +6,8 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/version"
 )
 
 // BackendPluginName is the name of the plugin that can be
@@ -59,23 +57,8 @@ func Serve(opts *ServeOpts) error {
 		GRPCServer: plugin.DefaultGRPCServer,
 	}
 
-	// Run on netrpc if we are on version less than 0.9.2
-	verInfo := version.GetVersion()
-	if verInfo.Version != "unknown" && verInfo.VersionPrerelease != "unknown" {
-		verString := versInfo.VersionNumber()
-		ver, err := gversion.NewVersion(verString)
-		if err != nil {
-			return err
-		}
-
-		constraint, err := gversion.NewConstraint("< 0.9.2")
-		if err != nil {
-			return err
-		}
-
-		if constraint.Check(ver) {
-			serveOpts.GRPCServer = nil
-		}
+	if !pluginutil.GRPCSupport() {
+		serveOpts.GRPCServer = nil
 	}
 
 	// If FetchMetadata is true, run without TLSProvider
