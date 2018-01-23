@@ -62,10 +62,17 @@ func Serve(opts *ServeOpts) error {
 	// Run on netrpc if we are on version less than 0.9.2
 	verInfo := version.GetVersion()
 	if verInfo.Version != "unknown" && verInfo.VersionPrerelease != "unknown" {
-		versInfo.VersionNumber()
+		verString := versInfo.VersionNumber()
 		ver, err := gversion.NewVersion(verString)
+		if err != nil {
+			return err
+		}
 
 		contraint, err := gversion.NewConstraint("< 0.9.2")
+		if err != nil {
+			return err
+		}
+
 		if constraint.Check(ver) {
 			serveOpts.GRPCServer = nil
 		}
