@@ -78,7 +78,7 @@ func (s *gRPCSystemViewClient) CachingDisabled() bool {
 func (s *gRPCSystemViewClient) ReplicationState() consts.ReplicationState {
 	reply, err := s.client.ReplicationState(context.Background(), &pb.Empty{})
 	if err != nil {
-		return consts.ReplicationDisabled
+		return consts.ReplicationUnknown
 	}
 
 	return consts.ReplicationState(reply.State)

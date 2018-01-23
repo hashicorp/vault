@@ -79,7 +79,7 @@ func (s *SystemViewClient) ReplicationState() consts.ReplicationState {
 
 	err := s.client.Call("Plugin.ReplicationState", new(interface{}), &reply)
 	if err != nil {
-		return consts.ReplicationDisabled
+		return consts.ReplicationUnknown
 	}
 
 	return reply.ReplicationState

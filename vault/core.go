@@ -493,6 +493,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		activeNodeReplicationState:       new(uint32),
 	}
 
+	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
+
 	if conf.ClusterCipherSuites != "" {
 		suites, err := tlsutil.ParseCiphers(conf.ClusterCipherSuites)
 		if err != nil {

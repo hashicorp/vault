@@ -43,7 +43,7 @@ var (
 						var state consts.ReplicationState
 						resp := &logical.Response{
 							Data: map[string]interface{}{
-								"mode": state.String(),
+								"mode": "disabled",
 							},
 						}
 						return resp, nil

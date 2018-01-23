@@ -480,7 +480,7 @@ func (c *forwardingClient) startHeartbeat() {
 			case <-c.echoContext.Done():
 				c.echoTicker.Stop()
 				c.core.logger.Trace("forwarding: stopping heartbeating")
-				atomic.StoreUint32(c.core.activeNodeReplicationState, uint32(consts.ReplicationDisabled))
+				atomic.StoreUint32(c.core.activeNodeReplicationState, uint32(consts.ReplicationUnknown))
 				return
 			case <-c.echoTicker.C:
 				tick()
