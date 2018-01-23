@@ -27,6 +27,10 @@ func TestGRPCSupport(t *testing.T) {
 			false,
 		},
 		{
+			"0.9.3",
+			true,
+		},
+		{
 			"unknown",
 			true,
 		},
