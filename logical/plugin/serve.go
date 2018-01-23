@@ -22,7 +22,6 @@ type ServeOpts struct {
 	BackendFactoryFunc logical.Factory
 	TLSProviderFunc    TLSProdiverFunc
 	Logger             hclog.Logger
-	ServerProtocol     plugin.Protocol
 }
 
 // Serve is a helper function used to serve a backend plugin. This
