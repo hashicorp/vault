@@ -6,8 +6,10 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/version"
 )
 
 // BackendPluginName is the name of the plugin that can be
@@ -20,6 +22,7 @@ type ServeOpts struct {
 	BackendFactoryFunc logical.Factory
 	TLSProviderFunc    TLSProdiverFunc
 	Logger             hclog.Logger
+	ServerProtocol     plugin.Protocol
 }
 
 // Serve is a helper function used to serve a backend plugin. This
@@ -47,8 +50,7 @@ func Serve(opts *ServeOpts) error {
 		return err
 	}
 
-	// If FetchMetadata is true, run without TLSProvider
-	plugin.Serve(&plugin.ServeConfig{
+	serveOpts := &plugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		TLSProvider:     opts.TLSProviderFunc,
@@ -56,7 +58,22 @@ func Serve(opts *ServeOpts) error {
 
 		// A non-nil value here enables gRPC serving for this plugin...
 		GRPCServer: plugin.DefaultGRPCServer,
-	})
+	}
+
+	// Run on netrpc if we are on version less than 0.9.2
+	verInfo := version.GetVersion()
+	if verInfo.Version != "unknown" && verInfo.VersionPrerelease != "unknown" {
+		versInfo.VersionNumber()
+		ver, err := gversion.NewVersion(verString)
+
+		contraint, err := gversion.NewConstraint("< 0.9.2")
+		if constraint.Check(ver) {
+			serveOpts.GRPCServer = nil
+		}
+	}
+
+	// If FetchMetadata is true, run without TLSProvider
+	plugin.Serve(serveOpts)
 
 	return nil
 }
