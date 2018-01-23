@@ -12,6 +12,7 @@ import (
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/wrapping"
+	"github.com/hashicorp/vault/version"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -70,6 +71,7 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 	if wrapper.MlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))
 
 	// Create logger for the plugin client
 	clogger := &hclogFaker{

@@ -47,8 +47,7 @@ func Serve(opts *ServeOpts) error {
 		return err
 	}
 
-	// If FetchMetadata is true, run without TLSProvider
-	plugin.Serve(&plugin.ServeConfig{
+	serveOpts := &plugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		TLSProvider:     opts.TLSProviderFunc,
@@ -56,7 +55,14 @@ func Serve(opts *ServeOpts) error {
 
 		// A non-nil value here enables gRPC serving for this plugin...
 		GRPCServer: plugin.DefaultGRPCServer,
-	})
+	}
+
+	if !pluginutil.GRPCSupport() {
+		serveOpts.GRPCServer = nil
+	}
+
+	// If FetchMetadata is true, run without TLSProvider
+	plugin.Serve(serveOpts)
 
 	return nil
 }
