@@ -32,7 +32,7 @@ you through the generation of dynamic AWS credentials.
 The end-to-end scenario described in this guide involves two personas:
 
 - **`admin`** with privileged permissions to configure secret backends
-- **`app`** is the requester of credentials
+- **`apps`** reads the secrets from Vault
 
 ## Challenge
 
@@ -147,9 +147,20 @@ must be mounted.
 
 #### CLI command
 
+To mount a database backend:
+
 ```shell
-vault mount database
+$ vault mount <PATH>
 ```
+
+**Example:**
+
+```shell
+$ vault mount database
+```
+
+**NOTE:** In this guide, the database backend is mounted at the `/database path` in
+Vault.  However, it is possible to mount your secret backends at any location.
 
 #### API call using cURL
 
@@ -159,7 +170,7 @@ Mount `database` secret backend using `/sys/mounts` endpoint:
 $ curl --header "X-Vault-Token: <TOKEN>" \
        --request POST \
        --data <PARAMETERS> \
-       <VAULT_ADDRESS>/v1/sys/mounts/database
+       <VAULT_ADDRESS>/v1/sys/mounts/<PATH>
 ```
 
 Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
@@ -176,6 +187,8 @@ $ curl --header "X-Vault-Token: ..." \
        --data '{"type":"database"}' \
        https://$ vault.rocks/v1/sys/mounts/database
 ```
+
+**NOTE:** It is possible to mount your database secret backends at any location.
 
 
 ### <a name="step1"></a>Step 2: Configure PostgreSQL backend
@@ -212,10 +225,10 @@ $ vault write database/config/postgresql plugin_name=postgresql-database-plugin 
 **Example:**
 
 ```shell
-$ curl --header "X-Vault-Token: ..." --request POST --data @postgres-config.json \
+$ curl --header "X-Vault-Token: ..." --request POST --data @payload.json \
     https://vault.rocks/v1/database/config/postgresql
 
-$ cat postgres-config.json
+$ cat payload.json
 {
 	"plugin_name": "postgresql-database-plugin",
 	"allowed_roles": "readonly",
@@ -249,7 +262,7 @@ if Vault is offline or unable to communicate with it.
 
 **Example:**
 
-```plaintext
+```shell
 $ vault write database/roles/readonly db_name=postgresql creation_statements=@readonly.sql \
     default_ttl=1h max_ttl=24h
 ```
@@ -263,10 +276,10 @@ statement is passed as the role creation statement.
 **Example:**
 
 ```shell
-$ curl --header "X-Vault-Token: ..." --request POST --data @role-payload.json \
+$ curl --header "X-Vault-Token: ..." --request POST --data @payload.json \
     https://vault.rocks/v1/database/roles/readonly
 
-$ cat role-payload.json
+$ cat payload.json
 {
 	"db_name": "postgres",
 	"creation_statements": "CREATE ROLE '{{name}}' WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
@@ -281,9 +294,9 @@ the `role-payload.json`.
 
 
 ### <a name="step4"></a>Step 4: Request PostgreSQL credentials
-(**Persona:** app)
+(**Persona:** apps)
 
-Now, you are switching to [`app` persona](#personas). To get a new set of
+Now, you are switching to [`apps` persona](#personas). To get a new set of
 PostgreSQL credentials, the client app needs to be able to **read** from the
 `readonly` role endpoint. Therefore, the app's token must have a policy granting
 the read permission.
@@ -300,14 +313,16 @@ path "database/creds/readonly" {
 #### CLI command
 
 First create an `apps` policy, and generate a token so that you can authenticate
-as an `app` persona.
+as an `apps` persona.
 
 **Example:**
 
 ```shell
+# Create "apps" policy
 $ vault policy-write apps apps-policy.hcl
 Policy 'apps' written.
 
+# Create a new token with app policy
 $ vault token-create -policy="apps"
 Key            	Value
 ---            	-----
@@ -324,12 +339,14 @@ Use the returned token to perform the remaining.
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
+# Authenticate with Vault using the generated token first
 $ vault auth e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
 Successfully authenticated! You are now logged in.
 token: e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
 token_duration: 2764277
 token_policies: [apps default]
 
+# Invoke the vault command
 $ vault read database/creds/readonly
 
 Key            	Value
@@ -352,15 +369,18 @@ First create an `apps` policy, and generate a token so that you can authenticate
 as an `app` persona.
 
 ```shell
-$ curl --header "X-Vault-Token: ..." --request PUT \
-       --data @payload.json \
-       https://vault.rocks/v1/sys/policy/apps
-
+# Payload to pass in the API call
 $ cat payload.json
 {
   "policy": "path \"database/creds/readonly\" {capabilities = [ \"read\" ]}"
 }
 
+# Create "apps" policy
+$ curl --header "X-Vault-Token: ..." --request PUT \
+       --data @payload.json \
+       https://vault.rocks/v1/sys/policy/apps
+
+# Generate a new token with apps policy
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data '{"policies": ["apps"]}' \
        https://vault.rocks/v1/auth/token/create | jq

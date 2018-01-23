@@ -8,8 +8,8 @@ description: |-
 
 # Policies
 
-Use policy to govern the behavior of clients by specifying the access privilege
-(_authorization_).
+In Vault, use policies to govern the behavior of clients by specifying the
+access privilege (_authorization_).
 
 When you first initialize Vault, the
 [**`root`**](/docs/concepts/policies.html#root-policy) policy gets created by
@@ -47,11 +47,22 @@ valid input.
 
 10 minutes
 
+## Personas
+
+The scenario described in this guide introduces the following personas:
+
+- **`root`** sets up initial policies for `admin`
+- **`admin`** is empowered with managing a Vault infrastructure for a team or
+organizations
+- **`provisioner`** configures secret backends as well as creating policies for
+client apps
+
+
 ## Challenge
 
-Since Vault centrally secure, store, and access control secrets across distributed
-infrastructure and applications, it is critical to control permissions before
-any user or machine can gain access.
+Since Vault centrally secure, store, and access control secrets across
+distributed infrastructure and applications, it is critical to control
+permissions before any user or machine can gain access.
 
 
 ## Solution
@@ -68,26 +79,64 @@ Vault.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment.  Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault.
-
-Make sure that your Vault server has been [initialized and
+Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy.html).
+
+### <a name="policy"></a>Policy requirements
+
+Since this guide demonstrates the creation of an **`admin`** policy, log in with
+**`root`** token if possible. Otherwise, make sure that you have the following
+permissions:
+
+```shell
+# To perform Step 2 & 3
+path "sys/policy/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+# To perform Step 4
+path "auth/token/create"
+{
+  capabilities = ["create", "update"]
+}
+
+# To perform Step 4
+path "sys/capabilities"
+{
+  capabilities = ["create", "update"]
+}
+
+# To perform Step 4
+path "sys/capabilities-self"
+{
+  capabilities = ["create", "update"]
+}
+```
+
 
 ## Steps
 
+The basic workflow of creating policies is:
+
+![Policy Creation Workflow](/assets/images/vault-policy-workflow.png)
+
 This guide demonstrates basic policy authoring and management tasks.
 
-1. [Write ACL policies](#step1)
-2. [View existing policies](#step2)
-3. [Check capabilities of a token](#step3)
+1. [Write ACL policies in HCL format](#step1)
+2. [Create policies](#step2)
+3. [View existing policies](#step3)
+4. [Check capabilities of a token](#step4)
 
 
-### <a name="step1"></a>Step 1: Write ACL policies
+### <a name="step1"></a>Step 1: Write ACL policies in HCL format
 
-ACL policies are defined for each path:
+Remember, empty policy grants **no permission** in the system. Therefore, ACL
+policies are defined for each path.
 
-```plaintext
-path "<PAHT>" {
+```shell
+path "<PATH>" {
   capabilities = [ "<LIST_OF_CAPABILITIES>" ]
 }
 ```
@@ -96,7 +145,7 @@ path "<PAHT>" {
 namespacing. For example, "`secret/training_*`" grants permissions on any
 path starts with "`secret/training_`" (e.g. `secret/training_vault`).
 
-Define one or more capabilities on each path to control operations that are
+Define one or more [capabilities](/docs/concepts/policies.html#capabilities) on each path to control operations that are
 permitted.
 
 | Capability      | Associated HTTP verbs  |
@@ -110,73 +159,127 @@ permitted.
 
 #### Policy requirements
 
-First step in writing policies is to gather policy requirements. As an exercise,
-assume that the following are the policy requirements defined for `developers`
-and `devops`.
+First step in creating policies is to **gather policy requirements**.
 
-Developers must be able to:
+**Example:**
 
-- Perform all operations on `secret/apps/*` path
-- Obtain AWS credentials for `devops` role
-- Obtain database credentials for `devops` role
+**`admin`** is a type of user empowered with managing a Vault infrastructure for
+a team or organizations. Empowered with sudo, the Administrator is focused on
+configuring and maintaining the health of Vault cluster(s) as well as
+providing bespoke support to Vault users.
 
-DevOps must be able to:
+`admin` must be able to:
 
-- View and manage leases
+- Mount and manage auth backends broadly across Vault
+- Mount and manage secret backends broadly across Vault
+- Create and manage ACL policies broadly across Vault
+- Read system health check
+
+**`provisioner`** is a type of user or service that will be used by an automated
+tool (e.g. Terraform) to provision and configure a namespace within a Vault
+secret backend for a new Vault user to access and write secrets.
+
+`provisioner` must be able to:
+
+- Mount and manage auth backends
 - Mount and manage secret backends
+- Create and manage ACL policies
 
-#### Example policy for Developers
 
-`dev-pol.hcl`
+Now, you are ready to author policies to fulfill the requirements.
+
+#### Example policy for admin
+
+`admin-policy.hcl`
 
 ```shell
-# Full permissions on secret/apps/* path
-path "secret/apps/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+# Manage auth backends broadly across Vault
+path "auth/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
-# Read new credentials from aws secret backend
-path "aws/creds/devops" {
-  capabilities = ["read"]
+# List, create, update, and delete auth backends
+path "sys/auth/*"
+{
+  capabilities = ["create", "read", "update", "delete", "sudo"]
 }
 
-# Read new credentials from database secret backend
-path "database/creds/devops" {
-  capabilities = ["read"]  
+# Create and manage ACL policies broadly across Vault
+path "sys/policy/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# List, create, update, and delete key/value secrets
+path "secret/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage and manage secret backends broadly across Vault.
+path "sys/mounts/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Read health checks
+path "sys/health"
+{
+  capabilities = ["read", "sudo"]
 }
 ```
 
-#### Example policy for DevOps
+#### Example policy for provisioner
 
-`devops-pol.hcl`
+`provisioner-policy.hcl`
 
 ```shell
-# Permissions to manage leases
-path "sys/leases/*" {
+# Manage auth backends broadly across Vault
+path "auth/*"
+{
   capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-# Permissions to create and manage secret backends
-path "sys/mounts/*" {
+# List, create, update, and delete auth backends
+path "sys/auth/*"
+{
+  capabilities = ["create", "read", "update", "delete"]
+}
+
+# Create and manage ACL policies
+path "sys/policy/*"
+{
   capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-# Move already mounted backend to a new endpoint
-path "sys/remount/*" {
-  capabilities = ["create", "update"]
+# List, create, update, and delete key/value secrets
+path "secret/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list"]
 }
 ```
 
-Once the ACL policies are written, create policies.
+### <a name="step2"></a>Step 2: Create policies
+
+Now, create `admin` and `provisioner` policies in Vault.
 
 #### CLI command
 
-Create new ACL policies:
+To create policies:
 
 ```shell
-$ vault write dev-pol dev-pol.hcl
+$ vault policy-write <POLICY_NAME> <POLICY_FILE>
+```
 
-$ vault write devops-pol devops-pol.hcl
+**Example:**
+
+```shell
+# Create admin policy
+$ vault write admin admin-policy.hcl
+
+# Create provisioner policy
+$ vault write provisioner provisioner-policy.hcl
 ```
 
 **NOTE:** To update an existing policy, simply re-run the same command by
@@ -184,122 +287,125 @@ passing your modified policy (`*.hcl`).
 
 #### API call using cURL
 
-Before begin, create the following environment variables for your convenience:
+To create a policy, use `/sys/policy` endpoint:
 
-- **VAULT_ADDR** is set to your Vault server address
-- **VAULT_TOKEN** is set to your Vault token
+```shell
+$ curl --header "X-Vault-Token: <TOKEN>" \
+       --request PUT \
+       --data <PAYLOAD> \
+       <VAULT_ADDRESS>/v1/sys/policy/<POLICY_NAME>
+```
+
+Where `<TOKEN>` is your valid token, and `<PAYLOAD>` includes policy name and
+stringfied policy.
 
 **Example:**
 
-```plaintext
-$ export VAULT_ADDR=http://127.0.0.1:8201
-
-$ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
-```
-
-Now, create new ACL policies using API:
+Now, create `admin` and `provisioner` policies:
 
 ```shell
-# Create dev-pol policy
-$ curl -X PUT -H "X-Vault-Token: $VAULT_TOKEN" -d @dev-payload.json \
-    $VAULT_ADDR/v1/sys/policies/acl/dev-pol
+# Create admin policy
+$ curl --request PUT --header "X-Vault-Token: ..." --data @admin-payload.json \
+    https://vault.rocks/v1/sys/policy/admin
 
-$ cat dev-payload.json
+$ cat admin-payload.json
 {
-  "policy": "path \"secret/apps/*\" { capabilities = [\"create\", \"read\", \"update\" ... }"
+  "policy": "path \"auth/*\" { capabilities = [\"create\", \"read\", \"update\", ... }"
 }
 
-# Create devops-pol policy
-$ curl -X PUT -H "X-Vault-Token: $VAULT_TOKEN" -d @devops-payload.json \
-    $VAULT_ADDR/v1/sys/policies/acl/devops-pol
+# Create provisioner policy
+$ curl --request PUT --header "X-Vault-Token: ..." --data @provisioner-payload.json \
+    https://vault.rocks/v1/sys/policy/provisioner
 
-$ cat devops-payload.json
+$ cat provisioner-payload.json
 {
-  "policy": "path \"sys/leases/*\" { capabilities = [\"create\", \"read\", \"update\" ... }"
+  "policy": "path \"auth/*\" { capabilities = [\"create\", \"read\", \"update\", ... }"
 }
-```
-
-**NOTE:** To update an existing policy, simply re-run the same command by
-passing your modified policy in the request payload (`*.json`).
-
-
-
-### <a name="step2"></a>Step 2: View existing policies
-
-Make sure that you see the policies you created in [Step 1](#step1).
-
-#### CLI command
-
-The following command lists existing policies:
-
-```shell
-vault policies
-```
-
-To view a specific policy:
-
-```shell
-vault read sys/policy/<POLICY_NAME>
-```
-
-**Example:**
-
-```shell
-vault read sys/policy/default
-
-Key  	Value
----  	-----
-name 	default
-rules	# Allow tokens to look up their own properties
-path "auth/token/lookup-self" {
-    capabilities = ["read"]
-}
-
-# Allow tokens to renew themselves
-path "auth/token/renew-self" {
-    capabilities = ["update"]
-}
-
-# Allow tokens to revoke themselves
-path "auth/token/revoke-self" {
-    capabilities = ["update"]
-}
-...
-```
-
-
-#### API call using cURL
-
-To list existing ACL policies, use the `/sys/policy` endpoint.
-
-```plaintext
-curl -X LIST -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/sys/policy | jq
 ```
 
 -> NOTE: You can also use `/sys/policies` endpoint which is used to manage
 ACL, RGP, and EGP policies in Vault (RGP and EGP policies are enterprise-only
 features). To list policies, invoke `/sys/policies/acl` endpoint.
 
+**NOTE:** To update an existing policy, simply re-run the same command by
+passing your modified policy in the request payload (`*.json`).
+
+
+
+### <a name="step3"></a>Step 3: View existing policies
+
+Make sure that you see the policies you created in [Step 2](#step2).
+
+#### CLI command
+
+The following command lists existing policies:
+
+```shell
+$ vault policies
+```
+
+To view a specific policy:
+
+```shell
+$ vault read sys/policy/<POLICY_NAME>
+```
+
+**Example:**
+
+```shell
+# Read admin policy
+$ vault read sys/policy/admin
+Key  	Value
+---  	-----
+name 	admin
+rules	# Mount and manage auth backends broadly across Vault
+path "auth/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+path "sys/auth/*"
+{
+  capabilities = ["create", "read", "update", "delete", "sudo"]
+}
+
+# Create and manage ACL policies broadly across Vault
+path "sys/policy/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+...
+```
+
+#### API call using cURL
+
+To list existing ACL policies, use the `/sys/policy` endpoint.
+
+```shell
+$ curl --request LIST --header "X-Vault-Token: ..." https://vault.rocks/v1/sys/policy | jq
+```
+
 To read a specific policy, the endpoint path should be
 `/sys/policy/<POLICY_NAME>`.
 
 **Example:**
 
-```plaintext
-curl -X GET -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/sys/policy/default | jq
+Read the admin policy:
 
+```plaintext
+$ curl --request GET --header "X-Vault-Token: ..." https://vault.rocks/v1/sys/policy/admin | jq
 {
-  "name": "default",
-  "rules": "\n# Allow tokens to look up their own properties\npath \"auth/token/lookup-self\" ...",
-  "request_id": "1379d18d-e5e3-dbd2-8f3a-0e446c016a23",
+  "name": "admin",
+  "rules": "# Mount and manage auth backends broadly across Vault\npath \"auth/*\"\n{\n  ...",
+  "request_id": "e8151bf3-8136-fef9-428b-1506042350cf",
   "lease_id": "",
   "renewable": false,
   "lease_duration": 0,
+  "data": {
   ...
 ```
 
-
-### <a name="step3"></a>Step 3: Check capabilities of a token
+### <a name="step4"></a>Step 4: Check capabilities of a token
 
 Use the `/sys/capabilities` endpoint to fetch the capabilities of a token on a
 given path. This helps to verify what operations are granted based on the
@@ -310,22 +416,42 @@ policies attached to the token.
 The command is:
 
 ```shell
-vault capabilities <TOKEN> <PATH>
+$ vault capabilities <TOKEN> <PATH>
 ```
 
 **Example:**
 
-```plaintext
-vault capabilities a59c0d41-8df7-ba8e-477e-9bfb394f28a0 secret/apps
+First, create a token attached to `admin` policy:
 
-Capabilities: [create delete list read update]
+```shell
+$ vault token-create -policy="admin"
+Key            	Value
+---            	-----
+token          	79ecdd41-9bac-1ac7-1ee4-99fbce796221
+token_accessor 	39b5e8b5-7bbf-6c6d-c536-ba79d3a80dd5
+token_duration 	768h0m0s
+token_renewable	true
+token_policies 	[admin default]
 ```
+
+Now, fetch the capabilities of this token on `sys/auth/approle` path.
+
+```plaintext
+$ vault capabilities 79ecdd41-9bac-1ac7-1ee4-99fbce796221 sys/auth/approle
+Capabilities: [create delete read sudo update]
+```
+
+The result should match the policy rule you wrote on `sys/auth/*` path. You can
+repeat the steps to generate a token for `provisioner` and check its
+capabilities on paths.
+
 
 In the absence of token, it returns capabilities of current token invoking this
 command.
 
 ```shell
-vault capabilities secret/apps
+$ vault capabilities sys/auth/approle
+Capabilities: [root]
 ```
 
 #### API call using cURL
@@ -334,25 +460,83 @@ Use the `sys/capabilities` endpoint.
 
 **Example:**
 
-```plaintext
-$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d @payload.json \
-    $VAULT_ADDR/v1/sys/capabilities
+First, create a token attached to `admin` policy:
 
-$ cat payload.json
+```shell
+$ curl --request POST --header "X-Vault-Token: ..." --data '{ "policies":"admin" }' \
+       https://vault.rocks/v1/auth/token/create
 {
-  "token": "a59c0d41-8df7-ba8e-477e-9bfb394f28a0",
-  "path": "secret/apps"
+ "request_id": "870ef38c-1401-7beb-633c-ff09cca3db68",
+ "lease_id": "",
+ "renewable": false,
+ "lease_duration": 0,
+ "data": null,
+ "wrap_info": null,
+ "warnings": null,
+ "auth": {
+   "client_token": "9f3a9fbb-4e1a-87c3-9d4d-ee4d96d40af1",
+   "accessor": "f8a269c0-153a-c1ea-ae97-e7e964814392",
+   "policies": [
+     "root"
+   ],
+   "metadata": null,
+   "lease_duration": 0,
+   "renewable": false,
+   "entity_id": ""
+ }
 }
 ```
+
+Now, fetch the capabilities of this token on `sys/auth/approle` path.
+
+```shell
+# Request payload
+$ cat payload.json
+{
+  "token": "9f3a9fbb-4e1a-87c3-9d4d-ee4d96d40af1",
+  "path": "sys/auth/approle"
+}
+
+$ curl --request POST --header "X-Vault-Token: ..." --data @payload.json \
+    https://vault.rocks/v1/sys/capabilities
+{
+  "capabilities": [
+    "create",
+    "delete",
+    "read",
+    "sudo",
+    "update"
+  ],
+  "request_id": "03f9d5e2-7e8a-4cd3-b9e9-034c058d3d06",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "capabilities": [
+      "create",
+      "delete",
+      "read",
+      "sudo",
+      "update"
+    ]
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+The result should match the policy rule you wrote on `sys/auth/*` path. You can
+repeat the steps to generate a token for `provisioner` and check its
+capabilities on paths.
 
 To check current token's capabilities permitted on a path, use
 `sys/capabilities-self` endpoint.
 
 ```plaintext
-curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d '{"path":"secret/apps"}' \
-    $VAULT_ADDR/v1/sys/capabilities-self
+$ curl --request POST --header "X-Vault-Token: ..." --data '{"path":"sys/auth/approle"}' \
+    https://vault.rocks/v1/sys/capabilities-self
 ```
-
 
 
 ## Next steps
