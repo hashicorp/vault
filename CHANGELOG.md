@@ -67,6 +67,9 @@ BUG FIXES:
    TTL value [GH-3803]
  * secret/database: Fix an issue where plugins were not closed properly if they
    failed to initialize [GH-3768]
+ * ui: mounting a secret backend will now properly set `max_lease_ttl` and 
+   `default_lease_ttl` when specified - previously both fields set 
+   `default_lease_ttl`.
 
 ## 0.9.1 (December 21st, 2017)
 
