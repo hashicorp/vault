@@ -69,7 +69,7 @@ func GetDuoAuthClient(ctx context.Context, req *logical.Request, config *DuoConf
 	if err != nil {
 		return nil, err
 	}
-	if check.StatResult == nil {
+	if check == nil || check.StatResult.Message == nil || check.StatResult.Message_Detail == nil {
 		return nil, fmt.Errorf("Could not connect to Duo; got nil result back from API check call")
 	}
 	if check.StatResult.Stat != "OK" {
