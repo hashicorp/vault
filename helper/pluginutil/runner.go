@@ -71,7 +71,7 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 	if wrapper.MlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().VersionNumber()))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))
 
 	// Create logger for the plugin client
 	clogger := &hclogFaker{
