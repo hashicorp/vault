@@ -8,8 +8,9 @@ description: |-
 
 # Policies
 
-In Vault, use policies to govern the behavior of clients by specifying the
-access privilege (_authorization_).
+In Vault, use policies to govern the behavior of clients and instrument 
+Role-Based Access Control (RBAC) by specifying access privileges
+ (_authorization_).
 
 When you first initialize Vault, the
 [**`root`**](/docs/concepts/policies.html#root-policy) policy gets created by
@@ -22,14 +23,14 @@ In addition, there is another build-in policy,
 `default` policy is attached to all tokens and provides common permissions.
 
 Everything in Vault is path based, and write policies to grant or forbid access
-to certain paths and operations in Vault. Empty policy grants **no permission**
-in the system.
+to certain paths and operations in Vault. Vault operates on a **secure by default** 
+standard, and as such an empty policy grants **no permission** in the system.
 
 
 ### HashiCorp Configuration Language (HCL)
 
 Policies written in [HCL](https://github.com/hashicorp/hcl) format are often
-referred as **_ACL Policy_**. [Sentinel](https://www.hashicorp.com/sentinel) is
+referred as **_ACL Policies_**. [Sentinel](https://www.hashicorp.com/sentinel) is
 another framework for policy which is available in [Vault
 Enterprise](/docs/enterprise/index.html).  Since Sentinel is an enterprise-only
 feature, this guide focuses on writing ACL policies.
