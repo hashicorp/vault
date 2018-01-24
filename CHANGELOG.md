@@ -51,8 +51,10 @@ IMPROVEMENTS:
  * plugins: Args for plugins can now be specified separately from the command,
    allowing the same output format and input format for plugin information
    [GH-3778]
- * secret/pki: `ou` and `organization` can now be specified as a 
+ * secret/pki: `ou` and `organization` can now be specified as a
    comma-separated string or an array of strings [GH-3804]
+ * plugins: Plugins will fall back to using netrpc as the communication protocol
+   on older versions of Vault [GH-3833]
 
 BUG FIXES:
 
