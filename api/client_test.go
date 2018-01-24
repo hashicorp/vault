@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -92,6 +93,27 @@ func TestClientToken(t *testing.T) {
 
 	if v := client.Token(); v != "" {
 		t.Fatalf("bad: %s", v)
+	}
+}
+
+func TestClientBadToken(t *testing.T) {
+	tokenValue := "foo\u007f"
+	handler := func(w http.ResponseWriter, req *http.Request) {}
+
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	client.SetToken(tokenValue)
+
+	// Do a raw "/" request
+	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
+	if err == nil || !strings.Contains(err.Error(), "printable") {
+		t.Fatalf("expected error due to bad token")
 	}
 }
 
