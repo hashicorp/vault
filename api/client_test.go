@@ -98,12 +98,8 @@ func TestClientToken(t *testing.T) {
 
 func TestClientBadToken(t *testing.T) {
 	tokenValue := "foo\u007f"
-	handler := func(w http.ResponseWriter, req *http.Request) {}
 
-	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
-	defer ln.Close()
-
-	client, err := NewClient(config)
+	client, err := NewClient(nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
