@@ -97,16 +97,25 @@ func TestClientToken(t *testing.T) {
 }
 
 func TestClientBadToken(t *testing.T) {
-	tokenValue := "foo\u007f"
+	handler := func(w http.ResponseWriter, req *http.Request) {}
 
-	client, err := NewClient(nil)
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	client, err := NewClient(config)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	client.SetToken(tokenValue)
+	/*
+		client.SetToken("foo")
+		_, err = client.RawRequest(client.NewRequest("PUT", "/"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	*/
 
-	// Do a raw "/" request
+	client.SetToken("foo\u00f7")
 	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
 	if err == nil || !strings.Contains(err.Error(), "printable") {
 		t.Fatalf("expected error due to bad token")
