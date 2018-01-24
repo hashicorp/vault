@@ -55,9 +55,8 @@ storage isn't enough to access your secrets.
 
 To perform the tasks described in this guide, you need to have a Vault
 environment.  Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault.
-
-Make sure that your Vault server has been [initialized and
+Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy.html).
 
 
@@ -87,10 +86,17 @@ You will perform the following:
 
 ### <a name="step1"></a>Step 1: Store the Google API key
 
+If the secret path convention is **`secret/<OWNER>/apikey/<APP>`**, store the
+Google API key in `secret/eng/apikey/Googl`. If you have an API key for New Relic
+owned by the DevOps team, the path may look like
+`secret/devops/apikey/New_Relic`.
+
 #### CLI command
 
+To create key/value secrets:
+
 ```shell
-vault write secret/<PATH> <KEY>=VALUE>
+$ vault write secret/<PATH> <KEY>=VALUE>
 ```
 
 The `<PATH>` can be anything you want it to be, and your organization should
@@ -99,48 +105,46 @@ decide on the naming convention that makes most sense.
 **Example:**
 
 ```shell
-vault write secret/eng/apikey/Google key=AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
+$ vault write secret/eng/apikey/Google key=AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 Success! Data written to: secret/eng/apikey/Google
 ```
 
-> In this example, the path
-> convention is **`secret/<OWNER>/apikey/<APP>`**. Therefore, `secret/eng/apikey/Googl`.
-> The key is "key" and its value is "AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI".
-> If you have an API key for New Relic owned by the DevOps team, the path may
-> look like `secret/devops/apikey/New_Relic`.
+The secret key is "key" and its value is "AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI" in
+this example.
 
 #### API call using cURL
 
-Before begin, create the following environment variables for your convenience:
+Use `/secret/<PATH>` endpoint to create secrets:
 
-- **VAULT_ADDR** is set to your Vault server address
-- **VAULT_TOKEN** is set to your Vault token
-
-**Example:**
-
-```plaintext
-$ export VAULT_ADDR=http://127.0.0.1:8201
-
-$ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
+```shell
+$ curl --header "X-Vault-Token: <TOKEN>" \
+       --request POST \
+       --data <SECRETS> \
+       <VAULT_ADDRESS>/v1/secret/<PATH>
 ```
 
-To perform the same task using the Vault API, pass the token in the request header.
+Where `<TOKEN>` is your valid token, `<SECRETS>` is the key-value pair(s) of your
+secrets, and `secret/<PATH>` is the path to your secrets.
 
 **Example:**
 
 ```shell
-curl $VAULT_ADDR/v1/secret/eng/apikey/Google -X POST \
- -H "X-Vault-Token: $VAULT_TOKEN" --data '{"key": "AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI"}'
+$ curl --header "X-Vault-Token: ..." --request POST \
+       --data '{"key": "AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI"}' \
+       https://vault.rocks/v1/secret/eng/apikey/Google
 ```
 
+The secret key is "key" and its value is
+"AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI" in this example.
 
 
 ### <a name="step2"></a>Step 2: Store the root certificate for MySQL
 
-For the purpose of this guide, generate a new self-sign certificate using [OpenSSL](https://www.openssl.org/source/).
+For the purpose of this guide, generate a new self-sign certificate using
+[OpenSSL](https://www.openssl.org/source/).
 
 ```shell
-openssl req -x509 -sha256 -nodes -newkey rsa:2048 -keyout selfsigned.key -out cert.pem
+$ openssl req --request509 -sha256 -nodes -newkey rsa:2048 -keyout selfsigned.key -out cert.pem
 ```
 
 Generated `cert.pem` file:
@@ -174,23 +178,19 @@ save it as `cert.pem`.
 
 #### CLI command
 
-The command is basically the same as the Google API key example.
+The command is basically the same as the Google API key example. Now, the path
+convention is **`secret/<ENVIRONMENT>/cert/<SYSTEM>`**. To store the root certificate
+for production MySQL, the path becomes `secret/staging/cert/postgres`.
 
 **Example:**
 
 ```shell
-vault write secret/prod/cert/mysql cert=@cert.pem
+$ vault write secret/prod/cert/mysql cert=@cert.pem
 ```
-
-**NOTE:** Any value begins with "@" is loaded from a file.
 
 This example reads the root certificate from a PEM file from the disk, and store it under
 `secret/prod/cert/mysql` path.
-
-> The path convention here is **`secret/<ENVIRONMENT>/cert/<SYSTEM>`**. This path
-> has an environment flag (`prod`) to indicate that this is a root certificate
-> for MySQL in production. If there is a root certificate for a PostgreSQL
-> running in staging, you may store it in `secret/staging/cert/postgres`.
+> **NOTE:** Any value begins with "@" is loaded from a file.
 
 
 #### API call using cURL
@@ -200,10 +200,12 @@ To perform the same task using the Vault API, pass the token in the request head
 **Example:**
 
 ```shell
-curl $VAULT_ADDR/v1/secret/eng/apikey/Google -X POST \
- -H "X-Vault-Token: $VAULT_TOKEN" --data @cert.pem
+$ curl --header "X-Vault-Token: ..." \
+       --request POST \
+       --data @cert.pem \
+       https://vault.rocks/v1/secret/prod/cert/mysql
 ```
-
+> **NOTE:** Any value begins with "@" is loaded from a file.
 
 
 ### <a name="step3"></a>Step 3: Retrieve the secrets
@@ -213,13 +215,13 @@ Retrieving the secret from Vault is simple.
 #### CLI command
 
 ```shell
-vault read secret/<PATH>
+$ vault read secret/<PATH>
 ```
 
 **Example:**
 
 ```shell
-vault read secret/eng/apikey/Google
+$ vault read secret/eng/apikey/Google
 Key             	Value
 ---             	-----
 refresh_interval	768h0m0s
@@ -229,14 +231,14 @@ key             	AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 To return the key value alone, pass `-field=key` as an argument.
 
 ```shell
-vault read -field=key secret/eng/apikey/Google
+$ vault read -field=key secret/eng/apikey/Google
 AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 ```
 
 #### Root certificate example:
 
 ```shell
-vault read -field=cert secret/prod/cert/mysql
+$ vault read -field=cert secret/prod/cert/mysql
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA6E2Uq0XqreZISgVMUu9pnoMsq+OoK1PI54rsA9vtDE6wiRk0GWhf5vD4DGf1
 ...
@@ -247,8 +249,8 @@ MIIEowIBAAKCAQEA6E2Uq0XqreZISgVMUu9pnoMsq+OoK1PI54rsA9vtDE6wiRk0GWhf5vD4DGf1
 **Example:**
 
 ```shell
-curl $VAULT_ADDR/v1/secret/eng/apikey/Google -X GET -H "X-Vault-Token: $VAULT_TOKEN" | jq
-
+$ curl --header "X-Vault-Token: ..." --request GET \
+     https://vault.rocks/v1/secret/eng/apikey/Google | jq
 {
 "request_id": "5a2005ac-1149-2275-cab3-76cee71bf524",
 "lease_id": "",
@@ -268,15 +270,15 @@ curl $VAULT_ADDR/v1/secret/eng/apikey/Google -X GET -H "X-Vault-Token: $VAULT_TO
 Retrieve the key value with `jq`:
 
 ```shell
-curl $VAULT_ADDR/v1/secret/eng/apikey/Google -X GET \
- -H "X-Vault-Token: $VAULT_TOKEN" | jq ".data.key"
+$ curl --header "X-Vault-Token: ..." --request GET \
+     https://vault.rocks/v1/secret/eng/apikey/Google | jq ".data.key"
 ```
 
 #### Root certificate example:
 
 ```shell
-curl $VAULT_ADDR/v1/secret/prod/cert/mysql -X GET \
- -H "X-Vault-Token: $VAULT_TOKEN" | jq ".data.cert"
+$ curl --header "X-Vault-Token: ..." --request GET \
+     https://vault.rocks/v1/secret/prod/cert/mysql | jq ".data.cert"
 ```
 
 ## Additional Discussion
@@ -294,7 +296,7 @@ enter the secret in a new line. After entering the secret, press **`Ctrl+d`** to
 end the pipe and write the secret to the Vault.
 
 ```shell
-vault write secret/eng/apikey/Google key=-
+$ vault write secret/eng/apikey/Google key=-
 
 AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 <Ctrl+d>
@@ -313,7 +315,7 @@ Using the Google API key example, you can create a file containing the key (apik
 The CLI command would look like:
 
 ```shell
-vault write secret/eng/apikey/Google @apikey.txt
+$ vault write secret/eng/apikey/Google @apikey.txt
 ```
 
 #### Option 3: Disable all vault command history
@@ -326,7 +328,7 @@ in history.
 In bash:
 
 ```shell
-export HISTIGNORE="&:vault"
+$ export HISTIGNORE="&:vault"
 ```
 
 **NOTE:** This prevents the use of the Up arrow key for command history as well.
@@ -337,7 +339,7 @@ export HISTIGNORE="&:vault"
 The two examples introduced in this guide only had a single key-value pair.  You can pass multiple values in the command.
 
 ```shell
-vault write secret/dev/config/mongodb url=foo.example.com:35533 db_name=users \
+$ vault write secret/dev/config/mongodb url=foo.example.com:35533 db_name=users \
  username=admin password=pa$$w0rd
 ```
 

@@ -57,25 +57,24 @@ renewal and revocation
 Consider the following scenarios:
 
 - Currently, there is no **break glass** procedure available
-- Credentials for externals systems (e.g. AWS, MySQL) are shared
+- Credentials for external systems (e.g. AWS, MySQL) are shared
 - Need a temporal access to database in a specific scenario
 
 ## Solution
 
 Vault has built-in support for secret revocation. Vault can revoke not only
 single secret, but also a tree of secrets. For example, Vault can revoke all
-secrets read by a specific user or all secrets of a specific type. Revocation
-assists in key rolling as well as locking down systems in the case of an
-intrusion. This also allows for organizations to plan and train for various
+secrets read by a specific **user** or all secrets of a specific **type**.
+Revocation assists in key rolling as well as locking down systems in the case of
+an intrusion. This also allows for organizations to plan and train for various
 "break glass" procedures.
 
 ## Prerequisites
 
 To perform the tasks described in this guide, you need to have a Vault
 environment.  Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault.
-
-Make sure that your Vault server has been [initialized and
+Started](/intro/getting-started/install.html) guide to install Vault. Make sure
+that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy.html).
 
 ## Steps
@@ -100,7 +99,7 @@ When you create leases with no specific TTL values, the default value applies
 to the lease.
 
 ```shell
-vault auth -methods
+$ vault auth -methods
 
 Path       Type      Accessor                Default TTL  Max TTL  Replication Behavior  Description
 approle/   approle   auth_approle_53f0fb08   system       system   replicated
@@ -115,15 +114,17 @@ shorter in Vault's configuration file.
 Another option is to tune the mount configuration to override the system
 defaults by calling the **`/sys/mounts/<PATH>/tune`** endpoint (e.g.
 `/sys/mounts/database/tune`). For the auth backend system configuration, call
-**`/sys/auth/<METHOD>/tune`** endpoint. See the [Reference Content](#reference)
-for more detail.
+**`/sys/auth/<METHOD>/tune`** endpoint.
+
+NOTE: Refer to the [Advanced Features](#advanced-features) section for tuning
+the backend system configuration.
 
 #### CLI command
 
 Read the default TTL settings for **token** auth backend:
 
 ```shell
-vault read sys/auth/token/tune
+$ vault read sys/auth/token/tune
 
 Key              	Value
 ---              	-----
@@ -134,23 +135,23 @@ max_lease_ttl    	2764800
 
 #### API call using cURL
 
-Before begin, create the following environment variables for your convenience:
+Use `/sys/mounts` endpoint to read the default TTL settings for **token** auth
+backend:
 
-- **VAULT_ADDR** is set to your Vault server address
-- **VAULT_TOKEN** is set to your Vault token
+```shell
+$ curl --header "X-Vault-Token: <TOKEN>" \
+     --request GET \
+     <VAULT_ADDRESS>/v1/sys/auth/token/tune
+```
+
+Where `<TOKEN>` is your valid token with read permission on the
+`sys/auth/token/tune` path.
 
 **Example:**
 
-```plaintext
-$ export VAULT_ADDR=http://127.0.0.1:8201
-
-$ export VAULT_TOKEN=0c4d13ba-9f5b-475e-faf2-8f39b28263a5
-```
-
-Read the default TTL settings for **token** auth backend:
-
-```plaintext
-$ curl -X GET -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/sys/auth/token/tune | jq
+```shell
+$ curl --header "X-Vault-Token: ..." --request GET \
+      https://vault.rocks/v1/sys/auth/token/tune | jq
 {
   "default_lease_ttl": 2764800,
   "max_lease_ttl": 2764800,
@@ -179,15 +180,17 @@ Create a new token with TTL of 30 seconds.
 #### CLI command
 
 ```shell
+# Create a token with TTL of 30 seconds
 $ vault token-create -ttl=30s
 Key            	Value
 ---            	-----
-token          	7544266f-3ec9-81a6-d504-e258b89de862
+token          	7544266f-3ec9-81a6--data504-e258b89de862
 token_accessor 	59aae2f1-2e97-6ebb-f925-8a97cf5a9942
 token_duration 	30s
 token_renewable	true
 token_policies 	[root]
 
+# Test the new token
 $ VAULT_TOKEN=3b2b1285-844b-4b40-6afa-623f39c1b738 vault token-lookup
 Key             	Value
 ---             	-----
@@ -220,13 +223,13 @@ token usage.
 You can **renew** the token's TTL as long as the token has not expired, yet.
 
 ```shell
-vault token-renew <TOKEN>
+$ vault token-renew <TOKEN>
 ```
 
 If you want to renew and extend the token's TTL, pass the desired extension:
 
 ```shell
-vault token-renew <TOKEN> <EXTENSION>
+$ vault token-renew <TOKEN> <EXTENSION>
 ```
 
 The extension value can be an integer number of seconds (e.g. 3600) or a string
@@ -235,10 +238,11 @@ duration (e.g. "1h").
 
 #### API call using cURL
 
-```plaintext
-curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d '{"ttl": "30s"}' \
-   $VAULT_ADDR/v1/auth/token/create | jq
-
+```shell
+# Create a new token with TTl of 30 seconds
+$ curl --header "X-Vault-Token: ..." --request POST \
+     --data '{"ttl": "30s"}' \
+     https://vault.rocks/v1/auth/token/create | jq
 {
   ...
  "auth": {
@@ -252,18 +256,15 @@ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d '{"ttl": "30s"}' \
    "renewable": true
  }
 }
-```
 
-#### Verification
-
-```plaintext
-curl -X GET -H "X-Vault-Token: f7d88963-1aba-64d7-11a0-9282ae7681d0" \
-   $VAULT_ADDR/v1/auth/token/lookup-self | jq
-
+# Pass the returned token (`client_token`) in the `X-Vault-Token` header to test
+$ curl --header "X-Vault-Token: f7d88963-1aba-64d7-11a0-9282ae7681d0" \
+     --request GET \
+     https://vault.rocks/v1/auth/token/lookup-self | jq
 {
   ...
  "data": {
-   "accessor": "a54fea3f-6c09-d288-ede5-53288569f988",
+   "accessor": "a54fea3f-6c09--data288-ede5-53288569f988",
    "creation_time": 1515702669,
    "creation_ttl": 30,
     ...
@@ -281,11 +282,14 @@ token usage.
 
 #### Renew the token:
 
-```plaintext
-$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/auth/token/renew/<TOKEN> | jq
+```shell
+$ curl --header "X-Vault-Token: ..." --request POST \
+       https://vault.rocks/v1/auth/token/renew/<TOKEN> | jq
 
-$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d '{"increment": "3600"}' \
-    $VAULT_ADDR/v1/auth/token/renew/<TOKEN> | jq
+# Renew token with 1 hour extension
+$ curl --header "X-Vault-Token: ..." --request POST \
+       --data '{"increment": "3600"}' \
+       https://vault.rocks/v1/auth/token/renew/<TOKEN> | jq
 ```
 
 -> **NOTE:** Tokens can be renewed as long as its life hasn't reached its max
@@ -312,12 +316,12 @@ Create a token with `-use-limit` property argument.
 **Example:**
 
 ```shell
-vault token-create -policy=default -use-limit=2
+$ vault token-create -policy=default -use-limit=2
 
 Key            	Value
 ---            	-----
 token          	bd39178e-176e-cc91-3930-94f7b0194de5
-token_accessor 	a230f5ab-b59f-db0b-855d-36ea4319b58e
+token_accessor 	a230f5ab-b59f--datab0b-855d-36ea4319b58e
 token_duration 	768h0m0s
 token_renewable	true
 token_policies 	[default]
@@ -332,7 +336,7 @@ $ VAULT_TOKEN=bd39178e-176e-cc91-3930-94f7b0194de5 vault token-lookup
 
 Key             	Value
 ---             	-----
-accessor        	a230f5ab-b59f-db0b-855d-36ea4319b58e
+accessor        	a230f5ab-b59f--datab0b-855d-36ea4319b58e
 creation_time   	1515710251
 creation_ttl    	2764800
 display_name    	token
@@ -373,10 +377,10 @@ the attempt to read the secret from cubbyhole failed.
 
 Set the `num_uses` property in the request payload.
 
-```plaintext
-curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d '{ "policies": ["default"], "num_uses":2 }' \
-  $VAULT_ADDR/v1/auth/token/create | jq
-
+```shell
+$ curl --header "X-Vault-Token: ..." --request POST  \
+       --data '{ "policies": ["default"], "num_uses":2 }' \
+       https://vault.rocks/v1/auth/token/create | jq
 {
   "request_id": "0e98ff80-2825-7f50-6522-b6f95d596ef4",
   "lease_id": "",
@@ -402,9 +406,10 @@ This creates a token with _default_ policy with use limit of 2.
 
 #### Verification
 
-```plaintext
-$ curl -X GET -H "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
-    $VAULT_ADDR/v1/auth/token/lookup-self | jq
+```text
+$ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
+       --request GET \
+       https://vault.rocks/v1/auth/token/lookup-self | jq
 {
   "request_id": "77be1321-c0ca-e099-6f92-4ad87133b044",
   "lease_id": "",
@@ -424,12 +429,15 @@ $ curl -X GET -H "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
     ...
 }
 
-$ curl -X POST -H "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
-    -d '{ "value": "d9c2f2e5-6b8a-4021-476c-ebd3f166d668" }' $VAULT_ADDR/v1/cubbyhole/token
+$ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
+       --request POST \
+       --data '{ "value": "d9c2f2e5-6b8a-4021-476c-ebd3f166d668" }' \
+       https://vault.rocks/v1/cubbyhole/token
 
 
-$ curl -X GET -H "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" $VAULT_ADDR/v1/cubbyhole/token | jq
-
+$ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
+       --request GET \
+       https://vault.rocks/v1/cubbyhole/token | jq
 {
   "errors": [
     "permission denied"
@@ -458,24 +466,24 @@ token renewal period. This value can be an integer value in seconds (e.g.
 2764800) or a string duration (e.g. 72h).
 
 ```shell
-vault write auth/token/roles/<ROLE_NAME> allowed_policies="<POLICY_NAMES>" period=<RENEWAL_PERIOD>
+$ vault write auth/token/roles/<ROLE_NAME> allowed_policies="<POLICY_NAMES>" period=<RENEWAL_PERIOD>
 ```
 
 **Example:**
 
 ```shell
-vault write auth/token/roles/zabbix allowed_policies="zabbix-pol, default" period="24h"
+$ vault write auth/token/roles/zabbix allowed_policies="zabbix-pol, default" period="24h"
 ```
 
 Now, generate a token:
 
 ```shell
-vault token-create -role=zabbix
+$ vault token-create -role=zabbix
 
 Key            	Value
 ---            	-----
 token          	de91ebba-20ad-18ba-fa43-08e1932de301
-token_accessor 	1f8abad0-c1db-9399-15ee-dd4b6230386c
+token_accessor 	1f8abad0-c1db-9399-15ee--datad4b6230386c
 token_duration 	24h0m0s
 token_renewable	true
 token_policies 	[default zabbix-pol]
@@ -492,11 +500,11 @@ token renewal period. This value can be an integer value in seconds (e.g.
 **Example:**
 
 ```plaintext
-$ curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" -d @token-role.json \
-    $VAULT_ADDR/v1/auth/token/roles/zabbix
+$ curl --header "X-Vault-Token: ..." --request POST \
+       --data @token-role.json \
+       https://vault.rocks/v1/auth/token/roles/zabbix
 
 $ cat token-role.json
-
 {
 	"allowed_policies": [
 		"default",
@@ -511,9 +519,9 @@ policies attached. Also, its renewal period is set to 24 hours.
 
 Now, generate a token:
 
-```plaintext
-curl -X POST -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDR/v1/auth/token/create/zabbix | jq
-
+```shell
+$ curl --header "X-Vault-Token: ..." --request POST \
+     https://$ vault.rocks/v1/auth/token/create/zabbix | jq
 {
   ...
   "auth": {
@@ -545,14 +553,15 @@ indefinitely. To create AppRole periodic tokens, create your AppRole role with
 **Example:**
 
 ```plaintext
-vault write auth/approle/role/jenkins policies="dev-pol,devops-pol" period="72h"
+$ vault write auth/approle/role/jenkins policies="dev-pol,devops-pol" period="72h"
 ```
 
 Or
 
 ```plaintext
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d @payload.json \
-    $VAULT_ADDR/v1/auth/approle/role/jenkins
+$ curl --header "X-Vault-Token:..." --request POST \
+       --data @payload.json \
+       https://vault.rocks/v1/auth/approle/role/jenkins
 
 $ cat payload.json
 {
@@ -564,7 +573,7 @@ $ cat payload.json
 }
 ```
 
-For more details about AppRole, refer to [Authentication - AppRole guide](/guides/authentication.html).
+For more details about AppRole, refer to [AppRole Pull Authentication](/guides/authentication.html).
 
 
 
@@ -579,14 +588,15 @@ parent does.
 #### CLI command
 
 ```shell
-vault token-create -orphan
+$ vault token-create -orphan
 ```
 
 #### API call using cURL
 
-```plaintext
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{ "no_parent": true }' \
-    $VAULT_ADDR/v1/auth/token/create-orphan | jq
+```shell
+$ curl --header "X-Vault-Token:..." --request POST \
+       --data '{ "no_parent": true }' \
+       https://vault.rocks/v1/auth/token/create-orphan | jq
 ```
 
 
@@ -599,13 +609,13 @@ Revoking a token and all its children.
 To revoke a specific token:
 
 ```shell
-vault token-revoke <TOKEN>
+$ vault token-revoke <TOKEN>
 ```
 
 To revoke all tokens under a specific path:
 
 ```shell
-vault token-revoke -prefix <PATH>
+$ vault token-revoke -prefix <PATH>
 ```
 
 **Example:**
@@ -630,16 +640,18 @@ To revoke a specific token, call `/auth/token/revoke` endpoint.  If you want to 
 **Example:**
 
 ```shell
-
 # Revoke a specific token
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{ "token": "eeaf890e-4b0f-a687-4190-c75b1d6d70bc" }' \
-    $VAULT_ADDR/v1/auth/token/revoke
+$ curl --header "X-Vault-Token:..." --request POST \
+       --data '{ "token": "eeaf890e-4b0f-a687-4190-c75b1d6d70bc" }' \
+       https://vault.rocks/v1/auth/token/revoke
 
 # Revoke all secrets for database auth backend
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" $VAULT_ADDR/v1/sys/leases/revoke-prefix/database/creds
+$ curl --header "X-Vault-Token:..." --request POST \
+       https://vault.rocks/v1/sys/leases/revoke-prefix/database/creds
 
 # Revoke all tokens
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" $VAULT_ADDR/v1/sys/leases/revoke-prefix/auth/token/create
+$ curl --header "X-Vault-Token:..." --request POST \
+       https://vault.rocks/v1/sys/leases/revoke-prefix/auth/token/create
 ```
 
 
@@ -678,8 +690,9 @@ $ vault write sys/mounts/database/tune default_lease_ttl="8640"
 Or
 
 ```plaintext
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d `{ "max_lease_ttl": 129600}`\
-    $VAULT_ADDR/v1/sys/mounts/database/tune
+$ curl --header "X-Vault-Token:..." --request POST \
+       --data `{ "max_lease_ttl": 129600}`\
+       https://vault.rocks/v1/sys/mounts/database/tune
 ```
 
 #### 3. Check the role specific TTLs
@@ -701,11 +714,6 @@ path_suffix
 period             	86400
 renewable          	true
 ```
-
-
-
-
-
 
 
 ## Next steps
