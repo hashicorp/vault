@@ -61,14 +61,16 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		return nil
 	}
 
-	c.rpcServer = grpc.NewServer(
+	fwRPCServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Time: 2 * HeartbeatInterval,
 		}),
 	)
 
+	c.rpcServer = fwRPCServer
+
 	if ha && c.clusterHandler != nil {
-		RegisterRequestForwardingServer(c.rpcServer, &forwardedRequestRPCServer{
+		RegisterRequestForwardingServer(fwRPCServer, &forwardedRequestRPCServer{
 			core:    c,
 			handler: c.clusterHandler,
 		})
@@ -167,9 +169,6 @@ func (c *Core) startForwarding(ctx context.Context) error {
 					}
 
 					c.logger.Trace("core: got request forwarding connection")
-					c.clusterParamsLock.RLock()
-					rpcServer := c.rpcServer
-					c.clusterParamsLock.RUnlock()
 
 					shutdownWg.Add(2)
 					// quitCh is used to close the connection and the second
@@ -186,7 +185,7 @@ func (c *Core) startForwarding(ctx context.Context) error {
 
 					go func() {
 						fws.ServeConn(tlsConn, &http2.ServeConnOpts{
-							Handler: rpcServer,
+							Handler: fwRPCServer,
 						})
 						// close the quitCh which will close the connection and
 						// the other goroutine.
