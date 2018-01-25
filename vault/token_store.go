@@ -99,9 +99,8 @@ type TokenStore struct {
 
 	logger log.Logger
 
-	saltLock   sync.RWMutex
-	salt       *salt.Salt
-	saltConfig *salt.Config
+	saltLock sync.RWMutex
+	salt     *salt.Salt
 
 	tidyLock int64
 }
@@ -483,20 +482,6 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 	return t, nil
 }
 
-func (ts *TokenStore) Initialize(ctx context.Context) error {
-	ts.saltLock.Lock()
-
-	// Setup the salt config
-	ts.saltConfig = &salt.Config{
-		HashFunc: salt.SHA1Hash,
-		Location: salt.DefaultLocation,
-	}
-	ts.salt = nil
-	ts.saltLock.Unlock()
-
-	return nil
-}
-
 func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
 	//ts.logger.Trace("token: invalidating key", "key", key)
 
@@ -520,7 +505,10 @@ func (ts *TokenStore) Salt() (*salt.Salt, error) {
 	if ts.salt != nil {
 		return ts.salt, nil
 	}
-	salt, err := salt.NewSalt(ts.view, ts.saltConfig)
+	salt, err := salt.NewSalt(ts.view, &salt.Config{
+		HashFunc: salt.SHA1Hash,
+		Location: salt.DefaultLocation,
+	})
 	if err != nil {
 		return nil, err
 	}
