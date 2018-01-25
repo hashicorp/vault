@@ -231,9 +231,21 @@ $ curl --header "X-Vault-Token: ..." --request GET \
 
 ### <a name="step2"></a>Step 2: Create short-live tokens
 
-Create a new token with TTL of 30 seconds.
+Create a new token with TTL of 30 seconds which means that the token gets
+automatically revoked after 30 seconds.
 
 #### CLI command
+
+To view optional parameters to create tokens:
+
+```shell
+$ vault token-create -help
+```
+
+There are a number of parameters you can set.  To specify the token TTL, pass
+the value using `-ttl` parameter.
+
+**Example:**
 
 ```shell
 # Create a token with TTL of 30 seconds
@@ -293,6 +305,14 @@ duration (e.g. "1h").
 
 
 #### API call using cURL
+
+Use `auth/token/create` endpoint to create a new token. There are a number of
+optional [parameters](/api/auth/token/index.html#create-token) that you can pass
+in the request payload.
+
+**Example:**
+
+The following example sets the `ttl` parameter.
 
 ```shell
 # Create a new token with TTl of 30 seconds
