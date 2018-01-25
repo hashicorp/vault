@@ -103,14 +103,29 @@ To perform all tasks demonstrated in this guide, your policy must include the
 following permissions:
 
 ```shell
+# List available auth backend - Step 1
+path "sys/auth" {
+  capabilities = [ "read" ]
+}
+
 # Read default token configuration
 path "sys/auth/token/tune" {
-  capabilities = [ "read" ]
+  capabilities = [ "read", "sudo" ]
 }
 
 # Create and manage tokens (renew, lookup, revoke, etc.)
 path "auth/token/*" {
   capabilities = [ "create", "read", "update", "delete", "list", "sudo" ]
+}
+
+# For Advanced Features - list available secret backends
+path "sys/mounts" {
+  capabilities = [ "read" ]
+}
+
+# For Advanced Features - tune the database backend TTL
+path "sys/mounts/database/tune" {
+  capabilities = [ "update" ]
 }
 ```
 
@@ -229,7 +244,7 @@ token          	7544266f-3ec9-81a6--data504-e258b89de862
 token_accessor 	59aae2f1-2e97-6ebb-f925-8a97cf5a9942
 token_duration 	30s
 token_renewable	true
-token_policies 	[root]
+token_policies 	[admin]
 
 # Test the new token
 $ VAULT_TOKEN=3b2b1285-844b-4b40-6afa-623f39c1b738 vault token-lookup
@@ -247,7 +262,7 @@ meta            	<nil>
 num_uses        	0
 orphan          	false
 path            	auth/token/create
-policies        	[root]
+policies        	[admin]
 renewable       	true
 ttl             	8
 ```
@@ -290,7 +305,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
    "client_token": "f7d88963-1aba-64d7-11a0-9282ae7681d0",
    "accessor": "c0a40d94-b814-e46f-7e56-ee18fccdf1b6",
    "policies": [
-     "root"
+     "admin"
    ],
    "metadata": null,
    "lease_duration": 30,
@@ -513,7 +528,7 @@ $ vault write auth/token/roles/<ROLE_NAME> allowed_policies="<POLICY_NAMES>" per
 **Example:**
 
 ```shell
-$ vault write auth/token/roles/zabbix allowed_policies="zabbix-pol, default" period="24h"
+$ vault write auth/token/roles/zabbix allowed_policies="default" period="24h"
 ```
 
 Now, generate a token:
@@ -527,7 +542,7 @@ token          	de91ebba-20ad-18ba-fa43-08e1932de301
 token_accessor 	1f8abad0-c1db-9399-15ee--datad4b6230386c
 token_duration 	24h0m0s
 token_renewable	true
-token_policies 	[default zabbix-pol]
+token_policies 	[default]
 ```
 
 
@@ -548,15 +563,14 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 $ cat payload.json
 {
 	"allowed_policies": [
-		"default",
-		"zabbix-pol"
+		"default"
 	],
 	"period": "24h"
 }
 ```
 
-This creates a token role named `zabbix` with `default` and `zabbix-pol`
-policies attached. Also, its renewal period is set to 24 hours.
+This creates a token role named `zabbix` with `default` policies attached. Also,
+its renewal period is set to 24 hours.
 
 Now, generate a token:
 
@@ -569,8 +583,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
     "client_token": "a59c0d41-8df7-ba8e-477e-9bfb394f28a0",
     "accessor": "c2023006-ce8d-532b-136f-330223ccf464",
     "policies": [
-      "default",
-      "zabbix-pol"
+      "default"
     ],
     "metadata": null,
     "lease_duration": 86400,
@@ -584,11 +597,16 @@ before its lease duration expires. The token renew command was covered in
 [Step 2](#step2).
 
 
-#### Periodic Tokens with AppRole
+#### Additional Note: Periodic Tokens with AppRole
 
 It probably makes better sense to create **AppRole** periodic tokens since we
 are talking about long-running apps need to be able to renew its token
-indefinitely. To create AppRole periodic tokens, create your AppRole role with
+indefinitely.
+
+-> For more details about AppRole, read the [AppRole Pull
+-Authentication](/guides/authentication.html) guide.
+
+To create AppRole periodic tokens, create your AppRole role with
 `period` specified.
 
 **Example:**
@@ -612,8 +630,6 @@ $ cat payload.json
   "period": "72h"  
 }
 ```
-
--> For more details about AppRole, refer to [AppRole Pull Authentication](/guides/authentication.html).
 
 
 
@@ -752,7 +768,7 @@ $ vault read auth/token/roles/zabbix
 
 Key                	Value
 ---                	-----
-allowed_policies   	[default zabbix-pol]
+allowed_policies   	[default]
 disallowed_policies	[]
 explicit_max_ttl   	0
 name               	zabbix

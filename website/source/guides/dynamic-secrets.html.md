@@ -117,9 +117,9 @@ path "sys/policy/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
 
-# Create tokens for verification
+# Manage tokens for verification
 path "auth/token/create" {
-  capabilities = [ "create" ]
+  capabilities = [ "create", "read", "update", "delete", "list", "sudo" ]
 }
 ```
 

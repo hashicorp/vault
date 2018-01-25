@@ -89,7 +89,7 @@ path "sys/policy/*" {
 
 # Create tokens for verification & test
 path "auth/token/create" {
-  capabilities = [ "create" ]
+  capabilities = [ "create", "update", "sudo" ]
 }
 ```
 
