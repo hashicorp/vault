@@ -94,7 +94,7 @@
     "ptypes/duration",
     "ptypes/timestamp"
   ]
-  revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+  revision = "c65a0412e71e8b9b3bfd22925720d23c0f054237"
 
 [[projects]]
   branch = "master"
@@ -124,7 +124,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-hclog"
   packages = ["."]
-  revision = "ca137eb4b4389c9bc6f1a6d887f056bf16c00510"
+  revision = "5bcb0f17e36442247290887cc914a6e507afa5c4"
 
 [[projects]]
   branch = "master"
@@ -136,7 +136,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-plugin"
   packages = ["."]
-  revision = "1fc09c47b843b73705f51ffb0520e3ac1bfecf99"
+  revision = "4812fde368935ee7d8bf9866bdca3d98ecddd30a"
 
 [[projects]]
   branch = "master"
@@ -149,6 +149,12 @@
   name = "github.com/hashicorp/go-uuid"
   packages = ["."]
   revision = "64130c7a86d732268a38cb04cfbaf0cc987fda98"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-version"
+  packages = ["."]
+  revision = "4fe82ae3040f80a03d04d2cccb5606a626b8e1ee"
 
 [[projects]]
   branch = "master"
@@ -188,9 +194,10 @@
     "logical",
     "logical/framework",
     "logical/plugin",
-    "logical/plugin/pb"
+    "logical/plugin/pb",
+    "version"
   ]
-  revision = "ca2306860b836a2727a3f36619a3a628b450552f"
+  revision = "0ffbf4018611e5da0f2095cdf233defd55e0ff8d"
 
 [[projects]]
   branch = "master"
@@ -286,13 +293,13 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec"
+  revision = "0ed95abb35c445290478a5348a7b38bb154135fd"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "2c42eef0765b9837fbdab12011af7830f55f88f0"
+  revision = "af9a21289d0040306ecc55fa668c95246f1f8425"
 
 [[projects]]
   branch = "master"
@@ -320,7 +327,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "a8101f21cf983e773d0c1133ebc5424792003214"
+  revision = "14790a1795ea4c3387aaf24aed670ddb51f18292"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -350,8 +357,8 @@
     "tap",
     "transport"
   ]
-  revision = "7cea4cc846bcf00cbb27595b07da5de875ef7de9"
-  version = "v1.9.1"
+  revision = "6b51017f791ae1cfbec89c52efdf444b13b550ef"
+  version = "v1.9.2"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -408,6 +415,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dfb0ef4889225ea4843fef5ed665c15d889d45d0a0e513a099655000e11a86eb"
+  inputs-digest = "88822523ccf1a3b5ac409bbc717788f0a34ee921ddb7a32e8939179dc6f7d02d"
   solver-name = "gps-cdcl"
   solver-version = 1
