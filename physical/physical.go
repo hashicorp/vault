@@ -56,10 +56,20 @@ type HABackend interface {
 	HAEnabled() bool
 }
 
-// Purgable is an optional interface for backends that support
+// Purgeable is an optional interface for backends that support
 // purging of their caches.
-type Purgable interface {
+type Purgeable interface {
 	Purge(ctx context.Context)
+}
+
+// Toggleable allows toggling on or off special functionality
+type Toggleable interface {
+	SetEnabled(bool)
+}
+
+type ToggleablePurgemonster interface {
+	Purgeable
+	Toggleable
 }
 
 // RedirectDetect is an optional interface that an HABackend
