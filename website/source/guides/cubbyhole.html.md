@@ -73,8 +73,8 @@ following permissions:
 
 ```shell
 # Manage tokens
-path "sys/auth/token/*" {
-  capabilities = [ "create", "read", "update", "delete" ]
+path "auth/token/*" {
+  capabilities = [ "create", "read", "update", "delete", "sudo" ]
 }
 
 # Write ACL policies
@@ -286,6 +286,7 @@ token.
 $ vault auth 7bb915b2-8a44-48b0-a71d-72b590252016
 
 $ vault read secret/dev
+No value found at secret/dev
 ```
 
 #### API call using cURL
