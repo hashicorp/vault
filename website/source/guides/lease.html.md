@@ -677,7 +677,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
 ```
 
 
-### <a name="step6"></a>Step 6: Revoke tokens
+### <a name="step6"></a>Step 6: Revoke tokens and leases
 
 Revoking a token and all its children.
 
@@ -689,10 +689,10 @@ To revoke a specific token:
 $ vault token-revoke <TOKEN>
 ```
 
-To revoke all tokens under a specific path:
+To revoke all leases under a specific path:
 
 ```shell
-$ vault token-revoke -prefix <PATH>
+$ vault revoke -prefix <PATH>
 ```
 
 **Example:**
@@ -701,11 +701,11 @@ $ vault token-revoke -prefix <PATH>
 # Revoke a specific token
 $ vault token-revoke eeaf890e-4b0f-a687-4190-c75b1d6d70bc
 
-# Revoke all secrets for database auth backend
-$ vault token-revoke -prefix database/creds
+# Revoke all leases for database auth backend
+$ vault revoke -prefix database/creds
 
 # Revoke all tokens
-$ vault token-revoke -prefix auth/token/create
+$ vault revoke -prefix auth/token/create
 ```
 
 
