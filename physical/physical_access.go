@@ -32,7 +32,7 @@ func (p *PhysicalAccess) List(ctx context.Context, prefix string) ([]string, err
 }
 
 func (p *PhysicalAccess) Purge(ctx context.Context) {
-	if purgeable, ok := p.physical.(Purgeable); ok {
+	if purgeable, ok := p.physical.(ToggleablePurgemonster); ok {
 		purgeable.Purge(ctx)
 	}
 }

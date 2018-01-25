@@ -32,10 +32,6 @@ type TransactionalCache struct {
 }
 
 // Verify Cache satisfies the correct interfaces
-var _ Toggleable = (*Cache)(nil)
-var _ Toggleable = (*TransactionalCache)(nil)
-var _ Purgeable = (*Cache)(nil)
-var _ Purgeable = (*TransactionalCache)(nil)
 var _ ToggleablePurgemonster = (*Cache)(nil)
 var _ ToggleablePurgemonster = (*TransactionalCache)(nil)
 var _ Backend = (*Cache)(nil)
