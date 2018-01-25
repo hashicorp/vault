@@ -335,8 +335,8 @@ type Core struct {
 	clusterLeaderParamsLock sync.RWMutex
 	// Info on cluster members
 	clusterPeerClusterAddrsCache *cache.Cache
-	// The grpc Server that handles server RPC calls
-	rpcServer *grpc.Server
+	// Stores whether we currently have a server running
+	rpcServerActive *uint32
 	// The context for the client
 	rpcClientConnContext context.Context
 	// The function for canceling the client connection
@@ -488,6 +488,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		enableMlock:                      !conf.DisableMlock,
 		rawEnabled:                       conf.EnableRaw,
 		replicationState:                 new(uint32),
+		rpcServerActive:                  new(uint32),
 		atomicPrimaryClusterAddrs:        new(atomic.Value),
 		atomicPrimaryFailoverAddrs:       new(atomic.Value),
 		activeNodeReplicationState:       new(uint32),

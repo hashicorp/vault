@@ -53,10 +53,7 @@ func (c *Core) startForwarding(ctx context.Context) error {
 	// The server supports all of the possible protos
 	tlsConfig.NextProtos = []string{"h2", requestForwardingALPN}
 
-	// Create our RPC server and register the request handler server
-	c.clusterParamsLock.Lock()
-
-	if c.rpcServer != nil {
+	if !atomic.CompareAndSwapUint32(c.rpcServerActive, 0, 1) {
 		c.logger.Warn("core: forwarding rpc server already running")
 		return nil
 	}
@@ -67,15 +64,12 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		}),
 	)
 
-	c.rpcServer = fwRPCServer
-
 	if ha && c.clusterHandler != nil {
 		RegisterRequestForwardingServer(fwRPCServer, &forwardedRequestRPCServer{
 			core:    c,
 			handler: c.clusterHandler,
 		})
 	}
-	c.clusterParamsLock.Unlock()
 
 	// Create the HTTP/2 server that will be shared by both RPC and regular
 	// duties. Doing it this way instead of listening via the server and gRPC
@@ -214,19 +208,19 @@ func (c *Core) startForwarding(ctx context.Context) error {
 
 		// Stop the RPC server
 		c.logger.Info("core: shutting down forwarding rpc listeners")
-		c.clusterParamsLock.Lock()
-		c.rpcServer.Stop()
-		c.rpcServer = nil
-		c.clusterParamsLock.Unlock()
-		c.logger.Info("core: forwarding rpc listeners stopped")
+		fwRPCServer.Stop()
 
 		// Set the shutdown flag. This will cause the listeners to shut down
 		// within the deadline in clusterListenerAcceptDeadline
 		atomic.StoreUint32(&shutdown, 1)
+		c.logger.Info("core: forwarding rpc listeners stopped")
 
 		// Wait for them all to shut down
 		shutdownWg.Wait()
 		c.logger.Info("core: rpc listeners successfully shut down")
+
+		// Clear us up to run this function again
+		atomic.StoreUint32(c.rpcServerActive, 0)
 
 		// Tell the main thread that shutdown is done.
 		c.clusterListenerShutdownSuccessCh <- struct{}{}
