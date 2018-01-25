@@ -53,6 +53,8 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 		lru:     cache,
 		locks:   locksutil.CreateLocks(),
 		logger:  logger,
+		// Being explicit. This fails safe.
+		enabled: false,
 	}
 	return c
 }
@@ -65,6 +67,8 @@ func NewTransactionalCache(b Backend, size int, logger log.Logger) *Transactiona
 	return c
 }
 
+// SetEnabled is used to toggle whether the cache is on or off. It must be
+// called with true to actually activate the cache after creation.
 func (c *Cache) SetEnabled(enabled bool) {
 	c.enabled = enabled
 }
