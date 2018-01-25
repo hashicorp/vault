@@ -71,10 +71,6 @@ type Backend struct {
 	// to the backend, if required.
 	Clean CleanupFunc
 
-	// Initialize is called after a backend is created. Storage should not be
-	// written to before this function is called.
-	Init InitializeFunc
-
 	// Invalidate is called when a keys is modified if required
 	Invalidate InvalidateFunc
 
@@ -107,9 +103,6 @@ type WALRollbackFunc func(context.Context, *logical.Request, string, interface{}
 
 // CleanupFunc is the callback for backend unload.
 type CleanupFunc func(context.Context)
-
-// InitializeFunc is the callback for backend creation.
-type InitializeFunc func(context.Context) error
 
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(context.Context, string)
@@ -239,15 +232,6 @@ func (b *Backend) Cleanup(ctx context.Context) {
 	if b.Clean != nil {
 		b.Clean(ctx)
 	}
-}
-
-// Initialize calls the backend's Init func if set.
-func (b *Backend) Initialize(ctx context.Context) error {
-	if b.Init != nil {
-		return b.Init(ctx)
-	}
-
-	return nil
 }
 
 // InvalidateKey is used to clear caches and reset internal state on key changes

@@ -473,8 +473,6 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 				HelpDescription: strings.TrimSpace(tokenTidyDesc),
 			},
 		},
-
-		Init: t.Initialize,
 	}
 
 	t.Backend.Setup(ctx, config)
