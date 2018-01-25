@@ -56,8 +56,8 @@ type HABackend interface {
 	HAEnabled() bool
 }
 
-// An interface for backends that can toggle on or off special functionality
-// and/or support purging
+// ToggleablePurgemonsteris an interface for backends that can toggle on or off
+// special functionality and/or support purging
 type ToggleablePurgemonster interface {
 	Purge(ctx context.Context)
 	SetEnabled(bool)
