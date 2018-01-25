@@ -168,7 +168,6 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: response: expected:nil actual:%#v\n", resp)
 	}
-
 }
 
 func Test_enableIamIDResolution(t *testing.T) {
