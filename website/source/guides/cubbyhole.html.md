@@ -34,8 +34,8 @@ long as its policy allows it.
 
 The end-to-end scenario described in this guide involves two personas:
 
-- **`admin`** with privileged permissions to create tokens and policies
-- **`app`** is the receiving client of a wrapped response
+- **`admin`** with privileged permissions to create tokens
+- **`apps`** is the receiving client of a wrapped response
 
 ## Challenge
 
@@ -43,12 +43,12 @@ In order to tightly manage the secrets, you set the scope of who can do what
 using the [Vault policy](/docs/concepts/policies.html) and attach that to
 tokens, roles, entities, etc.
 
-How to securely distribute the initial token to a machine or app?
+How to securely distribute a secret (e.g. token, credentials) to a machine or app?
 
 ## Solution
 
 Use Vault's **cubbyhole response wrapping** where the initial token is stored in
-the cubbyhole backend. The wrapped secret can be unwrap using the single use
+the cubbyhole backend. The wrapped secret can be unwrapped using the single-use
 wrapping token. Even the user or the system created the initial token won't see
 the original value. The wrapping token is short-lived and can be revoked just
 like any other tokens so that the risk of unauthorized access can be minimized.
@@ -63,15 +63,13 @@ unsealed](/intro/getting-started/deploy.html).
 
 ### <a name="policy"></a>Policy requirements
 
-To perform all tasks demonstrated in this guide, you need to be able to
-authenticate with Vault as an [**`admin`** user](#personas).
-
 -> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
 with Vault. However, it is recommended that root tokens are only used for just
 enough initial setup or in emergencies. As a best practice, use tokens with
 appropriate set of policies based on your role in the organization.
 
-The `admin` policy must include the following permissions:
+To perform all tasks demonstrated in this guide, your policy must include the
+following permissions:
 
 ```shell
 # Manage tokens
@@ -83,39 +81,41 @@ path "sys/auth/token/*" {
 path "sys/policy/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
-
-# Access cubbyhole backend
-path "cubbyhole/private/*" {
-	capabilities = ["create", "read", "update", "delete", "list"]
-}
 ```
 
 ## Steps
 
-To distribute the initial token to an app using cubbyhole response wrapping, you
-perform the following tasks:
+Think of a scenario where apps read secrets from Vault. The `apps` need:
+
+- Policy granting "read" permission on the specific path (`secret/dev`)
+- Valid tokens to interact with Vault
+
+![Response Wrapping Scenario](/assets/images/vault-cubbyhole.png)
+
+Setting the appropriate policies and token generation are done by the `admin`
+persona. For the `admin` to distribute the initial token to the app securely, it
+uses cubbyhole response wrapping. In this guide, you perform the following:
 
 1. [Create and wrap a token](#step1)
 2. [Unwrap the secret](#step2)
+
+**NOTE:** This guide demonstrates how the response wrapping works. To learn more
+about reading and writing secrets in Vault, refer to the [Static
+Secret](/guide/static-secrets.html) guide.
 
 ### <a name="step1"></a>Step 1: Create and wrap a token
 (**Persona:** admin)
 
 When the response to `vault token-create` request is wrapped, Vault inserts the
-generated token it into the cubbyhole of a single-use token, returning that
+generated token into the cubbyhole of a single-use token, returning that
 single-use wrapping token. Retrieving the secret requires an unwrap operation
 against this wrapping token.
 
 In this scenario, an [admin user](#personas) creates a token using response wrapping. To perform the steps in this guide, first create a policy for the app.
 
-`app-policy.hcl`:
+`apps-policy.hcl`:
 
 ```shell
-# Unwrap the token
-path "sys/wrapping/unwrap" {
-  capabilities = [ "create", "read" ]
-}
-
 # For testing, read-only on secret/dev path
 path "secret/dev" {
   capabilities = [ "read" ]
@@ -137,11 +137,12 @@ To create a token using response wrapping:
 $ vault token-create -policy=<POLICY_NAME> -wrap-ttl=<WRAP_TTL>
 ```
 
-Where the `<WRAP_TTL>` is a numeric string indicating the TTL of the response.
+Where the `<WRAP_TTL>` can be either an integer number of seconds or a string
+duration of seconds (15s), minutes (20m), or hours (25h).
 
 **Example:**
 
-Generate a token for `app` persona using response wrapping with TTL of 60
+Generate a token for `apps` persona using response wrapping with TTL of 60
 seconds.
 
 ```shell
@@ -159,19 +160,33 @@ wrapped_accessor:            	195763a9-3f26-1fcf-6a1a-ee0a11e76cb1
 The response is the wrapping token; therefore, the admin user does not even see
 the generated token from the `token-create` command.
 
+
 #### API call using cURL
 
-First create an `apps` policy:
+First create an `apps` policy using `sys/policy` endpoint:
 
 ```shell
-$ curl --header "X-Vault-Token: ..." --request PUT \
-       --data @payload.json \
-       https://vault.rocks/v1/sys/policy/apps
+$ curl --header "X-Vault-Token: <TOKEN>" \
+       --request PUT \
+       --data <PAYLOAD> \
+       <VAULT_ADDRESS>/v1/sys/policy/<POLICY_NAME>
+```
 
+Where `<TOKEN>` is your valid token, and `<PAYLOAD>` includes policy name and
+stringfied policy.
+
+**Example:**
+
+```shell
+# Request payload
 $ cat payload.json
 {
-  "policy": "path \"sys/wrapping/unwrap\" { capabilities = [ \"create\", \"read\" ] ... }"
+  "policy": "path \"secret/dev\" { capabilities = [ \"read\" ] }"
 }
+
+# API call to create a policy named, "apps"
+$ curl --header "X-Vault-Token: ..." --request PUT --data @payload.json \
+       https://vault.rocks/v1/sys/policy/apps
 ```
 
 Response wrapping is per-request and is triggered by providing to Vault the
@@ -218,15 +233,16 @@ $ curl --header "X-Vault-Wrap-TTL: 60s" \
 }  
 ```
 
-Generate a token for `app` persona using response wrapping with TTL of 60
-seconds. The admin user does not even see the generated token.
+This API call generates a token for `apps` persona using response wrapping with
+TTL of 60 seconds. The admin user does not even see the generated token.
 
 
 ### <a name="step2"></a>Step 2: Unwrap the secret
-(**Persona:** app)
+(**Persona:** apps)
 
-The response is wrapped by a wrapping token, and retrieving it requires an
-unwrap operation against this token.
+The `apps` persona receives a wrapping token from the `admin`.  In order for the
+`apps` to acquire a valid token to read secrets from `secret/dev` path, it must
+run the unwrap operation using this token.
 
 -> **NOTE:** If a client has been expecting delivery of a response-wrapping
 token and none arrives, this may be due to an attacker intercepting the token
@@ -324,60 +340,57 @@ $ curl --header "X-Vault-Token: af5f7682-aa55-fa37-5039-ee116df56600" \
 
 ## Additional Discussion
 
-Similar to the key/value secret backend, the cubbyhole backend is mounted at the
-**`cubbyhole/`** prefix by default. The secrets you store in the `cubbyhole/` path
-are tied to your token and only accessible by you.
+The `cubbyhole` secret backend provides your own private secret storage space
+where no one else can read (including `root`). This comes handy when you want to
+store a password tied to your username that should not be shared with anyone.
 
-To test the cubbyhole secret backend, perform the following steps.
-
-First, create `tester` policy which grants permissions on the path under `cubbyhole/private/` prefix.  
+The cubbyhole backend is mounted at the **`cubbyhole/`** prefix by default. The
+secrets you store in the `cubbyhole/` path are tied to your token and all tokens
+are permitted to read and write to the `cubbyhole` backend by the [`default`](/docs/concepts/policies.html#default-policy) policy.
 
 ```shell
-$ vault policy-write tester tester.hcl
-
-$ cat tester.hcl
-path "cubbyhole/private/*" {
-	capabilities = ["create", "read", "update", "delete", "list"]
+...
+# Allow a token to manage its own cubbyhole
+path "cubbyhole/*" {
+    capabilities = ["create", "read", "update", "delete", "list"]
 }
+...
 ```
 
-Create a token attached to the `tester` policy, and then authenticate using the
-token.
+To test the cubbyhole secret backend, perform the following steps. (NOTE: Keep
+using the `apps` token from [Step 2](#step2) to ensure that you are logged in with
+non-root token.)
+
+#### CLI command
+
+Commands to write and read secrets to the `cubbyhole` backend:
 
 ```shell
-$ vault token-create -policy=tester
-Key            	Value
----            	-----
-token          	2ba26888-b531-1626-3598-01ea4aa383bb
-token_accessor 	28cbd05c-31a3-0aaa-4dca-838a9aafe4cb
-token_duration 	768h0m0s
-token_renewable	true
-token_policies 	[default tester]
+# Write key-value pair(s) in your cubbyhole
+$ vault write cubbyhole/<PATH> <KEY>=<VALUE>
 
-$ unset VAULT_TOKEN
-
-$ vault auth 2ba26888-b531-1626-3598-01ea4aa383bb
-Successfully authenticated! You are now logged in.
-token: 2ba26888-b531-1626-3598-01ea4aa383bb
-token_duration: 2764651
-token_policies: [default tester]
+# Read values from your cubbyhole
+$ vault write cubbyhole/<PATH>
 ```
 
-You should be able to write secrets under `cubbyhole/private/` path, and read it
-back.
+**Example:**
+
+Write secrets under `cubbyhole/private/` path, and read it back.
 
 ```shell
+# Write "token" to cubbyhole/private/access-token path
 $ vault write cubbyhole/private/access-token token="123456789abcdefg87654321"
 Success! Data written to: cubbyhole/private/access-token
 
+# Read value from cubbyhole/private/access-token path
 $ vault read cubbyhole/private/access-token
 Key  	Value
 ---  	-----
 token	123456789abcdefg87654321
 ```
 
-Now, try to access the secret using the root token, you shouldn't be able to
-read.
+Now, try to access the secret using the `root` token. It should NOT return the
+secret.
 
 ```shell
 $ VAULT_TOKEN=<ROOT_TOKEN> vault read cubbyhole/private/access-token
@@ -385,7 +398,61 @@ $ VAULT_TOKEN=<ROOT_TOKEN> vault read cubbyhole/private/access-token
 No value found at cubbyhole/private/access-token
 ```
 
+#### API call using cURL
+
+The API to work with the `cubbyhole` backend is very similar to `secret` backend:
+
+```shell
+$ curl --header "X-Vault-Token: <TOKEN>" \
+       --request POST \
+       --data <SECRETS> \
+       <VAULT_ADDRESS>/v1/cubbyhole/<PATH>
+```
+
+**Example:**
+
+Write secrets under `cubbyhole/private/` path, and read it back.
+
+```shell
+# Write "token" to cubbyhole/private/access-token path
+$ curl --header "X-Vault-Token: e095129f-123a-4fef-c007-1f6a487cfa78" --request POST \
+       --data '{"token": "123456789abcdefg87654321"}' \
+       https://vault.rocks/v1/cubbyhole/private/access-token
+
+# Read value from cubbyhole/private/access-token path
+$ curl --header "X-Vault-Token: e095129f-123a-4fef-c007-1f6a487cfa78" --request GET \
+       https://vault.rocks/v1/cubbyhole/private/access-token  | jq
+{
+ "request_id": "b2ff9f04-7a72-7eb0-672f-225b5eb652df",
+ "lease_id": "",
+ "renewable": false,
+ "lease_duration": 0,
+ "data": {
+   "token": "123456789abcdefg87654321"
+ },
+ "wrap_info": null,
+ "warnings": null,
+ "auth": null
+}
+```
+
+Now, try to access the secret using the `root` token. It should NOT return the
+secret.
+
+```shell
+$ curl --header "X-Vault-Token: root" --request GET \
+       https://vault.rocks/v1/cubbyhole/private/access-token  | jq
+{
+ "errors": []
+}
+```
+
 Also, refer to [Cubbyhole Secret Backend HTTP API](/api/secret/cubbyhole/index.html).
 
 
 ## Next steps
+
+The use of [AppRole Pull Authentication](/guides/authentication.html) is a good
+use case to leverage the response wrapping. Go through the guide if you have not
+done so.  To better understand the lifecycle of Vault tokens, proceed to [Tokens
+and Leases](/guides/lease.html) guide.

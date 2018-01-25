@@ -85,17 +85,15 @@ Started](/intro/getting-started/install.html) guide to install Vault. Make sure
 that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy.html).
 
-### <a name="policy"></a>Policy requirements
-
-To perform all tasks demonstrated in this guide, you need to be able to
-authenticate with Vault as an [**`admin`** user](#personas).
+### Policy requirements
 
 -> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
 with Vault. However, it is recommended that root tokens are only used for just
 enough initial setup or in emergencies. As a best practice, use tokens with
 appropriate set of policies based on your role in the organization.
 
-The `admin` policy must include the following permissions:
+To perform all tasks demonstrated in this guide, your policy must include the
+following permissions:
 
 ```shell
 # Mount the AppRole auth backend

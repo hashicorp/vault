@@ -52,6 +52,14 @@ renewal and revocation
 
 10 minutes
 
+## Personas
+
+The end-to-end scenario described in this guide involves one persona:
+
+- **`admin`** with privileged permissions to create and manage tokens
+
+See the [policy requirements](#policy-requirements) section for details.
+
 ## Challenge
 
 Consider the following scenarios:
@@ -66,7 +74,13 @@ Vault has built-in support for secret revocation. Vault can revoke not only
 single secret, but also a tree of secrets. For example, Vault can revoke all
 secrets read by a specific **user** or all secrets of a specific **type**.
 Revocation assists in key rolling as well as locking down systems in the case of
-an intrusion. This also allows for organizations to plan and train for various
+an intrusion.
+
+If a user or machine needs a temporal access to Vault, you can set a short TTL
+or number of use to a token so that the token gets revoked automatically at the
+end of its life.
+
+This also allows for organizations to plan and train for various
 "break glass" procedures.
 
 ## Prerequisites
@@ -76,6 +90,33 @@ environment.  Refer to the [Getting
 Started](/intro/getting-started/install.html) guide to install Vault. Make sure
 that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy.html).
+
+
+### Policy requirements
+
+-> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
+with Vault. However, it is recommended that root tokens are only used for just
+enough initial setup or in emergencies. As a best practice, use tokens with
+appropriate set of policies based on your role in the organization.
+
+To perform all tasks demonstrated in this guide, your policy must include the
+following permissions:
+
+```shell
+# Read default token configuration
+path "sys/auth/token/tune" {
+  capabilities = [ "read" ]
+}
+
+# Create and manage tokens (renew, lookup, revoke, etc.)
+path "auth/token/*" {
+  capabilities = [ "create", "read", "update", "delete", "list", "sudo" ]
+}
+```
+
+If you are not familiar with policies, complete the
+[policies](/guides/policies.html) guide.
+
 
 ## Steps
 
@@ -135,7 +176,7 @@ max_lease_ttl    	2764800
 
 #### API call using cURL
 
-Use `/sys/mounts` endpoint to read the default TTL settings for **token** auth
+Use `/sys/auth/token/tune` endpoint to read the default TTL settings for **token** auth
 backend:
 
 ```shell
@@ -453,16 +494,16 @@ the attempt to read the secret from cubbyhole failed.
 
 ### <a name="step4"></a>Step 4: Periodic tokens
 
-Root or sudo users have the ability to generate **periodic tokens**. Periodic
-tokens have a TTL, but no max TTL; therefore, it may live for an infinite
-duration of time so long as they are renewed within their TTL. This is useful
-for long-running services that cannot handle regenerating a token.
+**Root** or **sudo** users have the ability to generate **periodic tokens**.
+Periodic tokens have a TTL, but no max TTL; therefore, it may live for an
+infinite duration of time so long as they are renewed within their TTL. This
+is useful for long-running services that cannot handle regenerating a token.
 
 #### CLI command
 
-First, create a token role with a specific `period`.  When you set `period`, tokens
-created for this role will have no max TTL. Instead, the `period` becomes the
-token renewal period. This value can be an integer value in seconds (e.g.
+First, create a token role with a specific `period`.  When you set `period`,
+tokens created for this role will have no max TTL. Instead, the `period` becomes
+the token renewal period. This value can be an integer value in seconds (e.g.
 2764800) or a string duration (e.g. 72h).
 
 ```shell
@@ -499,12 +540,12 @@ token renewal period. This value can be an integer value in seconds (e.g.
 
 **Example:**
 
-```plaintext
+```shell
 $ curl --header "X-Vault-Token: ..." --request POST \
-       --data @token-role.json \
+       --data @payload.json \
        https://vault.rocks/v1/auth/token/roles/zabbix
 
-$ cat token-role.json
+$ cat payload.json
 {
 	"allowed_policies": [
 		"default",
@@ -519,9 +560,9 @@ policies attached. Also, its renewal period is set to 24 hours.
 
 Now, generate a token:
 
-```shell
+```plaintext
 $ curl --header "X-Vault-Token: ..." --request POST \
-     https://$ vault.rocks/v1/auth/token/create/zabbix | jq
+     https://vault.rocks/v1/auth/token/create/zabbix | jq
 {
   ...
   "auth": {
@@ -538,7 +579,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
   }
 ```
 
--> Generated tokens are renewable indefinitely for as long as it gets renewed
+Generated tokens are renewable indefinitely for as long as it gets renewed
 before its lease duration expires. The token renew command was covered in
 [Step 2](#step2).
 
@@ -553,7 +594,7 @@ indefinitely. To create AppRole periodic tokens, create your AppRole role with
 **Example:**
 
 ```plaintext
-$ vault write auth/approle/role/jenkins policies="dev-pol,devops-pol" period="72h"
+$ vault write auth/approle/role/jenkins policies="jenkins" period="72h"
 ```
 
 Or
@@ -566,22 +607,22 @@ $ curl --header "X-Vault-Token:..." --request POST \
 $ cat payload.json
 {
   "allowed_policies": [
-		"dev-pol",
-		"devops-pol"
+		"jenkins"
 	],
   "period": "72h"  
 }
 ```
 
-For more details about AppRole, refer to [AppRole Pull Authentication](/guides/authentication.html).
+-> For more details about AppRole, refer to [AppRole Pull Authentication](/guides/authentication.html).
 
 
 
 ### <a name="step5"></a>Step 5: Orphan tokens
 
-Root or sudo users have the ability to generate **orphan** tokens. Orphan tokens
+**Root** or **sudo users** have the ability to generate **orphan** tokens. Orphan tokens
 are **not** children of their parent; therefore, it does not expire when their
 parent does.
+
 
 **NOTE:** Orphan tokens still expire when their own max TTL is reached.
 
@@ -676,6 +717,8 @@ sys/        system     system_f5b5ecac     n/a     n/a          n/a      false  
 transit/    transit    transit_07fc2df9    n/a     system       system   false           replicated            false
 ```
 
+Notice the **Default TTL** and **Max TTL** columns.
+
 #### 2. Tune the system TTLs
 
 Override the global defaults by specifying `default_lease_ttl` and
@@ -683,17 +726,21 @@ Override the global defaults by specifying `default_lease_ttl` and
 
 **Example:**
 
+The following example assumes that you have database secret backend configured.
+
 ```shell
 $ vault write sys/mounts/database/tune default_lease_ttl="8640"
 ```
 
 Or
 
-```plaintext
+```shell
 $ curl --header "X-Vault-Token:..." --request POST \
-       --data `{ "max_lease_ttl": 129600}`\
+       --data '{ "max_lease_ttl": 129600}' \
        https://vault.rocks/v1/sys/mounts/database/tune
 ```
+
+
 
 #### 3. Check the role specific TTLs
 
@@ -717,3 +764,7 @@ renewable          	true
 
 
 ## Next steps
+
+Now you have learned the lifecycle of tokens and leases, read [AppRole Pull
+Authentication](/guides/authentication.html) guide to learn how to generate
+tokens for apps or machines.

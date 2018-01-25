@@ -27,6 +27,13 @@ Secret Storage.
 
 10 minutes
 
+## Personas
+
+The end-to-end scenario described in this guide involves two personas:
+
+- **`devops`** with privileged permissions to write secrets
+- **`apps`** reads the secrets from Vault
+
 ## Challenge
 
 Consider the following situations:
@@ -59,6 +66,36 @@ Started](/intro/getting-started/install.html) guide to install Vault. Make sure
 that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy.html).
 
+### Policy requirements
+
+-> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
+with Vault. However, it is recommended that root tokens are only used for just
+enough initial setup or in emergencies. As a best practice, use tokens with
+appropriate set of policies based on your role in the organization.
+
+To perform all tasks demonstrated in this guide, your policy must include the
+following permissions:
+
+```shell
+# Write and manage secrets in key/value backend
+path "secret/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+
+# Create policies to permit apps to read secrets
+path "sys/policy/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+
+# Create tokens for verification & test
+path "auth/token/create" {
+  capabilities = [ "create" ]
+}
+```
+
+If you are not familiar with policies, complete the
+[policies](/guides/policies.html) guide.
+
 
 ## Steps
 
@@ -69,7 +106,7 @@ scenario here is to store the following secrets:
 - Root certificate of a production database (MySQL)
 
 To store your API key within the configured physical storage for Vault, use the
-key/value secret backend via **`secret/`** prefixed.
+**key/value** secret backend via **`secret/`** prefixed path.
 
 -> Key/Value secret backend passes through any operation back to the configured
 storage backend for Vault. For example, if your Vault server is configured with
@@ -77,18 +114,30 @@ Consul as its storage backend, a "read" operation turns into a read from Consul
 at the same path.
 
 
-
 You will perform the following:
 
 1. [Store the Google API key](#step1)
 2. [Store the root certificate for MySQL](#step2)
-3. [Retrieve the secrets](#step3)
+3. [Generate a token for apps](#step3)
+4. [Retrieve the secrets](#step4)
+
+![Personas Introduction](/assets/images/vault-static-secrets.png)
+
+Step 1 through 3 are performed by `devops` psersona.  Step 4 describes the
+commands that `apps` persona runs to read secrets from Vault.
 
 ### <a name="step1"></a>Step 1: Store the Google API key
+(**Persona:** devops)
 
-If the secret path convention is **`secret/<OWNER>/apikey/<APP>`**, store the
-Google API key in `secret/eng/apikey/Googl`. If you have an API key for New Relic
-owned by the DevOps team, the path may look like
+Everything after the **`secret/`** path is a key-value pair to write to the
+secret backend. You can specify multiple values. If the value has a space, you
+need to surround it with quotes. Having keys with spaces is permitted, but
+strongly discouraged because it can lead to unexpected client-side behavior.
+
+Let's assume that the path convention in your organization is
+**`secret/<OWNER>/apikey/<APP>`** for API keys. To store the Google API key used
+by the engineering team, the path would be `secret/eng/apikey/Googl`. If you
+have an API key for New Relic owned by the DevOps team, the path would look like
 `secret/devops/apikey/New_Relic`.
 
 #### CLI command
@@ -139,6 +188,7 @@ The secret key is "key" and its value is
 
 
 ### <a name="step2"></a>Step 2: Store the root certificate for MySQL
+(**Persona:** devops)
 
 For the purpose of this guide, generate a new self-sign certificate using
 [OpenSSL](https://www.openssl.org/source/).
@@ -179,8 +229,9 @@ save it as `cert.pem`.
 #### CLI command
 
 The command is basically the same as the Google API key example. Now, the path
-convention is **`secret/<ENVIRONMENT>/cert/<SYSTEM>`**. To store the root certificate
-for production MySQL, the path becomes `secret/staging/cert/postgres`.
+convention for certificates is **`secret/<ENVIRONMENT>/cert/<SYSTEM>`**. To
+store the root certificate for production MySQL, the path becomes
+`secret/staging/cert/postgres`.
 
 **Example:**
 
@@ -188,8 +239,8 @@ for production MySQL, the path becomes `secret/staging/cert/postgres`.
 $ vault write secret/prod/cert/mysql cert=@cert.pem
 ```
 
-This example reads the root certificate from a PEM file from the disk, and store it under
-`secret/prod/cert/mysql` path.
+This example reads the root certificate from a PEM file from the disk, and store
+it under `secret/prod/cert/mysql` path.
 > **NOTE:** Any value begins with "@" is loaded from a file.
 
 
@@ -208,11 +259,120 @@ $ curl --header "X-Vault-Token: ..." \
 > **NOTE:** Any value begins with "@" is loaded from a file.
 
 
-### <a name="step3"></a>Step 3: Retrieve the secrets
+### <a name="step3"></a>Step 3: Generate a token for apps
+(**Persona:** devops)
 
-Retrieving the secret from Vault is simple.  
+To read the secrets, `apps` persona needs "read" permit on those secret backend
+paths. In this scenario, the `apps` policy must include the following:
+
+**Example:** `apps-policy.hcl`
+
+```shell
+# Read-only permit
+path "secret/eng/apikey/Google" {
+  capabilities = [ "read" ]  
+}
+
+# Read-only permit
+path "secret/prod/cert/mysql" {
+  capabilities = [ "read" ]
+}
+```
+
 
 #### CLI command
+
+First create `apps` policy, and generate a token so that you can authenticate
+as an `apps` persona, and read the secrets.
+
+```shell
+# Create "apps" policy
+$ vault policy-write apps apps-policy.hcl
+Policy 'apps' written.
+
+# Create a new token with app policy
+$ vault token-create -policy="apps"
+Key            	Value
+---            	-----
+token          	e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
+token_accessor 	54700b7e--data828-a6c4-6141-96e71e002bd7
+token_duration 	768h0m0s
+token_renewable	true
+token_policies 	[apps default]
+```
+
+Now, `apps` can use this token to read the secrets.
+
+
+#### API call using cURL
+
+First create an `apps` policy, and generate a token so that you can authenticate
+as an `app` persona.
+
+**Example:**
+
+```shell
+# Payload to pass in the API call
+$ cat payload.json
+{
+  "policy": "path \"secret/eng/apikey/Google\" { capabilities = [ \"read\" ] ...}"
+}
+
+# Create "apps" policy
+$ curl --header "X-Vault-Token: ..." --request PUT \
+       --data @payload.json \
+       https://vault.rocks/v1/sys/policy/apps
+
+# Generate a new token with apps policy
+$ curl --header "X-Vault-Token: ..." --request POST \
+       --data '{"policies": ["apps"]}' \
+       https://vault.rocks/v1/auth/token/create | jq
+{
+ "request_id": "e1737bc8-7e51-3943-42a0-2dbd6cb40e3e",
+ "lease_id": "",
+ "renewable": false,
+ "lease_duration": 0,
+ "data": null,
+ "wrap_info": null,
+ "warnings": null,
+ "auth": {
+   "client_token": "1c97b03a-6098-31cf-9d8b-b404e52dcb4a",
+   "accessor": "b10a3eb7-15fe-1924-600e-403cfda34c28",
+   "policies": [
+     "apps",
+     "default"
+   ],
+   "metadata": null,
+   "lease_duration": 2764800,
+   "renewable": true,
+   "entity_id": ""
+ }
+}
+```
+
+Now, `apps` can use this token to read the secrets.
+
+**NOTE:** For the purpose of this guide, you created a policy for `apps`
+persona, and generated a token for it. However, in a real world, you may have
+a dedicated `policy author`, or `admin` to write policies. Also, the
+consumer of the API key may be different from the consumer of the root
+certificate. Then each persona would have a policy based on what it needs to
+access.
+
+![Personas Introduction](/assets/images/vault-static-secrets2.png)
+
+
+
+### <a name="step4"></a>Step 4: Retrieve the secrets
+(**Persona:** apps)
+
+Using the token from [Step 3](#step3), read the Google API key, and root certificate for
+MySQL.
+
+
+#### CLI command
+
+The command to read secret is:
 
 ```shell
 $ vault read secret/<PATH>
@@ -221,6 +381,14 @@ $ vault read secret/<PATH>
 **Example:**
 
 ```shell
+# Authenticate with Vault using the generated token first
+$ vault auth e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
+Successfully authenticated! You are now logged in.
+token: e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
+token_duration: 2764277
+token_policies: [apps default]
+
+# Read the API key
 $ vault read secret/eng/apikey/Google
 Key             	Value
 ---             	-----
@@ -237,6 +405,8 @@ AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI
 
 #### Root certificate example:
 
+The command is basically the same:
+
 ```shell
 $ vault read -field=cert secret/prod/cert/mysql
 -----BEGIN RSA PRIVATE KEY-----
@@ -246,11 +416,22 @@ MIIEowIBAAKCAQEA6E2Uq0XqreZISgVMUu9pnoMsq+OoK1PI54rsA9vtDE6wiRk0GWhf5vD4DGf1
 
 #### API call using cURL
 
-**Example:**
+Use `secret/` endpoint to retrieve secrets from key/value backend:
 
 ```shell
-$ curl --header "X-Vault-Token: ..." --request GET \
-     https://vault.rocks/v1/secret/eng/apikey/Google | jq
+$ curl --header "X-Vault-Token: <TOKEN_FROM_STEP3>" \
+       --request Get \
+       <VAULT_ADDRESS>/v1/secret/<PATH>
+```
+
+**Example:**
+
+Read the Google API key.
+
+```shell
+$ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
+       --request GET \
+       https://vault.rocks/v1/secret/eng/apikey/Google | jq
 {
 "request_id": "5a2005ac-1149-2275-cab3-76cee71bf524",
 "lease_id": "",
@@ -270,15 +451,17 @@ $ curl --header "X-Vault-Token: ..." --request GET \
 Retrieve the key value with `jq`:
 
 ```shell
-$ curl --header "X-Vault-Token: ..." --request GET \
-     https://vault.rocks/v1/secret/eng/apikey/Google | jq ".data.key"
+$ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
+       --request GET \
+       https://vault.rocks/v1/secret/eng/apikey/Google | jq ".data.key"
 ```
 
 #### Root certificate example:
 
 ```shell
-$ curl --header "X-Vault-Token: ..." --request GET \
-     https://vault.rocks/v1/secret/prod/cert/mysql | jq ".data.cert"
+$ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
+       --request GET \
+       https://vault.rocks/v1/secret/prod/cert/mysql | jq ".data.cert"
 ```
 
 ## Additional Discussion
@@ -357,5 +540,10 @@ $ cat mongodb.txt
 }
 ```
 
-
 ## Next steps
+
+This guide introduced the CLI commands and API endpoints to read and write
+secrets in key/value backend. To keep it simple, the `devops` persona generated a
+token for `apps`.  Read [AppRole Pull
+Authentication](/guides/authentication.html) guide to learn about
+programmatically generate a token for apps.

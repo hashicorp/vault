@@ -8,9 +8,9 @@ description: |-
 
 # Policies
 
-In Vault, use policies to govern the behavior of clients and instrument 
+In Vault, use policies to govern the behavior of clients and instrument
 Role-Based Access Control (RBAC) by specifying access privileges
- (_authorization_).
+(_authorization_).
 
 When you first initialize Vault, the
 [**`root`**](/docs/concepts/policies.html#root-policy) policy gets created by
@@ -23,8 +23,9 @@ In addition, there is another build-in policy,
 `default` policy is attached to all tokens and provides common permissions.
 
 Everything in Vault is path based, and write policies to grant or forbid access
-to certain paths and operations in Vault. Vault operates on a **secure by default** 
-standard, and as such an empty policy grants **no permission** in the system.
+to certain paths and operations in Vault. Vault operates on a **secure by
+default** standard, and as such as empty policy grants **no permission** in the
+system.
 
 
 ### HashiCorp Configuration Language (HCL)
@@ -84,7 +85,7 @@ Started](/intro/getting-started/install.html) guide to install Vault. Make sure
 that your Vault server has been [initialized and
 unsealed](/intro/getting-started/deploy.html).
 
-### <a name="policy"></a>Policy requirements
+### Policy requirements
 
 Since this guide demonstrates the creation of an **`admin`** policy, log in with
 **`root`** token if possible. Otherwise, make sure that you have the following
