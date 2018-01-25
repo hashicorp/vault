@@ -118,6 +118,20 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	data["bound_iam_principal_arn"] = ""
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "role/ami-abcd456",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to update role with empty bound_iam_principal_arn: %s", resp.Data["error"])
+	}
+
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles",
@@ -154,6 +168,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: response: expected:nil actual:%#v\n", resp)
 	}
+
 }
 
 func Test_enableIamIDResolution(t *testing.T) {
