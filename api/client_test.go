@@ -107,15 +107,13 @@ func TestClientBadToken(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	/*
-		client.SetToken("foo")
-		_, err = client.RawRequest(client.NewRequest("PUT", "/"))
-		if err != nil {
-			t.Fatal(err)
-		}
-	*/
+	client.SetToken("foo")
+	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	client.SetToken("foo\u00f7")
+	client.SetToken("foo\u007f")
 	_, err = client.RawRequest(client.NewRequest("PUT", "/"))
 	if err == nil || !strings.Contains(err.Error(), "printable") {
 		t.Fatalf("expected error due to bad token")
