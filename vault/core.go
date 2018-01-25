@@ -1576,7 +1576,9 @@ func (c *Core) postUnseal() (retErr error) {
 	c.requestForwardingConnectionLock.Unlock()
 
 	c.physicalCache.Purge(c.activeContext)
-	c.physicalCache.SetEnabled(true)
+	if !c.cachingDisabled {
+		c.physicalCache.SetEnabled(true)
+	}
 
 	// Purge these for safety in case of a rekey
 	c.seal.SetBarrierConfig(c.activeContext, nil)
