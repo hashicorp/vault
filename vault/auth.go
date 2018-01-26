@@ -119,10 +119,6 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 		return fmt.Errorf("cannot mount '%s' of type '%s' as an auth method", entry.Config.PluginName, backendType)
 	}
 
-	if err := backend.Initialize(ctx); err != nil {
-		return err
-	}
-
 	// Update the auth table
 	newTable := c.auth.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
@@ -479,9 +475,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 		}
 
-		if err := backend.Initialize(ctx); err != nil {
-			return err
-		}
 	ROUTER_MOUNT:
 		// Mount the backend
 		path := credentialRoutePrefix + entry.Path

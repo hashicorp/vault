@@ -342,7 +342,6 @@ service Backend {
     rpc HandleRequest(HandleRequestArgs) returns (HandleRequestReply);
     rpc SpecialPaths(Empty) returns (SpecialPathsReply);
     rpc HandleExistenceCheck(HandleExistenceCheckArgs) returns (HandleExistenceCheckReply);
-    rpc Initialize(Empty) returns (Empty);
     rpc Cleanup(Empty) returns (Empty);
     rpc InvalidateKey(InvalidateKeyArgs) returns (Empty);
     rpc Setup(SetupArgs) returns (SetupReply);

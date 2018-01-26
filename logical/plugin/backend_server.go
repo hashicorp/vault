@@ -83,15 +83,6 @@ func (b *backendPluginServer) Cleanup(_ interface{}, _ *struct{}) error {
 	return nil
 }
 
-func (b *backendPluginServer) Initialize(_ interface{}, _ *struct{}) error {
-	if inMetadataMode() {
-		return ErrServerInMetadataMode
-	}
-
-	err := b.backend.Initialize(context.Background())
-	return err
-}
-
 func (b *backendPluginServer) InvalidateKey(args string, _ *struct{}) error {
 	if inMetadataMode() {
 		return ErrServerInMetadataMode

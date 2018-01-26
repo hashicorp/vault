@@ -65,15 +65,6 @@ func (b *backendTracingMiddleware) Cleanup(ctx context.Context) {
 	b.next.Cleanup(ctx)
 }
 
-func (b *backendTracingMiddleware) Initialize(ctx context.Context) (err error) {
-	defer func(then time.Time) {
-		b.logger.Trace("plugin.Initialize", "status", "finished", "type", b.typeStr, "transport", b.transport, "err", err, "took", time.Since(then))
-	}(time.Now())
-
-	b.logger.Trace("plugin.Initialize", "status", "started", "type", b.typeStr, "transport", b.transport)
-	return b.next.Initialize(ctx)
-}
-
 func (b *backendTracingMiddleware) InvalidateKey(ctx context.Context, key string) {
 	defer func(then time.Time) {
 		b.logger.Trace("plugin.InvalidateKey", "key", key, "status", "finished", "type", b.typeStr, "transport", b.transport, "took", time.Since(then))
