@@ -61,5 +61,8 @@ func (w *udsWriter) Write(data []byte) error {
 }
 
 func (w *udsWriter) Close() error {
-	return w.conn.Close()
+	if w.conn != nil {
+		return w.conn.Close()
+	}
+	return nil
 }

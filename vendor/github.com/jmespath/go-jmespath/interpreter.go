@@ -76,11 +76,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		}
 		return intr.fCall.CallFunction(node.value.(string), resolvedArgs, intr)
 	case ASTField:
-		if m, ok := value.(map[string]interface{}); ok {
-			key := node.value.(string)
-			return m[key], nil
-		}
-		return intr.fieldFromStruct(node.value.(string), value)
+		return intr.fieldFromStructOrMap(node.value.(string), value)
 	case ASTFilterProjection:
 		left, err := intr.Execute(node.children[0], value)
 		if err != nil {
@@ -314,8 +310,14 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 	return nil, errors.New("Unknown AST node: " + node.nodeType.String())
 }
 
-func (intr *treeInterpreter) fieldFromStruct(key string, value interface{}) (interface{}, error) {
+func (intr *treeInterpreter) fieldFromStructOrMap(key string, value interface{}) (interface{}, error) {
+	var err error
 	rv := reflect.ValueOf(value)
+	rv, err = stripPtrs(rv)
+	if err != nil {
+		return nil, nil
+	}
+
 	first, n := utf8.DecodeRuneInString(key)
 	fieldName := string(unicode.ToUpper(first)) + key[n:]
 	if rv.Kind() == reflect.Struct {
@@ -323,19 +325,24 @@ func (intr *treeInterpreter) fieldFromStruct(key string, value interface{}) (int
 		if !v.IsValid() {
 			return nil, nil
 		}
-		return v.Interface(), nil
-	} else if rv.Kind() == reflect.Ptr {
-		// Handle multiple levels of indirection?
-		if rv.IsNil() {
-			return nil, nil
-		}
-		rv = rv.Elem()
-		v := rv.FieldByName(fieldName)
-		if !v.IsValid() {
+		v, err = stripPtrs(v)
+		if err != nil {
 			return nil, nil
 		}
 		return v.Interface(), nil
+	} else if rv.Kind() == reflect.Map {
+		field := rv.MapIndex(reflect.ValueOf(key))
+		field, err = stripPtrs(field)
+		if err != nil {
+			return nil, nil
+		}
+		if field.IsValid() {
+			return field.Interface(), nil
+		} else {
+			return nil, nil
+		}
 	}
+
 	return nil, nil
 }
 

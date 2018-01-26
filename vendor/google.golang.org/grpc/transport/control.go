@@ -116,6 +116,7 @@ type goAway struct {
 func (*goAway) item() {}
 
 type flushIO struct {
+	closeTr bool
 }
 
 func (*flushIO) item() {}
@@ -156,7 +157,7 @@ func (qb *quotaPool) add(v int) {
 func (qb *quotaPool) lockedAdd(v int) {
 	var wakeUp bool
 	if qb.quota <= 0 {
-		wakeUp = true // Wake up potential watiers.
+		wakeUp = true // Wake up potential waiters.
 	}
 	qb.quota += v
 	if wakeUp && qb.quota > 0 {

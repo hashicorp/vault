@@ -645,6 +645,15 @@ func addSubkey(e *Entity, packets *packet.Reader, pub *packet.PublicKey, priv *p
 			}
 		}
 	}
+
+	if subKey.Sig != nil {
+		if err := subKey.PublicKey.ErrorIfDeprecated(); err != nil {
+			// Key passed signature check but is deprecated.
+			subKey.Sig = nil
+			lastErr = err
+		}
+	}
+
 	if subKey.Sig != nil {
 		e.Subkeys = append(e.Subkeys, subKey)
 	} else {

@@ -142,8 +142,8 @@ type clusterMetadata struct {
 }
 
 func (c *clusterMetadata) setPartitioner(partitioner string) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	if c.partitioner != partitioner {
 		// TODO: update other things now

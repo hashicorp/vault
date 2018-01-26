@@ -90,6 +90,16 @@ func (s *GRPCServer) Init() error {
 	return nil
 }
 
+// Stop calls Stop on the underlying grpc.Server
+func (s *GRPCServer) Stop() {
+	s.server.Stop()
+}
+
+// GracefulStop calls GracefulStop on the underlying grpc.Server
+func (s *GRPCServer) GracefulStop() {
+	s.server.GracefulStop()
+}
+
 // Config is the GRPCServerConfig encoded as JSON then base64.
 func (s *GRPCServer) Config() string {
 	// Create a buffer that will contain our final contents
