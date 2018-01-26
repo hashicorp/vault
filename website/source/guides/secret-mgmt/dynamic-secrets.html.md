@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Secret as a Service - Guides"
-sidebar_current: "guides--dataynamic-secrets"
+sidebar_current: "guides-secret-mgmt-dataynamic-secrets"
 description: |-
   Vault can dynamically generate secrets on--dataemand for some systems.
 ---

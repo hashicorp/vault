@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Static Secrets - Guides"
-sidebar_current: "guides-static-secrets"
+sidebar_current: "guides-secret-mgmt-static-secrets"
 description: |-
   Vault supports generating new unseal keys as well as rotating the underlying
   encryption keys. This guide covers rekeying and rotating Vault's encryption

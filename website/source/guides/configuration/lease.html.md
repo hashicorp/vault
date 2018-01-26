@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Tokens and Leases - Guides"
-sidebar_current: "guides-lease"
+sidebar_current: "guides-configuration-lease"
 description: |-
   Tokens are the core method for authentication within Vault. For every
   authentication token and dynamic secret, Vault creates a lease

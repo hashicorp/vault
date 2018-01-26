@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Setting up Vault Enterprise Performance Replication - Guides"
-sidebar_current: "guides-replication"
+sidebar_current: "guides-operations-replication"
 description: |-
   Learn how to set up and manage Vault Enterprise Performance Replication.
 ---
@@ -177,6 +177,3 @@ mechanisms if DR is necessary in your implementation.
 
 If you need true DR, look at the
 [general information page](/docs/vault-enterprise/replication/index.html) for information on Vault's disaster recovery replication.
-
-
-

@@ -1,21 +1,21 @@
 ---
 layout: "guides"
 page_title: "Plugin Backends - Guides"
-sidebar_current: "guides-plugin-backends"
+sidebar_current: "guides-configuration-plugin-backends"
 description: |-
   Learn how to build, register, and mount a custom plugin backend.
 ---
 
 # Introduction
 
-Plugin backends utilize the [plugin system][plugin-system] to enable 
-third-party secret and auth backends to be mounted. 
+Plugin backends utilize the [plugin system][plugin-system] to enable
+third-party secret and auth backends to be mounted.
 
 It is worth noting that even though [database backends][database-backend]
 operate under the same underlying plugin mechanism, they are slightly different
-in design than plugin backends demonstrated in this guide. The database backend 
+in design than plugin backends demonstrated in this guide. The database backend
 manages multiple plugins under the same backend mount point, whereas plugin
-backends are generic backends that function as either secret or auth backends. 
+backends are generic backends that function as either secret or auth backends.
 
 This guide provides steps to build, register, and mount non-database external
 plugin backends.
@@ -35,7 +35,7 @@ plugin_directory="/etc/vault/vault_plugins"
 ## Build the Plugin Backend
 
 Build the custom backend binary, and move it to the `plugin_directory` path.
-In this guide, we will use `mock-plugin` that comes from Vault's 
+In this guide, we will use `mock-plugin` that comes from Vault's
 `logical/plugin/mock` package.
 
 ```

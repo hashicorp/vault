@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "AppRole Pull Authentication - Guides"
-sidebar_current: "guides-authentication"
+sidebar_current: "guides-configuration-authentication"
 description: |-
   Authentication is a process in Vault by which user or machine-supplied
   information is verified to create a token with pre-configured policy.

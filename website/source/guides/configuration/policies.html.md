@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Policies - Guides"
-sidebar_current: "guides-governance"
+sidebar_current: "guides-configuration-policies"
 description: |-
   Policies in Vault control what a user can access.
 ---
@@ -283,6 +283,12 @@ path "auth/*"
 path "sys/auth/*"
 {
   capabilities = ["create", "read", "update", "delete", "sudo"]
+}
+
+# List existing policies
+path "sys/policy"
+{
+  capabilities = ["read"]
 }
 
 # Create and manage ACL policies

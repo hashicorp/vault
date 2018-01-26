@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Cubbyhole Response Wrapping - Guides"
-sidebar_current: "guides-cubbyhole"
+sidebar_current: "guides-secret-mgmt-cubbyhole"
 description: |-
   Vault provides a capability to wrap Vault response and store it in a
   "cubbyhole" where the holder of the one-time use wrapping token can unwrap to
@@ -35,7 +35,7 @@ long as its policy allows it.
 The end-to-end scenario described in this guide involves two personas:
 
 - **`admin`** with privileged permissions to create tokens
-- **`apps`** is the receiving client of a wrapped response
+- **`apps`** trusted entity retrieving secrets from Vault
 
 ## Challenge
 
@@ -43,7 +43,12 @@ In order to tightly manage the secrets, you set the scope of who can do what
 using the [Vault policy](/docs/concepts/policies.html) and attach that to
 tokens, roles, entities, etc.
 
-How to securely distribute a secret (e.g. token, credentials) to a machine or app?
+Think of a case where you have a trusted entity (Chef, Jenkins, etc.) which
+reads secrets from Vault. This trusted entity must obtain a token. If the
+trusted entity or its host machine was rebooted, it must re-authenticate with
+Vault using a valid token.
+
+How can you securely distribute the initial token to the trusted entity?
 
 ## Solution
 
@@ -81,6 +86,11 @@ path "auth/token/*" {
 path "sys/policy/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
+
+# Manage secret/dev secret backend - for Verification test
+path "secret/dev" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
 ```
 
 ## Steps
@@ -106,12 +116,19 @@ Secret](/guide/static-secrets.html) guide.
 ### <a name="step1"></a>Step 1: Create and wrap a token
 (**Persona:** admin)
 
+To solve the [challenge](#challenge) addressed in this guide:
+
+1. More privileged token (`admin`) wraps a secret only the expecting client can
+read
+2. The receiving client (`app`) unwraps the secret to obtain the token
+
 When the response to `vault token-create` request is wrapped, Vault inserts the
 generated token into the cubbyhole of a single-use token, returning that
 single-use wrapping token. Retrieving the secret requires an unwrap operation
 against this wrapping token.
 
-In this scenario, an [admin user](#personas) creates a token using response wrapping. To perform the steps in this guide, first create a policy for the app.
+In this scenario, an [admin user](#personas) creates a token using response
+wrapping. To perform the steps in this guide, first create a policy for the app.
 
 `apps-policy.hcl`:
 
@@ -142,16 +159,16 @@ duration of seconds (15s), minutes (20m), or hours (25h).
 
 **Example:**
 
-Generate a token for `apps` persona using response wrapping with TTL of 60
+Generate a token for `apps` persona using response wrapping with TTL of 120
 seconds.
 
 ```shell
-$ vault token-create -policy=apps -wrap-ttl=60s
+$ vault token-create -policy=apps -wrap-ttl=120
 
 Key                          	Value
 ---                          	-----
 wrapping_token:              	9ac59985-094f-a2de-aed8-bf688e436fbc
-wrapping_token_ttl:          	1m0s
+wrapping_token_ttl:          	2m0s
 wrapping_token_creation_time:	2018-01-10 00:47:54.970185208 +0000 UTC
 wrapping_token_creation_path:	auth/token/create
 wrapped_accessor:            	195763a9-3f26-1fcf-6a1a-ee0a11e76cb1
@@ -210,7 +227,7 @@ seconds (15s), minutes (20m), or hours (25h).
 To wrap the response of token-create request:
 
 ```shell
-$ curl --header "X-Vault-Wrap-TTL: 60s" \
+$ curl --header "X-Vault-Wrap-TTL: 120" \
        --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"policies":["apps"]}' \
@@ -223,7 +240,7 @@ $ curl --header "X-Vault-Wrap-TTL: 60s" \
   "data": null,
   "wrap_info": {
     "token": "e095129f-123a-4fef-c007-1f6a487cfa78",
-    "ttl": 60,
+    "ttl": 120,
     "creation_time": "2018-01-10T01:43:38.025351336Z",
     "creation_path": "auth/token/create",
     "wrapped_accessor": "44e8253c-65b4-1690-1bf1-7902a7a6b2aa"
@@ -249,9 +266,47 @@ token and none arrives, this may be due to an attacker intercepting the token
 and then preventing it from traveling further. This should cause an alert to
 trigger an immediate investigation.
 
+The following tasks will be performed to demonstrate the client operations:
+
+1. Create a token with **`default`** policy
+2. Authenticate with Vault using this `default` token (less privileged token)
+3. Unwrap the secret to obtain more privileged token (**`apps`** persona token)
+4. Verify that you can read `secret/dev` using the `apps`token
+
+
 #### CLI command
 
-To unwrap the secret:
+First, create a token with `default` policy:
+
+```shell
+# Create a token with `default` policy
+$ vault token-create -policy=default
+Key            	Value
+---            	-----
+token          	4522b2e8-27fe-bdc5-b932-d982f3166c6c
+token_accessor 	96108f48-7475-6190-b058-769a2e5ebc8e
+token_duration 	768h0m0s
+token_renewable	true
+token_policies 	[default]
+
+# Authenticate using the generated token
+$ vault auth 4522b2e8-27fe-bdc5-b932-d982f3166c6c
+Successfully authenticated! You are now logged in.
+token: 4522b2e8-27fe-bdc5-b932-d982f3166c6c
+token_duration: 2764729
+token_policies: [default]
+
+# Verify that you do NOT have a permission to read secret/dev
+$ vault read secret/dev
+Error reading secret/dev: Error making API request.
+
+URL: GET http://<VAULT_ADDRESS>/v1/secret/dev
+Code: 403. Errors:
+
+* permission denied
+```
+
+The command to unwrap the wrapped secret is:
 
 ```shell
 $ vault unwrap <WRAPPING_TOKEN>
@@ -261,9 +316,6 @@ Or
 ```shell
 $ VAULT_TOKEN=<WRAPPING_TOKEN> vault unwrap
 ```
-
-In this scenario, the wrapped secret is a Vault token. Therefore, it probably
-makes better sense to use the second option.
 
 **Example:**
 
@@ -279,6 +331,8 @@ token_renewable	true
 token_policies 	[apps default]
 ```
 
+Verify that this token has `apps` policy attached.
+
 Once the client acquired the token, future requests can be made using this
 token.
 
@@ -291,7 +345,37 @@ No value found at secret/dev
 
 #### API call using cURL
 
-To unwrap the secret, use `/sys/wrapping/unwrap` endpoint:
+First, create a token with `default` policy:
+
+```shell
+# Create a new token default policy
+$ curl --header "X-Vault-Token: ..." --request POST \
+     --data '{"policies": "default"}' \
+     https://vault.rocks/v1/auth/token/create | jq
+{
+  ...
+  "auth": {
+    "client_token": "5fe14760-b0fd-22dc-403c-14a05003b67f",
+    "accessor": "e709610e-916e-f7e3-b93b-41f4dfdca7a0",
+    "policies": [
+      "default"
+    ],
+    ...
+ }
+}
+
+# Verify that you can NOT read secret/dev using default token
+$ curl --header "X-Vault-Token: 5fe14760-b0fd-22dc-403c-14a05003b67f" \
+       --request GET \
+       https://vault.rocks/v1/secret/dev | jq
+{
+ "errors": [
+   "permission denied"
+ ]
+}
+```
+
+Now, unwrap the secret using `/sys/wrapping/unwrap` endpoint:
 
 ```shell
 $ curl --header "X-Vault-Token: <WRAPPING_TOKEN>" \
@@ -338,6 +422,8 @@ $ curl --header "X-Vault-Token: af5f7682-aa55-fa37-5039-ee116df56600" \
   "errors": []
 }
 ```
+
+Since there is no data in `secret/dev`, it returns an empty array.
 
 ## Additional Discussion
 
