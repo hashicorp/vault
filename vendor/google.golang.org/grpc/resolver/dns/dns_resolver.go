@@ -50,7 +50,9 @@ const (
 	txtAttribute = "grpc_config="
 )
 
-var errMissingAddr = errors.New("missing address")
+var (
+	errMissingAddr = errors.New("missing address")
+)
 
 // NewBuilder creates a dnsBuilder which is used to factory DNS resolvers.
 func NewBuilder() resolver.Builder {

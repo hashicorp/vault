@@ -8,6 +8,12 @@ die() {
   exit 1
 }
 
+# TODO: Remove this check and the mangling below once "context" is imported
+# directly.
+if git status --porcelain | read; then
+  die "Uncommitted or untracked files found; commit changes first"
+fi
+
 PATH="$GOPATH/bin:$GOROOT/bin:$PATH"
 
 # Check proto in manual runs or cron runs.
@@ -42,16 +48,10 @@ elif [[ "$#" -ne 0 ]]; then
   die "Unknown argument(s): $*"
 fi
 
-# TODO: Remove this check and the mangling below once "context" is imported
-# directly.
-if git status --porcelain | read; then
-  die "Uncommitted or untracked files found; commit changes first"
-fi
-
 git ls-files "*.go" | xargs grep -L "\(Copyright [0-9]\{4,\} gRPC authors\)\|DO NOT EDIT" 2>&1 | tee /dev/stderr | (! read)
 gofmt -s -d -l . 2>&1 | tee /dev/stderr | (! read)
 goimports -l . 2>&1 | tee /dev/stderr | (! read)
-golint ./... 2>&1 | (grep -vE "(_mock|_string|\.pb)\.go:" || true) | tee /dev/stderr | (! read)
+golint ./... 2>&1 | (grep -vE "(_mock|_string|grpc_lb_v1/doc|\.pb)\.go:" || true) | tee /dev/stderr | (! read)
 
 # Undo any edits made by this script.
 cleanup() {
