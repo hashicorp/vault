@@ -1171,28 +1171,28 @@
 			"revisionTime": "2017-10-22T02:00:50Z"
 		},
 		{
-			"checksumSHA1": "U8fqnq/HdKHy2PHfgPRQFKF5vH0=",
+			"checksumSHA1": "Dse2mmAcxZoMoe6xjhP1uZ6zbiU=",
 			"path": "github.com/hashicorp/vault-plugin-auth-centrify",
-			"revision": "60f3d09648224922d7598a6a6c70fe574197c873",
-			"revisionTime": "2018-01-25T04:12:13Z"
+			"revision": "9a63465d76159256de5dbdb8b23a213d48977fe0",
+			"revisionTime": "2018-01-26T13:58:44Z"
 		},
 		{
 			"checksumSHA1": "eVlMWanJ2W+/9c1kz72iefRcrYM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "920d35a4f48dd664051c07d5534cf4046731b8bc",
-			"revisionTime": "2018-01-25T04:13:18Z"
+			"revision": "94cc987530e1fc757cdcacf8a057120165234970",
+			"revisionTime": "2018-01-26T14:00:40Z"
 		},
 		{
 			"checksumSHA1": "ffJQvzbQvmCG/PdaElGSfGnDgNM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/util",
-			"revision": "920d35a4f48dd664051c07d5534cf4046731b8bc",
-			"revisionTime": "2018-01-25T04:13:18Z"
+			"revision": "94cc987530e1fc757cdcacf8a057120165234970",
+			"revisionTime": "2018-01-26T14:00:40Z"
 		},
 		{
-			"checksumSHA1": "1Ae/iGAv3OtjNn2OELc7qVLIGs0=",
+			"checksumSHA1": "mUY/3RGGEigHFro0reomV6ePRjA=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "cbf4a8b5ca5d65fd4e6d613154f4e69dcf0e4b92",
-			"revisionTime": "2018-01-25T04:20:06Z"
+			"revision": "f33ac92b41e4634a4f70d48cf6fd3501c133ad1a",
+			"revisionTime": "2018-01-26T14:02:57Z"
 		},
 		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",

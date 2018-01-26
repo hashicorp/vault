@@ -54,8 +54,8 @@
   name = "k8s.io/api"
 
 [[constraint]]
-  name = "k8s.io/apimachinery"
   branch = "release-1.8"
+  name = "k8s.io/apimachinery"
 
 [prune]
   go-tests = true
