@@ -34,6 +34,7 @@ const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
 const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
+const EnvAWSApiGatewaySignature = "VAULT_AWS_APIGATEWAY_SIGNATURE"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -69,6 +70,8 @@ type Config struct {
 	// If there is an error when creating the configuration, this will be the
 	// error
 	Error error
+
+	AWSApiGatewaySignature bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -205,6 +208,7 @@ func (c *Config) ReadEnvironment() error {
 	var envInsecure bool
 	var envTLSServerName string
 	var envMaxRetries *uint64
+	var envAWSApiGatewaySignature bool
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -245,6 +249,17 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
 		envTLSServerName = v
+	}
+
+	if v := os.Getenv(EnvAWSApiGatewaySignature); v != "" {
+		var err error
+		envAWSApiGatewaySignature, err = strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("Could not parse VAULT_AWS_APIGATEWAY_SIGNATURE")
+		}
+		if envAWSApiGatewaySignature {
+			c.AWSApiGatewaySignature = true
+		}
 	}
 
 	// Configure the HTTP clients TLS configuration.
@@ -519,6 +534,10 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		req.Headers = c.headers
 	}
 
+	if c.config.AWSApiGatewaySignature {
+		req.AWSApiGatewaySignature = true
+	}
+
 	req.PolicyOverride = c.policyOverride
 
 	return req
@@ -544,6 +563,7 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 
 	redirectCount := 0
 START:
+	r.AWSApiGatewaySignature = c.config.AWSApiGatewaySignature
 	req, err := r.ToHTTP()
 	if err != nil {
 		return nil, err

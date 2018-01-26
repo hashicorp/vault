@@ -4,8 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
+
+	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/signer/v4"
 )
 
 // Request is a raw request configuration structure used to initiate
@@ -25,7 +30,8 @@ type Request struct {
 	// Whether to request overriding soft-mandatory Sentinel policies (RGPs and
 	// EGPs). If set, the override flag will take effect for all policies
 	// evaluated during the request.
-	PolicyOverride bool
+	PolicyOverride         bool
+	AWSApiGatewaySignature bool
 }
 
 // SetJSONBody is used to set a request body that is a JSON-encoded value.
@@ -91,6 +97,27 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 
 	if r.PolicyOverride {
 		req.Header.Set("X-Vault-Policy-Override", "true")
+	}
+
+	if r.AWSApiGatewaySignature {
+		cfg := defaults.Config()
+		handlers := defaults.Handlers()
+		creds := defaults.CredChain(cfg, handlers)
+		signer := v4.NewSigner(creds)
+		if r.Body != nil {
+			body, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				return nil, err
+			}
+			reader := bytes.NewReader(body)
+			_, err = signer.Sign(req, reader, "execute-api", *cfg.Region, time.Now())
+		} else {
+			_, err = signer.Sign(req, nil, "execute-api", *cfg.Region, time.Now())
+		}
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return req, nil
