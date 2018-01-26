@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -29,10 +30,9 @@ func secretCreds(b *backend) *framework.Secret {
 }
 
 // Renew the previously issued secret
-func (b *backend) secretCredsRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the lease information
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -40,12 +40,11 @@ func (b *backend) secretCredsRenew(
 		lease = &configLease{}
 	}
 
-	return framework.LeaseExtend(lease.TTL, lease.MaxTTL, b.System())(req, d)
+	return framework.LeaseExtend(lease.TTL, lease.MaxTTL, b.System())(ctx, req, d)
 }
 
 // Revoke the previously issued secret
-func (b *backend) secretCredsRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
@@ -54,7 +53,7 @@ func (b *backend) secretCredsRevoke(
 	username := usernameRaw.(string)
 
 	// Get our connection
-	client, err := b.Client(req.Storage)
+	client, err := b.Client(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

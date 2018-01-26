@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -23,7 +24,7 @@ func TestBackend(t *testing.T) {
 	config, cleanup := testConfig(t)
 	defer cleanup()
 
-	_, err := Backend(config)
+	_, err := Backend(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +34,7 @@ func TestBackend_Factory(t *testing.T) {
 	config, cleanup := testConfig(t)
 	defer cleanup()
 
-	_, err := Factory(config)
+	_, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}

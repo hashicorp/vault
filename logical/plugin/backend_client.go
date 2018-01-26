@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"errors"
 	"net/rpc"
 
@@ -78,17 +79,7 @@ type TypeReply struct {
 	Type logical.BackendType
 }
 
-// RegisterLicenseArgs is the args for the RegisterLicense method.
-type RegisterLicenseArgs struct {
-	License interface{}
-}
-
-// RegisterLicenseReply is the reply for the RegisterLicense method.
-type RegisterLicenseReply struct {
-	Error error
-}
-
-func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (b *backendPluginClient) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if b.metadataMode {
 		return nil, ErrClientInMetadataMode
 	}
@@ -146,7 +137,7 @@ func (b *backendPluginClient) Logger() log.Logger {
 	return b.logger
 }
 
-func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+func (b *backendPluginClient) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	if b.metadataMode {
 		return false, false, ErrClientInMetadataMode
 	}
@@ -182,11 +173,11 @@ func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, 
 	return reply.CheckFound, reply.Exists, nil
 }
 
-func (b *backendPluginClient) Cleanup() {
+func (b *backendPluginClient) Cleanup(ctx context.Context) {
 	b.client.Call("Plugin.Cleanup", new(interface{}), &struct{}{})
 }
 
-func (b *backendPluginClient) Initialize() error {
+func (b *backendPluginClient) Initialize(ctx context.Context) error {
 	if b.metadataMode {
 		return ErrClientInMetadataMode
 	}
@@ -194,14 +185,14 @@ func (b *backendPluginClient) Initialize() error {
 	return err
 }
 
-func (b *backendPluginClient) InvalidateKey(key string) {
+func (b *backendPluginClient) InvalidateKey(ctx context.Context, key string) {
 	if b.metadataMode {
 		return
 	}
 	b.client.Call("Plugin.InvalidateKey", key, &struct{}{})
 }
 
-func (b *backendPluginClient) Setup(config *logical.BackendConfig) error {
+func (b *backendPluginClient) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	// Shim logical.Storage
 	storageImpl := config.StorageView
 	if b.metadataMode {
@@ -263,24 +254,4 @@ func (b *backendPluginClient) Type() logical.BackendType {
 	}
 
 	return logical.BackendType(reply.Type)
-}
-
-func (b *backendPluginClient) RegisterLicense(license interface{}) error {
-	if b.metadataMode {
-		return ErrClientInMetadataMode
-	}
-
-	var reply RegisterLicenseReply
-	args := RegisterLicenseArgs{
-		License: license,
-	}
-	err := b.client.Call("Plugin.RegisterLicense", args, &reply)
-	if err != nil {
-		return err
-	}
-	if reply.Error != nil {
-		return reply.Error
-	}
-
-	return nil
 }

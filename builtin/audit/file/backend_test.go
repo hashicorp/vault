@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -33,7 +34,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		"mode": modeStr,
 	}
 
-	_, err = Factory(&audit.BackendConfig{
+	_, err = Factory(context.Background(), &audit.BackendConfig{
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 		Config:     config,
@@ -72,7 +73,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		"path": f.Name(),
 	}
 
-	_, err = Factory(&audit.BackendConfig{
+	_, err = Factory(context.Background(), &audit.BackendConfig{
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},

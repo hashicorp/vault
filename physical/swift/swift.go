@@ -1,6 +1,7 @@
 package swift
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -17,6 +18,9 @@ import (
 	"github.com/hashicorp/vault/physical"
 	"github.com/ncw/swift"
 )
+
+// Verify SwiftBackend satisfies the correct interfaces
+var _ physical.Backend = (*SwiftBackend)(nil)
 
 // SwiftBackend is a physical backend that stores data
 // within an OpenStack Swift container.
@@ -123,7 +127,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 }
 
 // Put is used to insert or update an entry
-func (s *SwiftBackend) Put(entry *physical.Entry) error {
+func (s *SwiftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"swift", "put"}, time.Now())
 
 	s.permitPool.Acquire()
@@ -139,7 +143,7 @@ func (s *SwiftBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch an entry
-func (s *SwiftBackend) Get(key string) (*physical.Entry, error) {
+func (s *SwiftBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"swift", "get"}, time.Now())
 
 	s.permitPool.Acquire()
@@ -171,7 +175,7 @@ func (s *SwiftBackend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (s *SwiftBackend) Delete(key string) error {
+func (s *SwiftBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"swift", "delete"}, time.Now())
 
 	s.permitPool.Acquire()
@@ -188,7 +192,7 @@ func (s *SwiftBackend) Delete(key string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (s *SwiftBackend) List(prefix string) ([]string, error) {
+func (s *SwiftBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"swift", "list"}, time.Now())
 
 	s.permitPool.Acquire()

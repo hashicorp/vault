@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"sort"
 	"strings"
 
@@ -17,7 +18,7 @@ type PolicyMap struct {
 	PolicyKey  string
 }
 
-func (p *PolicyMap) Policies(s logical.Storage, names ...string) ([]string, error) {
+func (p *PolicyMap) Policies(ctx context.Context, s logical.Storage, names ...string) ([]string, error) {
 	policyKey := "value"
 	if p.PolicyKey != "" {
 		policyKey = p.PolicyKey
@@ -32,7 +33,7 @@ func (p *PolicyMap) Policies(s logical.Storage, names ...string) ([]string, erro
 
 	set := make(map[string]struct{})
 	for _, name := range names {
-		v, err := p.Get(s, name)
+		v, err := p.Get(ctx, s, name)
 		if err != nil {
 			return nil, err
 		}

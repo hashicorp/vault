@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"reflect"
@@ -18,15 +19,17 @@ import (
 type NoopBackend struct {
 	sync.Mutex
 
-	Root          []string
-	Login         []string
-	Paths         []string
-	Requests      []*logical.Request
-	Response      *logical.Response
-	Invalidations []string
+	Root            []string
+	Login           []string
+	Paths           []string
+	Requests        []*logical.Request
+	Response        *logical.Response
+	Invalidations   []string
+	DefaultLeaseTTL time.Duration
+	MaxLeaseTTL     time.Duration
 }
 
-func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	n.Lock()
 	defer n.Unlock()
 
@@ -40,7 +43,7 @@ func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, er
 	return n.Response, nil
 }
 
-func (n *NoopBackend) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+func (n *NoopBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	return false, false, nil
 }
 
@@ -52,21 +55,31 @@ func (n *NoopBackend) SpecialPaths() *logical.Paths {
 }
 
 func (n *NoopBackend) System() logical.SystemView {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 32
+	if n.DefaultLeaseTTL > 0 {
+		defaultLeaseTTLVal = n.DefaultLeaseTTL
+	}
+
+	if n.MaxLeaseTTL > 0 {
+		maxLeaseTTLVal = n.MaxLeaseTTL
+	}
+
 	return logical.StaticSystemView{
-		DefaultLeaseTTLVal: time.Hour * 24,
-		MaxLeaseTTLVal:     time.Hour * 24 * 32,
+		DefaultLeaseTTLVal: defaultLeaseTTLVal,
+		MaxLeaseTTLVal:     maxLeaseTTLVal,
 	}
 }
 
-func (n *NoopBackend) Cleanup() {
+func (n *NoopBackend) Cleanup(ctx context.Context) {
 	// noop
 }
 
-func (n *NoopBackend) InvalidateKey(k string) {
+func (n *NoopBackend) InvalidateKey(ctx context.Context, k string) {
 	n.Invalidations = append(n.Invalidations, k)
 }
 
-func (n *NoopBackend) Setup(config *logical.BackendConfig) error {
+func (n *NoopBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	return nil
 }
 
@@ -74,16 +87,12 @@ func (n *NoopBackend) Logger() log.Logger {
 	return logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.LevelOff)
 }
 
-func (n *NoopBackend) Initialize() error {
+func (n *NoopBackend) Initialize(ctx context.Context) error {
 	return nil
 }
 
 func (n *NoopBackend) Type() logical.BackendType {
 	return logical.TypeLogical
-}
-
-func (n *NoopBackend) RegisterLicense(license interface{}) error {
-	return nil
 }
 
 func TestRouter_Mount(t *testing.T) {
@@ -155,7 +164,7 @@ func TestRouter_Mount(t *testing.T) {
 	req := &logical.Request{
 		Path: "prod/aws/foo",
 	}
-	resp, err := r.Route(req)
+	resp, err := r.Route(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -252,7 +261,7 @@ func TestRouter_MountCredential(t *testing.T) {
 	req := &logical.Request{
 		Path: "auth/aws/foo",
 	}
-	resp, err := r.Route(req)
+	resp, err := r.Route(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -281,7 +290,7 @@ func TestRouter_Unmount(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = r.Unmount("prod/aws/")
+	err = r.Unmount(context.Background(), "prod/aws/")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -289,7 +298,7 @@ func TestRouter_Unmount(t *testing.T) {
 	req := &logical.Request{
 		Path: "prod/aws/foo",
 	}
-	_, err = r.Route(req)
+	_, err = r.Route(context.Background(), req)
 	if !strings.Contains(err.Error(), "unsupported path") {
 		t.Fatalf("err: %v", err)
 	}
@@ -329,7 +338,7 @@ func TestRouter_Remount(t *testing.T) {
 	req := &logical.Request{
 		Path: "prod/aws/foo",
 	}
-	_, err = r.Route(req)
+	_, err = r.Route(context.Background(), req)
 	if !strings.Contains(err.Error(), "unsupported path") {
 		t.Fatalf("err: %v", err)
 	}
@@ -337,7 +346,7 @@ func TestRouter_Remount(t *testing.T) {
 	req = &logical.Request{
 		Path: "stage/aws/foo",
 	}
-	_, err = r.Route(req)
+	_, err = r.Route(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -463,20 +472,20 @@ func TestRouter_Taint(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Path:      "prod/aws/foo",
 	}
-	_, err = r.Route(req)
+	_, err = r.Route(context.Background(), req)
 	if err.Error() != "unsupported path" {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Rollback and Revoke should work
 	req.Operation = logical.RollbackOperation
-	_, err = r.Route(req)
+	_, err = r.Route(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	req.Operation = logical.RevokeOperation
-	_, err = r.Route(req)
+	_, err = r.Route(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -511,7 +520,7 @@ func TestRouter_Untaint(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Path:      "prod/aws/foo",
 	}
-	_, err = r.Route(req)
+	_, err = r.Route(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

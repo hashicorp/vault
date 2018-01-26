@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -34,8 +35,8 @@ func kvPaths(b *backend) []*framework.Path {
 	}
 }
 
-func (b *backend) pathExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	out, err := req.Storage.Get(req.Path)
+func (b *backend) pathExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return false, fmt.Errorf("existence check failed: %v", err)
 	}
@@ -43,9 +44,8 @@ func (b *backend) pathExistenceCheck(req *logical.Request, data *framework.Field
 	return out != nil, nil
 }
 
-func (b *backend) pathKVRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := req.Storage.Get(req.Path)
+func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	entry, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +56,7 @@ func (b *backend) pathKVRead(
 
 	value := string(entry.Value)
 
+	b.Logger().Info("reading value", "key", req.Path, "value", value)
 	// Return the secret
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -64,17 +65,17 @@ func (b *backend) pathKVRead(
 	}, nil
 }
 
-func (b *backend) pathKVCreateUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKVCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	value := data.Get("value").(string)
 
+	b.Logger().Info("storing value", "key", req.Path, "value", value)
 	entry := &logical.StorageEntry{
 		Key:   req.Path,
 		Value: []byte(value),
 	}
 
 	s := req.Storage
-	err := s.Put(entry)
+	err := s.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -86,16 +87,16 @@ func (b *backend) pathKVCreateUpdate(
 	}, nil
 }
 
-func (b *backend) pathKVDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if err := req.Storage.Delete(req.Path); err != nil {
+func (b *backend) pathKVDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if err := req.Storage.Delete(ctx, req.Path); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathKVList(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	vals, err := req.Storage.List("kv/")
+func (b *backend) pathKVList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	vals, err := req.Storage.List(ctx, "kv/")
 	if err != nil {
 		return nil, err
 	}

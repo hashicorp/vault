@@ -1,57 +1,78 @@
 ---
 layout: "docs"
-page_title: "MongoDB Database Plugin - Database Secret Backend"
+page_title: "MongoDB - Database - Secrets Engines"
 sidebar_current: "docs-secrets-databases-mongodb"
 description: |-
-  The MongoDB plugin for Vault's Database backend generates database credentials to access MongoDB.
+  MongoDB is one of the supported plugins for the database secrets engine. This
+  plugin generates database credentials dynamically based on configured roles
+  for the MongoDB database.
 ---
 
-# MongoDB Database Plugin
+# MongoDB Database Secrets Engine
 
-Name: `mongodb-database-plugin`
+MongoDB is one of the supported plugins for the database secrets engine. This
+plugin generates database credentials dynamically based on configured roles for
+the MongoDB database.
 
-The MongoDB Database Plugin is one of the supported plugins for the Database
-backend. This plugin generates database credentials dynamically based on
-configured roles for the MongoDB database.
+See the [database secrets engine](/docs/secrets/databases/index.html) docs for
+more information about setting up the database secrets engine.
 
-See the [Database Backend](/docs/secrets/databases/index.html) docs for more
-information about setting up the Database Backend.
+## Setup
 
-## Quick Start
+1. Enable the database secrets engine if it is not already enabled:
 
-After the Database Backend is mounted you can configure a MongoDB connection
-by specifying this plugin as the `"plugin_name"` argument. Here is an example
-MongoDB configuration:
+    ```text
+    $ vault secrets enable database
+    Success! Enabled the database secrets engine at: database/
+    ```
 
-```
-$ vault write database/config/mongodb \
-    plugin_name=mongodb-database-plugin \
-    allowed_roles="readonly" \
-    connection_url="mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true"
+    By default, the secrets engine will enable at the name of the engine. To
+    enable the secrets engine at a different path, use the `-path` argument.
 
-The following warnings were returned from the Vault server:
-* Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
-```
+1. Configure Vault with the proper plugin and connection information:
 
-Once the MongoDB connection is configured we can add a role:
+    ```text
+    $ vault write database/config/my-mongodb-database \
+        plugin_name=mongodb-database-plugin \
+        allowed_roles="my-role" \
+        connection_url="mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true"
+    ```
 
-```
-$ vault write database/roles/readonly \
-    db_name=mongodb \
-    creation_statements='{ "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }' \
-    default_ttl="1h" \
-    max_ttl="24h"
+1. Configure a role that maps a name in Vault to an SQL statement to execute to
+create the database credential:
 
-Success! Data written to: database/roles/readonly
-```
+    ```text
+    $ vault write database/roles/my-role \
+        db_name=my-mongodb-database \
+        creation_statements='{ "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }' \
+        default_ttl="1h" \
+        max_ttl="24h"
+    Success! Data written to: database/roles/my-role
+    ```
 
-This role can be used to retrieve a new set of credentials by querying the
-"database/creds/readonly" endpoint.
+## Usage
+
+After the secrets engine is configured and a user/machine has a Vault token with
+the proper permission, it can generate credentials.
+
+1. Generate a new credential by reading from the `/creds` endpoint with the name
+of the role:
+
+    ```text
+    $ vault read database/creds/my-role
+    Key                Value
+    ---                -----
+    lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
+    lease_duration     1h
+    lease_renewable    true
+    password           8cab931c-d62e-a73d-60d3-5ee85139cd66
+    username           v-root-e2978cd0-
+    ```
 
 ## API
 
 The full list of configurable options can be seen in the [MongoDB database
 plugin API](/api/secret/databases/mongodb.html) page.
 
-For more information on the Database secret backend's HTTP API please see the [Database secret
-backend API](/api/secret/databases/index.html) page.
+For more information on the database secrets engine's HTTP API please see the
+[Database secrets engine API](/api/secret/databases/index.html) page.

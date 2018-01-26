@@ -1,11 +1,11 @@
 ---
 layout: "docs"
-page_title: "Signed SSH Certificates - SSH Secret Backend"
+page_title: "Signed SSH Certificates - SSH - Secrets Engines"
 sidebar_current: "docs-secrets-ssh-signed-ssh-certificates"
 description: |-
   The signed SSH certificates is the simplest and most powerful in terms of
   setup complexity and in terms of being platform agnostic. When using this
-  type, an SSH CA signing key is generated or configured at the backend's mount.
+  type, an SSH CA signing key is generated or configured at the secrets engine's mount.
   This key will be used to sign other SSH keys.
 ---
 
@@ -20,12 +20,12 @@ In this section, the term "**client**" refers to the person or machine
 performing the SSH operation. The "**host**" refers to the target machine. If
 this is confusing, substitute "client" with "user".
 
-This page will show a quick start for this backend. For detailed documentation
-on every path, use `vault path-help` after mounting the backend.
+This page will show a quick start for this secrets engine. For detailed documentation
+on every path, use `vault path-help` after mounting the secrets engine.
 
 ## Client Key Signing
 
-Before a client can request their SSH key be signed, the Vault SSH backend must
+Before a client can request their SSH key be signed, the Vault SSH secrets engine must
 be configured. Usually a Vault administrator or security team performs these
 steps. It is also possible to automate these actions using a configuration
 management tool like Chef, Puppet, Ansible, or Salt.
@@ -35,7 +35,7 @@ management tool like Chef, Puppet, Ansible, or Salt.
 The following steps are performed in advance by a Vault administrator, security
 team, or configuration management tooling.
 
-1. Mount the backend. Like all secret backends in Vault, the SSH secret backend
+1. Mount the secrets engine. Like all secrets engines in Vault, the SSH secrets engine
 must be mounted before use.
 
     ```text
@@ -43,10 +43,10 @@ must be mounted before use.
     Successfully mounted 'ssh' at 'ssh-client-signer'!
     ```
 
-    This mounts the SSH backend at the path "ssh-client-signer". It is possible
-    to mount the same secret backend multiple times using different `-path`
-    arguments. The name "ssh-client-signer" is not special - it can be any name,
-    but this documentation will assume "ssh-client-signer".
+    This enables the SSH secrets engine at the path "ssh-client-signer". It is
+    possible to mount the same secrets engine multiple times using different
+    `-path` arguments. The name "ssh-client-signer" is not special - it can be
+    any name, but this documentation will assume "ssh-client-signer".
 
 1. Configure Vault with a CA for signing client keys using the `/config/ca`
 endpoint. If you do not have an internal CA, Vault can generate a keypair for
@@ -197,7 +197,7 @@ accidentally SSHing into an unmanaged or malicious machine.
 
 ### Signing Key Configuration
 
-1. Mount the backend. For the most security, mount at a different path from the
+1. Mount the secrets engine. For the most security, mount at a different path from the
 client signer.
 
     ```text
@@ -231,7 +231,7 @@ you.
 1. Extend host key certificate TTLs.
 
     ```text
-    $ vault mount-tune -max-lease-ttl=87600h ssh-host-signer
+    $ vault secrets tune -max-lease-ttl=87600h ssh-host-signer
     ```
 
 1. Create a role for signing host keys. Be sure to fill in the list of allowed
@@ -480,6 +480,6 @@ forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
 
 ## API
 
-The SSH secret backend has a full HTTP API. Please see the
-[SSH secret backend API](/api/secret/ssh/index.html) for more
+The SSH secrets engine has a full HTTP API. Please see the
+[SSH secrets engine API](/api/secret/ssh/index.html) for more
 details.

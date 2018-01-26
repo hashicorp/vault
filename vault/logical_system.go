@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -9,12 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/fatih/structs"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -38,11 +39,10 @@ var (
 			&framework.Path{
 				Pattern: "replication/status",
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-						var state consts.ReplicationState
+					logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 						resp := &logical.Response{
 							Data: map[string]interface{}{
-								"mode": state.String(),
+								"mode": "disabled",
 							},
 						}
 						return resp, nil
@@ -859,6 +859,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
 					},
+					"args": &framework.FieldSchema{
+						Type:        framework.TypeStringSlice,
+						Description: strings.TrimSpace(sysHelp["plugin-catalog_args"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1002,7 +1006,7 @@ type SystemBackend struct {
 }
 
 // handleCORSRead returns the current CORS configuration
-func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleCORSRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	corsConf := b.Core.corsConfig
 
 	enabled := corsConf.IsEnabled()
@@ -1025,20 +1029,20 @@ func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldD
 
 // handleCORSUpdate sets the list of origins that are allowed to make
 // cross-origin requests and sets the CORS enabled flag to true
-func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleCORSUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	origins := d.Get("allowed_origins").([]string)
 	headers := d.Get("allowed_headers").([]string)
 
-	return nil, b.Core.corsConfig.Enable(origins, headers)
+	return nil, b.Core.corsConfig.Enable(ctx, origins, headers)
 }
 
 // handleCORSDelete sets the CORS enabled flag to false and clears the list of
 // allowed origins & headers.
-func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return nil, b.Core.corsConfig.Disable()
+func (b *SystemBackend) handleCORSDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return nil, b.Core.corsConfig.Disable(ctx)
 }
 
-func (b *SystemBackend) handleTidyLeases(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	err := b.Core.expiration.Tidy()
 	if err != nil {
 		b.Backend.Logger().Error("sys: failed to tidy leases", "error", err)
@@ -1047,7 +1051,7 @@ func (b *SystemBackend) handleTidyLeases(req *logical.Request, d *framework.Fiel
 	return nil, err
 }
 
-func (b *SystemBackend) invalidate(key string) {
+func (b *SystemBackend) invalidate(ctx context.Context, key string) {
 	/*
 		if b.Core.logger.IsTrace() {
 			b.Core.logger.Trace("sys: invalidating key", "key", key)
@@ -1058,19 +1062,19 @@ func (b *SystemBackend) invalidate(key string) {
 		b.Core.stateLock.RLock()
 		defer b.Core.stateLock.RUnlock()
 		if b.Core.policyStore != nil {
-			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policyACLSubPath), PolicyTypeACL)
+			b.Core.policyStore.invalidate(ctx, strings.TrimPrefix(key, policyACLSubPath), PolicyTypeACL)
 		}
 	case strings.HasPrefix(key, tokenSubPath):
 		b.Core.stateLock.RLock()
 		defer b.Core.stateLock.RUnlock()
 		if b.Core.tokenStore != nil {
-			b.Core.tokenStore.Invalidate(key)
+			b.Core.tokenStore.Invalidate(ctx, key)
 		}
 	}
 }
 
-func (b *SystemBackend) handlePluginCatalogList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	plugins, err := b.Core.pluginCatalog.List()
+func (b *SystemBackend) handlePluginCatalogList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	plugins, err := b.Core.pluginCatalog.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1078,7 +1082,7 @@ func (b *SystemBackend) handlePluginCatalogList(req *logical.Request, d *framewo
 	return logical.ListResponse(plugins), nil
 }
 
-func (b *SystemBackend) handlePluginCatalogUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
@@ -1097,12 +1101,24 @@ func (b *SystemBackend) handlePluginCatalogUpdate(req *logical.Request, d *frame
 		return logical.ErrorResponse("missing command value"), nil
 	}
 
+	// For backwards compatibility, also accept args as part of command.  Don't
+	// accepts args in both command and args.
+	args := d.Get("args").([]string)
+	parts := strings.Split(command, " ")
+	if len(parts) <= 0 {
+		return logical.ErrorResponse("missing command value"), nil
+	} else if len(parts) > 1 && len(args) > 0 {
+		return logical.ErrorResponse("must not speficy args in command and args field"), nil
+	} else if len(parts) > 1 {
+		args = parts[1:]
+	}
+
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(pluginName, command, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginName, parts[0], args, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -1110,12 +1126,12 @@ func (b *SystemBackend) handlePluginCatalogUpdate(req *logical.Request, d *frame
 	return nil, nil
 }
 
-func (b *SystemBackend) handlePluginCatalogRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName)
 	if err != nil {
 		return nil, err
 	}
@@ -1123,20 +1139,33 @@ func (b *SystemBackend) handlePluginCatalogRead(req *logical.Request, d *framewo
 		return nil, nil
 	}
 
-	// Create a map of data to be returned and remove sensitive information from it
-	data := structs.New(plugin).Map()
+	command := ""
+	if !plugin.Builtin {
+		command, err = filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	data := map[string]interface{}{
+		"name":    plugin.Name,
+		"args":    plugin.Args,
+		"command": command,
+		"sha256":  hex.EncodeToString(plugin.Sha256),
+		"builtin": plugin.Builtin,
+	}
 
 	return &logical.Response{
 		Data: data,
 	}, nil
 }
 
-func (b *SystemBackend) handlePluginCatalogDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	err := b.Core.pluginCatalog.Delete(pluginName)
+	err := b.Core.pluginCatalog.Delete(ctx, pluginName)
 	if err != nil {
 		return nil, err
 	}
@@ -1144,7 +1173,7 @@ func (b *SystemBackend) handlePluginCatalogDelete(req *logical.Request, d *frame
 	return nil, nil
 }
 
-func (b *SystemBackend) handlePluginReloadUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("plugin").(string)
 	pluginMounts := d.Get("mounts").([]string)
 
@@ -1156,12 +1185,12 @@ func (b *SystemBackend) handlePluginReloadUpdate(req *logical.Request, d *framew
 	}
 
 	if pluginName != "" {
-		err := b.Core.reloadMatchingPlugin(pluginName)
+		err := b.Core.reloadMatchingPlugin(ctx, pluginName)
 		if err != nil {
 			return nil, err
 		}
 	} else if len(pluginMounts) > 0 {
-		err := b.Core.reloadMatchingPluginMounts(pluginMounts)
+		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts)
 		if err != nil {
 			return nil, err
 		}
@@ -1171,7 +1200,7 @@ func (b *SystemBackend) handlePluginReloadUpdate(req *logical.Request, d *framew
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
-func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	hmac := d.Get("hmac").(bool)
 	if header == "" {
@@ -1179,7 +1208,7 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *frame
 	}
 
 	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.add(header, hmac)
+	err := headerConfig.add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -1188,14 +1217,14 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *frame
 }
 
 // handleAudtedHeaderDelete deletes the header with the given name
-func (b *SystemBackend) handleAuditedHeaderDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
 	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.remove(header)
+	err := headerConfig.remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -1204,7 +1233,7 @@ func (b *SystemBackend) handleAuditedHeaderDelete(req *logical.Request, d *frame
 }
 
 // handleAuditedHeaderRead returns the header configuration for the given header name
-func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
@@ -1224,7 +1253,7 @@ func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framewo
 }
 
 // handleAuditedHeadersRead returns the whole audited headers config
-func (b *SystemBackend) handleAuditedHeadersRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	headerConfig := b.Core.AuditedHeadersConfig()
 
 	return &logical.Response{
@@ -1235,12 +1264,12 @@ func (b *SystemBackend) handleAuditedHeadersRead(req *logical.Request, d *framew
 }
 
 // handleCapabilities returns the ACL capabilities of the token for a given path
-func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	token := d.Get("token").(string)
 	if token == "" {
 		token = req.ClientToken
 	}
-	capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
+	capabilities, err := b.Core.Capabilities(ctx, token, d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -1254,18 +1283,18 @@ func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.Fi
 
 // handleCapabilitiesAccessor returns the ACL capabilities of the
 // token associted with the given accessor for a given path.
-func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	accessor := d.Get("accessor").(string)
 	if accessor == "" {
 		return logical.ErrorResponse("missing accessor"), nil
 	}
 
-	aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor, false)
+	aEntry, err := b.Core.tokenStore.lookupByAccessor(ctx, accessor, false)
 	if err != nil {
 		return nil, err
 	}
 
-	capabilities, err := b.Core.Capabilities(aEntry.TokenID, d.Get("path").(string))
+	capabilities, err := b.Core.Capabilities(ctx, aEntry.TokenID, d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -1280,10 +1309,11 @@ func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *fram
 // handleRekeyRetrieve returns backed-up, PGP-encrypted unseal keys from a
 // rekey operation
 func (b *SystemBackend) handleRekeyRetrieve(
+	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
 	recovery bool) (*logical.Response, error) {
-	backup, err := b.Core.RekeyRetrieveBackup(recovery)
+	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up backed-up keys: %v", err)
 	}
@@ -1319,23 +1349,22 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	return resp, nil
 }
 
-func (b *SystemBackend) handleRekeyRetrieveBarrier(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyRetrieve(req, data, false)
+func (b *SystemBackend) handleRekeyRetrieveBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyRetrieve(ctx, req, data, false)
 }
 
-func (b *SystemBackend) handleRekeyRetrieveRecovery(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyRetrieve(req, data, true)
+func (b *SystemBackend) handleRekeyRetrieveRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyRetrieve(ctx, req, data, true)
 }
 
 // handleRekeyDelete deletes backed-up, PGP-encrypted unseal keys from a rekey
 // operation
 func (b *SystemBackend) handleRekeyDelete(
+	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
 	recovery bool) (*logical.Response, error) {
-	err := b.Core.RekeyDeleteBackup(recovery)
+	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("error during deletion of backed-up keys: %v", err)
 	}
@@ -1343,19 +1372,16 @@ func (b *SystemBackend) handleRekeyDelete(
 	return nil, nil
 }
 
-func (b *SystemBackend) handleRekeyDeleteBarrier(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyDelete(req, data, false)
+func (b *SystemBackend) handleRekeyDeleteBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyDelete(ctx, req, data, false)
 }
 
-func (b *SystemBackend) handleRekeyDeleteRecovery(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyDelete(req, data, true)
+func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
 // handleMountTable handles the "mounts" endpoint to provide the mount table
-func (b *SystemBackend) handleMountTable(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.mountsLock.RLock()
 	defer b.Core.mountsLock.RUnlock()
 
@@ -1385,9 +1411,8 @@ func (b *SystemBackend) handleMountTable(
 }
 
 // handleMount is used to mount a new path
-func (b *SystemBackend) handleMount(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
@@ -1492,7 +1517,7 @@ func (b *SystemBackend) handleMount(
 	}
 
 	// Attempt mount
-	if err := b.Core.mount(me); err != nil {
+	if err := b.Core.mount(ctx, me); err != nil {
 		b.Backend.Logger().Error("sys: mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -1512,12 +1537,11 @@ func handleError(
 }
 
 // handleUnmount is used to unmount a path
-func (b *SystemBackend) handleUnmount(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	path = sanitizeMountPath(path)
 
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(path)
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
@@ -1531,7 +1555,7 @@ func (b *SystemBackend) handleUnmount(
 	}
 
 	// Attempt unmount
-	if err := b.Core.unmount(path); err != nil {
+	if err := b.Core.unmount(ctx, path); err != nil {
 		b.Backend.Logger().Error("sys: unmount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -1540,9 +1564,8 @@ func (b *SystemBackend) handleUnmount(
 }
 
 // handleRemount is used to remount a path
-func (b *SystemBackend) handleRemount(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.ReplicationState()
 
 	// Get the paths
 	fromPath := data.Get("from").(string)
@@ -1562,7 +1585,7 @@ func (b *SystemBackend) handleRemount(
 	}
 
 	// Attempt remount
-	if err := b.Core.remount(fromPath, toPath); err != nil {
+	if err := b.Core.remount(ctx, fromPath, toPath); err != nil {
 		b.Backend.Logger().Error("sys: remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
 		return handleError(err)
 	}
@@ -1571,8 +1594,7 @@ func (b *SystemBackend) handleRemount(
 }
 
 // handleAuthTuneRead is used to get config settings on a auth path
-func (b *SystemBackend) handleAuthTuneRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuthTuneRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse(
@@ -1583,8 +1605,7 @@ func (b *SystemBackend) handleAuthTuneRead(
 }
 
 // handleMountTuneRead is used to get config settings on a backend
-func (b *SystemBackend) handleMountTuneRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleMountTuneRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse(
@@ -1592,7 +1613,7 @@ func (b *SystemBackend) handleMountTuneRead(
 			logical.ErrInvalidRequest
 	}
 
-	// This call will read both logical backend's configuration as well as auth backends'.
+	// This call will read both logical backend's configuration as well as auth methods'.
 	// Retaining this behavior for backward compatibility. If this behavior is not desired,
 	// an error can be returned if path has a prefix of "auth/".
 	return b.handleTuneReadCommon(path)
@@ -1626,34 +1647,31 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 }
 
 // handleAuthTuneWrite is used to set config settings on an auth path
-func (b *SystemBackend) handleAuthTuneWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse("path must be specified as a string"),
 			logical.ErrInvalidRequest
 	}
-	return b.handleTuneWriteCommon("auth/"+path, data)
+	return b.handleTuneWriteCommon(ctx, "auth/"+path, data)
 }
 
 // handleMountTuneWrite is used to set config settings on a backend
-func (b *SystemBackend) handleMountTuneWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse("path must be specified as a string"),
 			logical.ErrInvalidRequest
 	}
-	// This call will write both logical backend's configuration as well as auth backends'.
+	// This call will write both logical backend's configuration as well as auth methods'.
 	// Retaining this behavior for backward compatibility. If this behavior is not desired,
 	// an error can be returned if path has a prefix of "auth/".
-	return b.handleTuneWriteCommon(path, data)
+	return b.handleTuneWriteCommon(ctx, path, data)
 }
 
 // handleTuneWriteCommon is used to set config settings on a path
-func (b *SystemBackend) handleTuneWriteCommon(
-	path string, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.ReplicationState()
 
 	path = sanitizeMountPath(path)
 
@@ -1729,7 +1747,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		if newDefault != mountEntry.Config.DefaultLeaseTTL ||
 			newMax != mountEntry.Config.MaxLeaseTTL {
 
-			if err := b.tuneMountTTLs(path, mountEntry, newDefault, newMax); err != nil {
+			if err := b.tuneMountTTLs(ctx, path, mountEntry, newDefault, newMax); err != nil {
 				b.Backend.Logger().Error("sys: tuning failed", "path", path, "error", err)
 				return handleError(err)
 			}
@@ -1745,9 +1763,9 @@ func (b *SystemBackend) handleTuneWriteCommon(
 		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(b.Core.auth, mountEntry.Local)
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
 		default:
-			err = b.Core.persistMounts(b.Core.mounts, mountEntry.Local)
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
 		}
 		if err != nil {
 			mountEntry.Description = oldDesc
@@ -1762,8 +1780,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 }
 
 // handleLease is use to view the metadata for a given LeaseID
-func (b *SystemBackend) handleLeaseLookup(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	leaseID := data.Get("lease_id").(string)
 	if leaseID == "" {
 		return logical.ErrorResponse("lease_id must be specified"),
@@ -1801,14 +1818,13 @@ func (b *SystemBackend) handleLeaseLookup(
 	return resp, nil
 }
 
-func (b *SystemBackend) handleLeaseLookupList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleLeaseLookupList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	prefix := data.Get("prefix").(string)
 	if prefix != "" && !strings.HasSuffix(prefix, "/") {
 		prefix = prefix + "/"
 	}
 
-	keys, err := b.Core.expiration.idView.List(prefix)
+	keys, err := b.Core.expiration.idView.List(ctx, prefix)
 	if err != nil {
 		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
 		return handleError(err)
@@ -1817,8 +1833,7 @@ func (b *SystemBackend) handleLeaseLookupList(
 }
 
 // handleRenew is used to renew a lease with a given LeaseID
-func (b *SystemBackend) handleRenew(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
 	leaseID := data.Get("lease_id").(string)
 	if leaseID == "" {
@@ -1843,8 +1858,7 @@ func (b *SystemBackend) handleRenew(
 }
 
 // handleRevoke is used to revoke a given LeaseID
-func (b *SystemBackend) handleRevoke(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
 	leaseID := data.Get("lease_id").(string)
 	if leaseID == "" {
@@ -1864,14 +1878,12 @@ func (b *SystemBackend) handleRevoke(
 }
 
 // handleRevokePrefix is used to revoke a prefix with many LeaseIDs
-func (b *SystemBackend) handleRevokePrefix(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRevokePrefix(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return b.handleRevokePrefixCommon(req, data, false)
 }
 
 // handleRevokeForce is used to revoke a prefix with many LeaseIDs, ignoring errors
-func (b *SystemBackend) handleRevokeForce(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRevokeForce(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return b.handleRevokePrefixCommon(req, data, true)
 }
 
@@ -1896,8 +1908,7 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 }
 
 // handleAuthTable handles the "auth" endpoint to provide the auth table
-func (b *SystemBackend) handleAuthTable(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.authLock.RLock()
 	defer b.Core.authLock.RUnlock()
 
@@ -1922,9 +1933,8 @@ func (b *SystemBackend) handleAuthTable(
 }
 
 // handleEnableAuth is used to enable a new credential backend
-func (b *SystemBackend) handleEnableAuth(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.ReplicationState()
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
@@ -1985,7 +1995,7 @@ func (b *SystemBackend) handleEnableAuth(
 	}
 
 	// Attempt enabling
-	if err := b.Core.enableCredential(me); err != nil {
+	if err := b.Core.enableCredential(ctx, me); err != nil {
 		b.Backend.Logger().Error("sys: enable auth mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -1993,14 +2003,13 @@ func (b *SystemBackend) handleEnableAuth(
 }
 
 // handleDisableAuth is used to disable a credential backend
-func (b *SystemBackend) handleDisableAuth(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	path = sanitizeMountPath(path)
 
 	fullPath := credentialRoutePrefix + path
 
-	repState := b.Core.replicationState
+	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(fullPath)
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
@@ -2014,7 +2023,7 @@ func (b *SystemBackend) handleDisableAuth(
 	}
 
 	// Attempt disable
-	if err := b.Core.disableCredential(path); err != nil {
+	if err := b.Core.disableCredential(ctx, path); err != nil {
 		b.Backend.Logger().Error("sys: disable auth mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -2022,10 +2031,9 @@ func (b *SystemBackend) handleDisableAuth(
 }
 
 // handlePolicyList handles the "policy" endpoint to provide the enabled policies
-func (b *SystemBackend) handlePolicyList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePolicyList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the configured policies
-	policies, err := b.Core.policyStore.ListPolicies(PolicyTypeACL)
+	policies, err := b.Core.policyStore.ListPolicies(ctx, PolicyTypeACL)
 
 	// Add the special "root" policy
 	policies = append(policies, "root")
@@ -2037,9 +2045,9 @@ func (b *SystemBackend) handlePolicyList(
 	return resp, err
 }
 
-func (b *SystemBackend) handlePoliciesList(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		policies, err := b.Core.policyStore.ListPolicies(policyType)
+func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		policies, err := b.Core.policyStore.ListPolicies(ctx, policyType)
 		if err != nil {
 			return nil, err
 		}
@@ -2056,11 +2064,11 @@ func (b *SystemBackend) handlePoliciesList(policyType PolicyType) func(*logical.
 	}
 }
 
-func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
-		policy, err := b.Core.policyStore.GetPolicy(name, policyType)
+		policy, err := b.Core.policyStore.GetPolicy(ctx, name, policyType)
 		if err != nil {
 			return handleError(err)
 		}
@@ -2081,11 +2089,10 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) func(*logical.
 }
 
 // handlePolicyRead handles the "policy/<name>" endpoint to read a policy
-func (b *SystemBackend) handlePolicyRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePolicyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	policy, err := b.Core.policyStore.GetPolicy(name, PolicyTypeACL)
+	policy, err := b.Core.policyStore.GetPolicy(ctx, name, PolicyTypeACL)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2104,8 +2111,8 @@ func (b *SystemBackend) handlePolicyRead(
 	return resp, nil
 }
 
-func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		policy := &Policy{
 			Name: strings.ToLower(data.Get("name").(string)),
 			Type: policyType,
@@ -2136,7 +2143,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) func(*logical.R
 		}
 
 		// Update the policy
-		if err := b.Core.policyStore.SetPolicy(policy); err != nil {
+		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 			return handleError(err)
 		}
 		return nil, nil
@@ -2144,8 +2151,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) func(*logical.R
 }
 
 // handlePolicySet handles the "policy/<name>" endpoint to set a policy
-func (b *SystemBackend) handlePolicySet(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePolicySet(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	policy := &Policy{
 		Type: PolicyTypeACL,
@@ -2176,17 +2182,17 @@ func (b *SystemBackend) handlePolicySet(
 	policy.Paths = p.Paths
 
 	// Update the policy
-	if err := b.Core.policyStore.SetPolicy(policy); err != nil {
+	if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 		return handleError(err)
 	}
 	return resp, nil
 }
 
-func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) func(*logical.Request, *framework.FieldData) (*logical.Response, error) {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
-		if err := b.Core.policyStore.DeletePolicy(name, policyType); err != nil {
+		if err := b.Core.policyStore.DeletePolicy(ctx, name, policyType); err != nil {
 			return handleError(err)
 		}
 		return nil, nil
@@ -2194,19 +2200,17 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) func(*logica
 }
 
 // handlePolicyDelete handles the "policy/<name>" endpoint to delete a policy
-func (b *SystemBackend) handlePolicyDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePolicyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	if err := b.Core.policyStore.DeletePolicy(name, PolicyTypeACL); err != nil {
+	if err := b.Core.policyStore.DeletePolicy(ctx, name, PolicyTypeACL); err != nil {
 		return handleError(err)
 	}
 	return nil, nil
 }
 
 // handleAuditTable handles the "audit" endpoint to provide the audit table
-func (b *SystemBackend) handleAuditTable(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditTable(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.Core.auditLock.RLock()
 	defer b.Core.auditLock.RUnlock()
 
@@ -2228,8 +2232,7 @@ func (b *SystemBackend) handleAuditTable(
 
 // handleAuditHash is used to fetch the hash of the given input data with the
 // specified audit backend's salt
-func (b *SystemBackend) handleAuditHash(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	input := data.Get("input").(string)
 	if input == "" {
@@ -2251,9 +2254,8 @@ func (b *SystemBackend) handleAuditHash(
 }
 
 // handleEnableAudit is used to enable a new audit backend
-func (b *SystemBackend) handleEnableAudit(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
@@ -2287,7 +2289,7 @@ func (b *SystemBackend) handleEnableAudit(
 	}
 
 	// Attempt enabling
-	if err := b.Core.enableAudit(me); err != nil {
+	if err := b.Core.enableAudit(ctx, me); err != nil {
 		b.Backend.Logger().Error("sys: enable audit mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -2295,12 +2297,11 @@ func (b *SystemBackend) handleEnableAudit(
 }
 
 // handleDisableAudit is used to disable an audit backend
-func (b *SystemBackend) handleDisableAudit(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
 	// Attempt disable
-	if existed, err := b.Core.disableAudit(path); existed && err != nil {
+	if existed, err := b.Core.disableAudit(ctx, path); existed && err != nil {
 		b.Backend.Logger().Error("sys: disable audit mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -2308,8 +2309,7 @@ func (b *SystemBackend) handleDisableAudit(
 }
 
 // handleRawRead is used to read directly from the barrier
-func (b *SystemBackend) handleRawRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
 	// Prevent access of protected paths
@@ -2320,7 +2320,7 @@ func (b *SystemBackend) handleRawRead(
 		}
 	}
 
-	entry, err := b.Core.barrier.Get(path)
+	entry, err := b.Core.barrier.Get(ctx, path)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2336,8 +2336,7 @@ func (b *SystemBackend) handleRawRead(
 }
 
 // handleRawWrite is used to write directly to the barrier
-func (b *SystemBackend) handleRawWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRawWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
 	// Prevent access of protected paths
@@ -2353,15 +2352,14 @@ func (b *SystemBackend) handleRawWrite(
 		Key:   path,
 		Value: []byte(value),
 	}
-	if err := b.Core.barrier.Put(entry); err != nil {
+	if err := b.Core.barrier.Put(ctx, entry); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
 }
 
 // handleRawDelete is used to delete directly from the barrier
-func (b *SystemBackend) handleRawDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRawDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 
 	// Prevent access of protected paths
@@ -2372,15 +2370,14 @@ func (b *SystemBackend) handleRawDelete(
 		}
 	}
 
-	if err := b.Core.barrier.Delete(path); err != nil {
+	if err := b.Core.barrier.Delete(ctx, path); err != nil {
 		return handleError(err)
 	}
 	return nil, nil
 }
 
 // handleRawList is used to list directly from the barrier
-func (b *SystemBackend) handleRawList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path != "" && !strings.HasSuffix(path, "/") {
 		path = path + "/"
@@ -2394,7 +2391,7 @@ func (b *SystemBackend) handleRawList(
 		}
 	}
 
-	keys, err := b.Core.barrier.List(path)
+	keys, err := b.Core.barrier.List(ctx, path)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2402,8 +2399,7 @@ func (b *SystemBackend) handleRawList(
 }
 
 // handleKeyStatus returns status information about the backend key
-func (b *SystemBackend) handleKeyStatus(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get the key info
 	info, err := b.Core.barrier.ActiveKeyInfo()
 	if err != nil {
@@ -2420,15 +2416,14 @@ func (b *SystemBackend) handleKeyStatus(
 }
 
 // handleRotate is used to trigger a key rotation
-func (b *SystemBackend) handleRotate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	repState := b.Core.replicationState
+func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	repState := b.Core.ReplicationState()
 	if repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
 	}
 
 	// Rotate to the new term
-	newTerm, err := b.Core.barrier.Rotate()
+	newTerm, err := b.Core.barrier.Rotate(ctx)
 	if err != nil {
 		b.Backend.Logger().Error("sys: failed to create new encryption key", "error", err)
 		return handleError(err)
@@ -2438,13 +2433,13 @@ func (b *SystemBackend) handleRotate(
 	// In HA mode, we need to an upgrade path for the standby instances
 	if b.Core.ha != nil {
 		// Create the upgrade path to the new term
-		if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
+		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
 			b.Backend.Logger().Error("sys: failed to create new upgrade", "term", newTerm, "error", err)
 		}
 
 		// Schedule the destroy of the upgrade path
 		time.AfterFunc(keyRotateGracePeriod, func() {
-			if err := b.Core.barrier.DestroyUpgrade(newTerm); err != nil {
+			if err := b.Core.barrier.DestroyUpgrade(ctx, newTerm); err != nil {
 				b.Backend.Logger().Error("sys: failed to destroy upgrade", "term", newTerm, "error", err)
 			}
 		})
@@ -2452,7 +2447,7 @@ func (b *SystemBackend) handleRotate(
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := b.Core.barrier.Put(&Entry{
+	if err := b.Core.barrier.Put(ctx, &Entry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
 	}); err != nil {
@@ -2463,8 +2458,7 @@ func (b *SystemBackend) handleRotate(
 	return nil, nil
 }
 
-func (b *SystemBackend) handleWrappingPubkey(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleWrappingPubkey(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	x, _ := b.Core.wrappingJWTKey.X.MarshalText()
 	y, _ := b.Core.wrappingJWTKey.Y.MarshalText()
 	return &logical.Response{
@@ -2476,8 +2470,7 @@ func (b *SystemBackend) handleWrappingPubkey(
 	}, nil
 }
 
-func (b *SystemBackend) handleWrappingWrap(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleWrappingWrap(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if req.WrapInfo == nil || req.WrapInfo.TTL == 0 {
 		return logical.ErrorResponse("endpoint requires response wrapping to be used"), logical.ErrInvalidRequest
 	}
@@ -2494,8 +2487,7 @@ func (b *SystemBackend) handleWrappingWrap(
 	}, nil
 }
 
-func (b *SystemBackend) handleWrappingUnwrap(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// If a third party is unwrapping (rather than the calling token being the
 	// wrapping token) we detect this so that we can revoke the original
 	// wrapping token after reading it
@@ -2515,7 +2507,7 @@ func (b *SystemBackend) handleWrappingUnwrap(
 	// by handleRequest(), this happens when it's a normal response wrapping
 	// request and the token was provided "first party". We want to inspect the
 	// token policies but will not use this token entry for anything else.
-	te, err := b.Core.tokenStore.lookupTainted(token)
+	te, err := b.Core.tokenStore.lookupTainted(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -2529,7 +2521,7 @@ func (b *SystemBackend) handleWrappingUnwrap(
 	var response string
 	switch te.Policies[0] {
 	case responseWrappingPolicyName:
-		response, err = b.responseWrappingUnwrap(token, thirdParty)
+		response, err = b.responseWrappingUnwrap(ctx, token, thirdParty)
 	}
 	if err != nil {
 		var respErr *logical.Response
@@ -2556,15 +2548,15 @@ func (b *SystemBackend) handleWrappingUnwrap(
 
 // responseWrappingUnwrap will read the stored response in the cubbyhole and
 // return the raw HTTP response.
-func (b *SystemBackend) responseWrappingUnwrap(token string, thirdParty bool) (string, error) {
+func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string, thirdParty bool) (string, error) {
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseTokenByID(token)
+		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
 			return "", fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
 		}
 
-		defer b.Core.tokenStore.Revoke(token)
+		defer b.Core.tokenStore.Revoke(ctx, token)
 	}
 
 	cubbyReq := &logical.Request{
@@ -2572,7 +2564,7 @@ func (b *SystemBackend) responseWrappingUnwrap(token string, thirdParty bool) (s
 		Path:        "cubbyhole/response",
 		ClientToken: token,
 	}
-	cubbyResp, err := b.Core.router.Route(cubbyReq)
+	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return "", fmt.Errorf("error looking up wrapping information: %v", err)
 	}
@@ -2598,8 +2590,7 @@ func (b *SystemBackend) responseWrappingUnwrap(token string, thirdParty bool) (s
 	return response, nil
 }
 
-func (b *SystemBackend) handleWrappingLookup(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// This ordering of lookups has been validated already in the wrapping
 	// validation func, we're just doing this for a safety check
 	token := data.Get("token").(string)
@@ -2615,7 +2606,7 @@ func (b *SystemBackend) handleWrappingLookup(
 		Path:        "cubbyhole/wrapinfo",
 		ClientToken: token,
 	}
-	cubbyResp, err := b.Core.router.Route(cubbyReq)
+	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
 	}
@@ -2654,8 +2645,7 @@ func (b *SystemBackend) handleWrappingLookup(
 	return resp, nil
 }
 
-func (b *SystemBackend) handleWrappingRewrap(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// If a third party is rewrapping (rather than the calling token being the
 	// wrapping token) we detect this so that we can revoke the original
 	// wrapping token after reading it. Right now wrapped tokens can't unwrap
@@ -2672,11 +2662,11 @@ func (b *SystemBackend) handleWrappingRewrap(
 
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseTokenByID(token)
+		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
 			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
 		}
-		defer b.Core.tokenStore.Revoke(token)
+		defer b.Core.tokenStore.Revoke(ctx, token)
 	}
 
 	// Fetch the original TTL
@@ -2685,7 +2675,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 		Path:        "cubbyhole/wrapinfo",
 		ClientToken: token,
 	}
-	cubbyResp, err := b.Core.router.Route(cubbyReq)
+	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
 	}
@@ -2722,7 +2712,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 		Path:        "cubbyhole/response",
 		ClientToken: token,
 	}
-	cubbyResp, err = b.Core.router.Route(cubbyReq)
+	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up response: %v", err)
 	}
@@ -2754,8 +2744,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 	}, nil
 }
 
-func (b *SystemBackend) pathHashWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	inputB64 := d.Get("input").(string)
 	format := d.Get("format").(string)
 	algorithm := d.Get("urlalgorithm").(string)
@@ -2808,8 +2797,7 @@ func (b *SystemBackend) pathHashWrite(
 	return resp, nil
 }
 
-func (b *SystemBackend) pathRandomWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	bytes := 0
 	var err error
 	strBytes := d.Get("urlbytes").(string)
@@ -3123,10 +3111,10 @@ This path responds to the following HTTP methods.
         credential backend.
 
     POST /<mount point>
-        Enable a new auth backend.
+        Enable a new auth method.
 
     DELETE /<mount point>
-        Disable the auth backend at the given mount point.
+        Disable the auth method at the given mount point.
 		`,
 	},
 
@@ -3372,6 +3360,10 @@ command field. This should be HEX encoded.`,
 		`The command used to start the plugin. The
 executable defined in this command must exist in vault's
 plugin directory.`,
+		"",
+	},
+	"plugin-catalog_args": {
+		`The args passed to plugin command.`,
 		"",
 	},
 	"leases": {

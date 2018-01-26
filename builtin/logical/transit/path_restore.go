@@ -1,6 +1,8 @@
 package transit
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -28,13 +30,13 @@ func (b *backend) pathRestore() *framework.Path {
 	}
 }
 
-func (b *backend) pathRestoreUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	backupB64 := d.Get("backup").(string)
 	if backupB64 == "" {
 		return logical.ErrorResponse("'backup' must be supplied"), nil
 	}
 
-	return nil, b.lm.RestorePolicy(req.Storage, d.Get("name").(string), backupB64)
+	return nil, b.lm.RestorePolicy(ctx, req.Storage, d.Get("name").(string), backupB64)
 }
 
 const pathRestoreHelpSyn = `Restore the named key`

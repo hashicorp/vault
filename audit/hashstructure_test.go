@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"reflect"
@@ -94,7 +95,7 @@ func TestCopy_response(t *testing.T) {
 
 func TestHashString(t *testing.T) {
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(&logical.StorageEntry{
+	inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
@@ -192,7 +193,7 @@ func TestHash(t *testing.T) {
 	}
 
 	inmemStorage := &logical.InmemStorage{}
-	inmemStorage.Put(&logical.StorageEntry{
+	inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})

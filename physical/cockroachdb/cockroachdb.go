@@ -20,6 +20,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// Verify CockroachDBBackend satisfies the correct interfaces
+var _ physical.Backend = (*CockroachDBBackend)(nil)
+var _ physical.Transactional = (*CockroachDBBackend)(nil)
+
 // CockroachDBBackend Backend is a physical backend that stores data
 // within a CockroachDB database.
 type CockroachDBBackend struct {
@@ -108,7 +112,7 @@ func (c *CockroachDBBackend) prepare(name, query string) error {
 }
 
 // Put is used to insert or update an entry.
-func (c *CockroachDBBackend) Put(entry *physical.Entry) error {
+func (c *CockroachDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "put"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -122,7 +126,7 @@ func (c *CockroachDBBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch and entry.
-func (c *CockroachDBBackend) Get(key string) (*physical.Entry, error) {
+func (c *CockroachDBBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "get"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -145,7 +149,7 @@ func (c *CockroachDBBackend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (c *CockroachDBBackend) Delete(key string) error {
+func (c *CockroachDBBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "delete"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -160,7 +164,7 @@ func (c *CockroachDBBackend) Delete(key string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (c *CockroachDBBackend) List(prefix string) ([]string, error) {
+func (c *CockroachDBBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "list"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -196,7 +200,7 @@ func (c *CockroachDBBackend) List(prefix string) ([]string, error) {
 }
 
 // Transaction is used to run multiple entries via a transaction
-func (c *CockroachDBBackend) Transaction(txns []*physical.TxnEntry) error {
+func (c *CockroachDBBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "transaction"}, time.Now())
 	if len(txns) == 0 {
 		return nil

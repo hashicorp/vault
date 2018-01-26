@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -30,12 +31,11 @@ func pathRoleCreate(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRoleCreateRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
 	// Get the role
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (b *backend) pathRoleCreateRead(
 	}
 
 	// Determine if we have a lease
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (b *backend) pathRoleCreateRead(
 	}
 
 	// Get our handle
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,13 @@ func (b *backend) pathRoleCreateRead(
 		"username": username,
 		"role":     name,
 	})
-	resp.Secret.TTL = lease.Lease
+
+	ttl := lease.Lease
+	if ttl == 0 || (lease.LeaseMax > 0 && ttl > lease.LeaseMax) {
+		ttl = lease.LeaseMax
+	}
+	resp.Secret.TTL = ttl
+
 	return resp, nil
 }
 

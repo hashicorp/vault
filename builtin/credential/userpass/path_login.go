@@ -1,6 +1,7 @@
 package userpass
 
 import (
+	"context"
 	"crypto/subtle"
 	"fmt"
 	"strings"
@@ -36,8 +37,7 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLoginAliasLookahead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := strings.ToLower(d.Get("username").(string))
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
@@ -52,8 +52,7 @@ func (b *backend) pathLoginAliasLookahead(
 	}, nil
 }
 
-func (b *backend) pathLogin(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := strings.ToLower(d.Get("username").(string))
 
 	password := d.Get("password").(string)
@@ -62,7 +61,7 @@ func (b *backend) pathLogin(
 	}
 
 	// Get the user and validate auth
-	user, err := b.user(req.Storage, username)
+	user, err := b.user(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
@@ -101,10 +100,9 @@ func (b *backend) pathLogin(
 	}, nil
 }
 
-func (b *backend) pathLoginRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the user
-	user, err := b.user(req.Storage, req.Auth.Metadata["username"])
+	user, err := b.user(ctx, req.Storage, req.Auth.Metadata["username"])
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +115,7 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	return framework.LeaseExtend(user.TTL, user.MaxTTL, b.System())(req, d)
+	return framework.LeaseExtend(user.TTL, user.MaxTTL, b.System())(ctx, req, d)
 }
 
 const pathLoginSyn = `

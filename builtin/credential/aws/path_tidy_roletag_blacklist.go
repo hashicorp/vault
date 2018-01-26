@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -31,7 +32,7 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
-func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) error {
+func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, safety_buffer int) error {
 	grabbed := atomic.CompareAndSwapUint32(&b.tidyBlacklistCASGuard, 0, 1)
 	if grabbed {
 		defer atomic.StoreUint32(&b.tidyBlacklistCASGuard, 0)
@@ -40,13 +41,13 @@ func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) err
 	}
 
 	bufferDuration := time.Duration(safety_buffer) * time.Second
-	tags, err := s.List("blacklist/roletag/")
+	tags, err := s.List(ctx, "blacklist/roletag/")
 	if err != nil {
 		return err
 	}
 
 	for _, tag := range tags {
-		tagEntry, err := s.Get("blacklist/roletag/" + tag)
+		tagEntry, err := s.Get(ctx, "blacklist/roletag/"+tag)
 		if err != nil {
 			return fmt.Errorf("error fetching tag %s: %s", tag, err)
 		}
@@ -65,7 +66,7 @@ func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) err
 		}
 
 		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-			if err := s.Delete("blacklist/roletag" + tag); err != nil {
+			if err := s.Delete(ctx, "blacklist/roletag"+tag); err != nil {
 				return fmt.Errorf("error deleting tag %s from storage: %s", tag, err)
 			}
 		}
@@ -75,9 +76,8 @@ func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) err
 }
 
 // pathTidyRoletagBlacklistUpdate is used to clean-up the entries in the role tag blacklist.
-func (b *backend) pathTidyRoletagBlacklistUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, b.tidyBlacklistRoleTag(req.Storage, data.Get("safety_buffer").(int))
+func (b *backend) pathTidyRoletagBlacklistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return nil, b.tidyBlacklistRoleTag(ctx, req.Storage, data.Get("safety_buffer").(int))
 }
 
 const pathTidyRoletagBlacklistSyn = `

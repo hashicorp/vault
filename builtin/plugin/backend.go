@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"net/rpc"
 	"reflect"
@@ -18,17 +19,17 @@ var (
 )
 
 // Factory returns a configured plugin logical.Backend.
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	_, ok := conf.Config["plugin_name"]
 	if !ok {
 		return nil, fmt.Errorf("plugin_name not provided")
 	}
-	b, err := Backend(conf)
+	b, err := Backend(ctx, conf)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -36,18 +37,18 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 
 // Backend returns an instance of the backend, either as a plugin if external
 // or as a concrete implementation if builtin, casted as logical.Backend.
-func Backend(conf *logical.BackendConfig) (logical.Backend, error) {
+func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	var b backend
 
 	name := conf.Config["plugin_name"]
 	sys := conf.System
 
 	// NewBackend with isMetadataMode set to true
-	raw, err := bplugin.NewBackend(name, sys, conf.Logger, true)
+	raw, err := bplugin.NewBackend(ctx, name, sys, conf.Logger, true)
 	if err != nil {
 		return nil, err
 	}
-	err = raw.Setup(conf)
+	err = raw.Setup(ctx, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func Backend(conf *logical.BackendConfig) (logical.Backend, error) {
 	btype := raw.Type()
 
 	// Cleanup meta plugin backend
-	raw.Cleanup()
+	raw.Cleanup(ctx)
 
 	// Initialize b.Backend with dummy backend since plugin
 	// backends will need to be lazy loaded.
@@ -84,23 +85,23 @@ type backend struct {
 	loaded bool
 }
 
-func (b *backend) reloadBackend() error {
+func (b *backend) reloadBackend(ctx context.Context) error {
 	b.Logger().Trace("plugin: reloading plugin backend", "plugin", b.config.Config["plugin_name"])
-	return b.startBackend()
+	return b.startBackend(ctx)
 }
 
 // startBackend starts a plugin backend
-func (b *backend) startBackend() error {
+func (b *backend) startBackend(ctx context.Context) error {
 	pluginName := b.config.Config["plugin_name"]
 
 	// Ensure proper cleanup of the backend (i.e. call client.Kill())
-	b.Backend.Cleanup()
+	b.Backend.Cleanup(ctx)
 
-	nb, err := bplugin.NewBackend(pluginName, b.config.System, b.config.Logger, false)
+	nb, err := bplugin.NewBackend(ctx, pluginName, b.config.System, b.config.Logger, false)
 	if err != nil {
 		return err
 	}
-	err = nb.Setup(b.config)
+	err = nb.Setup(ctx, b.config)
 	if err != nil {
 		return err
 	}
@@ -109,12 +110,12 @@ func (b *backend) startBackend() error {
 	// check if type and special paths still matches
 	if !b.loaded {
 		if b.Backend.Type() != nb.Type() {
-			nb.Cleanup()
+			nb.Cleanup(ctx)
 			b.Logger().Warn("plugin: failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchType)
 			return ErrMismatchType
 		}
 		if !reflect.DeepEqual(b.Backend.SpecialPaths(), nb.SpecialPaths()) {
-			nb.Cleanup()
+			nb.Cleanup(ctx)
 			b.Logger().Warn("plugin: failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchPaths)
 			return ErrMismatchPaths
 		}
@@ -123,16 +124,11 @@ func (b *backend) startBackend() error {
 	b.Backend = nb
 	b.loaded = true
 
-	// Call initialize
-	if err := b.Backend.Initialize(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
-func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error) {
+func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	b.RLock()
 	canary := b.canary
 
@@ -143,7 +139,7 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 		b.Lock()
 		// Check once more after lock swap
 		if !b.loaded {
-			err := b.startBackend()
+			err := b.startBackend(ctx)
 			if err != nil {
 				b.Unlock()
 				return nil, err
@@ -152,15 +148,16 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 		b.Unlock()
 		b.RLock()
 	}
-	resp, err := b.Backend.HandleRequest(req)
+	resp, err := b.Backend.HandleRequest(ctx, req)
 	b.RUnlock()
 	// Need to compare string value for case were err comes from plugin RPC
 	// and is returned as plugin.BasicError type.
-	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
+	if err != nil &&
+		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend()
+			err := b.reloadBackend(ctx)
 			if err != nil {
 				b.Unlock()
 				return nil, err
@@ -176,13 +173,13 @@ func (b *backend) HandleRequest(req *logical.Request) (*logical.Response, error)
 		// Try request once more
 		b.RLock()
 		defer b.RUnlock()
-		return b.Backend.HandleRequest(req)
+		return b.Backend.HandleRequest(ctx, req)
 	}
 	return resp, err
 }
 
 // HandleExistenceCheck is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
-func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	b.RLock()
 	canary := b.canary
 
@@ -193,7 +190,7 @@ func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error)
 		b.Lock()
 		// Check once more after lock swap
 		if !b.loaded {
-			err := b.startBackend()
+			err := b.startBackend(ctx)
 			if err != nil {
 				b.Unlock()
 				return false, false, err
@@ -203,13 +200,14 @@ func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error)
 		b.RLock()
 	}
 
-	checkFound, exists, err := b.Backend.HandleExistenceCheck(req)
+	checkFound, exists, err := b.Backend.HandleExistenceCheck(ctx, req)
 	b.RUnlock()
-	if err != nil && err.Error() == rpc.ErrShutdown.Error() {
+	if err != nil &&
+		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend()
+			err := b.reloadBackend(ctx)
 			if err != nil {
 				b.Unlock()
 				return false, false, err
@@ -225,7 +223,7 @@ func (b *backend) HandleExistenceCheck(req *logical.Request) (bool, bool, error)
 		// Try request once more
 		b.RLock()
 		defer b.RUnlock()
-		return b.Backend.HandleExistenceCheck(req)
+		return b.Backend.HandleExistenceCheck(ctx, req)
 	}
 	return checkFound, exists, err
 }

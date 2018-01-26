@@ -1,6 +1,8 @@
 package mfa
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -25,8 +27,8 @@ func pathMFAConfig(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) MFAConfig(req *logical.Request) (*MFAConfig, error) {
-	entry, err := req.Storage.Get("mfa_config")
+func (b *backend) MFAConfig(ctx context.Context, req *logical.Request) (*MFAConfig, error) {
+	entry, err := req.Storage.Get(ctx, "mfa_config")
 	if err != nil {
 		return nil, err
 	}
@@ -40,8 +42,7 @@ func (b *backend) MFAConfig(req *logical.Request) (*MFAConfig, error) {
 	return &result, nil
 }
 
-func (b *backend) pathMFAConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathMFAConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("mfa_config", MFAConfig{
 		Type: d.Get("type").(string),
 	})
@@ -49,17 +50,15 @@ func (b *backend) pathMFAConfigWrite(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathMFAConfigRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
-	config, err := b.MFAConfig(req)
+func (b *backend) pathMFAConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	config, err := b.MFAConfig(ctx, req)
 	if err != nil {
 		return nil, err
 	}

@@ -25,10 +25,10 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 	password, ok := m["password"]
 	if !ok {
-		fmt.Printf("Password (will be hidden): ")
+		fmt.Fprintf(os.Stderr, "Password (will be hidden): ")
 		var err error
 		password, err = pwd.Read(os.Stdin)
-		fmt.Println()
+		fmt.Fprintf(os.Stderr, "\n")
 		if err != nil {
 			return nil, err
 		}
@@ -36,6 +36,15 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 	data := map[string]interface{}{
 		"password": password,
+	}
+
+	mfa_method, ok := m["method"]
+	if ok {
+		data["method"] = mfa_method
+	}
+	mfa_passcode, ok := m["passcode"]
+	if ok {
+		data["passcode"] = mfa_passcode
 	}
 
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
@@ -53,14 +62,28 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 // Help method for okta cli
 func (h *CLIHandler) Help() string {
 	help := `
-The Okta credential provider allows you to authenticate with Okta.
-To use it, first configure it through the "config" endpoint, and then
-login by specifying username and password. If password is not provided
-on the command line, it will be read from stdin.
+Usage: vault login -method=okta [CONFIG K=V...]
 
-    Example: vault auth -method=okta username=john
+  The Okta auth method allows users to authenticate using Okta.
 
-    `
+  Authenticate as "sally":
+
+      $ vault login -method=okta username=sally
+      Password (will be hidden):
+
+  Authenticate as "bob":
+
+      $ vault login -method=okta username=bob password=password
+
+Configuration:
+
+  password=<string>
+      Okta password to use for authentication. If not provided, the CLI will
+      prompt for this on stdin.
+
+  username=<string>
+      Okta username to use for authentication.
+`
 
 	return strings.TrimSpace(help)
 }

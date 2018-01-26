@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -31,7 +32,7 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyWhitelistIdentity is used to delete entries in the whitelist that are expired.
-func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) error {
+func (b *backend) tidyWhitelistIdentity(ctx context.Context, s logical.Storage, safety_buffer int) error {
 	grabbed := atomic.CompareAndSwapUint32(&b.tidyWhitelistCASGuard, 0, 1)
 	if grabbed {
 		defer atomic.StoreUint32(&b.tidyWhitelistCASGuard, 0)
@@ -41,13 +42,13 @@ func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) er
 
 	bufferDuration := time.Duration(safety_buffer) * time.Second
 
-	identities, err := s.List("whitelist/identity/")
+	identities, err := s.List(ctx, "whitelist/identity/")
 	if err != nil {
 		return err
 	}
 
 	for _, instanceID := range identities {
-		identityEntry, err := s.Get("whitelist/identity/" + instanceID)
+		identityEntry, err := s.Get(ctx, "whitelist/identity/"+instanceID)
 		if err != nil {
 			return fmt.Errorf("error fetching identity of instanceID %s: %s", instanceID, err)
 		}
@@ -66,7 +67,7 @@ func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) er
 		}
 
 		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
-			if err := s.Delete("whitelist/identity" + instanceID); err != nil {
+			if err := s.Delete(ctx, "whitelist/identity"+instanceID); err != nil {
 				return fmt.Errorf("error deleting identity of instanceID %s from storage: %s", instanceID, err)
 			}
 		}
@@ -76,9 +77,8 @@ func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) er
 }
 
 // pathTidyIdentityWhitelistUpdate is used to delete entries in the whitelist that are expired.
-func (b *backend) pathTidyIdentityWhitelistUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, b.tidyWhitelistIdentity(req.Storage, data.Get("safety_buffer").(int))
+func (b *backend) pathTidyIdentityWhitelistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return nil, b.tidyWhitelistIdentity(ctx, req.Storage, data.Get("safety_buffer").(int))
 }
 
 const pathTidyIdentityWhitelistSyn = `

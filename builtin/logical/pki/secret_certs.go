@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -34,8 +35,7 @@ reference`,
 	}
 }
 
-func (b *backend) secretCredsRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.Secret == nil {
 		return nil, fmt.Errorf("secret is nil in request")
 	}
@@ -48,5 +48,5 @@ func (b *backend) secretCredsRevoke(
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(b, req, serialInt.(string), true)
+	return revokeCert(ctx, b, req, serialInt.(string), true)
 }

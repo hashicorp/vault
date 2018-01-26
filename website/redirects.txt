@@ -84,6 +84,7 @@
 /docs/secrets/custom.html              /docs/plugin/index.html
 /docs/secrets/generic/index.html       /docs/secrets/kv/index.html
 /intro/getting-started/acl.html        /intro/getting-started/policies.html
+/intro/getting-started/secret-backends.html   /intro/getting-started/secrets-engines.html
 
 /docs/vault-enterprise/index.html               /docs/enterprise/index.html
 /docs/vault-enterprise/replication/index.html   /docs/enterprise/replication/index.html
@@ -98,5 +99,9 @@
 /docs/vault-enterprise/mfa/mfa-okta.html        /docs/enterprise/mfa/mfa-okta.html
 /docs/vault-enterprise/mfa/mfa-pingid.html      /docs/enterprise/mfa/mfa-pingid.html
 /docs/vault-enterprise/mfa/mfa-totp.html        /docs/enterprise/mfa/mfa-totp.html
+
+/docs/commands/environment.html        /docs/commands/index.html#environment-variables
+/docs/commands/read-write.html         /docs/commands/index.html#reading-and-writing-data
+/docs/commands/help.html               /docs/commands/path-help.html
 
 /docs/enterprise/hsm/configuration.html /docs/configuration/seal/pkcs11.html

@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -33,8 +34,7 @@ func secretCreds(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretCredsRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
@@ -45,13 +45,13 @@ func (b *backend) secretCredsRenew(
 		return nil, fmt.Errorf("usernameRaw is not a string")
 	}
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the lease information
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (b *backend) secretCredsRenew(
 	}
 
 	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	resp, err := f(req, d)
+	resp, err := f(ctx, req, d)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +86,7 @@ func (b *backend) secretCredsRenew(
 	return resp, nil
 }
 
-func (b *backend) secretCredsRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
@@ -102,7 +101,7 @@ func (b *backend) secretCredsRevoke(
 
 	roleNameRaw, ok := req.Secret.InternalData["role"]
 	if ok {
-		role, err := b.Role(req.Storage, roleNameRaw.(string))
+		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +116,7 @@ func (b *backend) secretCredsRevoke(
 	}
 
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

@@ -1,13 +1,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 )
 
 // tuneMount is used to set config on a mount point
-func (b *SystemBackend) tuneMountTTLs(path string, me *MountEntry, newDefault, newMax time.Duration) error {
+func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *MountEntry, newDefault, newMax time.Duration) error {
 	zero := time.Duration(0)
 
 	switch {
@@ -37,9 +38,9 @@ func (b *SystemBackend) tuneMountTTLs(path string, me *MountEntry, newDefault, n
 	var err error
 	switch {
 	case strings.HasPrefix(path, credentialRoutePrefix):
-		err = b.Core.persistAuth(b.Core.auth, me.Local)
+		err = b.Core.persistAuth(ctx, b.Core.auth, me.Local)
 	default:
-		err = b.Core.persistMounts(b.Core.mounts, me.Local)
+		err = b.Core.persistMounts(ctx, b.Core.mounts, me.Local)
 	}
 	if err != nil {
 		me.Config.MaxLeaseTTL = origMax

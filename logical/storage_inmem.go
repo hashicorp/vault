@@ -1,6 +1,7 @@
 package logical
 
 import (
+	"context"
 	"strings"
 	"sync"
 
@@ -17,7 +18,7 @@ type InmemStorage struct {
 	once sync.Once
 }
 
-func (s *InmemStorage) Get(key string) (*StorageEntry, error) {
+func (s *InmemStorage) Get(ctx context.Context, key string) (*StorageEntry, error) {
 	s.once.Do(s.init)
 
 	s.RLock()
@@ -34,7 +35,7 @@ func (s *InmemStorage) Get(key string) (*StorageEntry, error) {
 	return nil, nil
 }
 
-func (s *InmemStorage) Put(entry *StorageEntry) error {
+func (s *InmemStorage) Put(ctx context.Context, entry *StorageEntry) error {
 	s.once.Do(s.init)
 
 	s.Lock()
@@ -47,7 +48,7 @@ func (s *InmemStorage) Put(entry *StorageEntry) error {
 	return nil
 }
 
-func (s *InmemStorage) Delete(key string) error {
+func (s *InmemStorage) Delete(ctx context.Context, key string) error {
 	s.once.Do(s.init)
 
 	s.Lock()
@@ -57,7 +58,7 @@ func (s *InmemStorage) Delete(key string) error {
 	return nil
 }
 
-func (s *InmemStorage) List(prefix string) ([]string, error) {
+func (s *InmemStorage) List(ctx context.Context, prefix string) ([]string, error) {
 	s.once.Do(s.init)
 
 	s.RLock()

@@ -1,19 +1,19 @@
 ---
 layout: "api"
-page_title: "AWS Secret Backend - HTTP API"
+page_title: "AWS - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-aws"
 description: |-
-  This is the API documentation for the Vault AWS secret backend.
+  This is the API documentation for the Vault AWS secrets engine.
 ---
 
-# AWS Secret Backend HTTP API
+# AWS Secrets Engine (API)
 
-This is the API documentation for the Vault AWS secret backend. For general
-information about the usage and operation of the AWS backend, please see the
-[Vault AWS backend documentation](/docs/secrets/aws/index.html).
+This is the API documentation for the Vault AWS secrets engine. For general
+information about the usage and operation of the AWS secrets engine, please see
+the [Vault AWS documentation](/docs/secrets/aws/index.html).
 
-This documentation assumes the AWS backend is mounted at the `/aws` path in
-Vault. Since it is possible to mount secret backends at any location, please
+This documentation assumes the AWS secrets engine is enabled at the `/aws` path
+in Vault. Since it is possible to enable secrets engines at any location, please
 update your API calls accordingly.
 
 ## Configure Root IAM Credentials
@@ -78,7 +78,7 @@ $ curl \
 
 ## Configure Lease
 
-This endpoint configures lease settings for the AWS secret backend. It is
+This endpoint configures lease settings for the AWS secrets engine. It is
 optional, as there are default values for `lease` and `lease_max`.
 
 | Method   | Path                         | Produces               |
@@ -115,7 +115,7 @@ $ curl \
 
 ## Read Lease
 
-This endpoint returns the current lease settings for the AWS secret backend.
+This endpoint returns the current lease settings for the AWS secrets engine.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -235,12 +235,11 @@ For an ARN:
 
 ## List Roles
 
-This endpoint lists all existing roles in the backend.
+This endpoint lists all existing roles in the secrets engine.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/aws/roles`                 | `200 application/json` |
-| `GET`    | `/aws/roles?list=true`       | `200 application/json` |
 
 ### Sample Request
 

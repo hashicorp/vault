@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -74,8 +75,8 @@ template values are '{{username}}' and
 	}
 }
 
-func getRole(s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + n)
+func getRole(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, "role/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -91,9 +92,8 @@ func getRole(s logical.Storage, n string) (*roleEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathRoleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("role/" + data.Get("name").(string))
+func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -101,9 +101,8 @@ func (b *backend) pathRoleDelete(
 	return nil, nil
 }
 
-func (b *backend) pathRoleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := getRole(req.Storage, data.Get("name").(string))
+func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	role, err := getRole(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +115,7 @@ func (b *backend) pathRoleRead(
 	}, nil
 }
 
-func (b *backend) pathRoleCreate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
 	creationCQL := data.Get("creation_cql").(string)
@@ -150,7 +148,7 @@ func (b *backend) pathRoleCreate(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entryJSON); err != nil {
+	if err := req.Storage.Put(ctx, entryJSON); err != nil {
 		return nil, err
 	}
 

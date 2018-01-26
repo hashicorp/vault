@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -29,7 +30,8 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +42,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 		"policies":     "p,q,r,s",
 		"bound_ami_id": "abcd-123",
 	}
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/abcd-123",
 		Storage:   storage,
@@ -54,7 +56,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// read the created role entry
-	roleEntry, err := b.lockedAWSRole(storage, "abcd-123")
+	roleEntry, err := b.lockedAWSRole(context.Background(), storage, "abcd-123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +84,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// parse the created role tag
-	rTag2, err := b.parseAndVerifyRoleTagValue(storage, val)
+	rTag2, err := b.parseAndVerifyRoleTagValue(context.Background(), storage, val)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +109,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// register a different role
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ami-6789",
 		Storage:   storage,
@@ -121,7 +123,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// get the entry of the newly created role entry
-	roleEntry2, err := b.lockedAWSRole(storage, "ami-6789")
+	roleEntry2, err := b.lockedAWSRole(context.Background(), storage, "ami-6789")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +255,8 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,14 +272,14 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 		"disable_periodic_tidy": true,
 	}
 	tidyRequest.Data = data
-	_, err = b.HandleRequest(tidyRequest)
+	_, err = b.HandleRequest(context.Background(), tidyRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// test read operation
 	tidyRequest.Operation = logical.ReadOperation
-	resp, err := b.HandleRequest(tidyRequest)
+	resp, err := b.HandleRequest(context.Background(), tidyRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +292,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 
 	// test delete operation
 	tidyRequest.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(tidyRequest)
+	resp, err = b.HandleRequest(context.Background(), tidyRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +310,8 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -323,14 +327,14 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 		"disable_periodic_tidy": true,
 	}
 	tidyRequest.Data = data
-	_, err = b.HandleRequest(tidyRequest)
+	_, err = b.HandleRequest(context.Background(), tidyRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// test read operation
 	tidyRequest.Operation = logical.ReadOperation
-	resp, err := b.HandleRequest(tidyRequest)
+	resp, err := b.HandleRequest(context.Background(), tidyRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +347,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 
 	// test delete operation
 	tidyRequest.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(tidyRequest)
+	resp, err = b.HandleRequest(context.Background(), tidyRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,13 +365,14 @@ func TestBackend_TidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// test update operation
-	_, err = b.HandleRequest(&logical.Request{
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "tidy/identity-whitelist",
 		Storage:   storage,
@@ -386,13 +391,14 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// test update operation
-	_, err = b.HandleRequest(&logical.Request{
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "tidy/roletag-blacklist",
 		Storage:   storage,
@@ -411,7 +417,8 @@ func TestBackend_ConfigClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -464,7 +471,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	})
 
 	// test existence check returning false
-	checkFound, exists, err := b.HandleExistenceCheck(&logical.Request{
+	checkFound, exists, err := b.HandleExistenceCheck(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "config/client",
 		Storage:   storage,
@@ -486,13 +493,13 @@ func TestBackend_ConfigClient(t *testing.T) {
 		Data:      data,
 		Storage:   storage,
 	}
-	_, err = b.HandleRequest(configClientCreateRequest)
+	_, err = b.HandleRequest(context.Background(), configClientCreateRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	//test existence check returning true
-	checkFound, exists, err = b.HandleExistenceCheck(&logical.Request{
+	checkFound, exists, err = b.HandleExistenceCheck(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "config/client",
 		Storage:   storage,
@@ -519,13 +526,13 @@ func TestBackend_ConfigClient(t *testing.T) {
 		Storage:   storage,
 		Data:      endpointData,
 	}
-	_, err = b.HandleRequest(endpointReq)
+	_, err = b.HandleRequest(context.Background(), endpointReq)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	endpointReq.Operation = logical.ReadOperation
-	resp, err := b.HandleRequest(endpointReq)
+	resp, err := b.HandleRequest(context.Background(), endpointReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -548,7 +555,8 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -558,7 +566,7 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 		Storage:   storage,
 		Path:      "config/certificate/cert1",
 	}
-	checkFound, exists, err := b.HandleExistenceCheck(certReq)
+	checkFound, exists, err := b.HandleExistenceCheck(context.Background(), certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -595,14 +603,14 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 
 	certReq.Data = data
 	// test create operation
-	resp, err := b.HandleRequest(certReq)
+	resp, err := b.HandleRequest(context.Background(), certReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
 	certReq.Data = nil
 	// test existence check
-	checkFound, exists, err = b.HandleExistenceCheck(certReq)
+	checkFound, exists, err = b.HandleExistenceCheck(context.Background(), certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -615,7 +623,7 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 
 	certReq.Operation = logical.ReadOperation
 	// test read operation
-	resp, err = b.HandleRequest(certReq)
+	resp, err = b.HandleRequest(context.Background(), certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -646,7 +654,7 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 	certReq.Path = "config/certificate/cert2"
 	certReq.Data = data
 	// create another entry to test the list operation
-	_, err = b.HandleRequest(certReq)
+	_, err = b.HandleRequest(context.Background(), certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -654,7 +662,7 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 	certReq.Operation = logical.ListOperation
 	certReq.Path = "config/certificates"
 	// test list operation
-	resp, err = b.HandleRequest(certReq)
+	resp, err = b.HandleRequest(context.Background(), certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -668,13 +676,13 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 
 	certReq.Operation = logical.DeleteOperation
 	certReq.Path = "config/certificate/cert1"
-	_, err = b.HandleRequest(certReq)
+	_, err = b.HandleRequest(context.Background(), certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	certReq.Path = "config/certificate/cert2"
-	_, err = b.HandleRequest(certReq)
+	_, err = b.HandleRequest(context.Background(), certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -682,7 +690,7 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 	certReq.Operation = logical.ListOperation
 	certReq.Path = "config/certificates"
 	// test list operation
-	resp, err = b.HandleRequest(certReq)
+	resp, err = b.HandleRequest(context.Background(), certReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -703,7 +711,8 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -716,7 +725,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 		"role_tag":     "VaultRole",
 		"bound_ami_id": "abcd-123",
 	}
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/abcd-123",
 		Storage:   storage,
@@ -730,7 +739,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	}
 
 	// verify that the entry is created
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/abcd-123",
 		Storage:   storage,
@@ -746,7 +755,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	data2 := map[string]interface{}{
 		"policies": "p,q,r,s",
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "role/abcd-123/tag",
 		Storage:   storage,
@@ -762,7 +771,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	tagValue := resp.Data["tag_value"].(string)
 
 	// parse the value and check if the verifiable values match
-	rTag, err := b.parseAndVerifyRoleTagValue(storage, tagValue)
+	rTag, err := b.parseAndVerifyRoleTagValue(context.Background(), storage, tagValue)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -784,7 +793,8 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -796,7 +806,7 @@ func TestBackend_PathRoleTag(t *testing.T) {
 		"role_tag":     "VaultRole",
 		"bound_ami_id": "abcd-123",
 	}
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/abcd-123",
 		Storage:   storage,
@@ -809,7 +819,7 @@ func TestBackend_PathRoleTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/abcd-123",
 		Storage:   storage,
@@ -821,7 +831,7 @@ func TestBackend_PathRoleTag(t *testing.T) {
 		t.Fatalf("failed to find a role entry for abcd-123")
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "role/abcd-123/tag",
 		Storage:   storage,
@@ -849,7 +859,8 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -861,7 +872,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		"role_tag":     "VaultRole",
 		"bound_ami_id": "abcd-123",
 	}
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/abcd-123",
 		Storage:   storage,
@@ -878,7 +889,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	data2 := map[string]interface{}{
 		"policies": "p,q,r,s",
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "role/abcd-123/tag",
 		Storage:   storage,
@@ -899,7 +910,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 
 	// blacklist that role tag
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roletag-blacklist/" + tag,
 		Storage:   storage,
@@ -912,7 +923,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 
 	// read the blacklist entry
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "roletag-blacklist/" + tag,
 		Storage:   storage,
@@ -928,7 +939,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 
 	// delete the blacklisted entry
-	_, err = b.HandleRequest(&logical.Request{
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
 		Path:      "roletag-blacklist/" + tag,
 		Storage:   storage,
@@ -938,7 +949,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 
 	// try to read the deleted entry
-	tagEntry, err := b.lockedBlacklistRoleTagEntry(storage, tag)
+	tagEntry, err := b.lockedBlacklistRoleTagEntry(context.Background(), storage, tag)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -997,7 +1008,8 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1020,7 +1032,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		}
 
 		// store the credentials
-		_, err = b.HandleRequest(&logical.Request{
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
 			Storage:   storage,
 			Path:      "config/client",
@@ -1063,13 +1075,13 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	}
 
 	// Save the role with wrong AMI ID
-	resp, err := b.HandleRequest(roleReq)
+	resp, err := b.HandleRequest(context.Background(), roleReq)
 	if err != nil && (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
 	}
 
 	// Expect failure when tried to login with wrong AMI ID
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1078,13 +1090,13 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	roleReq.Operation = logical.UpdateOperation
 	data["bound_ami_id"] = amiID
 	data["bound_account_id"] = "wrong-account-id"
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	// Expect failure when tried to login with incorrect AccountID
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1092,26 +1104,26 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	// Place the correct AccountID, but make the wrong IAMRoleARN
 	data["bound_account_id"] = accountID
 	data["bound_iam_role_arn"] = "wrong_iam_role_arn"
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	// Attempt to login and expect a fail because IAM Role ARN is wrong
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
 	// place the correct IAM role ARN
 	data["bound_iam_role_arn"] = iamARN
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	// Now, the login attempt should succeed
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1132,7 +1144,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	loginInput["nonce"] = "changed-vault-client-nonce"
 	// try to login again with changed nonce
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1146,7 +1158,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		Path:      "identity-whitelist/" + instanceID,
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(wlRequest)
+	resp, err = b.HandleRequest(context.Background(), wlRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1156,7 +1168,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	// Delete the whitelist identity entry.
 	wlRequest.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(wlRequest)
+	resp, err = b.HandleRequest(context.Background(), wlRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1167,7 +1179,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	// Allow a fresh login without supplying the nonce
 	delete(loginInput, "nonce")
 
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1189,7 +1201,8 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1198,7 +1211,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 		Storage:   storage,
 		Path:      "config/sts/account1",
 	}
-	checkFound, exists, err := b.HandleExistenceCheck(stsReq)
+	checkFound, exists, err := b.HandleExistenceCheck(context.Background(), stsReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1215,14 +1228,14 @@ func TestBackend_pathStsConfig(t *testing.T) {
 
 	stsReq.Data = data
 	// test create operation
-	resp, err := b.HandleRequest(stsReq)
+	resp, err := b.HandleRequest(context.Background(), stsReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
 	stsReq.Data = nil
 	// test existence check
-	checkFound, exists, err = b.HandleExistenceCheck(stsReq)
+	checkFound, exists, err = b.HandleExistenceCheck(context.Background(), stsReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1235,7 +1248,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 
 	stsReq.Operation = logical.ReadOperation
 	// test read operation
-	resp, err = b.HandleRequest(stsReq)
+	resp, err = b.HandleRequest(context.Background(), stsReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1248,7 +1261,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	stsReq.Path = "config/sts/account2"
 	stsReq.Data = data
 	// create another entry to test the list operation
-	resp, err = b.HandleRequest(stsReq)
+	resp, err = b.HandleRequest(context.Background(), stsReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(err)
 	}
@@ -1256,7 +1269,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	stsReq.Operation = logical.ListOperation
 	stsReq.Path = "config/sts"
 	// test list operation
-	resp, err = b.HandleRequest(stsReq)
+	resp, err = b.HandleRequest(context.Background(), stsReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1270,13 +1283,13 @@ func TestBackend_pathStsConfig(t *testing.T) {
 
 	stsReq.Operation = logical.DeleteOperation
 	stsReq.Path = "config/sts/account1"
-	resp, err = b.HandleRequest(stsReq)
+	resp, err = b.HandleRequest(context.Background(), stsReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(err)
 	}
 
 	stsReq.Path = "config/sts/account2"
-	resp, err = b.HandleRequest(stsReq)
+	resp, err = b.HandleRequest(context.Background(), stsReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(err)
 	}
@@ -1284,7 +1297,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	stsReq.Operation = logical.ListOperation
 	stsReq.Path = "config/sts"
 	// test list operation
-	resp, err = b.HandleRequest(stsReq)
+	resp, err = b.HandleRequest(context.Background(), stsReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1337,7 +1350,8 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1401,7 +1415,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      clientConfigData,
 	}
-	_, err = b.HandleRequest(clientRequest)
+	_, err = b.HandleRequest(context.Background(), clientRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1418,7 +1432,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      roleData,
 	}
-	resp, err := b.HandleRequest(roleRequest)
+	resp, err := b.HandleRequest(context.Background(), roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1435,24 +1449,24 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      roleDataEc2,
 	}
-	resp, err = b.HandleRequest(roleRequestEc2)
+	resp, err = b.HandleRequest(context.Background(), roleRequestEc2)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role; resp:%#v\nerr:%v", resp, err)
 	}
 
 	fakeArn := "arn:aws:iam::123456789012:role/somePath/FakeRole"
-	fakeArnResolver := func(s logical.Storage, arn string) (string, error) {
+	fakeArnResolver := func(ctx context.Context, s logical.Storage, arn string) (string, error) {
 		if arn == fakeArn {
 			return fmt.Sprintf("FakeUniqueIdFor%s", fakeArn), nil
 		}
-		return b.resolveArnToRealUniqueId(s, arn)
+		return b.resolveArnToRealUniqueId(context.Background(), s, arn)
 	}
 	b.resolveArnToUniqueIDFunc = fakeArnResolver
 
 	// now we're creating the invalid role we won't be able to login to
 	roleData["bound_iam_principal_arn"] = fakeArn
 	roleRequest.Path = "role/" + testInvalidRoleName
-	resp, err = b.HandleRequest(roleRequest)
+	resp, err = b.HandleRequest(context.Background(), roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: didn't fail to create role: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1470,7 +1484,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginData,
 	}
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to missing header: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1493,7 +1507,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginData,
 	}
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to invalid header: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1512,13 +1526,13 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginData,
 	}
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to invalid role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = "ec2only"
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to bad auth type: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1526,7 +1540,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// finally, the happy path test :)
 
 	loginData["role"] = testValidRoleName
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1543,7 +1557,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Schema: pathLogin(b).Fields,
 	}
 	// ensure we can renew
-	resp, err = b.pathLoginRenew(renewReq, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1561,17 +1575,17 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// pick up the fake user ID
 	roleData["bound_iam_principal_arn"] = entity.canonicalArn()
 	roleRequest.Path = "role/" + testValidRoleName
-	resp, err = b.HandleRequest(roleRequest)
+	resp, err = b.HandleRequest(context.Background(), roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to recreate role: resp:%#v\nerr:%v", resp, err)
 	}
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to changed AWS role ID: resp: %#v\nerr:%v", resp, err)
 	}
 
 	// and ensure a renew no longer works
-	resp, err = b.pathLoginRenew(renewReq, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
 	if err == nil || (resp != nil && !resp.IsError()) {
 		t.Errorf("bad: expected failed renew due to changed AWS role ID: resp: %#v", resp, err)
 	}
@@ -1584,13 +1598,13 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	wildcardEntity.FriendlyName = "*"
 	roleData["bound_iam_principal_arn"] = wildcardEntity.canonicalArn()
 	roleRequest.Path = "role/" + wildcardRoleName
-	resp, err = b.HandleRequest(roleRequest)
+	resp, err = b.HandleRequest(context.Background(), roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create wildcard role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = wildcardRoleName
-	resp, err = b.HandleRequest(loginRequest)
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1599,7 +1613,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 	// and ensure we can renew
 	renewReq = generateRenewRequest(storage, resp.Auth)
-	resp, err = b.pathLoginRenew(renewReq, empty_login_fd)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1614,6 +1628,40 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if cachedArn == "" {
 		t.Errorf("got empty ARN back from user ID cache; expected full arn")
 	}
+
+	// Test for renewal with period
+	period := 600 * time.Second
+	roleData["period"] = period.String()
+	roleRequest.Path = "role/" + testValidRoleName
+	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to create wildcard role: resp:%#v\nerr:%v", resp, err)
+	}
+
+	loginData["role"] = testValidRoleName
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("bad: expected valid login: resp:%#v", resp)
+	}
+
+	renewReq = generateRenewRequest(storage, resp.Auth)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error when renewing: %#v", *resp)
+	}
+
+	if resp.Auth.Period != period {
+		t.Fatalf("expected a period value of %s in the response, got: %s", period, resp.Auth.Period)
+	}
 }
 
 func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Request {
@@ -1626,6 +1674,7 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 	renewReq.Auth.LeaseOptions = auth.LeaseOptions
 	renewReq.Auth.Policies = auth.Policies
 	renewReq.Auth.IssueTime = time.Now()
+	renewReq.Auth.Period = auth.Period
 
 	return renewReq
 }

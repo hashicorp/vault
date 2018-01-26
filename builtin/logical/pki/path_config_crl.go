@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -35,8 +36,8 @@ valid; defaults to 72 hours`,
 	}
 }
 
-func (b *backend) CRL(s logical.Storage) (*crlConfig, error) {
-	entry, err := s.Get("config/crl")
+func (b *backend) CRL(ctx context.Context, s logical.Storage) (*crlConfig, error) {
+	entry, err := s.Get(ctx, "config/crl")
 	if err != nil {
 		return nil, err
 	}
@@ -52,9 +53,8 @@ func (b *backend) CRL(s logical.Storage) (*crlConfig, error) {
 	return &result, nil
 }
 
-func (b *backend) pathCRLRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	config, err := b.CRL(req.Storage)
+func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config, err := b.CRL(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +69,7 @@ func (b *backend) pathCRLRead(
 	}, nil
 }
 
-func (b *backend) pathCRLWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	expiry := d.Get("expiry").(string)
 
 	_, err := time.ParseDuration(expiry)
@@ -86,7 +85,7 @@ func (b *backend) pathCRLWrite(
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}

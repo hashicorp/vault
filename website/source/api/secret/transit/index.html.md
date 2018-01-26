@@ -1,20 +1,20 @@
 ---
 layout: "api"
-page_title: "Transit Secret Backend - HTTP API"
+page_title: "Transit - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-transit"
 description: |-
-  This is the API documentation for the Vault Transit secret backend.
+  This is the API documentation for the Vault Transit secrets engine.
 ---
 
-# Transit Secret Backend HTTP API
+# Transit Secrets Engine (API)
 
-This is the API documentation for the Vault Transit secret backend. For general
-information about the usage and operation of the Transit backend, please see the
-[Vault Transit backend documentation](/docs/secrets/transit/index.html).
+This is the API documentation for the Vault Transit secrets engine. For general
+information about the usage and operation of the Transit secrets engine, please
+see the [transit documentation](/docs/secrets/transit/index.html).
 
-This documentation assumes the Transit backend is mounted at the `/transit`
-path in Vault. Since it is possible to mount secret backends at any location,
-please update your API calls accordingly.
+This documentation assumes the transit secrets engine is enabled at the
+`/transit` path in Vault. Since it is possible to enable secrets engines at any
+location, please update your API calls accordingly.
 
 ## Create Key
 
@@ -136,7 +136,6 @@ actual keys themselves).
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/transit/keys`              | `200 application/json` |
-| `GET`    | `/transit/keys?list=true`    | `200 application/json` |
 
 ### Sample Request
 
