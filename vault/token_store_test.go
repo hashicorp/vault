@@ -500,10 +500,6 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 	ts2.SetExpirationManager(c.expiration)
 
-	if err := ts2.Initialize(context.Background()); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
 	// Should still match
 	out, err = ts2.Lookup(context.Background(), ent.ID)
 	if err != nil {
