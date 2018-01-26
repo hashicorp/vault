@@ -70,7 +70,7 @@ updated, it takes effect immediately to all associated users.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/policy/:name`          | `204 (empty body)`     |
+| `PUT`    | `/sys/policy/:name`          | `204 (empty body)`<br />`200 (deprecated fields warnings)`  |
 
 ### Parameters
 
@@ -119,3 +119,4 @@ $ curl \
     --request DELETE \
     https://vault.rocks/v1/sys/policy/my-policy
 ```
+
