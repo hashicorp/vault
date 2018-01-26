@@ -2,6 +2,7 @@ package physical
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -22,7 +23,7 @@ type Cache struct {
 	lru     *lru.TwoQueueCache
 	locks   []*locksutil.LockEntry
 	logger  log.Logger
-	enabled bool
+	enabled *uint32
 }
 
 // TransactionalCache is a Cache that wraps the physical that is transactional
@@ -53,8 +54,8 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 		lru:     cache,
 		locks:   locksutil.CreateLocks(),
 		logger:  logger,
-		// Being explicit. This fails safe.
-		enabled: false,
+		// This fails safe.
+		enabled: new(uint32),
 	}
 	return c
 }
@@ -70,7 +71,11 @@ func NewTransactionalCache(b Backend, size int, logger log.Logger) *Transactiona
 // SetEnabled is used to toggle whether the cache is on or off. It must be
 // called with true to actually activate the cache after creation.
 func (c *Cache) SetEnabled(enabled bool) {
-	c.enabled = enabled
+	if enabled {
+		atomic.StoreUint32(c.enabled, 1)
+		return
+	}
+	atomic.StoreUint32(c.enabled, 0)
 }
 
 // Purge is used to clear the cache
@@ -85,7 +90,7 @@ func (c *Cache) Purge(ctx context.Context) {
 }
 
 func (c *Cache) Put(ctx context.Context, entry *Entry) error {
-	if !c.enabled {
+	if atomic.LoadUint32(c.enabled) == 0 {
 		return c.backend.Put(ctx, entry)
 	}
 
@@ -101,7 +106,7 @@ func (c *Cache) Put(ctx context.Context, entry *Entry) error {
 }
 
 func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
-	if !c.enabled {
+	if atomic.LoadUint32(c.enabled) == 0 {
 		return c.backend.Get(ctx, key)
 	}
 
@@ -132,7 +137,7 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 }
 
 func (c *Cache) Delete(ctx context.Context, key string) error {
-	if !c.enabled {
+	if atomic.LoadUint32(c.enabled) == 0 {
 		return c.backend.Delete(ctx, key)
 	}
 
@@ -170,7 +175,7 @@ func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) 
 		return err
 	}
 
-	if c.enabled {
+	if atomic.LoadUint32(c.enabled) == 1 {
 		for _, txn := range txns {
 			switch txn.Operation {
 			case PutOperation:
