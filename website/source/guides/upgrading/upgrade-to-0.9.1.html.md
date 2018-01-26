@@ -10,7 +10,7 @@ description: |-
 # Overview
 
 This page contains the list of deprecations and important or breaking changes
-for Vault 0.9.1 compared to the 0.9.0. Please read it carefully.
+for Vault 0.9.1 compared to 0.9.0. Please read it carefully.
 
 ### AppRole Case Sensitivity
 
