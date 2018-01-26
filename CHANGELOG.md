@@ -1,4 +1,20 @@
-## 0.9.2 (Unreleased)
+## 0.9.2 (January 26th, 2018)
+
+SECURITY:
+
+ * Okta Auth Backend: While the Okta auth backend was successfully verifying
+   usernames and passwords, it was not checking the returned state of the
+   account, so accounts that had been marked locked out could still be used to
+   log in. Only accounts in SUCCESS or PASSWORD_WARN states are now allowed.
+ * Periodic Tokens: A regression in 0.9.1 meant that periodic tokens created by
+   the AppRole, AWS, and Cert auth backends would expire when the max TTL for
+   the backend/mount/system was hit instead of their stated behavior of living
+   as long as they are renewed. This is now fixed; existing tokens do not have
+   to be reissued as this was purely a regression in the renewal logic.
+ * Seal Wrapping: During certain replication states values written marked for
+   seal wrapping may not be wrapped on the secondaries. This has been fixed,
+   and existing values will be wrapped on next read or write. This does not
+   affect the barrier keys.
 
 DEPRECATIONS/CHANGES:
 
@@ -63,6 +79,7 @@ BUG FIXES:
    TTL value [GH-3803]
  * auth/aws: Fix error returned if `bound_iam_principal_arn` was given to an
    existing role update [GH-3843]
+ * core/sealwrap: Speed improvements and bug fixes (Enterprise)
  * identity: Delete group alias when an external group is deleted [GH-3773]
  * legacymfa/duo: Fix intermittent panic when Duo could not be reached
    [GH-2030]
