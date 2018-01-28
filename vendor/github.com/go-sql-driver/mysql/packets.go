@@ -157,6 +157,11 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 func (mc *mysqlConn) readInitPacket() ([]byte, error) {
 	data, err := mc.readPacket()
 	if err != nil {
+		// for init we can rewrite this to ErrBadConn for sql.Driver to retry, since
+		// in connection initialization we don't risk retrying non-idempotent actions.
+		if err == ErrInvalidConn {
+			return nil, driver.ErrBadConn
+		}
 		return nil, err
 	}
 
@@ -697,10 +702,14 @@ func (mc *mysqlConn) readColumns(count int) ([]mysqlField, error) {
 		if err != nil {
 			return nil, err
 		}
+		pos += n
 
 		// Filler [uint8]
+		pos++
+
 		// Charset [charset, collation uint8]
-		pos += n + 1 + 2
+		columns[i].charSet = data[pos]
+		pos += 2
 
 		// Length [uint32]
 		columns[i].length = binary.LittleEndian.Uint32(data[pos : pos+4])
@@ -912,6 +921,12 @@ func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 	const minPktLen = 4 + 1 + 4 + 1 + 4
 	mc := stmt.mc
 
+	// Determine threshould dynamically to avoid packet size shortage.
+	longDataSize := mc.maxAllowedPacket / (stmt.paramCount + 1)
+	if longDataSize < 64 {
+		longDataSize = 64
+	}
+
 	// Reset packet-sequence
 	mc.sequence = 0
 
@@ -1039,7 +1054,7 @@ func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 					paramTypes[i+i] = byte(fieldTypeString)
 					paramTypes[i+i+1] = 0x00
 
-					if len(v) < mc.maxAllowedPacket-pos-len(paramValues)-(len(args)-(i+1))*64 {
+					if len(v) < longDataSize {
 						paramValues = appendLengthEncodedInteger(paramValues,
 							uint64(len(v)),
 						)
@@ -1061,7 +1076,7 @@ func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 				paramTypes[i+i] = byte(fieldTypeString)
 				paramTypes[i+i+1] = 0x00
 
-				if len(v) < mc.maxAllowedPacket-pos-len(paramValues)-(len(args)-(i+1))*64 {
+				if len(v) < longDataSize {
 					paramValues = appendLengthEncodedInteger(paramValues,
 						uint64(len(v)),
 					)

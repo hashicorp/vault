@@ -15,9 +15,7 @@ import (
 // SetClockSequence then it will be set automatically.  If GetTime fails to
 // return the current NewUUID returns nil.
 func NewUUID() UUID {
-	if nodeID == nil {
-		SetNodeInterface("")
-	}
+	SetNodeInterface("")
 
 	now, seq, err := GetTime()
 	if err != nil {

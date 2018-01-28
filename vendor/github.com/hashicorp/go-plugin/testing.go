@@ -137,13 +137,11 @@ func TestPluginGRPCConn(t testing.T, ps map[string]Plugin) (*GRPCClient, *GRPCSe
 		t.Fatalf("err: %s", err)
 	}
 
-	// Connection successful, close the listener
-	l.Close()
-
 	brokerGRPCClient := newGRPCBrokerClient(conn)
 	broker := newGRPCBroker(brokerGRPCClient, nil)
 	go broker.Run()
 	go brokerGRPCClient.StartStream()
+
 	// Create the client
 	client := &GRPCClient{
 		Conn:    conn,

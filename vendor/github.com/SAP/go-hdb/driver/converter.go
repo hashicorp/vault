@@ -59,8 +59,8 @@ func columnConverter(dt p.DataType) driver.ValueConverter {
 		return dbTinyint
 	case p.DtSmallint:
 		return dbSmallint
-	case p.DtInt:
-		return dbInt
+	case p.DtInteger:
+		return dbInteger
 	case p.DtBigint:
 		return dbBigint
 	case p.DtReal:
@@ -90,19 +90,19 @@ func (t dbUnknownType) ConvertValue(v interface{}) (driver.Value, error) {
 }
 
 // int types
-var dbTinyint = dbIntType{min: minTinyint, max: maxTinyint}
-var dbSmallint = dbIntType{min: minSmallint, max: maxSmallint}
-var dbInt = dbIntType{min: minInteger, max: maxInteger}
-var dbBigint = dbIntType{min: minBigint, max: maxBigint}
+var dbTinyint = dbIntegerType{min: minTinyint, max: maxTinyint}
+var dbSmallint = dbIntegerType{min: minSmallint, max: maxSmallint}
+var dbInteger = dbIntegerType{min: minInteger, max: maxInteger}
+var dbBigint = dbIntegerType{min: minBigint, max: maxBigint}
 
-type dbIntType struct {
+type dbIntegerType struct {
 	min int64
 	max int64
 }
 
-var _ driver.ValueConverter = dbIntType{} //check that type implements interface
+var _ driver.ValueConverter = dbIntegerType{} //check that type implements interface
 
-func (i dbIntType) ConvertValue(v interface{}) (driver.Value, error) {
+func (i dbIntegerType) ConvertValue(v interface{}) (driver.Value, error) {
 
 	if v == nil {
 		return v, nil
@@ -111,6 +111,9 @@ func (i dbIntType) ConvertValue(v interface{}) (driver.Value, error) {
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 
+	// bool is represented in HDB as tinyint
+	case reflect.Bool:
+		return rv.Bool(), nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i64 := rv.Int()
 		if i64 > i.max || i64 < i.min {

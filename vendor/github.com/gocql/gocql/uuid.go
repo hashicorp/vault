@@ -122,19 +122,29 @@ func TimeUUID() UUID {
 // RFC 4122. This UUID contains the MAC address of the node that generated
 // the UUID, the given timestamp and a sequence number.
 func UUIDFromTime(aTime time.Time) UUID {
+	utcTime := aTime.In(time.UTC)
+	t := int64(utcTime.Unix()-timeBase)*10000000 + int64(utcTime.Nanosecond()/100)
+	clock := atomic.AddUint32(&clockSeq, 1)
+
+	return TimeUUIDWith(t, clock, hardwareAddr)
+}
+
+// TimeUUIDWith generates a new time based UUID (version 1) as described in
+// RFC4122 with given parameters. t is the number of 100's of nanoseconds
+// since 15 Oct 1582 (60bits). clock is the number of clock sequence (14bits).
+// node is a slice to gurarantee the uniqueness of the UUID (up to 6bytes).
+// Note: calling this function does not increment the static clock sequence.
+func TimeUUIDWith(t int64, clock uint32, node []byte) UUID {
 	var u UUID
 
-	utcTime := aTime.In(time.UTC)
-	t := uint64(utcTime.Unix()-timeBase)*10000000 + uint64(utcTime.Nanosecond()/100)
 	u[0], u[1], u[2], u[3] = byte(t>>24), byte(t>>16), byte(t>>8), byte(t)
 	u[4], u[5] = byte(t>>40), byte(t>>32)
 	u[6], u[7] = byte(t>>56)&0x0F, byte(t>>48)
 
-	clock := atomic.AddUint32(&clockSeq, 1)
 	u[8] = byte(clock >> 8)
 	u[9] = byte(clock)
 
-	copy(u[10:], hardwareAddr)
+	copy(u[10:], node)
 
 	u[6] |= 0x10 // set version to 1 (time based uuid)
 	u[8] &= 0x3F // clear variant
@@ -196,6 +206,17 @@ func (u UUID) Node() []byte {
 		return nil
 	}
 	return u[10:]
+}
+
+// Clock extracts the clock sequence of this UUID. It will return zero if the
+// UUID is not a time based UUID (version 1).
+func (u UUID) Clock() uint32 {
+	if u.Version() != 1 {
+		return 0
+	}
+
+	// Clock sequence is the lower 14bits of u[8:10]
+	return uint32(u[8]&0x3F)<<8 | uint32(u[9])
 }
 
 // Timestamp extracts the timestamp information from a time based UUID

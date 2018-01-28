@@ -16,7 +16,7 @@ import (
 // It is similar to an IssueEvent but may contain more information.
 // GitHub API docs: https://developer.github.com/v3/issues/timeline/
 type Timeline struct {
-	ID        *int    `json:"id,omitempty"`
+	ID        *int64  `json:"id,omitempty"`
 	URL       *string `json:"url,omitempty"`
 	CommitURL *string `json:"commit_url,omitempty"`
 
@@ -120,7 +120,7 @@ type Timeline struct {
 
 // Source represents a reference's source.
 type Source struct {
-	ID    *int    `json:"id,omitempty"`
+	ID    *int64  `json:"id,omitempty"`
 	URL   *string `json:"url,omitempty"`
 	Actor *User   `json:"actor,omitempty"`
 }

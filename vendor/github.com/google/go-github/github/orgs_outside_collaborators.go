@@ -48,3 +48,34 @@ func (s *OrganizationsService) ListOutsideCollaborators(ctx context.Context, org
 
 	return members, resp, nil
 }
+
+// RemoveOutsideCollaborator removes a user from the list of outside collaborators;
+// consequently, removing them from all the organization's repositories.
+//
+// GitHub API docs: https://developer.github.com/v3/orgs/outside_collaborators/#remove-outside-collaborator
+func (s *OrganizationsService) RemoveOutsideCollaborator(ctx context.Context, org string, user string) (*Response, error) {
+	u := fmt.Sprintf("orgs/%v/outside_collaborators/%v", org, user)
+	req, err := s.client.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.client.Do(ctx, req, nil)
+}
+
+// ConvertMemberToOutsideCollaborator reduces the permission level of a member of the
+// organization to that of an outside collaborator. Therefore, they will only
+// have access to the repositories that their current team membership allows.
+// Responses for converting a non-member or the last owner to an outside collaborator
+// are listed in GitHub API docs.
+//
+// GitHub API docs: https://developer.github.com/v3/orgs/outside_collaborators/#convert-member-to-outside-collaborator
+func (s *OrganizationsService) ConvertMemberToOutsideCollaborator(ctx context.Context, org string, user string) (*Response, error) {
+	u := fmt.Sprintf("orgs/%v/outside_collaborators/%v", org, user)
+	req, err := s.client.NewRequest("PUT", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.client.Do(ctx, req, nil)
+}
