@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/mongodb"
 	"github.com/hashicorp/vault/builtin/logical/mssql"
 	"github.com/hashicorp/vault/builtin/logical/mysql"
+	"github.com/hashicorp/vault/builtin/logical/nomad"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
 	"github.com/hashicorp/vault/builtin/logical/rabbitmq"
@@ -442,6 +443,7 @@ func init() {
 					"mongodb":    mongodb.Factory,
 					"mssql":      mssql.Factory,
 					"mysql":      mysql.Factory,
+					"nomad":      nomad.Factory,
 					"pki":        pki.Factory,
 					"plugin":     plugin.Factory,
 					"postgresql": postgresql.Factory,
