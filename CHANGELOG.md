@@ -63,7 +63,8 @@ IMPROVEMENTS:
  * auth/aws: Handle IAM headers produced by clients that formulate numbers as
    ints rather than strings [GH-3763]
  * auth/okta: Support JSON lists when specifying groups and policies [GH-3801]
- * autoseal/hsm: Attempt reconnecting to the HSM on certain kinds of errors
+ * autoseal/hsm: Attempt reconnecting to the HSM on certain kinds of issues, 
+   including HA scenarios for some Gemalto HSMs.
    (Enterprise)
  * cli: Output password prompts to stderr to make it easier to pipe an output
    token to another command [GH-3782]
