@@ -64,7 +64,7 @@ func testVaultServer(tb testing.TB) (*api.Client, func()) {
 
 func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 	tb.Helper()
-	
+
 	client, _, closer := testVaultServerCoreConfig(tb, &vault.CoreConfig{
 		DisableMlock:       true,
 		DisableCache:       true,
