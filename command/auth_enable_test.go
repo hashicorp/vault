@@ -161,6 +161,20 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			}
 		}
 
+		plugins, err := ioutil.ReadDir("../vendor/github.com/hashicorp")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range plugins {
+			if p.IsDir() && strings.HasPrefix(p.Name(), "vault-plugin-auth-") {
+				backends = append(backends, strings.TrimPrefix(p.Name(), "vault-plugin-auth-"))
+			}
+		}
+
+		if len(backends) != len(credentialBackends) {
+			t.Fatalf("expected %d credential backends, got %d", len(credentialBackends), len(backends))
+		}
+
 		for _, b := range backends {
 			if b == "token" {
 				continue

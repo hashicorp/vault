@@ -184,8 +184,26 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		var backends []string
 		for _, f := range files {
 			if f.IsDir() {
+				if f.Name() == "plugin" {
+					continue
+				}
 				backends = append(backends, f.Name())
 			}
+		}
+
+		plugins, err := ioutil.ReadDir("../vendor/github.com/hashicorp")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range plugins {
+			if p.IsDir() && strings.HasPrefix(p.Name(), "vault-plugin-") && !strings.HasPrefix(p.Name(), "vault-plugin-auth-") {
+				backends = append(backends, strings.TrimPrefix(p.Name(), "vault-plugin-"))
+			}
+		}
+
+		// Removing one from logical list since plugin is a virtual backend
+		if len(backends) != len(logicalBackends)-1 {
+			t.Fatalf("expected %d logical backends, got %d", len(logicalBackends)-1, len(backends))
 		}
 
 		for _, b := range backends {
