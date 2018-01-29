@@ -1,6 +1,7 @@
 package command
 
 import (
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -167,5 +168,36 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 
 		_, cmd := testSecretsEnableCommand(t)
 		assertNoTabs(t, cmd)
+	})
+
+	t.Run("mount_all", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerAllBackends(t)
+		defer closer()
+
+		files, err := ioutil.ReadDir("../builtin/logical")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var backends []string
+		for _, f := range files {
+			if f.IsDir() {
+				backends = append(backends, f.Name())
+			}
+		}
+
+		for _, b := range backends {
+			ui, cmd := testSecretsEnableCommand(t)
+			cmd.client = client
+
+			code := cmd.Run([]string{
+				b,
+			})
+			if exp := 0; code != exp {
+				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+			}
+		}
 	})
 }
