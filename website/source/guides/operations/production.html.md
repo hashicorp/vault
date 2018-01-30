@@ -76,7 +76,7 @@ and practical.
 
 * **Avoid Root Tokens**. Vault provides a root token when it is first
   initialized. This token should be used to setup the system initially,
-  particularly setting up authentication backends so that users may
+  particularly setting up auth methods so that users may
   authenticate. We recommend treating Vault [configuration as
   code](https://www.hashicorp.com/blog/codifying-vault-policies-and-configuration/),
   and using version control to manage policies. Once setup, the root token

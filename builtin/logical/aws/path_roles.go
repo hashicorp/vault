@@ -58,7 +58,7 @@ func pathRoles() *framework.Path {
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("policy/")
+	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("policy/" + d.Get("name").(string))
+	err := req.Storage.Delete(ctx, "policy/"+d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.Fie
 }
 
 func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entry, err := req.Storage.Get("policy/" + d.Get("name").(string))
+	entry, err := req.Storage.Get(ctx, "policy/"+d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 				"Error compacting policy: %s", err)), nil
 		}
 		// Write the policy into storage
-		err := req.Storage.Put(&logical.StorageEntry{
+		err := req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   "policy/" + d.Get("name").(string),
 			Value: buf.Bytes(),
 		})
@@ -134,7 +134,7 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 		}
 	} else {
 		// Write the arn ref into storage
-		err := req.Storage.Put(&logical.StorageEntry{
+		err := req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   "policy/" + d.Get("name").(string),
 			Value: []byte(d.Get("arn").(string)),
 		})

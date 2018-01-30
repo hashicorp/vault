@@ -43,6 +43,8 @@ const (
 	UnixPath       string = `^(/[^/\x00]*)+/?$`
 	Semver         string = "^v?(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(-(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$"
 	tagName        string = "valid"
+	hasLowerCase   string = ".*[[:lower:]]"
+	hasUpperCase   string = ".*[[:upper:]]"
 )
 
 // Used by IsFilePath func
@@ -87,4 +89,6 @@ var (
 	rxWinPath        = regexp.MustCompile(WinPath)
 	rxUnixPath       = regexp.MustCompile(UnixPath)
 	rxSemver         = regexp.MustCompile(Semver)
+	rxHasLowerCase   = regexp.MustCompile(hasLowerCase)
+	rxHasUpperCase   = regexp.MustCompile(hasUpperCase)
 )

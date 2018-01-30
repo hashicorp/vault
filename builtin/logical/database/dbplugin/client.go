@@ -28,26 +28,16 @@ func (dc *DatabasePluginClient) Close() error {
 	return err
 }
 
-// This wraps the Initialize call and ensures we close the plugin on error.
-func (dc *DatabasePluginClient) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error {
-	err := dc.Database.Initialize(ctx, config, verifyConnection)
-	if err != nil {
-		dc.Close()
-	}
-
-	return err
-}
-
 // newPluginClient returns a databaseRPCClient with a connection to a running
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
-func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (Database, error) {
+func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (Database, error) {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"database": new(DatabasePlugin),
 	}
 
-	client, err := pluginRunner.Run(sys, pluginMap, handshakeConfig, []string{}, logger)
+	client, err := pluginRunner.Run(ctx, sys, pluginMap, handshakeConfig, []string{}, logger)
 	if err != nil {
 		return nil, err
 	}

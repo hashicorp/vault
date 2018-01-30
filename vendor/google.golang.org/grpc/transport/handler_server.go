@@ -53,7 +53,10 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request) (ServerTr
 	if r.Method != "POST" {
 		return nil, errors.New("invalid gRPC request method")
 	}
-	if !validContentType(r.Header.Get("Content-Type")) {
+	contentType := r.Header.Get("Content-Type")
+	// TODO: do we assume contentType is lowercase? we did before
+	contentSubtype, validContentType := contentSubtype(contentType)
+	if !validContentType {
 		return nil, errors.New("invalid gRPC request content-type")
 	}
 	if _, ok := w.(http.Flusher); !ok {
@@ -64,10 +67,12 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request) (ServerTr
 	}
 
 	st := &serverHandlerTransport{
-		rw:       w,
-		req:      r,
-		closedCh: make(chan struct{}),
-		writes:   make(chan func()),
+		rw:             w,
+		req:            r,
+		closedCh:       make(chan struct{}),
+		writes:         make(chan func()),
+		contentType:    contentType,
+		contentSubtype: contentSubtype,
 	}
 
 	if v := r.Header.Get("grpc-timeout"); v != "" {
@@ -79,7 +84,7 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request) (ServerTr
 		st.timeout = to
 	}
 
-	var metakv []string
+	metakv := []string{"content-type", contentType}
 	if r.Host != "" {
 		metakv = append(metakv, ":authority", r.Host)
 	}
@@ -123,10 +128,15 @@ type serverHandlerTransport struct {
 	// when WriteStatus is called.
 	writes chan func()
 
-	mu sync.Mutex
-	// streamDone indicates whether WriteStatus has been called and writes channel
-	// has been closed.
-	streamDone bool
+	// block concurrent WriteStatus calls
+	// e.g. grpc/(*serverStream).SendMsg/RecvMsg
+	writeStatusMu sync.Mutex
+
+	// we just mirror the request content-type
+	contentType string
+	// we store both contentType and contentSubtype so we don't keep recreating them
+	// TODO make sure this is consistent across handler_server and http2_server
+	contentSubtype string
 }
 
 func (ht *serverHandlerTransport) Close() error {
@@ -177,13 +187,9 @@ func (ht *serverHandlerTransport) do(fn func()) error {
 }
 
 func (ht *serverHandlerTransport) WriteStatus(s *Stream, st *status.Status) error {
-	ht.mu.Lock()
-	if ht.streamDone {
-		ht.mu.Unlock()
-		return nil
-	}
-	ht.streamDone = true
-	ht.mu.Unlock()
+	ht.writeStatusMu.Lock()
+	defer ht.writeStatusMu.Unlock()
+
 	err := ht.do(func() {
 		ht.writeCommonHeaders(s)
 
@@ -222,7 +228,11 @@ func (ht *serverHandlerTransport) WriteStatus(s *Stream, st *status.Status) erro
 			}
 		}
 	})
-	close(ht.writes)
+
+	if err == nil { // transport has not been closed
+		ht.Close()
+		close(ht.writes)
+	}
 	return err
 }
 
@@ -236,7 +246,7 @@ func (ht *serverHandlerTransport) writeCommonHeaders(s *Stream) {
 
 	h := ht.rw.Header()
 	h["Date"] = nil // suppress Date to make tests happy; TODO: restore
-	h.Set("Content-Type", "application/grpc")
+	h.Set("Content-Type", ht.contentType)
 
 	// Predeclare trailers we'll set later in WriteStatus (after the body).
 	// This is a SHOULD in the HTTP RFC, and the way you add (known)
@@ -285,12 +295,12 @@ func (ht *serverHandlerTransport) WriteHeader(s *Stream, md metadata.MD) error {
 func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), traceCtx func(context.Context, string) context.Context) {
 	// With this transport type there will be exactly 1 stream: this HTTP request.
 
-	var ctx context.Context
+	ctx := contextFromRequest(ht.req)
 	var cancel context.CancelFunc
 	if ht.timeoutSet {
-		ctx, cancel = context.WithTimeout(context.Background(), ht.timeout)
+		ctx, cancel = context.WithTimeout(ctx, ht.timeout)
 	} else {
-		ctx, cancel = context.WithCancel(context.Background())
+		ctx, cancel = context.WithCancel(ctx)
 	}
 
 	// requestOver is closed when either the request's context is done
@@ -314,13 +324,14 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 	req := ht.req
 
 	s := &Stream{
-		id:           0, // irrelevant
-		requestRead:  func(int) {},
-		cancel:       cancel,
-		buf:          newRecvBuffer(),
-		st:           ht,
-		method:       req.URL.Path,
-		recvCompress: req.Header.Get("grpc-encoding"),
+		id:             0, // irrelevant
+		requestRead:    func(int) {},
+		cancel:         cancel,
+		buf:            newRecvBuffer(),
+		st:             ht,
+		method:         req.URL.Path,
+		recvCompress:   req.Header.Get("grpc-encoding"),
+		contentSubtype: ht.contentSubtype,
 	}
 	pr := &peer.Peer{
 		Addr: ht.RemoteAddr(),

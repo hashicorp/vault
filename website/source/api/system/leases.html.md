@@ -62,7 +62,6 @@ This endpoint returns a list of lease ids.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/sys/leases/lookup/:prefix` | `200 application/json` |
-| `GET`   | `/sys/leases/lookup/:prefix?list=true` | `200 application/json` |
 
 
 ### Sample Request

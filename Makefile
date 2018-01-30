@@ -31,7 +31,12 @@ dev-dynamic: prep
 
 # test runs the unit tests and vets the code
 test: prep
-	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=20m -parallel=4
+	@CGO_ENABLED=0 \
+	VAULT_ADDR= \
+	VAULT_TOKEN= \
+	VAULT_DEV_ROOT_TOKEN_ID= \
+	VAULT_ACC= \
+	go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=20m -parallel=20
 
 testcompile: prep
 	@for pkg in $(TEST) ; do \
@@ -48,7 +53,12 @@ testacc: prep
 
 # testrace runs the race checker
 testrace: prep
-	CGO_ENABLED=1 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=45m -parallel=4
+	@CGO_ENABLED=1 \
+	VAULT_ADDR= \
+	VAULT_TOKEN= \
+	VAULT_DEV_ROOT_TOKEN_ID= \
+	VAULT_ACC= \
+	go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=45m -parallel=20
 
 cover:
 	./scripts/coverage.sh --html
@@ -85,7 +95,8 @@ proto:
 	protoc -I physical physical/types.proto --go_out=plugins=grpc:physical
 	protoc -I helper/identity -I ../../.. helper/identity/types.proto --go_out=plugins=grpc:helper/identity
 	protoc  builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:.
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/protobuf:"/sentinel:"" protobuf:"/' helper/identity/types.pb.go helper/storagepacker/types.pb.go
+	protoc  logical/plugin/pb/*.proto --go_out=plugins=grpc:.
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/protobuf:"/sentinel:"" protobuf:"/' helper/identity/types.pb.go helper/storagepacker/types.pb.go logical/plugin/pb/backend.pb.go
 	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' physical/types.pb.go
 
 fmtcheck:

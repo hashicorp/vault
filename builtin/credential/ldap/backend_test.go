@@ -23,7 +23,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 		t.Fatalf("failed to create backend")
 	}
 
-	err := b.Backend.Setup(config)
+	err := b.Backend.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 }
 
 /*
- * Acceptance test for LDAP Auth Backend
+ * Acceptance test for LDAP Auth Method
  *
  * The tests here rely on a public LDAP server:
  * [http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/]
@@ -120,7 +120,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,

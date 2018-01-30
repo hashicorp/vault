@@ -35,7 +35,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		name := data.Get("name").(string)
 
 		// Get the role
-		role, err := b.Role(req.Storage, name)
+		role, err := b.Role(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 		}
 
-		dbConfig, err := b.DatabaseConfig(req.Storage, role.DBName)
+		dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +56,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		// Grab the read lock
 		b.RLock()
-		var unlockFunc func() = b.RUnlock
+		unlockFunc := b.RUnlock
 
 		// Get the Database object
 		db, ok := b.getDBObj(role.DBName)
@@ -74,7 +74,12 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			}
 		}
 
-		expiration := time.Now().Add(role.DefaultTTL)
+		ttl := role.DefaultTTL
+		if ttl == 0 || (role.MaxTTL > 0 && ttl > role.MaxTTL) {
+			ttl = role.MaxTTL
+		}
+
+		expiration := time.Now().Add(ttl)
 
 		usernameConfig := dbplugin.UsernameConfig{
 			DisplayName: req.DisplayName,
@@ -83,9 +88,8 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		// Create the user
 		username, password, err := db.CreateUser(ctx, role.Statements, usernameConfig, expiration)
-		// Unlock
-		unlockFunc()
 		if err != nil {
+			unlockFunc()
 			b.closeIfShutdown(role.DBName, err)
 			return nil, err
 		}
@@ -97,7 +101,9 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			"username": username,
 			"role":     name,
 		})
-		resp.Secret.TTL = role.DefaultTTL
+		resp.Secret.TTL = ttl
+
+		unlockFunc()
 		return resp, nil
 	}
 }

@@ -101,8 +101,8 @@ TTL will be set to the value of this parameter.`,
 	}
 }
 
-func (b *backend) Cert(s logical.Storage, n string) (*CertEntry, error) {
-	entry, err := s.Get("cert/" + strings.ToLower(n))
+func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertEntry, error) {
+	entry, err := s.Get(ctx, "cert/"+strings.ToLower(n))
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (b *backend) Cert(s logical.Storage, n string) (*CertEntry, error) {
 }
 
 func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("cert/" + strings.ToLower(d.Get("name").(string)))
+	err := req.Storage.Delete(ctx, "cert/"+strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathCertList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	certs, err := req.Storage.List("cert/")
+	certs, err := req.Storage.List(ctx, "cert/")
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (b *backend) pathCertList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	cert, err := b.Cert(req.Storage, strings.ToLower(d.Get("name").(string)))
+	cert, err := b.Cert(ctx, req.Storage, strings.ToLower(d.Get("name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -144,12 +144,13 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"certificate":  cert.Certificate,
-			"display_name": cert.DisplayName,
-			"policies":     cert.Policies,
-			"ttl":          cert.TTL / time.Second,
-			"max_ttl":      cert.MaxTTL / time.Second,
-			"period":       cert.Period / time.Second,
+			"certificate":   cert.Certificate,
+			"display_name":  cert.DisplayName,
+			"policies":      cert.Policies,
+			"ttl":           cert.TTL / time.Second,
+			"max_ttl":       cert.MaxTTL / time.Second,
+			"period":        cert.Period / time.Second,
+			"allowed_names": cert.AllowedNames,
 		},
 	}, nil
 }
@@ -244,7 +245,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

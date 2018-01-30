@@ -30,7 +30,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	name := d.Get("name").(string)
 
 	// Get the policy
-	p, lock, err := b.lm.GetPolicyExclusive(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyExclusive(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.Unlock()
 	}
@@ -42,7 +42,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	// Rotate the policy
-	err = p.Rotate(req.Storage)
+	err = p.Rotate(ctx, req.Storage)
 
 	return nil, err
 }

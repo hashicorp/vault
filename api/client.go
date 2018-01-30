@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
@@ -530,7 +531,16 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 	c.modifyLock.RLock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
+	token := c.token
 	c.modifyLock.RUnlock()
+
+	// Sanity check the token before potentially erroring from the API
+	idx := strings.IndexFunc(token, func(c rune) bool {
+		return !unicode.IsPrint(c)
+	})
+	if idx != -1 {
+		return nil, fmt.Errorf("Configured Vault token contains non-printable characters and cannot be used.")
+	}
 
 	redirectCount := 0
 START:

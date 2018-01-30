@@ -1,24 +1,24 @@
 ---
 layout: "api"
-page_title: "MSSQL Secret Backend - HTTP API"
+page_title: "MSSQL - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-mssql"
 description: |-
-  This is the API documentation for the Vault MSSQL secret backend.
+  This is the API documentation for the Vault MSSQL secrets engine.
 ---
 
-# MSSQL Secret Backend HTTP API
+# MSSQL Secrets Engine (API)
 
-~> **Deprecation Note:** This backend is deprecated in favor of the
-combined databases backend added in v0.7.1. See the API documentation for
-the new implementation of this backend at
-[MSSQL Database Plugin HTTP API](/api/secret/databases/mssql.html).
+~> **Deprecation Note:** This secrets engine is deprecated in favor of the
+combined databases secrets engine added in v0.7.1. See the API documentation for
+the new implementation of this secrets engine at
+[MSSQL database plugin HTTP API](/api/secret/databases/mssql.html).
 
-This is the API documentation for the Vault MSSQL secret backend. For general
-information about the usage and operation of the MSSQL backend, please see
-the [Vault MSSQL backend documentation](/docs/secrets/mssql/index.html).
+This is the API documentation for the Vault MSSQL secrets engine. For general
+information about the usage and operation of the MSSQL secrets engine, please
+see the [Vault MSSQL documentation](/docs/secrets/mssql/index.html).
 
-This documentation assumes the MSSQL backend is mounted at the `/mssql`
-path in Vault. Since it is possible to mount secret backends at any location,
+This documentation assumes the MSSQL secrets engine is enabled at the `/mssql`
+path in Vault. Since it is possible to enable secrets engines at any location,
 please update your API calls accordingly.
 
 ## Configure Connection
@@ -169,7 +169,6 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/mssql/roles`               | `200 application/json` |
-| `GET`   | `/mssql/roles?list=true`      | `200 application/json` |
 
 ### Sample Request
 

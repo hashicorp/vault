@@ -42,7 +42,7 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		return nil, fmt.Errorf("error converting role internal data to string")
 	}
 
-	role, err := getRole(req.Storage, roleName)
+	role, err := getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load role: %s", err)
 	}
@@ -61,7 +61,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 		return nil, fmt.Errorf("error converting username internal data to string")
 	}
 
-	session, err := b.DB(req.Storage)
+	session, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("error getting session")
 	}

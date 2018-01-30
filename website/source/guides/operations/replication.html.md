@@ -85,8 +85,8 @@ consistent `~/.vault-token` file or `VAULT_TOKEN` environment variable when
 working with both clusters.
 
 On a production system, after a secondary is activated, the enabled
-authentication backends should be used to get tokens with appropriate policies,
-as policies and auth backend configuration are replicated.
+auth methods should be used to get tokens with appropriate policies,
+as policies and auth method configuration are replicated.
 
 The generate-root command can also be used to generate a root token local to
 the secondary cluster.
@@ -143,7 +143,7 @@ secondaries.
 Mounts can also be marked local (via the `-local` flag on the Vault CLI or
 setting the `local` parameter to `true` in the API). This can only be performed
 at mount time; if a mount is local but should have been replicated, or vice
-versa, you must unmount the backend and mount a new instance at that path with
+versa, you must disable the backend and mount a new instance at that path with
 the local flag enabled.
 
 Local mounts do not propagate data from the primary to secondaries, and local
@@ -153,16 +153,16 @@ state where replication is disabled; all data, including local mounts, is
 deleted at this time (as the encryption keys will have changed so data in local
 mounts would be unable to be read).
 
-### Audit Backends
+### Audit Devices
 
-In normal Vault usage, if Vault has at least one audit backend configured and
-is unable to successfully log to at least one backend, it will block further
+In normal Vault usage, if Vault has at least one audit device configured and
+is unable to successfully log to at least one device, it will block further
 requests.
 
 Replicated audit mounts must be able to successfully log on all replicated
-clusters. For example, if using the file backend, the configured path must be
-able to be written to by all secondaries. It may be useful to use at least one
-local audit mount on each cluster to prevent such a scenario.
+clusters. For example, if using the file audit device, the configured path must
+be able to be written to by all secondaries. It may be useful to use at least
+one local audit mount on each cluster to prevent such a scenario.
 
 ### Never Have Two Primaries
 

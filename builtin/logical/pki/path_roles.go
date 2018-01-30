@@ -185,15 +185,13 @@ include the Common Name (cn). Defaults to true.`,
 			},
 
 			"ou": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "",
+				Type: framework.TypeCommaStringSlice,
 				Description: `If set, the OU (OrganizationalUnit) will be set to
 this value in certificates issued by this role.`,
 			},
 
 			"organization": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "",
+				Type: framework.TypeCommaStringSlice,
 				Description: `If set, the O (Organization) will be set to
 this value in certificates issued by this role.`,
 			},
@@ -235,8 +233,8 @@ for "generate_lease".`,
 	}
 }
 
-func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + n)
+func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, "role/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -303,12 +301,26 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		modified = true
 	}
 
+	// Upgrade OU
+	if result.OUOld != "" {
+		result.OU = strings.Split(result.OUOld, ",")
+		result.OUOld = ""
+		modified = true
+	}
+
+	// Upgrade Organization
+	if result.OrganizationOld != "" {
+		result.Organization = strings.Split(result.OrganizationOld, ",")
+		result.OrganizationOld = ""
+		modified = true
+	}
+
 	if modified {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
 			return nil, err
 		}
-		if err := s.Put(jsonEntry); err != nil {
+		if err := s.Put(ctx, jsonEntry); err != nil {
 			// Only perform upgrades on replication primary
 			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 				return nil, err
@@ -320,7 +332,7 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 }
 
 func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("role/" + data.Get("name").(string))
+	err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +346,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return logical.ErrorResponse("missing role name"), nil
 	}
 
-	role, err := b.getRole(req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +374,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -394,8 +406,8 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:          data.Get("use_csr_sans").(bool),
 		KeyUsage:            data.Get("key_usage").([]string),
-		OU:                  data.Get("ou").(string),
-		Organization:        data.Get("organization").(string),
+		OU:                  data.Get("ou").([]string),
+		Organization:        data.Get("organization").([]string),
 		GenerateLease:       new(bool),
 		NoStore:             data.Get("no_store").(bool),
 	}
@@ -459,7 +471,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(jsonEntry); err != nil {
+	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
 
@@ -522,8 +534,10 @@ type roleEntry struct {
 	MaxPathLength         *int     `json:",omitempty" mapstructure:"max_path_length"`
 	KeyUsageOld           string   `json:"key_usage,omitempty"`
 	KeyUsage              []string `json:"key_usage_list" mapstructure:"key_usage"`
-	OU                    string   `json:"ou" mapstructure:"ou"`
-	Organization          string   `json:"organization" mapstructure:"organization"`
+	OUOld                 string   `json:"ou,omitempty"`
+	OU                    []string `json:"ou_list" mapstructure:"ou"`
+	OrganizationOld       string   `json:"organization,omitempty"`
+	Organization          []string `json:"organization_list" mapstructure:"organization"`
 	GenerateLease         *bool    `json:"generate_lease,omitempty"`
 	NoStore               bool     `json:"no_store" mapstructure:"no_store"`
 

@@ -144,6 +144,16 @@ func (a *ACLTokens) Info(accessorID string, q *QueryOptions) (*ACLToken, *QueryM
 	return &resp, wm, nil
 }
 
+// Self is used to query our own token
+func (a *ACLTokens) Self(q *QueryOptions) (*ACLToken, *QueryMeta, error) {
+	var resp ACLToken
+	wm, err := a.client.query("/v1/acl/token/self", &resp, q)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &resp, wm, nil
+}
+
 // ACLPolicyListStub is used to for listing ACL policies
 type ACLPolicyListStub struct {
 	Name        string

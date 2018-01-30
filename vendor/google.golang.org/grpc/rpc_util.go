@@ -25,6 +25,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding"
+	"google.golang.org/grpc/encoding/proto"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
@@ -125,13 +127,13 @@ func (d *gzipDecompressor) Type() string {
 type callInfo struct {
 	compressorType        string
 	failFast              bool
-	headerMD              metadata.MD
-	trailerMD             metadata.MD
-	peer                  *peer.Peer
+	stream                *transport.Stream
 	traceInfo             traceInfo // in trace.go
 	maxReceiveMessageSize *int
 	maxSendMessageSize    *int
 	creds                 credentials.PerRPCCredentials
+	contentSubtype        string
+	codec                 baseCodec
 }
 
 func defaultCallInfo() *callInfo {
@@ -172,7 +174,9 @@ func (o afterCall) after(c *callInfo)        { o(c) }
 // for a unary RPC.
 func Header(md *metadata.MD) CallOption {
 	return afterCall(func(c *callInfo) {
-		*md = c.headerMD
+		if c.stream != nil {
+			*md, _ = c.stream.Header()
+		}
 	})
 }
 
@@ -180,16 +184,20 @@ func Header(md *metadata.MD) CallOption {
 // for a unary RPC.
 func Trailer(md *metadata.MD) CallOption {
 	return afterCall(func(c *callInfo) {
-		*md = c.trailerMD
+		if c.stream != nil {
+			*md = c.stream.Trailer()
+		}
 	})
 }
 
 // Peer returns a CallOption that retrieves peer information for a
 // unary RPC.
-func Peer(peer *peer.Peer) CallOption {
+func Peer(p *peer.Peer) CallOption {
 	return afterCall(func(c *callInfo) {
-		if c.peer != nil {
-			*peer = *c.peer
+		if c.stream != nil {
+			if x, ok := peer.FromContext(c.stream.Context()); ok {
+				*p = *x
+			}
 		}
 	})
 }
@@ -236,6 +244,61 @@ func PerRPCCredentials(creds credentials.PerRPCCredentials) CallOption {
 	})
 }
 
+// UseCompressor returns a CallOption which sets the compressor used when
+// sending the request.  If WithCompressor is also set, UseCompressor has
+// higher priority.
+//
+// This API is EXPERIMENTAL.
+func UseCompressor(name string) CallOption {
+	return beforeCall(func(c *callInfo) error {
+		c.compressorType = name
+		return nil
+	})
+}
+
+// CallContentSubtype returns a CallOption that will set the content-subtype
+// for a call. For example, if content-subtype is "json", the Content-Type over
+// the wire will be "application/grpc+json". The content-subtype is converted
+// to lowercase before being included in Content-Type. See Content-Type on
+// https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests for
+// more details.
+//
+// If CallCustomCodec is not also used, the content-subtype will be used to
+// look up the Codec to use in the registry controlled by RegisterCodec. See
+// the documention on RegisterCodec for details on registration. The lookup
+// of content-subtype is case-insensitive. If no such Codec is found, the call
+// will result in an error with code codes.Internal.
+//
+// If CallCustomCodec is also used, that Codec will be used for all request and
+// response messages, with the content-subtype set to the given contentSubtype
+// here for requests.
+func CallContentSubtype(contentSubtype string) CallOption {
+	contentSubtype = strings.ToLower(contentSubtype)
+	return beforeCall(func(c *callInfo) error {
+		c.contentSubtype = contentSubtype
+		return nil
+	})
+}
+
+// CallCustomCodec returns a CallOption that will set the given Codec to be
+// used for all request and response messages for a call. The result of calling
+// String() will be used as the content-subtype in a case-insensitive manner.
+//
+// See Content-Type on
+// https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests for
+// more details. Also see the documentation on RegisterCodec and
+// CallContentSubtype for more details on the interaction between Codec and
+// content-subtype.
+//
+// This function is provided for advanced users; prefer to use only
+// CallContentSubtype to select a registered codec instead.
+func CallCustomCodec(codec Codec) CallOption {
+	return beforeCall(func(c *callInfo) error {
+		c.codec = codec
+		return nil
+	})
+}
+
 // The format of the payload: compressed or not?
 type payloadFormat uint8
 
@@ -251,8 +314,8 @@ type parser struct {
 	// error types.
 	r io.Reader
 
-	// The header of a gRPC message. Find more detail
-	// at https://grpc.io/docs/guides/wire.html.
+	// The header of a gRPC message. Find more detail at
+	// https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
 	header [5]byte
 }
 
@@ -281,10 +344,10 @@ func (p *parser) recvMsg(maxReceiveMessageSize int) (pf payloadFormat, msg []byt
 		return pf, nil, nil
 	}
 	if int64(length) > int64(maxInt) {
-		return 0, nil, Errorf(codes.ResourceExhausted, "grpc: received message larger than max length allowed on current machine (%d vs. %d)", length, maxInt)
+		return 0, nil, status.Errorf(codes.ResourceExhausted, "grpc: received message larger than max length allowed on current machine (%d vs. %d)", length, maxInt)
 	}
 	if int(length) > maxReceiveMessageSize {
-		return 0, nil, Errorf(codes.ResourceExhausted, "grpc: received message larger than max (%d vs. %d)", length, maxReceiveMessageSize)
+		return 0, nil, status.Errorf(codes.ResourceExhausted, "grpc: received message larger than max (%d vs. %d)", length, maxReceiveMessageSize)
 	}
 	// TODO(bradfitz,zhaoq): garbage. reuse buffer after proto decoding instead
 	// of making it for each message:
@@ -301,7 +364,7 @@ func (p *parser) recvMsg(maxReceiveMessageSize int) (pf payloadFormat, msg []byt
 // encode serializes msg and returns a buffer of message header and a buffer of msg.
 // If msg is nil, it generates the message header and an empty msg buffer.
 // TODO(ddyihai): eliminate extra Compressor parameter.
-func encode(c Codec, msg interface{}, cp Compressor, outPayload *stats.OutPayload, compressor encoding.Compressor) ([]byte, []byte, error) {
+func encode(c baseCodec, msg interface{}, cp Compressor, outPayload *stats.OutPayload, compressor encoding.Compressor) ([]byte, []byte, error) {
 	var (
 		b    []byte
 		cbuf *bytes.Buffer
@@ -314,7 +377,7 @@ func encode(c Codec, msg interface{}, cp Compressor, outPayload *stats.OutPayloa
 		var err error
 		b, err = c.Marshal(msg)
 		if err != nil {
-			return nil, nil, Errorf(codes.Internal, "grpc: error while marshaling: %v", err.Error())
+			return nil, nil, status.Errorf(codes.Internal, "grpc: error while marshaling: %v", err.Error())
 		}
 		if outPayload != nil {
 			outPayload.Payload = msg
@@ -328,20 +391,20 @@ func encode(c Codec, msg interface{}, cp Compressor, outPayload *stats.OutPayloa
 			if compressor != nil {
 				z, _ := compressor.Compress(cbuf)
 				if _, err := z.Write(b); err != nil {
-					return nil, nil, Errorf(codes.Internal, "grpc: error while compressing: %v", err.Error())
+					return nil, nil, status.Errorf(codes.Internal, "grpc: error while compressing: %v", err.Error())
 				}
 				z.Close()
 			} else {
 				// If Compressor is not set by UseCompressor, use default Compressor
 				if err := cp.Do(cbuf, b); err != nil {
-					return nil, nil, Errorf(codes.Internal, "grpc: error while compressing: %v", err.Error())
+					return nil, nil, status.Errorf(codes.Internal, "grpc: error while compressing: %v", err.Error())
 				}
 			}
 			b = cbuf.Bytes()
 		}
 	}
 	if uint(len(b)) > math.MaxUint32 {
-		return nil, nil, Errorf(codes.ResourceExhausted, "grpc: message too large (%d bytes)", len(b))
+		return nil, nil, status.Errorf(codes.ResourceExhausted, "grpc: message too large (%d bytes)", len(b))
 	}
 
 	bufHeader := make([]byte, payloadLen+sizeLen)
@@ -359,22 +422,26 @@ func encode(c Codec, msg interface{}, cp Compressor, outPayload *stats.OutPayloa
 	return bufHeader, b, nil
 }
 
-func checkRecvPayload(pf payloadFormat, recvCompress string, dc Decompressor) error {
+func checkRecvPayload(pf payloadFormat, recvCompress string, haveCompressor bool) *status.Status {
 	switch pf {
 	case compressionNone:
 	case compressionMade:
-		if (dc == nil || recvCompress != dc.Type()) && encoding.GetCompressor(recvCompress) == nil {
-			return Errorf(codes.Unimplemented, "grpc: Decompressor is not installed for grpc-encoding %q", recvCompress)
+		if recvCompress == "" || recvCompress == encoding.Identity {
+			return status.New(codes.Internal, "grpc: compressed flag set with identity or empty encoding")
+		}
+		if !haveCompressor {
+			return status.Newf(codes.Unimplemented, "grpc: Decompressor is not installed for grpc-encoding %q", recvCompress)
 		}
 	default:
-		return Errorf(codes.Internal, "grpc: received unexpected payload format %d", pf)
+		return status.Newf(codes.Internal, "grpc: received unexpected payload format %d", pf)
 	}
 	return nil
 }
 
-// TODO(ddyihai): eliminate extra Compressor parameter.
-func recv(p *parser, c Codec, s *transport.Stream, dc Decompressor, m interface{}, maxReceiveMessageSize int,
-	inPayload *stats.InPayload, compressor encoding.Compressor) error {
+// For the two compressor parameters, both should not be set, but if they are,
+// dc takes precedence over compressor.
+// TODO(dfawley): wrap the old compressor/decompressor using the new API?
+func recv(p *parser, c baseCodec, s *transport.Stream, dc Decompressor, m interface{}, maxReceiveMessageSize int, inPayload *stats.InPayload, compressor encoding.Compressor) error {
 	pf, d, err := p.recvMsg(maxReceiveMessageSize)
 	if err != nil {
 		return err
@@ -382,35 +449,37 @@ func recv(p *parser, c Codec, s *transport.Stream, dc Decompressor, m interface{
 	if inPayload != nil {
 		inPayload.WireLength = len(d)
 	}
-	if err := checkRecvPayload(pf, s.RecvCompress(), dc); err != nil {
-		return err
+
+	if st := checkRecvPayload(pf, s.RecvCompress(), compressor != nil || dc != nil); st != nil {
+		return st.Err()
 	}
+
 	if pf == compressionMade {
 		// To match legacy behavior, if the decompressor is set by WithDecompressor or RPCDecompressor,
 		// use this decompressor as the default.
 		if dc != nil {
 			d, err = dc.Do(bytes.NewReader(d))
 			if err != nil {
-				return Errorf(codes.Internal, "grpc: failed to decompress the received message %v", err)
+				return status.Errorf(codes.Internal, "grpc: failed to decompress the received message %v", err)
 			}
 		} else {
 			dcReader, err := compressor.Decompress(bytes.NewReader(d))
 			if err != nil {
-				return Errorf(codes.Internal, "grpc: failed to decompress the received message %v", err)
+				return status.Errorf(codes.Internal, "grpc: failed to decompress the received message %v", err)
 			}
 			d, err = ioutil.ReadAll(dcReader)
 			if err != nil {
-				return Errorf(codes.Internal, "grpc: failed to decompress the received message %v", err)
+				return status.Errorf(codes.Internal, "grpc: failed to decompress the received message %v", err)
 			}
 		}
 	}
 	if len(d) > maxReceiveMessageSize {
 		// TODO: Revisit the error code. Currently keep it consistent with java
 		// implementation.
-		return Errorf(codes.ResourceExhausted, "grpc: received message larger than max (%d vs. %d)", len(d), maxReceiveMessageSize)
+		return status.Errorf(codes.ResourceExhausted, "grpc: received message larger than max (%d vs. %d)", len(d), maxReceiveMessageSize)
 	}
 	if err := c.Unmarshal(d, m); err != nil {
-		return Errorf(codes.Internal, "grpc: failed to unmarshal the received message %v", err)
+		return status.Errorf(codes.Internal, "grpc: failed to unmarshal the received message %v", err)
 	}
 	if inPayload != nil {
 		inPayload.RecvTime = time.Now()
@@ -423,9 +492,7 @@ func recv(p *parser, c Codec, s *transport.Stream, dc Decompressor, m interface{
 }
 
 type rpcInfo struct {
-	failfast      bool
-	bytesSent     bool
-	bytesReceived bool
+	failfast bool
 }
 
 type rpcInfoContextKey struct{}
@@ -439,18 +506,10 @@ func rpcInfoFromContext(ctx context.Context) (s *rpcInfo, ok bool) {
 	return
 }
 
-func updateRPCInfoInContext(ctx context.Context, s rpcInfo) {
-	if ss, ok := rpcInfoFromContext(ctx); ok {
-		ss.bytesReceived = s.bytesReceived
-		ss.bytesSent = s.bytesSent
-	}
-	return
-}
-
 // Code returns the error code for err if it was produced by the rpc system.
 // Otherwise, it returns codes.Unknown.
 //
-// Deprecated; use status.FromError and Code method instead.
+// Deprecated: use status.FromError and Code method instead.
 func Code(err error) codes.Code {
 	if s, ok := status.FromError(err); ok {
 		return s.Code()
@@ -461,7 +520,7 @@ func Code(err error) codes.Code {
 // ErrorDesc returns the error description of err if it was produced by the rpc system.
 // Otherwise, it returns err.Error() or empty string when err is nil.
 //
-// Deprecated; use status.FromError and Message method instead.
+// Deprecated: use status.FromError and Message method instead.
 func ErrorDesc(err error) string {
 	if s, ok := status.FromError(err); ok {
 		return s.Message()
@@ -472,9 +531,30 @@ func ErrorDesc(err error) string {
 // Errorf returns an error containing an error code and a description;
 // Errorf returns nil if c is OK.
 //
-// Deprecated; use status.Errorf instead.
+// Deprecated: use status.Errorf instead.
 func Errorf(c codes.Code, format string, a ...interface{}) error {
 	return status.Errorf(c, format, a...)
+}
+
+// setCallInfoCodec should only be called after CallOptions have been applied.
+func setCallInfoCodec(c *callInfo) error {
+	if c.codec != nil {
+		// codec was already set by a CallOption; use it.
+		return nil
+	}
+
+	if c.contentSubtype == "" {
+		// No codec specified in CallOptions; use proto by default.
+		c.codec = encoding.GetCodec(proto.Name)
+		return nil
+	}
+
+	// c.contentSubtype is already lowercased in CallContentSubtype
+	c.codec = encoding.GetCodec(c.contentSubtype)
+	if c.codec == nil {
+		return status.Errorf(codes.Internal, "no codec registered for content-subtype %s", c.contentSubtype)
+	}
+	return nil
 }
 
 // The SupportPackageIsVersion variables are referenced from generated protocol
@@ -492,6 +572,6 @@ const (
 )
 
 // Version is the current grpc version.
-const Version = "1.8.0-dev"
+const Version = "1.10.0-dev"
 
 const grpcUA = "grpc-go/" + Version

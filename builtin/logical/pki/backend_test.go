@@ -46,7 +46,7 @@ var (
 func TestBackend_RSAKey(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -76,7 +76,7 @@ func TestBackend_RSAKey(t *testing.T) {
 func TestBackend_ECKey(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -104,7 +104,7 @@ func TestBackend_ECKey(t *testing.T) {
 func TestBackend_CSRValues(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -132,7 +132,7 @@ func TestBackend_CSRValues(t *testing.T) {
 func TestBackend_URLsCRUD(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -163,7 +163,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 func TestBackend_RSARoles(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -205,7 +205,7 @@ func TestBackend_RSARoles(t *testing.T) {
 func TestBackend_RSARoles_CSR(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -247,7 +247,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 func TestBackend_ECRoles(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -289,7 +289,7 @@ func TestBackend_ECRoles(t *testing.T) {
 func TestBackend_ECRoles_CSR(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -1492,7 +1492,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.ParseDedupLowercaseAndSortStrings(role.OU, ",")
+			expected := strutil.RemoveDuplicates(role.OU, true)
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
 			}
@@ -1513,7 +1513,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.ParseDedupLowercaseAndSortStrings(role.Organization, ",")
+			expected := strutil.RemoveDuplicates(role.Organization, true)
 			if !reflect.DeepEqual(cert.Subject.Organization, expected) {
 				return fmt.Errorf("Error: returned certificate has Organization of %s but %s was specified in the role.", cert.Subject.Organization, expected)
 			}
@@ -1798,18 +1798,18 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// OU tests
 	{
-		roleVals.OU = "foo"
+		roleVals.OU = []string{"foo"}
 		addTests(getOuCheck(roleVals))
 
-		roleVals.OU = "foo,bar"
+		roleVals.OU = []string{"foo", "bar"}
 		addTests(getOuCheck(roleVals))
 	}
 	// Organization tests
 	{
-		roleVals.Organization = "system:masters"
+		roleVals.Organization = []string{"system:masters"}
 		addTests(getOrganizationCheck(roleVals))
 
-		roleVals.Organization = "foo,bar"
+		roleVals.Organization = []string{"foo", "bar"}
 		addTests(getOrganizationCheck(roleVals))
 	}
 	// IP SAN tests
@@ -1893,7 +1893,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	err := b.Setup(config)
+	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2020,7 +2020,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	err := b.Setup(config)
+	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2564,7 +2564,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	err := b.Setup(config)
+	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2693,7 +2693,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signingBundle, err := fetchCAInfo(&logical.Request{Storage: storage})
+	signingBundle, err := fetchCAInfo(context.Background(), &logical.Request{Storage: storage})
 	if err != nil {
 		t.Fatal(err)
 	}

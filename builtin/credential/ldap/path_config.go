@@ -130,7 +130,7 @@ Default: cn`,
 /*
  * Construct ConfigEntry struct using stored configuration.
  */
-func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
+func (b *backend) Config(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
 	// Schema for ConfigEntry
 	fd, err := b.getConfigFieldData()
 	if err != nil {
@@ -143,7 +143,7 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 		return nil, err
 	}
 
-	storedConfig, err := req.Storage.Get("config")
+	storedConfig, err := req.Storage.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	cfg, err := b.Config(req)
+	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +299,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

@@ -149,7 +149,7 @@ func (o plainOptions) read(rd *bufio.Reader, cnt int) error {
 				return err
 			}
 
-		case tcInt:
+		case tcInteger:
 			if v, err := rd.ReadInt32(); err == nil {
 				o[k] = intType(v)
 			} else {
@@ -220,7 +220,7 @@ func (o plainOptions) write(wr *bufio.Writer) error {
 			}
 
 		case intType:
-			if err := wr.WriteInt8(int8(tcInt)); err != nil {
+			if err := wr.WriteInt8(int8(tcInteger)); err != nil {
 				return err
 			}
 			if err := wr.WriteInt32(int32(v)); err != nil {

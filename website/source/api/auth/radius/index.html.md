@@ -1,24 +1,24 @@
 ---
 layout: "api"
-page_title: "RADIUS Auth Backend - HTTP API"
+page_title: "RADIUS - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-radius"
 description: |-
-  This is the API documentation for the Vault RADIUS authentication backend.
+  This is the API documentation for the Vault RADIUS auth method.
 ---
 
-# RADIUS Auth Backend HTTP API
+# RADIUS Auth Method (API)
 
-This is the API documentation for the Vault RADIUS authentication backend. For
-general information about the usage and operation of the RADIUS backend, please
-see the [Vault RADIUS backend documentation](/docs/auth/radius.html).
+This is the API documentation for the Vault RADIUS auth method. For
+general information about the usage and operation of the RADIUS method, please
+see the [Vault RADIUS method documentation](/docs/auth/radius.html).
 
-This documentation assumes the RADIUS backend is mounted at the `/auth/radius`
-path in Vault. Since it is possible to mount auth backends at any location,
+This documentation assumes the RADIUS method is mounted at the `/auth/radius`
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Configure RADIUS
 
-Configures the connection parameters and shared secret used to communicate with 
+Configures the connection parameters and shared secret used to communicate with
 RADIUS.
 
 | Method   | Path                         | Produces               |
@@ -27,16 +27,16 @@ RADIUS.
 
 ### Parameters
 
-- `host` `(string: <required>)` - The RADIUS server to connect to. Examples: 
+- `host` `(string: <required>)` - The RADIUS server to connect to. Examples:
   `radius.myorg.com`, `127.0.0.1`
 - `port` `(integer: 1812)` - The UDP port where the RADIUS server is listening
    on. Defaults is 1812.
 - `secret` `(string: <required>)` - The RADIUS shared secret.
-- `unregistered_user_policies` `(string: "")` - A comma-separated list of 
+- `unregistered_user_policies` `(string: "")` - A comma-separated list of
   policies to be granted to unregistered users.
-- `dial_timeout` `(integer: 10)` - Number of second to wait for a backend 
+- `dial_timeout` `(integer: 10)` - Number of second to wait for a backend
   connection before timing out. Default is 10.
-- `nas_port` `(integer: 10)` - The NAS-Port attribute of the RADIUS request. 
+- `nas_port` `(integer: 10)` - The NAS-Port attribute of the RADIUS request.
   Defaults is 10.
 
 ### Sample Payload
@@ -61,7 +61,7 @@ $ curl \
 
 ## Register User
 
-Registers a new user and maps a set of policies to it.  This path honors the 
+Registers a new user and maps a set of policies to it.  This path honors the
 distinction between the `create` and `update` capabilities inside ACL policies.
 
 | Method   | Path                         | Produces               |
@@ -71,7 +71,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 ### Parameters
 
 - `username` `(string: <required>)` - Username for this user.
-- `policies` `(string: "")` - Comma-separated list of policies.  If set to 
+- `policies` `(string: "")` - Comma-separated list of policies.  If set to
   empty string, only the `default` policy will be applicable to the user.
 
 ```json
@@ -127,7 +127,7 @@ $ curl \
 
 ## Delete User
 
-Deletes an existing username from the backend.
+Deletes an existing username from the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -148,12 +148,11 @@ $ curl \
 
 ## List Users
 
-List the users registered with the backend.
+List the users registered with the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/radius/users`         | `200 application/json` |
-| `GET`   | `/auth/radius/users?list=true` | `200 application/json` |
 
 ### Sample Request
 

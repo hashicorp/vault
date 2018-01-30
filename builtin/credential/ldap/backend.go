@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"text/template"
 
@@ -12,9 +13,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -92,9 +93,9 @@ func EscapeLDAPValue(input string) string {
 	return input
 }
 
-func (b *backend) Login(req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
 
-	cfg, err := b.Config(req)
+	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -172,7 +173,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	var allGroups []string
 	// Import the custom added groups from ldap backend
-	user, err := b.User(req.Storage, username)
+	user, err := b.User(ctx, req.Storage, username)
 	if err == nil && user != nil && user.Groups != nil {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/ldap: adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
@@ -185,7 +186,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// Retrieve policies
 	var policies []string
 	for _, groupName := range allGroups {
-		group, err := b.Group(req.Storage, groupName)
+		group, err := b.Group(ctx, req.Storage, groupName)
 		if err == nil && group != nil {
 			policies = append(policies, group.Policies...)
 		}

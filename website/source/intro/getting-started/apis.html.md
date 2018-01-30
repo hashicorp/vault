@@ -7,6 +7,7 @@ description: |-
 ---
 
 # Using the HTTP APIs with Authentication
+
 All of Vault's capabilities are accessible via the HTTP API in addition to the
 CLI. In fact, most calls from the CLI actually invoke the HTTP API. In some
 cases, Vault features are not available via the CLI and can only be accessed
@@ -14,20 +15,23 @@ via the HTTP API.
 
 Once you have started the Vault server, you can use `curl` or any other http
 client to make API calls. For example, if you started the Vault server in
-[development mode](/docs/concepts/dev-server.html), you could validate the
+[dev mode](/docs/concepts/dev-server.html), you could validate the
 initialization status like this:
 
-```javascript
+```text
 $ curl http://127.0.0.1:8200/v1/sys/init
 ```
 
 This will return a JSON response:
 
-```javascript
-{ "initialized": true }
+```json
+{
+  "initialized": true
+}
 ```
 
 ## Accessing Secrets via the REST APIs
+
 Machines that need access to information stored in Vault will most likely
 access Vault via its REST API. For example, if a machine were using
 [AppRole](/docs/auth/approle.html) for authentication, the application would
@@ -36,9 +40,9 @@ application would use that token for future communication with Vault.
 
 For the purpose of this guide, we will use the following configuration which
 disables TLS and uses a file-based backend. TLS is disabled here only for
-exemplary purposes and it should never be disabled in production.
+exemplary purposes; it should never be disabled in production.
 
-```javascript
+```hcl
 backend "file" {
   path = "vault"
 }
@@ -48,33 +52,33 @@ listener "tcp" {
 }
 ```
 
-Save this file on disk and then start the Vault server with this command:
+Save this file on disk as `config.hcl` and then start the Vault server:
 
-```javascript
-$ vault server -config=/etc/vault.conf
+```text
+$ vault server -config=config.hcl
 ```
 
 At this point, we can use Vault's API for all our interactions. For example, we
 can initialize Vault like this:
 
-```javascript
+```text
 $ curl \
-  -X PUT \
-  -d "{\"secret_shares\":1, \"secret_threshold\":1}" \
-  http://127.0.0.1:8200/v1/sys/init
+    --request POST \
+    --data '{"secret_shares": 1, "secret_threshold": 1}' \
+    http://127.0.0.1:8200/v1/sys/init
 ```
 
 The response should be JSON and looks something like this:
 
-```javascript
+```json
 {
-  "root_token": "4f66bdfa-f5e4-209f-096c-6e01d863c145",
-  "keys_base64": [
-    "FwwsSzMysLgYAvJFrs+q5UfLMKIxC+dDFbP6YzyjzvQ="
-  ],
   "keys": [
-    "170c2c4b3332b0b81802f245aecfaae547cb30a2310be74315b3fa633ca3cef4"
-  ]
+    "373d500274dd8eb95271cb0f868e4ded27d9afa205d1741d60bb97cd7ce2fe41"
+  ],
+  "keys_base64": [
+    "Nz1QAnTdjrlSccsPho5N7SfZr6IF0XQdYLuXzXzi/kE="
+  ],
+  "root_token": "6fa4128e-8bd2-fd02-0ea8-a5e020d9b766"
 }
 ```
 
@@ -86,43 +90,48 @@ To make this guide easy to copy-and-paste, we will be using the environment
 variable `$VAULT_TOKEN` to store the root token. You can export this Vault
 token in your current shell like this:
 
-```javascript
-$ export VAULT_TOKEN=4f66bdfa-f5e4-209f-096c-6e01d863c145
+```sh
+$ export VAULT_TOKEN=6fa4128e-8bd2-fd02-0ea8-a5e020d9b766
 ```
 
 Using the unseal key (not the root token) from above, you can unseal the Vault
 via the HTTP API:
 
-```javascript
+```text
 $ curl \
-    -X PUT \
-    -d '{"key": "FwwsSzMysLgYAvJFrs+q5UfLMKIxC+dDFbP6YzyjzvQ="}' \
+    --request POST \
+    --data '{"key": "Nz1QAnTdjrlSccsPho5N7SfZr6IF0XQdYLuXzXzi/kE="}' \
     http://127.0.0.1:8200/v1/sys/unseal
 ```
 
-Note that you should replace `FwwsSzM...` with the generated key from your
+Note that you should replace `Nz1QAnT...` with the generated key from your
 output. This will return a JSON response:
 
-```javascript
+```json
 {
-  "cluster_id": "1c2523c9-adc2-7f3a-399f-7032da2b9faf",
-  "cluster_name": "vault-cluster-9ac82317",
-  "version": "0.6.2",
-  "progress": 0,
-  "n": 1,
+  "sealed": false,
   "t": 1,
-  "sealed": false
+  "n": 1,
+  "progress": 0,
+  "nonce": "",
+  "version": "1.2.3",
+  "cluster_name": "vault-cluster-9d524900",
+  "cluster_id": "d69ab1b0-7e9a-2523-0d05-b0bfd09caeea"
 }
 ```
 
-Now any of the available authentication backends can be enabled and configured.
+Now any of the available auth methods can be enabled and configured.
 For the purposes of this guide lets enable [AppRole](/docs/auth/approle.html)
 authentication.
 
 Start by enabling the AppRole authentication.
 
-```javascript
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"type":"approle"}' http://127.0.0.1:8200/v1/sys/auth/approle
+```text
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    --data '{"type": "approle"}' \
+    http://127.0.0.1:8200/v1/sys/auth/approle
 ```
 
 Notice that the request to enable the AppRole endpoint needed an authentication
@@ -132,124 +141,125 @@ mechanisms, but we will use the root token for simplicity.
 
 Now create an AppRole with desired set of [ACL
 policies](/docs/concepts/policies.html). In the following command, it is being
-specified that the tokens issued under the AppRole `testrole`, should be
-associated with `dev-policy` and the `test-policy`.
+specified that the tokens issued under the AppRole `my-role`, should be
+associated with `dev-policy` and the `my-policy`.
 
-```javascript
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"dev-policy,test-policy"}' http://127.0.0.1:8200/v1/auth/approle/role/testrole
+```text
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    --data '{"policies": ["dev-policy", "my-policy"]}' \
+    http://127.0.0.1:8200/v1/auth/approle/role/my-role
 ```
 
 The AppRole backend, in its default configuration expects two hard to guess
-credentials, a role ID and a secret ID. This command fetches the role ID of
-the `testrole`.
+credentials, a role ID and a secret ID. This command fetches the role ID of the
+`my-role`.
 
-```javascript
-$ curl -X GET -H "X-Vault-Token:$VAULT_TOKEN" http://127.0.0.1:8200/v1/auth/approle/role/testrole/role-id | jq .
+```text
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+     http://127.0.0.1:8200/v1/auth/approle/role/my-role/role-id
 ```
 
-```javascript
+The response will include a `data` key with the `role_id`:
+
+```json
 {
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
   "data": {
-    "role_id": "988a9dfd-ea69-4a53-6cb6-9d6b86474bba"
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": "",
-  "request_id": "ef5c9b3f-e15e-0527-5457-79b4ecfe7b60"
+    "role_id": "86a32a73-1f2b-05e0-113a-dfa930145d72"
+  }
 }
 ```
 
-This command creates a new secret ID under the `testrole`.
+This command creates a new secret ID under the `my-role`.
 
-```javascript
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" http://127.0.0.1:8200/v1/auth/approle/role/testrole/secret-id | jq .
+```text
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    http://127.0.0.1:8200/v1/auth/approle/role/my-role/secret-id
 ```
 
-```javascript
+The response will include the `secret_id` in the `data` key:
+
+```json
 {
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
   "data": {
-    "secret_id_accessor": "45946873-1d96-a9d4-678c-9229f74386a5",
-    "secret_id": "37b74931-c4cd-d49a-9246-ccc62d682a25"
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": "",
-  "request_id": "c98fa1c2-7565-fd45-d9de-0b43c307f2aa"
+    "secret_id": "cd4b2002-3e3b-aceb-378d-5caa84dffd14",
+    "secret_id_accessor": "6b9b58f6-d11a-c73c-ffa8-04a47d42716b"
+  }
 }
 ```
 
 These two credentials can be supplied to the login endpoint to fetch a new
 Vault token.
 
-```javascript
-$ curl -X POST \
-     -d '{"role_id":"988a9dfd-ea69-4a53-6cb6-9d6b86474bba","secret_id":"37b74931-c4cd-d49a-9246-ccc62d682a25"}' \
-     http://127.0.0.1:8200/v1/auth/approle/login | jq .
+```text
+$ curl \
+    --request POST \
+    --data '{"role_id": "86a32a73-1f2b-05e0-113a-dfa930145d72", "secret_id": "cd4b2002-3e3b-aceb-378d-5caa84dffd14"}' \
+    http://127.0.0.1:8200/v1/auth/approle/login
 ```
 
-```javascript
+The response will be JSON, under the key `auth`:
+
+```json
 {
   "auth": {
-    "renewable": true,
-    "lease_duration": 2764800,
-    "metadata": {},
+    "client_token": "50617721-dfb5-1916-7b13-4091e169d28c",
+    "accessor": "ada8d354-47c0-5d9e-50f9-d74e6de2df9b",
     "policies": [
       "default",
       "dev-policy",
-      "test-policy"
+      "my-policy"
     ],
-    "accessor": "5d7fb475-07cb-4060-c2de-1ca3fcbf0c56",
-    "client_token": "98a4c7ab-b1fe-361b-ba0b-e307aacfd587"
-  },
-  "warnings": null,
-  "wrap_info": null,
-  "data": null,
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": "",
-  "request_id": "988fb8db-ce3b-0167-0ac7-1a568b902d75"
+    "metadata": {
+      "role_name": "my-role"
+    },
+    "lease_duration": 2764800,
+    "renewable": true
+  }
 }
 ```
 
-The returned client token (`98a4c7ab-b1fe-361b-ba0b-e307aacfd587`) can now be
-used to authenticate with Vault. This token will be authorized with specific
-capabilities on all the resources encompassed by the policies `default`,
-`dev-policy` and `test-policy`.
+The returned client token (`50617721...`) can be used to authenticate with
+Vault. This token will be authorized with specific capabilities on all the
+resources encompassed by the policies `default`, `dev-policy` and `my-policy`.
 
 The newly acquired token can be exported as a new `VAULT_TOKEN` and use it to
 authenticate Vault requests.
 
-```javascript
-$ export VAULT_TOKEN="98a4c7ab-b1fe-361b-ba0b-e307aacfd587"
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"bar":"baz"}' http://127.0.0.1:8200/v1/secret/foo
+```sh
+$ export VAULT_TOKEN="50617721-dfb5-1916-7b13-4091e169d28c"
+```
+
+```text
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    --data '{"bar": "baz"}' \
+    http://127.0.0.1:8200/v1/secret/foo
 ```
 
 This will create a new secret named "foo" with the given JSON contents. We can
 read this value back with the same token:
 
-```javascript
-$ curl -X GET -H "X-Vault-Token:$VAULT_TOKEN" http://127.0.0.1:8200/v1/secret/foo | jq .
+```text
+$ curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    http://127.0.0.1:8200/v1/secret/foo
 ```
 
 This should return a response like this:
 
-```javascript
+```json
 {
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
   "data": {
     "bar": "baz"
   },
   "lease_duration": 2764800,
   "renewable": false,
-  "lease_id": "",
   "request_id": "5e246671-ec05-6fc8-9f93-4fe4512f34ab"
 }
 ```

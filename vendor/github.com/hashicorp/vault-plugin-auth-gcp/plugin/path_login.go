@@ -51,7 +51,7 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 }
 
 func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	loginInfo, err := b.parseAndValidateJwt(req, data)
+	loginInfo, err := b.parseAndValidateJwt(ctx, req, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -59,9 +59,9 @@ func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, da
 	roleType := loginInfo.Role.RoleType
 	switch roleType {
 	case iamRoleType:
-		return b.pathIamLogin(req, loginInfo)
+		return b.pathIamLogin(ctx, req, loginInfo)
 	case gceRoleType:
-		return b.pathGceLogin(req, loginInfo)
+		return b.pathGceLogin(ctx, req, loginInfo)
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("login against role type '%s' is unsupported", roleType)), nil
 	}
@@ -73,7 +73,7 @@ func (b *GcpAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 	if roleName == "" {
 		return logical.ErrorResponse("role name metadata not associated with auth token, invalid"), nil
 	}
-	role, err := b.role(req.Storage, roleName)
+	role, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	} else if role == nil {
@@ -84,11 +84,11 @@ func (b *GcpAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 
 	switch role.RoleType {
 	case iamRoleType:
-		if err := b.pathIamRenew(req, roleName, role); err != nil {
+		if err := b.pathIamRenew(ctx, req, roleName, role); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 	case gceRoleType:
-		if err := b.pathGceRenew(req, roleName, role); err != nil {
+		if err := b.pathGceRenew(ctx, req, roleName, role); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 	default:
@@ -123,7 +123,7 @@ type gcpLoginInfo struct {
 	GceMetadata *util.GCEIdentityMetadata
 }
 
-func (b *GcpAuthBackend) parseAndValidateJwt(req *logical.Request, data *framework.FieldData) (*gcpLoginInfo, error) {
+func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.Request, data *framework.FieldData) (*gcpLoginInfo, error) {
 	loginInfo := &gcpLoginInfo{}
 	var err error
 
@@ -132,7 +132,7 @@ func (b *GcpAuthBackend) parseAndValidateJwt(req *logical.Request, data *framewo
 		return nil, errors.New("role is required")
 	}
 
-	loginInfo.Role, err = b.role(req.Storage, loginInfo.RoleName)
+	loginInfo.Role, err = b.role(ctx, req.Storage, loginInfo.RoleName)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (b *GcpAuthBackend) parseAndValidateJwt(req *logical.Request, data *framewo
 		return nil, err
 	}
 
-	key, err := b.getSigningKey(jwtVal, signedJwt.(string), loginInfo.Role, req.Storage)
+	key, err := b.getSigningKey(ctx, jwtVal, signedJwt.(string), loginInfo.Role, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (b *GcpAuthBackend) parseAndValidateJwt(req *logical.Request, data *framewo
 	return loginInfo, nil
 }
 
-func (b *GcpAuthBackend) getSigningKey(token *jwt.JSONWebToken, rawToken string, role *gcpRole, s logical.Storage) (interface{}, error) {
+func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebToken, rawToken string, role *gcpRole, s logical.Storage) (interface{}, error) {
 	if len(token.Headers) != 1 {
 		return nil, errors.New("expected token to have exactly one header")
 	}
@@ -195,7 +195,7 @@ func (b *GcpAuthBackend) getSigningKey(token *jwt.JSONWebToken, rawToken string,
 
 	switch role.RoleType {
 	case iamRoleType:
-		iamClient, err := b.IAM(s)
+		iamClient, err := b.IAM(ctx, s)
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +208,7 @@ func (b *GcpAuthBackend) getSigningKey(token *jwt.JSONWebToken, rawToken string,
 		accountKey, err := util.ServiceAccountKey(iamClient, keyId, serviceAccountId, role.ProjectId)
 		if err != nil {
 			// Attempt to get a normal Google Oauth cert in case of GCE inferrence.
-			key, err := b.getGoogleOauthCert(keyId, s)
+			key, err := b.getGoogleOauthCert(ctx, keyId, s)
 			if err != nil {
 				return nil, errors.New("could not find service account key or Google Oauth cert with given 'kid' id")
 			}
@@ -216,15 +216,15 @@ func (b *GcpAuthBackend) getSigningKey(token *jwt.JSONWebToken, rawToken string,
 		}
 		return util.PublicKey(accountKey.PublicKeyData)
 	case gceRoleType:
-		return b.getGoogleOauthCert(keyId, s)
+		return b.getGoogleOauthCert(ctx, keyId, s)
 	default:
 		return nil, fmt.Errorf("unexpected role type %s", role.RoleType)
 	}
 }
 
-func (b *GcpAuthBackend) getGoogleOauthCert(keyId string, s logical.Storage) (interface{}, error) {
+func (b *GcpAuthBackend) getGoogleOauthCert(ctx context.Context, keyId string, s logical.Storage) (interface{}, error) {
 	var certsEndpoint string
-	conf, err := b.config(s)
+	conf, err := b.config(ctx, s)
 	if err != nil {
 		return nil, fmt.Errorf("could not read config for backend: %v", err)
 	}
@@ -264,8 +264,8 @@ func validateBaseJWTClaims(c *jwt.Claims, roleName string) error {
 
 // ---- IAM login domain ----
 // pathIamLogin attempts a login operation using the parsed login info.
-func (b *GcpAuthBackend) pathIamLogin(req *logical.Request, loginInfo *gcpLoginInfo) (*logical.Response, error) {
-	iamClient, err := b.IAM(req.Storage)
+func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request, loginInfo *gcpLoginInfo) (*logical.Response, error) {
+	iamClient, err := b.IAM(ctx, req.Storage)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(clientErrorTemplate, "IAM", err)), nil
 	}
@@ -340,8 +340,8 @@ func (b *GcpAuthBackend) pathIamLogin(req *logical.Request, loginInfo *gcpLoginI
 
 // pathIamRenew returns an error if the service account referenced in the auth token metadata cannot renew the
 // auth token for the given role.
-func (b *GcpAuthBackend) pathIamRenew(req *logical.Request, roleName string, role *gcpRole) error {
-	iamClient, err := b.IAM(req.Storage)
+func (b *GcpAuthBackend) pathIamRenew(ctx context.Context, req *logical.Request, roleName string, role *gcpRole) error {
+	iamClient, err := b.IAM(ctx, req.Storage)
 	if err != nil {
 		return fmt.Errorf(clientErrorTemplate, "IAM", err)
 	}
@@ -392,7 +392,7 @@ func (b *GcpAuthBackend) authorizeIAMServiceAccount(serviceAccount *iam.ServiceA
 
 // ---- GCE login domain ----
 // pathGceLogin attempts a login operation using the parsed login info.
-func (b *GcpAuthBackend) pathGceLogin(req *logical.Request, loginInfo *gcpLoginInfo) (*logical.Response, error) {
+func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request, loginInfo *gcpLoginInfo) (*logical.Response, error) {
 	role := loginInfo.Role
 	metadata := loginInfo.GceMetadata
 	if metadata == nil {
@@ -406,7 +406,7 @@ func (b *GcpAuthBackend) pathGceLogin(req *logical.Request, loginInfo *gcpLoginI
 	}
 
 	// Verify instance exists.
-	gceClient, err := b.GCE(req.Storage)
+	gceClient, err := b.GCE(ctx, req.Storage)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(clientErrorTemplate, "GCE", err)), nil
 	}
@@ -418,11 +418,11 @@ func (b *GcpAuthBackend) pathGceLogin(req *logical.Request, loginInfo *gcpLoginI
 			metadata.ProjectId, metadata.Zone, metadata.InstanceName, err)), nil
 	}
 
-	if err := b.authorizeGCEInstance(instance, req.Storage, role, metadata.Zone, loginInfo.ServiceAccountId); err != nil {
+	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, metadata.Zone, loginInfo.ServiceAccountId); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	iamClient, err := b.IAM(req.Storage)
+	iamClient, err := b.IAM(ctx, req.Storage)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(clientErrorTemplate, "IAM", err)), nil
 	}
@@ -489,8 +489,8 @@ func authMetadata(loginInfo *gcpLoginInfo, serviceAccount *iam.ServiceAccount) m
 
 // pathGceRenew returns an error if the instance referenced in the auth token metadata cannot renew the
 // auth token for the given role.
-func (b *GcpAuthBackend) pathGceRenew(req *logical.Request, roleName string, role *gcpRole) error {
-	gceClient, err := b.GCE(req.Storage)
+func (b *GcpAuthBackend) pathGceRenew(ctx context.Context, req *logical.Request, roleName string, role *gcpRole) error {
+	gceClient, err := b.GCE(ctx, req.Storage)
 	if err != nil {
 		return fmt.Errorf(clientErrorTemplate, "GCE", err)
 	}
@@ -509,7 +509,7 @@ func (b *GcpAuthBackend) pathGceRenew(req *logical.Request, roleName string, rol
 	if !ok {
 		return errors.New("invalid auth metadata: service_account_id not found")
 	}
-	if err := b.authorizeGCEInstance(instance, req.Storage, role, meta.Zone, serviceAccountId); err != nil {
+	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, meta.Zone, serviceAccountId); err != nil {
 		return fmt.Errorf("could not renew token for role %s: %v", roleName, err)
 	}
 
@@ -517,8 +517,8 @@ func (b *GcpAuthBackend) pathGceRenew(req *logical.Request, roleName string, rol
 }
 
 // validateGCEInstance returns an error if the given GCE instance is not authorized for the role.
-func (b *GcpAuthBackend) authorizeGCEInstance(instance *compute.Instance, s logical.Storage, role *gcpRole, zone, serviceAccountId string) error {
-	gceClient, err := b.GCE(s)
+func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, instance *compute.Instance, s logical.Storage, role *gcpRole, zone, serviceAccountId string) error {
+	gceClient, err := b.GCE(ctx, s)
 	if err != nil {
 		return err
 	}
@@ -593,7 +593,7 @@ func (b *GcpAuthBackend) authorizeGCEInstance(instance *compute.Instance, s logi
 
 	// Verify instance is running under one of the allowed service accounts.
 	if len(role.BoundServiceAccounts) > 0 {
-		iamClient, err := b.IAM(s)
+		iamClient, err := b.IAM(ctx, s)
 		if err != nil {
 			return err
 		}

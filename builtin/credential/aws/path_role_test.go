@@ -20,7 +20,8 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +118,20 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	data["bound_iam_principal_arn"] = ""
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "role/ami-abcd456",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to update role with empty bound_iam_principal_arn: %s", resp.Data["error"])
+	}
+
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles",
@@ -164,7 +179,7 @@ func Test_enableIamIDResolution(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +254,7 @@ func TestBackend_pathIam(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -403,7 +418,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -509,7 +524,8 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -635,7 +651,8 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -679,6 +696,6 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	}
 }
 
-func resolveArnToFakeUniqueId(s logical.Storage, arn string) (string, error) {
+func resolveArnToFakeUniqueId(ctx context.Context, s logical.Storage, arn string) (string, error) {
 	return "FakeUniqueId1", nil
 }

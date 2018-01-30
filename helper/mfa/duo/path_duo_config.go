@@ -19,7 +19,7 @@ func pathDuoConfig() *framework.Path {
 			},
 			"username_format": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Format string given auth backend username as argument to create Duo username (default '%s')",
+				Description: "Format string given auth method username as argument to create Duo username (default '%s')",
 			},
 			"push_info": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -37,10 +37,10 @@ func pathDuoConfig() *framework.Path {
 	}
 }
 
-func GetDuoConfig(req *logical.Request) (*DuoConfig, error) {
+func GetDuoConfig(ctx context.Context, req *logical.Request) (*DuoConfig, error) {
 	var result DuoConfig
 	// all config parameters are optional, so path need not exist
-	entry, err := req.Storage.Get("duo/config")
+	entry, err := req.Storage.Get(ctx, "duo/config")
 	if err == nil && entry != nil {
 		if err := entry.DecodeJSON(&result); err != nil {
 			return nil, err
@@ -69,7 +69,7 @@ func pathDuoConfigWrite(ctx context.Context, req *logical.Request, d *framework.
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -77,7 +77,7 @@ func pathDuoConfigWrite(ctx context.Context, req *logical.Request, d *framework.
 }
 
 func pathDuoConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	config, err := GetDuoConfig(req)
+	config, err := GetDuoConfig(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -101,10 +101,10 @@ type DuoConfig struct {
 }
 
 const pathDuoConfigHelpSyn = `
-Configure Duo second factor behavior. 
+Configure Duo second factor behavior.
 `
 
 const pathDuoConfigHelpDesc = `
-This endpoint allows you to configure how the original auth backend username maps to
+This endpoint allows you to configure how the original auth method username maps to
 the Duo username by providing a template format string.
 `

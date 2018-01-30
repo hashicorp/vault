@@ -1,6 +1,7 @@
 package inmem
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/logformat"
@@ -24,17 +25,17 @@ func TestPhysicalView_BadKeysKeys(t *testing.T) {
 	}
 	view := physical.NewView(backend, "foo/")
 
-	_, err = view.List("../")
+	_, err = view.List(context.Background(), "../")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 
-	_, err = view.Get("../")
+	_, err = view.Get(context.Background(), "../")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 
-	err = view.Delete("../foo")
+	err = view.Delete(context.Background(), "../foo")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -43,7 +44,7 @@ func TestPhysicalView_BadKeysKeys(t *testing.T) {
 		Key:   "../foo",
 		Value: []byte("test"),
 	}
-	err = view.Put(le)
+	err = view.Put(context.Background(), le)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -59,12 +60,12 @@ func TestPhysicalView(t *testing.T) {
 
 	// Write a key outside of foo/
 	entry := &physical.Entry{Key: "test", Value: []byte("test")}
-	if err := backend.Put(entry); err != nil {
+	if err := backend.Put(context.Background(), entry); err != nil {
 		t.Fatalf("bad: %v", err)
 	}
 
 	// List should have no visibility
-	keys, err := view.List("")
+	keys, err := view.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestPhysicalView(t *testing.T) {
 	}
 
 	// Get should have no visibility
-	out, err := view.Get("test")
+	out, err := view.Get(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -82,12 +83,12 @@ func TestPhysicalView(t *testing.T) {
 	}
 
 	// Try to put the same entry via the view
-	if err := view.Put(entry); err != nil {
+	if err := view.Put(context.Background(), entry); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Check it is nested
-	entry, err = backend.Get("foo/test")
+	entry, err = backend.Get(context.Background(), "foo/test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -96,12 +97,12 @@ func TestPhysicalView(t *testing.T) {
 	}
 
 	// Delete nested
-	if err := view.Delete("test"); err != nil {
+	if err := view.Delete(context.Background(), "test"); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Check the nested key
-	entry, err = backend.Get("foo/test")
+	entry, err = backend.Get(context.Background(), "foo/test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -110,7 +111,7 @@ func TestPhysicalView(t *testing.T) {
 	}
 
 	// Check the non-nested key
-	entry, err = backend.Get("test")
+	entry, err = backend.Get(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

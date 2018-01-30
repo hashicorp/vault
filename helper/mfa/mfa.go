@@ -1,5 +1,5 @@
 // Package mfa provides wrappers to add multi-factor authentication
-// to any auth backend.
+// to any auth method.
 //
 // To add MFA to a backend, replace its login path with the
 // paths returned by MFAPaths and add the additional root
@@ -37,7 +37,7 @@ func MFARootPaths() []string {
 }
 
 // HandlerFunc is the callback called to handle MFA for a login request.
-type HandlerFunc func(*logical.Request, *framework.FieldData, *logical.Response) (*logical.Response, error)
+type HandlerFunc func(context.Context, *logical.Request, *framework.FieldData, *logical.Response) (*logical.Response, error)
 
 // handlers maps each supported MFA type to its handler.
 var handlers = map[string]HandlerFunc{
@@ -72,7 +72,7 @@ func (b *backend) wrapLoginHandler(loginHandler framework.OperationFunc) framewo
 		}
 
 		// check if multi-factor enabled
-		mfa_config, err := b.MFAConfig(req)
+		mfa_config, err := b.MFAConfig(ctx, req)
 		if err != nil || mfa_config == nil {
 			return resp, nil
 		}
@@ -80,7 +80,7 @@ func (b *backend) wrapLoginHandler(loginHandler framework.OperationFunc) framewo
 		// perform multi-factor authentication if type supported
 		handler, ok := handlers[mfa_config.Type]
 		if ok {
-			return handler(req, d, resp)
+			return handler(ctx, req, d, resp)
 		} else {
 			return resp, err
 		}

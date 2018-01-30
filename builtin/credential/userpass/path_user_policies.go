@@ -35,7 +35,7 @@ func pathUserPolicies(b *backend) *framework.Path {
 func (b *backend) pathUserPoliciesUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 
-	userEntry, err := b.user(req.Storage, username)
+	userEntry, err := b.user(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (b *backend) pathUserPoliciesUpdate(ctx context.Context, req *logical.Reque
 
 	userEntry.Policies = policyutil.ParsePolicies(d.Get("policies"))
 
-	return nil, b.setUser(req.Storage, username, userEntry)
+	return nil, b.setUser(ctx, req.Storage, username, userEntry)
 }
 
 const pathUserPoliciesHelpSyn = `

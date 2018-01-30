@@ -77,7 +77,7 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 	}
 
 	// Fetch the role entry
-	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
+	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 
 // Parses the tag from string form into a struct form. This method
 // also verifies the correctness of the parsed role tag.
-func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
+func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Storage, tag string) (*roleTag, error) {
 	tagItems := strings.Split(tag, ":")
 
 	// Tag must contain version, nonce, policies and HMAC
@@ -349,7 +349,7 @@ func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*ro
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	roleEntry, err := b.lockedAWSRole(s, rTag.Role)
+	roleEntry, err := b.lockedAWSRole(ctx, s, rTag.Role)
 	if err != nil {
 		return nil, err
 	}

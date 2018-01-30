@@ -37,7 +37,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Get the role
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Get the client configuration
-	client, err := b.Client(req.Storage)
+	client, err := b.Client(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -99,12 +99,17 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	})
 
 	// Determine if we have a lease
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
+
 	if lease != nil {
-		resp.Secret.TTL = lease.TTL
+		ttl := lease.TTL
+		if ttl == 0 || (lease.MaxTTL > 0 && ttl > lease.MaxTTL) {
+			ttl = lease.MaxTTL
+		}
+		resp.Secret.TTL = ttl
 	}
 
 	return resp, nil

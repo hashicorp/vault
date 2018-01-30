@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -40,7 +41,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 
 func TestCore_EnableCredential(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
@@ -49,7 +50,7 @@ func TestCore_EnableCredential(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableCredential(me)
+	err := c.enableCredential(context.Background(), me)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -67,7 +68,7 @@ func TestCore_EnableCredential(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	c2.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c2.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 	for i, key := range keys {
@@ -91,7 +92,7 @@ func TestCore_EnableCredential(t *testing.T) {
 // correctly
 func TestCore_EnableCredential_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
@@ -116,12 +117,12 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 	}
 
 	// Both should set up successfully
-	err := c.setupCredentials()
+	err := c.setupCredentials(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rawLocal, err := c.barrier.Get(coreLocalAuthConfigPath)
+	rawLocal, err := c.barrier.Get(context.Background(), coreLocalAuthConfigPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,11 +138,11 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 	}
 
 	c.auth.Entries[1].Local = true
-	if err := c.persistAuth(c.auth, false); err != nil {
+	if err := c.persistAuth(context.Background(), c.auth, false); err != nil {
 		t.Fatal(err)
 	}
 
-	rawLocal, err = c.barrier.Get(coreLocalAuthConfigPath)
+	rawLocal, err = c.barrier.Get(context.Background(), coreLocalAuthConfigPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +158,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 	}
 
 	oldCredential := c.auth
-	if err := c.loadCredentials(); err != nil {
+	if err := c.loadCredentials(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -172,7 +173,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 
 func TestCore_EnableCredential_twice_409(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
@@ -181,13 +182,13 @@ func TestCore_EnableCredential_twice_409(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableCredential(me)
+	err := c.enableCredential(context.Background(), me)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// 2nd should be a 409 error
-	err2 := c.enableCredential(me)
+	err2 := c.enableCredential(context.Background(), me)
 	switch err2.(type) {
 	case logical.HTTPCodedError:
 		if err2.(logical.HTTPCodedError).Code() != 409 {
@@ -205,7 +206,7 @@ func TestCore_EnableCredential_Token(t *testing.T) {
 		Path:  "foo",
 		Type:  "token",
 	}
-	err := c.enableCredential(me)
+	err := c.enableCredential(context.Background(), me)
 	if err.Error() != "token credential backend cannot be instantiated" {
 		t.Fatalf("err: %v", err)
 	}
@@ -213,11 +214,11 @@ func TestCore_EnableCredential_Token(t *testing.T) {
 
 func TestCore_DisableCredential(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
-	err := c.disableCredential("foo")
+	err := c.disableCredential(context.Background(), "foo")
 	if err != nil && !strings.HasPrefix(err.Error(), "no matching backend") {
 		t.Fatalf("err: %v", err)
 	}
@@ -227,12 +228,12 @@ func TestCore_DisableCredential(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err = c.enableCredential(me)
+	err = c.enableCredential(context.Background(), me)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = c.disableCredential("foo")
+	err = c.disableCredential(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -268,7 +269,7 @@ func TestCore_DisableCredential(t *testing.T) {
 
 func TestCore_DisableCredential_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	err := c.disableCredential("token")
+	err := c.disableCredential(context.Background(), "token")
 	if err.Error() != "token credential backend cannot be disabled" {
 		t.Fatalf("err: %v", err)
 	}
@@ -279,7 +280,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 		Login: []string{"login"},
 	}
 	c, _, _ := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -288,7 +289,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableCredential(me)
+	err := c.enableCredential(context.Background(), me)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -301,7 +302,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 		Key:   "plstodelete",
 		Value: []byte("test"),
 	}
-	if err := view.Put(se); err != nil {
+	if err := view.Put(context.Background(), se); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -324,13 +325,13 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 	}
 
 	// Disable should cleanup
-	err = c.disableCredential("foo")
+	err = c.disableCredential(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Token should be revoked
-	te, err := c.tokenStore.Lookup(resp.Auth.ClientToken)
+	te, err := c.tokenStore.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -339,7 +340,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 	}
 
 	// View should be empty
-	out, err := logical.CollectKeys(view)
+	out, err := logical.CollectKeys(context.Background(), view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

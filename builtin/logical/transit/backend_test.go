@@ -32,7 +32,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	if b == nil {
 		t.Fatalf("failed to create backend")
 	}
-	err := b.Backend.Setup(config)
+	err := b.Backend.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -828,7 +828,7 @@ func TestKeyUpgrade(t *testing.T) {
 func TestDerivedKeyUpgrade(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	key, _ := uuid.GenerateRandomBytes(32)
-	context, _ := uuid.GenerateRandomBytes(32)
+	keyContext, _ := uuid.GenerateRandomBytes(32)
 
 	p := &keysutil.Policy{
 		Name:    "test",
@@ -838,18 +838,18 @@ func TestDerivedKeyUpgrade(t *testing.T) {
 	}
 
 	p.MigrateKeyToKeysMap()
-	p.Upgrade(storage) // Need to run the upgrade code to make the migration stick
+	p.Upgrade(context.Background(), storage) // Need to run the upgrade code to make the migration stick
 
 	if p.KDF != keysutil.Kdf_hmac_sha256_counter {
 		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", keysutil.Kdf_hmac_sha256_counter, p.KDF, *p)
 	}
 
-	derBytesOld, err := p.DeriveKey(context, 1)
+	derBytesOld, err := p.DeriveKey(keyContext, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesOld2, err := p.DeriveKey(context, 1)
+	derBytesOld2, err := p.DeriveKey(keyContext, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -863,12 +863,12 @@ func TestDerivedKeyUpgrade(t *testing.T) {
 		t.Fatal("expected no upgrade needed")
 	}
 
-	derBytesNew, err := p.DeriveKey(context, 1)
+	derBytesNew, err := p.DeriveKey(keyContext, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesNew2, err := p.DeriveKey(context, 1)
+	derBytesNew2, err := p.DeriveKey(keyContext, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -926,7 +926,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		ConvergentVersion:    ver,
 	}
 
-	err = p.Rotate(storage)
+	err = p.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}

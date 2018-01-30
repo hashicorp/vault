@@ -45,13 +45,13 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		return nil, fmt.Errorf("usernameRaw is not a string")
 	}
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the lease information
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 	roleNameRaw, ok := req.Secret.InternalData["role"]
 	if ok {
-		role, err := b.Role(req.Storage, roleNameRaw.(string))
+		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -116,7 +116,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

@@ -37,7 +37,7 @@ func TestPassthroughBackend_Write(t *testing.T) {
 			t.Fatalf("bad: %v", resp)
 		}
 
-		out, err := req.Storage.Get("foo")
+		out, err := req.Storage.Get(context.Background(), "foo")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -216,7 +216,7 @@ func TestPassthroughBackend_Revoke(t *testing.T) {
 }
 
 func testPassthroughBackend() logical.Backend {
-	b, _ := PassthroughBackendFactory(&logical.BackendConfig{
+	b, _ := PassthroughBackendFactory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: logical.StaticSystemView{
 			DefaultLeaseTTLVal: time.Hour * 24,
@@ -227,7 +227,7 @@ func testPassthroughBackend() logical.Backend {
 }
 
 func testPassthroughLeasedBackend() logical.Backend {
-	b, _ := LeasedPassthroughBackendFactory(&logical.BackendConfig{
+	b, _ := LeasedPassthroughBackendFactory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: logical.StaticSystemView{
 			DefaultLeaseTTLVal: time.Hour * 24,

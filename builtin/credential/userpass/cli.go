@@ -30,9 +30,9 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, fmt.Errorf("'username' must be specified")
 	}
 	if data.Password == "" {
-		fmt.Printf("Password (will be hidden): ")
+		fmt.Fprintf(os.Stderr, "Password (will be hidden): ")
 		password, err := pwd.Read(os.Stdin)
-		fmt.Println()
+		fmt.Fprintf(os.Stderr, "\n")
 		if err != nil {
 			return nil, err
 		}
@@ -66,20 +66,40 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 func (h *CLIHandler) Help() string {
 	help := `
-The "userpass"/"radius" credential provider allows you to authenticate with
-a username and password. To use it, specify the "username" and "password"
-parameters. If password is not provided on the command line, it will be
-read from stdin.
+Usage: vault login -method=userpass [CONFIG K=V...]
 
-If multi-factor authentication (MFA) is enabled, a "method" and/or "passcode"
-may be provided depending on the MFA backend enabled. To check
-which MFA backend is in use, read "auth/[mount]/mfa_config".
+  The userpass auth method allows users to authenticate using Vault's
+  internal user database.
 
-    Example: vault auth -method=userpass \
-      username=<user> \
-      password=<password>
+  If MFA is enabled, a "method" and/or "passcode" may be required depending on
+  the MFA method. To check which MFA is in use, run:
 
-	`
+      $ vault read auth/<mount>/mfa_config
+
+  Authenticate as "sally":
+
+      $ vault login -method=userpass username=sally
+      Password (will be hidden):
+
+  Authenticate as "bob":
+
+      $ vault login -method=userpass username=bob password=password
+
+Configuration:
+
+  method=<string>
+      MFA method.
+
+  passcode=<string>
+      MFA OTP/passcode.
+
+  password=<string>
+      Password to use for authentication. If not provided, the CLI will prompt
+      for this on stdin.
+
+  username=<string>
+      Username to use for authentication.
+`
 
 	return strings.TrimSpace(help)
 }
