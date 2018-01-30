@@ -7,6 +7,8 @@ description: |-
   for Vault 0.9.3. Please read it carefully.
 ---
 
+# Overview
+
 Due to a rapid release following 0.9.2, there are no version-specific upgrade
 instructions although any upgrade notices for 0.9.2 apply if you are coming
 from a previous version.
