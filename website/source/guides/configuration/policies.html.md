@@ -152,7 +152,7 @@ path "sys/capabilities-self"
 
 The basic workflow of creating policies is:
 
-![Policy Creation Workflow](/assets/images/vault-policy-workflow.png)
+![Policy Creation Workflow](/assets/images/vault-policy-authoring-workflow.png)
 
 This guide demonstrates basic policy authoring and management tasks.
 
