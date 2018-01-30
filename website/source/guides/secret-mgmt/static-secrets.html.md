@@ -287,11 +287,11 @@ as an `apps` persona, and read the secrets.
 
 ```shell
 # Create "apps" policy
-$ vault policy-write apps apps-policy.hcl
+$ vault policy write apps apps-policy.hcl
 Policy 'apps' written.
 
 # Create a new token with app policy
-$ vault token-create -policy="apps"
+$ vault token create -policy="apps"
 Key            	Value
 ---            	-----
 token          	e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2

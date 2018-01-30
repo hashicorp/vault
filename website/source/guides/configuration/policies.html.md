@@ -313,17 +313,17 @@ Now, create `admin` and `provisioner` policies in Vault.
 To create policies:
 
 ```shell
-$ vault policy-write <POLICY_NAME> <POLICY_FILE>
+$ vault policy write <POLICY_NAME> <POLICY_FILE>
 ```
 
 **Example:**
 
 ```shell
 # Create admin policy
-$ vault write admin admin-policy.hcl
+$ vault policy write admin admin-policy.hcl
 
 # Create provisioner policy
-$ vault write provisioner provisioner-policy.hcl
+$ vault policy write provisioner provisioner-policy.hcl
 ```
 
 **NOTE:** To update an existing policy, simply re-run the same command by
@@ -385,24 +385,22 @@ Make sure that you see the policies you created in [Step 2](#step2).
 The following command lists existing policies:
 
 ```shell
-$ vault policies
+$ vault policy list
 ```
 
 To view a specific policy:
 
 ```shell
-$ vault read sys/policy/<POLICY_NAME>
+$ vault policy read <POLICY_NAME>
 ```
 
 **Example:**
 
 ```shell
 # Read admin policy
-$ vault read sys/policy/admin
-Key  	Value
----  	-----
-name 	admin
-rules	# Mount and manage auth backends broadly across Vault
+$ vault policy read admin
+
+# Mount and manage auth backends broadly across Vault
 path "auth/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
@@ -460,7 +458,7 @@ policies attached to the token.
 The command is:
 
 ```shell
-$ vault capabilities <TOKEN> <PATH>
+$ vault token capabilities <TOKEN> <PATH>
 ```
 
 **Example:**
@@ -468,7 +466,7 @@ $ vault capabilities <TOKEN> <PATH>
 First, create a token attached to `admin` policy:
 
 ```shell
-$ vault token-create -policy="admin"
+$ vault token create -policy="admin"
 Key            	Value
 ---            	-----
 token          	79ecdd41-9bac-1ac7-1ee4-99fbce796221
@@ -481,7 +479,7 @@ token_policies 	[admin default]
 Now, fetch the capabilities of this token on `sys/auth/approle` path.
 
 ```plaintext
-$ vault capabilities 79ecdd41-9bac-1ac7-1ee4-99fbce796221 sys/auth/approle
+$ vault token capabilities 79ecdd41-9bac-1ac7-1ee4-99fbce796221 sys/auth/approle
 Capabilities: [create delete read sudo update]
 ```
 
@@ -494,7 +492,7 @@ In the absence of token, it returns capabilities of current token invoking this
 command.
 
 ```shell
-$ vault capabilities sys/auth/approle
+$ vault token capabilities sys/auth/approle
 Capabilities: [root]
 ```
 

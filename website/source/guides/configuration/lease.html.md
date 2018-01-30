@@ -155,7 +155,7 @@ When you create leases with no specific TTL values, the default value applies
 to the lease.
 
 ```shell
-$ vault auth -methods
+$ vault auth list
 
 Path       Type      Accessor                Default TTL  Max TTL  Replication Behavior  Description
 approle/   approle   auth_approle_53f0fb08   system       system   replicated
@@ -239,7 +239,7 @@ automatically revoked after 30 seconds.
 To view optional parameters to create tokens:
 
 ```shell
-$ vault token-create -help
+$ vault token create -help
 ```
 
 There are a number of parameters you can set.  To specify the token TTL, pass
@@ -249,7 +249,7 @@ the value using `-ttl` parameter.
 
 ```shell
 # Create a token with TTL of 30 seconds
-$ vault token-create -ttl=30s
+$ vault token create -ttl=30s
 Key            	Value
 ---            	-----
 token          	7544266f-3ec9-81a6--data504-e258b89de862
@@ -259,7 +259,7 @@ token_renewable	true
 token_policies 	[admin]
 
 # Test the new token
-$ VAULT_TOKEN=3b2b1285-844b-4b40-6afa-623f39c1b738 vault token-lookup
+$ VAULT_TOKEN=3b2b1285-844b-4b40-6afa-623f39c1b738 vault token lookup
 Key             	Value
 ---             	-----
 accessor        	2b2b5b83-7f22-fecd-03f0-4e25bf64da11
@@ -279,7 +279,7 @@ renewable       	true
 ttl             	8
 ```
 
-**NOTE:** The `vault token-lookup` command returns the token's properties.
+**NOTE:** The `vault token lookup` command returns the token's properties.
 In this example, it shows that this token has 8 more seconds before it expires.
 
 When you execute a vault command using the new token immediately following its
@@ -291,13 +291,13 @@ token usage.
 You can **renew** the token's TTL as long as the token has not expired, yet.
 
 ```shell
-$ vault token-renew <TOKEN>
+$ vault token renew <TOKEN>
 ```
 
 If you want to renew and extend the token's TTL, pass the desired extension:
 
 ```shell
-$ vault token-renew <TOKEN> <EXTENSION>
+$ vault token renew <TOKEN> <EXTENSION>
 ```
 
 The extension value can be an integer number of seconds (e.g. 3600) or a string
@@ -392,7 +392,7 @@ Create a token with `-use-limit` property argument.
 **Example:**
 
 ```shell
-$ vault token-create -policy=default -use-limit=2
+$ vault token create -policy=default -use-limit=2
 
 Key            	Value
 ---            	-----
@@ -408,7 +408,7 @@ This creates a token with _default_ policy with use limit of 2.
 #### Verification
 
 ```shell
-$ VAULT_TOKEN=bd39178e-176e-cc91-3930-94f7b0194de5 vault token-lookup
+$ VAULT_TOKEN=bd39178e-176e-cc91-3930-94f7b0194de5 vault token lookup
 
 Key             	Value
 ---             	-----
@@ -554,7 +554,7 @@ $ vault write auth/token/roles/zabbix allowed_policies="default" period="24h"
 Now, generate a token:
 
 ```shell
-$ vault token-create -role=zabbix
+$ vault token create -role=zabbix
 
 Key            	Value
 ---            	-----
@@ -665,7 +665,7 @@ parent does.
 #### CLI command
 
 ```shell
-$ vault token-create -orphan
+$ vault token create -orphan
 ```
 
 #### API call using cURL
@@ -686,26 +686,26 @@ Revoking a token and all its children.
 To revoke a specific token:
 
 ```shell
-$ vault token-revoke <TOKEN>
+$ vault token revoke <TOKEN>
 ```
 
 To revoke all leases under a specific path:
 
 ```shell
-$ vault revoke -prefix <PATH>
+$ vault lease revoke -prefix <PATH>
 ```
 
 **Example:**
 
 ```shell
 # Revoke a specific token
-$ vault token-revoke eeaf890e-4b0f-a687-4190-c75b1d6d70bc
+$ vault token revoke eeaf890e-4b0f-a687-4190-c75b1d6d70bc
 
 # Revoke all leases for database auth backend
-$ vault revoke -prefix database/creds
+$ vault lease revoke -prefix database/creds
 
 # Revoke all tokens
-$ vault revoke -prefix auth/token/create
+$ vault lease revoke -prefix auth/token/create
 ```
 
 
@@ -740,7 +740,7 @@ secret leases expiring earlier than you expected.
 #### 1. Determine the TTLs specific to the mount
 
 ```shell
-$ vault mounts
+$ vault secrets list
 
 Path        Type       Accessor            Plugin  Default TTL  Max TTL  Force No Cache  Replication Behavior  Seal Wrap  Description
 cubbyhole/  cubbyhole  cubbyhole_36021b8e  n/a     n/a          n/a      false           local                 false      per-token private secret storage

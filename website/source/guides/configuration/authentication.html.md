@@ -162,7 +162,7 @@ Like many other auth backends, AppRole must be enabled before it can be used.
 Enable `approle` auth backend by executing the following command:
 
 ```shell
-$ vault auth-enable approle
+$ vault auth enable approle
 ```
 
 #### API call using cURL
@@ -219,7 +219,7 @@ path "secret/mysql/*" {
 Before creating a role, create `jenkins` policy:
 
 ```shell
-$ vault policy-write jenkins jenkins-pol.hcl
+$ vault policy write jenkins jenkins-pol.hcl
 ```
 
 The command to create a new AppRole:

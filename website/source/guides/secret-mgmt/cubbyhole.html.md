@@ -122,7 +122,7 @@ To solve the [challenge](#challenge) addressed in this guide:
 read
 2. The receiving client (`app`) unwraps the secret to obtain the token
 
-When the response to `vault token-create` request is wrapped, Vault inserts the
+When the response to `vault token create` request is wrapped, Vault inserts the
 generated token into the cubbyhole of a single-use token, returning that
 single-use wrapping token. Retrieving the secret requires an unwrap operation
 against this wrapping token.
@@ -144,14 +144,14 @@ path "secret/dev" {
 First create an `apps` policy:
 
 ```shell
-$ vault policy-write apps apps-policy.hcl
+$ vault policy write apps apps-policy.hcl
 Policy 'apps' written.
 ```
 
 To create a token using response wrapping:
 
 ```shell
-$ vault token-create -policy=<POLICY_NAME> -wrap-ttl=<WRAP_TTL>
+$ vault token create -policy=<POLICY_NAME> -wrap-ttl=<WRAP_TTL>
 ```
 
 Where the `<WRAP_TTL>` can be either an integer number of seconds or a string
@@ -163,7 +163,7 @@ Generate a token for `apps` persona using response wrapping with TTL of 120
 seconds.
 
 ```shell
-$ vault token-create -policy=apps -wrap-ttl=120
+$ vault token create -policy=apps -wrap-ttl=120
 
 Key                          	Value
 ---                          	-----
@@ -175,7 +175,7 @@ wrapped_accessor:            	195763a9-3f26-1fcf-6a1a-ee0a11e76cb1
 ```
 
 The response is the wrapping token; therefore, the admin user does not even see
-the generated token from the `token-create` command.
+the generated token from the `token create` command.
 
 
 #### API call using cURL
@@ -224,7 +224,7 @@ seconds (15s), minutes (20m), or hours (25h).
 
 **Example:**
 
-To wrap the response of token-create request:
+To wrap the response of token create request:
 
 ```shell
 $ curl --header "X-Vault-Wrap-TTL: 120" \
@@ -280,7 +280,7 @@ First, create a token with `default` policy:
 
 ```shell
 # Create a token with `default` policy
-$ vault token-create -policy=default
+$ vault token create -policy=default
 Key            	Value
 ---            	-----
 token          	4522b2e8-27fe-bdc5-b932-d982f3166c6c

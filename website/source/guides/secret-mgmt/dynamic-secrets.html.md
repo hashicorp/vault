@@ -153,13 +153,13 @@ must be mounted.
 To mount a database backend:
 
 ```shell
-$ vault mount <PATH>
+$ vault secrets enable <PATH>
 ```
 
 **Example:**
 
 ```shell
-$ vault mount database
+$ vault secrets enable database
 ```
 
 **NOTE:** In this guide, the database backend is mounted at the `/database path` in
@@ -322,11 +322,11 @@ as an `apps` persona.
 
 ```shell
 # Create "apps" policy
-$ vault policy-write apps apps-policy.hcl
+$ vault policy write apps apps-policy.hcl
 Policy 'apps' written.
 
 # Create a new token with app policy
-$ vault token-create -policy="apps"
+$ vault token create -policy="apps"
 Key            	Value
 ---            	-----
 token          	e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
@@ -484,7 +484,7 @@ lease_renewable	true
 (4) Revoke the generated credentials.
 
 ```plaintext
-$ vault revoke database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
+$ vault lease revoke database/creds/readonly/3e8174da-6ca0-143b-aa8c-4c238aa02809
 ```
 
 **NOTE:** If you run the command with **`-prefix=true`** flag, it revokes all
