@@ -47,13 +47,15 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
-		Clean:       b.closeAllDBs,
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeLogical,
+		Clean:        b.closeAllDBs,
+		Invalidate:   b.invalidate,
+		BackendType:  logical.TypeLogical,
+		PeriodicFunc: b.periodicFunc,
 	}
 
 	b.logger = conf.Logger
 	b.connections = make(map[string]dbplugin.Database)
+	b.credentialRotationManager = new(credentialRotationManager)
 	return &b
 }
 
@@ -63,56 +65,8 @@ type databaseBackend struct {
 
 	*framework.Backend
 	sync.RWMutex
-}
 
-// closeAllDBs closes all connections from all database types
-func (b *databaseBackend) closeAllDBs(ctx context.Context) {
-	b.Lock()
-	defer b.Unlock()
-
-	for _, db := range b.connections {
-		db.Close()
-	}
-
-	b.connections = make(map[string]dbplugin.Database)
-}
-
-// This function is used to retrieve a database object either from the cached
-// connection map. The caller of this function needs to hold the backend's read
-// lock.
-func (b *databaseBackend) getDBObj(name string) (dbplugin.Database, bool) {
-	db, ok := b.connections[name]
-	return db, ok
-}
-
-// This function creates a new db object from the stored configuration and
-// caches it in the connections map. The caller of this function needs to hold
-// the backend's write lock
-func (b *databaseBackend) createDBObj(ctx context.Context, s logical.Storage, name string) (dbplugin.Database, error) {
-	db, ok := b.connections[name]
-	if ok {
-		return db, nil
-	}
-
-	config, err := b.DatabaseConfig(ctx, s, name)
-	if err != nil {
-		return nil, err
-	}
-
-	db, err = dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.Initialize(ctx, config.ConnectionDetails, true)
-	if err != nil {
-		db.Close()
-		return nil, err
-	}
-
-	b.connections[name] = db
-
-	return db, nil
+	credentialRotationManager *credentialRotationManager
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
@@ -178,19 +132,59 @@ func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName 
 }
 
 func (b *databaseBackend) invalidate(ctx context.Context, key string) {
-	b.Lock()
-	defer b.Unlock()
-
 	switch {
 	case strings.HasPrefix(key, databaseConfigPath):
 		name := strings.TrimPrefix(key, databaseConfigPath)
-		b.clearConnection(name)
+		b.ClearConnection(name)
 	}
+}
+
+func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, name string) (dbplugin.Database, error) {
+	b.RLock()
+	unlockFunc := b.RUnlock
+	defer func() { unlockFunc() }()
+
+	db, ok := b.connections[name]
+	if ok {
+		return db, nil
+	}
+
+	// Upgrade lock
+	b.RUnlock()
+	b.Lock()
+	unlockFunc = b.Unlock
+
+	db, ok = b.connections[name]
+	if ok {
+		return db, nil
+	}
+
+	config, err := b.DatabaseConfig(ctx, s, name)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err = dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Initialize(ctx, config.ConnectionDetails, true)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	b.connections[name] = db
+
+	return db, nil
 }
 
 // clearConnection closes the database connection and
 // removes it from the b.connections map.
-func (b *databaseBackend) clearConnection(name string) {
+func (b *databaseBackend) ClearConnection(name string) {
+	b.Lock()
+	defer b.Unlock()
+
 	db, ok := b.connections[name]
 	if ok {
 		db.Close()
@@ -198,14 +192,31 @@ func (b *databaseBackend) clearConnection(name string) {
 	}
 }
 
-func (b *databaseBackend) closeIfShutdown(name string, err error) {
+func (b *databaseBackend) CloseIfShutdown(name string, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
 	case rpc.ErrShutdown, dbplugin.ErrPluginShutdown:
-		b.Lock()
-		b.clearConnection(name)
-		b.Unlock()
+		b.ClearConnection(name)
 	}
+}
+
+// closeAllDBs closes all connections from all database types
+func (b *databaseBackend) closeAllDBs(ctx context.Context) {
+	b.Lock()
+	defer b.Unlock()
+
+	for _, db := range b.connections {
+		db.Close()
+	}
+	b.connections = make(map[string]dbplugin.Database)
+}
+
+func (b *databaseBackend) periodicFunc(ctx context.Context, req *logical.Request) error {
+	for _, db := range b.connections {
+		_ = db
+	}
+
+	return nil
 }
 
 const backendHelp = `

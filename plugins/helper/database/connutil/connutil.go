@@ -20,3 +20,11 @@ type ConnectionProducer interface {
 
 	sync.Locker
 }
+
+// RotatableConnectionProducer is used to embed in Database definition that support
+// rotating their root credentials
+type RotatableConnectionProducer interface {
+	ConnectionProducer
+
+	Rotate() (context.Context, map[string]interface{}, error)
+}

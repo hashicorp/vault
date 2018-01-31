@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
@@ -24,6 +25,9 @@ type DatabaseConfig struct {
 	// by each database type.
 	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
 	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
+
+	CredentialRotateStatements string        `json:"credential_rotate_statements" structs:"credential_rotate_statements" mapstructure:"credential_rotate_statements"`
+	CredentialRotateInterval   time.Duration `json:"credential_rotate_interval" structs:"credential_rotate_interval" mapstructure:"credential_rotate_interval"`
 }
 
 // pathResetConnection configures a path to reset a plugin.
@@ -55,18 +59,8 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		// Grab the mutex lock
-		b.Lock()
-		defer b.Unlock()
-
 		// Close plugin and delete the entry in the connections cache.
-		b.clearConnection(name)
-
-		// Execute plugin again, we don't need the object so throw away.
-		_, err := b.createDBObj(ctx, req.Storage, name)
-		if err != nil {
-			return nil, err
-		}
+		b.ClearConnection(name)
 
 		return nil, nil
 	}
@@ -210,7 +204,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		verifyConnection := data.Get("verify_connection").(bool)
-
 		allowedRoles := data.Get("allowed_roles").([]string)
 
 		// Remove these entries from the data before we store it keyed under
@@ -226,26 +219,21 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			AllowedRoles:      allowedRoles,
 		}
 
+		// Create a database plugin and initialize it. This instance is not
+		// going to be used and is initialized just to ensure all parameters
+		// are valid and the connection is verified, if requested.
 		db, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
-
 		err = db.Initialize(ctx, config.ConnectionDetails, verifyConnection)
+		db.Close()
 		if err != nil {
-			db.Close()
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
 
-		// Grab the mutex lock
-		b.Lock()
-		defer b.Unlock()
-
 		// Close and remove the old connection
-		b.clearConnection(name)
-
-		// Save the new connection
-		b.connections[name] = db
+		b.ClearConnection(name)
 
 		// Store it
 		entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
