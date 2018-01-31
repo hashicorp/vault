@@ -37,8 +37,9 @@ func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequestRPC, _ *str
 	return err
 }
 
-func (ds *databasePluginRPCServer) RotateRootCredentials(args *RotateRootCredentialsRequestRPC, _ *struct{}) error {
-	err := ds.impl.RotateRootCredentials(context.Background(), args.Statements, args.Username)
+func (ds *databasePluginRPCServer) RotateRootCredentials(args *RotateRootCredentialsRequestRPC, resp *RotateRootCredentialsResponse) error {
+	var err error
+	resp.Password, err = ds.impl.RotateRootCredentials(context.Background(), args.Statements)
 	return err
 }
 
@@ -102,15 +103,15 @@ func (dr *databasePluginRPCClient) RevokeUser(_ context.Context, statements Stat
 	return err
 }
 
-func (dr *databasePluginRPCClient) RotateRootCredentials(_ context.Context, statements Statements, username string) error {
+func (dr *databasePluginRPCClient) RotateRootCredentials(_ context.Context, statements string) (password string, err error) {
 	req := RotateRootCredentialsRequestRPC{
 		Statements: statements,
-		Username:   username,
 	}
 
-	err := dr.client.Call("Plugin.RotateRootCredentials", req, &struct{}{})
+	var resp RotateRootCredentialsResponse
+	err = dr.client.Call("Plugin.RotateRootCredentials", req, &resp)
 
-	return err
+	return resp.Password, err
 }
 
 func (dr *databasePluginRPCClient) Initialize(_ context.Context, conf map[string]interface{}, verifyConnection bool) error {
@@ -155,6 +156,5 @@ type RevokeUserRequestRPC struct {
 }
 
 type RotateRootCredentialsRequestRPC struct {
-	Statements Statements
-	Username   string
+	Statements string
 }

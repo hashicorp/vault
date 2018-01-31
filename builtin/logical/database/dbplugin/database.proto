@@ -26,8 +26,7 @@ message RevokeUserRequest {
 }
 
 message RotateRootCredentialsRequest {
-	Statements statements = 1;
-	string username = 2;
+	string statements = 1;
 }
 
 message Statements {
@@ -51,6 +50,10 @@ message TypeResponse {
     string type = 1;
 }
 
+message RotateRootCredentialsResponse {
+	string password = 1;
+}
+
 message Empty {}
 
 service Database {
@@ -58,7 +61,7 @@ service Database {
     rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
     rpc RenewUser(RenewUserRequest) returns (Empty);
     rpc RevokeUser(RevokeUserRequest) returns (Empty);
-    rpc RotateRootCredentials(RotateRootCredentialsRequest) returns (Empty);
+    rpc RotateRootCredentials(RotateRootCredentialsRequest) returns (RotateRootCredentialsResponse);
     rpc Initialize(InitializeRequest) returns (Empty);
     rpc Close(Empty) returns (Empty);
 }

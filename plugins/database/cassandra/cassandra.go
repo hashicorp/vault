@@ -180,7 +180,7 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 }
 
 // RotateRootCredentials is not supported on Cassandra, so this is a no-op.
-func (c *Cassandra) RotateRootCredentials(ctx context.Context, statements dbplugin.Statements, username string) error {
+func (c *Cassandra) RotateRootCredentials(ctx context.Context, statements string) (string, error) {
 	// NOOP
-	return nil
+	return "", nil
 }

@@ -51,13 +51,13 @@ func (mw *databaseTracingMiddleware) RevokeUser(ctx context.Context, statements 
 	return mw.next.RevokeUser(ctx, statements, username)
 }
 
-func (mw *databaseTracingMiddleware) RotateRootCredentials(ctx context.Context, statements Statements, username string) (err error) {
+func (mw *databaseTracingMiddleware) RotateRootCredentials(ctx context.Context, statements string) (password string, err error) {
 	defer func(then time.Time) {
 		mw.logger.Trace("database", "operation", "RotateRootCredentials", "status", "finished", "type", mw.typeStr, "transport", mw.transport, "err", err, "took", time.Since(then))
 	}(time.Now())
 
 	mw.logger.Trace("database", "operation", "RevokeUser", "status", "started", "type", mw.typeStr, "transport", mw.transport)
-	return mw.next.RotateRootCredentials(ctx, statements, username)
+	return mw.next.RotateRootCredentials(ctx, statements)
 }
 
 func (mw *databaseTracingMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (err error) {
@@ -140,7 +140,7 @@ func (mw *databaseMetricsMiddleware) RevokeUser(ctx context.Context, statements 
 	return mw.next.RevokeUser(ctx, statements, username)
 }
 
-func (mw *databaseMetricsMiddleware) RotateRootCredentials(ctx context.Context, statements Statements, username string) (err error) {
+func (mw *databaseMetricsMiddleware) RotateRootCredentials(ctx context.Context, statements string) (password string, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "RotateRootCredentials"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "RotateRootCredentials"}, now)
@@ -153,7 +153,7 @@ func (mw *databaseMetricsMiddleware) RotateRootCredentials(ctx context.Context, 
 
 	metrics.IncrCounter([]string{"database", "RotateRootCredentials"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "RotateRootCredentials"}, 1)
-	return mw.next.RotateRootCredentials(ctx, statements, username)
+	return mw.next.RotateRootCredentials(ctx, statements)
 }
 
 func (mw *databaseMetricsMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (err error) {

@@ -61,9 +61,11 @@ func (s *gRPCServer) RevokeUser(ctx context.Context, req *RevokeUserRequest) (*E
 	return &Empty{}, err
 }
 
-func (s *gRPCServer) RotateRootCredentials(ctx context.Context, req *RotateRootCredentialsRequest) (*Empty, error) {
-	err := s.impl.RotateRootCredentials(ctx, *req.Statements, req.Username)
-	return &Empty{}, err
+func (s *gRPCServer) RotateRootCredentials(ctx context.Context, req *RotateRootCredentialsRequest) (*RotateRootCredentialsResponse, error) {
+	p, err := s.impl.RotateRootCredentials(ctx, req.Statements)
+	return &RotateRootCredentialsResponse{
+		Password: p,
+	}, err
 }
 
 func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*Empty, error) {
@@ -177,26 +179,25 @@ func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, user
 	return nil
 }
 
-func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements Statements, username string) error {
+func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements string) (password string, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
 	defer close(quitCh)
 	defer cancel()
 
-	_, err := c.client.RotateRootCredentials(ctx, &RotateRootCredentialsRequest{
-		Statements: &statements,
-		Username:   username,
+	resp, err := c.client.RotateRootCredentials(ctx, &RotateRootCredentialsRequest{
+		Statements: statements,
 	})
 
 	if err != nil {
 		if c.doneCtx.Err() != nil {
-			return ErrPluginShutdown
+			return "", ErrPluginShutdown
 		}
 
-		return err
+		return "", err
 	}
 
-	return nil
+	return resp.Password, nil
 }
 
 func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error {

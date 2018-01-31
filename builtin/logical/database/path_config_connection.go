@@ -26,8 +26,10 @@ type DatabaseConfig struct {
 	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
 	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
 
-	CredentialRotateStatements string        `json:"credential_rotate_statements" structs:"credential_rotate_statements" mapstructure:"credential_rotate_statements"`
-	CredentialRotateInterval   time.Duration `json:"credential_rotate_interval" structs:"credential_rotate_interval" mapstructure:"credential_rotate_interval"`
+	RootCredentialRotateStatements string        `json:"root_credential_rotate_statements" structs:"credential_rotate_statements" mapstructure:"credential_rotate_statements"`
+	RootCredentialRotateInterval   time.Duration `json:"root_credential_rotate_interval" structs:"credential_rotate_interval" mapstructure:"credential_rotate_interval"`
+	RootCredentialUsername         string        `json:"root_credential_username" structs:"root_credential_username" mapstructure:"root_credential_username"`
+	RootCredentialPassword         string        `json:"root_credential_password" structs:"root_credential_password" mapstructure:"root_credential_password"`
 }
 
 // pathResetConnection configures a path to reset a plugin.
@@ -98,6 +100,21 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 				Description: `Comma separated string or array of the role names
 				allowed to get creds from this database connection. If empty no
 				roles are allowed. If "*" all roles are allowed.`,
+			},
+
+			"root_rotation_statements": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: ``,
+			},
+
+			"root_rotation_interval": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: ``,
+			},
+
+			"password": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: ``,
 			},
 		},
 
@@ -199,6 +216,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		verifyConnection := data.Get("verify_connection").(bool)
 		allowedRoles := data.Get("allowed_roles").([]string)
+		rootRotationStatements := data.Get("root_rotation_statements").(string)
+		rootRotationIntervalRaw := data.Get("root_rotation_interval").(int)
+		rootRotationInterval := time.Duration(rootRotationIntervalRaw) * time.Second
+		rootPassword := data.Get("password").(string)
 
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.
@@ -206,11 +227,17 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		delete(data.Raw, "plugin_name")
 		delete(data.Raw, "allowed_roles")
 		delete(data.Raw, "verify_connection")
+		delete(data.Raw, "root_rotation_statements")
+		delete(data.Raw, "root_rotation_interval")
+		// continue to pass password to backends
 
 		config := &DatabaseConfig{
-			ConnectionDetails: data.Raw,
-			PluginName:        pluginName,
-			AllowedRoles:      allowedRoles,
+			ConnectionDetails:              data.Raw,
+			PluginName:                     pluginName,
+			AllowedRoles:                   allowedRoles,
+			RootCredentialRotateStatements: rootRotationStatements,
+			RootCredentialRotateInterval:   rootRotationInterval,
+			RootCredentialPassword:         rootPassword,
 		}
 
 		// Create a database plugin and initialize it. This instance is not
