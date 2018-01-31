@@ -16,10 +16,8 @@ type credentialRotationManager struct {
 	nextRotation map[string]time.Time
 }
 
+// initialized must be read with the lock
 func (m *credentialRotationManager) initialize(ctx context.Context, s logical.Storage) error {
-	m.l.Lock()
-	defer m.l.Unlock()
-
 	if m.initialized {
 		return nil
 	}
@@ -75,7 +73,7 @@ func (m *credentialRotationManager) Remove(name string) {
 	delete(m.nextRotation, name)
 }
 
-func (m *credentialRotationManager) NeedUpdate(ctx context.Context, s logical.Storage) ([]string, error) {
+func (m *credentialRotationManager) NeedRotate(ctx context.Context, s logical.Storage) ([]string, error) {
 	m.l.Lock()
 	defer m.l.Unlock()
 

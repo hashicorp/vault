@@ -192,6 +192,7 @@ func (b *databaseBackend) ClearConnection(name string) error {
 		}
 		delete(b.connections, name)
 	}
+	return nil
 }
 
 func (b *databaseBackend) CloseIfShutdown(name string, err error) {

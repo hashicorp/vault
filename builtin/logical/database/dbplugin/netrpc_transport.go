@@ -37,6 +37,11 @@ func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequestRPC, _ *str
 	return err
 }
 
+func (ds *databasePluginRPCServer) RotateRootCredentials(args *RotateRootCredentialsRequestRPC, _ *struct{}) error {
+	err := ds.impl.RotateRootCredentials(context.Background(), args.Statements, args.Username)
+	return err
+}
+
 func (ds *databasePluginRPCServer) Initialize(args *InitializeRequestRPC, _ *struct{}) error {
 	err := ds.impl.Initialize(context.Background(), args.Config, args.VerifyConnection)
 	return err
@@ -97,6 +102,17 @@ func (dr *databasePluginRPCClient) RevokeUser(_ context.Context, statements Stat
 	return err
 }
 
+func (dr *databasePluginRPCClient) RotateRootCredentials(_ context.Context, statements Statements, username string) error {
+	req := RotateRootCredentialsRequestRPC{
+		Statements: statements,
+		Username:   username,
+	}
+
+	err := dr.client.Call("Plugin.RotateRootCredentials", req, &struct{}{})
+
+	return err
+}
+
 func (dr *databasePluginRPCClient) Initialize(_ context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	req := InitializeRequestRPC{
 		Config:           conf,
@@ -134,6 +150,11 @@ type RenewUserRequestRPC struct {
 }
 
 type RevokeUserRequestRPC struct {
+	Statements Statements
+	Username   string
+}
+
+type RotateRootCredentialsRequestRPC struct {
 	Statements Statements
 	Username   string
 }

@@ -284,3 +284,9 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 
 	return nil
 }
+
+// RotateRootCredentials is not supported on HANA, so this is a no-op.
+func (h *HANA) RotateRootCredentials(ctx context.Context, statements dbplugin.Statements, username string) error {
+	// NOOP
+	return nil
+}

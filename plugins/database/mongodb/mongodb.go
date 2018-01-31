@@ -203,3 +203,9 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 	return nil
 }
+
+// RotateRootCredentials is not supported on MongoDB, so this is a no-op.
+func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements dbplugin.Statements, username string) error {
+	// NOOP
+	return nil
+}
