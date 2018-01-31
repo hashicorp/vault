@@ -343,7 +343,7 @@ demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
 # Authenticate with Vault using the generated token first
-$ vault auth e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
+$ vault login e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
 Successfully authenticated! You are now logged in.
 token: e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
 token_duration: 2764277

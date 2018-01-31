@@ -290,7 +290,7 @@ token_renewable	true
 token_policies 	[default]
 
 # Authenticate using the generated token
-$ vault auth 4522b2e8-27fe-bdc5-b932-d982f3166c6c
+$ vault login 4522b2e8-27fe-bdc5-b932-d982f3166c6c
 Successfully authenticated! You are now logged in.
 token: 4522b2e8-27fe-bdc5-b932-d982f3166c6c
 token_duration: 2764729
@@ -337,7 +337,7 @@ Once the client acquired the token, future requests can be made using this
 token.
 
 ```shell
-$ vault auth 7bb915b2-8a44-48b0-a71d-72b590252016
+$ vault login 7bb915b2-8a44-48b0-a71d-72b590252016
 
 $ vault read secret/dev
 No value found at secret/dev

@@ -533,7 +533,7 @@ No value found at secret/mysql/webapp
 Alternatively, you can first authenticate with Vault using the `client_token`.
 
 ```shell
-$ vault auth 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e
+$ vault login 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e
 Successfully authenticated! You are now logged in.
 token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e
 token_duration: 2762013
