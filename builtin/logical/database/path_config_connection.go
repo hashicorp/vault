@@ -60,7 +60,9 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 		}
 
 		// Close plugin and delete the entry in the connections cache.
-		b.ClearConnection(name)
+		if err := b.ClearConnection(name); err != nil {
+			return nil, err
+		}
 
 		return nil, nil
 	}
@@ -173,16 +175,8 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 			return nil, errors.New("failed to delete connection configuration")
 		}
 
-		b.Lock()
-		defer b.Unlock()
-
-		if _, ok := b.connections[name]; ok {
-			err = b.connections[name].Close()
-			if err != nil {
-				return nil, err
-			}
-
-			delete(b.connections, name)
+		if err := b.ClearConnection(name); err != nil {
+			return nil, err
 		}
 
 		return nil, nil

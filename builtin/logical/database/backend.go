@@ -181,13 +181,15 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 
 // clearConnection closes the database connection and
 // removes it from the b.connections map.
-func (b *databaseBackend) ClearConnection(name string) {
+func (b *databaseBackend) ClearConnection(name string) error {
 	b.Lock()
 	defer b.Unlock()
 
 	db, ok := b.connections[name]
 	if ok {
-		db.Close()
+		if err := db.Close(); err != nil {
+			return err
+		}
 		delete(b.connections, name)
 	}
 }
