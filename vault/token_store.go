@@ -1837,19 +1837,23 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	var periodToUse time.Duration
 	if data.Period != "" {
-		if !isSudo {
-			return logical.ErrorResponse("root or sudo privileges required to create periodic token"),
-				logical.ErrInvalidRequest
-		}
 		dur, err := parseutil.ParseDurationSecond(data.Period)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
-		if dur < 0 {
+
+		switch {
+		case dur < 0:
 			return logical.ErrorResponse("period must be positive"), logical.ErrInvalidRequest
+		case dur == 0:
+		default:
+			if !isSudo {
+				return logical.ErrorResponse("root or sudo privileges required to create periodic token"),
+					logical.ErrInvalidRequest
+			}
+			te.Period = dur
+			periodToUse = dur
 		}
-		te.Period = dur
-		periodToUse = dur
 	}
 
 	// Parse the TTL/lease if any
