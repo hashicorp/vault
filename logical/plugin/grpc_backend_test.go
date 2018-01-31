@@ -102,16 +102,6 @@ func TestGRPCBackendPlugin_Cleanup(t *testing.T) {
 	b.Cleanup(context.Background())
 }
 
-func TestGRPCBackendPlugin_Initialize(t *testing.T) {
-	b, cleanup := testGRPCBackend(t)
-	defer cleanup()
-
-	err := b.Initialize(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestGRPCBackendPlugin_InvalidateKey(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()

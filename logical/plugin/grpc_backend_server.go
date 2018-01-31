@@ -119,15 +119,6 @@ func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb
 	return &pb.Empty{}, nil
 }
 
-func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Empty) (*pb.Empty, error) {
-	if inMetadataMode() {
-		return &pb.Empty{}, ErrServerInMetadataMode
-	}
-
-	err := b.backend.Initialize(ctx)
-	return &pb.Empty{}, err
-}
-
 func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.InvalidateKeyArgs) (*pb.Empty, error) {
 	if inMetadataMode() {
 		return &pb.Empty{}, ErrServerInMetadataMode

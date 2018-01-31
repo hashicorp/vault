@@ -142,20 +142,6 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	b.clientConn.Close()
 }
 
-func (b *backendGRPCPluginClient) Initialize(ctx context.Context) error {
-	if b.metadataMode {
-		return ErrClientInMetadataMode
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
-	defer close(quitCh)
-	defer cancel()
-
-	_, err := b.client.Initialize(ctx, &pb.Empty{})
-	return err
-}
-
 func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string) {
 	if b.metadataMode {
 		return

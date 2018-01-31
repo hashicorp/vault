@@ -15,7 +15,7 @@ import (
 // Event represents a GitHub event.
 type Event struct {
 	Type       *string          `json:"type,omitempty"`
-	Public     *bool            `json:"public"`
+	Public     *bool            `json:"public,omitempty"`
 	RawPayload *json.RawMessage `json:"payload,omitempty"`
 	Repo       *Repository      `json:"repo,omitempty"`
 	Actor      *User            `json:"actor,omitempty"`
@@ -56,6 +56,8 @@ func (e *Event) ParsePayload() (payload interface{}, err error) {
 		payload = &IssuesEvent{}
 	case "LabelEvent":
 		payload = &LabelEvent{}
+	case "MarketplacePurchaseEvent":
+		payload = &MarketplacePurchaseEvent{}
 	case "MemberEvent":
 		payload = &MemberEvent{}
 	case "MembershipEvent":

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
 	"strings"
 )
 
@@ -57,13 +58,15 @@ func GetNewRestClient(service string, httpFactory HttpClientFactory) (*RestClien
 	}
 
 	// Munge on the service a little bit, force it to have no trailing / and always start with https://
-	var normalizedService = strings.TrimPrefix(service, "http://")
-	normalizedService = strings.TrimPrefix(normalizedService, "https://")
-	normalizedService = strings.TrimSuffix(normalizedService, "/")
-	normalizedService = "https://" + normalizedService
+	url, err := url.Parse(service)
+	if err != nil {
+		return nil, err
+	}
+	url.Scheme = "https"
+	url.Path = ""
 
 	client := &RestClient{}
-	client.Service = normalizedService
+	client.Service = url.String()
 	if httpFactory != nil {
 		client.Client = httpFactory()
 	} else {

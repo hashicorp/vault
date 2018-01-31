@@ -500,7 +500,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		// This allows the user to sumbit an update with the same ARN to force Vault
 		// to re-resolve the ARN to the unique ID, in case an entity was deleted and
 		// recreated
-		if roleEntry.ResolveAWSUniqueIDs && !strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
+		if roleEntry.ResolveAWSUniqueIDs && roleEntry.BoundIamPrincipalARN != "" && !strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
 			principalID, err := b.resolveArnToUniqueIDFunc(ctx, req.Storage, principalARN)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("failed updating the unique ID of ARN %#v: %#v", principalARN, err)), nil

@@ -270,12 +270,6 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 		return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 	}
 
-	// Call initialize; this takes care of init tasks that must be run after
-	// the ignore paths are collected
-	if err := backend.Initialize(ctx); err != nil {
-		return err
-	}
-
 	c.setCoreBackend(entry, backend, view)
 
 	newTable := c.mounts.shallowClone()
@@ -770,10 +764,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		backendType = backend.Type()
 		if entry.Type == "plugin" && backendType != logical.TypeLogical {
 			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
-		}
-
-		if err := backend.Initialize(ctx); err != nil {
-			return err
 		}
 
 		c.setCoreBackend(entry, backend, view)

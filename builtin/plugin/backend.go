@@ -124,11 +124,6 @@ func (b *backend) startBackend(ctx context.Context) error {
 	b.Backend = nb
 	b.loaded = true
 
-	// Call initialize
-	if err := b.Backend.Initialize(ctx); err != nil {
-		return err
-	}
-
 	return nil
 }
 

@@ -81,6 +81,8 @@ type AgentCheckRegistration struct {
 
 // AgentServiceCheck is used to define a node or service level check
 type AgentServiceCheck struct {
+	CheckID           string              `json:",omitempty"`
+	Name              string              `json:",omitempty"`
 	Args              []string            `json:"ScriptArgs,omitempty"`
 	Script            string              `json:",omitempty"` // Deprecated, use Args.
 	DockerContainerID string              `json:",omitempty"`

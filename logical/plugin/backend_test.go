@@ -100,16 +100,6 @@ func TestBackendPlugin_Cleanup(t *testing.T) {
 	b.Cleanup(context.Background())
 }
 
-func TestBackendPlugin_Initialize(t *testing.T) {
-	b, cleanup := testBackend(t)
-	defer cleanup()
-
-	err := b.Initialize(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestBackendPlugin_InvalidateKey(t *testing.T) {
 	b, cleanup := testBackend(t)
 	defer cleanup()

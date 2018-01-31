@@ -282,6 +282,9 @@ type Core struct {
 
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
+	// Cache stores the actual cache; we always have this but may bypass it if
+	// disabled
+	physicalCache physical.ToggleablePurgemonster
 
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]reload.ReloadFunc
@@ -335,8 +338,8 @@ type Core struct {
 	clusterLeaderParamsLock sync.RWMutex
 	// Info on cluster members
 	clusterPeerClusterAddrsCache *cache.Cache
-	// The grpc Server that handles server RPC calls
-	rpcServer *grpc.Server
+	// Stores whether we currently have a server running
+	rpcServerActive *uint32
 	// The context for the client
 	rpcClientConnContext context.Context
 	// The function for canceling the client connection
@@ -488,6 +491,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		enableMlock:                      !conf.DisableMlock,
 		rawEnabled:                       conf.EnableRaw,
 		replicationState:                 new(uint32),
+		rpcServerActive:                  new(uint32),
 		atomicPrimaryClusterAddrs:        new(atomic.Value),
 		atomicPrimaryFailoverAddrs:       new(atomic.Value),
 		activeNodeReplicationState:       new(uint32),
@@ -516,13 +520,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	var ok bool
 
 	// Wrap the physical backend in a cache layer if enabled
-	if !conf.DisableCache {
-		if txnOK {
-			c.physical = physical.NewTransactionalCache(phys, conf.CacheSize, nil, conf.Logger)
-		} else {
-			c.physical = physical.NewCache(phys, conf.CacheSize, nil, conf.Logger)
-		}
+	if txnOK {
+		c.physical = physical.NewTransactionalCache(phys, conf.CacheSize, conf.Logger)
+	} else {
+		c.physical = physical.NewCache(phys, conf.CacheSize, conf.Logger)
 	}
+	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
 
 	if !conf.DisableMlock {
 		// Ensure our memory usage is locked into physical RAM
@@ -1572,9 +1575,9 @@ func (c *Core) postUnseal() (retErr error) {
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	// Purge the backend if supported
-	if purgable, ok := c.physical.(physical.Purgable); ok {
-		purgable.Purge(c.activeContext)
+	c.physicalCache.Purge(c.activeContext)
+	if !c.cachingDisabled {
+		c.physicalCache.SetEnabled(true)
 	}
 
 	// Purge these for safety in case of a rekey
@@ -1682,10 +1685,10 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, err)
 	}
 
-	// Purge the backend if supported
-	if purgable, ok := c.physical.(physical.Purgable); ok {
-		purgable.Purge(c.activeContext)
-	}
+	// Purge the cache
+	c.physicalCache.SetEnabled(false)
+	c.physicalCache.Purge(c.activeContext)
+
 	c.logger.Info("core: pre-seal teardown complete")
 	return result
 }

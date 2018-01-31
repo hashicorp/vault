@@ -117,7 +117,7 @@ func (i Import) String() string {
 //
 // GitHub API docs: https://developer.github.com/v3/migration/source_imports/#get-commit-authors
 type SourceImportAuthor struct {
-	ID         *int    `json:"id,omitempty"`
+	ID         *int64  `json:"id,omitempty"`
 	RemoteID   *string `json:"remote_id,omitempty"`
 	RemoteName *string `json:"remote_name,omitempty"`
 	Email      *string `json:"email,omitempty"`
@@ -247,7 +247,7 @@ func (s *MigrationService) CommitAuthors(ctx context.Context, owner, repo string
 // commits to the repository.
 //
 // GitHub API docs: https://developer.github.com/v3/migration/source_imports/#map-a-commit-author
-func (s *MigrationService) MapCommitAuthor(ctx context.Context, owner, repo string, id int, author *SourceImportAuthor) (*SourceImportAuthor, *Response, error) {
+func (s *MigrationService) MapCommitAuthor(ctx context.Context, owner, repo string, id int64, author *SourceImportAuthor) (*SourceImportAuthor, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/import/authors/%v", owner, repo, id)
 	req, err := s.client.NewRequest("PATCH", u, author)
 	if err != nil {

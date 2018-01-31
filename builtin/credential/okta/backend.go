@@ -72,6 +72,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	type authResult struct {
 		Embedded embeddedResult `json:"_embedded"`
+		Status   string         `json:"status"`
 	}
 
 	authReq, err := client.NewRequest("POST", "authn", map[string]interface{}{
@@ -93,6 +94,43 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	oktaResponse := &logical.Response{
 		Data: map[string]interface{}{},
+	}
+
+	// If lockout failures are not configured to be hidden, the status needs to
+	// be inspected for LOCKED_OUT status. Otherwise, it is handled above by an
+	// error returned during the authentication request.
+	switch result.Status {
+	case "LOCKED_OUT":
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/okta: user is locked out", "user", username)
+		}
+		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
+
+	case "PASSWORD_EXPIRED":
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/okta: password is expired", "user", username)
+		}
+		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
+
+	case "PASSWORD_WARN":
+		oktaResponse.AddWarning("Your Okta password is in warning state and needs to be changed soon.")
+
+	case "SUCCESS":
+		// Do nothing here
+
+	default:
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/okta: unhandled result status", "status", result.Status)
+		}
+		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
+	}
+
+	// Verify result status again in case a switch case above modifies result
+	if result.Status != "SUCCESS" && result.Status != "PASSWORD_WARN" {
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/okta: authentication returned a non-success status", "status", result.Status)
+		}
+		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
 	}
 
 	var allGroups []string

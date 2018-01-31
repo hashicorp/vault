@@ -121,12 +121,6 @@ func (c *Core) reloadPluginCommon(ctx context.Context, entry *MountEntry, isAuth
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
 	}
 
-	// Call initialize; this takes care of init tasks that must be run after
-	// the ignore paths are collected.
-	if err := backend.Initialize(ctx); err != nil {
-		return err
-	}
-
 	// Set the backend back
 	re.backend = backend
 

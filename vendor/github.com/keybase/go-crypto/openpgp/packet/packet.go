@@ -413,10 +413,12 @@ const (
 	PubKeyAlgoElGamal        PublicKeyAlgorithm = 16
 	PubKeyAlgoDSA            PublicKeyAlgorithm = 17
 	// RFC 6637, Section 5.
-	PubKeyAlgoECDH  PublicKeyAlgorithm = 18
-	PubKeyAlgoECDSA PublicKeyAlgorithm = 19
+	PubKeyAlgoECDH           PublicKeyAlgorithm = 18
+	PubKeyAlgoECDSA          PublicKeyAlgorithm = 19
+
+	PubKeyAlgoBadElGamal     PublicKeyAlgorithm = 20 // Reserved (deprecated, formerly ElGamal Encrypt or Sign)
 	// RFC -1
-	PubKeyAlgoEdDSA PublicKeyAlgorithm = 22
+	PubKeyAlgoEdDSA          PublicKeyAlgorithm = 22
 )
 
 // CanEncrypt returns true if it's possible to encrypt a message to a public

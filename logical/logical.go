@@ -71,10 +71,6 @@ type Backend interface {
 	// handle any cleanup like connection closing or releasing of file handles.
 	Cleanup(context.Context)
 
-	// Initialize is invoked after a backend is created. It is the place to run
-	// any operations requiring storage; these should not be in the factory.
-	Initialize(context.Context) error
-
 	// InvalidateKey may be invoked when an object is modified that belongs
 	// to the backend. The backend can use this to clear any caches or reset
 	// internal state as needed.
