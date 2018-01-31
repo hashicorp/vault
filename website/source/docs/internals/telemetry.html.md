@@ -62,7 +62,6 @@ The following sections describe available Vault metrics. The metrics interval ca
 
 These metrics represent operational aspects of the running Vault instance.
 
-<<<<<<< HEAD
 | Metric           | Description                       | Unit | Type |
 | ---------------- | ----------------------------------| ---- | ---- |
 |`vault.audit.log_request`| This measures the number of audit log requests | Number of requests | Summary |
