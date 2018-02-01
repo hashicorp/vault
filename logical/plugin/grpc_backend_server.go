@@ -81,6 +81,11 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Empty) (*pb.SpecialPathsReply, error) {
 	paths := b.backend.SpecialPaths()
+	if paths == nil {
+		return &pb.SpecialPathsReply{
+			Paths: nil,
+		}, nil
+	}
 
 	return &pb.SpecialPathsReply{
 		Paths: &pb.Paths{
