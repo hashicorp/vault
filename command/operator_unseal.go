@@ -1,11 +1,14 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
+	"github.com/ghodss/yaml"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -50,7 +53,7 @@ Usage: vault operator unseal [options] [KEY]
 }
 
 func (c *OperatorUnsealCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -141,5 +144,35 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 		return 2
 	}
 
-	return OutputSealStatus(c.UI, client, status)
+	switch c.flagFormat {
+	case "yaml":
+		return c.unsealOutputYAML(status)
+	case "json":
+		return c.unsealOutputJSON(status)
+	case "table":
+		return OutputSealStatus(c.UI, client, status)
+	default:
+		c.UI.Error(fmt.Sprintf("Unknown format: %s", c.flagFormat))
+		return 1
+	}
+}
+
+// unsealOutputYAML outputs the init output as YAML.
+func (c *OperatorUnsealCommand) unsealOutputYAML(resp *api.SealStatusResponse) int {
+	b, err := yaml.Marshal(resp)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error marshaling YAML: %s", err))
+		return 2
+	}
+	return PrintRaw(c.UI, strings.TrimSpace(string(b)))
+}
+
+// unsealOutputJSON outputs the init output as JSON.
+func (c *OperatorUnsealCommand) unsealOutputJSON(resp *api.SealStatusResponse) int {
+	b, err := json.Marshal(resp)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error marshaling JSON: %s", err))
+		return 2
+	}
+	return PrintRaw(c.UI, strings.TrimSpace(string(b)))
 }
