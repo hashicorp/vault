@@ -145,7 +145,7 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 	}
 
 	switch c.flagFormat {
-	case "yaml":
+	case "yaml", "yml":
 		return c.unsealOutputYAML(status)
 	case "json":
 		return c.unsealOutputJSON(status)
