@@ -1,3 +1,9 @@
+## 0.9.4 (Unreleased)
+
+BUG FIXES:
+
+ * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
+
 ## 0.9.3 (January 28th, 2018)
 
 A regression from a feature merge disabled the Nomad secrets backend in 0.9.2.
