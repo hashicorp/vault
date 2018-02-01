@@ -36,8 +36,8 @@
     ".",
     "log"
   ]
-  revision = "5741799b275a3c4a5a9623a993576d7545cf7b5c"
-  version = "v2.4.0"
+  revision = "2dd44038f0b95ae693b266c5f87593b5d2fdd78d"
+  version = "v2.5.0"
 
 [[projects]]
   name = "github.com/fatih/structs"
@@ -94,7 +94,7 @@
     "ptypes/duration",
     "ptypes/timestamp"
   ]
-  revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+  revision = "925541529c1fa6821df4e44ce2723319eb2be768"
 
 [[projects]]
   branch = "master"
@@ -124,7 +124,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-hclog"
   packages = ["."]
-  revision = "ca137eb4b4389c9bc6f1a6d887f056bf16c00510"
+  revision = "5bcb0f17e36442247290887cc914a6e507afa5c4"
 
 [[projects]]
   branch = "master"
@@ -136,7 +136,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-plugin"
   packages = ["."]
-  revision = "e2fbc6864d18d3c37b6cde4297ec9fca266d28f1"
+  revision = "e53f54cbf51efde642d4711313e829a1ff0c236d"
 
 [[projects]]
   branch = "master"
@@ -149,6 +149,12 @@
   name = "github.com/hashicorp/go-uuid"
   packages = ["."]
   revision = "64130c7a86d732268a38cb04cfbaf0cc987fda98"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-version"
+  packages = ["."]
+  revision = "4fe82ae3040f80a03d04d2cccb5606a626b8e1ee"
 
 [[projects]]
   branch = "master"
@@ -176,6 +182,7 @@
     "helper/consts",
     "helper/errutil",
     "helper/jsonutil",
+    "helper/logbridge",
     "helper/logformat",
     "helper/mlock",
     "helper/parseutil",
@@ -186,9 +193,11 @@
     "helper/wrapping",
     "logical",
     "logical/framework",
-    "logical/plugin"
+    "logical/plugin",
+    "logical/plugin/pb",
+    "version"
   ]
-  revision = "78adac0a24fbefa644fc775bae70b46482af0ea9"
+  revision = "a612abcf70231e6d6415c73ccddc1dbc5215dc36"
 
 [[projects]]
   branch = "master"
@@ -246,7 +255,13 @@
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "06020f85339e21b2478f756a78e295255ffa4d6a"
+  revision = "b4575eea38cca1123ec2dc90c26529b5c5acfcff"
+
+[[projects]]
+  name = "github.com/oklog/run"
+  packages = ["."]
+  revision = "4dadeb3030eda0273a12382bb2348ffc7c9d1a39"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/ryanuber/go-glob"
@@ -278,13 +293,13 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "434ec0c7fe3742c984919a691b2018a6e9694425"
+  revision = "0ed95abb35c445290478a5348a7b38bb154135fd"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "1792d66dc88e503d3cb2400578221cdf1f7fe26f"
+  revision = "03467258950d845cd1877eab69461b98e8c09219"
 
 [[projects]]
   branch = "master"
@@ -312,7 +327,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "a8101f21cf983e773d0c1133ebc5424792003214"
+  revision = "4eb30f4778eed4c258ba66527a0d4f9ec8a36c45"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -342,8 +357,8 @@
     "tap",
     "transport"
   ]
-  revision = "f3955b8e9e244dd4dd4bc4f7b7a23a8445400a76"
-  version = "v1.9.0"
+  revision = "6b51017f791ae1cfbec89c52efdf444b13b550ef"
+  version = "v1.9.2"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -355,7 +370,7 @@
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "1244d3ce02e3e1c16820ada0bae506b6c479f106"
+  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
 
 [[projects]]
   branch = "release-1.8"
@@ -389,17 +404,17 @@
     "pkg/watch",
     "third_party/forked/golang/reflect"
   ]
-  revision = "bc110fd540ab678abbf2bc71d9ce908eb9325ef6"
+  revision = "4972c8e335e32ab65ba45bde0a99c6544c8a8e4c"
 
 [[projects]]
   branch = "master"
   name = "k8s.io/kube-openapi"
   packages = ["pkg/common"]
-  revision = "b16ebc07f5cad97831f961e4b5a9cc1caed33b7e"
+  revision = "a07b7bbb58e7fdc5144f8d7046331d29fc9ad3b3"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dfb0ef4889225ea4843fef5ed665c15d889d45d0a0e513a099655000e11a86eb"
+  inputs-digest = "88822523ccf1a3b5ac409bbc717788f0a34ee921ddb7a32e8939179dc6f7d02d"
   solver-name = "gps-cdcl"
   solver-version = 1

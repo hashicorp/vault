@@ -45,8 +45,8 @@ type QueryOptions struct {
 	// Set HTTP parameters on the query.
 	Params map[string]string
 
-	// SecretID is the secret ID of an ACL token
-	SecretID string
+	// AuthToken is the secret ID of an ACL token
+	AuthToken string
 }
 
 // WriteOptions are used to parameterize a write
@@ -58,8 +58,8 @@ type WriteOptions struct {
 	// Namespace is the target namespace for the write.
 	Namespace string
 
-	// SecretID is the secret ID of an ACL token
-	SecretID string
+	// AuthToken is the secret ID of an ACL token
+	AuthToken string
 }
 
 // QueryMeta is used to return meta data about a query
@@ -325,6 +325,11 @@ func NewClient(config *Config) (*Client, error) {
 	return client, nil
 }
 
+// Address return the address of the Nomad agent
+func (c *Client) Address() string {
+	return c.config.Address
+}
+
 // SetRegion sets the region to forward API requests to.
 func (c *Client) SetRegion(region string) {
 	c.config.Region = region
@@ -406,8 +411,8 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	if q.Namespace != "" {
 		r.params.Set("namespace", q.Namespace)
 	}
-	if q.SecretID != "" {
-		r.token = q.SecretID
+	if q.AuthToken != "" {
+		r.token = q.AuthToken
 	}
 	if q.AllowStale {
 		r.params.Set("stale", "")
@@ -443,8 +448,8 @@ func (r *request) setWriteOptions(q *WriteOptions) {
 	if q.Namespace != "" {
 		r.params.Set("namespace", q.Namespace)
 	}
-	if q.SecretID != "" {
-		r.token = q.SecretID
+	if q.AuthToken != "" {
+		r.token = q.AuthToken
 	}
 }
 

@@ -131,7 +131,7 @@ func pathListPluginConnection(b *databaseBackend) *framework.Path {
 
 func (b *databaseBackend) connectionListHandler() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		entries, err := req.Storage.List("config/")
+		entries, err := req.Storage.List(ctx, "config/")
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		entry, err := req.Storage.Get(fmt.Sprintf("config/%s", name))
+		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
 			return nil, errors.New("failed to read connection configuration")
 		}
@@ -174,7 +174,7 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		err := req.Storage.Delete(fmt.Sprintf("config/%s", name))
+		err := req.Storage.Delete(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
 			return nil, errors.New("failed to delete connection configuration")
 		}
@@ -226,7 +226,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			AllowedRoles:      allowedRoles,
 		}
 
-		db, err := dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
+		db, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
@@ -252,7 +252,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
-		if err := req.Storage.Put(entry); err != nil {
+		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 

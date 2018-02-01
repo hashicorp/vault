@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -56,11 +57,11 @@ type Cluster struct {
 
 // Cluster fetches the details of the local cluster. This method errors out
 // when Vault is sealed.
-func (c *Core) Cluster() (*Cluster, error) {
+func (c *Core) Cluster(ctx context.Context) (*Cluster, error) {
 	var cluster Cluster
 
 	// Fetch the storage entry. This call fails when Vault is sealed.
-	entry, err := c.barrier.Get(coreLocalClusterInfoPath)
+	entry, err := c.barrier.Get(ctx, coreLocalClusterInfoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -150,13 +151,13 @@ func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) (retErr error) {
 // setupCluster creates storage entries for holding Vault cluster information.
 // Entries will be created only if they are not already present. If clusterName
 // is not supplied, this method will auto-generate it.
-func (c *Core) setupCluster() error {
+func (c *Core) setupCluster(ctx context.Context) error {
 	// Prevent data races with the TLS parameters
 	c.clusterParamsLock.Lock()
 	defer c.clusterParamsLock.Unlock()
 
 	// Check if storage index is already present or not
-	cluster, err := c.Cluster()
+	cluster, err := c.Cluster(ctx)
 	if err != nil {
 		c.logger.Error("core: failed to get cluster details", "error", err)
 		return err
@@ -269,7 +270,7 @@ func (c *Core) setupCluster() error {
 		}
 
 		// Store it
-		err = c.barrier.Put(&Entry{
+		err = c.barrier.Put(ctx, &Entry{
 			Key:   coreLocalClusterInfoPath,
 			Value: rawCluster,
 		})
@@ -286,7 +287,7 @@ func (c *Core) setupCluster() error {
 // is assumed that the state lock is held while this is run. Right now this
 // only starts forwarding listeners; it's TBD whether other request types will
 // be built in the same mechanism or started independently.
-func (c *Core) startClusterListener() error {
+func (c *Core) startClusterListener(ctx context.Context) error {
 	if c.clusterAddr == "" {
 		c.logger.Info("core: clustering disabled, not starting listeners")
 		return nil
@@ -299,7 +300,7 @@ func (c *Core) startClusterListener() error {
 
 	c.logger.Trace("core: starting cluster listeners")
 
-	err := c.startForwarding()
+	err := c.startForwarding(ctx)
 	if err != nil {
 		return err
 	}
@@ -337,7 +338,7 @@ func (c *Core) stopClusterListener() {
 
 // ClusterTLSConfig generates a TLS configuration based on the local/replicated
 // cluster key and cert.
-func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
+func (c *Core) ClusterTLSConfig(ctx context.Context) (*tls.Config, error) {
 	// Using lookup functions allows just-in-time lookup of the current state
 	// of clustering as connections come and go
 

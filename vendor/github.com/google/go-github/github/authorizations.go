@@ -54,7 +54,7 @@ type AuthorizationsService service
 
 // Authorization represents an individual GitHub authorization.
 type Authorization struct {
-	ID             *int              `json:"id,omitempty"`
+	ID             *int64            `json:"id,omitempty"`
 	URL            *string           `json:"url,omitempty"`
 	Scopes         []Scope           `json:"scopes,omitempty"`
 	Token          *string           `json:"token,omitempty"`
@@ -88,7 +88,7 @@ func (a AuthorizationApp) String() string {
 
 // Grant represents an OAuth application that has been granted access to an account.
 type Grant struct {
-	ID        *int              `json:"id,omitempty"`
+	ID        *int64            `json:"id,omitempty"`
 	URL       *string           `json:"url,omitempty"`
 	App       *AuthorizationApp `json:"app,omitempty"`
 	CreatedAt *Timestamp        `json:"created_at,omitempty"`
@@ -160,7 +160,7 @@ func (s *AuthorizationsService) List(ctx context.Context, opt *ListOptions) ([]*
 // Get a single authorization.
 //
 // GitHub API docs: https://developer.github.com/v3/oauth_authorizations/#get-a-single-authorization
-func (s *AuthorizationsService) Get(ctx context.Context, id int) (*Authorization, *Response, error) {
+func (s *AuthorizationsService) Get(ctx context.Context, id int64) (*Authorization, *Response, error) {
 	u := fmt.Sprintf("authorizations/%d", id)
 
 	req, err := s.client.NewRequest("GET", u, nil)
@@ -234,7 +234,7 @@ func (s *AuthorizationsService) GetOrCreateForApp(ctx context.Context, clientID 
 // Edit a single authorization.
 //
 // GitHub API docs: https://developer.github.com/v3/oauth_authorizations/#update-an-existing-authorization
-func (s *AuthorizationsService) Edit(ctx context.Context, id int, auth *AuthorizationUpdateRequest) (*Authorization, *Response, error) {
+func (s *AuthorizationsService) Edit(ctx context.Context, id int64, auth *AuthorizationUpdateRequest) (*Authorization, *Response, error) {
 	u := fmt.Sprintf("authorizations/%d", id)
 
 	req, err := s.client.NewRequest("PATCH", u, auth)
@@ -254,7 +254,7 @@ func (s *AuthorizationsService) Edit(ctx context.Context, id int, auth *Authoriz
 // Delete a single authorization.
 //
 // GitHub API docs: https://developer.github.com/v3/oauth_authorizations/#delete-an-authorization
-func (s *AuthorizationsService) Delete(ctx context.Context, id int) (*Response, error) {
+func (s *AuthorizationsService) Delete(ctx context.Context, id int64) (*Response, error) {
 	u := fmt.Sprintf("authorizations/%d", id)
 
 	req, err := s.client.NewRequest("DELETE", u, nil)
@@ -366,7 +366,7 @@ func (s *AuthorizationsService) ListGrants(ctx context.Context, opt *ListOptions
 // GetGrant gets a single OAuth application grant.
 //
 // GitHub API docs: https://developer.github.com/v3/oauth_authorizations/#get-a-single-grant
-func (s *AuthorizationsService) GetGrant(ctx context.Context, id int) (*Grant, *Response, error) {
+func (s *AuthorizationsService) GetGrant(ctx context.Context, id int64) (*Grant, *Response, error) {
 	u := fmt.Sprintf("applications/grants/%d", id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -387,7 +387,7 @@ func (s *AuthorizationsService) GetGrant(ctx context.Context, id int) (*Grant, *
 // the user.
 //
 // GitHub API docs: https://developer.github.com/v3/oauth_authorizations/#delete-a-grant
-func (s *AuthorizationsService) DeleteGrant(ctx context.Context, id int) (*Response, error) {
+func (s *AuthorizationsService) DeleteGrant(ctx context.Context, id int64) (*Response, error) {
 	u := fmt.Sprintf("applications/grants/%d", id)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {

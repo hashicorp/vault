@@ -1,6 +1,7 @@
 package kubeauth
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -28,9 +29,9 @@ type kubeAuthBackend struct {
 }
 
 // Factory returns a new backend as logical.Backend.
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -67,8 +68,8 @@ func Backend() *kubeAuthBackend {
 }
 
 // config takes a storage object and returns a kubeConfig object
-func (b *kubeAuthBackend) config(s logical.Storage) (*kubeConfig, error) {
-	raw, err := s.Get(configPath)
+func (b *kubeAuthBackend) config(ctx context.Context, s logical.Storage) (*kubeConfig, error) {
+	raw, err := s.Get(ctx, configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +96,8 @@ func (b *kubeAuthBackend) config(s logical.Storage) (*kubeConfig, error) {
 
 // role takes a storage backend and the name and returns the role's storage
 // entry
-func (b *kubeAuthBackend) role(s logical.Storage, name string) (*roleStorageEntry, error) {
-	raw, err := s.Get(fmt.Sprintf("%s%s", rolePrefix, strings.ToLower(name)))
+func (b *kubeAuthBackend) role(ctx context.Context, s logical.Storage, name string) (*roleStorageEntry, error) {
+	raw, err := s.Get(ctx, fmt.Sprintf("%s%s", rolePrefix, strings.ToLower(name)))
 	if err != nil {
 		return nil, err
 	}

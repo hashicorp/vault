@@ -27,8 +27,8 @@ import (
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding"
-	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/transport"
 )
 
@@ -46,10 +46,6 @@ func recvResponse(ctx context.Context, dopts dialOptions, t transport.ClientTran
 			}
 		}
 	}()
-	c.headerMD, err = stream.Header()
-	if err != nil {
-		return
-	}
 	p := &parser{r: stream}
 	var inPayload *stats.InPayload
 	if dopts.copts.StatsHandler != nil {
@@ -59,9 +55,19 @@ func recvResponse(ctx context.Context, dopts dialOptions, t transport.ClientTran
 	}
 	for {
 		if c.maxReceiveMessageSize == nil {
-			return Errorf(codes.Internal, "callInfo maxReceiveMessageSize field uninitialized(nil)")
+			return status.Errorf(codes.Internal, "callInfo maxReceiveMessageSize field uninitialized(nil)")
 		}
-		if err = recv(p, dopts.codec, stream, dopts.dc, reply, *c.maxReceiveMessageSize, inPayload, encoding.GetCompressor(c.compressorType)); err != nil {
+
+		// Set dc if it exists and matches the message compression type used,
+		// otherwise set comp if a registered compressor exists for it.
+		var comp encoding.Compressor
+		var dc Decompressor
+		if rc := stream.RecvCompress(); dopts.dc != nil && dopts.dc.Type() == rc {
+			dc = dopts.dc
+		} else if rc != "" && rc != encoding.Identity {
+			comp = encoding.GetCompressor(rc)
+		}
+		if err = recv(p, c.codec, stream, dc, reply, *c.maxReceiveMessageSize, inPayload, comp); err != nil {
 			if err == io.EOF {
 				break
 			}
@@ -73,7 +79,6 @@ func recvResponse(ctx context.Context, dopts dialOptions, t transport.ClientTran
 		// Fix the order if necessary.
 		dopts.copts.StatsHandler.HandleRPC(ctx, inPayload)
 	}
-	c.trailerMD = stream.Trailer()
 	return nil
 }
 
@@ -95,18 +100,26 @@ func sendRequest(ctx context.Context, dopts dialOptions, compressor Compressor, 
 			Client: true,
 		}
 	}
-	if c.compressorType != "" && encoding.GetCompressor(c.compressorType) == nil {
-		return Errorf(codes.Internal, "grpc: Compressor is not installed for grpc-encoding %q", c.compressorType)
+	// Set comp and clear compressor if a registered compressor matches the type
+	// specified via UseCompressor.  (And error if a matching compressor is not
+	// registered.)
+	var comp encoding.Compressor
+	if ct := c.compressorType; ct != "" && ct != encoding.Identity {
+		compressor = nil // Disable the legacy compressor.
+		comp = encoding.GetCompressor(ct)
+		if comp == nil {
+			return status.Errorf(codes.Internal, "grpc: Compressor is not installed for grpc-encoding %q", ct)
+		}
 	}
-	hdr, data, err := encode(dopts.codec, args, compressor, outPayload, encoding.GetCompressor(c.compressorType))
+	hdr, data, err := encode(c.codec, args, compressor, outPayload, comp)
 	if err != nil {
 		return err
 	}
 	if c.maxSendMessageSize == nil {
-		return Errorf(codes.Internal, "callInfo maxSendMessageSize field uninitialized(nil)")
+		return status.Errorf(codes.Internal, "callInfo maxSendMessageSize field uninitialized(nil)")
 	}
 	if len(data) > *c.maxSendMessageSize {
-		return Errorf(codes.ResourceExhausted, "grpc: trying to send message larger than max (%d vs. %d)", len(data), *c.maxSendMessageSize)
+		return status.Errorf(codes.ResourceExhausted, "grpc: trying to send message larger than max (%d vs. %d)", len(data), *c.maxSendMessageSize)
 	}
 	err = t.Write(stream, hdr, data, opts)
 	if err == nil && outPayload != nil {
@@ -125,6 +138,8 @@ func sendRequest(ctx context.Context, dopts dialOptions, compressor Compressor, 
 
 // Invoke sends the RPC request on the wire and returns after response is
 // received.  This is typically called by generated code.
+//
+// All errors returned by Invoke are compatible with the status package.
 func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error {
 	if cc.dopts.unaryInt != nil {
 		return cc.dopts.unaryInt(ctx, method, args, reply, cc, invoke, opts...)
@@ -167,6 +182,9 @@ func invoke(ctx context.Context, method string, args, reply interface{}, cc *Cli
 
 	c.maxSendMessageSize = getMaxSize(mc.MaxReqSize, c.maxSendMessageSize, defaultClientMaxSendMessageSize)
 	c.maxReceiveMessageSize = getMaxSize(mc.MaxRespSize, c.maxReceiveMessageSize, defaultClientMaxReceiveMessageSize)
+	if err := setCallInfoCodec(c); err != nil {
+		return err
+	}
 
 	if EnableTracing {
 		c.traceInfo.tr = trace.New("grpc.Sent."+methodFamily(method), method)
@@ -211,9 +229,6 @@ func invoke(ctx context.Context, method string, args, reply interface{}, cc *Cli
 		Host:   cc.authority,
 		Method: method,
 	}
-	if cc.dopts.cp != nil {
-		callHdr.SendCompress = cc.dopts.cp.Type()
-	}
 	if c.creds != nil {
 		callHdr.Creds = c.creds
 	}
@@ -253,20 +268,18 @@ func invoke(ctx context.Context, method string, args, reply interface{}, cc *Cli
 			}
 			return toRPCErr(err)
 		}
-		if peer, ok := peer.FromContext(stream.Context()); ok {
-			c.peer = peer
-		}
+		c.stream = stream
 		if c.traceInfo.tr != nil {
 			c.traceInfo.tr.LazyLog(&payload{sent: true, msg: args}, true)
 		}
 		err = sendRequest(ctx, cc.dopts, cc.dopts.cp, c, callHdr, stream, t, args, topts)
 		if err != nil {
 			if done != nil {
-				updateRPCInfoInContext(ctx, rpcInfo{
-					bytesSent:     true,
-					bytesReceived: stream.BytesReceived(),
+				done(balancer.DoneInfo{
+					Err:           err,
+					BytesSent:     true,
+					BytesReceived: stream.BytesReceived(),
 				})
-				done(balancer.DoneInfo{Err: err})
 			}
 			// Retry a non-failfast RPC when
 			// i) the server started to drain before this RPC was initiated.
@@ -286,11 +299,11 @@ func invoke(ctx context.Context, method string, args, reply interface{}, cc *Cli
 		err = recvResponse(ctx, cc.dopts, t, c, stream, reply)
 		if err != nil {
 			if done != nil {
-				updateRPCInfoInContext(ctx, rpcInfo{
-					bytesSent:     true,
-					bytesReceived: stream.BytesReceived(),
+				done(balancer.DoneInfo{
+					Err:           err,
+					BytesSent:     true,
+					BytesReceived: stream.BytesReceived(),
 				})
-				done(balancer.DoneInfo{Err: err})
 			}
 			if !c.failFast && stream.Unprocessed() {
 				// In these cases, the server did not receive the data, but we still
@@ -308,12 +321,13 @@ func invoke(ctx context.Context, method string, args, reply interface{}, cc *Cli
 			c.traceInfo.tr.LazyLog(&payload{sent: false, msg: reply}, true)
 		}
 		t.CloseStream(stream, nil)
+		err = stream.Status().Err()
 		if done != nil {
-			updateRPCInfoInContext(ctx, rpcInfo{
-				bytesSent:     true,
-				bytesReceived: stream.BytesReceived(),
+			done(balancer.DoneInfo{
+				Err:           err,
+				BytesSent:     true,
+				BytesReceived: stream.BytesReceived(),
 			})
-			done(balancer.DoneInfo{Err: err})
 		}
 		if !c.failFast && stream.Unprocessed() {
 			// In these cases, the server did not receive the data, but we still
@@ -324,6 +338,6 @@ func invoke(ctx context.Context, method string, args, reply interface{}, cc *Cli
 				continue
 			}
 		}
-		return stream.Status().Err()
+		return err
 	}
 }

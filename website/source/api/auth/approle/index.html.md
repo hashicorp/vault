@@ -281,7 +281,7 @@ itself, and also to delete the SecretID from the AppRole.
 ### Parameters
 
 - `role_name` `(string: <required>)` - Name of the AppRole.
-- `metadata` `(map: {})` -  Metadata to be tied to the SecretID. This should be
+- `metadata` `(string: "")` -  Metadata to be tied to the SecretID. This should be
   a JSON-formatted string containing the metadata in key-value pairs. This
   metadata will be set on tokens issued with this SecretID, and is logged in
   audit logs _in plaintext_.
@@ -294,9 +294,7 @@ itself, and also to delete the SecretID from the AppRole.
 
 ```json
 {
-  "metadata": {
-    "tag1": "production"
-  }
+  "metadata": "{ \"tag1\": \"production\" }"
 }
 ```
 
@@ -508,7 +506,7 @@ Assigns a "custom" SecretID against an existing AppRole. This is used in the
 
 - `role_name` `(string: <required>)` - Name of the AppRole.
 -  `secret_id` `(string: <required>)` - SecretID to be attached to the Role.
-- `metadata` `(map: {})` -  Metadata to be tied to the SecretID. This should be
+- `metadata` `(string: "")` -  Metadata to be tied to the SecretID. This should be
   a JSON-formatted string containing the metadata in key-value pairs. This
   metadata will be set on tokens issued with this SecretID, and is logged in
   audit logs _in plaintext_.

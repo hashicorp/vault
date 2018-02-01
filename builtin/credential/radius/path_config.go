@@ -65,7 +65,7 @@ func pathConfig(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.Config(req)
+	entry, err := b.Config(ctx, req)
 	if err != nil {
 		return false, err
 	}
@@ -75,9 +75,8 @@ func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request
 /*
  * Construct ConfigEntry struct using stored configuration.
  */
-func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
-
-	storedConfig, err := req.Storage.Get("config")
+func (b *backend) Config(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
+	storedConfig, err := req.Storage.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +95,7 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	cfg, err := b.Config(req)
+	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +112,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Build a ConfigEntry struct out of the supplied FieldData
-	cfg, err := b.Config(req)
+	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +189,7 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

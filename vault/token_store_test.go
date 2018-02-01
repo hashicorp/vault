@@ -68,11 +68,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		Value: enc,
 	}
 
-	if err := ts.view.Put(le); err != nil {
+	if err := ts.view.Put(context.Background(), le); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := ts.Lookup(entry.ID)
+	out, err := ts.Lookup(context.Background(), entry.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -98,11 +98,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		ExplicitMaxTTL: 100,
 		NumUses:        10,
 	}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	out, err = ts.Lookup(ent.ID)
+	out, err = ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -128,11 +128,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		ExplicitMaxTTLDeprecated: 100,
 		NumUsesDeprecated:        10,
 	}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	out, err = ts.Lookup(ent.ID)
+	out, err = ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -155,11 +155,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		NumUses:           5,
 		NumUsesDeprecated: 10,
 	}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	out, err = ts.Lookup(ent.ID)
+	out, err = ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -174,11 +174,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		NumUses:           10,
 		NumUsesDeprecated: 5,
 	}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	out, err = ts.Lookup(ent.ID)
+	out, err = ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -236,11 +236,11 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	out, err := ts.Lookup(ent.ID)
+	out, err := ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -250,7 +250,7 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 		t.Fatalf("bad: %#v", out)
 	}
 
-	aEntry, err := ts.lookupByAccessor(out.Accessor, false)
+	aEntry, err := ts.lookupByAccessor(context.Background(), out.Accessor, false)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -264,7 +264,7 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 	testMakeToken(t, ts, root, "tokenid", "", []string{"foo"})
-	out, err := ts.Lookup("tokenid")
+	out, err := ts.Lookup(context.Background(), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -308,7 +308,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts.revokeSalted(salted)
+	ts.revokeSalted(context.Background(), salted)
 
 	req := logical.TestRequest(t, logical.ListOperation, "accessors")
 
@@ -332,7 +332,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 
 	// Test upgrade from old struct method of accessor storage (of token id)
 	for _, accessor := range keys {
-		aEntry, err := ts.lookupByAccessor(accessor, false)
+		aEntry, err := ts.lookupByAccessor(context.Background(), accessor, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -345,7 +345,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 		}
 		path := accessorPrefix + salted
 		le := &logical.StorageEntry{Key: path, Value: []byte(aEntry.TokenID)}
-		if err := ts.view.Put(le); err != nil {
+		if err := ts.view.Put(context.Background(), le); err != nil {
 			t.Fatalf("failed to persist accessor index entry: %v", err)
 		}
 	}
@@ -370,7 +370,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 
 	for _, accessor := range keys2 {
-		aEntry, err := ts.lookupByAccessor(accessor, false)
+		aEntry, err := ts.lookupByAccessor(context.Background(), accessor, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -383,7 +383,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 	testMakeToken(t, ts, root, "tokenid", "", []string{"foo"})
-	out, err := ts.Lookup("tokenid")
+	out, err := ts.Lookup(context.Background(), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -401,7 +401,7 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	out, err = ts.Lookup("tokenid")
+	out, err = ts.Lookup(context.Background(), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -414,7 +414,7 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 func TestTokenStore_RootToken(t *testing.T) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
-	te, err := ts.rootToken()
+	te, err := ts.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -422,7 +422,7 @@ func TestTokenStore_RootToken(t *testing.T) {
 		t.Fatalf("missing ID")
 	}
 
-	out, err := ts.Lookup(te.ID)
+	out, err := ts.Lookup(context.Background(), te.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -435,14 +435,14 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	c, ts, _, _ := TestCoreWithTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if ent.ID == "" {
 		t.Fatalf("missing ID")
 	}
 
-	out, err := ts.Lookup(ent.ID)
+	out, err := ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -451,18 +451,14 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(c, getBackendConfig(c))
+	ts2, err := NewTokenStore(context.Background(), c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	ts2.SetExpirationManager(c.expiration)
 
-	if err := ts2.Initialize(); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
 	// Should still match
-	out, err = ts2.Lookup(ent.ID)
+	out, err = ts2.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -479,17 +475,17 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 		Path:     "test",
 		Policies: []string{"dev", "ops"},
 	}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if ent.ID != "foobarbaz" {
 		t.Fatalf("bad: ent.ID: expected:\"foobarbaz\"\n actual:%s", ent.ID)
 	}
-	if err := ts.create(ent); err == nil {
+	if err := ts.create(context.Background(), ent); err == nil {
 		t.Fatal("expected error creating token with the same ID")
 	}
 
-	out, err := ts.Lookup(ent.ID)
+	out, err := ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -498,18 +494,14 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(c, getBackendConfig(c))
+	ts2, err := NewTokenStore(context.Background(), c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	ts2.SetExpirationManager(c.expiration)
 
-	if err := ts2.Initialize(); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
 	// Should still match
-	out, err = ts2.Lookup(ent.ID)
+	out, err = ts2.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -522,7 +514,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if ent.ID == "" {
@@ -548,7 +540,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := ts.Lookup(ent.ID)
+	out, err := ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -575,7 +567,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 
 	// Test that the token lookup does not return the token entry due to the
 	// expired lease
-	out, err = ts.Lookup(ent.ID)
+	out, err = ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -588,13 +580,13 @@ func TestTokenStore_UseToken(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 
 	// Lookup the root token
-	ent, err := ts.Lookup(root)
+	ent, err := ts.Lookup(context.Background(), root)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Root is an unlimited use token, should be a no-op
-	te, err := ts.UseToken(ent)
+	te, err := ts.UseToken(context.Background(), ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -603,7 +595,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Lookup the root token again
-	ent2, err := ts.Lookup(root)
+	ent2, err := ts.Lookup(context.Background(), root)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -614,12 +606,12 @@ func TestTokenStore_UseToken(t *testing.T) {
 
 	// Create a retstricted token
 	ent = &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}, NumUses: 2}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Use the token
-	te, err = ts.UseToken(ent)
+	te, err = ts.UseToken(context.Background(), ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -628,7 +620,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Lookup the token
-	ent2, err = ts.Lookup(ent.ID)
+	ent2, err = ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -639,7 +631,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Use the token
-	te, err = ts.UseToken(ent)
+	te, err = ts.UseToken(context.Background(), ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -649,10 +641,10 @@ func TestTokenStore_UseToken(t *testing.T) {
 	if te.NumUses != tokenRevocationDeferred {
 		t.Fatalf("token entry after use #2 did not have revoke flag")
 	}
-	ts.Revoke(te.ID)
+	ts.Revoke(context.Background(), te.ID)
 
 	// Lookup the token
-	ent2, err = ts.Lookup(ent.ID)
+	ent2, err = ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -667,20 +659,20 @@ func TestTokenStore_Revoke(t *testing.T) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err := ts.Revoke("")
+	err := ts.Revoke(context.Background(), "")
 	if err.Error() != "cannot revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
-	err = ts.Revoke(ent.ID)
+	err = ts.Revoke(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := ts.Lookup(ent.ID)
+	out, err := ts.Lookup(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -702,7 +694,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	}
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -729,7 +721,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	}
 
 	// Revoke the token
-	err = ts.Revoke(ent.ID)
+	err = ts.Revoke(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -748,21 +740,21 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.create(ent); err != nil {
+	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent2 := &TokenEntry{Parent: ent.ID}
-	if err := ts.create(ent2); err != nil {
+	if err := ts.create(context.Background(), ent2); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err := ts.Revoke(ent.ID)
+	err := ts.Revoke(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := ts.Lookup(ent2.ID)
+	out, err := ts.Lookup(context.Background(), ent2.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -784,14 +776,14 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 	root, children := buildTokenTree(t, ts, depth)
-	err := ts.RevokeTree("")
+	err := ts.RevokeTree(context.Background(), "")
 
 	if err.Error() != "cannot tree-revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Nuke tree non recursively.
-	err = ts.RevokeTree(root.ID)
+	err = ts.RevokeTree(context.Background(), root.ID)
 
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -800,7 +792,7 @@ func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 	// deleted.
 	children = append(children, root)
 	for _, entry := range children {
-		out, err := ts.Lookup(entry.ID)
+		out, err := ts.Lookup(context.Background(), entry.ID)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -827,7 +819,7 @@ func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 // we may run revoke tests on it.
 func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntry, children []*TokenEntry) {
 	root = &TokenEntry{}
-	if err := ts.create(root); err != nil {
+	if err := ts.create(context.Background(), root); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -837,12 +829,12 @@ func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntr
 		next := make([]*TokenEntry, 0, 2*len(frontier))
 		for _, node := range frontier {
 			left := &TokenEntry{Parent: node.ID}
-			if err := ts.create(left); err != nil {
+			if err := ts.create(context.Background(), left); err != nil {
 				t.Fatalf("err: %v", err)
 			}
 
 			right := &TokenEntry{Parent: node.ID}
-			if err := ts.create(right); err != nil {
+			if err := ts.create(context.Background(), right); err != nil {
 				t.Fatalf("err: %v", err)
 			}
 
@@ -860,22 +852,22 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
 	ent1 := &TokenEntry{}
-	if err := ts.create(ent1); err != nil {
+	if err := ts.create(context.Background(), ent1); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent2 := &TokenEntry{Parent: ent1.ID}
-	if err := ts.create(ent2); err != nil {
+	if err := ts.create(context.Background(), ent2); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent3 := &TokenEntry{Parent: ent2.ID}
-	if err := ts.create(ent3); err != nil {
+	if err := ts.create(context.Background(), ent3); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	ent4 := &TokenEntry{Parent: ent2.ID}
-	if err := ts.create(ent4); err != nil {
+	if err := ts.create(context.Background(), ent4); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -889,7 +881,7 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 
 	lookup := []string{ent1.ID, ent2.ID, ent3.ID, ent4.ID}
 	for _, id := range lookup {
-		out, err := ts.Lookup(id)
+		out, err := ts.Lookup(context.Background(), id)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -946,7 +938,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 		DisplayName: "token-foo-bar-baz",
 		TTL:         0,
 	}
-	out, err := ts.Lookup(resp.Auth.ClientToken)
+	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -978,7 +970,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 		NumUses:     1,
 		TTL:         0,
 	}
-	out, err := ts.Lookup(resp.Auth.ClientToken)
+	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1041,7 +1033,7 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 		DisplayName: "token",
 		TTL:         0,
 	}
-	out, err := ts.Lookup(resp.Auth.ClientToken)
+	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1157,7 +1149,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
 
 	policy, _ := ParseACLPolicy(tokenCreationPolicy)
 	policy.Name = "test1"
-	if err := ps.SetPolicy(policy); err != nil {
+	if err := ps.SetPolicy(context.Background(), policy); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1265,7 +1257,7 @@ func TestTokenStore_HandleRequest_CreateToken_Root_NoParent(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, _ := ts.Lookup(resp.Auth.ClientToken)
+	out, _ := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if out.Parent != "" {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -1286,7 +1278,7 @@ func TestTokenStore_HandleRequest_CreateToken_PathBased_NoParent(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, _ := ts.Lookup(resp.Auth.ClientToken)
+	out, _ := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if out.Parent != "" {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -1312,7 +1304,7 @@ func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, _ := ts.Lookup(resp.Auth.ClientToken)
+	out, _ := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if !reflect.DeepEqual(out.Meta, meta) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", meta, out.Meta)
 	}
@@ -1381,7 +1373,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, err := ts.Lookup("child")
+	out, err := ts.Lookup(context.Background(), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1390,7 +1382,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 
 	// Sub-child should not exist
-	out, err = ts.Lookup("sub-child")
+	out, err = ts.Lookup(context.Background(), "sub-child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1417,7 +1409,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, err := ts.Lookup("child")
+	out, err := ts.Lookup(context.Background(), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1426,7 +1418,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	}
 
 	// Sub-child should exist!
-	out, err = ts.Lookup("sub-child")
+	out, err = ts.Lookup(context.Background(), "sub-child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1439,7 +1431,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 	testMakeToken(t, ts, root, "child", "", []string{"foo"})
 
-	out, err := ts.Lookup("child")
+	out, err := ts.Lookup(context.Background(), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1458,7 +1450,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 	}
 
 	// Should still exist
-	out, err = ts.Lookup("child")
+	out, err = ts.Lookup(context.Background(), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1698,7 +1690,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.rootToken()
+	root, err := ts.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1747,7 +1739,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.rootToken()
+	root, err := ts.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2013,19 +2005,19 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	// Create 3 different policies
 	policy, _ := ParseACLPolicy(tokenCreationPolicy)
 	policy.Name = "test1"
-	if err := ps.SetPolicy(policy); err != nil {
+	if err := ps.SetPolicy(context.Background(), policy); err != nil {
 		t.Fatal(err)
 	}
 
 	policy, _ = ParseACLPolicy(tokenCreationPolicy)
 	policy.Name = "test2"
-	if err := ps.SetPolicy(policy); err != nil {
+	if err := ps.SetPolicy(context.Background(), policy); err != nil {
 		t.Fatal(err)
 	}
 
 	policy, _ = ParseACLPolicy(tokenCreationPolicy)
 	policy.Name = "test3"
-	if err := ps.SetPolicy(policy); err != nil {
+	if err := ps.SetPolicy(context.Background(), policy); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2251,7 +2243,7 @@ func TestTokenStore_RoleOrphan(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, err := ts.Lookup(resp.Auth.ClientToken)
+	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2291,7 +2283,7 @@ func TestTokenStore_RolePathSuffix(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, err := ts.Lookup(resp.Auth.ClientToken)
+	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2947,7 +2939,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	ps := core.policyStore
 	policy, _ := ParseACLPolicy(tokenCreationPolicy)
 	policy.Name = "policy1"
-	if err := ps.SetPolicy(policy); err != nil {
+	if err := ps.SetPolicy(context.Background(), policy); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3231,7 +3223,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
-	root, _ := exp.tokenStore.rootToken()
+	root, _ := exp.tokenStore.rootToken(context.Background())
 
 	tokenReq := &logical.Request{
 		Path:        "create",
@@ -3251,7 +3243,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	te, err := ts.lookupSalted(saltTut, false)
+	te, err := ts.lookupSalted(context.Background(), saltTut, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3262,7 +3254,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatalf("bad: %d", te.NumUses)
 	}
 
-	te, err = ts.UseToken(te)
+	te, err = ts.UseToken(context.Background(), te)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3274,7 +3266,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Should return no entry because it's tainted
-	te, err = ts.lookupSalted(saltTut, false)
+	te, err = ts.lookupSalted(context.Background(), saltTut, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3300,7 +3292,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Should return tainted entries
-	te, err = ts.lookupSalted(saltTut, true)
+	te, err = ts.lookupSalted(context.Background(), saltTut, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3313,17 +3305,17 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	origDestroyCubbyhole := ts.cubbyholeDestroyer
 
-	ts.cubbyholeDestroyer = func(*TokenStore, string) error {
+	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, string) error {
 		return fmt.Errorf("keep it frosty")
 	}
 
-	err = ts.revokeSalted(saltTut)
+	err = ts.revokeSalted(context.Background(), saltTut)
 	if err == nil {
 		t.Fatalf("expected err")
 	}
 
 	// Since revocation failed we should see the tokenRevocationFailed canary value
-	te, err = ts.lookupSalted(saltTut, true)
+	te, err = ts.lookupSalted(context.Background(), saltTut, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3335,7 +3327,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Check the race condition situation by making the process sleep
-	ts.cubbyholeDestroyer = func(*TokenStore, string) error {
+	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, string) error {
 		time.Sleep(1 * time.Second)
 		return fmt.Errorf("keep it frosty")
 	}
@@ -3343,7 +3335,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	go func() {
 		cubbyFuncLock.RLock()
-		err := ts.revokeSalted(saltTut)
+		err := ts.revokeSalted(context.Background(), saltTut)
 		cubbyFuncLock.RUnlock()
 		if err == nil {
 			t.Fatalf("expected error")
@@ -3352,7 +3344,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	// Give time for the function to start and grab locks
 	time.Sleep(200 * time.Millisecond)
-	te, err = ts.lookupSalted(saltTut, true)
+	te, err = ts.lookupSalted(context.Background(), saltTut, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3371,12 +3363,12 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	defer cubbyFuncLock.Unlock()
 	ts.cubbyholeDestroyer = origDestroyCubbyhole
 
-	err = ts.revokeSalted(saltTut)
+	err = ts.revokeSalted(context.Background(), saltTut)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	te, err = ts.lookupSalted(saltTut, true)
+	te, err = ts.lookupSalted(context.Background(), saltTut, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3449,19 +3441,19 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = ts.lookupSalted(saltedTut, true)
+		_, err = ts.lookupSalted(context.Background(), saltedTut, true)
 		if err != nil {
 			t.Fatalf("failed to lookup token: %v", err)
 		}
 
 		// Destroy the token index
 		path := lookupPrefix + saltedTut
-		if ts.view.Delete(path); err != nil {
+		if ts.view.Delete(context.Background(), path); err != nil {
 			t.Fatalf("failed to delete token entry: %v", err)
 		}
 
 		// Destroy the cubby space
-		err = ts.destroyCubbyhole(saltedTut)
+		err = ts.destroyCubbyhole(context.Background(), saltedTut)
 		if err != nil {
 			t.Fatalf("failed to destroyCubbyhole: %v", err)
 		}
@@ -3524,7 +3516,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Create new token
-	root, err := ts.rootToken()
+	root, err := ts.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -3591,7 +3583,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	te, err := ts.lookupSalted(saltedTut, true)
+	te, err := ts.lookupSalted(context.Background(), saltedTut, true)
 	if err != nil {
 		t.Fatalf("failed to lookup token: %v", err)
 	}
@@ -3601,10 +3593,10 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 
 	// Destroy the token index
 	path := lookupPrefix + saltedTut
-	if ts.view.Delete(path); err != nil {
+	if ts.view.Delete(context.Background(), path); err != nil {
 		t.Fatalf("failed to delete token entry: %v", err)
 	}
-	te, err = ts.lookupSalted(saltedTut, true)
+	te, err = ts.lookupSalted(context.Background(), saltedTut, true)
 	if err != nil {
 		t.Fatalf("failed to lookup token: %v", err)
 	}

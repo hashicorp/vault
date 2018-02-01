@@ -13,7 +13,7 @@ import (
 
 // IssueEvent represents an event that occurred around an Issue or Pull Request.
 type IssueEvent struct {
-	ID  *int    `json:"id,omitempty"`
+	ID  *int64  `json:"id,omitempty"`
 	URL *string `json:"url,omitempty"`
 
 	// The User that generated this event.
@@ -123,7 +123,7 @@ func (s *IssuesService) ListRepositoryEvents(ctx context.Context, owner, repo st
 // GetEvent returns the specified issue event.
 //
 // GitHub API docs: https://developer.github.com/v3/issues/events/#get-a-single-event
-func (s *IssuesService) GetEvent(ctx context.Context, owner, repo string, id int) (*IssueEvent, *Response, error) {
+func (s *IssuesService) GetEvent(ctx context.Context, owner, repo string, id int64) (*IssueEvent, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/issues/events/%v", owner, repo, id)
 
 	req, err := s.client.NewRequest("GET", u, nil)

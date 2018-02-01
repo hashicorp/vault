@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -13,12 +14,12 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(conf)
 	if err != nil {
 		return nil, err
 	}
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -73,7 +74,7 @@ type backend struct {
 	// accounts using their IAM instance profile to get their credentials.
 	defaultAWSAccountID string
 
-	resolveArnToUniqueIDFunc func(logical.Storage, string) (string, error)
+	resolveArnToUniqueIDFunc func(context.Context, logical.Storage, string) (string, error)
 }
 
 func Backend(conf *logical.BackendConfig) (*backend, error) {
@@ -138,13 +139,13 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 // not once in a minute, but once in an hour, controlled by 'tidyCooldownPeriod'.
 // Tidying of blacklist and whitelist are by default enabled. This can be
 // changed using `config/tidy/roletags` and `config/tidy/identities` endpoints.
-func (b *backend) periodicFunc(req *logical.Request) error {
+func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
 	// Run the tidy operations for the first time. Then run it when current
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
 		// safety_buffer defaults to 180 days for roletag blacklist
 		safety_buffer := 15552000
-		tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(req.Storage)
+		tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 		if err != nil {
 			return err
 		}
@@ -160,12 +161,12 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 		}
 		// tidy role tags if explicitly not disabled
 		if !skipBlacklistTidy {
-			b.tidyBlacklistRoleTag(req.Storage, safety_buffer)
+			b.tidyBlacklistRoleTag(ctx, req.Storage, safety_buffer)
 		}
 
 		// reset the safety_buffer to 72h
 		safety_buffer = 259200
-		tidyWhitelistConfigEntry, err := b.lockedConfigTidyIdentities(req.Storage)
+		tidyWhitelistConfigEntry, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
 		if err != nil {
 			return err
 		}
@@ -181,7 +182,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 		}
 		// tidy identities if explicitly not disabled
 		if !skipWhitelistTidy {
-			b.tidyWhitelistIdentity(req.Storage, safety_buffer)
+			b.tidyWhitelistIdentity(ctx, req.Storage, safety_buffer)
 		}
 
 		// Update the time at which to run the tidy functions again.
@@ -190,7 +191,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 	return nil
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "config/client":
 		b.configMutex.Lock()
@@ -203,7 +204,7 @@ func (b *backend) invalidate(key string) {
 
 // Putting this here so we can inject a fake resolver into the backend for unit testing
 // purposes
-func (b *backend) resolveArnToRealUniqueId(s logical.Storage, arn string) (string, error) {
+func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storage, arn string) (string, error) {
 	entity, err := parseIamArn(arn)
 	if err != nil {
 		return "", err
@@ -223,7 +224,7 @@ func (b *backend) resolveArnToRealUniqueId(s logical.Storage, arn string) (strin
 	if region == nil {
 		return "", fmt.Errorf("Unable to resolve partition %q to a region", entity.Partition)
 	}
-	iamClient, err := b.clientIAM(s, region.ID(), entity.AccountNumber)
+	iamClient, err := b.clientIAM(ctx, s, region.ID(), entity.AccountNumber)
 	if err != nil {
 		return "", err
 	}

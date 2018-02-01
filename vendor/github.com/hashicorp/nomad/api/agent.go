@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 )
@@ -212,6 +213,30 @@ func (a *Agent) RemoveKey(key string) (*KeyringResponse, error) {
 	return &resp, err
 }
 
+// Health queries the agent's health
+func (a *Agent) Health() (*AgentHealthResponse, error) {
+	req, err := a.client.newRequest("GET", "/v1/agent/health")
+	if err != nil {
+		return nil, err
+	}
+
+	var health AgentHealthResponse
+	_, resp, err := a.client.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Always try to decode the response as JSON
+	err = json.NewDecoder(resp.Body).Decode(&health)
+	if err == nil {
+		return &health, nil
+	}
+
+	// Return custom error when response is not expected JSON format
+	return nil, fmt.Errorf("unable to unmarhsal response with status %d: %v", resp.StatusCode, err)
+}
+
 // joinResponse is used to decode the response we get while
 // sending a member join request.
 type joinResponse struct {
@@ -264,4 +289,20 @@ func (a AgentMembersNameSort) Less(i, j int) bool {
 
 	return a[i].Name < a[j].Name
 
+}
+
+// AgentHealthResponse is the response from the Health endpoint desecribing an
+// agent's health.
+type AgentHealthResponse struct {
+	Client *AgentHealth `json:"client,omitempty"`
+	Server *AgentHealth `json:"server,omitempty"`
+}
+
+// AgentHealth describes the Client or Server's health in a Health request.
+type AgentHealth struct {
+	// Ok is false if the agent is unhealthy
+	Ok bool `json:"ok"`
+
+	// Message describes why the agent is unhealthy
+	Message string `json:"message"`
 }

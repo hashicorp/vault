@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/mongodb"
 	"github.com/hashicorp/vault/builtin/logical/mssql"
 	"github.com/hashicorp/vault/builtin/logical/mysql"
+	"github.com/hashicorp/vault/builtin/logical/nomad"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
 	"github.com/hashicorp/vault/builtin/logical/rabbitmq"
@@ -31,6 +32,7 @@ import (
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
+	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
@@ -88,8 +90,7 @@ func (c *DeprecatedCommand) Run(args []string) int {
 func (c *DeprecatedCommand) warn() {
 	c.UI.Warn(wrapAtLength(fmt.Sprintf(
 		"WARNING! The \"vault %s\" command is deprecated. Please use \"vault %s\" "+
-			"instead. This command will be removed in the next major release of "+
-			"Vault.",
+			"instead. This command will be removed in Vault 0.11 (or later).",
 		c.Old,
 		c.New)))
 	c.UI.Warn("")
@@ -106,6 +107,14 @@ func init() {
 		Ui: &cli.BasicUi{
 			Writer:      os.Stdout,
 			ErrorWriter: os.Stderr,
+		},
+	}
+
+	serverCmdUi := &cli.ColoredUi{
+		ErrorColor: cli.UiColorRed,
+		WarnColor:  cli.UiColorYellow,
+		Ui: &cli.BasicUi{
+			Writer: os.Stdout,
 		},
 	}
 
@@ -404,7 +413,7 @@ func init() {
 		"server": func() (cli.Command, error) {
 			return &ServerCommand{
 				BaseCommand: &BaseCommand{
-					UI: ui,
+					UI: serverCmdUi,
 				},
 				AuditBackends: map[string]audit.Factory{
 					"file":   auditFile.Factory,
@@ -415,6 +424,7 @@ func init() {
 					"app-id":     credAppId.Factory,
 					"approle":    credAppRole.Factory,
 					"aws":        credAws.Factory,
+					"centrify":   credCentrify.Factory,
 					"cert":       credCert.Factory,
 					"gcp":        credGcp.Factory,
 					"github":     credGitHub.Factory,
@@ -433,6 +443,7 @@ func init() {
 					"mongodb":    mongodb.Factory,
 					"mssql":      mssql.Factory,
 					"mysql":      mysql.Factory,
+					"nomad":      nomad.Factory,
 					"pki":        pki.Factory,
 					"plugin":     plugin.Factory,
 					"postgresql": postgresql.Factory,

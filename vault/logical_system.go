@@ -10,12 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/fatih/structs"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -40,10 +40,9 @@ var (
 				Pattern: "replication/status",
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-						var state consts.ReplicationState
 						resp := &logical.Response{
 							Data: map[string]interface{}{
-								"mode": state.String(),
+								"mode": "disabled",
 							},
 						}
 						return resp, nil
@@ -860,6 +859,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
 					},
+					"args": &framework.FieldSchema{
+						Type:        framework.TypeStringSlice,
+						Description: strings.TrimSpace(sysHelp["plugin-catalog_args"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1030,13 +1033,13 @@ func (b *SystemBackend) handleCORSUpdate(ctx context.Context, req *logical.Reque
 	origins := d.Get("allowed_origins").([]string)
 	headers := d.Get("allowed_headers").([]string)
 
-	return nil, b.Core.corsConfig.Enable(origins, headers)
+	return nil, b.Core.corsConfig.Enable(ctx, origins, headers)
 }
 
 // handleCORSDelete sets the CORS enabled flag to false and clears the list of
 // allowed origins & headers.
 func (b *SystemBackend) handleCORSDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return nil, b.Core.corsConfig.Disable()
+	return nil, b.Core.corsConfig.Disable(ctx)
 }
 
 func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1048,7 +1051,7 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 	return nil, err
 }
 
-func (b *SystemBackend) invalidate(key string) {
+func (b *SystemBackend) invalidate(ctx context.Context, key string) {
 	/*
 		if b.Core.logger.IsTrace() {
 			b.Core.logger.Trace("sys: invalidating key", "key", key)
@@ -1059,19 +1062,19 @@ func (b *SystemBackend) invalidate(key string) {
 		b.Core.stateLock.RLock()
 		defer b.Core.stateLock.RUnlock()
 		if b.Core.policyStore != nil {
-			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policyACLSubPath), PolicyTypeACL)
+			b.Core.policyStore.invalidate(ctx, strings.TrimPrefix(key, policyACLSubPath), PolicyTypeACL)
 		}
 	case strings.HasPrefix(key, tokenSubPath):
 		b.Core.stateLock.RLock()
 		defer b.Core.stateLock.RUnlock()
 		if b.Core.tokenStore != nil {
-			b.Core.tokenStore.Invalidate(key)
+			b.Core.tokenStore.Invalidate(ctx, key)
 		}
 	}
 }
 
 func (b *SystemBackend) handlePluginCatalogList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	plugins, err := b.Core.pluginCatalog.List()
+	plugins, err := b.Core.pluginCatalog.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1098,12 +1101,24 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing command value"), nil
 	}
 
+	// For backwards compatibility, also accept args as part of command.  Don't
+	// accepts args in both command and args.
+	args := d.Get("args").([]string)
+	parts := strings.Split(command, " ")
+	if len(parts) <= 0 {
+		return logical.ErrorResponse("missing command value"), nil
+	} else if len(parts) > 1 && len(args) > 0 {
+		return logical.ErrorResponse("must not speficy args in command and args field"), nil
+	} else if len(parts) > 1 {
+		args = parts[1:]
+	}
+
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(pluginName, command, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginName, parts[0], args, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -1116,7 +1131,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName)
 	if err != nil {
 		return nil, err
 	}
@@ -1124,8 +1139,21 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		return nil, nil
 	}
 
-	// Create a map of data to be returned and remove sensitive information from it
-	data := structs.New(plugin).Map()
+	command := ""
+	if !plugin.Builtin {
+		command, err = filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	data := map[string]interface{}{
+		"name":    plugin.Name,
+		"args":    plugin.Args,
+		"command": command,
+		"sha256":  hex.EncodeToString(plugin.Sha256),
+		"builtin": plugin.Builtin,
+	}
 
 	return &logical.Response{
 		Data: data,
@@ -1137,7 +1165,7 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	err := b.Core.pluginCatalog.Delete(pluginName)
+	err := b.Core.pluginCatalog.Delete(ctx, pluginName)
 	if err != nil {
 		return nil, err
 	}
@@ -1157,12 +1185,12 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 	}
 
 	if pluginName != "" {
-		err := b.Core.reloadMatchingPlugin(pluginName)
+		err := b.Core.reloadMatchingPlugin(ctx, pluginName)
 		if err != nil {
 			return nil, err
 		}
 	} else if len(pluginMounts) > 0 {
-		err := b.Core.reloadMatchingPluginMounts(pluginMounts)
+		err := b.Core.reloadMatchingPluginMounts(ctx, pluginMounts)
 		if err != nil {
 			return nil, err
 		}
@@ -1180,7 +1208,7 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 	}
 
 	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.add(header, hmac)
+	err := headerConfig.add(ctx, header, hmac)
 	if err != nil {
 		return nil, err
 	}
@@ -1196,7 +1224,7 @@ func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logi
 	}
 
 	headerConfig := b.Core.AuditedHeadersConfig()
-	err := headerConfig.remove(header)
+	err := headerConfig.remove(ctx, header)
 	if err != nil {
 		return nil, err
 	}
@@ -1241,7 +1269,7 @@ func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Req
 	if token == "" {
 		token = req.ClientToken
 	}
-	capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
+	capabilities, err := b.Core.Capabilities(ctx, token, d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -1261,12 +1289,12 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 		return logical.ErrorResponse("missing accessor"), nil
 	}
 
-	aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor, false)
+	aEntry, err := b.Core.tokenStore.lookupByAccessor(ctx, accessor, false)
 	if err != nil {
 		return nil, err
 	}
 
-	capabilities, err := b.Core.Capabilities(aEntry.TokenID, d.Get("path").(string))
+	capabilities, err := b.Core.Capabilities(ctx, aEntry.TokenID, d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -1281,10 +1309,11 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 // handleRekeyRetrieve returns backed-up, PGP-encrypted unseal keys from a
 // rekey operation
 func (b *SystemBackend) handleRekeyRetrieve(
+	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
 	recovery bool) (*logical.Response, error) {
-	backup, err := b.Core.RekeyRetrieveBackup(recovery)
+	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up backed-up keys: %v", err)
 	}
@@ -1321,20 +1350,21 @@ func (b *SystemBackend) handleRekeyRetrieve(
 }
 
 func (b *SystemBackend) handleRekeyRetrieveBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyRetrieve(req, data, false)
+	return b.handleRekeyRetrieve(ctx, req, data, false)
 }
 
 func (b *SystemBackend) handleRekeyRetrieveRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyRetrieve(req, data, true)
+	return b.handleRekeyRetrieve(ctx, req, data, true)
 }
 
 // handleRekeyDelete deletes backed-up, PGP-encrypted unseal keys from a rekey
 // operation
 func (b *SystemBackend) handleRekeyDelete(
+	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
 	recovery bool) (*logical.Response, error) {
-	err := b.Core.RekeyDeleteBackup(recovery)
+	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("error during deletion of backed-up keys: %v", err)
 	}
@@ -1343,11 +1373,11 @@ func (b *SystemBackend) handleRekeyDelete(
 }
 
 func (b *SystemBackend) handleRekeyDeleteBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyDelete(req, data, false)
+	return b.handleRekeyDelete(ctx, req, data, false)
 }
 
 func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRekeyDelete(req, data, true)
+	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
 // handleMountTable handles the "mounts" endpoint to provide the mount table
@@ -1487,7 +1517,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	// Attempt mount
-	if err := b.Core.mount(me); err != nil {
+	if err := b.Core.mount(ctx, me); err != nil {
 		b.Backend.Logger().Error("sys: mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -1525,7 +1555,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 	}
 
 	// Attempt unmount
-	if err := b.Core.unmount(path); err != nil {
+	if err := b.Core.unmount(ctx, path); err != nil {
 		b.Backend.Logger().Error("sys: unmount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -1555,7 +1585,7 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	}
 
 	// Attempt remount
-	if err := b.Core.remount(fromPath, toPath); err != nil {
+	if err := b.Core.remount(ctx, fromPath, toPath); err != nil {
 		b.Backend.Logger().Error("sys: remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
 		return handleError(err)
 	}
@@ -1623,7 +1653,7 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 		return logical.ErrorResponse("path must be specified as a string"),
 			logical.ErrInvalidRequest
 	}
-	return b.handleTuneWriteCommon("auth/"+path, data)
+	return b.handleTuneWriteCommon(ctx, "auth/"+path, data)
 }
 
 // handleMountTuneWrite is used to set config settings on a backend
@@ -1636,11 +1666,11 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	// This call will write both logical backend's configuration as well as auth methods'.
 	// Retaining this behavior for backward compatibility. If this behavior is not desired,
 	// an error can be returned if path has a prefix of "auth/".
-	return b.handleTuneWriteCommon(path, data)
+	return b.handleTuneWriteCommon(ctx, path, data)
 }
 
 // handleTuneWriteCommon is used to set config settings on a path
-func (b *SystemBackend) handleTuneWriteCommon(path string, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 
 	path = sanitizeMountPath(path)
@@ -1717,7 +1747,7 @@ func (b *SystemBackend) handleTuneWriteCommon(path string, data *framework.Field
 		if newDefault != mountEntry.Config.DefaultLeaseTTL ||
 			newMax != mountEntry.Config.MaxLeaseTTL {
 
-			if err := b.tuneMountTTLs(path, mountEntry, newDefault, newMax); err != nil {
+			if err := b.tuneMountTTLs(ctx, path, mountEntry, newDefault, newMax); err != nil {
 				b.Backend.Logger().Error("sys: tuning failed", "path", path, "error", err)
 				return handleError(err)
 			}
@@ -1733,9 +1763,9 @@ func (b *SystemBackend) handleTuneWriteCommon(path string, data *framework.Field
 		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
-			err = b.Core.persistAuth(b.Core.auth, mountEntry.Local)
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
 		default:
-			err = b.Core.persistMounts(b.Core.mounts, mountEntry.Local)
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
 		}
 		if err != nil {
 			mountEntry.Description = oldDesc
@@ -1794,7 +1824,7 @@ func (b *SystemBackend) handleLeaseLookupList(ctx context.Context, req *logical.
 		prefix = prefix + "/"
 	}
 
-	keys, err := b.Core.expiration.idView.List(prefix)
+	keys, err := b.Core.expiration.idView.List(ctx, prefix)
 	if err != nil {
 		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
 		return handleError(err)
@@ -1965,7 +1995,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	// Attempt enabling
-	if err := b.Core.enableCredential(me); err != nil {
+	if err := b.Core.enableCredential(ctx, me); err != nil {
 		b.Backend.Logger().Error("sys: enable auth mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -1993,7 +2023,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 	}
 
 	// Attempt disable
-	if err := b.Core.disableCredential(path); err != nil {
+	if err := b.Core.disableCredential(ctx, path); err != nil {
 		b.Backend.Logger().Error("sys: disable auth mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -2003,7 +2033,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 // handlePolicyList handles the "policy" endpoint to provide the enabled policies
 func (b *SystemBackend) handlePolicyList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the configured policies
-	policies, err := b.Core.policyStore.ListPolicies(PolicyTypeACL)
+	policies, err := b.Core.policyStore.ListPolicies(ctx, PolicyTypeACL)
 
 	// Add the special "root" policy
 	policies = append(policies, "root")
@@ -2017,7 +2047,7 @@ func (b *SystemBackend) handlePolicyList(ctx context.Context, req *logical.Reque
 
 func (b *SystemBackend) handlePoliciesList(policyType PolicyType) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		policies, err := b.Core.policyStore.ListPolicies(policyType)
+		policies, err := b.Core.policyStore.ListPolicies(ctx, policyType)
 		if err != nil {
 			return nil, err
 		}
@@ -2038,7 +2068,7 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
-		policy, err := b.Core.policyStore.GetPolicy(name, policyType)
+		policy, err := b.Core.policyStore.GetPolicy(ctx, name, policyType)
 		if err != nil {
 			return handleError(err)
 		}
@@ -2062,7 +2092,7 @@ func (b *SystemBackend) handlePoliciesRead(policyType PolicyType) framework.Oper
 func (b *SystemBackend) handlePolicyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	policy, err := b.Core.policyStore.GetPolicy(name, PolicyTypeACL)
+	policy, err := b.Core.policyStore.GetPolicy(ctx, name, PolicyTypeACL)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2113,7 +2143,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		}
 
 		// Update the policy
-		if err := b.Core.policyStore.SetPolicy(policy); err != nil {
+		if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 			return handleError(err)
 		}
 		return nil, nil
@@ -2152,7 +2182,7 @@ func (b *SystemBackend) handlePolicySet(ctx context.Context, req *logical.Reques
 	policy.Paths = p.Paths
 
 	// Update the policy
-	if err := b.Core.policyStore.SetPolicy(policy); err != nil {
+	if err := b.Core.policyStore.SetPolicy(ctx, policy); err != nil {
 		return handleError(err)
 	}
 	return resp, nil
@@ -2162,7 +2192,7 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
-		if err := b.Core.policyStore.DeletePolicy(name, policyType); err != nil {
+		if err := b.Core.policyStore.DeletePolicy(ctx, name, policyType); err != nil {
 			return handleError(err)
 		}
 		return nil, nil
@@ -2173,7 +2203,7 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 func (b *SystemBackend) handlePolicyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	if err := b.Core.policyStore.DeletePolicy(name, PolicyTypeACL); err != nil {
+	if err := b.Core.policyStore.DeletePolicy(ctx, name, PolicyTypeACL); err != nil {
 		return handleError(err)
 	}
 	return nil, nil
@@ -2259,7 +2289,7 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	}
 
 	// Attempt enabling
-	if err := b.Core.enableAudit(me); err != nil {
+	if err := b.Core.enableAudit(ctx, me); err != nil {
 		b.Backend.Logger().Error("sys: enable audit mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -2271,7 +2301,7 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	path := data.Get("path").(string)
 
 	// Attempt disable
-	if existed, err := b.Core.disableAudit(path); existed && err != nil {
+	if existed, err := b.Core.disableAudit(ctx, path); existed && err != nil {
 		b.Backend.Logger().Error("sys: disable audit mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
@@ -2290,7 +2320,7 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	entry, err := b.Core.barrier.Get(path)
+	entry, err := b.Core.barrier.Get(ctx, path)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2322,7 +2352,7 @@ func (b *SystemBackend) handleRawWrite(ctx context.Context, req *logical.Request
 		Key:   path,
 		Value: []byte(value),
 	}
-	if err := b.Core.barrier.Put(entry); err != nil {
+	if err := b.Core.barrier.Put(ctx, entry); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -2340,7 +2370,7 @@ func (b *SystemBackend) handleRawDelete(ctx context.Context, req *logical.Reques
 		}
 	}
 
-	if err := b.Core.barrier.Delete(path); err != nil {
+	if err := b.Core.barrier.Delete(ctx, path); err != nil {
 		return handleError(err)
 	}
 	return nil, nil
@@ -2361,7 +2391,7 @@ func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	keys, err := b.Core.barrier.List(path)
+	keys, err := b.Core.barrier.List(ctx, path)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2393,7 +2423,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 	}
 
 	// Rotate to the new term
-	newTerm, err := b.Core.barrier.Rotate()
+	newTerm, err := b.Core.barrier.Rotate(ctx)
 	if err != nil {
 		b.Backend.Logger().Error("sys: failed to create new encryption key", "error", err)
 		return handleError(err)
@@ -2403,13 +2433,13 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 	// In HA mode, we need to an upgrade path for the standby instances
 	if b.Core.ha != nil {
 		// Create the upgrade path to the new term
-		if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
+		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
 			b.Backend.Logger().Error("sys: failed to create new upgrade", "term", newTerm, "error", err)
 		}
 
 		// Schedule the destroy of the upgrade path
 		time.AfterFunc(keyRotateGracePeriod, func() {
-			if err := b.Core.barrier.DestroyUpgrade(newTerm); err != nil {
+			if err := b.Core.barrier.DestroyUpgrade(ctx, newTerm); err != nil {
 				b.Backend.Logger().Error("sys: failed to destroy upgrade", "term", newTerm, "error", err)
 			}
 		})
@@ -2417,7 +2447,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := b.Core.barrier.Put(&Entry{
+	if err := b.Core.barrier.Put(ctx, &Entry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
 	}); err != nil {
@@ -2477,7 +2507,7 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	// by handleRequest(), this happens when it's a normal response wrapping
 	// request and the token was provided "first party". We want to inspect the
 	// token policies but will not use this token entry for anything else.
-	te, err := b.Core.tokenStore.lookupTainted(token)
+	te, err := b.Core.tokenStore.lookupTainted(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -2521,12 +2551,12 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, token string, thirdParty bool) (string, error) {
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseTokenByID(token)
+		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
 			return "", fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
 		}
 
-		defer b.Core.tokenStore.Revoke(token)
+		defer b.Core.tokenStore.Revoke(ctx, token)
 	}
 
 	cubbyReq := &logical.Request{
@@ -2632,11 +2662,11 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseTokenByID(token)
+		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
 			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
 		}
-		defer b.Core.tokenStore.Revoke(token)
+		defer b.Core.tokenStore.Revoke(ctx, token)
 	}
 
 	// Fetch the original TTL
@@ -3330,6 +3360,10 @@ command field. This should be HEX encoded.`,
 		`The command used to start the plugin. The
 executable defined in this command must exist in vault's
 plugin directory.`,
+		"",
+	},
+	"plugin-catalog_args": {
+		`The args passed to plugin command.`,
 		"",
 	},
 	"leases": {

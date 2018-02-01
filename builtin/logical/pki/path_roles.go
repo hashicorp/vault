@@ -239,8 +239,8 @@ for "generate_lease".`,
 	}
 }
 
-func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + n)
+func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, "role/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +326,7 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := s.Put(jsonEntry); err != nil {
+		if err := s.Put(ctx, jsonEntry); err != nil {
 			// Only perform upgrades on replication primary
 			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 				return nil, err
@@ -338,7 +338,7 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 }
 
 func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("role/" + data.Get("name").(string))
+	err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +352,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return logical.ErrorResponse("missing role name"), nil
 	}
 
-	role, err := b.getRole(req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 }
 
 func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +491,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(jsonEntry); err != nil {
+	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
 

@@ -32,7 +32,7 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 	name := data.Get("name").(string)
 
 	// Get the role
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 	}
 
 	// Determine if we have a lease configuration
-	leaseConfig, err := b.LeaseConfig(req.Storage)
+	leaseConfig, err := b.LeaseConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 	}
 
 	// Get our connection
-	session, err := b.Session(req.Storage)
+	session, err := b.Session(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,13 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 		"username": username,
 		"db":       role.DB,
 	})
-	resp.Secret.TTL = leaseConfig.TTL
+
+	ttl := leaseConfig.TTL
+	if ttl == 0 || (leaseConfig.MaxTTL > 0 && ttl > leaseConfig.MaxTTL) {
+		ttl = leaseConfig.MaxTTL
+	}
+	resp.Secret.TTL = ttl
+
 	return resp, nil
 }
 

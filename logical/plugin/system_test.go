@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"testing"
 
 	"reflect"
@@ -64,9 +65,10 @@ func TestSystem_sudoPrivilege(t *testing.T) {
 	})
 
 	testSystemView := &SystemViewClient{client: client}
+	ctx := context.Background()
 
-	expected := sys.SudoPrivilege("foo", "bar")
-	actual := testSystemView.SudoPrivilege("foo", "bar")
+	expected := sys.SudoPrivilege(ctx, "foo", "bar")
+	actual := testSystemView.SudoPrivilege(ctx, "foo", "bar")
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
 	}
@@ -148,7 +150,7 @@ func TestSystem_lookupPlugin(t *testing.T) {
 
 	testSystemView := &SystemViewClient{client: client}
 
-	if _, err := testSystemView.LookupPlugin("foo"); err == nil {
+	if _, err := testSystemView.LookupPlugin(context.Background(), "foo"); err == nil {
 		t.Fatal("LookPlugin(): expected error on due to unsupported call from plugin")
 	}
 }

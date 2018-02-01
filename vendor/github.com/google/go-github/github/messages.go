@@ -53,6 +53,7 @@ var (
 		"issue_comment":               "IssueCommentEvent",
 		"issues":                      "IssuesEvent",
 		"label":                       "LabelEvent",
+		"marketplace_purchase":        "MarketplacePurchaseEvent",
 		"member":                      "MemberEvent",
 		"membership":                  "MembershipEvent",
 		"milestone":                   "MilestoneEvent",

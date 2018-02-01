@@ -30,7 +30,8 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +56,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// read the created role entry
-	roleEntry, err := b.lockedAWSRole(storage, "abcd-123")
+	roleEntry, err := b.lockedAWSRole(context.Background(), storage, "abcd-123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +84,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// parse the created role tag
-	rTag2, err := b.parseAndVerifyRoleTagValue(storage, val)
+	rTag2, err := b.parseAndVerifyRoleTagValue(context.Background(), storage, val)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +123,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// get the entry of the newly created role entry
-	roleEntry2, err := b.lockedAWSRole(storage, "ami-6789")
+	roleEntry2, err := b.lockedAWSRole(context.Background(), storage, "ami-6789")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +255,8 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +310,8 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,7 +365,8 @@ func TestBackend_TidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -387,7 +391,8 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,7 +417,8 @@ func TestBackend_ConfigClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,7 +555,8 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -704,7 +711,8 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -763,7 +771,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	tagValue := resp.Data["tag_value"].(string)
 
 	// parse the value and check if the verifiable values match
-	rTag, err := b.parseAndVerifyRoleTagValue(storage, tagValue)
+	rTag, err := b.parseAndVerifyRoleTagValue(context.Background(), storage, tagValue)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -785,7 +793,8 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -850,7 +859,8 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -939,7 +949,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 
 	// try to read the deleted entry
-	tagEntry, err := b.lockedBlacklistRoleTagEntry(storage, tag)
+	tagEntry, err := b.lockedBlacklistRoleTagEntry(context.Background(), storage, tag)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -998,7 +1008,8 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1190,7 +1201,8 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1338,7 +1350,8 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1442,11 +1455,11 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	fakeArn := "arn:aws:iam::123456789012:role/somePath/FakeRole"
-	fakeArnResolver := func(s logical.Storage, arn string) (string, error) {
+	fakeArnResolver := func(ctx context.Context, s logical.Storage, arn string) (string, error) {
 		if arn == fakeArn {
 			return fmt.Sprintf("FakeUniqueIdFor%s", fakeArn), nil
 		}
-		return b.resolveArnToRealUniqueId(s, arn)
+		return b.resolveArnToRealUniqueId(context.Background(), s, arn)
 	}
 	b.resolveArnToUniqueIDFunc = fakeArnResolver
 
@@ -1615,6 +1628,40 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if cachedArn == "" {
 		t.Errorf("got empty ARN back from user ID cache; expected full arn")
 	}
+
+	// Test for renewal with period
+	period := 600 * time.Second
+	roleData["period"] = period.String()
+	roleRequest.Path = "role/" + testValidRoleName
+	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to create wildcard role: resp:%#v\nerr:%v", resp, err)
+	}
+
+	loginData["role"] = testValidRoleName
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("bad: expected valid login: resp:%#v", resp)
+	}
+
+	renewReq = generateRenewRequest(storage, resp.Auth)
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error when renewing: %#v", *resp)
+	}
+
+	if resp.Auth.Period != period {
+		t.Fatalf("expected a period value of %s in the response, got: %s", period, resp.Auth.Period)
+	}
 }
 
 func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Request {
@@ -1627,6 +1674,7 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 	renewReq.Auth.LeaseOptions = auth.LeaseOptions
 	renewReq.Auth.Policies = auth.Policies
 	renewReq.Auth.IssueTime = time.Now()
+	renewReq.Auth.Period = auth.Period
 
 	return renewReq
 }

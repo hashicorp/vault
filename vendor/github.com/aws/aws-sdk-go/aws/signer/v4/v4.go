@@ -339,6 +339,7 @@ func (v4 Signer) signWithBody(r *http.Request, body io.ReadSeeker, service, regi
 		return http.Header{}, err
 	}
 
+	ctx.sanitizeHostForHeader()
 	ctx.assignAmzQueryValues()
 	ctx.build(v4.DisableHeaderHoisting)
 
@@ -361,6 +362,10 @@ func (v4 Signer) signWithBody(r *http.Request, body io.ReadSeeker, service, regi
 	}
 
 	return ctx.SignedHeaderVals, nil
+}
+
+func (ctx *signingCtx) sanitizeHostForHeader() {
+	request.SanitizeHostForHeader(ctx.Request)
 }
 
 func (ctx *signingCtx) handlePresignRemoval() {

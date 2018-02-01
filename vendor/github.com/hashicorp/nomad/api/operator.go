@@ -32,6 +32,9 @@ type RaftServer struct {
 	// it's a non-voting server, which will be added in a future release of
 	// Nomad.
 	Voter bool
+
+	// RaftProtocol is the version of the Raft protocol spoken by this server.
+	RaftProtocol string
 }
 
 // RaftConfigration is returned when querying for the current Raft configuration.
@@ -73,9 +76,27 @@ func (op *Operator) RaftRemovePeerByAddress(address string, q *WriteOptions) err
 	}
 	r.setWriteOptions(q)
 
-	// TODO (alexdadgar) Currently we made address a query parameter. Once
-	// IDs are in place this will be DELETE /v1/operator/raft/peer/<id>.
 	r.params.Set("address", address)
+
+	_, resp, err := requireOK(op.c.doRequest(r))
+	if err != nil {
+		return err
+	}
+
+	resp.Body.Close()
+	return nil
+}
+
+// RaftRemovePeerByID is used to kick a stale peer (one that is in the Raft
+// quorum but no longer known to Serf or the catalog) by ID.
+func (op *Operator) RaftRemovePeerByID(id string, q *WriteOptions) error {
+	r, err := op.c.newRequest("DELETE", "/v1/operator/raft/peer")
+	if err != nil {
+		return err
+	}
+	r.setWriteOptions(q)
+
+	r.params.Set("id", id)
 
 	_, resp, err := requireOK(op.c.doRequest(r))
 	if err != nil {

@@ -30,7 +30,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/transport"
@@ -51,6 +50,8 @@ type StreamDesc struct {
 }
 
 // Stream defines the common interface a client or server stream has to satisfy.
+//
+// All errors returned from Stream are compatible with the status package.
 type Stream interface {
 	// Context returns the context for this stream.
 	Context() context.Context
@@ -124,7 +125,7 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		c.failFast = !*mc.WaitForReady
 	}
 
-	if mc.Timeout != nil {
+	if mc.Timeout != nil && *mc.Timeout >= 0 {
 		ctx, cancel = context.WithTimeout(ctx, *mc.Timeout)
 		defer func() {
 			if err != nil {
@@ -141,6 +142,9 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 	}
 	c.maxSendMessageSize = getMaxSize(mc.MaxReqSize, c.maxSendMessageSize, defaultClientMaxSendMessageSize)
 	c.maxReceiveMessageSize = getMaxSize(mc.MaxRespSize, c.maxReceiveMessageSize, defaultClientMaxReceiveMessageSize)
+	if err := setCallInfoCodec(c); err != nil {
+		return nil, err
+	}
 
 	callHdr := &transport.CallHdr{
 		Host:   cc.authority,
@@ -149,12 +153,27 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		// so we don't flush the header.
 		// If it's client streaming, the user may never send a request or send it any
 		// time soon, so we ask the transport to flush the header.
-		Flush: desc.ClientStreams,
+		Flush:          desc.ClientStreams,
+		ContentSubtype: c.contentSubtype,
 	}
-	if c.compressorType != "" {
-		callHdr.SendCompress = c.compressorType
+
+	// Set our outgoing compression according to the UseCompressor CallOption, if
+	// set.  In that case, also find the compressor from the encoding package.
+	// Otherwise, use the compressor configured by the WithCompressor DialOption,
+	// if set.
+	var cp Compressor
+	var comp encoding.Compressor
+	if ct := c.compressorType; ct != "" {
+		callHdr.SendCompress = ct
+		if ct != encoding.Identity {
+			comp = encoding.GetCompressor(ct)
+			if comp == nil {
+				return nil, status.Errorf(codes.Internal, "grpc: Compressor is not installed for requested grpc-encoding %q", ct)
+			}
+		}
 	} else if cc.dopts.cp != nil {
 		callHdr.SendCompress = cc.dopts.cp.Type()
+		cp = cc.dopts.cp
 	}
 	if c.creds != nil {
 		callHdr.Creds = c.creds
@@ -218,7 +237,14 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		s, err = t.NewStream(ctx, callHdr)
 		if err != nil {
 			if done != nil {
-				done(balancer.DoneInfo{Err: err})
+				doneInfo := balancer.DoneInfo{Err: err}
+				if _, ok := err.(transport.ConnectionError); ok {
+					// If error is connection error, transport was sending data on wire,
+					// and we are not sure if anything has been sent on wire.
+					// If error is not connection error, we are sure nothing has been sent.
+					doneInfo.BytesSent = true
+				}
+				done(doneInfo)
 				done = nil
 			}
 			// In the event of any error from NewStream, we never attempted to write
@@ -232,18 +258,15 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		break
 	}
 
-	// Set callInfo.peer object from stream's context.
-	if peer, ok := peer.FromContext(s.Context()); ok {
-		c.peer = peer
-	}
+	c.stream = s
 	cs := &clientStream{
 		opts:   opts,
 		c:      c,
 		desc:   desc,
-		codec:  cc.dopts.codec,
-		cpType: c.compressorType,
-		cp:     cc.dopts.cp,
+		codec:  c.codec,
+		cp:     cp,
 		dc:     cc.dopts.dc,
+		comp:   comp,
 		cancel: cancel,
 
 		done: done,
@@ -285,16 +308,20 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 
 // clientStream implements a client side Stream.
 type clientStream struct {
-	opts   []CallOption
-	c      *callInfo
-	t      transport.ClientTransport
-	s      *transport.Stream
-	p      *parser
-	desc   *StreamDesc
-	codec  Codec
-	cpType string
-	cp     Compressor
-	dc     Decompressor
+	opts []CallOption
+	c    *callInfo
+	t    transport.ClientTransport
+	s    *transport.Stream
+	p    *parser
+	desc *StreamDesc
+
+	codec     baseCodec
+	cp        Compressor
+	dc        Decompressor
+	comp      encoding.Compressor
+	decomp    encoding.Compressor
+	decompSet bool
+
 	cancel context.CancelFunc
 
 	tracing bool // set to EnableTracing when the clientStream is created.
@@ -370,18 +397,15 @@ func (cs *clientStream) SendMsg(m interface{}) (err error) {
 			Client: true,
 		}
 	}
-	if cs.cpType != "" && encoding.GetCompressor(cs.cpType) == nil {
-		return Errorf(codes.Internal, "grpc: Compressor is not installed for grpc-encoding %q", cs.cpType)
-	}
-	hdr, data, err := encode(cs.codec, m, cs.cp, outPayload, encoding.GetCompressor(cs.cpType))
+	hdr, data, err := encode(cs.codec, m, cs.cp, outPayload, cs.comp)
 	if err != nil {
 		return err
 	}
 	if cs.c.maxSendMessageSize == nil {
-		return Errorf(codes.Internal, "callInfo maxSendMessageSize field uninitialized(nil)")
+		return status.Errorf(codes.Internal, "callInfo maxSendMessageSize field uninitialized(nil)")
 	}
 	if len(data) > *cs.c.maxSendMessageSize {
-		return Errorf(codes.ResourceExhausted, "trying to send message larger than max (%d vs. %d)", len(data), *cs.c.maxSendMessageSize)
+		return status.Errorf(codes.ResourceExhausted, "trying to send message larger than max (%d vs. %d)", len(data), *cs.c.maxSendMessageSize)
 	}
 	err = cs.t.Write(cs.s, hdr, data, &transport.Options{Last: false})
 	if err == nil && outPayload != nil {
@@ -399,9 +423,25 @@ func (cs *clientStream) RecvMsg(m interface{}) (err error) {
 		}
 	}
 	if cs.c.maxReceiveMessageSize == nil {
-		return Errorf(codes.Internal, "callInfo maxReceiveMessageSize field uninitialized(nil)")
+		return status.Errorf(codes.Internal, "callInfo maxReceiveMessageSize field uninitialized(nil)")
 	}
-	err = recv(cs.p, cs.codec, cs.s, cs.dc, m, *cs.c.maxReceiveMessageSize, inPayload, encoding.GetCompressor(cs.cpType))
+	if !cs.decompSet {
+		// Block until we receive headers containing received message encoding.
+		if ct := cs.s.RecvCompress(); ct != "" && ct != encoding.Identity {
+			if cs.dc == nil || cs.dc.Type() != ct {
+				// No configured decompressor, or it does not match the incoming
+				// message encoding; attempt to find a registered compressor that does.
+				cs.dc = nil
+				cs.decomp = encoding.GetCompressor(ct)
+			}
+		} else {
+			// No compression is used; disable our decompressor.
+			cs.dc = nil
+		}
+		// Only initialize this state once per stream.
+		cs.decompSet = true
+	}
+	err = recv(cs.p, cs.codec, cs.s, cs.dc, m, *cs.c.maxReceiveMessageSize, inPayload, cs.decomp)
 	defer func() {
 		// err != nil indicates the termination of the stream.
 		if err != nil {
@@ -425,9 +465,9 @@ func (cs *clientStream) RecvMsg(m interface{}) (err error) {
 		// Special handling for client streaming rpc.
 		// This recv expects EOF or errors, so we don't collect inPayload.
 		if cs.c.maxReceiveMessageSize == nil {
-			return Errorf(codes.Internal, "callInfo maxReceiveMessageSize field uninitialized(nil)")
+			return status.Errorf(codes.Internal, "callInfo maxReceiveMessageSize field uninitialized(nil)")
 		}
-		err = recv(cs.p, cs.codec, cs.s, cs.dc, m, *cs.c.maxReceiveMessageSize, nil, encoding.GetCompressor(cs.cpType))
+		err = recv(cs.p, cs.codec, cs.s, cs.dc, m, *cs.c.maxReceiveMessageSize, nil, cs.decomp)
 		cs.closeTransportStream(err)
 		if err == nil {
 			return toRPCErr(errors.New("grpc: client streaming protocol violation: get <nil>, want <EOF>"))
@@ -498,11 +538,11 @@ func (cs *clientStream) finish(err error) {
 		o.after(cs.c)
 	}
 	if cs.done != nil {
-		updateRPCInfoInContext(cs.s.Context(), rpcInfo{
-			bytesSent:     true,
-			bytesReceived: cs.s.BytesReceived(),
+		cs.done(balancer.DoneInfo{
+			Err:           err,
+			BytesSent:     true,
+			BytesReceived: cs.s.BytesReceived(),
 		})
-		cs.done(balancer.DoneInfo{Err: err})
 		cs.done = nil
 	}
 	if cs.statsHandler != nil {
@@ -552,13 +592,16 @@ type ServerStream interface {
 
 // serverStream implements a server side Stream.
 type serverStream struct {
-	t                     transport.ServerTransport
-	s                     *transport.Stream
-	p                     *parser
-	codec                 Codec
-	cpType                string
-	cp                    Compressor
-	dc                    Decompressor
+	t     transport.ServerTransport
+	s     *transport.Stream
+	p     *parser
+	codec baseCodec
+
+	cp     Compressor
+	dc     Decompressor
+	comp   encoding.Compressor
+	decomp encoding.Compressor
+
 	maxReceiveMessageSize int
 	maxSendMessageSize    int
 	trInfo                *traceInfo
@@ -614,17 +657,12 @@ func (ss *serverStream) SendMsg(m interface{}) (err error) {
 	if ss.statsHandler != nil {
 		outPayload = &stats.OutPayload{}
 	}
-	if ss.cpType != "" {
-		if encoding.GetCompressor(ss.cpType) == nil && (ss.cp == nil || ss.cp != nil && ss.cp.Type() != ss.cpType) {
-			return Errorf(codes.Internal, "grpc: Compressor is not installed for grpc-encoding %q", ss.cpType)
-		}
-	}
-	hdr, data, err := encode(ss.codec, m, ss.cp, outPayload, encoding.GetCompressor(ss.cpType))
+	hdr, data, err := encode(ss.codec, m, ss.cp, outPayload, ss.comp)
 	if err != nil {
 		return err
 	}
 	if len(data) > ss.maxSendMessageSize {
-		return Errorf(codes.ResourceExhausted, "trying to send message larger than max (%d vs. %d)", len(data), ss.maxSendMessageSize)
+		return status.Errorf(codes.ResourceExhausted, "trying to send message larger than max (%d vs. %d)", len(data), ss.maxSendMessageSize)
 	}
 	if err := ss.t.Write(ss.s, hdr, data, &transport.Options{Last: false}); err != nil {
 		return toRPCErr(err)
@@ -659,12 +697,12 @@ func (ss *serverStream) RecvMsg(m interface{}) (err error) {
 	if ss.statsHandler != nil {
 		inPayload = &stats.InPayload{}
 	}
-	if err := recv(ss.p, ss.codec, ss.s, ss.dc, m, ss.maxReceiveMessageSize, inPayload, encoding.GetCompressor(ss.cpType)); err != nil {
+	if err := recv(ss.p, ss.codec, ss.s, ss.dc, m, ss.maxReceiveMessageSize, inPayload, ss.decomp); err != nil {
 		if err == io.EOF {
 			return err
 		}
 		if err == io.ErrUnexpectedEOF {
-			err = Errorf(codes.Internal, io.ErrUnexpectedEOF.Error())
+			err = status.Errorf(codes.Internal, io.ErrUnexpectedEOF.Error())
 		}
 		return toRPCErr(err)
 	}

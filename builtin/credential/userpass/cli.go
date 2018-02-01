@@ -30,9 +30,9 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, fmt.Errorf("'username' must be specified")
 	}
 	if data.Password == "" {
-		fmt.Printf("Password (will be hidden): ")
+		fmt.Fprintf(os.Stderr, "Password (will be hidden): ")
 		password, err := pwd.Read(os.Stdin)
-		fmt.Println()
+		fmt.Fprintf(os.Stderr, "\n")
 		if err != nil {
 			return nil, err
 		}

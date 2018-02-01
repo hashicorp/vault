@@ -51,8 +51,8 @@ func pathUsers(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
-	entry, err := s.Get("user/" + n)
+func (b *backend) User(ctx context.Context, s logical.Storage, n string) (*UserEntry, error) {
+	entry, err := s.Get(ctx, "user/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *f
 		return logical.ErrorResponse("Error empty name"), nil
 	}
 
-	err := req.Storage.Delete("user/" + name)
+	err := req.Storage.Delete(ctx, "user/"+name)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("Error empty name"), nil
 	}
 
-	user, err := b.User(req.Storage, name)
+	user, err := b.User(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -129,7 +129,7 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	users, err := req.Storage.List("user/")
+	users, err := req.Storage.List(ctx, "user/")
 	if err != nil {
 		return nil, err
 	}

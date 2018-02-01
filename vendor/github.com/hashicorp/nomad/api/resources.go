@@ -12,28 +12,47 @@ type Resources struct {
 	Networks []*NetworkResource
 }
 
+// Canonicalize will supply missing values in the cases
+// where they are not provided.
 func (r *Resources) Canonicalize() {
+	defaultResources := DefaultResources()
 	if r.CPU == nil {
-		r.CPU = helper.IntToPtr(100)
+		r.CPU = defaultResources.CPU
 	}
 	if r.MemoryMB == nil {
-		r.MemoryMB = helper.IntToPtr(10)
+		r.MemoryMB = defaultResources.MemoryMB
 	}
 	if r.IOPS == nil {
-		r.IOPS = helper.IntToPtr(0)
+		r.IOPS = defaultResources.IOPS
 	}
 	for _, n := range r.Networks {
 		n.Canonicalize()
 	}
 }
 
-func MinResources() *Resources {
+// DefaultResources is a small resources object that contains the
+// default resources requests that we will provide to an object.
+// ---  THIS FUNCTION IS REPLICATED IN nomad/structs/structs.go
+// and should be kept in sync.
+func DefaultResources() *Resources {
 	return &Resources{
 		CPU:      helper.IntToPtr(100),
+		MemoryMB: helper.IntToPtr(300),
+		IOPS:     helper.IntToPtr(0),
+	}
+}
+
+// MinResources is a small resources object that contains the
+// absolute minimum resources that we will provide to an object.
+// This should not be confused with the defaults which are
+// provided in DefaultResources() ---  THIS LOGIC IS REPLICATED
+// IN nomad/structs/structs.go and should be kept in sync.
+func MinResources() *Resources {
+	return &Resources{
+		CPU:      helper.IntToPtr(20),
 		MemoryMB: helper.IntToPtr(10),
 		IOPS:     helper.IntToPtr(0),
 	}
-
 }
 
 // Merge merges this resource with another resource.

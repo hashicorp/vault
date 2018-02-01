@@ -45,22 +45,22 @@ expiration, before it is removed from the backend storage.`,
 }
 
 func (b *backend) pathConfigTidyIdentityWhitelistExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.lockedConfigTidyIdentities(req.Storage)
+	entry, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-func (b *backend) lockedConfigTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
+func (b *backend) lockedConfigTidyIdentities(ctx context.Context, s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.nonLockedConfigTidyIdentities(s)
+	return b.nonLockedConfigTidyIdentities(ctx, s)
 }
 
-func (b *backend) nonLockedConfigTidyIdentities(s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
-	entry, err := s.Get(identityWhitelistConfigPath)
+func (b *backend) nonLockedConfigTidyIdentities(ctx context.Context, s logical.Storage) (*tidyWhitelistIdentityConfig, error) {
+	entry, err := s.Get(ctx, identityWhitelistConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(ctx context.Contex
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.nonLockedConfigTidyIdentities(req.Storage)
+	configEntry, err := b.nonLockedConfigTidyIdentities(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(ctx context.Contex
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -114,7 +114,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistCreateUpdate(ctx context.Contex
 }
 
 func (b *backend) pathConfigTidyIdentityWhitelistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := b.lockedConfigTidyIdentities(req.Storage)
+	clientConfig, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (b *backend) pathConfigTidyIdentityWhitelistDelete(ctx context.Context, req
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return nil, req.Storage.Delete(identityWhitelistConfigPath)
+	return nil, req.Storage.Delete(ctx, identityWhitelistConfigPath)
 }
 
 type tidyWhitelistIdentityConfig struct {

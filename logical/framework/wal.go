@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"time"
@@ -35,7 +36,7 @@ type WALEntry struct {
 // This returns a unique ID that can be used to reference this WAL data.
 // WAL data cannot be modified. You can only add to the WAL and commit existing
 // WAL entries.
-func PutWAL(s logical.Storage, kind string, data interface{}) (string, error) {
+func PutWAL(ctx context.Context, s logical.Storage, kind string, data interface{}) (string, error) {
 	value, err := json.Marshal(&WALEntry{
 		Kind:      kind,
 		Data:      data,
@@ -50,7 +51,7 @@ func PutWAL(s logical.Storage, kind string, data interface{}) (string, error) {
 		return "", err
 	}
 
-	return id, s.Put(&logical.StorageEntry{
+	return id, s.Put(ctx, &logical.StorageEntry{
 		Key:   WALPrefix + id,
 		Value: value,
 	})
@@ -60,8 +61,8 @@ func PutWAL(s logical.Storage, kind string, data interface{}) (string, error) {
 // then nil value is returned.
 //
 // The kind, value, and error are returned.
-func GetWAL(s logical.Storage, id string) (*WALEntry, error) {
-	entry, err := s.Get(WALPrefix + id)
+func GetWAL(ctx context.Context, s logical.Storage, id string) (*WALEntry, error) {
+	entry, err := s.Get(ctx, WALPrefix+id)
 	if err != nil {
 		return nil, err
 	}
@@ -81,13 +82,13 @@ func GetWAL(s logical.Storage, id string) (*WALEntry, error) {
 // DeleteWAL commits the WAL entry with the given ID. Once committed,
 // it is assumed that the operation was a success and doesn't need to
 // be rolled back.
-func DeleteWAL(s logical.Storage, id string) error {
-	return s.Delete(WALPrefix + id)
+func DeleteWAL(ctx context.Context, s logical.Storage, id string) error {
+	return s.Delete(ctx, WALPrefix+id)
 }
 
 // ListWAL lists all the entries in the WAL.
-func ListWAL(s logical.Storage) ([]string, error) {
-	keys, err := s.List(WALPrefix)
+func ListWAL(ctx context.Context, s logical.Storage) ([]string, error) {
+	keys, err := s.List(ctx, WALPrefix)
 	if err != nil {
 		return nil, err
 	}

@@ -47,8 +47,8 @@ func pathGroups(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, error) {
-	entry, err := s.Get("group/" + n)
+func (b *backend) Group(ctx context.Context, s logical.Storage, n string) (*GroupEntry, error) {
+	entry, err := s.Get(ctx, "group/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, error) {
 }
 
 func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("group/" + d.Get("name").(string))
+	err := req.Storage.Delete(ctx, "group/"+d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *
 }
 
 func (b *backend) pathGroupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	group, err := b.Group(req.Storage, d.Get("name").(string))
+	group, err := b.Group(ctx, req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -105,7 +105,7 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groups, err := req.Storage.List("group/")
+	groups, err := req.Storage.List(ctx, "group/")
 	if err != nil {
 		return nil, err
 	}

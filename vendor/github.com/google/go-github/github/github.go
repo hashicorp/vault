@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	libraryVersion = "14"
+	libraryVersion = "15"
 	defaultBaseURL = "https://api.github.com/"
 	uploadBaseURL  = "https://uploads.github.com/"
 	userAgent      = "go-github/" + libraryVersion
@@ -103,8 +103,17 @@ const (
 	// https://developer.github.com/changes/2017-07-26-team-review-request-thor-preview/
 	mediaTypeTeamReviewPreview = "application/vnd.github.thor-preview+json"
 
+	// https://developer.github.com/v3/apps/marketplace/
+	mediaTypeMarketplacePreview = "application/vnd.github.valkyrie-preview+json"
+
 	// https://developer.github.com/changes/2017-08-30-preview-nested-teams/
 	mediaTypeNestedTeamsPreview = "application/vnd.github.hellcat-preview+json"
+
+	// https://developer.github.com/changes/2017-11-09-repository-transfer-api-preview/
+	mediaTypeRepositoryTransferPreview = "application/vnd.github.nightshade-preview+json"
+
+	// https://developer.github.com/changes/2017-12-19-graphql-node-id/
+	mediaTypeGraphQLNodeIDPreview = "application/vnd.github.jean-grey-preview+json"
 )
 
 // A Client manages communication with the GitHub API.
@@ -137,15 +146,16 @@ type Client struct {
 	Git            *GitService
 	Gitignores     *GitignoresService
 	Issues         *IssuesService
+	Licenses       *LicensesService
+	Marketplace    *MarketplaceService
+	Migrations     *MigrationService
 	Organizations  *OrganizationsService
 	Projects       *ProjectsService
 	PullRequests   *PullRequestsService
+	Reactions      *ReactionsService
 	Repositories   *RepositoriesService
 	Search         *SearchService
 	Users          *UsersService
-	Licenses       *LicensesService
-	Migrations     *MigrationService
-	Reactions      *ReactionsService
 }
 
 type service struct {
@@ -227,6 +237,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Gitignores = (*GitignoresService)(&c.common)
 	c.Issues = (*IssuesService)(&c.common)
 	c.Licenses = (*LicensesService)(&c.common)
+	c.Marketplace = &MarketplaceService{client: c}
 	c.Migrations = (*MigrationService)(&c.common)
 	c.Organizations = (*OrganizationsService)(&c.common)
 	c.Projects = (*ProjectsService)(&c.common)
@@ -590,7 +601,7 @@ func (*AcceptedError) Error() string {
 }
 
 // AbuseRateLimitError occurs when GitHub returns 403 Forbidden response with the
-// "documentation_url" field value equal to "https://developer.github.com/v3#abuse-rate-limits".
+// "documentation_url" field value equal to "https://developer.github.com/v3/#abuse-rate-limits".
 type AbuseRateLimitError struct {
 	Response *http.Response // HTTP response that caused this error
 	Message  string         `json:"message"` // error message
@@ -682,7 +693,7 @@ func CheckResponse(r *http.Response) error {
 			Response: errorResponse.Response,
 			Message:  errorResponse.Message,
 		}
-	case r.StatusCode == http.StatusForbidden && errorResponse.DocumentationURL == "https://developer.github.com/v3#abuse-rate-limits":
+	case r.StatusCode == http.StatusForbidden && errorResponse.DocumentationURL == "https://developer.github.com/v3/#abuse-rate-limits":
 		abuseRateLimitError := &AbuseRateLimitError{
 			Response: errorResponse.Response,
 			Message:  errorResponse.Message,
@@ -848,14 +859,21 @@ func (t *UnauthenticatedRateLimitedTransport) RoundTrip(req *http.Request) (*htt
 	// To set extra querystring params, we must make a copy of the Request so
 	// that we don't modify the Request we were given. This is required by the
 	// specification of http.RoundTripper.
-	req = cloneRequest(req)
-	q := req.URL.Query()
+	//
+	// Since we are going to modify only req.URL here, we only need a deep copy
+	// of req.URL.
+	req2 := new(http.Request)
+	*req2 = *req
+	req2.URL = new(url.URL)
+	*req2.URL = *req.URL
+
+	q := req2.URL.Query()
 	q.Set("client_id", t.ClientID)
 	q.Set("client_secret", t.ClientSecret)
-	req.URL.RawQuery = q.Encode()
+	req2.URL.RawQuery = q.Encode()
 
 	// Make the HTTP request.
-	return t.transport().RoundTrip(req)
+	return t.transport().RoundTrip(req2)
 }
 
 // Client returns an *http.Client that makes requests which are subject to the
@@ -887,12 +905,24 @@ type BasicAuthTransport struct {
 
 // RoundTrip implements the RoundTripper interface.
 func (t *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req = cloneRequest(req) // per RoundTrip contract
-	req.SetBasicAuth(t.Username, t.Password)
-	if t.OTP != "" {
-		req.Header.Set(headerOTP, t.OTP)
+	// To set extra headers, we must make a copy of the Request so
+	// that we don't modify the Request we were given. This is required by the
+	// specification of http.RoundTripper.
+	//
+	// Since we are going to modify only req.Header here, we only need a deep copy
+	// of req.Header.
+	req2 := new(http.Request)
+	*req2 = *req
+	req2.Header = make(http.Header, len(req.Header))
+	for k, s := range req.Header {
+		req2.Header[k] = append([]string(nil), s...)
 	}
-	return t.transport().RoundTrip(req)
+
+	req2.SetBasicAuth(t.Username, t.Password)
+	if t.OTP != "" {
+		req2.Header.Set(headerOTP, t.OTP)
+	}
+	return t.transport().RoundTrip(req2)
 }
 
 // Client returns an *http.Client that makes requests that are authenticated
@@ -906,20 +936,6 @@ func (t *BasicAuthTransport) transport() http.RoundTripper {
 		return t.Transport
 	}
 	return http.DefaultTransport
-}
-
-// cloneRequest returns a clone of the provided *http.Request. The clone is a
-// shallow copy of the struct and its Header map.
-func cloneRequest(r *http.Request) *http.Request {
-	// shallow copy of the struct
-	r2 := new(http.Request)
-	*r2 = *r
-	// deep copy of the Header
-	r2.Header = make(http.Header, len(r.Header))
-	for k, s := range r.Header {
-		r2.Header[k] = append([]string(nil), s...)
-	}
-	return r2
 }
 
 // formatRateReset formats d to look like "[rate reset in 2s]" or
@@ -954,6 +970,10 @@ func Bool(v bool) *bool { return &v }
 // Int is a helper routine that allocates a new int value
 // to store v and returns a pointer to it.
 func Int(v int) *int { return &v }
+
+// Int64 is a helper routine that allocates a new int64 value
+// to store v and returns a pointer to it.
+func Int64(v int64) *int64 { return &v }
 
 // String is a helper routine that allocates a new string value
 // to store v and returns a pointer to it.

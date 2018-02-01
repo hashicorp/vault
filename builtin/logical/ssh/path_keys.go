@@ -36,8 +36,8 @@ func pathKeys(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) getKey(s logical.Storage, n string) (*sshHostKey, error) {
-	entry, err := s.Get("keys/" + n)
+func (b *backend) getKey(ctx context.Context, s logical.Storage, n string) (*sshHostKey, error) {
+	entry, err := s.Get(ctx, "keys/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (b *backend) getKey(s logical.Storage, n string) (*sshHostKey, error) {
 func (b *backend) pathKeysDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyName := d.Get("key_name").(string)
 	keyPath := fmt.Sprintf("keys/%s", keyName)
-	err := req.Storage.Delete(keyPath)
+	err := req.Storage.Delete(ctx, keyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (b *backend) pathKeysWrite(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 	return nil, nil

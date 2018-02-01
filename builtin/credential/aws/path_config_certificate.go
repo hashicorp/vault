@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -131,7 +130,7 @@ func (b *backend) pathConfigCertificateExistenceCheck(ctx context.Context, req *
 		return false, fmt.Errorf("missing cert_name")
 	}
 
-	entry, err := b.lockedAWSPublicCertificateEntry(req.Storage, certName)
+	entry, err := b.lockedAWSPublicCertificateEntry(ctx, req.Storage, certName)
 	if err != nil {
 		return false, err
 	}
@@ -143,7 +142,7 @@ func (b *backend) pathCertificatesList(ctx context.Context, req *logical.Request
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	certs, err := req.Storage.List("config/certificate/")
+	certs, err := req.Storage.List(ctx, "config/certificate/")
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +173,7 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 // the PKCS7 signatures of the instance identity documents. This method will
 // append the certificates registered using `config/certificate/<cert_name>`
 // endpoint, along with the default certificate in the backend.
-func (b *backend) awsPublicCertificates(s logical.Storage, isPkcs bool) ([]*x509.Certificate, error) {
+func (b *backend) awsPublicCertificates(ctx context.Context, s logical.Storage, isPkcs bool) ([]*x509.Certificate, error) {
 	// Lock at beginning and use internal method so that we are consistent as
 	// we iterate through
 	b.configMutex.RLock()
@@ -195,14 +194,14 @@ func (b *backend) awsPublicCertificates(s logical.Storage, isPkcs bool) ([]*x509
 	certs = append(certs, decodedCert)
 
 	// Get the list of all the registered certificates
-	registeredCerts, err := s.List("config/certificate/")
+	registeredCerts, err := s.List(ctx, "config/certificate/")
 	if err != nil {
 		return nil, err
 	}
 
 	// Iterate through each certificate, parse and append it to a slice
 	for _, cert := range registeredCerts {
-		certEntry, err := b.nonLockedAWSPublicCertificateEntry(s, cert)
+		certEntry, err := b.nonLockedAWSPublicCertificateEntry(ctx, s, cert)
 		if err != nil {
 			return nil, err
 		}
@@ -226,7 +225,7 @@ func (b *backend) awsPublicCertificates(s logical.Storage, isPkcs bool) ([]*x509
 // lockedSetAWSPublicCertificateEntry is used to store the AWS public key in
 // the storage. This method acquires lock before creating or updating a storage
 // entry.
-func (b *backend) lockedSetAWSPublicCertificateEntry(s logical.Storage, certName string, certEntry *awsPublicCert) error {
+func (b *backend) lockedSetAWSPublicCertificateEntry(ctx context.Context, s logical.Storage, certName string, certEntry *awsPublicCert) error {
 	if certName == "" {
 		return fmt.Errorf("missing certificate name")
 	}
@@ -238,13 +237,13 @@ func (b *backend) lockedSetAWSPublicCertificateEntry(s logical.Storage, certName
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return b.nonLockedSetAWSPublicCertificateEntry(s, certName, certEntry)
+	return b.nonLockedSetAWSPublicCertificateEntry(ctx, s, certName, certEntry)
 }
 
 // nonLockedSetAWSPublicCertificateEntry is used to store the AWS public key in
 // the storage. This method does not acquire lock before reading the storage.
 // If locking is desired, use lockedSetAWSPublicCertificateEntry instead.
-func (b *backend) nonLockedSetAWSPublicCertificateEntry(s logical.Storage, certName string, certEntry *awsPublicCert) error {
+func (b *backend) nonLockedSetAWSPublicCertificateEntry(ctx context.Context, s logical.Storage, certName string, certEntry *awsPublicCert) error {
 	if certName == "" {
 		return fmt.Errorf("missing certificate name")
 	}
@@ -261,24 +260,24 @@ func (b *backend) nonLockedSetAWSPublicCertificateEntry(s logical.Storage, certN
 		return fmt.Errorf("failed to create storage entry for AWS public key certificate")
 	}
 
-	return s.Put(entry)
+	return s.Put(ctx, entry)
 }
 
 // lockedAWSPublicCertificateEntry is used to get the configured AWS Public Key
 // that is used to verify the PKCS#7 signature of the instance identity
 // document.
-func (b *backend) lockedAWSPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
+func (b *backend) lockedAWSPublicCertificateEntry(ctx context.Context, s logical.Storage, certName string) (*awsPublicCert, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.nonLockedAWSPublicCertificateEntry(s, certName)
+	return b.nonLockedAWSPublicCertificateEntry(ctx, s, certName)
 }
 
 // nonLockedAWSPublicCertificateEntry reads the certificate information from
 // the storage. This method does not acquire lock before reading the storage.
 // If locking is desired, use lockedAWSPublicCertificateEntry instead.
-func (b *backend) nonLockedAWSPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
-	entry, err := s.Get("config/certificate/" + certName)
+func (b *backend) nonLockedAWSPublicCertificateEntry(ctx context.Context, s logical.Storage, certName string) (*awsPublicCert, error) {
+	entry, err := s.Get(ctx, "config/certificate/"+certName)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +297,7 @@ func (b *backend) nonLockedAWSPublicCertificateEntry(s logical.Storage, certName
 	}
 
 	if persistNeeded {
-		if err := b.nonLockedSetAWSPublicCertificateEntry(s, certName, &certEntry); err != nil {
+		if err := b.nonLockedSetAWSPublicCertificateEntry(ctx, s, certName, &certEntry); err != nil {
 			return nil, err
 		}
 	}
@@ -318,7 +317,7 @@ func (b *backend) pathConfigCertificateDelete(ctx context.Context, req *logical.
 		return logical.ErrorResponse("missing cert_name"), nil
 	}
 
-	return nil, req.Storage.Delete("config/certificate/" + certName)
+	return nil, req.Storage.Delete(ctx, "config/certificate/"+certName)
 }
 
 // pathConfigCertificateRead is used to view the configured AWS Public Key that
@@ -329,7 +328,7 @@ func (b *backend) pathConfigCertificateRead(ctx context.Context, req *logical.Re
 		return logical.ErrorResponse("missing cert_name"), nil
 	}
 
-	certificateEntry, err := b.lockedAWSPublicCertificateEntry(req.Storage, certName)
+	certificateEntry, err := b.lockedAWSPublicCertificateEntry(ctx, req.Storage, certName)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +337,10 @@ func (b *backend) pathConfigCertificateRead(ctx context.Context, req *logical.Re
 	}
 
 	return &logical.Response{
-		Data: structs.New(certificateEntry).Map(),
+		Data: map[string]interface{}{
+			"aws_public_cert": certificateEntry.AWSPublicCert,
+			"type":            certificateEntry.Type,
+		},
 	}, nil
 }
 
@@ -354,7 +356,7 @@ func (b *backend) pathConfigCertificateCreateUpdate(ctx context.Context, req *lo
 	defer b.configMutex.Unlock()
 
 	// Check if there is already a certificate entry registered
-	certEntry, err := b.nonLockedAWSPublicCertificateEntry(req.Storage, certName)
+	certEntry, err := b.nonLockedAWSPublicCertificateEntry(ctx, req.Storage, certName)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +408,7 @@ func (b *backend) pathConfigCertificateCreateUpdate(ctx context.Context, req *lo
 	}
 
 	// If none of the checks fail, save the provided certificate
-	if err := b.nonLockedSetAWSPublicCertificateEntry(req.Storage, certName, certEntry); err != nil {
+	if err := b.nonLockedSetAWSPublicCertificateEntry(ctx, req.Storage, certName, certEntry); err != nil {
 		return nil, err
 	}
 

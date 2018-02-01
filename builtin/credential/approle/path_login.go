@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -50,7 +51,7 @@ func (b *backend) pathLoginUpdateAliasLookahead(ctx context.Context, req *logica
 // Returns the Auth object indicating the authentication and authorization information
 // if the credentials provided are validated by the backend.
 func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, roleName, metadata, _, err := b.validateCredentials(req, data)
+	role, roleName, metadata, _, err := b.validateCredentials(ctx, req, data)
 	if err != nil || role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to validate credentials: %v", err)), nil
 	}
@@ -92,7 +93,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	defer lock.RUnlock()
 
 	// Ensure that the Role still exists.
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate role %s during renewal:%s", roleName, err)
 	}
@@ -100,12 +101,17 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 		return nil, fmt.Errorf("role %s does not exist during renewal", roleName)
 	}
 
-	resp, err := framework.LeaseExtend(role.TokenTTL, role.TokenMaxTTL, b.System())(ctx, req, data)
-	if err != nil {
-		return nil, err
+	// If a period is provided, set that as part of resp.Auth.Period and return a
+	// response immediately. Let expiration manager handle renewal from there on.
+	if role.Period > time.Duration(0) {
+		resp := &logical.Response{
+			Auth: req.Auth,
+		}
+		resp.Auth.Period = role.Period
+		return resp, nil
 	}
-	resp.Auth.Period = role.Period
-	return resp, nil
+
+	return framework.LeaseExtend(role.TokenTTL, role.TokenMaxTTL, b.System())(ctx, req, data)
 }
 
 const pathLoginHelpSys = "Issue a token based on the credentials supplied"

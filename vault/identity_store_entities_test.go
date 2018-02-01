@@ -337,7 +337,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	ghSysview := c.mountEntrySysView(meGH)
 
 	// Create new github auth credential backend
-	ghAuth, err := c.newCredentialBackend(meGH.Type, ghSysview, ghView, nil)
+	ghAuth, err := c.newCredentialBackend(context.Background(), meGH.Type, ghSysview, ghView, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

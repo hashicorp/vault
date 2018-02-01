@@ -26,9 +26,9 @@ type Database interface {
 
 // PluginFactory is used to build plugin database types. It wraps the database
 // object in a logging and metrics middleware.
-func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
+func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPlugin(pluginName)
+	pluginRunner, err := sys.LookupPlugin(ctx, pluginName)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 
 	} else {
 		// create a DatabasePluginClient instance
-		db, err = newPluginClient(sys, pluginRunner, logger)
+		db, err = newPluginClient(ctx, sys, pluginRunner, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -103,6 +103,9 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
+var _ plugin.Plugin = &DatabasePlugin{}
+var _ plugin.GRPCPlugin = &DatabasePlugin{}
+
 // DatabasePlugin implements go-plugin's Plugin interface. It has methods for
 // retrieving a server and a client instance of the plugin.
 type DatabasePlugin struct {
@@ -117,14 +120,15 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 	return &databasePluginRPCClient{client: c}, nil
 }
 
-func (d DatabasePlugin) GRPCServer(s *grpc.Server) error {
+func (d DatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
 	RegisterDatabaseServer(s, &gRPCServer{impl: d.impl})
 	return nil
 }
 
-func (DatabasePlugin) GRPCClient(c *grpc.ClientConn) (interface{}, error) {
+func (DatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &gRPCClient{
 		client:     NewDatabaseClient(c),
 		clientConn: c,
+		doneCtx:    doneCtx,
 	}, nil
 }

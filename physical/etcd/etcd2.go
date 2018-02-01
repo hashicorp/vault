@@ -55,6 +55,11 @@ type Etcd2Backend struct {
 	haEnabled  bool
 }
 
+// Verify Etcd2Backend satisfies the correct interfaces
+var _ physical.Backend = (*Etcd2Backend)(nil)
+var _ physical.HABackend = (*Etcd2Backend)(nil)
+var _ physical.Lock = (*Etcd2Lock)(nil)
+
 func newEtcd2Backend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	// Get the etcd path form the configuration.
 	path, ok := conf["path"]
@@ -170,7 +175,7 @@ func newEtcdV2Client(conf map[string]string) (client.Client, error) {
 }
 
 // Put is used to insert or update an entry.
-func (c *Etcd2Backend) Put(entry *physical.Entry) error {
+func (c *Etcd2Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"etcd", "put"}, time.Now())
 	value := base64.StdEncoding.EncodeToString(entry.Value)
 
@@ -182,7 +187,7 @@ func (c *Etcd2Backend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch an entry.
-func (c *Etcd2Backend) Get(key string) (*physical.Entry, error) {
+func (c *Etcd2Backend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"etcd", "get"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -214,7 +219,7 @@ func (c *Etcd2Backend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry.
-func (c *Etcd2Backend) Delete(key string) error {
+func (c *Etcd2Backend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"etcd", "delete"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -233,7 +238,7 @@ func (c *Etcd2Backend) Delete(key string) error {
 
 // List is used to list all the keys under a given prefix, up to the next
 // prefix.
-func (c *Etcd2Backend) List(prefix string) ([]string, error) {
+func (c *Etcd2Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"etcd", "list"}, time.Now())
 
 	// Set a directory path from the given prefix.

@@ -36,7 +36,7 @@ func pathConfigZeroAddress(b *backend) *framework.Path {
 }
 
 func (b *backend) pathConfigZeroAddressDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("config/zeroaddress")
+	err := req.Storage.Delete(ctx, "config/zeroaddress")
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (b *backend) pathConfigZeroAddressDelete(ctx context.Context, req *logical.
 }
 
 func (b *backend) pathConfigZeroAddressRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entry, err := b.getZeroAddressRoles(req.Storage)
+	entry, err := b.getZeroAddressRoles(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (b *backend) pathConfigZeroAddressWrite(ctx context.Context, req *logical.R
 	// Check if the roles listed actually exist in the backend
 	roles := strings.Split(roleNames, ",")
 	for _, item := range roles {
-		role, err := b.getRole(req.Storage, item)
+		role, err := b.getRole(ctx, req.Storage, item)
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +77,7 @@ func (b *backend) pathConfigZeroAddressWrite(ctx context.Context, req *logical.R
 		}
 	}
 
-	err := b.putZeroAddressRoles(req.Storage, roles)
+	err := b.putZeroAddressRoles(ctx, req.Storage, roles)
 	if err != nil {
 		return nil, err
 	}
@@ -86,22 +86,22 @@ func (b *backend) pathConfigZeroAddressWrite(ctx context.Context, req *logical.R
 }
 
 // Stores the given list of roles at zeroaddress endpoint
-func (b *backend) putZeroAddressRoles(s logical.Storage, roles []string) error {
+func (b *backend) putZeroAddressRoles(ctx context.Context, s logical.Storage, roles []string) error {
 	entry, err := logical.StorageEntryJSON("config/zeroaddress", &zeroAddressRoles{
 		Roles: roles,
 	})
 	if err != nil {
 		return err
 	}
-	if err := s.Put(entry); err != nil {
+	if err := s.Put(ctx, entry); err != nil {
 		return err
 	}
 	return nil
 }
 
 // Retrieves the list of roles from the zeroaddress endpoint.
-func (b *backend) getZeroAddressRoles(s logical.Storage) (*zeroAddressRoles, error) {
-	entry, err := s.Get("config/zeroaddress")
+func (b *backend) getZeroAddressRoles(ctx context.Context, s logical.Storage) (*zeroAddressRoles, error) {
+	entry, err := s.Get(ctx, "config/zeroaddress")
 	if err != nil {
 		return nil, err
 	}
@@ -118,8 +118,8 @@ func (b *backend) getZeroAddressRoles(s logical.Storage) (*zeroAddressRoles, err
 }
 
 // Removes a role from the list of roles present in config/zeroaddress path
-func (b *backend) removeZeroAddressRole(s logical.Storage, roleName string) error {
-	zeroAddressEntry, err := b.getZeroAddressRoles(s)
+func (b *backend) removeZeroAddressRole(ctx context.Context, s logical.Storage, roleName string) error {
+	zeroAddressEntry, err := b.getZeroAddressRoles(ctx, s)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (b *backend) removeZeroAddressRole(s logical.Storage, roleName string) erro
 		return err
 	}
 
-	return b.putZeroAddressRoles(s, zeroAddressEntry.Roles)
+	return b.putZeroAddressRoles(ctx, s, zeroAddressEntry.Roles)
 }
 
 // Removes a given role from the comma separated string
