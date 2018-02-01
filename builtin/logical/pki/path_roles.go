@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -114,9 +115,8 @@ Any valid IP is accepted.`,
 			},
 
 			"allowed_other_sans": &framework.FieldSchema{
-				Type: framework.TypeMap,
-				Description: `If set, a map of string OID to an array of allowed values.
-These values support globbing.`,
+				Type:        framework.TypeCommaStringSlice,
+				Description: `If set, an array of allowed other names to put in SANs. These values support globbing.`,
 			},
 
 			"server_flag": &framework.FieldSchema{
@@ -418,18 +418,13 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		NoStore:             data.Get("no_store").(bool),
 	}
 
-	otherSANsRaw, ok := data.GetOk("allowed_other_sans")
-	if ok {
-		otherSANsMap := otherSANsRaw.(map[string]interface{})
-		result := map[string][]string{}
-		for k, v := range otherSANsMap {
-			res, err := parseutil.ParseCommaStringSlice(v)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("error parsing allowed_other_sans: %v", err)), nil
-			}
-			result[k] = res
+	otherSANs := data.Get("allowed_other_sans").([]string)
+	if len(otherSANs) > 0 {
+		_, err := parseOtherSANs(otherSANs)
+		if err != nil {
+			return logical.ErrorResponse(errwrap.Wrapf("error parsing allowed_other_sans: {{err}}", err).Error()), nil
 		}
-		entry.AllowedOtherSANs = result
+		entry.AllowedOtherSANs = otherSANs
 	}
 
 	// no_store implies generate_lease := false
@@ -527,40 +522,40 @@ func parseKeyUsages(input []string) int {
 }
 
 type roleEntry struct {
-	LeaseMax              string              `json:"lease_max"`
-	Lease                 string              `json:"lease"`
-	MaxTTL                string              `json:"max_ttl" mapstructure:"max_ttl"`
-	TTL                   string              `json:"ttl" mapstructure:"ttl"`
-	AllowLocalhost        bool                `json:"allow_localhost" mapstructure:"allow_localhost"`
-	AllowedBaseDomain     string              `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
-	AllowedDomainsOld     string              `json:"allowed_domains,omit_empty"`
-	AllowedDomains        []string            `json:"allowed_domains_list" mapstructure:"allowed_domains"`
-	AllowBaseDomain       bool                `json:"allow_base_domain"`
-	AllowBareDomains      bool                `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
-	AllowTokenDisplayName bool                `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
-	AllowSubdomains       bool                `json:"allow_subdomains" mapstructure:"allow_subdomains"`
-	AllowGlobDomains      bool                `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
-	AllowAnyName          bool                `json:"allow_any_name" mapstructure:"allow_any_name"`
-	EnforceHostnames      bool                `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
-	AllowIPSANs           bool                `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
-	ServerFlag            bool                `json:"server_flag" mapstructure:"server_flag"`
-	ClientFlag            bool                `json:"client_flag" mapstructure:"client_flag"`
-	CodeSigningFlag       bool                `json:"code_signing_flag" mapstructure:"code_signing_flag"`
-	EmailProtectionFlag   bool                `json:"email_protection_flag" mapstructure:"email_protection_flag"`
-	UseCSRCommonName      bool                `json:"use_csr_common_name" mapstructure:"use_csr_common_name"`
-	UseCSRSANs            bool                `json:"use_csr_sans" mapstructure:"use_csr_sans"`
-	KeyType               string              `json:"key_type" mapstructure:"key_type"`
-	KeyBits               int                 `json:"key_bits" mapstructure:"key_bits"`
-	MaxPathLength         *int                `json:",omitempty" mapstructure:"max_path_length"`
-	KeyUsageOld           string              `json:"key_usage,omitempty"`
-	KeyUsage              []string            `json:"key_usage_list" mapstructure:"key_usage"`
-	OUOld                 string              `json:"ou,omitempty"`
-	OU                    []string            `json:"ou_list" mapstructure:"ou"`
-	OrganizationOld       string              `json:"organization,omitempty"`
-	Organization          []string            `json:"organization_list" mapstructure:"organization"`
-	GenerateLease         *bool               `json:"generate_lease,omitempty"`
-	NoStore               bool                `json:"no_store" mapstructure:"no_store"`
-	AllowedOtherSANs      map[string][]string `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
+	LeaseMax              string   `json:"lease_max"`
+	Lease                 string   `json:"lease"`
+	MaxTTL                string   `json:"max_ttl" mapstructure:"max_ttl"`
+	TTL                   string   `json:"ttl" mapstructure:"ttl"`
+	AllowLocalhost        bool     `json:"allow_localhost" mapstructure:"allow_localhost"`
+	AllowedBaseDomain     string   `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
+	AllowedDomainsOld     string   `json:"allowed_domains,omit_empty"`
+	AllowedDomains        []string `json:"allowed_domains_list" mapstructure:"allowed_domains"`
+	AllowBaseDomain       bool     `json:"allow_base_domain"`
+	AllowBareDomains      bool     `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
+	AllowTokenDisplayName bool     `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
+	AllowSubdomains       bool     `json:"allow_subdomains" mapstructure:"allow_subdomains"`
+	AllowGlobDomains      bool     `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
+	AllowAnyName          bool     `json:"allow_any_name" mapstructure:"allow_any_name"`
+	EnforceHostnames      bool     `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
+	AllowIPSANs           bool     `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
+	ServerFlag            bool     `json:"server_flag" mapstructure:"server_flag"`
+	ClientFlag            bool     `json:"client_flag" mapstructure:"client_flag"`
+	CodeSigningFlag       bool     `json:"code_signing_flag" mapstructure:"code_signing_flag"`
+	EmailProtectionFlag   bool     `json:"email_protection_flag" mapstructure:"email_protection_flag"`
+	UseCSRCommonName      bool     `json:"use_csr_common_name" mapstructure:"use_csr_common_name"`
+	UseCSRSANs            bool     `json:"use_csr_sans" mapstructure:"use_csr_sans"`
+	KeyType               string   `json:"key_type" mapstructure:"key_type"`
+	KeyBits               int      `json:"key_bits" mapstructure:"key_bits"`
+	MaxPathLength         *int     `json:",omitempty" mapstructure:"max_path_length"`
+	KeyUsageOld           string   `json:"key_usage,omitempty"`
+	KeyUsage              []string `json:"key_usage_list" mapstructure:"key_usage"`
+	OUOld                 string   `json:"ou,omitempty"`
+	OU                    []string `json:"ou_list" mapstructure:"ou"`
+	OrganizationOld       string   `json:"organization,omitempty"`
+	Organization          []string `json:"organization_list" mapstructure:"organization"`
+	GenerateLease         *bool    `json:"generate_lease,omitempty"`
+	NoStore               bool     `json:"no_store" mapstructure:"no_store"`
+	AllowedOtherSANs      []string `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool

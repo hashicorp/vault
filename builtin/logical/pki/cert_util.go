@@ -48,7 +48,7 @@ type creationBundle struct {
 	DNSNames       []string
 	EmailAddresses []string
 	IPAddresses    []net.IP
-	OtherSANs      map[string]string
+	OtherSANs      map[string][]string
 	IsCA           bool
 	KeyType        string
 	KeyBits        int
@@ -424,27 +424,53 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 	return ""
 }
 
-func validateOtherSANs(req *logical.Request, names map[string]string, role *roleEntry) (string, string) {
-	for oid, name := range names {
-		allowedNames, ok := role.AllowedOtherSANs[oid]
-		if !ok {
-			return oid, ""
-		}
-
-		valid := false
-		for _, allowedName := range allowedNames {
-			if glob.Glob(allowedName, name) {
-				valid = true
-				break
+func validateOtherSANs(req *logical.Request, requested map[string][]string, role *roleEntry) (string, string, error) {
+	allowed, err := parseOtherSANs(role.AllowedOtherSANs)
+	if err != nil {
+		return "", "", errwrap.Wrapf("error parsing role's allowed SANs: {{err}}", err)
+	}
+	for oid, names := range requested {
+		for _, name := range names {
+			allowedNames, ok := allowed[oid]
+			if !ok {
+				return oid, "", nil
 			}
-		}
 
-		if !valid {
-			return oid, name
+			valid := false
+			for _, allowedName := range allowedNames {
+				if glob.Glob(allowedName, name) {
+					valid = true
+					break
+				}
+			}
+
+			if !valid {
+				return oid, name, nil
+			}
 		}
 	}
 
-	return "", ""
+	return "", "", nil
+}
+
+func parseOtherSANs(others []string) (map[string][]string, error) {
+	result := map[string][]string{}
+	for _, other := range others {
+		splitOther := strings.SplitN(other, ";", 2)
+		if len(splitOther) != 2 {
+			return nil, fmt.Errorf("expected a semicolon in other SAN %q", other)
+		}
+		splitType := strings.SplitN(splitOther[1], ":", 2)
+		if len(splitType) != 2 {
+			return nil, fmt.Errorf("expected a colon in other SAN %q", other)
+		}
+		if strings.ToLower(splitType[0]) != "utf8" {
+			return nil, fmt.Errorf("only utf8 other SANs are supported; found non-supported type in other SAN %q", other)
+		}
+		result[splitOther[0]] = append(result[splitOther[0]], splitType[1])
+	}
+
+	return result, nil
 }
 
 func generateCert(ctx context.Context,
@@ -709,18 +735,24 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
-	var otherSANs map[string]string
-	if sans := data.Get("other_sans").(map[string]string); len(sans) > 0 {
-		badOID, badName := validateOtherSANs(req, sans, role)
+	var otherSANs map[string][]string
+	if sans := data.Get("other_sans").([]string); len(sans) > 0 {
+		requested, err := parseOtherSANs(sans)
+		if err != nil {
+			return nil, errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+		}
+		badOID, badName, err := validateOtherSANs(req, requested, role)
 		switch {
-		case len(badOID) > 0:
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"other SAN OID %s not allowed by this role", badOID)}
+		case err != nil:
+			return nil, errutil.UserError{Err: err.Error()}
 		case len(badName) != 0:
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"other SAN %s not allowed for OID %s by this role", badName, badOID)}
+		case len(badOID) > 0:
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"other SAN OID %s not allowed by this role", badOID)}
 		default:
-			otherSANs = sans
+			otherSANs = requested
 		}
 	}
 
@@ -1296,7 +1328,7 @@ func convertRespToPKCS8(resp *logical.Response) error {
 	return nil
 }
 
-func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string]string) error {
+func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string][]string) error {
 	certTemplate := &x509.Certificate{
 		DNSNames:       in.DNSNames,
 		IPAddresses:    in.IPAddresses,
@@ -1313,7 +1345,7 @@ func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string]string) err
 	return nil
 }
 
-func handleOtherSANs(in *x509.Certificate, sans map[string]string) error {
+func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 	// If other SANs is empty we return which causes normal Go stdlib parsing
 	// of the other SAN types
 	if len(sans) == 0 {
@@ -1329,23 +1361,25 @@ func handleOtherSANs(in *x509.Certificate, sans map[string]string) error {
 	// an EXPLICIT sequence. Note that asn1 is way too magical according to
 	// agl, and cryptobyte is modeled after the CBB/CBS bits that agl put into
 	// boringssl.
-	for k, v := range sans {
-		var b cryptobyte.Builder
-		oid, err := stringToOid(k)
-		if err != nil {
-			return err
-		}
-		b.AddASN1ObjectIdentifier(oid)
-		b.AddASN1(cbbasn1.Tag(0).ContextSpecific().Constructed(), func(b *cryptobyte.Builder) {
-			b.AddASN1(cbbasn1.UTF8String, func(b *cryptobyte.Builder) {
-				b.AddBytes([]byte(v))
+	for oid, vals := range sans {
+		for _, val := range vals {
+			var b cryptobyte.Builder
+			oidStr, err := stringToOid(oid)
+			if err != nil {
+				return err
+			}
+			b.AddASN1ObjectIdentifier(oidStr)
+			b.AddASN1(cbbasn1.Tag(0).ContextSpecific().Constructed(), func(b *cryptobyte.Builder) {
+				b.AddASN1(cbbasn1.UTF8String, func(b *cryptobyte.Builder) {
+					b.AddBytes([]byte(val))
+				})
 			})
-		})
-		m, err := b.Bytes()
-		if err != nil {
-			return err
+			m, err := b.Bytes()
+			if err != nil {
+				return err
+			}
+			rawValues = append(rawValues, asn1.RawValue{Tag: 0, Class: 2, IsCompound: true, Bytes: m})
 		}
-		rawValues = append(rawValues, asn1.RawValue{Tag: 0, Class: 2, IsCompound: true, Bytes: m})
 	}
 
 	// If other SANs is empty we return which causes normal Go stdlib parsing
