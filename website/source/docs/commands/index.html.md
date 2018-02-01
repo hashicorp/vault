@@ -11,6 +11,10 @@ description: |-
 
 # Vault Commands (CLI)
 
+~> **Note:** The Vault CLI interface was changed substantially in 0.9.2+ and may cause
+confusion while using older versions of Vault with this documentation. Read our
+[upgrade guide](/guides/upgrading/upgrade-to-0.9.2.html#backwards-compatible-cli-changes) for more information.
+
 In addition to a verbose [HTTP API](/api/index.html), Vault features a
 command-line interface that wraps common functionality and formats output. The
 Vault CLI is a single static binary. It is a thin wrapper around the HTTP API.
