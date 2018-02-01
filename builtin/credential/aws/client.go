@@ -69,7 +69,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 }
 
 // getClientConfig returns an aws-sdk-go config, with optionally assumed credentials
-// It uses getRawClientConfig to obtain config for the runtime environemnt, and if
+// It uses getRawClientConfig to obtain config for the runtime environment, and if
 // stsRole is a non-empty string, it will use AssumeRole to obtain a set of assumed
 // credentials. The credentials will expire after 15 minutes but will auto-refresh.
 func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region, stsRole, accountID, clientType string) (*aws.Config, error) {
