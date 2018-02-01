@@ -243,6 +243,10 @@ func (c *OperatorInitCommand) Run(args []string) int {
 		return 1
 	}
 
+	if c.flagNoColor {
+		c.UI = getBasicUI(c.UI)
+	}
+
 	// Deprecations
 	// TODO: remove in 0.9.0
 	if c.flagAuto {

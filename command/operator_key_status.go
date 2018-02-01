@@ -51,6 +51,10 @@ func (c *OperatorKeyStatusCommand) Run(args []string) int {
 		return 1
 	}
 
+	if c.flagNoColor {
+		c.UI = getBasicUI(c.UI)
+	}
+
 	args = f.Args()
 	if len(args) > 0 {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))

@@ -115,7 +115,7 @@ func init() {
 	}
 
 	// Attempt to detect if stdout is a tty. If so,
-	// Wrap BasicUi's in ColoredUi.
+	// wrap BasicUi's in ColoredUi.
 	if terminal.IsTerminal(int(os.Stdout.Fd())) {
 		ui = &cli.ColoredUi{
 			ErrorColor: cli.UiColorRed,

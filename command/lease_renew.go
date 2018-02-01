@@ -81,6 +81,10 @@ func (c *LeaseRenewCommand) Run(args []string) int {
 		return 1
 	}
 
+	if c.flagNoColor {
+		c.UI = getBasicUI(c.UI)
+	}
+
 	leaseID := ""
 	increment := c.flagIncrement
 

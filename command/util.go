@@ -110,6 +110,19 @@ func PrintRaw(ui cli.Ui, str string) int {
 	return 0
 }
 
+func getBasicUI(ui cli.Ui) cli.Ui {
+	switch t := ui.(type) {
+	case *cli.BasicUi:
+		return t
+	case *cli.ColoredUi:
+		return getBasicUI(t.Ui)
+	case *cli.ConcurrentUi:
+		return getBasicUI(t.Ui)
+	default:
+		return t
+	}
+}
+
 // getWriterFromUI accepts a cli.Ui and returns the underlying io.Writer by
 // unwrapping as many wrapped Uis as necessary. If there is an unknown UI
 // type, this falls back to os.Stdout.

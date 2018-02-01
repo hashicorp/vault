@@ -64,6 +64,10 @@ func (c *TokenCapabilitiesCommand) Run(args []string) int {
 		return 1
 	}
 
+	if c.flagNoColor {
+		c.UI = getBasicUI(c.UI)
+	}
+
 	token := ""
 	path := ""
 	args = f.Args()

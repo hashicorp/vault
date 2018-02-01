@@ -266,6 +266,10 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	if c.flagNoColor {
+		c.UI = getBasicUI(c.UI)
+	}
+
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
