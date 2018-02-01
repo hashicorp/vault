@@ -19,18 +19,18 @@ auth backend responsible for creating and storing tokens.
 
 ### Auth Backends
 
-Auth backends performs authentication to verify the user or machine-supplied
+Auth backends perform authentication to verify the user or machine-supplied
 information. Some of the supported auth backends are targeted towards users
 while others are targeted toward machines or apps. For example,
 [**LDAP**](/docs/auth/ldap.html) auth backend enables user authentication using
 an existing LDAP server while [**AppRole**](/docs/auth/approle.html) auth
 backend is recommended for machines or apps.
 
-[Getting Started](/intro/getting-started/authentication.html) guide walks you
-through how to enable GitHub auth backend for user authentication.
+The [Getting Started](/intro/getting-started/authentication.html) guide walks you
+through how to enable the GitHub auth backend for user authentication.
 
 This introductory guide focuses on generating tokens for machines or apps by
-enabling [**AppRole**](/docs/auth/approle.html) auth backend.
+enabling the [**AppRole**](/docs/auth/approle.html) auth backend.
 
 
 ## Reference Material
@@ -55,7 +55,7 @@ The end-to-end scenario described in this guide involves two personas:
 ## Challenge
 
 Think of a scenario where a DevOps team wants to configure Jenkins to read
-secrets from Vault so that it can inject the secrets to app's environment
+secrets from Vault so that it can inject the secrets to an app's environment
 variables (e.g. `MYSQL_DB_HOST`) at deployment time.
 
 Instead of hardcoding secrets in each build script as a plaintext, Jenkins
@@ -350,7 +350,7 @@ $ curl --header "X-Vault-Token: ..." --request GET \
 ### <a name="step3"></a>Step 3: Get Role ID and Secret ID
 (**Persona:** admin)
 
-**Role ID** and **Secret ID** are like username and password which a machine or
+**Role ID** and **Secret ID** are like a username and password that a machine or
 app uses to authenticate.
 
 Since the example created a `jenkins` role which operates in pull mode, Vault
@@ -613,9 +613,9 @@ A common solution involves **three personas** instead of two: `admin`, `app`, an
 `trusted entity`. The `trusted entity` delivers the Role ID and Secret ID to the
 client by separate means.   
 
-For example, Terraform injects the Role ID onto the virtual machine.  When the
-app runs on the virtual machine, the Role ID already exists on the virtual
-machine.
+For example, Terraform as a trusted entity can deliver the Role ID onto the
+virtual machine.  When the app runs on the virtual machine, the Role ID already
+exists on the virtual machine.
 
 ![AppRole auth backend workflow](assets/images/vault-approle-workflow2.png)
 

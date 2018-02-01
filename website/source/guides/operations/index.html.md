@@ -1,15 +1,15 @@
 ---
 layout: "guides"
-page_title: "Vault Architecture - Guides"
+page_title: "Vault Operations - Guides"
 sidebar_current: "guides-operations"
 description: |-
   Vault architecture guide covers Vault infrastructure discussions including
   installation.   
 ---
 
-# Vault Architecture
+# Vault Operations
 
-Vault Architectures guides address Vault infrastructure discussions.  These
+Vault Operations guides address Vault infrastructure discussions.  These
 guides are designed to help the operations team to plan and install a Vault
 cluster that meets your organization's needs.
 

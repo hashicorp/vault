@@ -4,23 +4,21 @@ page_title: "Vault Configuration - Guides"
 sidebar_current: "guides-configuration"
 description: |-
   Once a Vault instance has been installed, the next step is to configure auth
-  backend, secret backend, and manage keys. Vault configuration guides addresses
-  key concepts in configuring your Vault servers.   
+  backends, secret backends, and manage keys. Vault configuration guides addresses
+  key concepts in configuring your Vault application.   
 ---
 
 # Vault Configuration
 
-This guide walks you through Vault configuration topics. Some guides address
-fundamental tasks to get the server setup, and some guides introduce more
-advanced discussions.
+This guide walks you through Vault configuration topics.
 
 - [Policies](/guides/configuration/policies.html) are used to instrument
 Role-Based Access Control (RBAC) by specifying access privileges. Authoring of
 policies is probably the first step the Vault administrator performs. This guide
 walks you through creating example policies for `admin` and `provisioner` users.
 - [AppRole Pull Authentication](/guides/configuration/authentication.html) guide
-is an introductory guide introduces the steps to generate tokens for machines
-or apps by enabling AppRole auth backend.
+that introduces the steps to generate tokens for machines or apps by enabling
+AppRole auth backend.
 - [Token and Leases](/guides/configuration/lease.html) guide helps you
 understand how tokens and leases work in Vault. The understanding of the
 lease hierarchy and expiration mechanism helps you plan for break glass

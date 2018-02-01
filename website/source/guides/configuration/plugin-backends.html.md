@@ -8,14 +8,14 @@ description: |-
 
 # Introduction
 
-Plugin backends utilize the [plugin system][plugin-system] to enable
-third-party secret and auth backends to be mounted.
+Plugin backends utilize the [plugin system][plugin-system] to enable third-party
+secrets engines and auth methods.
 
 It is worth noting that even though [database secrets engines][database-backend]
 operate under the same underlying plugin mechanism, they are slightly different
-in design than plugin backends demonstrated in this guide. The database backend
-manages multiple plugins under the same backend mount point, whereas plugin
-backends are generic backends that function as either secret or auth backends.
+in design than plugin backends demonstrated in this guide. The database secrets
+engine manages multiple plugins under the same backend mount point, whereas
+plugin backends are kv backends that function as either secret or auth methods.
 
 This guide provides steps to build, register, and mount non-database external
 plugin backends.
@@ -36,9 +36,9 @@ will need to unseal it again.
 
 ## Compile Plugin
 
-Build the custom backend binary, and move it to the `plugin_directory` path.
-In this guide, we will use `mock-plugin` that comes from Vault's
-`logical/plugin/mock` package.
+Build the custom binary, and move it inside the `plugin_directory` path
+configured above. This guide uses `mock-plugin` that comes from Vault's
+[`logical/plugin/mock`](https://github.com/hashicorp/vault/tree/master/logical/plugin/mock/mock-plugin) package.
 
 Download the source (you would probably use your own plugin):
 

@@ -10,7 +10,7 @@ description: |-
 
 # Cubbyhole
 
-The term _cubbyhole_ comes from an Americnaism where you get a "locker" or "safe
+The term _cubbyhole_ comes from an Americanism where you get a "locker" or "safe
 place" to store your belongings or valuables. In Vault, cubbyhole is your
 "locker".  All secrets are namespaced under **your token**. If that token
 expires or is revoked, all the secrets in its cubbyhole are revoked as well.

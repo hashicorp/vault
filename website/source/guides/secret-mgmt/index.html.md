@@ -1,6 +1,6 @@
 ---
 layout: "guides"
-page_title: "Secret Management - Guides"
+page_title: "Secrets Management - Guides"
 sidebar_current: "guides-secret-mgmt"
 description: |-
    A very common use case of Vault is to manage your organization's secrets from
@@ -8,14 +8,14 @@ description: |-
    Vault is meant to be a solution for all secret management needs.
 ---
 
-# Secret Management
+# Secrets Management
 
 Vault is a tool for securely accessing secrets. A secret is anything that you
 want to tightly control access to, such as API keys, passwords, certificates,
 and more. Vault provides a unified interface to any secret while providing
 tight access control and recording a detailed audit log.
 
-Secret Management guides demonstrate features in Vault to securely store your
+Secrets Management guides demonstrate features in Vault to securely store your
 secrets.
 
 - [Static Secrets](/guides/secret-mgmt/static-secrets.html) guide walks you

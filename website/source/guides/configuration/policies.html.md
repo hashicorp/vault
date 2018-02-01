@@ -18,12 +18,12 @@ default. The `root` policy is a special policy that gives superuser access to
 _everything_ in Vault. This allows the superuser to set up initial policies,
 tokens, etc.
 
-In addition, there is another build-in policy,
+In addition, there is another built-in policy,
 [**`default`**](/docs/concepts/policies.html#default-policy) gets created. The
 `default` policy is attached to all tokens and provides common permissions.
 
-Everything in Vault is path based, and write policies to grant or forbid access
-to certain paths and operations in Vault. Vault operates on a **secure by
+Everything in Vault is path based, and admins write policies to grant or forbid
+access to certain paths and operations in Vault. Vault operates on a **secure by
 default** standard, and as such as empty policy grants **no permission** in the
 system.
 
@@ -34,7 +34,7 @@ Policies written in [HCL](https://github.com/hashicorp/hcl) format are often
 referred as **_ACL Policies_**. [Sentinel](https://www.hashicorp.com/sentinel) is
 another framework for policy which is available in [Vault
 Enterprise](/docs/enterprise/index.html).  Since Sentinel is an enterprise-only
-feature, this guide focuses on writing ACL policies.
+feature, this guide focuses on writing ACL policies as a foundation.
 
 **NOTE:** HCL is JSON compatible; therefore, JSON can be used as completely
 valid input.
@@ -56,7 +56,7 @@ The scenario described in this guide introduces the following personas:
 - **`root`** sets up initial policies for `admin`
 - **`admin`** is empowered with managing a Vault infrastructure for a team or
 organizations
-- **`provisioner`** configures secret backends as well as creating policies for
+- **`provisioner`** configures secret backends and creates policies for
 client apps
 
 

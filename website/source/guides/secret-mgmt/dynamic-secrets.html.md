@@ -32,20 +32,20 @@ you through the generation of dynamic AWS credentials.
 The end-to-end scenario described in this guide involves two personas:
 
 - **`admin`** with privileged permissions to configure secret backends
-- **`apps`** reads the secrets from Vault
+- **`apps`** read the secrets from Vault
 
 ## Challenge
 
 Data protection is a top priority which means that the database credential
-rotation is a critical part of the effort. Each role has a different set of
-permissions granted to access the database. When the system is constantly under
-attack by hackers, continuous credential rotation becomes necessary and needs to
-be automated.
+rotation is a critical part of any data protection initiative. Each role has a
+different set of permissions granted to access the database. When a system is
+attacked by hackers, continuous credential rotation becomes necessary and needs
+to be automated.
 
 
 ## Solution
 
-The application asks Vault for database credential rather than setting them as
+Applications ask Vault for database credential rather than setting them as
 environment variables. The administrator specifies the TTL of the database
 credentials to enforce its validity so that they are automatically revoked when
 they are no longer used.

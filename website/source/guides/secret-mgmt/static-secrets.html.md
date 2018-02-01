@@ -10,9 +10,9 @@ description: |-
 
 # Static Secrets
 
-Vault can be used to store any secrets in a secure manner.  The secrets may be
+Vault can be used to store any secret in a secure manner.  The secrets may be
 SSL certificates and keys for your organization's domain, credentials to connect
-to a corporate database server, etc. Storing such sensitive information in a
+to a corporate database server, etc. Storing such sensitive information in
 plaintext is not desirable. This guide demonstrates the use case of Vault as a
 Secret Storage.
 
@@ -46,16 +46,16 @@ Consider the following situations:
 - An app integrates with LDAP, and its configuration information is in a
   plaintext
 
-Organizations often seek an uniform solution to store any sensitive information
-securely.
+Organizations often seek an uniform workflow to securely store this sensitive
+information.
 
 ## Solution
 
-Leverage Vault as a centralized secret storage to secure any sensitive
-information. Vault encrypts these secrets using 256-bit AES in GCM mode with a
-randomly generated nonce prior to writing them to its persistent storage. The
-storage backend never sees the unencrypted value, so gaining access to the raw
-storage isn't enough to access your secrets.
+Vault as centralized secret storage to secure any sensitive information. Vault
+encrypts these secrets using 256-bit AES in GCM mode with a randomly generated
+nonce prior to writing them to its persistent storage. The storage backend never
+sees the unencrypted value, so gaining access to the raw storage isn't enough to
+access your secrets.
 
 
 ## Prerequisites
