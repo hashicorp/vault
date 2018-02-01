@@ -254,6 +254,9 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
 	}
+	if bucket == nil {
+		return nil, nil
+	}
 
 	// Look for a matching storage entry in the bucket items
 	for _, item := range bucket.Items {
