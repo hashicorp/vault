@@ -27,6 +27,7 @@ message RevokeUserRequest {
 
 message RotateRootCredentialsRequest {
 	string statements = 1;
+	map<string, string> root_credentials = 2;
 }
 
 message Statements {
@@ -51,7 +52,7 @@ message TypeResponse {
 }
 
 message RotateRootCredentialsResponse {
-	string password = 1;
+	map<string, string> root_credentials = 1;
 }
 
 message Empty {}

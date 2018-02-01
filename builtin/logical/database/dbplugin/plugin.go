@@ -20,7 +20,7 @@ type Database interface {
 	RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error
 	RevokeUser(ctx context.Context, statements Statements, username string) error
 
-	RotateRootCredentials(ctx context.Context, statements string) (password string, err error)
+	RotateRootCredentials(ctx context.Context, statements string, rootCredentials map[string]string) (newRootCredentials map[string]string, err error)
 
 	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error
 	Close() error

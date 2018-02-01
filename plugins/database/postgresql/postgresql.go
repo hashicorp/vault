@@ -375,7 +375,7 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 }
 
 // RotateRootCredentials is not supported on PostgreSQL, so this is a no-op.
-func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements string) (string, error) {
+func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements string, rootCredentials map[string]string) (map[string]string, error) {
 	// NOOP
-	return "", nil
+	return nil, nil
 }

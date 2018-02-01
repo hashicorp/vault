@@ -39,7 +39,7 @@ func (m *credentialRotationManager) initialize(ctx context.Context, s logical.St
 		if err := configEntry.DecodeJSON(&config); err != nil {
 			return err
 		}
-		m.add(s, dbName, config.RootCredentialRotateInterval)
+		m.add(s, dbName, config.RootCredentialsRotateInterval)
 	}
 
 	m.initialized = true
