@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/cassandra"
@@ -101,21 +102,32 @@ var Commands map[string]cli.CommandFactory
 var DeprecatedCommands map[string]cli.CommandFactory
 
 func init() {
-	ui := &cli.ColoredUi{
-		ErrorColor: cli.UiColorRed,
-		WarnColor:  cli.UiColorYellow,
-		Ui: &cli.BasicUi{
-			Writer:      os.Stdout,
-			ErrorWriter: os.Stderr,
-		},
+	var ui cli.Ui
+	var serverCmdUi cli.Ui
+
+	ui = &cli.BasicUi{
+		Writer:      os.Stdout,
+		ErrorWriter: os.Stderr,
 	}
 
-	serverCmdUi := &cli.ColoredUi{
-		ErrorColor: cli.UiColorRed,
-		WarnColor:  cli.UiColorYellow,
-		Ui: &cli.BasicUi{
-			Writer: os.Stdout,
-		},
+	serverCmdUi = &cli.BasicUi{
+		Writer: os.Stdout,
+	}
+
+	// Attempt to detect if stdout is a tty. If so,
+	// Wrap BasicUi's in ColoredUi.
+	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+		ui = &cli.ColoredUi{
+			ErrorColor: cli.UiColorRed,
+			WarnColor:  cli.UiColorYellow,
+			Ui:         ui,
+		}
+
+		serverCmdUi = &cli.ColoredUi{
+			ErrorColor: cli.UiColorRed,
+			WarnColor:  cli.UiColorYellow,
+			Ui:         serverCmdUi,
+		}
 	}
 
 	loginHandlers := map[string]LoginHandler{
