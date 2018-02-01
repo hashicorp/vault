@@ -333,6 +333,11 @@ func (f *FlagSets) Parse(args []string) error {
 	return f.mainSet.Parse(args)
 }
 
+// Parsed reports whether the command-line flags have been parsed.
+func (f *FlagSets) Parsed() bool {
+	return f.mainSet.Parsed()
+}
+
 // Args returns the remaining args after parsing.
 func (f *FlagSets) Args() []string {
 	return f.mainSet.Args()
