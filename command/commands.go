@@ -64,6 +64,72 @@ import (
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 )
 
+var (
+	auditBackends = map[string]audit.Factory{
+		"file":   auditFile.Factory,
+		"socket": auditSocket.Factory,
+		"syslog": auditSyslog.Factory,
+	}
+
+	credentialBackends = map[string]logical.Factory{
+		"app-id":     credAppId.Factory,
+		"approle":    credAppRole.Factory,
+		"aws":        credAws.Factory,
+		"centrify":   credCentrify.Factory,
+		"cert":       credCert.Factory,
+		"gcp":        credGcp.Factory,
+		"github":     credGitHub.Factory,
+		"kubernetes": credKube.Factory,
+		"ldap":       credLdap.Factory,
+		"okta":       credOkta.Factory,
+		"plugin":     plugin.Factory,
+		"radius":     credRadius.Factory,
+		"userpass":   credUserpass.Factory,
+	}
+
+	logicalBackends = map[string]logical.Factory{
+		"aws":        aws.Factory,
+		"cassandra":  cassandra.Factory,
+		"consul":     consul.Factory,
+		"database":   database.Factory,
+		"mongodb":    mongodb.Factory,
+		"mssql":      mssql.Factory,
+		"mysql":      mysql.Factory,
+		"nomad":      nomad.Factory,
+		"pki":        pki.Factory,
+		"plugin":     plugin.Factory,
+		"postgresql": postgresql.Factory,
+		"rabbitmq":   rabbitmq.Factory,
+		"ssh":        ssh.Factory,
+		"totp":       totp.Factory,
+		"transit":    transit.Factory,
+	}
+
+	physicalBackends = map[string]physical.Factory{
+		"azure":                  physAzure.NewAzureBackend,
+		"cassandra":              physCassandra.NewCassandraBackend,
+		"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
+		"consul":                 physConsul.NewConsulBackend,
+		"couchdb_transactional":  physCouchDB.NewTransactionalCouchDBBackend,
+		"couchdb":                physCouchDB.NewCouchDBBackend,
+		"dynamodb":               physDynamoDB.NewDynamoDBBackend,
+		"etcd":                   physEtcd.NewEtcdBackend,
+		"file_transactional":     physFile.NewTransactionalFileBackend,
+		"file":                   physFile.NewFileBackend,
+		"gcs":                    physGCS.NewGCSBackend,
+		"inmem_ha":               physInmem.NewInmemHA,
+		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
+		"inmem_transactional":    physInmem.NewTransactionalInmem,
+		"inmem":                  physInmem.NewInmem,
+		"mssql":                  physMSSQL.NewMSSQLBackend,
+		"mysql":                  physMySQL.NewMySQLBackend,
+		"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
+		"s3":                     physS3.NewS3Backend,
+		"swift":                  physSwift.NewSwiftBackend,
+		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
+	}
+)
+
 // DeprecatedCommand is a command that wraps an existing command and prints a
 // deprecation notice and points the user to the new command. Deprecated
 // commands are always hidden from help output.
@@ -415,68 +481,12 @@ func init() {
 				BaseCommand: &BaseCommand{
 					UI: serverCmdUi,
 				},
-				AuditBackends: map[string]audit.Factory{
-					"file":   auditFile.Factory,
-					"socket": auditSocket.Factory,
-					"syslog": auditSyslog.Factory,
-				},
-				CredentialBackends: map[string]logical.Factory{
-					"app-id":     credAppId.Factory,
-					"approle":    credAppRole.Factory,
-					"aws":        credAws.Factory,
-					"centrify":   credCentrify.Factory,
-					"cert":       credCert.Factory,
-					"gcp":        credGcp.Factory,
-					"github":     credGitHub.Factory,
-					"kubernetes": credKube.Factory,
-					"ldap":       credLdap.Factory,
-					"okta":       credOkta.Factory,
-					"plugin":     plugin.Factory,
-					"radius":     credRadius.Factory,
-					"userpass":   credUserpass.Factory,
-				},
-				LogicalBackends: map[string]logical.Factory{
-					"aws":        aws.Factory,
-					"cassandra":  cassandra.Factory,
-					"consul":     consul.Factory,
-					"database":   database.Factory,
-					"mongodb":    mongodb.Factory,
-					"mssql":      mssql.Factory,
-					"mysql":      mysql.Factory,
-					"nomad":      nomad.Factory,
-					"pki":        pki.Factory,
-					"plugin":     plugin.Factory,
-					"postgresql": postgresql.Factory,
-					"rabbitmq":   rabbitmq.Factory,
-					"ssh":        ssh.Factory,
-					"totp":       totp.Factory,
-					"transit":    transit.Factory,
-				},
-				PhysicalBackends: map[string]physical.Factory{
-					"azure":                  physAzure.NewAzureBackend,
-					"cassandra":              physCassandra.NewCassandraBackend,
-					"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
-					"consul":                 physConsul.NewConsulBackend,
-					"couchdb_transactional":  physCouchDB.NewTransactionalCouchDBBackend,
-					"couchdb":                physCouchDB.NewCouchDBBackend,
-					"dynamodb":               physDynamoDB.NewDynamoDBBackend,
-					"etcd":                   physEtcd.NewEtcdBackend,
-					"file_transactional":     physFile.NewTransactionalFileBackend,
-					"file":                   physFile.NewFileBackend,
-					"gcs":                    physGCS.NewGCSBackend,
-					"inmem_ha":               physInmem.NewInmemHA,
-					"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
-					"inmem_transactional":    physInmem.NewTransactionalInmem,
-					"inmem":                  physInmem.NewInmem,
-					"mssql":                  physMSSQL.NewMSSQLBackend,
-					"mysql":                  physMySQL.NewMySQLBackend,
-					"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
-					"s3":                     physS3.NewS3Backend,
-					"swift":                  physSwift.NewSwiftBackend,
-					"zookeeper":              physZooKeeper.NewZooKeeperBackend,
-				},
-				ShutdownCh: MakeShutdownCh(),
-				SighupCh:   MakeSighupCh(),
+				AuditBackends:      auditBackends,
+				CredentialBackends: credentialBackends,
+				LogicalBackends:    logicalBackends,
+				PhysicalBackends:   physicalBackends,
+				ShutdownCh:         MakeShutdownCh(),
+				SighupCh:           MakeSighupCh(),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {

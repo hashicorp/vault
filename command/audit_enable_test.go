@@ -1,6 +1,7 @@
 package command
 
 import (
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -156,5 +157,43 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 
 		_, cmd := testAuditEnableCommand(t)
 		assertNoTabs(t, cmd)
+	})
+
+	t.Run("mount_all", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerAllBackends(t)
+		defer closer()
+
+		files, err := ioutil.ReadDir("../builtin/audit")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var backends []string
+		for _, f := range files {
+			if f.IsDir() {
+				backends = append(backends, f.Name())
+			}
+		}
+
+		for _, b := range backends {
+			ui, cmd := testAuditEnableCommand(t)
+			cmd.client = client
+
+			args := []string{
+				b,
+			}
+			switch b {
+			case "file":
+				args = append(args, "file_path=discard")
+			case "socket":
+				args = append(args, "address=127.0.0.1:8888")
+			}
+			code := cmd.Run(args)
+			if exp := 0; code != exp {
+				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+			}
+		}
 	})
 }
