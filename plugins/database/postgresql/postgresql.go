@@ -421,7 +421,7 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements strin
 			continue
 		}
 		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name":     conf["name"].(string),
+			"name":     c.RootUsername,
 			"password": password,
 		}))
 		if err != nil {
