@@ -119,6 +119,16 @@ func (s *SystemViewClient) MlockEnabled() bool {
 	return reply.MlockEnabled
 }
 
+func (s *SystemViewClient) LocalMount() bool {
+	var reply LocalMountReply
+	err := s.client.Call("Plugin.LocalMount", new(interface{}), &reply)
+	if err != nil {
+		return false
+	}
+
+	return reply.Local
+}
+
 type SystemViewServer struct {
 	impl logical.SystemView
 }
@@ -202,6 +212,15 @@ func (s *SystemViewServer) MlockEnabled(_ interface{}, reply *MlockEnabledReply)
 	return nil
 }
 
+func (s *SystemViewServer) LocalMount(_ interface{}, reply *LocalMountReply) error {
+	local := s.impl.LocalMount()
+	*reply = LocalMountReply{
+		Local: local,
+	}
+
+	return nil
+}
+
 type DefaultLeaseTTLReply struct {
 	DefaultLeaseTTL time.Duration
 }
@@ -244,4 +263,8 @@ type ResponseWrapDataReply struct {
 
 type MlockEnabledReply struct {
 	MlockEnabled bool
+}
+
+type LocalMountReply struct {
+	Local bool
 }

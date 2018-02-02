@@ -16,18 +16,22 @@ func TestGRPCSupport(t *testing.T) {
 		},
 		{
 			"0.9.2",
-			true,
-		},
-		{
-			"0.9.2+ent",
-			true,
-		},
-		{
-			"0.9.2-beta",
 			false,
 		},
 		{
 			"0.9.3",
+			false,
+		},
+		{
+			"0.9.4+ent",
+			true,
+		},
+		{
+			"0.9.4-beta",
+			false,
+		},
+		{
+			"0.9.4",
 			true,
 		},
 		{

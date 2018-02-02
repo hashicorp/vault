@@ -6,6 +6,11 @@ BUG FIXES:
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens [GH-3880]
+ * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
+ * storage/etcd3: Fix large lists (like token loading at startup) not being
+   handled [GH-3772]
+ * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
+   plugins using gRPC transport [GH-3881]
 
 ## 0.9.3 (January 28th, 2018)
 
