@@ -438,5 +438,6 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements strin
 		return nil, err
 	}
 
-	return nil, nil
+	conf["password"] = password
+	return conf, nil
 }
