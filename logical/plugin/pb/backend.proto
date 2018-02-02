@@ -435,6 +435,10 @@ message MlockEnabledReply {
     bool enabled = 1;
 }
 
+message LocalMountReply {
+    bool local = 1;
+}
+
 service SystemView {
     rpc DefaultLeaseTTL(Empty) returns (TTLReply);
     rpc MaxLeaseTTL(Empty) returns (TTLReply);
@@ -444,6 +448,5 @@ service SystemView {
     rpc ReplicationState(Empty) returns (ReplicationStateReply);
     rpc ResponseWrapData(ResponseWrapDataArgs) returns (ResponseWrapDataReply);
     rpc MlockEnabled(Empty) returns (MlockEnabledReply);
+    rpc LocalMount(Empty) returns (LocalMountReply);
 }
-
-
