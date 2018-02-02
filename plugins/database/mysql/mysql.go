@@ -236,7 +236,7 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 }
 
 // RotateRootCredentials is not supported on MySQL, so this is a no-op.
-func (m *MySQL) RotateRootCredentials(ctx context.Context, statements string, rootCredentials map[string]string) (map[string]string, error) {
+func (m *MySQL) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (map[string]interface{}, error) {
 	// NOOP
 	return nil, nil
 }

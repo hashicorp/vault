@@ -303,7 +303,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 }
 
 // RotateRootCredentials is not supported on MSSQL, so this is a no-op.
-func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements string, rootCredentials map[string]string) (map[string]string, error) {
+func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (map[string]interface{}, error) {
 	// NOOP
 	return nil, nil
 }

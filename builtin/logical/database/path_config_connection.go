@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
@@ -26,9 +25,7 @@ type DatabaseConfig struct {
 	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
 	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
 
-	RootCredentialsRotateStatements string            `json:"root_credentials_rotate_statements" structs:"credential_rotate_statements" mapstructure:"credential_rotate_statements"`
-	RootCredentialsRotateInterval   time.Duration     `json:"root_credentials_rotate_interval" structs:"credential_rotate_interval" mapstructure:"credential_rotate_interval"`
-	RootCredentials                 map[string]string `json:"root_credentials" structs:"root_credentials" mapstructure:"root_credentials"`
+	RootCredentialsRotateStatements string `json:"root_credentials_rotate_statements" structs:"credential_rotate_statements" mapstructure:"credential_rotate_statements"`
 }
 
 // pathResetConnection configures a path to reset a plugin.
@@ -216,9 +213,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		verifyConnection := data.Get("verify_connection").(bool)
 		allowedRoles := data.Get("allowed_roles").([]string)
 		rootRotationStatements := data.Get("root_rotation_statements").(string)
-		rootRotationIntervalRaw := data.Get("root_rotation_interval").(int)
-		rootRotationInterval := time.Duration(rootRotationIntervalRaw) * time.Second
-		rootCredentials := data.Get("root_credentials").(map[string]string)
 
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.
@@ -227,25 +221,15 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		delete(data.Raw, "allowed_roles")
 		delete(data.Raw, "verify_connection")
 		delete(data.Raw, "root_rotation_statements")
-		delete(data.Raw, "root_rotation_interval")
-
-		config := &DatabaseConfig{
-			ConnectionDetails:               data.Raw,
-			PluginName:                      pluginName,
-			AllowedRoles:                    allowedRoles,
-			RootCredentialsRotateStatements: rootRotationStatements,
-			RootCredentialsRotateInterval:   rootRotationInterval,
-			RootCredentials:                 rootCredentials,
-		}
 
 		// Create a database plugin and initialize it. This instance is not
 		// going to be used and is initialized just to ensure all parameters
 		// are valid and the connection is verified, if requested.
-		db, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
+		db, err := dbplugin.PluginFactory(ctx, pluginName, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
-		err = db.Initialize(ctx, config.ConnectionDetails, verifyConnection)
+		connDetails, err := db.Initialize(ctx, data.Raw, verifyConnection)
 		db.Close()
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
@@ -255,6 +239,12 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		b.ClearConnection(name)
 
 		// Store it
+		config := &DatabaseConfig{
+			ConnectionDetails:               connDetails,
+			PluginName:                      pluginName,
+			AllowedRoles:                    allowedRoles,
+			RootCredentialsRotateStatements: rootRotationStatements,
+		}
 		entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
 		if err != nil {
 			return nil, err

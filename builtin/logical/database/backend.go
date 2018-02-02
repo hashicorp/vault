@@ -47,15 +47,13 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
-		Clean:        b.closeAllDBs,
-		Invalidate:   b.invalidate,
-		BackendType:  logical.TypeLogical,
-		PeriodicFunc: b.periodicFunc,
+		Clean:       b.closeAllDBs,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	b.logger = conf.Logger
 	b.connections = make(map[string]dbplugin.Database)
-	b.credentialRotationManager = new(credentialRotationManager)
 	return &b
 }
 
@@ -65,8 +63,6 @@ type databaseBackend struct {
 
 	*framework.Backend
 	sync.RWMutex
-
-	credentialRotationManager *credentialRotationManager
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
@@ -169,7 +165,7 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 		return nil, err
 	}
 
-	err = db.Initialize(ctx, config.ConnectionDetails, true)
+	_, err = db.Initialize(ctx, config.ConnectionDetails, true)
 	if err != nil {
 		db.Close()
 		return nil, err
@@ -212,14 +208,6 @@ func (b *databaseBackend) closeAllDBs(ctx context.Context) {
 		db.Close()
 	}
 	b.connections = make(map[string]dbplugin.Database)
-}
-
-func (b *databaseBackend) periodicFunc(ctx context.Context, req *logical.Request) error {
-	for _, db := range b.connections {
-		_ = db
-	}
-
-	return nil
 }
 
 const backendHelp = `

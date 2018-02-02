@@ -34,17 +34,17 @@ type mongoDBConnectionProducer struct {
 }
 
 // Initialize parses connection configuration.
-func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
 	c.Lock()
 	defer c.Unlock()
 
 	err := mapstructure.WeakDecode(conf, c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(c.ConnectionURL) == 0 {
-		return fmt.Errorf("connection_url cannot be empty")
+		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
 
 	if c.WriteConcern != "" {
@@ -60,13 +60,13 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 		concern := &mgo.Safe{}
 		err = json.Unmarshal([]byte(input), concern)
 		if err != nil {
-			return fmt.Errorf("error mashalling write_concern: %s", err)
+			return nil, fmt.Errorf("error mashalling write_concern: %s", err)
 		}
 
 		// Guard against empty, non-nil mgo.Safe object; we don't want to pass that
 		// into mgo.SetSafe in Connection().
 		if (mgo.Safe{} == *concern) {
-			return fmt.Errorf("provided write_concern values did not map to any mgo.Safe fields")
+			return nil, fmt.Errorf("provided write_concern values did not map to any mgo.Safe fields")
 		}
 		c.safe = concern
 	}
@@ -77,15 +77,15 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return fmt.Errorf("error verifying connection: %s", err)
+			return nil, fmt.Errorf("error verifying connection: %s", err)
 		}
 
 		if err := c.session.Ping(); err != nil {
-			return fmt.Errorf("error verifying connection: %s", err)
+			return nil, fmt.Errorf("error verifying connection: %s", err)
 		}
 	}
 
-	return nil
+	return conf, nil
 }
 
 // Connection creates or returns an exisitng a database connection. If the session fails

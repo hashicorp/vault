@@ -15,16 +15,8 @@ var (
 // connections and is used in all the builtin database types.
 type ConnectionProducer interface {
 	Close() error
-	Initialize(context.Context, map[string]interface{}, bool) error
+	Initialize(context.Context, map[string]interface{}, bool) (map[string]interface{}, error)
 	Connection(context.Context) (interface{}, error)
 
 	sync.Locker
-}
-
-// RotatableConnectionProducer is used to embed in Database definition that support
-// rotating their root credentials
-type RotatableConnectionProducer interface {
-	ConnectionProducer
-
-	Rotate() (context.Context, map[string]interface{}, error)
 }

@@ -286,7 +286,7 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 }
 
 // RotateRootCredentials is not supported on HANA, so this is a no-op.
-func (h *HANA) RotateRootCredentials(ctx context.Context, statements string, rootCredentials map[string]string) (map[string]string, error) {
+func (h *HANA) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (map[string]interface{}, error) {
 	// NOOP
 	return nil, nil
 }

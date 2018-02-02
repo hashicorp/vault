@@ -44,13 +44,13 @@ type cassandraConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
 	c.Lock()
 	defer c.Unlock()
 
 	err := mapstructure.WeakDecode(conf, c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if c.ConnectTimeoutRaw == nil {
@@ -58,16 +58,16 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
-		return fmt.Errorf("invalid connect_timeout: %s", err)
+		return nil, fmt.Errorf("invalid connect_timeout: %s", err)
 	}
 
 	switch {
 	case len(c.Hosts) == 0:
-		return fmt.Errorf("hosts cannot be empty")
+		return nil, fmt.Errorf("hosts cannot be empty")
 	case len(c.Username) == 0:
-		return fmt.Errorf("username cannot be empty")
+		return nil, fmt.Errorf("username cannot be empty")
 	case len(c.Password) == 0:
-		return fmt.Errorf("password cannot be empty")
+		return nil, fmt.Errorf("password cannot be empty")
 	}
 
 	var certBundle *certutil.CertBundle
@@ -76,11 +76,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 	case len(c.PemJSON) != 0:
 		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(c.PemJSON))
 		if err != nil {
-			return fmt.Errorf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: %s", err)
+			return nil, fmt.Errorf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: %s", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return fmt.Errorf("Error marshaling PEM information: %s", err)
+			return nil, fmt.Errorf("Error marshaling PEM information: %s", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -90,11 +90,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 	case len(c.PemBundle) != 0:
 		parsedCertBundle, err = certutil.ParsePEMBundle(c.PemBundle)
 		if err != nil {
-			return fmt.Errorf("Error parsing the given PEM information: %s", err)
+			return nil, fmt.Errorf("Error parsing the given PEM information: %s", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return fmt.Errorf("Error marshaling PEM information: %s", err)
+			return nil, fmt.Errorf("Error marshaling PEM information: %s", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -108,11 +108,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return fmt.Errorf("error verifying connection: %s", err)
+			return nil, fmt.Errorf("error verifying connection: %s", err)
 		}
 	}
 
-	return nil
+	return conf, nil
 }
 
 func (c *cassandraConnectionProducer) Connection(_ context.Context) (interface{}, error) {

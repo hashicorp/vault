@@ -15,13 +15,15 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/lib/pq"
-	_ "github.com/lib/pq"
 )
 
 const (
 	postgreSQLTypeName      string = "postgres"
 	defaultPostgresRenewSQL        = `
 ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
+`
+	defaultPostgresRotateRootCredentialsSQL = `
+ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
 `
 )
 
@@ -40,8 +42,8 @@ func New() (interface{}, error) {
 	}
 
 	dbType := &PostgreSQL{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
 
 	return dbType, nil
@@ -60,7 +62,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 }
 
 type PostgreSQL struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -374,8 +376,55 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	return nil
 }
 
-// RotateRootCredentials is not supported on PostgreSQL, so this is a no-op.
-func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements string, rootCredentials map[string]string) (map[string]string, error) {
-	// NOOP
+func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (map[string]interface{}, error) {
+	// p.Lock()
+	// defer p.Unlock()
+
+	// rotateStatents := statements
+	// if rotateStatents == "" {
+	// 	rotateStatents = defaultPostgresRotateRootCredentialsSQL
+	// }
+
+	// db, err := p.getConnection(ctx)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// tx, err := db.BeginTx(ctx, nil)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer func() {
+	// 	tx.Rollback()
+	// }()
+
+	// password, err := p.GeneratePassword()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// for _, query := range strutil.ParseArbitraryStringSlice(rotateStatents, ";") {
+	// 	query = strings.TrimSpace(query)
+	// 	if len(query) == 0 {
+	// 		continue
+	// 	}
+	// 	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+	// 		"name":    ,
+	// 		"password": password,
+	// 	}))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	defer stmt.Close()
+	// 	if _, err := stmt.ExecContext(ctx); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
+
+	// if err := tx.Commit(); err != nil {
+	// 	return nil, err
+	// }
+
 	return nil, nil
 }

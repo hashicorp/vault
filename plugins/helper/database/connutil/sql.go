@@ -9,8 +9,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
 )
+
+var _ ConnectionProducer = &SQLConnectionProducer{}
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type SQLConnectionProducer struct {
@@ -18,6 +21,8 @@ type SQLConnectionProducer struct {
 	MaxOpenConnections       int         `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
 	MaxIdleConnections       int         `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
+	RootUsername             string      `json:"root_username" structs:"root_username" mapstructure:"root_username"`
+	RootPassword             string      `json:"root_password" structs:"root_password" mapstructure:"root_password"`
 
 	Type                  string
 	maxConnectionLifetime time.Duration
@@ -26,17 +31,25 @@ type SQLConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
 	c.Lock()
 	defer c.Unlock()
 
-	err := mapstructure.WeakDecode(conf, c)
+	err = mapstructure.WeakDecode(conf, c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if len(c.ConnectionURL) == 0 {
-		return fmt.Errorf("connection_url cannot be empty")
+	connURL := c.ConnectionURL
+	if len(connURL) == 0 {
+		return nil, fmt.Errorf("connection_url cannot be empty")
+	}
+
+	if len(c.RootUsername) != 0 && len(c.RootPassword) != 0 {
+		dbutil.QueryHelper(connURL, map[string]string{
+			"name":     c.RootUsername,
+			"password": c.RootPassword,
+		})
 	}
 
 	if c.MaxOpenConnections == 0 {
@@ -55,7 +68,7 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 
 	c.maxConnectionLifetime, err = parseutil.ParseDurationSecond(c.MaxConnectionLifetimeRaw)
 	if err != nil {
-		return fmt.Errorf("invalid max_connection_lifetime: %s", err)
+		return nil, fmt.Errorf("invalid max_connection_lifetime: %s", err)
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -64,15 +77,15 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return fmt.Errorf("error verifying connection: %s", err)
+			return nil, fmt.Errorf("error verifying connection: %s", err)
 		}
 
 		if err := c.db.PingContext(ctx); err != nil {
-			return fmt.Errorf("error verifying connection: %s", err)
+			return nil, fmt.Errorf("error verifying connection: %s", err)
 		}
 	}
 
-	return nil
+	return conf, nil
 }
 
 func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, error) {

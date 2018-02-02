@@ -62,13 +62,28 @@ func (s *gRPCServer) RevokeUser(ctx context.Context, req *RevokeUserRequest) (*E
 }
 
 func (s *gRPCServer) RotateRootCredentials(ctx context.Context, req *RotateRootCredentialsRequest) (*RotateRootCredentialsResponse, error) {
-	p, err := s.impl.RotateRootCredentials(ctx, req.Statements, req.RootCredentials)
+	config := make(map[string]interface{})
+	err := json.Unmarshal(req.Config, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.impl.RotateRootCredentials(ctx, req.Statements, config)
+	if err != nil {
+		return nil, err
+	}
+
+	respConfig, err := json.Marshal(resp)
+	if err != nil {
+		return nil, err
+	}
+
 	return &RotateRootCredentialsResponse{
-		RootCredentials: p,
+		Config: respConfig,
 	}, err
 }
 
-func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*Empty, error) {
+func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*InitializeResponse, error) {
 	config := map[string]interface{}{}
 
 	err := json.Unmarshal(req.Config, &config)
@@ -76,8 +91,19 @@ func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*E
 		return nil, err
 	}
 
-	err = s.impl.Initialize(ctx, config, req.VerifyConnection)
-	return &Empty{}, err
+	resp, err := s.impl.Initialize(ctx, config, req.VerifyConnection)
+	if err != nil {
+		return nil, err
+	}
+
+	respConfig, err := json.Marshal(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return &InitializeResponse{
+		Config: respConfig,
+	}, err
 }
 
 func (s *gRPCServer) Close(_ context.Context, _ *Empty) (*Empty, error) {
@@ -179,15 +205,20 @@ func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, user
 	return nil
 }
 
-func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements string, rootCredentials map[string]string) (newRootCredentials map[string]string, err error) {
+func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (saveConf map[string]interface{}, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
 	defer close(quitCh)
 	defer cancel()
 
+	reqConf, err := json.Marshal(conf)
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := c.client.RotateRootCredentials(ctx, &RotateRootCredentialsRequest{
-		Statements:      statements,
-		RootCredentials: rootCredentials,
+		Statements: statements,
+		Config:     reqConf,
 	})
 
 	if err != nil {
@@ -198,13 +229,17 @@ func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements strin
 		return nil, err
 	}
 
-	return resp.RootCredentials, nil
+	if err := json.Unmarshal(resp.Config, conf); err != nil {
+		return nil, err
+	}
+
+	return conf, nil
 }
 
-func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error {
-	configRaw, err := json.Marshal(config)
+func (c *gRPCClient) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
+	configRaw, err := json.Marshal(conf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -212,19 +247,22 @@ func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface
 	defer close(quitCh)
 	defer cancel()
 
-	_, err = c.client.Initialize(ctx, &InitializeRequest{
+	resp, err := c.client.Initialize(ctx, &InitializeRequest{
 		Config:           configRaw,
 		VerifyConnection: verifyConnection,
 	})
 	if err != nil {
 		if c.doneCtx.Err() != nil {
-			return ErrPluginShutdown
+			return nil, ErrPluginShutdown
 		}
 
-		return err
+		return nil, err
 	}
 
-	return nil
+	if err := json.Unmarshal(resp.Config, conf); err != nil {
+		return nil, err
+	}
+	return conf, nil
 }
 
 func (c *gRPCClient) Close() error {
