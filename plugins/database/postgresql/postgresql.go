@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/lib/pq"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -42,8 +44,8 @@ func New() (interface{}, error) {
 	}
 
 	dbType := &PostgreSQL{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
 
 	return dbType, nil
@@ -62,7 +64,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 }
 
 type PostgreSQL struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -377,54 +379,64 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 }
 
 func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (map[string]interface{}, error) {
-	// p.Lock()
-	// defer p.Unlock()
+	p.Lock()
+	defer p.Unlock()
 
-	// rotateStatents := statements
-	// if rotateStatents == "" {
-	// 	rotateStatents = defaultPostgresRotateRootCredentialsSQL
-	// }
+	c := new(connutil.SQLConfig)
+	err := mapstructure.WeakDecode(conf, c)
+	if err != nil {
+		return nil, err
+	}
 
-	// db, err := p.getConnection(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	if len(c.RootUsername) == 0 || len(c.RootPassword) == 0 {
+		return nil, errors.New("root_username and root_password are required to rotate")
+	}
 
-	// tx, err := db.BeginTx(ctx, nil)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer func() {
-	// 	tx.Rollback()
-	// }()
+	rotateStatents := statements
+	if rotateStatents == "" {
+		rotateStatents = defaultPostgresRotateRootCredentialsSQL
+	}
 
-	// password, err := p.GeneratePassword()
-	// if err != nil {
-	// 	return nil, err
-	// }
+	db, err := p.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	// for _, query := range strutil.ParseArbitraryStringSlice(rotateStatents, ";") {
-	// 	query = strings.TrimSpace(query)
-	// 	if len(query) == 0 {
-	// 		continue
-	// 	}
-	// 	stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-	// 		"name":    ,
-	// 		"password": password,
-	// 	}))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		tx.Rollback()
+	}()
 
-	// 	defer stmt.Close()
-	// 	if _, err := stmt.ExecContext(ctx); err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+	password, err := p.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
 
-	// if err := tx.Commit(); err != nil {
-	// 	return nil, err
-	// }
+	for _, query := range strutil.ParseArbitraryStringSlice(rotateStatents, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+			"name":     conf["name"].(string),
+			"password": password,
+		}))
+		if err != nil {
+			return nil, err
+		}
+
+		defer stmt.Close()
+		if _, err := stmt.ExecContext(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }

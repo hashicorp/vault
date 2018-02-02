@@ -15,14 +15,19 @@ import (
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
 
-// SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
-type SQLConnectionProducer struct {
+// SQLConfig contains the config options for SQL database engines
+type SQLConfig struct {
 	ConnectionURL            string      `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
 	MaxOpenConnections       int         `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
 	MaxIdleConnections       int         `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
 	RootUsername             string      `json:"root_username" structs:"root_username" mapstructure:"root_username"`
 	RootPassword             string      `json:"root_password" structs:"root_password" mapstructure:"root_password"`
+}
+
+// SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
+type SQLConnectionProducer struct {
+	SQLConfig
 
 	Type                  string
 	maxConnectionLifetime time.Duration
@@ -46,6 +51,10 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 	}
 
 	if len(c.RootUsername) != 0 && len(c.RootPassword) != 0 {
+		if !strings.Contains(connURL, "{{name}}") || !strings.Contains(connURL, "{{password}}") {
+			return nil, fmt.Errorf("connection_url must be templated if root_username and root_password are provided")
+		}
+
 		dbutil.QueryHelper(connURL, map[string]string{
 			"name":     c.RootUsername,
 			"password": c.RootPassword,
