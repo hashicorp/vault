@@ -42,8 +42,8 @@ func New() (interface{}, error) {
 	}
 
 	dbType := &PostgreSQL{
-		SQLConnectionProducer: connProducer,
-		CredentialsProducer:   credsProducer,
+		ConnectionProducer:  connProducer,
+		CredentialsProducer: credsProducer,
 	}
 
 	return dbType, nil
@@ -62,7 +62,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 }
 
 type PostgreSQL struct {
-	*connutil.SQLConnectionProducer
+	connutil.ConnectionProducer
 	credsutil.CredentialsProducer
 }
 
