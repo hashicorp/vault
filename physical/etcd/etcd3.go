@@ -113,6 +113,15 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		cfg.Password = password
 	}
 
+	if maxReceive, ok := conf["max_receive_size"]; ok {
+		// grpc converts this to uint32 internally, so parse as that to avoid passing invalid values
+		val, err := strconv.ParseUint(maxReceive, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("value [%v] of 'max_receive_size' could not be understood", maxReceive)
+		}
+		cfg.MaxCallRecvMsgSize = int(val)
+	}
+
 	etcd, err := clientv3.New(cfg)
 	if err != nil {
 		return nil, err
