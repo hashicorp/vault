@@ -23,6 +23,10 @@ func Run(args []string) int {
 			args = []string{"version"}
 			break
 		}
+
+		if arg == "-no-color" {
+			os.Setenv("VAULT_OUTPUT_NO_COLOR", "true")
+		}
 	}
 
 	// Calculate hidden commands from the deprecated ones

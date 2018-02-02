@@ -89,6 +89,13 @@ func (c *DeprecatedCommand) Run(args []string) int {
 }
 
 func (c *DeprecatedCommand) warn() {
+	// If we detect the env var for no-color, then get the BasicUi.
+	// Ideally we would want DeprecatedCommands to support flags as well,
+	// and do parsing here, but this will do for now.
+	if os.Getenv("VAULT_OUTPUT_NO_COLOR") != "" {
+		c.UI = getBasicUI(c.UI)
+	}
+
 	c.UI.Warn(wrapAtLength(fmt.Sprintf(
 		"WARNING! The \"vault %s\" command is deprecated. Please use \"vault %s\" "+
 			"instead. This command will be removed in Vault 0.11 (or later).",
