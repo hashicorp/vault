@@ -250,9 +250,9 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 		result.SecretIDNumUses -= 1
 		result.LastUpdatedTime = time.Now()
 		if entry, err := logical.StorageEntryJSON(entryIndex, &result); err != nil {
-			return false, nil, fmt.Errorf("failed to decrement the use count for secret ID %q", secretID)
+			return false, nil, fmt.Errorf("failed to create storage entry while decrementing the secret ID use count: %v", err)
 		} else if err = req.Storage.Put(ctx, entry); err != nil {
-			return false, nil, fmt.Errorf("failed to decrement the use count for secret ID %q", secretID)
+			return false, nil, fmt.Errorf("failed to decrement the secret ID use count: %v", err)
 		}
 	}
 
