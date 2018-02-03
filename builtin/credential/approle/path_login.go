@@ -56,8 +56,10 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	switch {
 	case intErr != nil:
 		return nil, errwrap.Wrapf("failed to validate credentials: {{err}}", intErr)
-	case userErr != nil, role == nil:
+	case userErr != nil:
 		return logical.ErrorResponse(fmt.Sprintf("failed to validate credentials: %v", userErr)), nil
+	case role == nil:
+		return logical.ErrorResponse("failed to validate credentials; could not find role"), nil
 	}
 
 	// Always include the role name, for later filtering
