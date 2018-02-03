@@ -176,7 +176,7 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 		err = nil
 	}
 	// If we failed due to read-only storage, we can't do anything; ignore
-	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+	if err != nil && strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 		err = nil
 	}
 	if err != nil {
