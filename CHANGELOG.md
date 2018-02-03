@@ -2,10 +2,12 @@
 
 BUG FIXES:
 
+ * auth/approle: Fix inability to use limited-use-count secret IDs on
+   replication performance secondaries
  * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
-   periodic tokens [GH-3880]
+   periodic tokens. [GH-3880]
  * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
  * storage/etcd3: Fix large lists (like token loading at startup) not being
    handled [GH-3772]
