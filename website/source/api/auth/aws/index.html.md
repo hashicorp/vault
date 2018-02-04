@@ -628,11 +628,13 @@ inferencing configuration of that role.
   Vault still has the necessary IAM permissions to resolve the unique ID, Vault
   will update the unique ID. (If it does not have the necessary permissions to
   resolve the unique ID, then it will fail to update.) If this option is set to
-  false, then you MUST leave out the path component in bound_iam_principal_arn
-  for **roles** only, but not IAM users. That is, if your IAM role ARN is of the
-  form `arn:aws:iam::123456789012:role/some/path/to/MyRoleName`, you **must**
-  specify a bound_iam_principal_arn of
-  `arn:aws:iam::123456789012:role/MyRoleName` for authentication to work.
+  false, then you MUST leave out the path component in `bound_iam_principal_arn`
+  for **roles** that do not specify a wildcard at the end, but not IAM users or
+  role bindings that have a wildcard. That is, if your IAM role ARN is of the
+  form `arn:aws:iam::123456789012:role/some/path/to/MyRoleName`, and
+  `resolve_aws_unique_ids` is `false`, you **must** specify a
+  `bound_iam_principal_arn` of `arn:aws:iam::123456789012:role/MyRoleName` for
+  authentication to work.
 - `ttl` `(string: "")` - The TTL period of tokens issued using this role,
   provided as "1h", where hour is the largest suffix.
 - `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued using

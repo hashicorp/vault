@@ -218,7 +218,7 @@ func Test_enableIamIDResolution(t *testing.T) {
 	if resp == nil || resp.IsError() {
 		t.Fatalf("failed to read role: resp:%#v,\nerr:%#v", resp, err)
 	}
-	if resp.Data["bound_iam_principal_id"] != "" {
+	if resp.Data["bound_iam_principal_id"] != nil && len(resp.Data["bound_iam_principal_id"].([]string)) > 0 {
 		t.Fatalf("expected to get no unique ID in role, but got %q", resp.Data["bound_iam_principal_id"])
 	}
 
@@ -240,7 +240,8 @@ func Test_enableIamIDResolution(t *testing.T) {
 	if resp == nil || resp.IsError() {
 		t.Fatalf("failed to read role: resp:%#v,\nerr:%#v", resp, err)
 	}
-	if resp.Data["bound_iam_principal_id"] != "FakeUniqueId1" {
+	principal_ids := resp.Data["bound_iam_principal_id"].([]string)
+	if len(principal_ids) != 1 || principal_ids[0] != "FakeUniqueId1" {
 		t.Fatalf("bad: expected upgrade of role resolve principal ID to %q, but got %q instead", "FakeUniqueId1", resp.Data["bound_iam_principal_id"])
 	}
 }
@@ -499,7 +500,8 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.Data["bound_iam_principal_id"] != "FakeUniqueId1" {
+	principal_ids := resp.Data["bound_iam_principal_id"].([]string)
+	if len(principal_ids) != 1 || principal_ids[0] != "FakeUniqueId1" {
 		t.Fatalf("expected fake unique ID of FakeUniqueId1, got %q", resp.Data["bound_iam_principal_id"])
 	}
 	data["resolve_aws_unique_ids"] = false
@@ -584,15 +586,15 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 
 	expected := map[string]interface{}{
 		"auth_type":                      ec2AuthType,
-		"bound_ami_id":                   "testamiid",
-		"bound_account_id":               "testaccountid",
-		"bound_region":                   "testregion",
-		"bound_iam_principal_arn":        "",
-		"bound_iam_principal_id":         "",
-		"bound_iam_role_arn":             "arn:aws:iam::123456789012:role/MyRole",
-		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/MyInstanceProfile",
-		"bound_subnet_id":                "testsubnetid",
-		"bound_vpc_id":                   "testvpcid",
+		"bound_ami_id":                   []string{"testamiid"},
+		"bound_account_id":               []string{"testaccountid"},
+		"bound_region":                   []string{"testregion"},
+		"bound_iam_principal_arn":        []string{},
+		"bound_iam_principal_id":         []string{},
+		"bound_iam_role_arn":             []string{"arn:aws:iam::123456789012:role/MyRole"},
+		"bound_iam_instance_profile_arn": []string{"arn:aws:iam::123456789012:instance-profile/MyInstanceProfile"},
+		"bound_subnet_id":                []string{"testsubnetid"},
+		"bound_vpc_id":                   []string{"testvpcid"},
 		"inferred_entity_type":           "",
 		"inferred_aws_region":            "",
 		"resolve_aws_unique_ids":         false,
@@ -624,7 +626,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	expected["bound_vpc_id"] = "newvpcid"
+	expected["bound_vpc_id"] = []string{"newvpcid"}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: role data: expected: %#v\n actual: %#v", expected, resp.Data)

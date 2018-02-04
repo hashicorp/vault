@@ -386,7 +386,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 
 	// Verify that the AccountID of the instance trying to login matches the
 	// AccountID specified as a constraint on role
-	if roleEntry.BoundAccountID != "" && identityDoc.AccountID != roleEntry.BoundAccountID {
+	if len(roleEntry.BoundAccountIDs) > 0 && !strutil.StrListContains(roleEntry.BoundAccountIDs, identityDoc.AccountID) {
 		return fmt.Errorf("account ID %q does not belong to role %q", identityDoc.AccountID, roleName), nil
 	}
 
@@ -399,31 +399,31 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	// already calling the API to validate the Instance ID anyway, so it shouldn't
 	// matter. The benefit is that we have the exact same code whether auth_type
 	// is ec2 or iam.
-	if roleEntry.BoundAmiID != "" {
+	if len(roleEntry.BoundAmiIDs) > 0 {
 		if instance.ImageId == nil {
 			return nil, fmt.Errorf("AMI ID in the instance description is nil")
 		}
-		if roleEntry.BoundAmiID != *instance.ImageId {
+		if !strutil.StrListContains(roleEntry.BoundAmiIDs, *instance.ImageId) {
 			return fmt.Errorf("AMI ID %q does not belong to role %q", instance.ImageId, roleName), nil
 		}
 	}
 
 	// Validate the SubnetID if corresponding bound was set on the role
-	if roleEntry.BoundSubnetID != "" {
+	if len(roleEntry.BoundSubnetIDs) > 0 {
 		if instance.SubnetId == nil {
 			return nil, fmt.Errorf("subnet ID in the instance description is nil")
 		}
-		if roleEntry.BoundSubnetID != *instance.SubnetId {
+		if !strutil.StrListContains(roleEntry.BoundSubnetIDs, *instance.SubnetId) {
 			return fmt.Errorf("subnet ID %q does not satisfy the constraint on role %q", *instance.SubnetId, roleName), nil
 		}
 	}
 
 	// Validate the VpcID if corresponding bound was set on the role
-	if roleEntry.BoundVpcID != "" {
+	if len(roleEntry.BoundVpcIDs) > 0 {
 		if instance.VpcId == nil {
 			return nil, fmt.Errorf("VPC ID in the instance description is nil")
 		}
-		if roleEntry.BoundVpcID != *instance.VpcId {
+		if !strutil.StrListContains(roleEntry.BoundVpcIDs, *instance.VpcId) {
 			return fmt.Errorf("VPC ID %q does not satisfy the constraint on role %q", *instance.VpcId, roleName), nil
 		}
 	}
@@ -431,7 +431,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	// Check if the IAM instance profile ARN of the instance trying to
 	// login, matches the IAM instance profile ARN specified as a constraint
 	// on the role
-	if roleEntry.BoundIamInstanceProfileARN != "" {
+	if len(roleEntry.BoundIamInstanceProfileARNs) > 0 {
 		if instance.IamInstanceProfile == nil {
 			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
 		}
@@ -439,14 +439,21 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
 		}
 		iamInstanceProfileARN := *instance.IamInstanceProfile.Arn
-		if !strings.HasPrefix(iamInstanceProfileARN, roleEntry.BoundIamInstanceProfileARN) {
+		matchesInstanceProfile := false
+		for _, boundInstanceProfileARN := range roleEntry.BoundIamInstanceProfileARNs {
+			if strings.HasPrefix(iamInstanceProfileARN, boundInstanceProfileARN) {
+				matchesInstanceProfile = true
+				break
+			}
+		}
+		if !matchesInstanceProfile {
 			return fmt.Errorf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileARN, roleName), nil
 		}
 	}
 
 	// Check if the IAM role ARN of the instance trying to login, matches
 	// the IAM role ARN specified as a constraint on the role.
-	if roleEntry.BoundIamRoleARN != "" {
+	if len(roleEntry.BoundIamRoleARNs) > 0 {
 		if instance.IamInstanceProfile == nil {
 			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
 		}
@@ -484,7 +491,14 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 			return nil, fmt.Errorf("IAM role ARN could not be fetched")
 		}
 
-		if !strings.HasPrefix(iamRoleARN, roleEntry.BoundIamRoleARN) {
+		matchesInstanceRoleARN := false
+		for _, boundIamRoleARN := range roleEntry.BoundIamRoleARNs {
+			if strings.HasPrefix(iamRoleARN, boundIamRoleARN) {
+				matchesInstanceRoleARN = true
+				break
+			}
+		}
+		if !matchesInstanceRoleARN {
 			return fmt.Errorf("IAM role ARN %q does not satisfy the constraint role %q", iamRoleARN, roleName), nil
 		}
 	}
@@ -588,7 +602,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 
 	// Verify that the `Region` of the instance trying to login matches the
 	// `Region` specified as a constraint on role
-	if roleEntry.BoundRegion != "" && identityDocParsed.Region != roleEntry.BoundRegion {
+	if len(roleEntry.BoundRegions) > 0 && !strutil.StrListContains(roleEntry.BoundRegions, identityDocParsed.Region) {
 		return logical.ErrorResponse(fmt.Sprintf("Region %q does not satisfy the constraint on role %q", identityDocParsed.Region, roleName)), nil
 	}
 
@@ -939,17 +953,20 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 	// read the role directly to know what the bind is. It's a relatively small amount of leakage, in
 	// some fairly corner cases, and in the most likely error case (role has been changed to a new ARN),
 	// the error message is identical.
-	if roleEntry.BoundIamPrincipalARN != "" {
+	if len(roleEntry.BoundIamPrincipalARNs) > 0 {
 		// We might not get here if all bindings were on the inferred entity, which we've already validated
 		// above
+		// As with logins, there are three ways to pass this check:
+		// 1: clientUserId is in roleEntry.BoundIamPrincipalIDs (entries in roleEntry.BoundIamPrincipalIDs
+		//    implies that roleEntry.ResolveAWSUniqueIDs is true)
+		// 2: roleEntry.ResolveAWSUniqueIDs is false and canonical_arn is in roleEntry.BoundIamPrincipalARNs
+		// 3: Full ARN matches one of the wildcard globs in roleEntry.BoundIamPrincipalARNs
 		clientUserId, ok := req.Auth.Metadata["client_user_id"]
-		if ok && roleEntry.BoundIamPrincipalID != "" {
-			// Resolving unique IDs is enabled and the auth metadata contains the unique ID, so checking the
-			// unique ID is authoritative at this stage
-			if roleEntry.BoundIamPrincipalID != clientUserId {
-				return nil, fmt.Errorf("role no longer bound to ARN %q", canonicalArn)
-			}
-		} else if strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
+		switch {
+		case ok && strutil.StrListContains(roleEntry.BoundIamPrincipalIDs, clientUserId): // check 1 passed
+		case !roleEntry.ResolveAWSUniqueIDs && strutil.StrListContains(roleEntry.BoundIamPrincipalARNs, canonicalArn): // check 2 passed
+		default:
+			// check 3 is a bit more complex, so we do it last
 			fullArn := b.getCachedUserId(clientUserId)
 			if fullArn == "" {
 				entity, err := parseIamArn(canonicalArn)
@@ -967,11 +984,16 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 					b.setCachedUserId(clientUserId, fullArn)
 				}
 			}
-			if !strutil.GlobbedStringsMatch(roleEntry.BoundIamPrincipalARN, fullArn) {
+			matchedWildcardBind := false
+			for _, principalARN := range roleEntry.BoundIamPrincipalARNs {
+				if strings.HasSuffix(principalARN, "*") && strutil.GlobbedStringsMatch(principalARN, fullArn) {
+					matchedWildcardBind = true
+					break
+				}
+			}
+			if !matchedWildcardBind {
 				return nil, fmt.Errorf("role no longer bound to ARN %q", canonicalArn)
 			}
-		} else if roleEntry.BoundIamPrincipalARN != canonicalArn {
-			return nil, fmt.Errorf("role no longer bound to ARN %q", canonicalArn)
 		}
 	}
 
@@ -1189,15 +1211,19 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	// The role creation should ensure that either we're inferring this is an EC2 instance
 	// or that we're binding an ARN
-	// The only way BoundIamPrincipalID could get set is if BoundIamPrincipalARN was also set and
-	// resolving to internal IDs was turned on, which can't be turned off. So, there should be no
-	// way for this to be set and not match BoundIamPrincipalARN
-	if roleEntry.BoundIamPrincipalID != "" {
-		if callerUniqueId != roleEntry.BoundIamPrincipalID {
-			return logical.ErrorResponse(fmt.Sprintf("expected IAM %s %s to resolve to unique AWS ID %q but got %q instead", entity.Type, entity.FriendlyName, roleEntry.BoundIamPrincipalID, callerUniqueId)), nil
-		}
-	} else if roleEntry.BoundIamPrincipalARN != "" {
-		if strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
+	if len(roleEntry.BoundIamPrincipalARNs) > 0 {
+		// As with renews, there are three ways to pass this check:
+		// 1: callerUniqueId is in roleEntry.BoundIamPrincipalIDs (entries in roleEntry.BoundIamPrincipalIDs
+		//    implies that roleEntry.ResolveAWSUniqueIDs is true)
+		// 2: roleEntry.ResolveAWSUniqueIDs is false and entity.canonicalArn() is in roleEntry.BoundIamPrincipalARNs
+		// 3: Full ARN matches one of the wildcard globs in roleEntry.BoundIamPrincipalARNs
+		// Need to be able to handle pathological configurations such as roleEntry.BoundIamPrincipalARNs looking something like:
+		// arn:aw:iam::123456789012:{user/UserName,user/path/*,role/RoleName,role/path/*}
+		switch {
+		case strutil.StrListContains(roleEntry.BoundIamPrincipalIDs, callerUniqueId): // check 1 passed
+		case !roleEntry.ResolveAWSUniqueIDs && strutil.StrListContains(roleEntry.BoundIamPrincipalARNs, entity.canonicalArn()): // check 2 passed
+		default:
+			// evaluate check 3
 			fullArn := b.getCachedUserId(callerUniqueId)
 			if fullArn == "" {
 				fullArn, err = b.fullArn(ctx, entity, req.Storage)
@@ -1209,13 +1235,16 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				}
 				b.setCachedUserId(callerUniqueId, fullArn)
 			}
-			if !strutil.GlobbedStringsMatch(roleEntry.BoundIamPrincipalARN, fullArn) {
-				// Note: Intentionally giving the exact same error message as a few lines below. Otherwise, we might leak information
-				// about whether the bound IAM principal ARN is a wildcard or not, and what that wildcard is.
+			matchedWildcardBind := false
+			for _, principalARN := range roleEntry.BoundIamPrincipalARNs {
+				if strings.HasSuffix(principalARN, "*") && strutil.GlobbedStringsMatch(principalARN, fullArn) {
+					matchedWildcardBind = true
+					break
+				}
+			}
+			if !matchedWildcardBind {
 				return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
 			}
-		} else if roleEntry.BoundIamPrincipalARN != entity.canonicalArn() {
-			return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
 		}
 	}
 
