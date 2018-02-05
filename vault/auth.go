@@ -453,7 +453,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// Create a barrier view using the UUID
 		viewPath := credentialBarrierPrefix + entry.UUID + "/"
 		view = NewBarrierView(c.barrier, viewPath)
-		fmt.Printf("setupCredentials: view: %p\n", view)
 
 		// Mark the view as read-only until the mounting is complete and
 		// ensure that it is reset after. This ensures that there will be no
