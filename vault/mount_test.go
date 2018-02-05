@@ -21,7 +21,7 @@ func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
 			Key:   "bar",
 			Value: []byte("baz"),
 		})
-		if err == nil || !strings.Contains(err.Error(), "Cannot write to readonly storage") {
+		if err == nil || !strings.Contains(err.Error(), logical.ErrSetupReadOnly.Error()) {
 			t.Fatalf("expected a read-only error")
 		}
 		return &NoopBackend{}, nil

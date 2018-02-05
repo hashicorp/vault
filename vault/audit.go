@@ -93,8 +93,8 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry) error {
 	// Mark the view as read-only until the mounting is complete and
 	// ensure that it is reset after. This ensures that there will be no
 	// writes during the construction of the backend.
-	view.markReadOnly(true)
-	defer view.markReadOnly(false)
+	view.setReadOnlyErr(logical.ErrSetupReadOnly)
+	defer view.setReadOnlyErr(nil)
 
 	// Lookup the new backend
 	backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
@@ -329,16 +329,18 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		// Mark the view as read-only until the mounting is complete and
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
-		view.markReadOnly(true)
+		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 
 		// Initialize the backend
 		backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
 		if err != nil {
 			c.logger.Error("core: failed to create audit entry", "path", entry.Path, "error", err)
+			view.setReadOnlyErr(nil)
 			continue
 		}
 		if backend == nil {
 			c.logger.Error("core: created audit entry was nil", "path", entry.Path, "type", entry.Type)
+			view.setReadOnlyErr(nil)
 			continue
 		}
 
@@ -347,8 +349,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 
 		successCount += 1
 
-		// Undo the read-only marking
-		view.markReadOnly(false)
+		view.setReadOnlyErr(nil)
 	}
 
 	if len(c.audit.Entries) > 0 && successCount == 0 {

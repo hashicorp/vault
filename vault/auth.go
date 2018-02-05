@@ -100,8 +100,8 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 	// Mark the view as read-only until the mounting is complete and
 	// ensure that it is reset after. This ensures that there will be no
 	// writes during the construction of the backend.
-	view.markReadOnly(true)
-	defer view.markReadOnly(false)
+	view.setReadOnlyErr(logical.ErrSetupReadOnly)
+	defer view.setReadOnlyErr(nil)
 
 	var err error
 	var backend logical.Backend
@@ -457,7 +457,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// Mark the view as read-only until the mounting is complete and
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
-		view.markReadOnly(true)
+		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
@@ -476,15 +476,18 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				c.logger.Warn("core: skipping plugin-based credential entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
+			view.setReadOnlyErr(nil)
 			return errLoadAuthFailed
 		}
 		if backend == nil {
+			view.setReadOnlyErr(nil)
 			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
 		}
 
 		// Check for the correct backend type
 		backendType = backend.Type()
 		if entry.Type == "plugin" && backendType != logical.TypeCredential {
+			view.setReadOnlyErr(nil)
 			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 		}
 
@@ -493,6 +496,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		path := credentialRoutePrefix + entry.Path
 		err = c.router.Mount(backend, path, entry, view)
 		if err != nil {
+			view.setReadOnlyErr(nil)
 			c.logger.Error("core: failed to mount auth entry", "path", entry.Path, "error", err)
 			return errLoadAuthFailed
 		}
@@ -511,8 +515,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			c.tokenStore.cubbyholeBackend = c.router.MatchingBackend("cubbyhole/").(*CubbyholeBackend)
 		}
 
-		// Undo the read-only marking
-		view.markReadOnly(false)
+		view.setReadOnlyErr(nil)
 	}
 
 	if persistNeeded {
