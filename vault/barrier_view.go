@@ -34,6 +34,10 @@ func NewBarrierView(barrier BarrierStorage, prefix string) *BarrierView {
 	}
 }
 
+func (v *BarrierView) markReadOnly(readOnly bool) {
+	v.readonly = readOnly
+}
+
 // sanityCheck is used to perform a sanity check on a key
 func (v *BarrierView) sanityCheck(key string) error {
 	if strings.Contains(key, "..") {

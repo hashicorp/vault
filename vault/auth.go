@@ -96,6 +96,13 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 	}
 	viewPath := credentialBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
+
+	// Mark the view as read-only until the mounting is complete and
+	// ensure that it is reset after. This ensures that there will be no
+	// writes during the construction of the backend.
+	view.markReadOnly(true)
+	defer view.markReadOnly(false)
+
 	var err error
 	var backend logical.Backend
 	sysView := c.mountEntrySysView(entry)
@@ -446,6 +453,13 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// Create a barrier view using the UUID
 		viewPath := credentialBarrierPrefix + entry.UUID + "/"
 		view = NewBarrierView(c.barrier, viewPath)
+		fmt.Printf("setupCredentials: view: %p\n", view)
+
+		// Mark the view as read-only until the mounting is complete and
+		// ensure that it is reset after. This ensures that there will be no
+		// writes during the construction of the backend.
+		view.markReadOnly(true)
+
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
 		conf := make(map[string]string)
@@ -497,6 +511,9 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			c.tokenStore.cubbyholeBackend = c.router.MatchingBackend("cubbyhole/").(*CubbyholeBackend)
 		}
+
+		// Undo the read-only marking
+		view.markReadOnly(false)
 	}
 
 	if persistNeeded {

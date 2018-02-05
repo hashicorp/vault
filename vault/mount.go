@@ -247,6 +247,13 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	}
 	viewPath := backendBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
+
+	// Mark the view as read-only until the mounting is complete and
+	// ensure that it is reset after. This ensures that there will be no
+	// writes during the construction of the backend.
+	view.markReadOnly(true)
+	defer view.markReadOnly(false)
+
 	var backend logical.Backend
 	var err error
 	sysView := c.mountEntrySysView(entry)
@@ -735,6 +742,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Create a barrier view using the UUID
 		view = NewBarrierView(c.barrier, barrierPath)
 
+		// Mark the view as read-only until the mounting is complete and
+		// ensure that it is reset after. This ensures that there will be no
+		// writes during the construction of the backend.
+		view.markReadOnly(true)
+
 		var backend logical.Backend
 		var err error
 		sysView := c.mountEntrySysView(entry)
@@ -784,6 +796,9 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		if entry.Tainted {
 			c.router.Taint(entry.Path)
 		}
+
+		// Undo the read-only marking
+		view.markReadOnly(false)
 	}
 	return nil
 }
