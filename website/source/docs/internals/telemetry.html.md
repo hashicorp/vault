@@ -70,7 +70,18 @@ These metrics represent operational aspects of the running Vault instance.
 
 **[S]** Summary (Number of responses): Number of audit log responses
 
+Additionally, per audit log backend metrics such as those for a specific backend like `file` will be present as:
+
+### vault.audit.file.log_request
+
+**[S]** Summary (Number of requests): Number of audit log requests for the file based audit backend mounted as `file``
+
+### vault.audit.file.log_response
+
+**[S]** Summary (Number of responses): Number of audit log responses for the file based audit backend mounted as `file`
+
 ### vault.audit.log_request_failure
+
 
 **[C]** Counter (Number of failures): Number of audit log request failures
 
