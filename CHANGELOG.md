@@ -6,6 +6,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * api/renewer: Honor increment value in renew auth calls [GH-3904]
  * auth/approle: Fix inability to use limited-use-count secret IDs on
    replication performance secondaries
  * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
