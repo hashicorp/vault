@@ -1322,6 +1322,11 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 }
 
 func (i *IdentityStore) validateMemberGroupID(groupID string, memberGroupID string) error {
+	// Detect self loop
+	if groupID == memberGroupID {
+		return fmt.Errorf("member group ID %q is same as the ID of the group", groupID)
+	}
+
 	group, err := i.MemDBGroupByID(groupID, true)
 	if err != nil {
 		return err
@@ -1331,11 +1336,6 @@ func (i *IdentityStore) validateMemberGroupID(groupID string, memberGroupID stri
 	// okay to add any group as its member group.
 	if group == nil {
 		return nil
-	}
-
-	// Detect self loop
-	if groupID == memberGroupID {
-		fmt.Errorf("member group ID %q is same as the ID of the group")
 	}
 
 	// If adding the memberGroupID to groupID creates a cycle, then groupID must
