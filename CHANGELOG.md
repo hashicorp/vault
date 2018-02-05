@@ -15,6 +15,7 @@ BUG FIXES:
  * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
  * storage/etcd3: Fix large lists (like token loading at startup) not being
    handled [GH-3772]
+ * storage/zookeeper: Update vendoring to fix freezing issues [GH-3896]
  * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
    plugins using gRPC transport [GH-3881]
 
