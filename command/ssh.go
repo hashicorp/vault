@@ -244,6 +244,12 @@ func (c *SSHCommand) Run(args []string) int {
 		sshArgs = args[1:]
 	}
 
+	apiClient, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
 	// Credentials are generated only against a registered role. If user
 	// does not specify a role with the SSH command, then lookup API is used
 	// to fetch all the roles with which this IP is associated. If there is
@@ -258,7 +264,7 @@ func (c *SSHCommand) Run(args []string) int {
 				"on the API response. This will be removed in the Vault 0.11 (or " +
 				"later."))
 
-		role, err := c.defaultRole(c.flagMountPoint, ip)
+		role, err := c.defaultRole(apiClient, c.flagMountPoint, ip)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error choosing role: %v", err))
 			return 1
@@ -284,7 +290,7 @@ func (c *SSHCommand) Run(args []string) int {
 				"credential, reading its type, and then revoking it. To reduce the " +
 				"number of API calls and surface area, specify -mode directly. This " +
 				"will be removed in Vault 0.11 (or later)."))
-		secret, cred, err := c.generateCredential(username, ip)
+		secret, cred, err := c.generateCredential(apiClient, username, ip)
 		if err != nil {
 			// This is _very_ hacky, but is the only sane backwards-compatible way
 			// to do this. If the error is "key type unknown", we just assume the
@@ -302,7 +308,7 @@ func (c *SSHCommand) Run(args []string) int {
 		// Revoke the secret, since the child functions will generate their own
 		// credential. Users wishing to avoid this should specify -mode.
 		if secret != nil {
-			if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+			if err := apiClient.Sys().Revoke(secret.LeaseID); err != nil {
 				c.UI.Warn(fmt.Sprintf("Failed to revoke temporary key: %s", err))
 			}
 		}
@@ -310,11 +316,11 @@ func (c *SSHCommand) Run(args []string) int {
 
 	switch strings.ToLower(c.flagMode) {
 	case ssh.KeyTypeCA:
-		return c.handleTypeCA(username, ip, sshArgs)
+		return c.handleTypeCA(apiClient, username, ip, sshArgs)
 	case ssh.KeyTypeOTP:
-		return c.handleTypeOTP(username, ip, sshArgs)
+		return c.handleTypeOTP(apiClient, username, ip, sshArgs)
 	case ssh.KeyTypeDynamic:
-		return c.handleTypeDynamic(username, ip, sshArgs)
+		return c.handleTypeDynamic(apiClient, username, ip, sshArgs)
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown SSH mode: %s", c.flagMode))
 		return 1
@@ -322,7 +328,7 @@ func (c *SSHCommand) Run(args []string) int {
 }
 
 // handleTypeCA is used to handle SSH logins using the "CA" key type.
-func (c *SSHCommand) handleTypeCA(username, ip string, sshArgs []string) int {
+func (c *SSHCommand) handleTypeCA(apiClient *api.Client, username, ip string, sshArgs []string) int {
 	// Read the key from disk
 	publicKey, err := ioutil.ReadFile(c.flagPublicKeyPath)
 	if err != nil {
@@ -331,13 +337,7 @@ func (c *SSHCommand) handleTypeCA(username, ip string, sshArgs []string) int {
 		return 1
 	}
 
-	client, err := c.Client()
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-
-	sshClient := client.SSHWithMountPoint(c.flagMountPoint)
+	sshClient := apiClient.SSHWithMountPoint(c.flagMountPoint)
 
 	// Attempt to sign the public key
 	secret, err := sshClient.SignKey(c.flagRole, map[string]interface{}{
@@ -464,8 +464,8 @@ func (c *SSHCommand) handleTypeCA(username, ip string, sshArgs []string) int {
 }
 
 // handleTypeOTP is used to handle SSH logins using the "otp" key type.
-func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
-	secret, cred, err := c.generateCredential(username, ip)
+func (c *SSHCommand) handleTypeOTP(apiClient *api.Client, username, ip string, sshArgs []string) int {
+	secret, cred, err := c.generateCredential(apiClient, username, ip)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to generate credential: %s", err))
 		return 2
@@ -536,7 +536,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
 	}
 
 	// Revoke the key if it's longer than expected
-	if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+	if err := apiClient.Sys().Revoke(secret.LeaseID); err != nil {
 		c.UI.Error(fmt.Sprintf("failed to revoke key: %s", err))
 		return 2
 	}
@@ -545,9 +545,9 @@ func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
 }
 
 // handleTypeDynamic is used to handle SSH logins using the "dyanmic" key type.
-func (c *SSHCommand) handleTypeDynamic(username, ip string, sshArgs []string) int {
+func (c *SSHCommand) handleTypeDynamic(apiClient *api.Client, username, ip string, sshArgs []string) int {
 	// Generate the credential
-	secret, cred, err := c.generateCredential(username, ip)
+	secret, cred, err := c.generateCredential(apiClient, username, ip)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to generate credential: %s", err))
 		return 2
@@ -600,7 +600,7 @@ func (c *SSHCommand) handleTypeDynamic(username, ip string, sshArgs []string) in
 	}
 
 	// Revoke the key if it's longer than expected
-	if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+	if err := apiClient.Sys().Revoke(secret.LeaseID); err != nil {
 		c.UI.Error(fmt.Sprintf("failed to revoke key: %s", err))
 		return 2
 	}
@@ -610,13 +610,8 @@ func (c *SSHCommand) handleTypeDynamic(username, ip string, sshArgs []string) in
 
 // generateCredential generates a credential for the given role and returns the
 // decoded secret data.
-func (c *SSHCommand) generateCredential(username, ip string) (*api.Secret, *SSHCredentialResp, error) {
-	client, err := c.Client()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sshClient := client.SSHWithMountPoint(c.flagMountPoint)
+func (c *SSHCommand) generateCredential(apiClient *api.Client, username, ip string) (*api.Secret, *SSHCredentialResp, error) {
+	sshClient := apiClient.SSHWithMountPoint(c.flagMountPoint)
 
 	// Attempt to generate the credential.
 	secret, err := sshClient.Credential(c.flagRole, map[string]interface{}{
@@ -679,13 +674,9 @@ func (c *SSHCommand) writeTemporaryKey(name string, data []byte) (string, error,
 // If user did not provide the role with which SSH connection has
 // to be established and if there is only one role associated with
 // the IP, it is used by default.
-func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
+func (c *SSHCommand) defaultRole(client *api.Client, mountPoint, ip string) (string, error) {
 	data := map[string]interface{}{
 		"ip": ip,
-	}
-	client, err := c.Client()
-	if err != nil {
-		return "", err
 	}
 	secret, err := client.Logical().Write(mountPoint+"/lookup", data)
 	if err != nil {
