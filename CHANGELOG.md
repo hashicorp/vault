@@ -1,5 +1,9 @@
 ## 0.9.4 (Unreleased)
 
+IMPROVEMENTS:
+
+ * auth/centrify: Add CLI helper
+
 BUG FIXES:
 
  * auth/approle: Fix inability to use limited-use-count secret IDs on
