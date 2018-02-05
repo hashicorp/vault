@@ -36,7 +36,7 @@ func (p *ProxyProtoConfig) SetAuthorizedAddrs(addrs interface{}) error {
 		for _, v := range addrs.([]interface{}) {
 			stringAddr, ok := v.(string)
 			if !ok {
-				return fmt.Errorf("error parsing %q as string")
+				return fmt.Errorf("error parsing %v as string", v)
 			}
 			stringAddrs = append(stringAddrs, stringAddr)
 		}

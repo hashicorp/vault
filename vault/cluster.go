@@ -343,31 +343,26 @@ func (c *Core) ClusterTLSConfig(ctx context.Context) (*tls.Config, error) {
 	// of clustering as connections come and go
 
 	serverLookup := func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-		switch {
-		default:
-			var localCert bytes.Buffer
+		var localCert bytes.Buffer
 
-			c.clusterParamsLock.RLock()
-			localCert.Write(c.localClusterCert)
-			localSigner := c.localClusterPrivateKey
-			parsedCert := c.localClusterParsedCert
-			c.clusterParamsLock.RUnlock()
+		c.clusterParamsLock.RLock()
+		localCert.Write(c.localClusterCert)
+		localSigner := c.localClusterPrivateKey
+		parsedCert := c.localClusterParsedCert
+		c.clusterParamsLock.RUnlock()
 
-			if localCert.Len() == 0 {
-				return nil, fmt.Errorf("got forwarding connection but no local cert")
-			}
-
-			//c.logger.Trace("core: performing cert name lookup", "hello_server_name", clientHello.ServerName, "local_cluster_cert_name", parsedCert.Subject.CommonName)
-
-			return &tls.Certificate{
-				Certificate: [][]byte{localCert.Bytes()},
-				PrivateKey:  localSigner,
-				Leaf:        parsedCert,
-			}, nil
-
+		if localCert.Len() == 0 {
+			return nil, fmt.Errorf("got forwarding connection but no local cert")
 		}
 
-		return nil, nil
+		//c.logger.Trace("core: performing cert name lookup", "hello_server_name", clientHello.ServerName, "local_cluster_cert_name", parsedCert.Subject.CommonName)
+
+		return &tls.Certificate{
+			Certificate: [][]byte{localCert.Bytes()},
+			PrivateKey:  localSigner,
+			Leaf:        parsedCert,
+		}, nil
+
 	}
 
 	clientLookup := func(requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
