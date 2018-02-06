@@ -6,11 +6,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var defaultGRPCCallOpts []grpc.CallOption
-
-func init() {
-	defaultGRPCCallOpts = []grpc.CallOption{
-		grpc.MaxCallSendMsgSize(math.MaxInt32),
-		grpc.MaxCallRecvMsgSize(math.MaxInt32),
-	}
+var largeMsgGRPCCallOpts []grpc.CallOption = []grpc.CallOption{
+	grpc.MaxCallSendMsgSize(math.MaxInt32),
+	grpc.MaxCallRecvMsgSize(math.MaxInt32),
 }
