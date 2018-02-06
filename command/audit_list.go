@@ -44,7 +44,7 @@ Usage: vault audit list [options]
 }
 
 func (c *AuditListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -103,13 +103,15 @@ func (c *AuditListCommand) Run(args []string) int {
 		return 0
 	}
 
-	if c.flagDetailed {
-		c.UI.Output(tableOutput(c.detailedAudits(audits), nil))
-		return 0
+	switch c.flagFormat {
+	case "table":
+		if c.flagDetailed {
+			return OutputWithFormat(c.UI, c.flagFormat, c.detailedAudits(audits))
+		}
+		return OutputWithFormat(c.UI, c.flagFormat, c.simpleAudits(audits))
+	default:
+		return OutputWithFormat(c.UI, c.flagFormat, audits)
 	}
-
-	c.UI.Output(tableOutput(c.simpleAudits(audits), nil))
-	return 0
 }
 
 func (c *AuditListCommand) simpleAudits(audits map[string]*api.Audit) []string {

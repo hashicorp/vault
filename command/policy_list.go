@@ -31,7 +31,7 @@ Usage: vault policy list [options]
 }
 
 func (c *PolicyListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *PolicyListCommand) AutocompleteArgs() complete.Predictor {
@@ -72,9 +72,12 @@ func (c *PolicyListCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error listing policies: %s", err))
 		return 2
 	}
-	for _, p := range policies {
-		c.UI.Output(p)
-	}
 
-	return 0
+	switch c.flagFormat {
+	case "table":
+		out := append([]string{"Policies"}, policies...)
+		return OutputWithFormat(c.UI, c.flagFormat, out)
+	default:
+		return OutputWithFormat(c.UI, c.flagFormat, policies)
+	}
 }

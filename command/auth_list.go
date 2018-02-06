@@ -108,7 +108,6 @@ func (c *AuthListCommand) Run(args []string) int {
 	default:
 		return OutputWithFormat(c.UI, c.flagFormat, auths)
 	}
-
 }
 
 func (c *AuthListCommand) simpleMounts(auths map[string]*api.AuthMount) []string {
