@@ -192,7 +192,7 @@ const pathRoleHelpDesc = `
 This path lets you manage the roles that can be created with this backend.
 
 The "sql" parameter customizes the SQL string used to create the role.
-This can be a sequence of SQL queries, each semi-colon seperated. Some
+This can be a sequence of SQL queries, each semi-colon separated. Some
 substitution will be done to the SQL string for certain keys.
 The names of the variables must be surrounded by "{{" and "}}" to be replaced.
 
