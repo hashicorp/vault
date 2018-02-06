@@ -38,6 +38,7 @@ type SSHCommand struct {
 	flagPrivateKeyPath    string
 	flagHostKeyMountPoint string
 	flagHostKeyHostnames  string
+	flagValidPrincipals   string
 }
 
 func (c *SSHCommand) Synopsis() string {
@@ -191,6 +192,16 @@ func (c *SSHCommand) Flags() *FlagSets {
 			"list of values.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:       "valid-principals",
+		Target:     &c.flagValidPrincipals,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "List of valid principal names to include in the generated " +
+			"user certificate. This is specified as a comma-separated list of values.",
+	})
+
 	return set
 }
 
@@ -340,12 +351,17 @@ func (c *SSHCommand) handleTypeCA(username, ip string, sshArgs []string) int {
 
 	sshClient := c.client.SSHWithMountPoint(c.flagMountPoint)
 
+	var principals = username
+	if c.flagValidPrincipals != "" {
+		principals = c.flagValidPrincipals
+	}
+
 	// Attempt to sign the public key
 	secret, err := sshClient.SignKey(c.flagRole, map[string]interface{}{
 		// WARNING: publicKey is []byte, which is b64 encoded on JSON upload. We
 		// have to convert it to a string. SV lost many hours to this...
 		"public_key":       string(publicKey),
-		"valid_principals": username,
+		"valid_principals": principals,
 		"cert_type":        "user",
 
 		// TODO: let the user configure these. In the interim, if users want to
