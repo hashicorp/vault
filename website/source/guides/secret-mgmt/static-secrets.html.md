@@ -511,7 +511,7 @@ in history.
 In bash:
 
 ```shell
-$ export HISTIGNORE="&:vault"
+$ export HISTIGNORE="&:vault*"
 ```
 
 **NOTE:** This prevents the use of the Up arrow key for command history as well.
