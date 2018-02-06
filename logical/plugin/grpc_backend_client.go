@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"errors"
-	"math"
 
 	"google.golang.org/grpc"
 
@@ -54,7 +53,7 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 
 	reply, err := b.client.HandleRequest(ctx, &pb.HandleRequestArgs{
 		Request: protoReq,
-	}, grpc.MaxCallSendMsgSize(math.MaxInt32), grpc.MaxCallRecvMsgSize(math.MaxInt32))
+	}, defaultGRPCCallOpts...)
 	if err != nil {
 		if b.doneCtx.Err() != nil {
 			return nil, ErrPluginShutdown
@@ -116,7 +115,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	defer cancel()
 	reply, err := b.client.HandleExistenceCheck(ctx, &pb.HandleExistenceCheckArgs{
 		Request: protoReq,
-	}, grpc.MaxCallSendMsgSize(math.MaxInt32), grpc.MaxCallRecvMsgSize(math.MaxInt32))
+	}, defaultGRPCCallOpts...)
 	if err != nil {
 		if b.doneCtx.Err() != nil {
 			return false, false, ErrPluginShutdown
