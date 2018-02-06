@@ -9,6 +9,8 @@ BUG FIXES:
  * api/renewer: Honor increment value in renew auth calls [GH-3904]
  * auth/approle: Fix inability to use limited-use-count secret IDs on
    replication performance secondaries
+ * auth/approle: Cleanup of secret ID accessors during tidy and removal of
+   dangling accessor entries [GH-3924]
  * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
