@@ -1,0 +1,84 @@
+policy_module(vault, 1.0.0)
+
+########################################
+#
+# Declarations
+#
+
+type vault_t;
+type vault_exec_t;
+init_daemon_domain(vault_t, vault_exec_t)
+
+type vault_var_lib_t;
+files_type(vault_var_lib_t)
+
+type vault_unit_file_t;
+systemd_unit_file(vault_unit_file_t)
+
+type vault_port_t;
+corenet_port(vault_port_t)
+
+allow vault_t self:fifo_file rw_fifo_file_perms;
+allow vault_t self:unix_stream_socket create_stream_socket_perms;
+
+manage_dirs_pattern(vault_t, vault_var_lib_t, vault_var_lib_t)
+manage_files_pattern(vault_t, vault_var_lib_t, vault_var_lib_t)
+manage_lnk_files_pattern(vault_t, vault_var_lib_t, vault_var_lib_t)
+files_var_lib_filetrans(vault_t, vault_var_lib_t, { dir file lnk_file })
+
+domain_use_interactive_fds(vault_t)
+
+files_read_etc_files(vault_t)
+
+miscfiles_read_localization(vault_t)
+
+allow vault_t self:capability ipc_lock;
+allow vault_t self:netlink_route_socket { bind create getattr nlmsg_read };
+allow vault_t self:tcp_socket { accept bind create getattr listen setopt connect getopt };
+allow vault_t self:udp_socket { connect create getattr setopt };
+
+corenet_tcp_bind_generic_node(vault_t)
+# Vault default port
+corenet_tcp_bind_trivnet1_port(vault_t)
+kernel_read_net_sysctls(vault_t)
+kernel_search_network_sysctl(vault_t)
+
+kernel_read_net_sysctls(vault_t)
+kernel_search_network_sysctl(vault_t)
+miscfiles_read_generic_certs(vault_t)
+sysnet_read_config(vault_t)
+
+# semanage port -a -t vault_port_t -p tcp '8201,8202'
+vault_tcp_bind_vault_port(vault_t)
+
+gen_tunable(vault_ldap_connect, false)
+tunable_policy(`vault_ldap_connect',`
+corenet_tcp_connect_ldap_port(vault_t)
+')
+
+gen_tunable(vault_mysqld_connect, false)
+tunable_policy(`vault_mysqld_connect',`
+corenet_tcp_connect_mysqld_port(vault_t)
+')
+
+gen_tunable(vault_postgresql_connect, false)
+tunable_policy(`vault_postgresql_connect',`
+corenet_tcp_connect_postgresql_port(vault_t)
+')
+
+gen_tunable(vault_zookeeper_connect, false)
+tunable_policy(`vault_zookeeper_connect',`
+corenet_tcp_connect_zookeeper_client_port(vault_t)
+')
+
+gen_tunable(vault_couchdb_connect, false)
+tunable_policy(`vault_couchdb_connect',`
+corenet_tcp_connect_couchdb_port(vault_t)
+')
+
+gen_tunable(vault_http_connect, false)
+tunable_policy(`vault_http_connect',`
+corenet_tcp_connect_http_cache_port(vault_t)
+corenet_tcp_connect_http_port(vault_t)
+corenet_tcp_connect_squid_port(vault_t)
+')
