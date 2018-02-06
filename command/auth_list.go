@@ -100,14 +100,15 @@ func (c *AuthListCommand) Run(args []string) int {
 	}
 
 	switch c.flagFormat {
-	case "json", "yaml", "yml":
-		return OutputWithFormat(c.UI, c.flagFormat, auths)
-	default:
+	case "table":
 		if c.flagDetailed {
 			return OutputWithFormat(c.UI, c.flagFormat, c.detailedMounts(auths))
 		}
 		return OutputWithFormat(c.UI, c.flagFormat, c.simpleMounts(auths))
+	default:
+		return OutputWithFormat(c.UI, c.flagFormat, auths)
 	}
+
 }
 
 func (c *AuthListCommand) simpleMounts(auths map[string]*api.AuthMount) []string {
