@@ -1003,10 +1003,10 @@
 			"revisionTime": "2017-12-04T18:29:08Z"
 		},
 		{
-			"checksumSHA1": "y3op+t01flBlSBKlzUNqH5d4XHQ=",
+			"checksumSHA1": "7SheX5w6+xGsTMxPI3LiJx0iz7s=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "e53f54cbf51efde642d4711313e829a1ff0c236d",
-			"revisionTime": "2018-01-25T19:04:38Z"
+			"revision": "4b17561773d85e482ea040884ee3e288425d4174",
+			"revisionTime": "2018-02-06T18:30:35Z"
 		},
 		{
 			"checksumSHA1": "yzoWV7yrS/TvOrKy5ZrdUjsYaOA=",
@@ -1495,10 +1495,10 @@
 			"revisionTime": "2017-01-28T01:21:29Z"
 		},
 		{
-			"checksumSHA1": "y33yd1uDZmV3VY4K/5FCGTeRtB8=",
+			"checksumSHA1": "ze1R6Lrk0kW0cX24ZdZD6ZpIDCo=",
 			"path": "github.com/samuel/go-zookeeper/zk",
-			"revision": "471cd4e61d7a78ece1791fa5faa0345dc8c7d5a5",
-			"revisionTime": "2017-11-17T18:40:27Z"
+			"revision": "c4fab1ac1bec58281ad0667dc3f0907a9476ac47",
+			"revisionTime": "2018-01-30T19:37:22Z"
 		},
 		{
 			"checksumSHA1": "eDQ6f1EsNf+frcRO/9XukSEchm8=",

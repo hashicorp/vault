@@ -88,7 +88,13 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		}
 	}
 
-	acl := []zk.ACL{{zk.PermAll, schema, owner}}
+	acl := []zk.ACL{
+		{
+			Perms:  zk.PermAll,
+			Scheme: schema,
+			ID:     owner,
+		},
+	}
 
 	// Authnetication info
 	var schemaAndUser string

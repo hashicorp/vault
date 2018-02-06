@@ -953,8 +953,6 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
-
-	return false, errutil.InternalError{Err: "no valid key type found"}
 }
 
 func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) error {

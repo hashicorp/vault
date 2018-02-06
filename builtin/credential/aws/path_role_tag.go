@@ -319,23 +319,23 @@ func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Stor
 	for _, tagItem := range tagItems {
 		var err error
 		switch {
-		case strings.Contains(tagItem, "i="):
+		case strings.HasPrefix(tagItem, "i="):
 			rTag.InstanceID = strings.TrimPrefix(tagItem, "i=")
-		case strings.Contains(tagItem, "r="):
+		case strings.HasPrefix(tagItem, "r="):
 			rTag.Role = strings.TrimPrefix(tagItem, "r=")
-		case strings.Contains(tagItem, "p="):
+		case strings.HasPrefix(tagItem, "p="):
 			rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
-		case strings.Contains(tagItem, "d="):
+		case strings.HasPrefix(tagItem, "d="):
 			rTag.DisallowReauthentication, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "d="))
 			if err != nil {
 				return nil, err
 			}
-		case strings.Contains(tagItem, "m="):
+		case strings.HasPrefix(tagItem, "m="):
 			rTag.AllowInstanceMigration, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "m="))
 			if err != nil {
 				return nil, err
 			}
-		case strings.Contains(tagItem, "t="):
+		case strings.HasPrefix(tagItem, "t="):
 			rTag.MaxTTL, err = time.ParseDuration(fmt.Sprintf("%ss", strings.TrimPrefix(tagItem, "t=")))
 			if err != nil {
 				return nil, err

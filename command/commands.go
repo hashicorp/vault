@@ -185,11 +185,12 @@ func init() {
 	}
 
 	loginHandlers := map[string]LoginHandler{
-		"aws":    &credAws.CLIHandler{},
-		"cert":   &credCert.CLIHandler{},
-		"github": &credGitHub.CLIHandler{},
-		"ldap":   &credLdap.CLIHandler{},
-		"okta":   &credOkta.CLIHandler{},
+		"aws":      &credAws.CLIHandler{},
+		"centrify": &credCentrify.CLIHandler{},
+		"cert":     &credCert.CLIHandler{},
+		"github":   &credGitHub.CLIHandler{},
+		"ldap":     &credLdap.CLIHandler{},
+		"okta":     &credOkta.CLIHandler{},
 		"radius": &credUserpass.CLIHandler{
 			DefaultMount: "radius",
 		},
