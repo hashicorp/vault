@@ -1,7 +1,7 @@
 package okta
 
 import (
-	"strings"
+	"context"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -30,13 +30,13 @@ func pathUsers(b *backend) *framework.Path {
 			},
 
 			"groups": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Comma-separated list of groups associated with the user.",
+				Type:        framework.TypeCommaStringSlice,
+				Description: "List of groups associated with the user.",
 			},
 
 			"policies": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Comma-separated list of policies associated with the user.",
+				Type:        framework.TypeCommaStringSlice,
+				Description: "List of policies associated with the user.",
 			},
 		},
 
@@ -51,8 +51,8 @@ func pathUsers(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
-	entry, err := s.Get("user/" + n)
+func (b *backend) User(ctx context.Context, s logical.Storage, n string) (*UserEntry, error) {
+	entry, err := s.Get(ctx, "user/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -68,14 +68,13 @@ func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathUserDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if len(name) == 0 {
 		return logical.ErrorResponse("Error empty name"), nil
 	}
 
-	err := req.Storage.Delete("user/" + name)
+	err := req.Storage.Delete(ctx, "user/"+name)
 	if err != nil {
 		return nil, err
 	}
@@ -83,14 +82,13 @@ func (b *backend) pathUserDelete(
 	return nil, nil
 }
 
-func (b *backend) pathUserRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if len(name) == 0 {
 		return logical.ErrorResponse("Error empty name"), nil
 	}
 
-	user, err := b.User(req.Storage, name)
+	user, err := b.User(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -106,22 +104,14 @@ func (b *backend) pathUserRead(
 	}, nil
 }
 
-func (b *backend) pathUserWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if len(name) == 0 {
 		return logical.ErrorResponse("Error empty name"), nil
 	}
 
-	groups := strings.Split(d.Get("groups").(string), ",")
-	for i, g := range groups {
-		groups[i] = strings.TrimSpace(g)
-	}
-
-	policies := strings.Split(d.Get("policies").(string), ",")
-	for i, p := range policies {
-		policies[i] = strings.TrimSpace(p)
-	}
+	groups := d.Get("groups").([]string)
+	policies := d.Get("policies").([]string)
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
@@ -131,16 +121,15 @@ func (b *backend) pathUserWrite(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathUserList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	users, err := req.Storage.List("user/")
+func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	users, err := req.Storage.List(ctx, "user/")
 	if err != nil {
 		return nil, err
 	}

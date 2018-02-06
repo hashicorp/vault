@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -129,7 +130,7 @@ Default: cn`,
 /*
  * Construct ConfigEntry struct using stored configuration.
  */
-func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
+func (b *backend) Config(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
 	// Schema for ConfigEntry
 	fd, err := b.getConfigFieldData()
 	if err != nil {
@@ -142,7 +143,7 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 		return nil, err
 	}
 
-	storedConfig, err := req.Storage.Get("config")
+	storedConfig, err := req.Storage.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}
@@ -163,10 +164,8 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 	return result, nil
 }
 
-func (b *backend) pathConfigRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
-	cfg, err := b.Config(req)
+func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -289,9 +288,7 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	return cfg, nil
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Build a ConfigEntry struct out of the supplied FieldData
 	cfg, err := b.newConfigEntry(d)
 	if err != nil {
@@ -302,7 +299,7 @@ func (b *backend) pathConfigWrite(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

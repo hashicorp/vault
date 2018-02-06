@@ -1,6 +1,7 @@
 package okta
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -68,8 +69,8 @@ func pathConfig(b *backend) *framework.Path {
 }
 
 // Config returns the configuration for this backend.
-func (b *backend) Config(s logical.Storage) (*ConfigEntry, error) {
-	entry, err := s.Get("config")
+func (b *backend) Config(ctx context.Context, s logical.Storage) (*ConfigEntry, error) {
+	entry, err := s.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}
@@ -87,10 +88,8 @@ func (b *backend) Config(s logical.Storage) (*ConfigEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathConfigRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
-	cfg, err := b.Config(req.Storage)
+func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +101,8 @@ func (b *backend) pathConfigRead(
 		Data: map[string]interface{}{
 			"organization": cfg.Org,
 			"org_name":     cfg.Org,
-			"ttl":          cfg.TTL,
-			"max_ttl":      cfg.MaxTTL,
+			"ttl":          cfg.TTL.Seconds(),
+			"max_ttl":      cfg.MaxTTL.Seconds(),
 		},
 	}
 	if cfg.BaseURL != "" {
@@ -116,9 +115,8 @@ func (b *backend) pathConfigRead(
 	return resp, nil
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	cfg, err := b.Config(req.Storage)
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -195,16 +193,15 @@ func (b *backend) pathConfigWrite(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(jsonCfg); err != nil {
+	if err := req.Storage.Put(ctx, jsonCfg); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathConfigExistenceCheck(
-	req *logical.Request, d *framework.FieldData) (bool, error) {
-	cfg, err := b.Config(req.Storage)
+func (b *backend) pathConfigExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return false, err
 	}

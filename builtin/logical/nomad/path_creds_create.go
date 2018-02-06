@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -26,11 +27,10 @@ func pathCredsCreate(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathTokenRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
@@ -39,7 +39,7 @@ func (b *backend) pathTokenRead(
 	}
 
 	// Determine if we have a lease configuration
-	leaseConfig, err := b.LeaseConfig(req.Storage)
+	leaseConfig, err := b.LeaseConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (b *backend) pathTokenRead(
 	}
 
 	// Get the nomad client
-	c, err := b.client(req.Storage)
+	c, err := b.client(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

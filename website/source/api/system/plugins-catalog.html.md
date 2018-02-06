@@ -18,8 +18,7 @@ This endpoint lists the plugins in the catalog.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/plugins/catalog`      | `200 application/json` |
-| `GET`   | `/sys/plugins/catalog?list=true`      | `200 application/json` |
+| `LIST`   | `/sys/plugins/catalog`      | `200 application/json`  |
 
 ### Sample Request
 

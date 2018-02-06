@@ -13,7 +13,7 @@ import (
 
 // RepoStatus represents the status of a repository at a particular reference.
 type RepoStatus struct {
-	ID  *int    `json:"id,omitempty"`
+	ID  *int64  `json:"id,omitempty"`
 	URL *string `json:"url,omitempty"`
 
 	// State is the current state of the repository. Possible values are:

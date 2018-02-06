@@ -1,6 +1,8 @@
 package nomad
 
 import (
+	"context"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -34,8 +36,8 @@ func pathConfigAccess(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) configExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.readConfigAccess(req.Storage)
+func (b *backend) configExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	entry, err := b.readConfigAccess(ctx, req.Storage)
 	if err != nil {
 		return false, err
 	}
@@ -43,8 +45,8 @@ func (b *backend) configExistenceCheck(req *logical.Request, data *framework.Fie
 	return entry != nil, nil
 }
 
-func (b *backend) readConfigAccess(storage logical.Storage) (*accessConfig, error) {
-	entry, err := storage.Get(configAccessKey)
+func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConfig, error) {
+	entry, err := storage.Get(ctx, configAccessKey)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +62,8 @@ func (b *backend) readConfigAccess(storage logical.Storage) (*accessConfig, erro
 	return conf, nil
 }
 
-func (b *backend) pathConfigAccessRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, err := b.readConfigAccess(req.Storage)
+func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	conf, err := b.readConfigAccess(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -77,9 +78,8 @@ func (b *backend) pathConfigAccessRead(
 	}, nil
 }
 
-func (b *backend) pathConfigAccessWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, err := b.readConfigAccess(req.Storage)
+func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	conf, err := b.readConfigAccess(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -100,16 +100,15 @@ func (b *backend) pathConfigAccessWrite(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathConfigAccessDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if err := req.Storage.Delete(configAccessKey); err != nil {
+func (b *backend) pathConfigAccessDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if err := req.Storage.Delete(ctx, configAccessKey); err != nil {
 		return nil, err
 	}
 	return nil, nil

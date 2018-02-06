@@ -29,7 +29,7 @@ have the means necessary to decrypt it without Vault.
 Let's start by writing a secret. This is done very simply with the
 `vault write` command, as shown below:
 
-```
+```text
 $ vault write secret/hello value=world
 Success! Data written to: secret/hello
 ```
@@ -41,7 +41,7 @@ path is prefixed with `secret/`, otherwise this example won't work. The
 
 You can even write multiple pieces of data, if you want:
 
-```
+```text
 $ vault write secret/hello value=world excited=yes
 Success! Data written to: secret/hello
 ```
@@ -49,7 +49,7 @@ Success! Data written to: secret/hello
 `vault write` is a very powerful command. In addition to writing data
 directly from the command-line, it can read values and key pairs from
 `STDIN` as well as files. For more information, see the
-[vault write documentation](/docs/commands/read-write.html).
+[command documentation](/docs/commands/index.html).
 
 ~> **Warning:** The documentation uses the `key=value` based entry
 throughout, but it is more secure to use files if possible. Sending
@@ -60,13 +60,13 @@ please use files. See the link above about reading in from `STDIN` for more info
 
 As you might expect, secrets can be read with `vault read`:
 
-```
+```text
 $ vault read secret/hello
-Key             	Value
----             	-----
-refresh_interval	768h0m0s
-excited         	yes
-value           	world
+Key                 Value
+---                 -----
+refresh_interval    768h
+excited             yes
+value               world
 ```
 
 As you can see, the values we wrote are given back to us. Vault reads
@@ -75,35 +75,23 @@ the data from storage and decrypts it.
 The output format is purposefully whitespace separated to make it easy
 to pipe into a tool like `awk`.
 
-In addition to the tabular format, if you're working with machines or
-a tool like `jq`, you can output the data in JSON format:
+This contains some extra information. Many secrets engines create leases for
+secrets that allow time-limited access to other systems, and in those cases
+`lease_id` would contain a lease identifier and `lease_duration` would contain
+the length of time for which the lease is valid, in seconds.
 
-```
-$ vault read -format=json secret/hello
-{
-	"request_id": "68315073-6658-e3ff-2da7-67939fb91bbd",
-	"lease_id": "",
-	"lease_duration": 2764800,
-	"renewable": false,
-	"data": {
-		"excited": "yes",
-		"value": "world"
-	},
-	"warnings": null
-}
-```
+Optional JSON output is very useful for scripts. For example below we use the
+`jq` tool to extract the value of the `excited` secret:
 
-This contains some extra information; many backends create leases for secrets
-that allow time-limited access to other systems, and in those cases `lease_id` would
-contain a lease identifier and `lease_duration` would contain the length of time
-for which the lease is valid, in seconds.
-
-You can see our data mirrored
-here as well. The JSON output is very useful for scripts. For example below
-we use the `jq` tool to extract the value of the `excited` secret:
-
-```
+```text
 $ vault read -format=json secret/hello | jq -r .data.excited
+yes
+```
+
+When supported, you can also get a field directly:
+
+```text
+$ vault read -field=excited secret/hello
 yes
 ```
 
@@ -112,9 +100,9 @@ yes
 Now that we've learned how to read and write a secret, let's go ahead
 and delete it. We can do this with `vault delete`:
 
-```
+```text
 $ vault delete secret/hello
-Success! Deleted 'secret/hello' if it existed.
+Success! Data deleted (if it existed) at: secret/hello
 ```
 
 ## Next
@@ -123,4 +111,4 @@ In this section we learned how to use the powerful CRUD features of
 Vault to store arbitrary secrets. On its own this is already a useful
 but basic feature.
 
-Next, we'll learn the basics about [secret backends](/intro/getting-started/secret-backends.html).
+Next, we'll learn the basics about [secrets engines](/intro/getting-started/secrets-engines.html).

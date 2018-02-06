@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"reflect"
@@ -28,7 +29,7 @@ func TestTransit_Random(t *testing.T) {
 
 	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {
 		getResponse := func() []byte {
-			resp, err := b.HandleRequest(req)
+			resp, err := b.HandleRequest(context.Background(), req)
 			if err != nil && !errExpected {
 				t.Fatal(err)
 			}

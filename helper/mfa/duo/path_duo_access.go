@@ -1,6 +1,7 @@
 package duo
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -42,8 +43,8 @@ func pathDuoAccess() *framework.Path {
 	}
 }
 
-func GetDuoAuthClient(req *logical.Request, config *DuoConfig) (AuthClient, error) {
-	entry, err := req.Storage.Get("duo/access")
+func GetDuoAuthClient(ctx context.Context, req *logical.Request, config *DuoConfig) (AuthClient, error) {
+	entry, err := req.Storage.Get(ctx, "duo/access")
 	if err != nil {
 		return nil, err
 	}
@@ -68,14 +69,23 @@ func GetDuoAuthClient(req *logical.Request, config *DuoConfig) (AuthClient, erro
 	if err != nil {
 		return nil, err
 	}
+	if check == nil {
+		return nil, fmt.Errorf("Could not connect to Duo; got nil result back from API check call")
+	}
+	var msg, detail string
+	if check.StatResult.Message != nil {
+		msg = *check.StatResult.Message
+	}
+	if check.StatResult.Message_Detail != nil {
+		detail = *check.StatResult.Message_Detail
+	}
 	if check.StatResult.Stat != "OK" {
-		return nil, fmt.Errorf("Could not connect to Duo: %s (%s)", *check.StatResult.Message, *check.StatResult.Message_Detail)
+		return nil, fmt.Errorf("Could not connect to Duo: %s (%s)", msg, detail)
 	}
 	return duoAuthClient, nil
 }
 
-func pathDuoAccessWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func pathDuoAccessWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("duo/access", DuoAccess{
 		SKey: d.Get("skey").(string),
 		IKey: d.Get("ikey").(string),
@@ -85,7 +95,7 @@ func pathDuoAccessWrite(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

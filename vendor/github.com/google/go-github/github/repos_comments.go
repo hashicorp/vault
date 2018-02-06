@@ -15,7 +15,7 @@ import (
 type RepositoryComment struct {
 	HTMLURL   *string    `json:"html_url,omitempty"`
 	URL       *string    `json:"url,omitempty"`
-	ID        *int       `json:"id,omitempty"`
+	ID        *int64     `json:"id,omitempty"`
 	CommitID  *string    `json:"commit_id,omitempty"`
 	User      *User      `json:"user,omitempty"`
 	Reactions *Reactions `json:"reactions,omitempty"`
@@ -110,7 +110,7 @@ func (s *RepositoriesService) CreateComment(ctx context.Context, owner, repo, sh
 // GetComment gets a single comment from a repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/comments/#get-a-single-commit-comment
-func (s *RepositoriesService) GetComment(ctx context.Context, owner, repo string, id int) (*RepositoryComment, *Response, error) {
+func (s *RepositoriesService) GetComment(ctx context.Context, owner, repo string, id int64) (*RepositoryComment, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/comments/%v", owner, repo, id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -132,7 +132,7 @@ func (s *RepositoriesService) GetComment(ctx context.Context, owner, repo string
 // UpdateComment updates the body of a single comment.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/comments/#update-a-commit-comment
-func (s *RepositoriesService) UpdateComment(ctx context.Context, owner, repo string, id int, comment *RepositoryComment) (*RepositoryComment, *Response, error) {
+func (s *RepositoriesService) UpdateComment(ctx context.Context, owner, repo string, id int64, comment *RepositoryComment) (*RepositoryComment, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/comments/%v", owner, repo, id)
 	req, err := s.client.NewRequest("PATCH", u, comment)
 	if err != nil {
@@ -151,7 +151,7 @@ func (s *RepositoriesService) UpdateComment(ctx context.Context, owner, repo str
 // DeleteComment deletes a single comment from a repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/comments/#delete-a-commit-comment
-func (s *RepositoriesService) DeleteComment(ctx context.Context, owner, repo string, id int) (*Response, error) {
+func (s *RepositoriesService) DeleteComment(ctx context.Context, owner, repo string, id int64) (*Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/comments/%v", owner, repo, id)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {

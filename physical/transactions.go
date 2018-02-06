@@ -1,6 +1,8 @@
 package physical
 
 import (
+	"context"
+
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -16,20 +18,20 @@ type TxnEntry struct {
 // required for some features such as replication.
 type Transactional interface {
 	// The function to run a transaction
-	Transaction([]*TxnEntry) error
+	Transaction(context.Context, []*TxnEntry) error
 }
 
 type PseudoTransactional interface {
 	// An internal function should do no locking or permit pool acquisition.
 	// Depending on the backend and if it natively supports transactions, these
 	// may simply chain to the normal backend functions.
-	GetInternal(string) (*Entry, error)
-	PutInternal(*Entry) error
-	DeleteInternal(string) error
+	GetInternal(context.Context, string) (*Entry, error)
+	PutInternal(context.Context, *Entry) error
+	DeleteInternal(context.Context, string) error
 }
 
 // Implements the transaction interface
-func GenericTransactionHandler(t PseudoTransactional, txns []*TxnEntry) (retErr error) {
+func GenericTransactionHandler(ctx context.Context, t PseudoTransactional, txns []*TxnEntry) (retErr error) {
 	rollbackStack := make([]*TxnEntry, 0, len(txns))
 	var dirty bool
 
@@ -39,7 +41,7 @@ TxnWalk:
 	for _, txn := range txns {
 		switch txn.Operation {
 		case DeleteOperation:
-			entry, err := t.GetInternal(txn.Entry.Key)
+			entry, err := t.GetInternal(ctx, txn.Entry.Key)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
 				dirty = true
@@ -56,7 +58,7 @@ TxnWalk:
 					Value: entry.Value,
 				},
 			}
-			err = t.DeleteInternal(txn.Entry.Key)
+			err = t.DeleteInternal(ctx, txn.Entry.Key)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
 				dirty = true
@@ -65,7 +67,7 @@ TxnWalk:
 			rollbackStack = append([]*TxnEntry{rollbackEntry}, rollbackStack...)
 
 		case PutOperation:
-			entry, err := t.GetInternal(txn.Entry.Key)
+			entry, err := t.GetInternal(ctx, txn.Entry.Key)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
 				dirty = true
@@ -90,7 +92,7 @@ TxnWalk:
 				}
 			}
 
-			err = t.PutInternal(txn.Entry)
+			err = t.PutInternal(ctx, txn.Entry)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
 				dirty = true
@@ -107,12 +109,12 @@ TxnWalk:
 		for _, txn := range rollbackStack {
 			switch txn.Operation {
 			case DeleteOperation:
-				err := t.DeleteInternal(txn.Entry.Key)
+				err := t.DeleteInternal(ctx, txn.Entry.Key)
 				if err != nil {
 					retErr = multierror.Append(retErr, err)
 				}
 			case PutOperation:
-				err := t.PutInternal(txn.Entry)
+				err := t.PutInternal(ctx, txn.Entry)
 				if err != nil {
 					retErr = multierror.Append(retErr, err)
 				}

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -62,7 +63,7 @@ func (s *Secret) Response(
 }
 
 // HandleRenew is the request handler for renewing this secret.
-func (s *Secret) HandleRenew(req *logical.Request) (*logical.Response, error) {
+func (s *Secret) HandleRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if !s.Renewable() {
 		return nil, logical.ErrUnsupportedOperation
 	}
@@ -72,18 +73,18 @@ func (s *Secret) HandleRenew(req *logical.Request) (*logical.Response, error) {
 		Schema: s.Fields,
 	}
 
-	return s.Renew(req, data)
+	return s.Renew(ctx, req, data)
 }
 
 // HandleRevoke is the request handler for renewing this secret.
-func (s *Secret) HandleRevoke(req *logical.Request) (*logical.Response, error) {
+func (s *Secret) HandleRevoke(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	data := &FieldData{
 		Raw:    req.Data,
 		Schema: s.Fields,
 	}
 
 	if s.Revoke != nil {
-		return s.Revoke(req, data)
+		return s.Revoke(ctx, req, data)
 	}
 
 	return nil, logical.ErrUnsupportedOperation

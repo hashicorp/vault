@@ -501,27 +501,28 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		fmt.Sprintf("https://127.0.0.1:%d", cores[2].Listeners[0].Address.Port),
 	}
 
-	// Ensure we can't possibly use lingering connections even though it should be to a different address
-
-	transport = cleanhttp.DefaultTransport()
-	transport.TLSClientConfig = cores[0].TLSConfig
-	if err := http2.ConfigureTransport(transport); err != nil {
-		t.Fatal(err)
-	}
-
-	client = &http.Client{
-		Transport: transport,
-		CheckRedirect: func(*http.Request, []*http.Request) error {
-			return fmt.Errorf("redirects not allowed in this test")
-		},
-	}
-
-	//cores[0].Logger().Printf("cluster.RootToken token is %s", cluster.RootToken)
-	//time.Sleep(4 * time.Hour)
-
-	for _, addr := range addrs {
-		client := cores[0].Client
-		client.SetAddress(addr)
+	for i, addr := range addrs {
+		// Ensure we can't possibly use lingering connections even though it should
+		// be to a different address
+		transport = cleanhttp.DefaultTransport()
+		// i starts at zero but cores in addrs start at 1
+		transport.TLSClientConfig = cores[i+1].TLSConfig
+		if err := http2.ConfigureTransport(transport); err != nil {
+			t.Fatal(err)
+		}
+		httpClient := &http.Client{
+			Transport: transport,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return fmt.Errorf("redirects not allowed in this test")
+			},
+		}
+		client, err := api.NewClient(&api.Config{
+			Address:    addr,
+			HttpClient: httpClient,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		secret, err := client.Logical().Write("auth/cert/login", nil)
 		if err != nil {

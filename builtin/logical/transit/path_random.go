@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -42,8 +43,7 @@ func (b *backend) pathRandom() *framework.Path {
 	}
 }
 
-func (b *backend) pathRandomWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	bytes := 0
 	var err error
 	strBytes := d.Get("urlbytes").(string)

@@ -91,10 +91,12 @@ type Allocation struct {
 	DeploymentID       string
 	DeploymentStatus   *AllocDeploymentStatus
 	PreviousAllocation string
+	NextAllocation     string
 	CreateIndex        uint64
 	ModifyIndex        uint64
 	AllocModifyIndex   uint64
 	CreateTime         int64
+	ModifyTime         int64
 }
 
 // AllocationMetric is used to deserialize allocation metrics.
@@ -107,6 +109,7 @@ type AllocationMetric struct {
 	NodesExhausted     int
 	ClassExhausted     map[string]int
 	DimensionExhausted map[string]int
+	QuotaExhausted     []string
 	Scores             map[string]float64
 	AllocationTime     time.Duration
 	CoalescedFailures  int
@@ -131,11 +134,12 @@ type AllocationListStub struct {
 	CreateIndex        uint64
 	ModifyIndex        uint64
 	CreateTime         int64
+	ModifyTime         int64
 }
 
 // AllocDeploymentStatus captures the status of the allocation as part of the
 // deployment. This can include things like if the allocation has been marked as
-// heatlhy.
+// healthy.
 type AllocDeploymentStatus struct {
 	Healthy     *bool
 	ModifyIndex uint64

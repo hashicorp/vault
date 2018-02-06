@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -56,12 +57,11 @@ the latest version of the key is allowed.`,
 	}
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	// Check if the policy already exists before we lock everything
-	p, lock, err := b.lm.GetPolicyExclusive(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyExclusive(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.Unlock()
 	}
@@ -169,10 +169,10 @@ func (b *backend) pathConfigWrite(
 	}
 
 	if len(resp.Warnings) == 0 {
-		return nil, p.Persist(req.Storage)
+		return nil, p.Persist(ctx, req.Storage)
 	}
 
-	return resp, p.Persist(req.Storage)
+	return resp, p.Persist(ctx, req.Storage)
 }
 
 const pathConfigHelpSyn = `Configure a named encryption key`

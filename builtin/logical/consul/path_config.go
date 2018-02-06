@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -39,8 +40,8 @@ func pathConfigAccess() *framework.Path {
 	}
 }
 
-func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
-	entry, err := storage.Get("config/access")
+func readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConfig, error, error) {
+	entry, err := storage.Get(ctx, "config/access")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -58,9 +59,8 @@ func readConfigAccess(storage logical.Storage) (*accessConfig, error, error) {
 	return conf, nil, nil
 }
 
-func pathConfigAccessRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, userErr, intErr := readConfigAccess(req.Storage)
+func pathConfigAccessRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	conf, userErr, intErr := readConfigAccess(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}
@@ -79,8 +79,7 @@ func pathConfigAccessRead(
 	}, nil
 }
 
-func pathConfigAccessWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
 		Address: data.Get("address").(string),
 		Scheme:  data.Get("scheme").(string),
@@ -90,7 +89,7 @@ func pathConfigAccessWrite(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

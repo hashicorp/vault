@@ -69,6 +69,7 @@ func (n *Namespaces) Delete(namespace string, q *WriteOptions) (*WriteMeta, erro
 type Namespace struct {
 	Name        string
 	Description string
+	Quota       string
 	CreateIndex uint64
 	ModifyIndex uint64
 }

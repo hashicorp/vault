@@ -2053,6 +2053,17 @@ type TupleTypeInfo struct {
 	Elems []TypeInfo
 }
 
+func (t TupleTypeInfo) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("%s(", t.typ))
+	for _, elem := range t.Elems {
+		buf.WriteString(fmt.Sprintf("%s, ", elem))
+	}
+	buf.Truncate(buf.Len() - 2)
+	buf.WriteByte(')')
+	return buf.String()
+}
+
 func (t TupleTypeInfo) New() interface{} {
 	return reflect.New(goType(t)).Interface()
 }

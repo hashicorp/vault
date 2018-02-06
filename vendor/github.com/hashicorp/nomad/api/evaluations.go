@@ -73,6 +73,7 @@ type Evaluation struct {
 	FailedTGAllocs       map[string]*AllocationMetric
 	ClassEligibility     map[string]bool
 	EscapedComputedClass bool
+	QuotaLimitReached    string
 	AnnotatePlan         bool
 	QueuedAllocations    map[string]int
 	SnapshotIndex        uint64

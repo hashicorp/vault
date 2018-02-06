@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -33,7 +34,7 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupAliasRegister,
+				logical.UpdateOperation: i.pathGroupAliasRegister(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias"][0]),
@@ -60,8 +61,8 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   i.pathGroupAliasIDRead,
-				logical.DeleteOperation: i.pathGroupAliasIDDelete,
+				logical.ReadOperation:   i.pathGroupAliasIDRead(),
+				logical.DeleteOperation: i.pathGroupAliasIDDelete(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias-by-id"][0]),
@@ -70,7 +71,7 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "group-alias/id/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathGroupAliasIDList,
+				logical.ListOperation: i.pathGroupAliasIDList(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["group-alias-id-list"][0]),
@@ -79,36 +80,40 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 	}
 }
 
-func (i *IdentityStore) pathGroupAliasRegister(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	_, ok := d.GetOk("id")
-	if ok {
-		return i.pathGroupAliasIDUpdate(req, d)
+func (i *IdentityStore) pathGroupAliasRegister() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		_, ok := d.GetOk("id")
+		if ok {
+			return i.pathGroupAliasIDUpdate()(ctx, req, d)
+		}
+
+		i.groupLock.Lock()
+		defer i.groupLock.Unlock()
+
+		return i.handleGroupAliasUpdateCommon(req, d, nil)
 	}
-
-	i.groupLock.Lock()
-	defer i.groupLock.Unlock()
-
-	return i.handleGroupAliasUpdateCommon(req, d, nil)
 }
 
-func (i *IdentityStore) pathGroupAliasIDUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groupAliasID := d.Get("id").(string)
-	if groupAliasID == "" {
-		return logical.ErrorResponse("empty group alias ID"), nil
-	}
+func (i *IdentityStore) pathGroupAliasIDUpdate() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupAliasID := d.Get("id").(string)
+		if groupAliasID == "" {
+			return logical.ErrorResponse("empty group alias ID"), nil
+		}
 
-	i.groupLock.Lock()
-	defer i.groupLock.Unlock()
+		i.groupLock.Lock()
+		defer i.groupLock.Unlock()
 
-	groupAlias, err := i.MemDBAliasByID(groupAliasID, true, true)
-	if err != nil {
-		return nil, err
-	}
-	if groupAlias == nil {
-		return logical.ErrorResponse("invalid group alias ID"), nil
-	}
+		groupAlias, err := i.MemDBAliasByID(groupAliasID, true, true)
+		if err != nil {
+			return nil, err
+		}
+		if groupAlias == nil {
+			return logical.ErrorResponse("invalid group alias ID"), nil
+		}
 
-	return i.handleGroupAliasUpdateCommon(req, d, groupAlias)
+		return i.handleGroupAliasUpdateCommon(req, d, groupAlias)
+	}
 }
 
 func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *framework.FieldData, groupAlias *identity.Alias) (*logical.Response, error) {
@@ -217,49 +222,55 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *fr
 
 // pathGroupAliasIDRead returns the properties of an alias for a given
 // alias ID
-func (i *IdentityStore) pathGroupAliasIDRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groupAliasID := d.Get("id").(string)
-	if groupAliasID == "" {
-		return logical.ErrorResponse("empty group alias id"), nil
-	}
+func (i *IdentityStore) pathGroupAliasIDRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupAliasID := d.Get("id").(string)
+		if groupAliasID == "" {
+			return logical.ErrorResponse("empty group alias id"), nil
+		}
 
-	groupAlias, err := i.MemDBAliasByID(groupAliasID, false, true)
-	if err != nil {
-		return nil, err
-	}
+		groupAlias, err := i.MemDBAliasByID(groupAliasID, false, true)
+		if err != nil {
+			return nil, err
+		}
 
-	return i.handleAliasReadCommon(groupAlias)
+		return i.handleAliasReadCommon(groupAlias)
+	}
 }
 
 // pathGroupAliasIDDelete deletes the group's alias for a given group alias ID
-func (i *IdentityStore) pathGroupAliasIDDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groupAliasID := d.Get("id").(string)
-	if groupAliasID == "" {
-		return logical.ErrorResponse("missing group alias ID"), nil
-	}
+func (i *IdentityStore) pathGroupAliasIDDelete() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupAliasID := d.Get("id").(string)
+		if groupAliasID == "" {
+			return logical.ErrorResponse("missing group alias ID"), nil
+		}
 
-	return nil, i.deleteGroupAlias(groupAliasID)
+		return nil, i.deleteGroupAlias(groupAliasID)
+	}
 }
 
 // pathGroupAliasIDList lists the IDs of all the valid group aliases in the
 // identity store
-func (i *IdentityStore) pathGroupAliasIDList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ws := memdb.NewWatchSet()
-	iter, err := i.MemDBAliases(ws, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch iterator for group aliases in memdb: %v", err)
-	}
-
-	var groupAliasIDs []string
-	for {
-		raw := iter.Next()
-		if raw == nil {
-			break
+func (i *IdentityStore) pathGroupAliasIDList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		ws := memdb.NewWatchSet()
+		iter, err := i.MemDBAliases(ws, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch iterator for group aliases in memdb: %v", err)
 		}
-		groupAliasIDs = append(groupAliasIDs, raw.(*identity.Alias).ID)
-	}
 
-	return logical.ListResponse(groupAliasIDs), nil
+		var groupAliasIDs []string
+		for {
+			raw := iter.Next()
+			if raw == nil {
+				break
+			}
+			groupAliasIDs = append(groupAliasIDs, raw.(*identity.Alias).ID)
+		}
+
+		return logical.ListResponse(groupAliasIDs), nil
+	}
 }
 
 var groupAliasHelp = map[string][2]string{

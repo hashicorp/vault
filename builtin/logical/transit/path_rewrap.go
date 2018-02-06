@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -51,8 +52,7 @@ to the min_encryption_version configured on the key.`,
 	}
 }
 
-func (b *backend) pathRewrapWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []BatchRequestItem
 	var err error
@@ -113,7 +113,7 @@ func (b *backend) pathRewrapWrite(
 	}
 
 	// Get the policy
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, d.Get("name").(string))
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, d.Get("name").(string))
 	if lock != nil {
 		defer lock.RUnlock()
 	}

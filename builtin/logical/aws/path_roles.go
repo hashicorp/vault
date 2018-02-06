@@ -2,6 +2,7 @@ package aws
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -56,18 +57,16 @@ func pathRoles() *framework.Path {
 	}
 }
 
-func (b *backend) pathRoleList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("policy/")
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}
 	return logical.ListResponse(entries), nil
 }
 
-func pathRolesDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("policy/" + d.Get("name").(string))
+func pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete(ctx, "policy/"+d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +74,8 @@ func pathRolesDelete(
 	return nil, nil
 }
 
-func pathRolesRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entry, err := req.Storage.Get("policy/" + d.Get("name").(string))
+func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entry, err := req.Storage.Get(ctx, "policy/"+d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +111,7 @@ func useInlinePolicy(d *framework.FieldData) (bool, error) {
 	return bp, nil
 }
 
-func pathRolesWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var buf bytes.Buffer
 
 	uip, err := useInlinePolicy(d)
@@ -128,7 +125,7 @@ func pathRolesWrite(
 				"Error compacting policy: %s", err)), nil
 		}
 		// Write the policy into storage
-		err := req.Storage.Put(&logical.StorageEntry{
+		err := req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   "policy/" + d.Get("name").(string),
 			Value: buf.Bytes(),
 		})
@@ -137,7 +134,7 @@ func pathRolesWrite(
 		}
 	} else {
 		// Write the arn ref into storage
-		err := req.Storage.Put(&logical.StorageEntry{
+		err := req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   "policy/" + d.Get("name").(string),
 			Value: []byte(d.Get("arn").(string)),
 		})

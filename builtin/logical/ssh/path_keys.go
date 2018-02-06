@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
 
 	"golang.org/x/crypto/ssh"
@@ -35,8 +36,8 @@ func pathKeys(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) getKey(s logical.Storage, n string) (*sshHostKey, error) {
-	entry, err := s.Get("keys/" + n)
+func (b *backend) getKey(ctx context.Context, s logical.Storage, n string) (*sshHostKey, error) {
+	entry, err := s.Get(ctx, "keys/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -51,17 +52,17 @@ func (b *backend) getKey(s logical.Storage, n string) (*sshHostKey, error) {
 	return &result, nil
 }
 
-func (b *backend) pathKeysDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKeysDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyName := d.Get("key_name").(string)
 	keyPath := fmt.Sprintf("keys/%s", keyName)
-	err := req.Storage.Delete(keyPath)
+	err := req.Storage.Delete(ctx, keyPath)
 	if err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKeysWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyName := d.Get("key_name").(string)
 	if keyName == "" {
 		return logical.ErrorResponse("Missing key_name"), nil
@@ -88,7 +89,7 @@ func (b *backend) pathKeysWrite(req *logical.Request, d *framework.FieldData) (*
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 	return nil, nil

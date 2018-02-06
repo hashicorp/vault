@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"strings"
@@ -41,8 +42,7 @@ func pathCredsCreate(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathCredsCreateWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("Missing role"), nil
@@ -53,7 +53,7 @@ func (b *backend) pathCredsCreateWrite(
 		return logical.ErrorResponse("Missing ip"), nil
 	}
 
-	role, err := b.getRole(req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %v", err)
 	}
@@ -95,7 +95,7 @@ func (b *backend) pathCredsCreateWrite(
 	// Check if the IP belongs to the registered list of CIDR blocks under the role
 	ip := ipAddr.String()
 
-	zeroAddressEntry, err := b.getZeroAddressRoles(req.Storage)
+	zeroAddressEntry, err := b.getZeroAddressRoles(ctx, req.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving zero-address roles: %v", err)
 	}
@@ -112,7 +112,7 @@ func (b *backend) pathCredsCreateWrite(
 	var result *logical.Response
 	if role.KeyType == KeyTypeOTP {
 		// Generate an OTP
-		otp, err := b.GenerateOTPCredential(req, &sshOTP{
+		otp, err := b.GenerateOTPCredential(ctx, req, &sshOTP{
 			Username: username,
 			IP:       ip,
 			RoleName: roleName,
@@ -137,7 +137,7 @@ func (b *backend) pathCredsCreateWrite(
 	} else if role.KeyType == KeyTypeDynamic {
 		// Generate an RSA key pair. This also installs the newly generated
 		// public key in the remote host.
-		dynamicPublicKey, dynamicPrivateKey, err := b.GenerateDynamicCredential(req, role, username, ip)
+		dynamicPublicKey, dynamicPrivateKey, err := b.GenerateDynamicCredential(ctx, req, role, username, ip)
 		if err != nil {
 			return nil, err
 		}
@@ -167,9 +167,9 @@ func (b *backend) pathCredsCreateWrite(
 }
 
 // Generates a RSA key pair and installs it in the remote target
-func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole, username, ip string) (string, string, error) {
+func (b *backend) GenerateDynamicCredential(ctx context.Context, req *logical.Request, role *sshRole, username, ip string) (string, string, error) {
 	// Fetch the host key to be used for dynamic key installation
-	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
+	keyEntry, err := req.Storage.Get(ctx, fmt.Sprintf("keys/%s", role.KeyName))
 	if err != nil {
 		return "", "", fmt.Errorf("key %q not found. err: %v", role.KeyName, err)
 	}
@@ -216,14 +216,14 @@ func (b *backend) GenerateSaltedOTP() (string, string, error) {
 }
 
 // Generates an UUID OTP and creates an entry for the same in storage backend with its salted string.
-func (b *backend) GenerateOTPCredential(req *logical.Request, sshOTPEntry *sshOTP) (string, error) {
+func (b *backend) GenerateOTPCredential(ctx context.Context, req *logical.Request, sshOTPEntry *sshOTP) (string, error) {
 	otp, otpSalted, err := b.GenerateSaltedOTP()
 	if err != nil {
 		return "", err
 	}
 
 	// Check if there is an entry already created for the newly generated OTP.
-	entry, err := b.getOTP(req.Storage, otpSalted)
+	entry, err := b.getOTP(ctx, req.Storage, otpSalted)
 
 	// If entry already exists for the OTP, make sure that new OTP is not
 	// replacing an existing one by recreating new ones until an unused
@@ -234,7 +234,7 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, sshOTPEntry *sshOT
 		if err != nil {
 			return "", err
 		}
-		entry, err = b.getOTP(req.Storage, otpSalted)
+		entry, err = b.getOTP(ctx, req.Storage, otpSalted)
 		if err != nil {
 			return "", err
 		}
@@ -245,7 +245,7 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, sshOTPEntry *sshOT
 	if err != nil {
 		return "", err
 	}
-	if err := req.Storage.Put(newEntry); err != nil {
+	if err := req.Storage.Put(ctx, newEntry); err != nil {
 		return "", err
 	}
 	return otp, nil

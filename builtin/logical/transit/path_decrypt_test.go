@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -28,7 +29,7 @@ func TestTransit_BatchDecryptionCase1(t *testing.T) {
 		Storage:   s,
 		Data:      batchEncryptionData,
 	}
-	resp, err = b.HandleRequest(batchEncryptionReq)
+	resp, err = b.HandleRequest(context.Background(), batchEncryptionReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -43,7 +44,7 @@ func TestTransit_BatchDecryptionCase1(t *testing.T) {
 		Storage:   s,
 		Data:      batchDecryptionData,
 	}
-	resp, err = b.HandleRequest(batchDecryptionReq)
+	resp, err = b.HandleRequest(context.Background(), batchDecryptionReq)
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
@@ -70,7 +71,7 @@ func TestTransit_BatchDecryptionCase2(t *testing.T) {
 		Storage:   s,
 		Data:      batchEncryptionData,
 	}
-	resp, err = b.HandleRequest(batchEncryptionReq)
+	resp, err = b.HandleRequest(context.Background(), batchEncryptionReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -90,7 +91,7 @@ func TestTransit_BatchDecryptionCase2(t *testing.T) {
 		Storage:   s,
 		Data:      batchDecryptionData,
 	}
-	resp, err = b.HandleRequest(batchDecryptionReq)
+	resp, err = b.HandleRequest(context.Background(), batchDecryptionReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -124,7 +125,7 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		Data:      policyData,
 	}
 
-	resp, err = b.HandleRequest(policyReq)
+	resp, err = b.HandleRequest(context.Background(), policyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -143,7 +144,7 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		Storage:   s,
 		Data:      batchData,
 	}
-	resp, err = b.HandleRequest(batchReq)
+	resp, err = b.HandleRequest(context.Background(), batchReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -165,7 +166,7 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		Storage:   s,
 		Data:      batchDecryptionData,
 	}
-	resp, err = b.HandleRequest(batchDecryptionReq)
+	resp, err = b.HandleRequest(context.Background(), batchDecryptionReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}

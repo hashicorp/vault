@@ -24,7 +24,7 @@ type Packet struct {
 // values. The returned packet's Identifier, Authenticator are filled with
 // random values.
 func New(code Code, secret []byte) *Packet {
-	buff := make([]byte, 17)
+	var buff [17]byte
 	if _, err := rand.Read(buff[:]); err != nil {
 		panic(err)
 	}

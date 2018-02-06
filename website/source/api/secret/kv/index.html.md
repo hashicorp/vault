@@ -1,20 +1,20 @@
 ---
 layout: "api"
-page_title: "Key/Value Secret Backend - HTTP API"
+page_title: "KV - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-kv"
 description: |-
-  This is the API documentation for the Vault Key/Value secret backend.
+  This is the API documentation for the Vault KV secrets engine.
 ---
 
-# Key/Value Secret Backend HTTP API
+# KV Secrets Engine (API)
 
-This is the API documentation for the Vault Key/Value secret backend. For general
-information about the usage and operation of the Key/Value backend, please see
-the [Vault Key/Value backend documentation](/docs/secrets/kv/index.html).
+This is the API documentation for the Vault KV secrets engine. For general
+information about the usage and operation of the kv secrets engine, please
+see the [Vault kv documentation](/docs/secrets/kv/index.html).
 
-This documentation assumes the Key/Value backend is mounted at the `/secret`
-path in Vault. Since it is possible to mount secret backends at any location,
-please update your API calls accordingly.
+This documentation assumes the kv secrets engine is enabled at the
+`/secret` path in Vault. Since it is possible to enable secrets engines at any
+location, please update your API calls accordingly.
 
 ## Read Secret
 
@@ -53,9 +53,9 @@ $ curl \
 
 _Note_: the `lease_duration` field (which on the CLI shows as
 `refresh_interval`) is advisory. No lease is created. This is a way for writers
-to indicate how often a given value shold be re-read by the client. See the
-[Vault Key/Value backend documentation](/docs/secrets/kv/index.html) for
-more details.
+to indicate how often a given value should be re-read by the client. See the
+[Vault KV secrets engine documentation](/docs/secrets/kv/index.html)
+for more details.
 
 ## List Secrets
 
@@ -68,7 +68,6 @@ this command.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/secret/:path`              | `200 application/json` |
-| `GET`    | `/secret/:path?list=true`    | `200 application/json` |
 
 ### Parameters
 
@@ -122,7 +121,7 @@ policy granting the `update` capability.
 - `:key` `(string: "")` – Specifies a key, paired with an associated value, to
   be held at the given location. Multiple key/value pairs can be specified, and
   all will be returned on a read operation. A key called `ttl` will trigger
-  some special behavior; see the [Vault Key/Value backend
+  some special behavior. See the [Vault KV secrets engine
   documentation](/docs/secrets/kv/index.html) for details.
 
 ### Sample Payload

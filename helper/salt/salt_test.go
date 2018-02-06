@@ -1,6 +1,7 @@
 package salt
 
 import (
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"testing"
@@ -23,7 +24,7 @@ func TestSalt(t *testing.T) {
 	}
 
 	// Verify the salt exists
-	out, err := inm.Get(DefaultLocation)
+	out, err := inm.Get(context.Background(), DefaultLocation)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

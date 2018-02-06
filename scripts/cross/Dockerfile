@@ -1,6 +1,6 @@
 # Adapted from tcnksm/dockerfile-gox -- thanks!
 
-FROM debian:stable
+FROM debian:testing
 
 RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          curl \
@@ -10,7 +10,7 @@ RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          git mercurial bzr \
                && rm -rf /var/lib/apt/lists/*
 
-ENV GOVERSION 1.9.2
+ENV GOVERSION 1.9.3
 RUN mkdir /goroot && mkdir /gopath
 RUN curl https://storage.googleapis.com/golang/go${GOVERSION}.linux-amd64.tar.gz \
            | tar xvzf - -C /goroot --strip-components=1

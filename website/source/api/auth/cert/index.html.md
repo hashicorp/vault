@@ -1,20 +1,20 @@
 ---
 layout: "api"
-page_title: "TLS Certificate Auth Backend - HTTP API"
+page_title: "TLS Certificate - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-cert"
 description: |-
   This is the API documentation for the Vault TLS Certificate authentication
-  backend.
+  method.
 ---
 
-# TLS Certificate Auth Backend HTTP API
+# TLS Certificate Auth Method (API)
 
-This is the API documentation for the Vault TLS Certificate authentication 
-backend. For general information about the usage and operation of the TLS
-Certificate backend, please see the [Vault TLS Certificate backend documentation](/docs/auth/cert.html).
+This is the API documentation for the Vault TLS Certificate authentication
+method. For general information about the usage and operation of the TLS
+Certificate method, please see the [Vault TLS Certificate method documentation](/docs/auth/cert.html).
 
-This documentation assumes the TLS Certificate backend is mounted at the
-`/auth/cert` path in Vault. Since it is possible to mount auth backends at any
+This documentation assumes the TLS Certificate method is mounted at the
+`/auth/cert` path in Vault. Since it is possible to enable auth methods at any
 location, please update your API calls accordingly.
 
 ## Create CA Certificate Role
@@ -54,7 +54,6 @@ Sets a CA cert and associated parameters in a role name.
   as it is renewed it never expires unless `max_ttl` is also set, but the TTL
   set on the token at each renewal is fixed to the value specified here. If this
   value is modified, the token will pick up the new value at its next renewal.
-
 
 ### Sample Payload
 
@@ -124,7 +123,6 @@ Lists configured certificate names.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/cert/certs`           | `200 application/json` |
-| `GET`   | `/auth/cert/certs?list=true`  | `200 application/json` |
 
 ### Sample Request
 
@@ -143,7 +141,7 @@ $ curl \
   "wrap_info": null,
   "data": {
     "keys": [
-      "cert1", 
+      "cert1",
       "cert2"
     ]
   },
@@ -155,7 +153,7 @@ $ curl \
 
 ## Delete Certificate Role
 
-Deletes the named role and CA cert from the backend mount.
+Deletes the named role and CA cert from the method mount.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -183,7 +181,7 @@ Sets a named CRL.
 | `POST`   | `/auth/cert/crls/:name`      | `204 (empty body)`     |
 
 
-### Parameters 
+### Parameters
 
 - `name` `(string: <required>)` - The name of the CRL.
 - `crl` `(string: <required>)` - The PEM format CRL.
@@ -247,7 +245,7 @@ $ curl \
 
 ## Delete CRL
 
-Deletes the named CRL from the backend mount.
+Deletes the named CRL from the auth method mount.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -266,9 +264,9 @@ $ curl \
     https://vault.rocks/v1/auth/cert/crls/cert1
 ```
 
-## Configure TLS Certificate Backend
+## Configure TLS Certificate Method
 
-Configuration options for the backend.
+Configuration options for the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -278,7 +276,7 @@ Configuration options for the backend.
 
 - `disable_binding` `(boolean: false)` - If set, during renewal, skips the
   matching of presented client identity with the client identity used during
-  login. 
+  login.
 
 ### Sample Payload
 
@@ -298,10 +296,10 @@ $ curl \
     https://vault.rocks/v1/auth/cert/certs/cert1
 ```
 
-## Login with TLS Certiicate Backend
+## Login with TLS Certificate Method
 
 Log in and fetch a token. If there is a valid chain to a CA configured in the
-backend and all role constraints are matched, a token will be issued.
+method and all role constraints are matched, a token will be issued.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -309,7 +307,7 @@ backend and all role constraints are matched, a token will be issued.
 
 ### Parameters
 
-- `name` `(string: "")` - Authenticate against only the named certificate role, 
+- `name` `(string: "")` - Authenticate against only the named certificate role,
   returning its policy list if successful. If not set, defaults to trying all
   certificate roles and returning any one that matches.
 
@@ -337,7 +335,7 @@ $ curl \
   "auth": {
     "client_token": "cf95f87d-f95b-47ff-b1f5-ba7bff850425",
     "policies": [
-      "web", 
+      "web",
       "stage"
     ],
     "lease_duration": 3600,

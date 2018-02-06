@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/base64"
@@ -106,9 +107,8 @@ return the public key for the given context.`,
 	}
 }
 
-func (b *backend) pathKeysList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("policy/")
+func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +116,7 @@ func (b *backend) pathKeysList(
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathPolicyWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
@@ -152,7 +151,7 @@ func (b *backend) pathPolicyWrite(
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	p, lock, upserted, err := b.lm.GetPolicyUpsert(polReq)
+	p, lock, upserted, err := b.lm.GetPolicyUpsert(ctx, polReq)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -178,11 +177,10 @@ type asymKey struct {
 	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
-func (b *backend) pathPolicyRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -308,12 +306,11 @@ func (b *backend) pathPolicyRead(
 	return resp, nil
 }
 
-func (b *backend) pathPolicyDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	// Delete does its own locking
-	err := b.lm.DeletePolicy(req.Storage, name)
+	err := b.lm.DeletePolicy(ctx, req.Storage, name)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error deleting policy %s: %s", name, err)), err
 	}

@@ -1,6 +1,8 @@
 package mock
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -12,9 +14,9 @@ func New() (interface{}, error) {
 }
 
 // Factory returns a new backend as logical.Backend.
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -22,11 +24,11 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 
 // FactoryType is a wrapper func that allows the Factory func to specify
 // the backend type for the mock backend plugin instance.
-func FactoryType(backendType logical.BackendType) func(*logical.BackendConfig) (logical.Backend, error) {
-	return func(conf *logical.BackendConfig) (logical.Backend, error) {
+func FactoryType(backendType logical.BackendType) logical.Factory {
+	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 		b := Backend()
 		b.BackendType = backendType
-		if err := b.Setup(conf); err != nil {
+		if err := b.Setup(ctx, conf); err != nil {
 			return nil, err
 		}
 		return b, nil
@@ -44,6 +46,7 @@ func Backend() *backend {
 			[]*framework.Path{
 				pathInternal(&b),
 				pathSpecial(&b),
+				pathRaw(&b),
 			},
 		),
 		PathsSpecial: &logical.Paths{
@@ -66,7 +69,7 @@ type backend struct {
 	internal string
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "internal":
 		b.internal = ""

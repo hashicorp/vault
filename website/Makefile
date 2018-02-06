@@ -1,4 +1,4 @@
-VERSION?="0.3.28"
+VERSION?="0.3.29"
 
 build:
 	@echo "==> Starting build in Docker..."
@@ -20,5 +20,15 @@ website:
 		--publish "35729:35729" \
 		--volume "$(shell pwd):/website" \
 		hashicorp/middleman-hashicorp:${VERSION}
+
+update-deps:
+	@echo "==> Updating deps..."
+	@docker run \
+		--interactive \
+		--rm \
+		--tty \
+		--volume "$(shell pwd):/website" \
+		hashicorp/middleman-hashicorp:${VERSION} \
+		bundle update
 
 .PHONY: build website

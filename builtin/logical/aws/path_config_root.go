@@ -1,6 +1,8 @@
 package aws
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -42,8 +44,7 @@ func pathConfigRoot() *framework.Path {
 	}
 }
 
-func pathConfigRootWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
 	iamendpoint := data.Get("iam_endpoint").(string)
 	stsendpoint := data.Get("sts_endpoint").(string)
@@ -59,7 +60,7 @@ func pathConfigRootWrite(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

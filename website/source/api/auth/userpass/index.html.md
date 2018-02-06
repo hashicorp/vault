@@ -1,20 +1,20 @@
 ---
 layout: "api"
-page_title: "Userpass Auth Backend - HTTP API"
+page_title: "Userpass - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-userpass"
 description: |-
   This is the API documentation for the Vault username and password
-  authentication backend.
+  auth method.
 ---
 
-# Username & Password Auth Backend HTTP API
+# Userpass Auth Method (HTTP API)
 
-This is the API documentation for the Vault Username & Password authentication backend. For
-general information about the usage and operation of the Username and Password backend, please
-see the [Vault Userpass backend documentation](/docs/auth/userpass.html).
+This is the API documentation for the Vault Username & Password auth method. For
+general information about the usage and operation of the Username and Password method, please
+see the [Vault Userpass method documentation](/docs/auth/userpass.html).
 
-This documentation assumes the Username & Password backend is mounted at the `/auth/userpass`
-path in Vault. Since it is possible to mount auth backends at any location,
+This documentation assumes the Username & Password method is mounted at the `/auth/userpass`
+path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
 ## Create/Update User
@@ -28,7 +28,7 @@ Create a new user or update an existing user. This path honors the distinction b
 ### Parameters
 
 - `username` `(string: <required>)` – The username for the user.
-- `password` `(string: <required>)` - The password for the user. Only required 
+- `password` `(string: <required>)` - The password for the user. Only required
   when creating the user.
 - `policies` `(string: "")` – Comma-separated list of policies. If set to empty
   string, only the `default` policy will be applicable to the user.
@@ -89,7 +89,7 @@ $ curl \
 
 ## Delete User
 
-This endpoint deletes the user from the backend.
+This endpoint deletes the user from the method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -177,7 +177,6 @@ List available userpass users.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/userpass/users`          | `200 application/json` |
-| `GET`    | `/auth/userpass/users?list=true` | `200 application/json` |
 
 ### Sample Request
 

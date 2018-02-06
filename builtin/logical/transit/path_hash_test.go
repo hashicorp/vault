@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -26,7 +27,7 @@ func TestTransit_Hash(t *testing.T) {
 	}
 
 	doRequest := func(req *logical.Request, errExpected bool, expected string) {
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			t.Fatal(err)
 		}

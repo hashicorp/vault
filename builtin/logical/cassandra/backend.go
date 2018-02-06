@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -11,9 +12,9 @@ import (
 )
 
 // Factory creates a new backend
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -43,7 +44,7 @@ func Backend() *backend {
 
 		Invalidate: b.invalidate,
 
-		Clean: func() {
+		Clean: func(_ context.Context) {
 			b.ResetDB(nil)
 		},
 		BackendType: logical.TypeLogical,
@@ -77,7 +78,7 @@ type sessionConfig struct {
 }
 
 // DB returns the database connection.
-func (b *backend) DB(s logical.Storage) (*gocql.Session, error) {
+func (b *backend) DB(ctx context.Context, s logical.Storage) (*gocql.Session, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -86,7 +87,7 @@ func (b *backend) DB(s logical.Storage) (*gocql.Session, error) {
 		return b.session, nil
 	}
 
-	entry, err := s.Get("config/connection")
+	entry, err := s.Get(ctx, "config/connection")
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +121,7 @@ func (b *backend) ResetDB(newSession *gocql.Session) {
 	b.session = newSession
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(_ context.Context, key string) {
 	switch key {
 	case "config/connection":
 		b.ResetDB(nil)

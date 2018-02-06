@@ -16,9 +16,9 @@ import (
 
 const databaseConfigPath = "database/config/"
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend(conf)
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -66,7 +66,7 @@ type databaseBackend struct {
 }
 
 // closeAllDBs closes all connections from all database types
-func (b *databaseBackend) closeAllDBs() {
+func (b *databaseBackend) closeAllDBs(ctx context.Context) {
 	b.Lock()
 	defer b.Unlock()
 
@@ -94,18 +94,19 @@ func (b *databaseBackend) createDBObj(ctx context.Context, s logical.Storage, na
 		return db, nil
 	}
 
-	config, err := b.DatabaseConfig(s, name)
+	config, err := b.DatabaseConfig(ctx, s, name)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err = dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
+	db, err = dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
 	if err != nil {
 		return nil, err
 	}
 
 	err = db.Initialize(ctx, config.ConnectionDetails, true)
 	if err != nil {
+		db.Close()
 		return nil, err
 	}
 
@@ -114,8 +115,8 @@ func (b *databaseBackend) createDBObj(ctx context.Context, s logical.Storage, na
 	return db, nil
 }
 
-func (b *databaseBackend) DatabaseConfig(s logical.Storage, name string) (*DatabaseConfig, error) {
-	entry, err := s.Get(fmt.Sprintf("config/%s", name))
+func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
+	entry, err := s.Get(ctx, fmt.Sprintf("config/%s", name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read connection configuration: %s", err)
 	}
@@ -146,8 +147,8 @@ type upgradeCheck struct {
 	Statements upgradeStatements `json:"statments"`
 }
 
-func (b *databaseBackend) Role(s logical.Storage, roleName string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + roleName)
+func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, "role/"+roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +177,7 @@ func (b *databaseBackend) Role(s logical.Storage, roleName string) (*roleEntry, 
 	return &result, nil
 }
 
-func (b *databaseBackend) invalidate(key string) {
+func (b *databaseBackend) invalidate(ctx context.Context, key string) {
 	b.Lock()
 	defer b.Unlock()
 

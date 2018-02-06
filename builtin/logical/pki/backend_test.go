@@ -2,6 +2,7 @@ package pki
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -45,7 +46,7 @@ var (
 func TestBackend_RSAKey(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -75,7 +76,7 @@ func TestBackend_RSAKey(t *testing.T) {
 func TestBackend_ECKey(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -103,7 +104,7 @@ func TestBackend_ECKey(t *testing.T) {
 func TestBackend_CSRValues(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -131,7 +132,7 @@ func TestBackend_CSRValues(t *testing.T) {
 func TestBackend_URLsCRUD(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -162,7 +163,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 func TestBackend_RSARoles(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -204,7 +205,7 @@ func TestBackend_RSARoles(t *testing.T) {
 func TestBackend_RSARoles_CSR(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -246,7 +247,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 func TestBackend_ECRoles(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -288,7 +289,7 @@ func TestBackend_ECRoles(t *testing.T) {
 func TestBackend_ECRoles_CSR(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -1491,7 +1492,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.ParseDedupLowercaseAndSortStrings(role.OU, ",")
+			expected := strutil.RemoveDuplicates(role.OU, true)
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
 			}
@@ -1512,7 +1513,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.ParseDedupLowercaseAndSortStrings(role.Organization, ",")
+			expected := strutil.RemoveDuplicates(role.Organization, true)
 			if !reflect.DeepEqual(cert.Subject.Organization, expected) {
 				return fmt.Errorf("Error: returned certificate has Organization of %s but %s was specified in the role.", cert.Subject.Organization, expected)
 			}
@@ -1797,18 +1798,18 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// OU tests
 	{
-		roleVals.OU = "foo"
+		roleVals.OU = []string{"foo"}
 		addTests(getOuCheck(roleVals))
 
-		roleVals.OU = "foo,bar"
+		roleVals.OU = []string{"foo", "bar"}
 		addTests(getOuCheck(roleVals))
 	}
 	// Organization tests
 	{
-		roleVals.Organization = "system:masters"
+		roleVals.Organization = []string{"system:masters"}
 		addTests(getOrganizationCheck(roleVals))
 
-		roleVals.Organization = "foo,bar"
+		roleVals.Organization = []string{"foo", "bar"}
 		addTests(getOrganizationCheck(roleVals))
 	}
 	// IP SAN tests
@@ -1892,7 +1893,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	err := b.Setup(config)
+	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1903,7 +1904,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		"ttl":         "6h",
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -1922,7 +1923,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/urls",
 		Storage:   storage,
@@ -1942,7 +1943,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		"max_ttl":          "4h",
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test-example",
 		Storage:   storage,
@@ -1961,7 +1962,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		certData := map[string]interface{}{
 			"common_name": "example.test.com",
 		}
-		resp, err = b.HandleRequest(&logical.Request{
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      "issue/test-example",
 			Storage:   storage,
@@ -1978,7 +1979,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	}
 
 	// list certs
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "certs",
 		Storage:   storage,
@@ -1995,7 +1996,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	}
 
 	// list certs/
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "certs/",
 		Storage:   storage,
@@ -2019,7 +2020,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	err := b.Setup(config)
+	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2030,7 +2031,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		"ttl":         "172800",
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -2068,7 +2069,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		t.Fatal("pem csr is empty")
 	}
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim",
 		Storage:   storage,
@@ -2091,7 +2092,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		"ttl":     "4h",
 		"max_ttl": "8h",
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test",
 		Storage:   storage,
@@ -2103,7 +2104,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
@@ -2121,7 +2122,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if resp.Secret != nil {
 		t.Fatal("got a lease when we should not have")
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
@@ -2162,7 +2163,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		"max_ttl":        "8h",
 		"generate_lease": true,
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test",
 		Storage:   storage,
@@ -2174,7 +2175,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
@@ -2563,7 +2564,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	err := b.Setup(config)
+	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2574,7 +2575,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		"ttl":         "172800",
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -2618,7 +2619,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	}
 
 	ss, _ := getSelfSigned(template, template)
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
@@ -2648,7 +2649,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		BasicConstraintsValid: true,
 	}
 	ss, ssCert := getSelfSigned(template, issuer)
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
@@ -2667,7 +2668,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	}
 
 	ss, ssCert = getSelfSigned(template, template)
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
@@ -2692,7 +2693,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signingBundle, err := fetchCAInfo(&logical.Request{Storage: storage})
+	signingBundle, err := fetchCAInfo(context.Background(), &logical.Request{Storage: storage})
 	if err != nil {
 		t.Fatal(err)
 	}

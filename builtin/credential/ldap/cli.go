@@ -26,10 +26,10 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 	password, ok := m["password"]
 	if !ok {
-		fmt.Printf("Password (will be hidden): ")
+		fmt.Fprintf(os.Stderr, "Password (will be hidden): ")
 		var err error
 		password, err = pwd.Read(os.Stdin)
-		fmt.Println()
+		fmt.Fprintf(os.Stderr, "\n")
 		if err != nil {
 			return nil, err
 		}
@@ -62,18 +62,40 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 func (h *CLIHandler) Help() string {
 	help := `
-The LDAP credential provider allows you to authenticate with LDAP.
-To use it, first configure it through the "config" endpoint, and then
-login by specifying username and password. If password is not provided
-on the command line, it will be read from stdin.
+Usage: vault login -method=ldap [CONFIG K=V...]
 
-If multi-factor authentication (MFA) is enabled, a "method" and/or "passcode"
-may be provided depending on the MFA backend enabled. To check
-which MFA backend is in use, read "auth/[mount]/mfa_config".
+  The LDAP auth method allows users to authenticate using LDAP or
+  Active Directory.
 
-    Example: vault auth -method=ldap username=john
+  If MFA is enabled, a "method" and/or "passcode" may be required depending on
+  the MFA method. To check which MFA is in use, run:
 
-    `
+      $ vault read auth/<mount>/mfa_config
+
+  Authenticate as "sally":
+
+      $ vault login -method=ldap username=sally
+      Password (will be hidden):
+
+  Authenticate as "bob":
+
+      $ vault login -method=ldap username=bob password=password
+
+Configuration:
+
+  method=<string>
+      MFA method.
+
+  passcode=<string>
+      MFA OTP/passcode.
+
+  password=<string>
+      LDAP password to use for authentication. If not provided, the CLI will
+      prompt for this on stdin.
+
+  username=<string>
+      LDAP username to use for authentication.
+`
 
 	return strings.TrimSpace(help)
 }

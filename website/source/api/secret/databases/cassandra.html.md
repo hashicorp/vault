@@ -1,21 +1,21 @@
 ---
 layout: "api"
-page_title: "Cassandra Database Plugin - HTTP API"
+page_title: "Cassandra - Database - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-databases-cassandra"
 description: |-
-  The Cassandra plugin for Vault's Database backend generates database credentials to access Cassandra servers.
+  The Cassandra plugin for Vault's database secrets engine generates database credentials to access Cassandra servers.
 ---
 
 # Cassandra Database Plugin HTTP API
 
-The Cassandra Database Plugin is one of the supported plugins for the Database
-backend. This plugin generates database credentials dynamically based on
+The Cassandra database plugin is one of the supported plugins for the database
+secrets engine. This plugin generates database credentials dynamically based on
 configured roles for the Cassandra database.
 
 ## Configure Connection
 
 In addition to the parameters defined by the [Database
-Backend](/api/secret/databases/index.html#configure-connection), this plugin
+Secrets Engine](/api/secret/databases/index.html#configure-connection), this plugin
 has a number of parameters to further configure a connection.
 
 | Method   | Path                         | Produces               |
@@ -48,7 +48,7 @@ has a number of parameters to further configure a connection.
 - `pem_json` `(string: "")` – Specifies JSON containing a certificate and
   private key; a certificate, private key, and issuing CA certificate; or just a
   CA certificate. For convenience format is the same as the output of the
-  `issue` command from the `pki` backend; see
+  `issue` command from the `pki` secrets engine; see
   [the pki documentation](/docs/secrets/pki/index.html).
 
 - `protocol_version` `(int: 2)` – Specifies the CQL protocol version to use.
@@ -74,7 +74,7 @@ TLS works as follows:
 `pem_bundle` should be a PEM-concatenated bundle of a private key + client
 certificate, an issuing CA certificate, or both. `pem_json` should contain the
 same information; for convenience, the JSON format is the same as that output by
-the issue command from the PKI backend.
+the issue command from the PKI secrets engine.
 
 ### Sample Payload
 
@@ -103,7 +103,7 @@ $ curl \
 Statements are configured during role creation and are used by the plugin to
 determine what is sent to the datatabse on user creation, renewing, and
 revocation. For more information on configuring roles see the [Role
-API](/api/secret/databases/index.html#create-role) in the Database Backend docs.
+API](/api/secret/databases/index.html#create-role) in the database secrets engine docs.
 
 ### Parameters
 
@@ -129,4 +129,4 @@ list the plugin does not support that statement type.
   semicolon-separated string, a base64-encoded semicolon-separated string, a
   serialized JSON string array, or a base64-encoded serialized JSON string
   array. The '{{name}}' value will be substituted. If not provided, defaults to
-  a generic drop user statement 
+  a generic drop user statement

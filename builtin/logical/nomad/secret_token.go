@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -27,9 +28,8 @@ func secretToken(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretTokenRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	lease, err := b.LeaseConfig(req.Storage)
+func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	lease, err := b.LeaseConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -37,12 +37,11 @@ func (b *backend) secretTokenRenew(
 		lease = &configLease{}
 	}
 
-	return framework.LeaseExtend(lease.TTL, lease.MaxTTL, b.System())(req, d)
+	return framework.LeaseExtend(lease.TTL, lease.MaxTTL, b.System())(ctx, req, d)
 }
 
-func (b *backend) secretTokenRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	c, err := b.client(req.Storage)
+func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	c, err := b.client(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}

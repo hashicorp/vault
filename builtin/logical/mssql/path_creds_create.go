@@ -1,6 +1,7 @@
 package mssql
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -29,12 +30,11 @@ func pathCredsCreate(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathCredsCreateRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
 	// Get the role
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (b *backend) pathCredsCreateRead(
 	}
 
 	// Determine if we have a lease configuration
-	leaseConfig, err := b.LeaseConfig(req.Storage)
+	leaseConfig, err := b.LeaseConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (b *backend) pathCredsCreateRead(
 	}
 
 	// Get our handle
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,13 @@ func (b *backend) pathCredsCreateRead(
 	}, map[string]interface{}{
 		"username": username,
 	})
-	resp.Secret.TTL = leaseConfig.TTL
+
+	ttl := leaseConfig.TTL
+	if ttl == 0 || (leaseConfig.TTLMax > 0 && ttl > leaseConfig.TTLMax) {
+		ttl = leaseConfig.TTLMax
+	}
+	resp.Secret.TTL = ttl
+
 	return resp, nil
 }
 

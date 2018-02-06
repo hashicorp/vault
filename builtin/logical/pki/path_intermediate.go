@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -53,8 +54,7 @@ endpoint.`,
 	return ret
 }
 
-func (b *backend) pathGenerateIntermediate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
 	exported, format, role, errorResp := b.getGenerationParams(data)
@@ -121,7 +121,7 @@ func (b *backend) pathGenerateIntermediate(
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +129,7 @@ func (b *backend) pathGenerateIntermediate(
 	return resp, nil
 }
 
-func (b *backend) pathSetSignedIntermediate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSetSignedIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	cert := data.Get("certificate").(string)
 
 	if cert == "" {
@@ -152,7 +151,7 @@ func (b *backend) pathSetSignedIntermediate(
 	}
 
 	cb := &certutil.CertBundle{}
-	entry, err := req.Storage.Get("config/ca_bundle")
+	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, err
 	}
@@ -198,14 +197,14 @@ func (b *backend) pathSetSignedIntermediate(
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	entry.Key = "certs/" + normalizeSerial(cb.SerialNumber)
 	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -214,13 +213,13 @@ func (b *backend) pathSetSignedIntermediate(
 	// location
 	entry.Key = "ca"
 	entry.Value = inputBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	// Build a fresh CRL
-	err = buildCRL(b, req)
+	err = buildCRL(ctx, b, req)
 
 	return nil, err
 }

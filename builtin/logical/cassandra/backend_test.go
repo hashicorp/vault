@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -82,7 +83,7 @@ func TestBackend_basic(t *testing.T) {
 	}
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +107,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}

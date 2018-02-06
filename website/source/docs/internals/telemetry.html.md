@@ -288,7 +288,7 @@ Thes operations take a request and response with an associated lease and registe
 
 ## Authentication Backend Metrics
 
-These metrics relate to supported authentication backends.
+These metrics relate to supported authentication methods.
 
 ### vault.rollback.attempt.auth-token-
 

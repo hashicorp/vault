@@ -1,6 +1,7 @@
 package okta
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -19,7 +20,7 @@ import (
 func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 12
 	maxLeaseTTLVal := time.Hour * 24
-	b, err := Factory(&logical.BackendConfig{
+	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: logformat.NewVaultLogger(log.LevelTrace),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -53,16 +54,16 @@ func TestBackend_Config(t *testing.T) {
 			testConfigCreate(t, configData),
 			testLoginWrite(t, username, "wrong", "E0000004", 0, nil),
 			testLoginWrite(t, username, password, "user is not a member of any authorized policy", 0, nil),
-			testAccUserGroups(t, username, "local_grouP,lOcal_group2"),
+			testAccUserGroups(t, username, "local_grouP,lOcal_group2", []string{"user_policy"}),
 			testAccGroups(t, "local_groUp", "loCal_group_policy"),
-			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy"}),
+			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy", "user_policy"}),
 			testAccGroups(t, "everyoNe", "everyone_grouP_policy,eveRy_group_policy2"),
-			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy"}),
+			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy", "user_policy"}),
 			testConfigUpdate(t, configDataToken),
 			testConfigRead(t, token, configData),
-			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy"}),
+			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "user_policy"}),
 			testAccGroups(t, "locAl_group2", "testgroup_group_policy"),
-			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy"}),
+			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy", "user_policy"}),
 		},
 	})
 }
@@ -154,19 +155,24 @@ func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("OKTA_ORG"); v == "" {
 		t.Fatal("OKTA_ORG must be set for acceptance tests")
 	}
+
+	if v := os.Getenv("OKTA_API_TOKEN"); v == "" {
+		t.Fatal("OKTA_API_TOKEN must be set for acceptance tests")
+	}
 }
 
-func testAccUserGroups(t *testing.T, user string, groups string) logicaltest.TestStep {
+func testAccUserGroups(t *testing.T, user string, groups interface{}, policies interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + user,
 		Data: map[string]interface{}{
-			"groups": groups,
+			"groups":   groups,
+			"policies": policies,
 		},
 	}
 }
 
-func testAccGroups(t *testing.T, group string, policies string) logicaltest.TestStep {
+func testAccGroups(t *testing.T, group string, policies interface{}) logicaltest.TestStep {
 	t.Logf("[testAccGroups] - Registering group %s, policy %s", group, policies)
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
