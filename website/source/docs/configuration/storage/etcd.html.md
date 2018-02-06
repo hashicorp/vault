@@ -117,7 +117,7 @@ This example show enabling high availability for the Etcd storage backend.
 api_addr = "https://vault-leader.my-company.internal"
 
 storage "etcd" {
-  ha_enabled    = true
+  ha_enabled    = "true"
   ...
 }
 ```
