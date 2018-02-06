@@ -101,6 +101,9 @@ type Conn struct {
 	reconnectLatch   chan struct{}
 	setWatchLimit    int
 	setWatchCallback func([]*setWatchesRequest)
+	// Debug (for recurring re-auth hang)
+	debugCloseRecvLoop bool
+	debugReauthDone    chan struct{}
 
 	logger  Logger
 	logInfo bool // true if information messages are logged; false if only errors are logged
@@ -301,9 +304,9 @@ func WithMaxBufferSize(maxBufferSize int) connOption {
 // to a limit of 1mb. This option should be used for non-standard server setup
 // where znode is bigger than default 1mb.
 func WithMaxConnBufferSize(maxBufferSize int) connOption {
-       return func(c *Conn) {
-               c.buf = make([]byte, maxBufferSize)
-       }
+	return func(c *Conn) {
+		c.buf = make([]byte, maxBufferSize)
+	}
 }
 
 func (c *Conn) Close() {
@@ -389,6 +392,17 @@ func (c *Conn) connect() error {
 }
 
 func (c *Conn) resendZkAuth(reauthReadyChan chan struct{}) {
+	shouldCancel := func() bool {
+		select {
+		case <-c.shouldQuit:
+			return true
+		case <-c.closeChan:
+			return true
+		default:
+			return false
+		}
+	}
+
 	c.credsMu.Lock()
 	defer c.credsMu.Unlock()
 
@@ -400,6 +414,10 @@ func (c *Conn) resendZkAuth(reauthReadyChan chan struct{}) {
 	}
 
 	for _, cred := range c.creds {
+		if shouldCancel() {
+			c.logger.Printf("Cancel rer-submitting credentials")
+			return
+		}
 		resChan, err := c.sendRequest(
 			opSetAuth,
 			&setAuthRequest{Type: 0,
@@ -415,7 +433,16 @@ func (c *Conn) resendZkAuth(reauthReadyChan chan struct{}) {
 			continue
 		}
 
-		res := <-resChan
+		var res response
+		select {
+		case res = <-resChan:
+		case <-c.closeChan:
+			c.logger.Printf("Recv closed, cancel re-submitting credentials")
+			return
+		case <-c.shouldQuit:
+			c.logger.Printf("Should quit, cancel re-submitting credentials")
+			return
+		}
 		if res.err != nil {
 			c.logger.Printf("Credential re-submit failed: %s", res.err)
 			// FIXME(prozlach): lets ignore errors for now
@@ -476,6 +503,9 @@ func (c *Conn) loop() {
 			wg.Add(1)
 			go func() {
 				<-reauthChan
+				if c.debugCloseRecvLoop {
+					close(c.debugReauthDone)
+				}
 				err := c.sendLoop()
 				if err != nil || c.logInfo {
 					c.logger.Printf("Send loop terminated: err=%v", err)
@@ -486,7 +516,12 @@ func (c *Conn) loop() {
 
 			wg.Add(1)
 			go func() {
-				err := c.recvLoop(c.conn)
+				var err error
+				if c.debugCloseRecvLoop {
+					err = errors.New("DEBUG: close recv loop")
+				} else {
+					err = c.recvLoop(c.conn)
+				}
 				if err != io.EOF || c.logInfo {
 					c.logger.Printf("Recv loop terminated: err=%v", err)
 				}
