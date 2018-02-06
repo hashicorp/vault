@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"errors"
+	"math"
 
 	"google.golang.org/grpc"
 
@@ -25,7 +26,7 @@ type GRPCStorageClient struct {
 func (s *GRPCStorageClient) List(ctx context.Context, prefix string) ([]string, error) {
 	reply, err := s.client.List(ctx, &pb.StorageListArgs{
 		Prefix: prefix,
-	})
+	}, grpc.MaxCallSendMsgSize(math.MaxInt32), grpc.MaxCallRecvMsgSize(math.MaxInt32))
 	if err != nil {
 		return reply.Keys, err
 	}
@@ -38,7 +39,7 @@ func (s *GRPCStorageClient) List(ctx context.Context, prefix string) ([]string, 
 func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
 	reply, err := s.client.Get(ctx, &pb.StorageGetArgs{
 		Key: key,
-	})
+	}, grpc.MaxCallSendMsgSize(math.MaxInt32), grpc.MaxCallRecvMsgSize(math.MaxInt32))
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +52,7 @@ func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.Stora
 func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry) error {
 	reply, err := s.client.Put(ctx, &pb.StoragePutArgs{
 		Entry: pb.LogicalStorageEntryToProtoStorageEntry(entry),
-	})
+	}, grpc.MaxCallSendMsgSize(math.MaxInt32), grpc.MaxCallRecvMsgSize(math.MaxInt32))
 	if err != nil {
 		return err
 	}
