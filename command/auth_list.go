@@ -46,7 +46,7 @@ Usage: vault auth list [options]
 }
 
 func (c *AuthListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -55,7 +55,7 @@ func (c *AuthListCommand) Flags() *FlagSets {
 		Target:  &c.flagDetailed,
 		Default: false,
 		Usage: "Print detailed information such as configuration and replication " +
-			"status about each auth method.",
+			"status about each auth method. This option is only applicable to table formatted output.",
 	})
 
 	return set
@@ -97,6 +97,11 @@ func (c *AuthListCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing enabled authentications: %s", err))
 		return 2
+	}
+
+	switch c.flagFormat {
+	case "json", "yaml", "yml":
+		return OutputWithFormat(c.UI, c.flagFormat, auths)
 	}
 
 	if c.flagDetailed {

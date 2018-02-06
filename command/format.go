@@ -19,12 +19,38 @@ const (
 	hopeDelim = "♨"
 )
 
+type FormatOptions struct {
+	Format string
+}
+
 func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
 	return outputWithFormat(ui, format, secret, secret)
 }
 
-func OutputList(ui cli.Ui, format string, secret *api.Secret) int {
-	return outputWithFormat(ui, format, secret, secret.Data["keys"])
+func OutputList(ui cli.Ui, format string, data interface{}) int {
+	switch data.(type) {
+	case *api.Secret:
+		secret := data.(*api.Secret)
+		return outputWithFormat(ui, format, secret, secret.Data["keys"])
+	default:
+		return outputWithFormat(ui, format, nil, data)
+	}
+}
+
+// OutputWithFormat supports printing arbitrary data under a specified format.
+// The Formatter currently does not support table format
+func OutputWithFormat(ui cli.Ui, format string, data interface{}) int {
+	switch data.(type) {
+	case *api.Secret:
+		secret := data.(*api.Secret)
+		// Best-guess effort that is this a list, so parse out the keys
+		if listVals, ok := secret.Data["keys"]; ok {
+			return outputWithFormat(ui, format, secret, listVals)
+		}
+		return outputWithFormat(ui, format, secret, secret)
+	default:
+		return outputWithFormat(ui, format, nil, data)
+	}
 }
 
 func outputWithFormat(ui cli.Ui, format string, secret *api.Secret, data interface{}) int {
