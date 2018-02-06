@@ -79,7 +79,7 @@ var baseRoleFieldSchema map[string]*framework.FieldSchema = map[string]*framewor
 	"bound_service_accounts": {
 		Type: framework.TypeCommaStringSlice,
 		Description: `
-	Can be set for both 'iam' and 'gce' roles (required for 'iam'). A comma-separated list of authorized service accounts.
+	Can be set for both 'iam' and 'gce' roles (required for 'iam'). A comma-seperated list of authorized service accounts.
 	If the single value "*" is given, this is assumed to be all service accounts under the role's project. If this
 	is set on a GCE role, the inferred service account from the instance metadata token will be used.`,
 	},
