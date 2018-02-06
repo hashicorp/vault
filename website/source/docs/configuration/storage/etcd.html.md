@@ -45,9 +45,9 @@ storage "etcd" {
   version is 3.1+ and there has been no data written using the v2 API, the
   auto-detected default is v3.
 
-- `ha_enabled` `(string: "true")` – Specifies if high availability should be
-  enabled.By default, high availability is disabled. This can also be provided 
-  via the environment variable `ETCD_HA_ENABLED`.
+- `ha_enabled` `(string: "false")` – Specifies if high availability should be
+  enabled. This can also be provided via the environment variable
+  `ETCD_HA_ENABLED`.
 
 - `path` `(string: "vault/")` – Specifies the path in Etcd where Vault data will
   be stored.
