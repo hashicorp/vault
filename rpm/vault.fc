@@ -1,0 +1,5 @@
+/usr/bin/vault		--	gen_context(system_u:object_r:vault_exec_t,s0)
+
+/usr/lib/systemd/system/vault.service		--	gen_context(system_u:object_r:vault_unit_file_t,s0)
+
+/var/lib/vault(/.*)?		gen_context(system_u:object_r:vault_var_lib_t,s0)

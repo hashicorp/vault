@@ -1,0 +1,13 @@
+[Unit]
+Description=Vault secret management tool
+After=syslog.target network.target local-fs.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=simple
+User=vault
+Group=vault
+ExecStart=/usr/bin/vault server -config=/etc/vault/vault.config
+ExecReload=/bin/kill -s HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target

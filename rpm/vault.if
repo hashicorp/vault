@@ -1,0 +1,223 @@
+
+## <summary>policy for vault</summary>
+
+########################################
+## <summary>
+##	Execute vault_exec_t in the vault domain.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+#
+interface(`vault_domtrans',`
+	gen_require(`
+		type vault_t, vault_exec_t;
+	')
+
+	corecmd_search_bin($1)
+	domtrans_pattern($1, vault_exec_t, vault_t)
+')
+
+######################################
+## <summary>
+##	Execute vault in the caller domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`vault_exec',`
+	gen_require(`
+		type vault_exec_t;
+	')
+
+	corecmd_search_bin($1)
+	can_exec($1, vault_exec_t)
+')
+
+########################################
+## <summary>
+##	Search vault lib directories.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`vault_search_lib',`
+	gen_require(`
+		type vault_var_lib_t;
+	')
+
+	allow $1 vault_var_lib_t:dir search_dir_perms;
+	files_search_var_lib($1)
+')
+
+########################################
+## <summary>
+##	Read vault lib files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`vault_read_lib_files',`
+	gen_require(`
+		type vault_var_lib_t;
+	')
+
+	files_search_var_lib($1)
+	read_files_pattern($1, vault_var_lib_t, vault_var_lib_t)
+')
+
+########################################
+## <summary>
+##	Manage vault lib files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`vault_manage_lib_files',`
+	gen_require(`
+		type vault_var_lib_t;
+	')
+
+	files_search_var_lib($1)
+	manage_files_pattern($1, vault_var_lib_t, vault_var_lib_t)
+')
+
+########################################
+## <summary>
+##	Manage vault lib directories.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`vault_manage_lib_dirs',`
+	gen_require(`
+		type vault_var_lib_t;
+	')
+
+	files_search_var_lib($1)
+	manage_dirs_pattern($1, vault_var_lib_t, vault_var_lib_t)
+')
+
+########################################
+## <summary>
+##	Execute vault server in the vault domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed to transition.
+##	</summary>
+## </param>
+#
+interface(`vault_systemctl',`
+	gen_require(`
+		type vault_t;
+		type vault_unit_file_t;
+	')
+
+	systemd_exec_systemctl($1)
+        systemd_read_fifo_file_passwd_run($1)
+	allow $1 vault_unit_file_t:file read_file_perms;
+	allow $1 vault_unit_file_t:service manage_service_perms;
+
+	ps_process_pattern($1, vault_t)
+')
+
+
+########################################
+## <summary>
+##	All of the rules required to administrate
+##	an vault environment
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <param name="role">
+##	<summary>
+##	Role allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`vault_admin',`
+	gen_require(`
+		type vault_t;
+		type vault_var_lib_t;
+	type vault_unit_file_t;
+	')
+
+	allow $1 vault_t:process { signal_perms };
+	ps_process_pattern($1, vault_t)
+
+    tunable_policy(`deny_ptrace',`',`
+        allow $1 vault_t:process ptrace;
+    ')
+
+	files_search_var_lib($1)
+	admin_pattern($1, vault_var_lib_t)
+
+	vault_systemctl($1)
+	admin_pattern($1, vault_unit_file_t)
+	allow $1 vault_unit_file_t:service all_service_perms;
+	optional_policy(`
+		systemd_passwd_agent_exec($1)
+		systemd_read_fifo_file_passwd_run($1)
+	')
+')
+
+########################################
+## <summary>
+##      Make a TCP connection to the vault port.
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`vault_connect',`
+        gen_require(`
+                type vault_port_t;
+        ')
+
+        allow $1 vault_port_t:tcp_socket name_connect;
+	corenet_tcp_connect_trivnet1_port($1)
+')
+
+########################################
+## <summary>
+##      Bind TCP sockets to the vault port.
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+## <infoflow type="none"/>
+#
+interface(`vault_tcp_bind_vault_port',`
+        gen_require(`
+                type vault_port_t;
+        ')
+
+        allow $1 vault_port_t:tcp_socket name_bind;
+
+')
