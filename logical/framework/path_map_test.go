@@ -271,7 +271,7 @@ func testSalting(t *testing.T, ctx context.Context, storage logical.Storage, sal
 		Value: []byte(`{"foo": "bar"}`),
 	})
 	if err != nil {
-		t.Fatal("err: %v", err)
+		t.Fatalf("err: %v", err)
 	}
 	// A read should transparently upgrade
 	resp, err = b.HandleRequest(ctx, &logical.Request{

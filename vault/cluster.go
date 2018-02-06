@@ -364,10 +364,7 @@ func (c *Core) ClusterTLSConfig(ctx context.Context) (*tls.Config, error) {
 				PrivateKey:  localSigner,
 				Leaf:        parsedCert,
 			}, nil
-
 		}
-
-		return nil, nil
 	}
 
 	clientLookup := func(requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
