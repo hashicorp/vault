@@ -38,7 +38,6 @@ func OutputList(ui cli.Ui, format string, data interface{}) int {
 }
 
 // OutputWithFormat supports printing arbitrary data under a specified format.
-// The Formatter currently does not support table format
 func OutputWithFormat(ui cli.Ui, format string, data interface{}) int {
 	switch data.(type) {
 	case *api.Secret:
@@ -113,18 +112,29 @@ type TableFormatter struct {
 }
 
 func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	// TODO: this should really use reflection like the other formatters do
-	if s, ok := data.(*api.Secret); ok {
-		return t.OutputSecret(ui, s)
+	switch data.(type) {
+	case *api.Secret:
+		return t.OutputSecret(ui, secret)
+	case []interface{}:
+		return t.OutputList(ui, secret, data)
+	case []string:
+		return t.OutputList(ui, nil, data)
+	default:
+		return errors.New("Cannot use the table formatter for this type")
 	}
-	if s, ok := data.([]interface{}); ok {
-		return t.OutputList(ui, secret, s)
-	}
-	return errors.New("Cannot use the table formatter for this type")
 }
 
-func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, list []interface{}) error {
+func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	t.printWarnings(ui, secret)
+
+	switch data.(type) {
+	case []interface{}:
+	case []string:
+		ui.Output(tableOutput(data.([]string), nil))
+		return nil
+	}
+
+	list := data.([]interface{})
 
 	if len(list) > 0 {
 		keys := make([]string, len(list))
