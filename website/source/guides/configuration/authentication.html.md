@@ -36,7 +36,7 @@ enabling the [**AppRole**](/docs/auth/approle.html) auth backend.
 ## Reference Material
 
 - [Getting Started](/intro/getting-started/authentication.html)
-- [Auth Backends](docs/auth/index.html)
+- [Auth Backends](/docs/auth/index.html)
 - [GitHub Auth APIs](/api/auth/github/index.html)
 
 
@@ -133,7 +133,7 @@ to allow machines or apps to acquire a token to interact with Vault. It uses
 **Role ID** and **Secret ID** for login.
 
 The basic workflow is:
-![AppRole auth backend workflow](assets/images/vault-approle-workflow.png)
+![AppRole auth backend workflow](/assets/images/vault-approle-workflow.png)
 
 > For the purpose of introducing the basics of AppRole, this guide walks you
 > through a very simple scenario involving only two personas (admin and app).
@@ -617,7 +617,7 @@ For example, Terraform as a trusted entity can deliver the Role ID onto the
 virtual machine.  When the app runs on the virtual machine, the Role ID already
 exists on the virtual machine.
 
-![AppRole auth backend workflow](assets/images/vault-approle-workflow2.png)
+![AppRole auth backend workflow](/assets/images/vault-approle-workflow2.png)
 
 Secret ID is like a password. To keep the Secret ID confidential, use
 [**response wrapping**](/docs/concepts/response-wrapping.html) so that the only

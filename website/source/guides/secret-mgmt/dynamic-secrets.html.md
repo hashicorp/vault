@@ -338,7 +338,7 @@ token_policies 	[apps default]
 
 Use the returned token to perform the remaining.
 
-**NOTE:** [AppRole Pull Authentication](/guides/authentication.html) guide
+**NOTE:** [AppRole Pull Authentication](/guides/configuration/authentication.html) guide
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
@@ -412,7 +412,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 
 Be sure to use the returned token to perform the remaining.
 
-**NOTE:** [AppRole Pull Authentication](/guides/authentication.html) guide
+**NOTE:** [AppRole Pull Authentication](/guides/configuration/authentication.html) guide
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
