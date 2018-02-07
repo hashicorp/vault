@@ -44,7 +44,7 @@ Usage: vault rotate [options]
 }
 
 func (c *OperatorRotateCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *OperatorRotateCommand) AutocompleteArgs() complete.Predictor {
