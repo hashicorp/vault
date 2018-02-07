@@ -540,10 +540,11 @@ func (a *AuditBroker) LogRequest(ctx context.Context, auth *logical.Auth, req *l
 		}
 
 		ret = retErr.ErrorOrNil()
-
+		failure := float32(0.0)
 		if ret != nil {
-			metrics.IncrCounter([]string{"audit", "log_request_failure"}, 1.0)
+			failure = 1.0
 		}
+		metrics.IncrCounter([]string{"audit", "log_request_failure"}, failure)
 	}()
 
 	// All logged requests must have an identifier
@@ -603,9 +604,11 @@ func (a *AuditBroker) LogResponse(ctx context.Context, auth *logical.Auth, req *
 
 		ret = retErr.ErrorOrNil()
 
+		failure := float32(0.0)
 		if ret != nil {
-			metrics.IncrCounter([]string{"audit", "log_response_failure"}, 1.0)
+			failure = 1.0
 		}
+		metrics.IncrCounter([]string{"audit", "log_response_failure"}, failure)
 	}()
 
 	headers := req.Headers
