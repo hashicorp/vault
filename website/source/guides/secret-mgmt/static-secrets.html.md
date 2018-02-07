@@ -94,7 +94,7 @@ path "auth/token/create" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/policies.html) guide.
+[policies](/guides/configuration/policies.html) guide.
 
 
 ## Steps
