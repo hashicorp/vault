@@ -41,8 +41,8 @@ two hours later, `b519c6aa...` will be revoked and takes its child
 
 ## Reference Material
 
-- The [Validation](/guides/dynamic-secrets.html#validation) section of the
-[Secret as a Service](/guides/dynamic-secrets.html) guide demonstrated lease
+- The [Validation](/guides/secret-mgmt/dynamic-secrets.html#validation) section of the
+[Secret as a Service](/guides/secret-mgmt/dynamic-secrets.html) guide demonstrated lease
 renewal and revocation
 - [Tokens documentation](/docs/concepts/tokens.html)
 - [Token Auth Backend HTTP API](/api/auth/token/index.html)
@@ -625,7 +625,7 @@ are talking about long-running apps need to be able to renew its token
 indefinitely.
 
 -> For more details about AppRole, read the [AppRole Pull
--Authentication](/guides/authentication.html) guide.
+-Authentication](/guides/configuration/authentication.html) guide.
 
 To create AppRole periodic tokens, create your AppRole role with
 `period` specified.
@@ -803,5 +803,5 @@ renewable          	true
 ## Next steps
 
 Now you have learned the lifecycle of tokens and leases, read [AppRole Pull
-Authentication](/guides/authentication.html) guide to learn how to generate
+Authentication](/guides/configuration/authentication.html) guide to learn how to generate
 tokens for apps or machines.
