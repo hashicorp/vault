@@ -1,0 +1,8 @@
+cli:
+  project: github.com/hashicorp/vault
+
+analyze:
+  modules:
+    - name: vault
+      path: github.com/hashicorp/vault
+      type: gopackage
