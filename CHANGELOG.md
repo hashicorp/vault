@@ -3,6 +3,8 @@
 IMPROVEMENTS:
 
  * auth/centrify: Add CLI helper
+ * audit: Always log failure metrics, even if zero, to ensure the values appear
+   on dashboards [GH-3937]
 
 BUG FIXES:
 
