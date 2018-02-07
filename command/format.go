@@ -67,7 +67,7 @@ func outputWithFormat(ui cli.Ui, format string, secret *api.Secret, data interfa
 	}
 
 	if err := formatter.Output(ui, secret, data); err != nil {
-		ui.Error(fmt.Sprintf("Could not output secret: %s", err.Error()))
+		ui.Error(fmt.Sprintf("Could not parse output: %s", err.Error()))
 		return 1
 	}
 	return 0
@@ -248,14 +248,9 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
 func OutputSealStatus(ui cli.Ui, format string, client *api.Client, status *api.SealStatusResponse) int {
 	switch format {
-	case "yaml", "yml":
-		return outputAsYAML(ui, status)
-	case "json":
-		return outputAsJSON(ui, status)
 	case "table":
 	default:
-		ui.Error(fmt.Sprintf("Unknown format: %s", format))
-		return 1
+		return OutputWithFormat(ui, format, status)
 	}
 
 	var sealPrefix string
@@ -309,28 +304,4 @@ func OutputSealStatus(ui cli.Ui, format string, client *api.Client, status *api.
 
 	ui.Output(tableOutput(out, nil))
 	return 0
-}
-
-func outputAsYAML(ui cli.Ui, data interface{}) int {
-	// Automatically fallback to BasicUi to avoid having ANSI color codes in the output
-	ui = getBasicUI(ui)
-
-	b, err := yaml.Marshal(data)
-	if err != nil {
-		ui.Error(fmt.Sprintf("Error marshaling YAML: %s", err))
-		return 2
-	}
-	return PrintRaw(ui, strings.TrimSpace(string(b)))
-}
-
-func outputAsJSON(ui cli.Ui, data interface{}) int {
-	// Automatically fallback to BasicUi to avoid having ANSI color codes in the output
-	ui = getBasicUI(ui)
-
-	b, err := json.Marshal(data)
-	if err != nil {
-		ui.Error(fmt.Sprintf("Error marshaling JSON: %s", err))
-		return 2
-	}
-	return PrintRaw(ui, strings.TrimSpace(string(b)))
 }
