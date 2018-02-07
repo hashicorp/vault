@@ -525,7 +525,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, auth *logical.Auth, req *l
 		}
 
 		ret = retErr.ErrorOrNil()
-		failure := 0.0
+		failure := float32(0.0)
 		if ret != nil {
 			failure = 1.0
 		}
@@ -589,7 +589,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, auth *logical.Auth, req *
 
 		ret = retErr.ErrorOrNil()
 
-		failure := 0.0
+		failure := float32(0.0)
 		if ret != nil {
 			failure = 1.0
 		}
