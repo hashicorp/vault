@@ -144,7 +144,6 @@ const (
 	FlagSetHTTP
 	FlagSetOutputField
 	FlagSetOutputFormat
-	FlagSetOutputNoColor
 )
 
 // flagSet creates the flags for this command. The result is cached on the
@@ -156,7 +155,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 		// These flag sets will apply to all leaf subcommands.
 		// TODO: Optional, but FlagSetHTTP can be safely removed from the individual
 		// Flags() subcommands.
-		bit = bit | FlagSetHTTP | FlagSetOutputNoColor
+		bit = bit | FlagSetHTTP
 
 		if bit&FlagSetHTTP != 0 {
 			f := set.NewFlagSet("HTTP Options")
@@ -270,16 +269,6 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Completion: complete.PredictSet("table", "json", "yaml"),
 					Usage: "Print the output in the given format. Valid formats " +
 						"are \"table\", \"json\", or \"yaml\".",
-				})
-			}
-
-			if bit&FlagSetOutputNoColor != 0 {
-				f.BoolVar(&BoolVar{
-					Name:    "no-color",
-					Target:  &c.flagNoColor,
-					Default: false,
-					EnvVar:  "VAULT_OUTPUT_NO_COLOR",
-					Usage:   "Print the output without ANSI color escape sequences.",
 				})
 			}
 		}

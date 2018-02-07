@@ -65,6 +65,9 @@ import (
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 )
 
+// EnvVaultCLINoColor is an env var that toggles colored UI output.
+const EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
+
 // DeprecatedCommand is a command that wraps an existing command and prints a
 // deprecation notice and points the user to the new command. Deprecated
 // commands are always hidden from help output.
@@ -89,13 +92,6 @@ func (c *DeprecatedCommand) Run(args []string) int {
 }
 
 func (c *DeprecatedCommand) warn() {
-	// If we detect the env var for no-color, then get the BasicUi.
-	// Ideally we would want DeprecatedCommands to support flags as well,
-	// and do parsing here, but this will do for now.
-	if os.Getenv("VAULT_OUTPUT_NO_COLOR") != "" {
-		c.UI = getBasicUI(c.UI)
-	}
-
 	c.UI.Warn(wrapAtLength(fmt.Sprintf(
 		"WARNING! The \"vault %s\" command is deprecated. Please use \"vault %s\" "+
 			"instead. This command will be removed in Vault 0.11 (or later).",
@@ -121,9 +117,8 @@ func init() {
 		Writer: os.Stdout,
 	}
 
-	// Attempt to detect if stdout is a tty. If so,
-	// wrap BasicUi's in ColoredUi.
-	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+	// Only use colored UI if stdoout is a tty, and EnvVaultCLINoColor is not set.
+	if terminal.IsTerminal(int(os.Stdout.Fd())) && os.Getenv(EnvVaultCLINoColor) == "" {
 		ui = &cli.ColoredUi{
 			ErrorColor: cli.UiColorRed,
 			WarnColor:  cli.UiColorYellow,

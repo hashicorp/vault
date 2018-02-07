@@ -30,10 +30,6 @@ func (c *PoliciesDeprecatedCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.flagNoColor {
-		c.UI = getBasicUI(c.UI)
-	}
-
 	args = f.Args()
 
 	// Got an arg, this is trying to read a policy

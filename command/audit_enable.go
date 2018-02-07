@@ -106,10 +106,6 @@ func (c *AuditEnableCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.flagNoColor {
-		c.UI = getBasicUI(c.UI)
-	}
-
 	args = f.Args()
 	if len(args) < 1 {
 		c.UI.Error("Missing TYPE!")

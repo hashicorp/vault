@@ -88,10 +88,6 @@ func (c *TokenRenewCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.flagNoColor {
-		c.UI = getBasicUI(c.UI)
-	}
-
 	token := ""
 	increment := c.flagIncrement
 

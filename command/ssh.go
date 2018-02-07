@@ -220,10 +220,6 @@ func (c *SSHCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.flagNoColor {
-		c.UI = getBasicUI(c.UI)
-	}
-
 	// Use homedir to expand any relative paths such as ~/.ssh
 	c.flagUserKnownHostsFile = expandPath(c.flagUserKnownHostsFile)
 	c.flagPublicKeyPath = expandPath(c.flagPublicKeyPath)

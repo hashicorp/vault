@@ -50,10 +50,6 @@ func (c *PolicyListCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.flagNoColor {
-		c.UI = getBasicUI(c.UI)
-	}
-
 	args = f.Args()
 	switch {
 	case len(args) > 0:

@@ -83,10 +83,6 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.flagNoColor {
-		c.UI = getBasicUI(c.UI)
-	}
-
 	unsealKey := ""
 
 	args = f.Args()

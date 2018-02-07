@@ -106,10 +106,6 @@ func (c *TokenRevokeCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.flagNoColor {
-		c.UI = getBasicUI(c.UI)
-	}
-
 	args = f.Args()
 	token := ""
 	if len(args) > 0 {
