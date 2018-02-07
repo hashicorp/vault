@@ -40,9 +40,8 @@ type BaseCommand struct {
 	flagTLSSkipVerify bool
 	flagWrapTTL       time.Duration
 
-	flagFormat  string
-	flagField   string
-	flagNoColor bool
+	flagFormat string
+	flagField  string
 
 	tokenHelper token.TokenHelper
 
@@ -244,7 +243,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 		}
 
-		if bit&(FlagSetOutputField|FlagSetOutputFormat|FlagSetOutputNoColor) != 0 {
+		if bit&(FlagSetOutputField|FlagSetOutputFormat) != 0 {
 			f := set.NewFlagSet("Output Options")
 
 			if bit&FlagSetOutputField != 0 {
