@@ -36,7 +36,7 @@ Usage: vault policy read [options] [NAME]
 }
 
 func (c *PolicyReadCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *PolicyReadCommand) AutocompleteArgs() complete.Predictor {
@@ -85,7 +85,15 @@ func (c *PolicyReadCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("No policy named: %s", name))
 		return 2
 	}
-	c.UI.Output(strings.TrimSpace(rules))
 
-	return 0
+	switch c.flagFormat {
+	case "table":
+		c.UI.Output(strings.TrimSpace(rules))
+		return 0
+	default:
+		resp := map[string]string{
+			"policy": rules,
+		}
+		return OutputWithFormat(c.UI, c.flagFormat, &resp)
+	}
 }
