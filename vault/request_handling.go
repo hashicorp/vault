@@ -436,22 +436,15 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 			var err error
 
-			// Check if an entity already exists for the given alias
-			entity, err = c.identityStore.entityByAliasFactors(auth.Alias.MountAccessor, auth.Alias.Name, false)
+			// Fetch the entity for the alias, or create an entity if one
+			// doesn't exist.
+			entity, err = c.identityStore.FetchOrCreateEntity(auth.Alias)
 			if err != nil {
 				return nil, nil, err
 			}
 
-			// If not, create one.
 			if entity == nil {
-				c.logger.Debug("core: creating a new entity", "alias", auth.Alias)
-				entity, err = c.identityStore.CreateEntity(auth.Alias)
-				if err != nil {
-					return nil, nil, err
-				}
-				if entity == nil {
-					return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
-				}
+				return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
 			}
 
 			auth.EntityID = entity.ID
