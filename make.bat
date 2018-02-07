@@ -7,7 +7,7 @@ REM If no target is provided, default to test.
 if [%1]==[] goto test
 
 set _TARGETS=bin,bootstrap,dev,generate,test,testacc,testrace,vet
-set _EXTERNAL_TOOLS=github.com/mitchellh/gox,github.com/kardianos/govendor,github.com/client9/misspell/cmd/misspell
+set _EXTERNAL_TOOLS=github.com/mitchellh/gox,github.com/kardianos/govendor
 
 REM Run target.
 for %%a in (%_TARGETS%) do (if x%1==x%%a goto %%a)
