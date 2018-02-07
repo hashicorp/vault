@@ -437,7 +437,7 @@ $ curl \
 
 For more information, please read:
 
-- [Production Hardening](/guides/production.html)
+- [Production Hardening](/guides/operations/production.html)
 - [Generating a Root Token](/guides/configuration/generate-root.html)
 
 ## Managing Policies
