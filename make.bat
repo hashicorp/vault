@@ -34,7 +34,7 @@ REM into ./bin/ as well as %GOPATH%/bin
 REM generate runs `go generate` to build the dynamically generated
 REM source files.
 :generate
-	go list ./... | findstr /v vendor | go generate
+	for /F "usebackq" %%f in (`go list ./... ^| findstr /v vendor`) do @go generate %%f
 	goto :eof
 
 REM test runs the unit tests and vets the code.
