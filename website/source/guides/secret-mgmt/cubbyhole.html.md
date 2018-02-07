@@ -542,4 +542,4 @@ Also, refer to [Cubbyhole Secret Backend HTTP API](/api/secret/cubbyhole/index.h
 The use of [AppRole Pull Authentication](/guides/configuration/authentication.html) is a good
 use case to leverage the response wrapping. Go through the guide if you have not
 done so.  To better understand the lifecycle of Vault tokens, proceed to [Tokens
-and Leases](/guides/lease.html) guide.
+and Leases](/guides/configuration/lease.html) guide.
