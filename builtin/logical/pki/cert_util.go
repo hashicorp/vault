@@ -258,10 +258,6 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 // If one does not pass, it is returned in the string argument.
 func validateNames(req *logical.Request, names []string, role *roleEntry) string {
 	for _, name := range names {
-		if name == "" {
-			// This might happen when common_name is empty
-			continue
-		}
 		sanitizedName := name
 		emailDomain := name
 		isEmail := false
@@ -666,14 +662,16 @@ func generateCreationBundle(b *backend,
 
 		// Check the CN. This ensures that the CN is checked even if it's
 		// excluded from SANs.
-		badName := validateNames(req, []string{cn}, role)
-		if len(badName) != 0 {
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"common name %s not allowed by this role", badName)}
+		if cn != "" {
+			badName := validateNames(req, []string{cn}, role)
+			if len(badName) != 0 {
+				return nil, errutil.UserError{Err: fmt.Sprintf(
+					"common name %s not allowed by this role", badName)}
+			}
 		}
 
 		// Check for bad email and/or DNS names
-		badName = validateNames(req, dnsNames, role)
+		badName := validateNames(req, dnsNames, role)
 		if len(badName) != 0 {
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"subject alternate name %s not allowed by this role", badName)}
