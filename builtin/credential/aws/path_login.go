@@ -682,7 +682,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	rTagMaxTTL := time.Duration(0)
 	var roleTagResp *roleTagLoginResponse
 	if roleEntry.RoleTag != "" {
-		roleTagResp, err := b.handleRoleTagLogin(ctx, req.Storage, roleName, roleEntry, instance)
+		roleTagResp, err = b.handleRoleTagLogin(ctx, req.Storage, roleName, roleEntry, instance)
 		if err != nil {
 			return nil, err
 		}
