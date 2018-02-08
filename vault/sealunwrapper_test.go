@@ -1,3 +1,8 @@
+// +build !ent
+// +build !prem
+// +build !pro
+// +build !hsm
+
 package vault
 
 import (

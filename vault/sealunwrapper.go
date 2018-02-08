@@ -1,3 +1,8 @@
+// +build !ent
+// +build !prem
+// +build !pro
+// +build !hsm
+
 package vault
 
 import (
@@ -122,16 +127,14 @@ func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, e
 	if se.Wrapped {
 		return nil, fmt.Errorf("cannot decode sealwrapped storage entry %s", entry.Key)
 	}
-	if atomic.LoadUint32(d.allowUnwraps) != 1 {
-		return &physical.Entry{
-			Key:   entry.Key,
-			Value: se.Ciphertext,
-		}, nil
-	}
 
 	entry = &physical.Entry{
 		Key:   entry.Key,
 		Value: se.Ciphertext,
+	}
+
+	if atomic.LoadUint32(d.allowUnwraps) != 1 {
+		return entry, nil
 	}
 	return entry, d.underlying.Put(ctx, entry)
 }
