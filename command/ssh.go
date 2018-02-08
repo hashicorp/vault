@@ -244,6 +244,13 @@ func (c *SSHCommand) Run(args []string) int {
 		sshArgs = args[1:]
 	}
 
+	// Set the client in the command
+	_, err = c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
 	// Credentials are generated only against a registered role. If user
 	// does not specify a role with the SSH command, then lookup API is used
 	// to fetch all the roles with which this IP is associated. If there is
@@ -331,13 +338,7 @@ func (c *SSHCommand) handleTypeCA(username, ip string, sshArgs []string) int {
 		return 1
 	}
 
-	client, err := c.Client()
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-
-	sshClient := client.SSHWithMountPoint(c.flagMountPoint)
+	sshClient := c.client.SSHWithMountPoint(c.flagMountPoint)
 
 	// Attempt to sign the public key
 	secret, err := sshClient.SignKey(c.flagRole, map[string]interface{}{
@@ -611,12 +612,7 @@ func (c *SSHCommand) handleTypeDynamic(username, ip string, sshArgs []string) in
 // generateCredential generates a credential for the given role and returns the
 // decoded secret data.
 func (c *SSHCommand) generateCredential(username, ip string) (*api.Secret, *SSHCredentialResp, error) {
-	client, err := c.Client()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sshClient := client.SSHWithMountPoint(c.flagMountPoint)
+	sshClient := c.client.SSHWithMountPoint(c.flagMountPoint)
 
 	// Attempt to generate the credential.
 	secret, err := sshClient.Credential(c.flagRole, map[string]interface{}{
@@ -683,11 +679,7 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	data := map[string]interface{}{
 		"ip": ip,
 	}
-	client, err := c.Client()
-	if err != nil {
-		return "", err
-	}
-	secret, err := client.Logical().Write(mountPoint+"/lookup", data)
+	secret, err := c.client.Logical().Write(mountPoint+"/lookup", data)
 	if err != nil {
 		return "", fmt.Errorf("Error finding roles for IP %q: %q", ip, err)
 

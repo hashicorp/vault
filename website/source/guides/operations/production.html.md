@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Production Hardening - Guides"
-sidebar_current: "guides-production-hardening"
+sidebar_current: "guides-operations-production-hardening"
 description: |-
   This guide provides guidance on best practices for a production hardened deployment of HashiCorp Vault.
 ---
@@ -81,7 +81,7 @@ and practical.
   code](https://www.hashicorp.com/blog/codifying-vault-policies-and-configuration/),
   and using version control to manage policies. Once setup, the root token
   should be revoked to eliminate the risk of exposure. Root tokens can be
-  [generated when needed](/guides/generate-root.html), and should be
+  [generated when needed](/guides/configuration/generate-root.html), and should be
   revoked as soon as possible.
 
 * **Enable Auditing**. Vault supports several auditing backends. Enabling

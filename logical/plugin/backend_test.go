@@ -143,7 +143,7 @@ func testBackend(t *testing.T) (logical.Backend, func()) {
 			Factory: mock.Factory,
 		},
 	}
-	client, _ := gplugin.TestPluginRPCConn(t, pluginMap)
+	client, _ := gplugin.TestPluginRPCConn(t, pluginMap, nil)
 	cleanup := func() {
 		client.Close()
 	}

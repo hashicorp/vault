@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -142,7 +143,9 @@ func (b *backend) invalidate(_ context.Context, key string) {
 // to delay the removal of SecretIDs by a minute.
 func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
 	// Initiate clean-up of expired SecretID entries
-	b.tidySecretID(ctx, req.Storage)
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		b.tidySecretID(ctx, req.Storage)
+	}
 	return nil
 }
 

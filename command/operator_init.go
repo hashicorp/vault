@@ -51,7 +51,7 @@ func (c *OperatorInitCommand) Help() string {
 Usage: vault operator init [options]
 
   Initializes a Vault server. Initialization is the process by which Vault's
-  storage backend is prepared to receive data. Since Vault server's share the
+  storage backend is prepared to receive data. Since Vault servers share the
   same storage backend in HA mode, you only need to initialize one Vault to
   initialize the storage backend.
 
@@ -403,7 +403,7 @@ func (c *OperatorInitCommand) consulAuto(client *api.Client, req *api.InitReques
 		// requiring the client to update VAULT_ADDR and to run init again.
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"Discovered %d uninitialized Vault servers with Consul service name "+
-				"%q. To initialize these Vatuls, set any one of the following "+
+				"%q. To initialize these Vaults, set any one of the following "+
 				"environment variables and run \"vault init\":",
 			len(uninitedVaults), c.flagConsulService)))
 		c.UI.Output("")
@@ -459,8 +459,8 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 	if req.StoredShares < 1 {
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
-			"Vault initialized with %d key shares an a key threshold of %d. Please "+
-				"securely distributed the key shares printed above. When the Vault is "+
+			"Vault initialized with %d key shares and a key threshold of %d. Please "+
+				"securely distribute the key shares printed above. When the Vault is "+
 				"re-sealed, restarted, or stopped, you must supply at least %d of "+
 				"these keys to unseal it before it can start servicing requests.",
 			req.SecretShares,

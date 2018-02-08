@@ -113,6 +113,15 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		cfg.Password = password
 	}
 
+	if maxReceive, ok := conf["max_receive_size"]; ok {
+		// grpc converts this to uint32 internally, so parse as that to avoid passing invalid values
+		val, err := strconv.ParseUint(maxReceive, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("value [%v] of 'max_receive_size' could not be understood", maxReceive)
+		}
+		cfg.MaxCallRecvMsgSize = int(val)
+	}
+
 	etcd, err := clientv3.New(cfg)
 	if err != nil {
 		return nil, err
@@ -249,24 +258,23 @@ type EtcdLock struct {
 
 // Lock is used for mutual exclusion based on the given key.
 func (c *EtcdBackend) LockWith(key, value string) (physical.Lock, error) {
-	session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(etcd3LockTimeoutInSeconds))
-	if err != nil {
-		return nil, err
-	}
-
 	p := path.Join(c.path, key)
 	return &EtcdLock{
-		etcdSession: session,
-		etcdMu:      concurrency.NewMutex(session, p),
-		prefix:      p,
-		value:       value,
-		etcd:        c.etcd,
+		prefix: p,
+		value:  value,
+		etcd:   c.etcd,
 	}, nil
 }
 
 func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
+	if c.etcdMu == nil {
+		if err := c.initMu(); err != nil {
+			return nil, err
+		}
+	}
 
 	if c.held {
 		return nil, EtcdLockHeldError
@@ -276,13 +284,10 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	case _, ok := <-c.etcdSession.Done():
 		if !ok {
 			// The session's done channel is closed, so the session is over,
-			// and we need a new one
-			session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(etcd3LockTimeoutInSeconds))
-			if err != nil {
+			// and we need a new lock with a new session.
+			if err := c.initMu(); err != nil {
 				return nil, err
 			}
-			c.etcdSession = session
-			c.etcdMu = concurrency.NewMutex(session, c.prefix)
 		}
 	default:
 	}
@@ -339,4 +344,14 @@ func (c *EtcdLock) Value() (bool, string, error) {
 	}
 
 	return true, string(resp.Kvs[0].Value), nil
+}
+
+func (c *EtcdLock) initMu() error {
+	session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(etcd3LockTimeoutInSeconds))
+	if err != nil {
+		return err
+	}
+	c.etcdSession = session
+	c.etcdMu = concurrency.NewMutex(session, c.prefix)
+	return nil
 }

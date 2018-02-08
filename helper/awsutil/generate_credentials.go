@@ -77,7 +77,7 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 	// Create the credentials required to access the API.
 	creds := credentials.NewChainCredentials(providers)
 	if creds == nil {
-		return nil, fmt.Errorf("could not compile valid credential providers from static config, environemnt, shared, or instance metadata")
+		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
 	}
 
 	return creds, nil

@@ -101,8 +101,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		Data: map[string]interface{}{
 			"organization": cfg.Org,
 			"org_name":     cfg.Org,
-			"ttl":          cfg.TTL,
-			"max_ttl":      cfg.MaxTTL,
+			"ttl":          cfg.TTL.Seconds(),
+			"max_ttl":      cfg.MaxTTL.Seconds(),
 		},
 	}
 	if cfg.BaseURL != "" {
