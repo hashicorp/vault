@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -313,7 +314,7 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 		return false, fmt.Errorf("received nil roleEntry")
 	}
 	var upgraded bool
-	switch roleEntry.version {
+	switch roleEntry.Version {
 	case 0:
 		// Check if the value held by role ARN field is actually an instance profile ARN
 		if roleEntry.BoundIamRoleARN != "" && strings.Contains(roleEntry.BoundIamRoleARN, ":instance-profile/") {
@@ -395,11 +396,11 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 			roleEntry.BoundVpcID = ""
 			upgraded = true
 		}
-		roleEntry.version = 1
+		roleEntry.Version = 1
 		fallthrough
 	case currentRoleStorageVersion:
 	default:
-		return false, fmt.Errorf("unrecognized role version: %q", roleEntry.version)
+		return false, fmt.Errorf("unrecognized role version: %q", roleEntry.Version)
 	}
 
 	return upgraded, nil
@@ -468,17 +469,6 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return nil, nil
 	}
 
-	// // Prepare the map of all the entries in the roleEntry.
-	// respData := structs.New(roleEntry).Map()
-
-	// // HMAC key belonging to the role should NOT be exported.
-	// delete(respData, "hmac_key")
-
-	// // Display all the durations in seconds
-	// respData["ttl"] = roleEntry.TTL / time.Second
-	// respData["max_ttl"] = roleEntry.MaxTTL / time.Second
-	// respData["period"] = roleEntry.Period / time.Second
-
 	return &logical.Response{
 		Data: roleEntry.ToResponseData(),
 	}, nil
@@ -500,7 +490,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	}
 	if roleEntry == nil {
 		roleEntry = &awsRoleEntry{
-			version: currentRoleStorageVersion,
+			Version: currentRoleStorageVersion,
 		}
 	} else {
 		needUpdate, err := b.upgradeRoleEntry(ctx, req.Storage, roleEntry)
@@ -813,37 +803,37 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 // Struct to hold the information associated with a Vault role
 type awsRoleEntry struct {
-	AuthType                    string        `json:"auth_type" structs:"auth_type" mapstructure:"auth_type"`
-	BoundAmiID                  string        `json:"bound_ami_id,omitempty" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
-	BoundAmiIDs                 []string      `json:"bound_ami_id_list" structs:"bound_ami_id_list" mapstructure:"bound_ami_id_list"`
-	BoundAccountID              string        `json:"bound_account_id,omitempty" structs:"bound_account_id" mapstructure:"bound_account_id"`
-	BoundAccountIDs             []string      `json:"bound_account_id_list" structs:"bound_account_id_list" mapstructure:"bound_account_id_list"`
-	BoundIamPrincipalARN        string        `json:"bound_iam_principal_arn,omitempty" structs:"bound_iam_principal_arn" mapstructure:"bound_iam_principal_arn"`
-	BoundIamPrincipalARNs       []string      `json:"bound_iam_principal_arn_list" structs:"bound_iam_principal_arn_list" mapstructure:"bound_iam_principal_arn_list"`
-	BoundIamPrincipalID         string        `json:"bound_iam_principal_id,omitempty" structs:"bound_iam_principal_id" mapstructure:"bound_iam_principal_id"`
-	BoundIamPrincipalIDs        []string      `json:"bound_iam_principal_id_list" structs:"bound_iam_principal_id_list" mapstructure:"bound_iam_principal_id_list"`
-	BoundIamRoleARN             string        `json:"bound_iam_role_arn,omitempty" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
-	BoundIamRoleARNs            []string      `json:"bound_iam_role_arn_list" structs:"bound_iam_role_arn_list" mapstructure:"bound_iam_role_arn_list"`
-	BoundIamInstanceProfileARN  string        `json:"bound_iam_instance_profile_arn,omitempty" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
-	BoundIamInstanceProfileARNs []string      `json:"bound_iam_instance_profile_arn_list" structs:"bound_iam_instance_profile_arn_list" mapstructure:"bound_iam_instance_profile_arn_list"`
-	BoundRegion                 string        `json:"bound_region,omitempty" structs:"bound_region" mapstructure:"bound_region"`
-	BoundRegions                []string      `json:"bound_region_list" structs:"bound_region_list" mapstructure:"bound_region_list"`
-	BoundSubnetID               string        `json:"bound_subnet_id,omitempty" structs:"bound_subnet_id" mapstructure:"bound_subnet_id"`
-	BoundSubnetIDs              []string      `json:"bound_subnet_id_list" structs:"bound_subnet_id_list" mapstructure:"bound_subnet_id_list"`
-	BoundVpcID                  string        `json:"bound_vpc_id,omitempty" structs:"bound_vpc_id" mapstructure:"bound_vpc_id"`
-	BoundVpcIDs                 []string      `json:"bound_vpc_id_list" structs:"bound_vpc_id_list" mapstructure:"bound_vpc_id_list"`
-	InferredEntityType          string        `json:"inferred_entity_type" structs:"inferred_entity_type" mapstructure:"inferred_entity_type"`
-	InferredAWSRegion           string        `json:"inferred_aws_region" structs:"inferred_aws_region" mapstructure:"inferred_aws_region"`
-	ResolveAWSUniqueIDs         bool          `json:"resolve_aws_unique_ids" structs:"resolve_aws_unique_ids" mapstructure:"resolve_aws_unique_ids"`
-	RoleTag                     string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
-	AllowInstanceMigration      bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
-	TTL                         time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
-	MaxTTL                      time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	Policies                    []string      `json:"policies" structs:"policies" mapstructure:"policies"`
-	DisallowReauthentication    bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	HMACKey                     string        `json:"hmac_key" structs:"hmac_key" mapstructure:"hmac_key"`
-	Period                      time.Duration `json:"period" mapstructure:"period" structs:"period"`
-	version                     int           `json:"version" mapstructure:"version" structs:"versoin"`
+	AuthType                    string        `json:"auth_type" mapstructure:"auth_type"`
+	BoundAmiID                  string        `json:"bound_ami_id,omitempty" mapstructure:"bound_ami_id"`
+	BoundAmiIDs                 []string      `json:"bound_ami_id_list" mapstructure:"bound_ami_id_list"`
+	BoundAccountID              string        `json:"bound_account_id,omitempty" mapstructure:"bound_account_id"`
+	BoundAccountIDs             []string      `json:"bound_account_id_list" mapstructure:"bound_account_id_list"`
+	BoundIamPrincipalARN        string        `json:"bound_iam_principal_arn,omitempty" mapstructure:"bound_iam_principal_arn"`
+	BoundIamPrincipalARNs       []string      `json:"bound_iam_principal_arn_list" mapstructure:"bound_iam_principal_arn_list"`
+	BoundIamPrincipalID         string        `json:"bound_iam_principal_id,omitempty" mapstructure:"bound_iam_principal_id"`
+	BoundIamPrincipalIDs        []string      `json:"bound_iam_principal_id_list" mapstructure:"bound_iam_principal_id_list"`
+	BoundIamRoleARN             string        `json:"bound_iam_role_arn,omitempty" mapstructure:"bound_iam_role_arn"`
+	BoundIamRoleARNs            []string      `json:"bound_iam_role_arn_list" mapstructure:"bound_iam_role_arn_list"`
+	BoundIamInstanceProfileARN  string        `json:"bound_iam_instance_profile_arn,omitempty" mapstructure:"bound_iam_instance_profile_arn"`
+	BoundIamInstanceProfileARNs []string      `json:"bound_iam_instance_profile_arn_list" mapstructure:"bound_iam_instance_profile_arn_list"`
+	BoundRegion                 string        `json:"bound_region,omitempty" mapstructure:"bound_region"`
+	BoundRegions                []string      `json:"bound_region_list" mapstructure:"bound_region_list"`
+	BoundSubnetID               string        `json:"bound_subnet_id,omitempty" mapstructure:"bound_subnet_id"`
+	BoundSubnetIDs              []string      `json:"bound_subnet_id_list" mapstructure:"bound_subnet_id_list"`
+	BoundVpcID                  string        `json:"bound_vpc_id,omitempty" mapstructure:"bound_vpc_id"`
+	BoundVpcIDs                 []string      `json:"bound_vpc_id_list" mapstructure:"bound_vpc_id_list"`
+	InferredEntityType          string        `json:"inferred_entity_type" mapstructure:"inferred_entity_type"`
+	InferredAWSRegion           string        `json:"inferred_aws_region" mapstructure:"inferred_aws_region"`
+	ResolveAWSUniqueIDs         bool          `json:"resolve_aws_unique_ids" mapstructure:"resolve_aws_unique_ids"`
+	RoleTag                     string        `json:"role_tag" mapstructure:"role_tag"`
+	AllowInstanceMigration      bool          `json:"allow_instance_migration" mapstructure:"allow_instance_migration"`
+	TTL                         time.Duration `json:"ttl" mapstructure:"ttl"`
+	MaxTTL                      time.Duration `json:"max_ttl" mapstructure:"max_ttl"`
+	Policies                    []string      `json:"policies" mapstructure:"policies"`
+	DisallowReauthentication    bool          `json:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
+	HMACKey                     string        `json:"hmac_key" mapstructure:"hmac_key"`
+	Period                      time.Duration `json:"period" mapstructure:"period"`
+	Version                     int           `json:"version" mapstructure:"version"`
 }
 
 func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
