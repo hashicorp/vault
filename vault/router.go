@@ -24,15 +24,21 @@ type Router struct {
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
 	storagePrefix *radix.Tree
+	middlewares   []RouterMiddleware
 }
 
 // NewRouter returns a new router
 func NewRouter() *Router {
+	// Ideally we'd want to do this through a factory
+	var middlewares []RouterMiddleware
+	middlewares = append(middlewares, &PassthroughHeadersMiddleware{})
+
 	r := &Router{
 		root:               radix.New(),
 		storagePrefix:      radix.New(),
 		mountUUIDCache:     radix.New(),
 		mountAccessorCache: radix.New(),
+		middlewares:        middlewares,
 	}
 	return r
 }
@@ -508,7 +514,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		ok, exists, err := re.backend.HandleExistenceCheck(ctx, req)
 		return nil, ok, exists, err
 	} else {
-		resp, err := re.backend.HandleRequest(ctx, req)
+		chained := re.backend.HandleRequest
+		for _, middleware := range r.middlewares {
+			chained = middleware.Handler(chained)
+		}
+		resp, err := chained(ctx, req)
+		// resp, err := re.backend.HandleRequest(ctx, req)
+
 		// When a token gets renewed, the request hits this path and reaches
 		// token store. Token store delegates the renewal to the expiration
 		// manager. Expiration manager in-turn creates a different logical
