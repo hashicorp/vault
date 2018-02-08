@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	math "math"
 	"net"
 	"net/http"
 	"net/url"
@@ -263,7 +264,11 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time: 2 * HeartbeatInterval,
-		}))
+		}),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(math.MaxInt32),
+			grpc.MaxCallSendMsgSize(math.MaxInt32),
+		))
 	if err != nil {
 		cancelFunc()
 		c.logger.Error("core: err setting up forwarding rpc client", "error", err)

@@ -128,7 +128,7 @@ it? What is the point of a secrets engine?
 
 As mentioned above, Vault behaves similarly to a [virtual filesystem][vfs]. The
 read/write/delete/list operations are forwarded to the corresponding secrets
-engine, and the secrets engine decides who to react to those operations.
+engine, and the secrets engine decides how to react to those operations.
 
 This abstraction is incredibly powerful. It enables Vault to interface directly
 with physical systems, databases, HSMs, etc. But in addition to these physical
