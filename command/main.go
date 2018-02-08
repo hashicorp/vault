@@ -10,9 +10,25 @@ import (
 	"text/tabwriter"
 
 	"github.com/mitchellh/cli"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
+type VaultUI struct {
+	cli.Ui
+	isTerminal bool
+}
+
+func (u *VaultUI) Output(m string) {
+	if u.isTerminal {
+		u.Ui.Output(m)
+	} else {
+		getWriterFromUI(u.Ui).Write([]byte(m))
+	}
+}
+
 func Run(args []string) int {
+	color := true
+
 	// Handle -v shorthand
 	for _, arg := range args {
 		if arg == "--" {
@@ -23,7 +39,50 @@ func Run(args []string) int {
 			args = []string{"version"}
 			break
 		}
+
+		/*
+			if arg == "-no-color" {
+				color = false
+			}
+		*/
 	}
+
+	if os.Getenv(EnvVaultCLINoColor) != "" {
+		color = false
+	}
+
+	isTerminal := terminal.IsTerminal(int(os.Stdout.Fd()))
+
+	ui := &VaultUI{
+		Ui: &cli.BasicUi{
+			Writer:      os.Stdout,
+			ErrorWriter: os.Stderr,
+		},
+		isTerminal: isTerminal,
+	}
+	serverCmdUi := &VaultUI{
+		Ui: &cli.BasicUi{
+			Writer: os.Stdout,
+		},
+		isTerminal: isTerminal,
+	}
+
+	// Only use colored UI if stdoout is a tty, and not disabled
+	if isTerminal && color {
+		ui.Ui = &cli.ColoredUi{
+			ErrorColor: cli.UiColorRed,
+			WarnColor:  cli.UiColorYellow,
+			Ui:         ui.Ui,
+		}
+
+		serverCmdUi.Ui = &cli.ColoredUi{
+			ErrorColor: cli.UiColorRed,
+			WarnColor:  cli.UiColorYellow,
+			Ui:         serverCmdUi.Ui,
+		}
+	}
+
+	initCommands(ui, serverCmdUi)
 
 	// Calculate hidden commands from the deprecated ones
 	hiddenCommands := make([]string, 0, len(DeprecatedCommands)+1)

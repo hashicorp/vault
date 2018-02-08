@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
-	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/builtin/logical/cassandra"
@@ -170,34 +169,7 @@ func (c *DeprecatedCommand) warn() {
 var Commands map[string]cli.CommandFactory
 var DeprecatedCommands map[string]cli.CommandFactory
 
-func init() {
-	var ui cli.Ui
-	var serverCmdUi cli.Ui
-
-	ui = &cli.BasicUi{
-		Writer:      os.Stdout,
-		ErrorWriter: os.Stderr,
-	}
-
-	serverCmdUi = &cli.BasicUi{
-		Writer: os.Stdout,
-	}
-
-	// Only use colored UI if stdoout is a tty, and EnvVaultCLINoColor is not set.
-	if terminal.IsTerminal(int(os.Stdout.Fd())) && os.Getenv(EnvVaultCLINoColor) == "" {
-		ui = &cli.ColoredUi{
-			ErrorColor: cli.UiColorRed,
-			WarnColor:  cli.UiColorYellow,
-			Ui:         ui,
-		}
-
-		serverCmdUi = &cli.ColoredUi{
-			ErrorColor: cli.UiColorRed,
-			WarnColor:  cli.UiColorYellow,
-			Ui:         serverCmdUi,
-		}
-	}
-
+func initCommands(ui, serverCmdUi cli.Ui) {
 	loginHandlers := map[string]LoginHandler{
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
