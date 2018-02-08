@@ -26,5 +26,6 @@ The following list of tools is maintained by the community of Vault users; Hashi
 * [vault-aws-creds](https://github.com/jantman/vault-aws-creds) - Python helper to export Vault-provided temporary AWS creds into the environment
 * [goldfish](https://github.com/Caiyeon/goldfish) - A Vault UI panel written with VueJS and Vault native Go API.
 * [vaultenv](https://github.com/channable/vaultenv) - A tool that fetches secrets in parallel, puts them into the environment and then `exec`s the process that needs them
+* [vault-migrator](https://github.com/nebtex/vault-migrator) - A tool to migrate data between different Vault storage mechanisms
 
 Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/master/website/source/api/relatedtools.html.md).
