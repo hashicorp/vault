@@ -621,10 +621,10 @@ func generateCreationBundle(b *backend,
 		if csr != nil && role.UseCSRCommonName {
 			cn = csr.Subject.CommonName
 		}
-		if cn == "" {
+		if cn == "" && role.RequireCN {
 			cn = data.Get("common_name").(string)
 			if cn == "" {
-				return nil, errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true`}
+				return nil, errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true, unless "require_cn" is set to false`}
 			}
 		}
 
