@@ -40,11 +40,9 @@ func Run(args []string) int {
 			break
 		}
 
-		/*
-			if arg == "-no-color" {
-				color = false
-			}
-		*/
+		if arg == "-no-color" {
+			color = false
+		}
 	}
 
 	if os.Getenv(EnvVaultCLINoColor) != "" {
