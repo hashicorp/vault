@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
@@ -82,7 +83,7 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 
 	c.maxConnectionLifetime, err = parseutil.ParseDurationSecond(c.MaxConnectionLifetimeRaw)
 	if err != nil {
-		return nil, fmt.Errorf("invalid max_connection_lifetime: %s", err)
+		return nil, errwrap.Wrapf("invalid max_connection_lifetime: {{err}}", err)
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -91,11 +92,11 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return nil, fmt.Errorf("error verifying connection: %s", err)
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 
 		if err := c.db.PingContext(ctx); err != nil {
-			return nil, fmt.Errorf("error verifying connection: %s", err)
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 	}
 

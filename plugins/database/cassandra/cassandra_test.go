@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/gocql/gocql"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
@@ -60,7 +61,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 
 		session, err := clusterConfig.CreateSession()
 		if err != nil {
-			return fmt.Errorf("error creating session: %s", err)
+			return errwrap.Wrapf("error creating session: {{err}}", err)
 		}
 		defer session.Close()
 		return nil
@@ -268,7 +269,7 @@ func testCredsExist(t testing.TB, address string, port int, username, password s
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
-		return fmt.Errorf("error creating session: %s", err)
+		return errwrap.Wrapf("error creating session: {{err}}", err)
 	}
 	defer session.Close()
 	return nil

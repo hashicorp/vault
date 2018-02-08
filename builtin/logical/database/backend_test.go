@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -65,7 +66,7 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 		})
 		if err != nil || (resp != nil && resp.IsError()) {
 			// It's likely not up and running yet, so return error and try again
-			return fmt.Errorf("err:%s resp:%#v\n", err, resp)
+			return errwrap.Wrapf(fmt.Sprintf("err:{{err}} resp:%#v", resp), err)
 		}
 		if resp == nil {
 			t.Fatal("expected warning")

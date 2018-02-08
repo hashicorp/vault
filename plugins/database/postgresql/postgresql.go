@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -364,10 +365,10 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 
 	// can't drop if not all privileges are revoked
 	if rows.Err() != nil {
-		return fmt.Errorf("could not generate revocation statements for all rows: %s", rows.Err())
+		return errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
 	}
 	if lastStmtError != nil {
-		return fmt.Errorf("could not perform all revocation statements: %s", lastStmtError)
+		return errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
 	}
 
 	// Drop this user

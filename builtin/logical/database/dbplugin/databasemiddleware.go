@@ -2,7 +2,12 @@ package dbplugin
 
 import (
 	"context"
+	"errors"
+	"net/url"
+	"strings"
 	"time"
+
+	"github.com/hashicorp/errwrap"
 
 	metrics "github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
@@ -186,4 +191,63 @@ func (mw *databaseMetricsMiddleware) Close() (err error) {
 	metrics.IncrCounter([]string{"database", "Close"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "Close"}, 1)
 	return mw.next.Close()
+}
+
+// ---- Error Sanitizer Middleware Domain ----
+
+// databaseErrorSanitizerMiddleware wraps an implementation of Databases and
+// sanitizes returned error messages
+type databaseErrorSanitizerMiddleware struct {
+	next Database
+}
+
+func (mw *databaseErrorSanitizerMiddleware) Type() (string, error) {
+	dbType, err := mw.next.Type()
+	return dbType, mw.sanitize(err)
+}
+
+func (mw *databaseErrorSanitizerMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
+	username, password, err = mw.next.CreateUser(ctx, statements, usernameConfig, expiration)
+	return username, password, mw.sanitize(err)
+}
+
+func (mw *databaseErrorSanitizerMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
+	return mw.sanitize(mw.next.RenewUser(ctx, statements, username, expiration))
+}
+
+func (mw *databaseErrorSanitizerMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
+	return mw.sanitize(mw.next.RevokeUser(ctx, statements, username))
+}
+
+func (mw *databaseErrorSanitizerMiddleware) RotateRootCredentials(ctx context.Context, statements []string, conf map[string]interface{}) (saveConf map[string]interface{}, err error) {
+	saveConf, err = mw.next.RotateRootCredentials(ctx, statements, conf)
+	return saveConf, mw.sanitize(err)
+}
+
+func (mw *databaseErrorSanitizerMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
+	saveConf, err = mw.next.Initialize(ctx, conf, verifyConnection)
+	return saveConf, mw.sanitize(err)
+}
+
+func (mw *databaseErrorSanitizerMiddleware) Close() (err error) {
+	return mw.sanitize(mw.next.Close())
+}
+
+// sanitize
+func (mw *databaseErrorSanitizerMiddleware) sanitize(err error) (retErr error) {
+	walkFunc := func(inner error) {
+		if errwrap.ContainsType(inner, new(url.Error)) {
+			urlErr := inner.Error()
+			if strings.Index(urlErr, ":") != -1 {
+				start := strings.Index(urlErr, ":") + 2
+				if len(urlErr)-1 < start {
+					start = len(urlErr) - 1
+				}
+				inner = errors.New(urlErr[start:])
+			}
+		}
+		retErr = errwrap.Wrapf("{{err}}", inner)
+	}
+	errwrap.Walk(err, walkFunc)
+	return
 }

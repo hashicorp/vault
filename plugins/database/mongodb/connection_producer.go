@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/mitchellh/mapstructure"
 
@@ -60,7 +61,7 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 		concern := &mgo.Safe{}
 		err = json.Unmarshal([]byte(input), concern)
 		if err != nil {
-			return nil, fmt.Errorf("error mashalling write_concern: %s", err)
+			return nil, errwrap.Wrapf("error mashalling write_concern: {{err}}", err)
 		}
 
 		// Guard against empty, non-nil mgo.Safe object; we don't want to pass that
@@ -77,11 +78,11 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return nil, fmt.Errorf("error verifying connection: %s", err)
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 
 		if err := c.session.Ping(); err != nil {
-			return nil, fmt.Errorf("error verifying connection: %s", err)
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 	}
 

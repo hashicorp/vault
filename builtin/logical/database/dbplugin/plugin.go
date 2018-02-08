@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	log "github.com/mgutz/logxi/v1"
@@ -42,7 +43,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		// from the pluginRunner. Then cast it to a Database.
 		dbRaw, err := pluginRunner.BuiltinFactory()
 		if err != nil {
-			return nil, fmt.Errorf("error getting plugin type: %s", err)
+			return nil, errwrap.Wrapf("error initializing plugin: {{err}}", err)
 		}
 
 		var ok bool
@@ -73,7 +74,12 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 
 	typeStr, err := db.Type()
 	if err != nil {
-		return nil, fmt.Errorf("error getting plugin type: %s", err)
+		return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
+	}
+
+	// Wrap with error sanitizer
+	db = &databaseErrorSanitizerMiddleware{
+		next: db,
 	}
 
 	// Wrap with metrics middleware

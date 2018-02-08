@@ -11,6 +11,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/gocql/gocql"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
@@ -58,7 +59,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
-		return nil, fmt.Errorf("invalid connect_timeout: %s", err)
+		return nil, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
 	}
 
 	switch {
@@ -76,11 +77,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 	case len(c.PemJSON) != 0:
 		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(c.PemJSON))
 		if err != nil {
-			return nil, fmt.Errorf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: %s", err)
+			return nil, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return nil, fmt.Errorf("Error marshaling PEM information: %s", err)
+			return nil, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -90,11 +91,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 	case len(c.PemBundle) != 0:
 		parsedCertBundle, err = certutil.ParsePEMBundle(c.PemBundle)
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing the given PEM information: %s", err)
+			return nil, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return nil, fmt.Errorf("Error marshaling PEM information: %s", err)
+			return nil, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
 		}
 		c.certificate = certBundle.Certificate
 		c.privateKey = certBundle.PrivateKey
@@ -108,7 +109,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return nil, fmt.Errorf("error verifying connection: %s", err)
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 	}
 
@@ -186,12 +187,12 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse certificate bundle: %s", err)
+				return nil, errwrap.Wrapf("failed to parse certificate bundle: {{err}}", err)
 			}
 
 			tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
 			if err != nil || tlsConfig == nil {
-				return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig:%#v err:%v", tlsConfig, err)
+				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get TLS configuration: tlsConfig:%#v err:{{err}}", tlsConfig), err)
 			}
 			tlsConfig.InsecureSkipVerify = c.InsecureTLS
 
@@ -215,7 +216,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
-		return nil, fmt.Errorf("error creating session: %s", err)
+		return nil, errwrap.Wrapf("error creating session: {{err}}", err)
 	}
 
 	// Set consistency
@@ -231,7 +232,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	// Verify the info
 	err = session.Query(`LIST ALL`).Exec()
 	if err != nil {
-		return nil, fmt.Errorf("error validating connection info: %s", err)
+		return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
 	}
 
 	return session, nil
