@@ -668,4 +668,4 @@ b07d7a47-1d0d-741d-20b4-ae0de7c6d964
 ## Next steps
 
 To learn more about response wrapping, go to [Cubbyhole Response
-Wrapping](/guides/cubbyhole.html) guide.
+Wrapping](/guides/secret-mgmt/cubbyhole.html) guide.
