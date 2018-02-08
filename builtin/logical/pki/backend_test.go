@@ -84,7 +84,8 @@ func TestPKI_RequireCN(t *testing.T) {
 		"max_ttl":            "2h",
 	})
 
-	// Issue a cert with require_cn set to true and with common name supplied
+	// Issue a cert with require_cn set to true and with common name supplied.
+	// It should succeed.
 	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{
 		"common_name": "foobar.com",
 	})
@@ -92,7 +93,8 @@ func TestPKI_RequireCN(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Issue a cert with require_cn set to true and with out supplying the common name
+	// Issue a cert with require_cn set to true and with out supplying the
+	// common name. It should error out.
 	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{})
 	if err == nil {
 		t.Fatalf("expected an error due to missing common_name")
@@ -107,7 +109,19 @@ func TestPKI_RequireCN(t *testing.T) {
 		"require_cn":         false,
 	})
 
-	// Issue a cert with require_cn set to true and with out supplying the common name
+	// Issue a cert with require_cn set to false and without supplying the
+	// common name. It should succeed.
+	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data["certificate"] == "" {
+		t.Fatalf("expected a cert to be generated")
+	}
+
+	// Issue a cert with require_cn set to false and with a common name. It
+	// should succeed.
 	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)

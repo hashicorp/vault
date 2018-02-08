@@ -258,6 +258,10 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 // If one does not pass, it is returned in the string argument.
 func validateNames(req *logical.Request, names []string, role *roleEntry) string {
 	for _, name := range names {
+		if name == "" {
+			// This might happen when common_name is empty
+			continue
+		}
 		sanitizedName := name
 		emailDomain := name
 		isEmail := false
@@ -621,9 +625,9 @@ func generateCreationBundle(b *backend,
 		if csr != nil && role.UseCSRCommonName {
 			cn = csr.Subject.CommonName
 		}
-		if cn == "" && role.RequireCN {
+		if cn == "" {
 			cn = data.Get("common_name").(string)
-			if cn == "" {
+			if cn == "" && role.RequireCN {
 				return nil, errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true, unless "require_cn" is set to false`}
 			}
 		}
@@ -633,7 +637,7 @@ func generateCreationBundle(b *backend,
 			emailAddresses = csr.EmailAddresses
 		}
 
-		if !data.Get("exclude_cn_from_sans").(bool) {
+		if cn != "" && !data.Get("exclude_cn_from_sans").(bool) {
 			if strings.Contains(cn, "@") {
 				// Note: emails are not disallowed if the role's email protection
 				// flag is false, because they may well be included for
