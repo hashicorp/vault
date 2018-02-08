@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestIdentityStore_FetchOrCreateEntity(t *testing.T) {
+func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 	is, ghAccessor, _ := testIdentityStoreWithGithubAuth(t)
 	alias := &logical.Alias{
 		MountType:     "github",
@@ -17,7 +17,7 @@ func TestIdentityStore_FetchOrCreateEntity(t *testing.T) {
 		Name:          "githubuser",
 	}
 
-	entity, err := is.FetchOrCreateEntity(alias)
+	entity, err := is.CreateOrFetchEntity(alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestIdentityStore_FetchOrCreateEntity(t *testing.T) {
 		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 
-	entity, err = is.FetchOrCreateEntity(alias)
+	entity, err = is.CreateOrFetchEntity(alias)
 	if err != nil {
 		t.Fatal(err)
 	}

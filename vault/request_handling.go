@@ -438,7 +438,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 			// Fetch the entity for the alias, or create an entity if one
 			// doesn't exist.
-			entity, err = c.identityStore.FetchOrCreateEntity(auth.Alias)
+			entity, err = c.identityStore.CreateOrFetchEntity(auth.Alias)
 			if err != nil {
 				return nil, nil, err
 			}

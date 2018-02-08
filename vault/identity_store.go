@@ -281,9 +281,9 @@ func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor,
 	return i.MemDBEntityByAliasIDInTxn(txn, alias.ID, clone)
 }
 
-// CreateEntity creates a new entity. This is used by core to
+// CreateOrFetchEntity creates a new entity. This is used by core to
 // associate each login attempt by an alias to a unified entity in Vault.
-func (i *IdentityStore) FetchOrCreateEntity(alias *logical.Alias) (*identity.Entity, error) {
+func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Entity, error) {
 	var entity *identity.Entity
 	var err error
 
