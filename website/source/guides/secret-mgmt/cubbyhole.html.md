@@ -111,7 +111,7 @@ uses cubbyhole response wrapping. In this guide, you perform the following:
 
 **NOTE:** This guide demonstrates how the response wrapping works. To learn more
 about reading and writing secrets in Vault, refer to the [Static
-Secret](/guide/static-secrets.html) guide.
+Secret](/guides/secret-mgmt/static-secrets.html) guide.
 
 ### <a name="step1"></a>Step 1: Create and wrap a token
 (**Persona:** admin)
@@ -539,7 +539,7 @@ Also, refer to [Cubbyhole Secret Backend HTTP API](/api/secret/cubbyhole/index.h
 
 ## Next steps
 
-The use of [AppRole Pull Authentication](/guides/authentication.html) is a good
+The use of [AppRole Pull Authentication](/guides/configuration/authentication.html) is a good
 use case to leverage the response wrapping. Go through the guide if you have not
 done so.  To better understand the lifecycle of Vault tokens, proceed to [Tokens
-and Leases](/guides/lease.html) guide.
+and Leases](/guides/configuration/lease.html) guide.

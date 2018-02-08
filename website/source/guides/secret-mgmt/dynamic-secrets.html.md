@@ -50,7 +50,7 @@ environment variables. The administrator specifies the TTL of the database
 credentials to enforce its validity so that they are automatically revoked when
 they are no longer used.
 
-![Dynamic Secret Workflow](assets/images/vault-dynamic-secrets.png)
+![Dynamic Secret Workflow](/assets/images/vault-dynamic-secrets.png)
 
 Each app instance can get unique credentials that they don't have to share. By
 making those credentials to be short-lived, you reduced the change of the secret
@@ -124,7 +124,7 @@ path "auth/token/create" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/policies.html) guide.
+[policies](/guides/configuration/policies.html) guide.
 
 ## Steps
 
@@ -338,7 +338,7 @@ token_policies 	[apps default]
 
 Use the returned token to perform the remaining.
 
-**NOTE:** [AppRole Pull Authentication](/guides/authentication.html) guide
+**NOTE:** [AppRole Pull Authentication](/guides/configuration/authentication.html) guide
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
@@ -412,7 +412,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 
 Be sure to use the returned token to perform the remaining.
 
-**NOTE:** [AppRole Pull Authentication](/guides/authentication.html) guide
+**NOTE:** [AppRole Pull Authentication](/guides/configuration/authentication.html) guide
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
@@ -498,5 +498,5 @@ user name exists.
 
 This guide discussed how to generate credentials on--dataemand so that the access
 credentials no longer need to be written to disk. Next, learn about the
-[Tokens and Leases](/guides/lease.html) so that you can control the lifecycle of
+[Tokens and Leases](/guides/configuration/lease.html) so that you can control the lifecycle of
 those credentials.
