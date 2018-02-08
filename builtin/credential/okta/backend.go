@@ -117,7 +117,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	case "MFA_REQUIRED", "MFA_ENROLL":
 		if !cfg.BypassOktaMFA {
-			return nil, logical.ErrorResponse("okta mfa required but mfa bypass not set in config"), nil, nil
+			return nil, logical.ErrorResponse("okta mfa required for this account but mfa bypass not set in config"), nil, nil
 		}
 
 	case "SUCCESS":
