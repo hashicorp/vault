@@ -20,8 +20,8 @@ Secret Storage.
 ## Reference Material
 
 - [Key/Value Secret Backend](/docs/secrets/kv/index.html)
-- [Key/Value Secret Backend API](/apikey/secret/kv/index.html)
-- [Client libraries](/apikey/libraries.html) for Vault API for commonly used languages
+- [Key/Value Secret Backend API](/api/secret/kv/index.html)
+- [Client libraries](/api/libraries.html) for Vault API for commonly used languages
 
 ## Estimated Time to Complete
 
