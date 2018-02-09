@@ -3,6 +3,7 @@ package okta
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/chrismalek/oktasdk-go/okta"
 	"github.com/hashicorp/vault/helper/mfa"
@@ -207,7 +208,7 @@ func (b *backend) getOktaGroups(client *okta.Client, user *okta.User) ([]string,
 		oktaGroups = append(oktaGroups, group.Profile.Name)
 	}
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/okta: Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", oktaGroups)
+		b.Logger().Debug("auth/okta: Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", strings.Join(oktaGroups, ", "))
 	}
 	return oktaGroups, nil
 }
