@@ -380,6 +380,9 @@ type Core struct {
 	// going to be shut down, stepped down, or sealed
 	activeContext           context.Context
 	activeContextCancelFunc context.CancelFunc
+
+	// Stores the sealunwrapper for downgrade needs
+	sealUnwrapper physical.Backend
 }
 
 // CoreConfig is used to parameterize a core
@@ -517,13 +520,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.seal.SetCore(c)
 
+	c.sealUnwrapper = NewSealUnwrapper(phys, conf.Logger)
+
 	var ok bool
 
 	// Wrap the physical backend in a cache layer if enabled
 	if txnOK {
-		c.physical = physical.NewTransactionalCache(phys, conf.CacheSize, conf.Logger)
+		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, conf.Logger)
 	} else {
-		c.physical = physical.NewCache(phys, conf.CacheSize, conf.Logger)
+		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, conf.Logger)
 	}
 	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
 
@@ -1580,6 +1585,13 @@ func (c *Core) postUnseal() (retErr error) {
 		c.physicalCache.SetEnabled(true)
 	}
 
+	switch c.sealUnwrapper.(type) {
+	case *sealUnwrapper:
+		c.sealUnwrapper.(*sealUnwrapper).runUnwraps()
+	case *transactionalSealUnwrapper:
+		c.sealUnwrapper.(*transactionalSealUnwrapper).runUnwraps()
+	}
+
 	// Purge these for safety in case of a rekey
 	c.seal.SetBarrierConfig(c.activeContext, nil)
 	if c.seal.RecoveryKeySupported() {
@@ -1683,6 +1695,13 @@ func (c *Core) preSeal() error {
 	}
 	if err := enterprisePreSeal(c); err != nil {
 		result = multierror.Append(result, err)
+	}
+
+	switch c.sealUnwrapper.(type) {
+	case *sealUnwrapper:
+		c.sealUnwrapper.(*sealUnwrapper).stopUnwraps()
+	case *transactionalSealUnwrapper:
+		c.sealUnwrapper.(*transactionalSealUnwrapper).stopUnwraps()
 	}
 
 	// Purge the cache
