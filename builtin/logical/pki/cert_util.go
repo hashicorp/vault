@@ -643,21 +643,17 @@ func generateCreationBundle(b *backend,
 				// used for the purpose for which they are presented
 				emailAddresses = append(emailAddresses, cn)
 			} else {
-				// Only add to dnsNames if it's actually a DNS name but convert idn first
-				wildcard := false
-				lcn := cn
-				if strings.HasPrefix(cn, "*.") {
-					wildcard = true
-					lcn = strings.TrimPrefix(cn, "*.")
-				}
-				converted, err := idna.Lookup.ToASCII(lcn)
+				// Only add to dnsNames if it's actually a DNS name but convert
+				// idn first
+				p := idna.New(
+					idna.StrictDomainName(true),
+					idna.VerifyDNSLength(true),
+				)
+				converted, err := p.ToASCII(cn)
 				if err != nil {
 					return nil, errutil.UserError{Err: err.Error()}
 				}
 				if hostnameRegex.MatchString(converted) {
-					if wildcard {
-						converted = "*." + converted
-					}
 					dnsNames = append(dnsNames, converted)
 				}
 			}
@@ -671,20 +667,17 @@ func generateCreationBundle(b *backend,
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
 					} else {
-						// Only add to dnsNames if it's actually a DNS name but convert idn first
-						wildcard := false
-						if strings.HasPrefix(v, "*.") {
-							wildcard = true
-							v = strings.TrimPrefix(v, "*.")
-						}
-						converted, err := idna.Lookup.ToASCII(v)
+						// Only add to dnsNames if it's actually a DNS name but
+						// convert idn first
+						p := idna.New(
+							idna.StrictDomainName(true),
+							idna.VerifyDNSLength(true),
+						)
+						converted, err := p.ToASCII(v)
 						if err != nil {
 							return nil, errutil.UserError{Err: err.Error()}
 						}
 						if hostnameRegex.MatchString(converted) {
-							if wildcard {
-								converted = "*." + converted
-							}
 							dnsNames = append(dnsNames, converted)
 						}
 					}

@@ -1632,7 +1632,11 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			if retName != name {
 				// Check IDNA
-				converted, err := idna.Lookup.ToUnicode(retName)
+				p := idna.New(
+					idna.StrictDomainName(true),
+					idna.VerifyDNSLength(true),
+				)
+				converted, err := p.ToUnicode(retName)
 				if err != nil {
 					t.Fatal(err)
 				}
