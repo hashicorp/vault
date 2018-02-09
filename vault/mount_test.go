@@ -14,6 +14,30 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		err := config.StorageView.Put(ctx, &logical.StorageEntry{
+			Key:   "bar",
+			Value: []byte("baz"),
+		})
+		if err == nil || !strings.Contains(err.Error(), logical.ErrSetupReadOnly.Error()) {
+			t.Fatalf("expected a read-only error")
+		}
+		return &NoopBackend{}, nil
+	}
+
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err := c.mount(context.Background(), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestCore_DefaultMountTable(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	verifyDefaultTable(t, c.mounts)
