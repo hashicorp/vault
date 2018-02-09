@@ -33,6 +33,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/net/idna"
 )
 
 var (
@@ -153,8 +154,6 @@ func TestBackend_RSAKey(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
 	testCase.Steps = append(testCase.Steps, generateCATestingSteps(t, rsaCACert, rsaCAKey, ecCACert, intdata, reqdata)...)
@@ -183,8 +182,6 @@ func TestBackend_ECKey(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
 	testCase.Steps = append(testCase.Steps, generateCATestingSteps(t, ecCACert, ecCAKey, rsaCACert, intdata, reqdata)...)
@@ -211,8 +208,6 @@ func TestBackend_CSRValues(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
 	testCase.Steps = append(testCase.Steps, generateCSRSteps(t, ecCACert, ecCAKey, intdata, reqdata)...)
@@ -238,8 +233,6 @@ func TestBackend_URLsCRUD(t *testing.T) {
 		Backend: b,
 		Steps:   []logicaltest.TestStep{},
 	}
-
-	stepCount = len(testCase.Steps)
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
@@ -278,12 +271,10 @@ func TestBackend_RSARoles(t *testing.T) {
 		},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
 		}
 	}
 
@@ -320,12 +311,10 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 		},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
 		}
 	}
 
@@ -362,12 +351,10 @@ func TestBackend_ECRoles(t *testing.T) {
 		},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
 		}
 	}
 
@@ -404,12 +391,10 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 		},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
 		}
 	}
 
@@ -588,7 +573,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
-				"common_name": "Intermediate Cert",
+				"common_name": "intermediate.cert.com",
 				"csr":         string(csrPem1024),
 				"format":      "der",
 			},
@@ -609,7 +594,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
-				"common_name": "Intermediate Cert",
+				"common_name": "intermediate.cert.com",
 				"csr":         string(csrPem2048),
 				"format":      "der",
 			},
@@ -638,8 +623,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
 				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
-				case !reflect.DeepEqual([]string{"Intermediate Cert"}, cert.DNSNames):
-					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", []string{"Intermediate Cert"}, cert.DNSNames)
+				case !reflect.DeepEqual([]string{"intermediate.cert.com"}, cert.DNSNames):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", []string{"intermediate.cert.com"}, cert.DNSNames)
 				}
 
 				return nil
@@ -651,7 +636,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
-				"common_name":          "Intermediate Cert",
+				"common_name":          "intermediate.cert.com",
 				"csr":                  string(csrPem2048),
 				"format":               "der",
 				"exclude_cn_from_sans": true,
@@ -991,7 +976,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.UpdateOperation,
 			Path:      "intermediate/generate/exported",
 			Data: map[string]interface{}{
-				"common_name": "Intermediate Cert",
+				"common_name": "intermediate.cert.com",
 			},
 			Check: func(resp *logical.Response) error {
 				intdata["intermediatecsr"] = resp.Data["csr"].(string)
@@ -1009,7 +994,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				delete(reqdata, "pem_bundle")
 				delete(reqdata, "ttl")
 				reqdata["csr"] = intdata["intermediatecsr"].(string)
-				reqdata["common_name"] = "Intermediate Cert"
+				reqdata["common_name"] = "intermediate.cert.com"
 				reqdata["ttl"] = "10s"
 				return nil
 			},
@@ -1144,7 +1129,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				"format":      "der",
 				"key_type":    "ec",
 				"key_bits":    384,
-				"common_name": "Intermediate Cert",
+				"common_name": "intermediate.cert.com",
 			},
 			Check: func(resp *logical.Response) error {
 				csrBytes, _ := base64.StdEncoding.DecodeString(resp.Data["csr"].(string))
@@ -1171,7 +1156,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				delete(reqdata, "pem_bundle")
 				delete(reqdata, "ttl")
 				reqdata["csr"] = intdata["intermediatecsr"].(string)
-				reqdata["common_name"] = "Intermediate Cert"
+				reqdata["common_name"] = "intermediate.cert.com"
 				reqdata["ttl"] = "10s"
 				return nil
 			},
@@ -1646,7 +1631,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				retName = cert.EmailAddresses[0]
 			}
 			if retName != name {
-				return fmt.Errorf("Error: returned certificate has a DNS SAN of %s but %s was requested", retName, name)
+				// Check IDNA
+				converted, err := idna.Lookup.ToUnicode(retName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if converted != name {
+					return fmt.Errorf("Error: returned certificate has a DNS SAN of %s (from idna: %s) but %s was requested", retName, converted, name)
+				}
 			}
 			return nil
 		}
