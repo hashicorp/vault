@@ -221,6 +221,11 @@ or revoked, so this option is recommended only for certificates that are
 non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,
 			},
+			"require_cn": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -411,6 +416,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		Organization:        data.Get("organization").([]string),
 		GenerateLease:       new(bool),
 		NoStore:             data.Get("no_store").(bool),
+		RequireCN:           data.Get("require_cn").(bool),
 	}
 
 	// no_store implies generate_lease := false
@@ -541,6 +547,7 @@ type roleEntry struct {
 	Organization          []string `json:"organization_list" mapstructure:"organization"`
 	GenerateLease         *bool    `json:"generate_lease,omitempty"`
 	NoStore               bool     `json:"no_store" mapstructure:"no_store"`
+	RequireCN             bool     `json:"require_cn" mapstructure:"require_cn"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool

@@ -773,11 +773,14 @@ request is denied.
   Vault.
 
 - `no_store` `(bool: false)` – If set, certificates issued/signed against this
-role will not be stored in the storage backend. This can improve performance
-when issuing large numbers of certificates. However, certificates issued
-in this way cannot be enumerated or revoked, so this option is recommended
-only for certificates that are non-sensitive, or extremely short-lived.
-This option implies a value of `false` for `generate_lease`.
+  role will not be stored in the storage backend. This can improve performance
+  when issuing large numbers of certificates. However, certificates issued in
+  this way cannot be enumerated or revoked, so this option is recommended only
+  for certificates that are non-sensitive, or extremely short-lived.  This
+  option implies a value of `false` for `generate_lease`.
+
+- `require_cn` `(bool: true)` - If set to false, makes the `common_name` field
+  optional while generating a certificate.
 
 ### Sample Payload
 
