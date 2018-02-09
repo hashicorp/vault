@@ -642,7 +642,10 @@ func generateCreationBundle(b *backend,
 				// used for the purpose for which they are presented
 				emailAddresses = append(emailAddresses, cn)
 			} else {
-				dnsNames = append(dnsNames, cn)
+				// Only add to dnsNames if it's actually a DNS name
+				if hostnameRegex.MatchString(cn) {
+					dnsNames = append(dnsNames, cn)
+				}
 			}
 		}
 
@@ -654,7 +657,9 @@ func generateCreationBundle(b *backend,
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
 					} else {
-						dnsNames = append(dnsNames, v)
+						if hostnameRegex.MatchString(cnAlt) {
+							dnsNames = append(dnsNames, v)
+						}
 					}
 				}
 			}
