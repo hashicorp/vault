@@ -623,8 +623,8 @@ func generateCreationBundle(b *backend,
 		}
 		if cn == "" {
 			cn = data.Get("common_name").(string)
-			if cn == "" {
-				return nil, errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true`}
+			if cn == "" && role.RequireCN {
+				return nil, errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true, unless "require_cn" is set to false`}
 			}
 		}
 
@@ -633,7 +633,7 @@ func generateCreationBundle(b *backend,
 			emailAddresses = csr.EmailAddresses
 		}
 
-		if !data.Get("exclude_cn_from_sans").(bool) {
+		if cn != "" && !data.Get("exclude_cn_from_sans").(bool) {
 			if strings.Contains(cn, "@") {
 				// Note: emails are not disallowed if the role's email protection
 				// flag is false, because they may well be included for
@@ -642,7 +642,10 @@ func generateCreationBundle(b *backend,
 				// used for the purpose for which they are presented
 				emailAddresses = append(emailAddresses, cn)
 			} else {
-				dnsNames = append(dnsNames, cn)
+				// Only add to dnsNames if it's actually a DNS name
+				if hostnameRegex.MatchString(cn) {
+					dnsNames = append(dnsNames, cn)
+				}
 			}
 		}
 
@@ -654,7 +657,9 @@ func generateCreationBundle(b *backend,
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
 					} else {
-						dnsNames = append(dnsNames, v)
+						if hostnameRegex.MatchString(cnAlt) {
+							dnsNames = append(dnsNames, v)
+						}
 					}
 				}
 			}
@@ -662,14 +667,16 @@ func generateCreationBundle(b *backend,
 
 		// Check the CN. This ensures that the CN is checked even if it's
 		// excluded from SANs.
-		badName := validateNames(req, []string{cn}, role)
-		if len(badName) != 0 {
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"common name %s not allowed by this role", badName)}
+		if cn != "" {
+			badName := validateNames(req, []string{cn}, role)
+			if len(badName) != 0 {
+				return nil, errutil.UserError{Err: fmt.Sprintf(
+					"common name %s not allowed by this role", badName)}
+			}
 		}
 
 		// Check for bad email and/or DNS names
-		badName = validateNames(req, dnsNames, role)
+		badName := validateNames(req, dnsNames, role)
 		if len(badName) != 0 {
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"subject alternate name %s not allowed by this role", badName)}
