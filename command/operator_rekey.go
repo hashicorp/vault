@@ -563,7 +563,6 @@ func (c *OperatorRekeyCommand) backupDelete(client *api.Client) int {
 
 // printStatus dumps the status to output
 func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int {
-	// FIXME: make the table case do something more sane, possibly via stuffing these k/v into an api.Secret
 	out := []string{}
 	out = append(out, "Key | Value")
 	out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))

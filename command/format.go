@@ -49,13 +49,6 @@ func outputWithFormat(ui cli.Ui, secret *api.Secret, data interface{}) int {
 		return 1
 	}
 
-	// Type-check formatter, and ignore colored UI if it's a non-table output
-	if _, ok := formatter.(TableFormatter); !ok {
-		// If we had a colored UI, pull out the nested ui so we don't add escape
-		// sequences for outputting json, etc.
-		ui = getBasicUI(ui)
-	}
-
 	if err := formatter.Output(ui, secret, data); err != nil {
 		ui.Error(fmt.Sprintf("Could not parse output: %s", err.Error()))
 		return 1

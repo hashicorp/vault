@@ -55,7 +55,8 @@ func (c *AuthListCommand) Flags() *FlagSets {
 		Target:  &c.flagDetailed,
 		Default: false,
 		Usage: "Print detailed information such as configuration and replication " +
-			"status about each auth method. This option is only applicable to table formatted output.",
+			"status about each auth method. This option is only applicable to " +
+			"table-formatted output.",
 	})
 
 	return set
