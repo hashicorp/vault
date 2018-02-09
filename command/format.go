@@ -75,7 +75,7 @@ var Formatters = map[string]Formatter{
 }
 
 func Format() string {
-	return os.Getenv("VAULT_FORMAT")
+	return os.Getenv(EnvVaultFormat)
 }
 
 // An output formatter for json output of an object

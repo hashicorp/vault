@@ -64,8 +64,12 @@ import (
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 )
 
-// EnvVaultCLINoColor is an env var that toggles colored UI output.
-const EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
+const (
+	// EnvVaultCLINoColor is an env var that toggles colored UI output.
+	EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
+	// EnvVaultFormat is the output format
+	EnvVaultFormat = `VAULT_FORMAT`
+)
 
 var (
 	auditBackends = map[string]audit.Factory{

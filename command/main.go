@@ -52,8 +52,8 @@ func Run(args []string) int {
 	}
 
 	// If we did not parse a value, fetch the env var
-	if format == "" && os.Getenv("VAULT_FORMAT") != "" {
-		format = os.Getenv("VAULT_FORMAT")
+	if format == "" && os.Getenv(EnvVaultFormat) != "" {
+		format = os.Getenv(EnvVaultFormat)
 	}
 	// Lowercase for consistency
 	format = strings.ToLower(format)
@@ -61,7 +61,7 @@ func Run(args []string) int {
 		format = "table"
 	}
 	// Put back into the env for later
-	os.Setenv("VAULT_FORMAT", format)
+	os.Setenv(EnvVaultFormat, format)
 
 	// Don't use color if disabled or if the output isn't a table
 	if os.Getenv(EnvVaultCLINoColor) != "" || format != "table" {
