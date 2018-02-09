@@ -42,10 +42,6 @@ func OutputWithFormat(ui cli.Ui, format string, data interface{}) int {
 	switch data.(type) {
 	case *api.Secret:
 		secret := data.(*api.Secret)
-		// Best-guess effort that is this a list, so parse out the keys
-		if listVals, ok := secret.Data["keys"]; ok {
-			return outputWithFormat(ui, format, secret, listVals)
-		}
 		return outputWithFormat(ui, format, secret, secret)
 	default:
 		return outputWithFormat(ui, format, nil, data)
@@ -133,6 +129,8 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 	case []string:
 		ui.Output(tableOutput(data.([]string), nil))
 		return nil
+	default:
+		return errors.New("Error: table formatter cannot output list for this data type")
 	}
 
 	list := data.([]interface{})
