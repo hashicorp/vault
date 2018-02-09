@@ -1589,6 +1589,19 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_rawRead_Compressed(t *testing.T) {
+	b := testSystemBackendRaw(t)
+
+	req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.HasPrefix(resp.Data["value"].(string), "{\"type\":\"mounts\"") {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
 func TestSystemBackend_rawRead_Protected(t *testing.T) {
 	b := testSystemBackendRaw(t)
 
