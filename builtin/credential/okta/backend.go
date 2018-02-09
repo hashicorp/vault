@@ -80,8 +80,19 @@ func (m embedded) Decode(name string, dest interface{}) error {
 	return mapstructure.Decode(m[name], dest)
 }
 
-// links is a HAL "_links" object.
-type links map[string]link
+// links is a HAL "_links" object. Annoyingly, each _links entry can be either a single link
+// or a list.
+type links map[string]interface{}
+
+// Link returns a single link.
+func (m links) Link(name string) (*link, error) {
+	l := &link{}
+	err := mapstructure.Decode(m[name], l)
+	if err != nil {
+		return nil, err
+	}
+	return l, nil
+}
 
 // link is a HAL link.
 type link struct {
@@ -290,9 +301,11 @@ func (b *backend) completeMfa(ctx context.Context, client *okta.Client, mfaRequi
 			// For Okta push, the only thing we need to do is hit the verify endpoint.
 			handler = doOktaVerify
 			factorId = v.Id
+			break
 		} else if v.Provider == "DUO" && v.FactorType == "web" {
 			handler = b.verifyDuoPush
 			factorId = v.Id
+			break
 		}
 	}
 	if handler == nil || factorId == "" {
@@ -302,6 +315,9 @@ func (b *backend) completeMfa(ctx context.Context, client *okta.Client, mfaRequi
 	stateToken := mfaRequiredResult.StateToken
 	// Perform our part of the MFA flow.
 	result, err := handler(client, stateToken, factorId)
+	if err != nil {
+		return nil, err
+	}
 
 	if result.FactorResult == "WAITING" {
 		b.Logger().Debug("auth/okta: waiting for Okta MFA result")
@@ -469,7 +485,11 @@ func (b *backend) verifyDuoPush(oktaClient *okta.Client, stateToken string, fact
 		"stateToken":   stateToken,
 		"sig_response": fmt.Sprintf("%s:%s", duoResponse.Response["cookie"], appSig),
 	}
-	if err = postForm(verification.Links["complete"].Href, completeVals, nil); err != nil {
+	completeLink, err := verification.Links.Link("complete")
+	if err != nil {
+		return nil, err
+	}
+	if err = postForm(completeLink.Href, completeVals, nil); err != nil {
 		return nil, err
 	}
 	b.Logger().Debug("auth/okta: Duo verification: result posted back to Okta")
