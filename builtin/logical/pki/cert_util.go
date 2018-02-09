@@ -15,7 +15,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
-	"regexp"
 	"strings"
 	"time"
 
@@ -92,7 +91,6 @@ func (b *caInfoBundle) GetCAChain() []*certutil.CertBlock {
 }
 
 var (
-	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 )
 
@@ -298,7 +296,12 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 		// ensure that we are not either checking a full email address or a
 		// wildcard prefix.
 		if role.EnforceHostnames {
-			if !hostnameRegex.MatchString(sanitizedName) {
+			p := idna.New(
+				idna.StrictDomainName(true),
+				idna.VerifyDNSLength(true),
+			)
+			converted, err := p.ToASCII(sanitizedName)
+			if err != nil {
 				return name
 			}
 		}
@@ -650,10 +653,7 @@ func generateCreationBundle(b *backend,
 					idna.VerifyDNSLength(true),
 				)
 				converted, err := p.ToASCII(cn)
-				if err != nil {
-					return nil, errutil.UserError{Err: err.Error()}
-				}
-				if hostnameRegex.MatchString(converted) {
+				if err == nil {
 					dnsNames = append(dnsNames, converted)
 				}
 			}
@@ -674,10 +674,7 @@ func generateCreationBundle(b *backend,
 							idna.VerifyDNSLength(true),
 						)
 						converted, err := p.ToASCII(v)
-						if err != nil {
-							return nil, errutil.UserError{Err: err.Error()}
-						}
-						if hostnameRegex.MatchString(converted) {
+						if err == nil {
 							dnsNames = append(dnsNames, converted)
 						}
 					}
