@@ -657,7 +657,7 @@ func generateCreationBundle(b *backend,
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
 					} else {
-						if hostnameRegex.MatchString(cnAlt) {
+						if hostnameRegex.MatchString(v) {
 							dnsNames = append(dnsNames, v)
 						}
 					}
