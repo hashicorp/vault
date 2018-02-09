@@ -100,7 +100,7 @@ func (c *UnwrapCommand) Run(args []string) int {
 
 	// Check if the original was a list response and format as a list
 	if _, ok := extractListData(secret); ok {
-		return OutputList(c.UI, c.flagFormat, secret)
+		return OutputList(c.UI, secret)
 	}
-	return OutputSecret(c.UI, c.flagFormat, secret)
+	return OutputSecret(c.UI, secret)
 }

@@ -28,6 +28,7 @@ func (u *VaultUI) Output(m string) {
 
 func Run(args []string) int {
 	color := true
+	var format string
 
 	// Handle -v shorthand
 	for _, arg := range args {
@@ -43,9 +44,27 @@ func Run(args []string) int {
 		if arg == "-no-color" {
 			color = false
 		}
+
+		// Parse a given flag here, which overrides the env var
+		if strings.HasPrefix(arg, "-format=") {
+			format = strings.TrimPrefix(arg, "-format=")
+		}
 	}
 
-	if os.Getenv(EnvVaultCLINoColor) != "" {
+	// If we did not parse a value, fetch the env var
+	if format == "" && os.Getenv(EnvVaultFormat) != "" {
+		format = os.Getenv(EnvVaultFormat)
+	}
+	// Lowercase for consistency
+	format = strings.ToLower(format)
+	if format == "" {
+		format = "table"
+	}
+	// Put back into the env for later
+	os.Setenv(EnvVaultFormat, format)
+
+	// Don't use color if disabled or if the output isn't a table
+	if os.Getenv(EnvVaultCLINoColor) != "" || format != "table" {
 		color = false
 	}
 
@@ -65,8 +84,13 @@ func Run(args []string) int {
 		isTerminal: isTerminal,
 	}
 
+	if _, ok := Formatters[format]; !ok {
+		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
+		return 1
+	}
+
 	// Only use colored UI if stdoout is a tty, and not disabled
-	if isTerminal && color {
+	if isTerminal && color && format == "table" {
 		ui.Ui = &cli.ColoredUi{
 			ErrorColor: cli.UiColorRed,
 			WarnColor:  cli.UiColorYellow,

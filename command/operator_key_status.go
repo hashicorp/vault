@@ -69,11 +69,11 @@ func (c *OperatorKeyStatusCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 		c.UI.Output(printKeyStatus(status))
 		return 0
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, status)
+		return OutputData(c.UI, status)
 	}
 }

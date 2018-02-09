@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -23,35 +24,28 @@ type FormatOptions struct {
 	Format string
 }
 
-func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
-	return outputWithFormat(ui, format, secret, secret)
+func OutputSecret(ui cli.Ui, secret *api.Secret) int {
+	return outputWithFormat(ui, secret, secret)
 }
 
-func OutputList(ui cli.Ui, format string, data interface{}) int {
+func OutputList(ui cli.Ui, data interface{}) int {
 	switch data.(type) {
 	case *api.Secret:
 		secret := data.(*api.Secret)
-		return outputWithFormat(ui, format, secret, secret.Data["keys"])
+		return outputWithFormat(ui, secret, secret.Data["keys"])
 	default:
-		return outputWithFormat(ui, format, nil, data)
+		return outputWithFormat(ui, nil, data)
 	}
 }
 
-// OutputWithFormat supports printing arbitrary data under a specified format.
-func OutputWithFormat(ui cli.Ui, format string, data interface{}) int {
-	switch data.(type) {
-	case *api.Secret:
-		secret := data.(*api.Secret)
-		return outputWithFormat(ui, format, secret, secret)
-	default:
-		return outputWithFormat(ui, format, nil, data)
-	}
+func OutputData(ui cli.Ui, data interface{}) int {
+	return outputWithFormat(ui, nil, data)
 }
 
-func outputWithFormat(ui cli.Ui, format string, secret *api.Secret, data interface{}) int {
-	formatter, ok := Formatters[strings.ToLower(format)]
+func outputWithFormat(ui cli.Ui, secret *api.Secret, data interface{}) int {
+	formatter, ok := Formatters[Format()]
 	if !ok {
-		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
+		ui.Error(fmt.Sprintf("Invalid output format: %s", Format()))
 		return 1
 	}
 
@@ -78,6 +72,10 @@ var Formatters = map[string]Formatter{
 	"table": TableFormatter{},
 	"yaml":  YamlFormatter{},
 	"yml":   YamlFormatter{},
+}
+
+func Format() string {
+	return os.Getenv(EnvVaultFormat)
 }
 
 // An output formatter for json output of an object
@@ -244,11 +242,11 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 }
 
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
-func OutputSealStatus(ui cli.Ui, format string, client *api.Client, status *api.SealStatusResponse) int {
-	switch format {
+func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
+	switch Format() {
 	case "table":
 	default:
-		return OutputWithFormat(ui, format, status)
+		return OutputData(ui, status)
 	}
 
 	var sealPrefix string

@@ -338,11 +338,11 @@ func (c *OperatorGenerateRootCommand) init(client *api.Client, otp, pgpKey strin
 		return 2
 	}
 
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 		return c.printStatus(status)
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, status)
+		return OutputData(c.UI, status)
 	}
 }
 
@@ -434,11 +434,11 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, dr
 		c.UI.Error(fmt.Sprintf("Error posting unseal key: %s", err))
 		return 2
 	}
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 		return c.printStatus(status)
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, status)
+		return OutputData(c.UI, status)
 	}
 }
 
@@ -467,11 +467,11 @@ func (c *OperatorGenerateRootCommand) status(client *api.Client, drToken bool) i
 		c.UI.Error(fmt.Sprintf("Error getting root generation status: %s", err))
 		return 2
 	}
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 		return c.printStatus(status)
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, status)
+		return OutputData(c.UI, status)
 	}
 }
 

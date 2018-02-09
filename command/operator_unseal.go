@@ -108,7 +108,7 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 			c.UI.Error(fmt.Sprintf("Error resetting unseal process: %s", err))
 			return 2
 		}
-		return OutputSealStatus(c.UI, c.flagFormat, client, status)
+		return OutputSealStatus(c.UI, client, status)
 	}
 
 	if unsealKey == "" {
@@ -141,5 +141,5 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 		return 2
 	}
 
-	return OutputSealStatus(c.UI, c.flagFormat, client, status)
+	return OutputSealStatus(c.UI, client, status)
 }

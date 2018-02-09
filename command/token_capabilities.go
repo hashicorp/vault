@@ -94,12 +94,12 @@ func (c *TokenCapabilitiesCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 		sort.Strings(capabilities)
 		c.UI.Output(strings.Join(capabilities, ", "))
 		return 0
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, capabilities)
+		return OutputData(c.UI, capabilities)
 	}
 }

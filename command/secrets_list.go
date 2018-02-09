@@ -96,14 +96,16 @@ func (c *SecretsListCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 		if c.flagDetailed {
-			return OutputWithFormat(c.UI, c.flagFormat, c.detailedMounts(mounts))
+			c.UI.Output(tableOutput(c.detailedMounts(mounts), nil))
+			return 0
 		}
-		return OutputWithFormat(c.UI, c.flagFormat, c.simpleMounts(mounts))
+		c.UI.Output(tableOutput(c.simpleMounts(mounts), nil))
+		return 0
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, mounts)
+		return OutputData(c.UI, mounts)
 	}
 }
 

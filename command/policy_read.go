@@ -82,7 +82,7 @@ func (c *PolicyReadCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 		c.UI.Output(strings.TrimSpace(rules))
 		return 0
@@ -90,6 +90,6 @@ func (c *PolicyReadCommand) Run(args []string) int {
 		resp := map[string]string{
 			"policy": rules,
 		}
-		return OutputWithFormat(c.UI, c.flagFormat, &resp)
+		return OutputData(c.UI, &resp)
 	}
 }
