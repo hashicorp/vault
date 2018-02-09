@@ -67,10 +67,10 @@ They do not forward service read or write requests until they are elected and be
 
 | Capability                                                                                                               	| Disaster Recovery 	| Performance                                                              	|
 |--------------------------------------------------------------------------------------------------------------------------	|-------------------	|--------------------------------------------------------------------------	|
-| Mirrors the secrets infrastructure of a primary cluster                                                                  	| Yes               	| Yes                                                                      	|
-| Mirrors the configuration of a primary cluster’s backends (i.e.: auth methods, storage backends, secrets engines, etc.) 	| Yes               	| Yes                                                                      	|
-| Contains a local replica of secrets on the secondary and allows the secondary to forward writes                          	| No                	| Yes                                                                      	|
-| Mirrors the token auth infrastructure for applications or users interacting with the primary cluster                     	| Yes               	| No. Upon promotion, applications must re-auth tokens with a new primary. 	|
+| Mirrors the configuration of a primary cluster                                                                  	| Yes               	| Yes                                                                      	|
+| Mirrors the configuration of a primary cluster’s backends (i.e.: auth methods, secrets engines, audit devices, etc.) 	| Yes               	| Yes                                                                      	|
+| Mirrors the tokens and leases for applications and users interacting with the primary cluster                     	| Yes               	| No. Applications must re-auth tokens and obtain new leases from the new primary. 	|
+| Allows the secondary cluster to handle client requests                          	| No                	| Yes                                                                      	|
 
 For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/api/system/replication.html).
 
@@ -134,7 +134,7 @@ its encrypted barrier.
 
 ## Setup and Best Practices
 
-A [setup guide](/guides/replication.html) is
+A [setup guide](/guides/operations/replication.html) is
 available to help you get started; this guide also contains best practices
 around operationalizing the replication feature.
 

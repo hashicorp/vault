@@ -20,8 +20,8 @@ Secret Storage.
 ## Reference Material
 
 - [Key/Value Secret Backend](/docs/secrets/kv/index.html)
-- [Key/Value Secret Backend API](/apikey/secret/kv/index.html)
-- [Client libraries](/apikey/libraries.html) for Vault API for commonly used languages
+- [Key/Value Secret Backend API](/api/secret/kv/index.html)
+- [Client libraries](/api/libraries.html) for Vault API for commonly used languages
 
 ## Estimated Time to Complete
 
@@ -94,7 +94,7 @@ path "auth/token/create" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/policies.html) guide.
+[policies](/guides/configuration/policies.html) guide.
 
 
 ## Steps
@@ -545,5 +545,5 @@ $ cat mongodb.txt
 This guide introduced the CLI commands and API endpoints to read and write
 secrets in key/value backend. To keep it simple, the `devops` persona generated a
 token for `apps`.  Read [AppRole Pull
-Authentication](/guides/authentication.html) guide to learn about
+Authentication](/guides/configuration/authentication.html) guide to learn about
 programmatically generate a token for apps.
