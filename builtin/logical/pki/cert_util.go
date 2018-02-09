@@ -300,7 +300,7 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 				idna.StrictDomainName(true),
 				idna.VerifyDNSLength(true),
 			)
-			converted, err := p.ToASCII(sanitizedName)
+			_, err := p.ToASCII(sanitizedName)
 			if err != nil {
 				return name
 			}
