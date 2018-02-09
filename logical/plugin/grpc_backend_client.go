@@ -73,9 +73,12 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 }
 
 func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
-	// Timeout the connection
 	reply, err := b.client.SpecialPaths(b.doneCtx, &pb.Empty{})
 	if err != nil {
+		return nil
+	}
+
+	if reply.Paths == nil {
 		return nil
 	}
 
