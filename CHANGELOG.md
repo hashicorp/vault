@@ -19,6 +19,7 @@ BUG FIXES:
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens. [GH-3880]
  * command/ssh: Create and reuse the api client [GH-3909]
+ * identity: Fix race when creating entities [GH-3932]
  * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
  * storage/etcd3: Fix large lists (like token loading at startup) not being
    handled [GH-3772]
