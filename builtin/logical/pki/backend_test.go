@@ -1658,7 +1658,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		SubSubdomain         bool `structs:"foo.bar.example.com"`
 		SubSubdomainWildcard bool `structs:"*.bar.example.com"`
 		GlobDomain           bool `structs:"fooexample.com"`
-		NonHostname          bool `structs:"daɪˈɛrɨsɨs"`
+		IDN                  bool `structs:"daɪˈɛrɨsɨs"`
 		AnyHost              bool `structs:"porkslap.beer"`
 	}
 
@@ -1872,10 +1872,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		roleVals.AllowAnyName = true
 		roleVals.EnforceHostnames = true
 		commonNames.AnyHost = true
+		commonNames.IDN = true
 		addCnTests()
 
 		roleVals.EnforceHostnames = false
-		commonNames.NonHostname = true
 		addCnTests()
 
 		// Ensure that we end up with acceptable key sizes since they won't be

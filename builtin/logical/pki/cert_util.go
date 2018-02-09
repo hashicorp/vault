@@ -417,7 +417,6 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 			}
 		}
 
-		//panic(fmt.Sprintf("\nName is %s\nRole is\n%#v\n", name, role))
 		return name
 	}
 
