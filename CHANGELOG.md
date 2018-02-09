@@ -5,6 +5,7 @@ IMPROVEMENTS:
  * auth/centrify: Add CLI helper
  * audit: Always log failure metrics, even if zero, to ensure the values appear
    on dashboards [GH-3937]
+ * secret/pki: Add a flag to make the common name optional on certs [GH-3940]
 
 BUG FIXES:
 
@@ -13,17 +14,22 @@ BUG FIXES:
    replication performance secondaries
  * auth/approle: Cleanup of secret ID accessors during tidy and removal of
    dangling accessor entries [GH-3924]
+ * auth/aws-ec2: Avoid masking of role tag response [GH-3941]
  * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens. [GH-3880]
  * command/ssh: Create and reuse the api client [GH-3909]
+ * identity: Fix race when creating entities [GH-3932]
+ * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
+   plugins using gRPC transport [GH-3881]
+ * plugin/gRPC: Fix panic when special paths are not set [GH-3946]
+ * secret/pki: Verify a name is a valid hostname before adding to DNS SANs
+   [GH-3918]
  * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
  * storage/etcd3: Fix large lists (like token loading at startup) not being
    handled [GH-3772]
  * storage/zookeeper: Update vendoring to fix freezing issues [GH-3896]
- * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
-   plugins using gRPC transport [GH-3881]
 
 ## 0.9.3 (January 28th, 2018)
 
