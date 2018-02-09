@@ -63,8 +63,8 @@ func Run(args []string) int {
 	// Put back into the env for later
 	os.Setenv(EnvVaultFormat, format)
 
-	// Don't use color if disabled or if the output isn't a table
-	if os.Getenv(EnvVaultCLINoColor) != "" || format != "table" {
+	// Don't use color if disabled
+	if os.Getenv(EnvVaultCLINoColor) != "" {
 		color = false
 	}
 
