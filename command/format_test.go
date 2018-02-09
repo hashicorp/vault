@@ -76,3 +76,58 @@ func TestTableFormatter(t *testing.T) {
 		t.Fatal("did not find 'something'")
 	}
 }
+
+func Test_Format_Parsing(t *testing.T) {
+	defer func() {
+		os.Setenv(EnvVaultCLINoColor, "")
+		os.Setenv(EnvVaultFormat, "")
+	}()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"format",
+			[]string{"-format", "json"},
+			"{",
+			0,
+		},
+		{
+			"format_bad",
+			[]string{"-format", "nope-not-real"},
+			"Invalid output format",
+			1,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			// Login with the token so we can renew-self.
+			token, _ := testTokenAndAccessor(t, client)
+			client.SetToken(token)
+
+			ui, cmd := testTokenRenewCommand(t)
+			cmd.client = client
+
+			tc.args = setupEnv(tc.args)
+
+			code := cmd.Run(tc.args)
+			if code != tc.code {
+				t.Errorf("expected %d to be %d", code, tc.code)
+			}
+
+			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+			if !strings.Contains(combined, tc.out) {
+				t.Errorf("expected %q to contain %q", combined, tc.out)
+			}
+		})
+	}
+}

@@ -68,7 +68,11 @@ var Formatters = map[string]Formatter{
 }
 
 func Format() string {
-	return os.Getenv(EnvVaultFormat)
+	format := os.Getenv(EnvVaultFormat)
+	if format == "" {
+		format = "table"
+	}
+	return format
 }
 
 // An output formatter for json output of an object

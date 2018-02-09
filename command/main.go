@@ -26,12 +26,19 @@ func (u *VaultUI) Output(m string) {
 	}
 }
 
-func Run(args []string) int {
-	color := true
+// setupEnv parses args and may replace them and sets some env vars to known
+// values based on color/format options
+func setupEnv(args []string) []string {
 	var format string
+	var nextArgFormat bool
 
-	// Handle -v shorthand
 	for _, arg := range args {
+		if nextArgFormat {
+			nextArgFormat = false
+			format = arg
+			continue
+		}
+
 		if arg == "--" {
 			break
 		}
@@ -42,12 +49,16 @@ func Run(args []string) int {
 		}
 
 		if arg == "-no-color" {
-			color = false
+			os.Setenv(EnvVaultCLINoColor, "true")
 		}
 
 		// Parse a given flag here, which overrides the env var
 		if strings.HasPrefix(arg, "-format=") {
 			format = strings.TrimPrefix(arg, "-format=")
+		}
+		// For backwards compat, it could be specified without an equal sign
+		if arg == "-format" {
+			nextArgFormat = true
 		}
 	}
 
@@ -63,10 +74,19 @@ func Run(args []string) int {
 	// Put back into the env for later
 	os.Setenv(EnvVaultFormat, format)
 
+	return args
+}
+
+func Run(args []string) int {
+	args = setupEnv(args)
+
 	// Don't use color if disabled
+	color := true
 	if os.Getenv(EnvVaultCLINoColor) != "" {
 		color = false
 	}
+
+	format := Format()
 
 	isTerminal := terminal.IsTerminal(int(os.Stdout.Fd()))
 
