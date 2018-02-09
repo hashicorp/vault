@@ -370,7 +370,7 @@ func (c *SSHCommand) handleTypeCA(username, ip string, sshArgs []string) int {
 
 	// Handle no-exec
 	if c.flagNoExec {
-		if Format() != "table" {
+		if c.flagField != "" {
 			return PrintRawField(c.UI, secret, c.flagField)
 		}
 		return OutputSecret(c.UI, secret)
@@ -474,7 +474,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
 
 	// Handle no-exec
 	if c.flagNoExec {
-		if Format() != "table" {
+		if c.flagField != "" {
 			return PrintRawField(c.UI, secret, c.flagField)
 		}
 		return OutputSecret(c.UI, secret)
@@ -556,7 +556,7 @@ func (c *SSHCommand) handleTypeDynamic(username, ip string, sshArgs []string) in
 
 	// Handle no-exec
 	if c.flagNoExec {
-		if Format() != "table" {
+		if c.flagField != "" {
 			return PrintRawField(c.UI, secret, c.flagField)
 		}
 		return OutputSecret(c.UI, secret)

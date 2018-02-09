@@ -1,6 +1,7 @@
 package command
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -30,8 +31,9 @@ func (m mockUi) Error(s string)  { m.t.Log(s) }
 func (m mockUi) Warn(s string)   { m.t.Log(s) }
 
 func TestJsonFormatter(t *testing.T) {
+	os.Setenv(EnvVaultFormat, "json")
 	ui := mockUi{t: t, SampleData: "something"}
-	if err := outputWithFormat(ui, "json", nil, ui); err != 0 {
+	if err := outputWithFormat(ui, nil, ui); err != 0 {
 		t.Fatal(err)
 	}
 	var newUi mockUi
@@ -46,8 +48,9 @@ func TestJsonFormatter(t *testing.T) {
 }
 
 func TestYamlFormatter(t *testing.T) {
+	os.Setenv(EnvVaultFormat, "yaml")
 	ui := mockUi{t: t, SampleData: "something"}
-	if err := outputWithFormat(ui, "yaml", nil, ui); err != 0 {
+	if err := outputWithFormat(ui, nil, ui); err != 0 {
 		t.Fatal(err)
 	}
 	var newUi mockUi
@@ -63,9 +66,10 @@ func TestYamlFormatter(t *testing.T) {
 }
 
 func TestTableFormatter(t *testing.T) {
+	os.Setenv(EnvVaultFormat, "table")
 	ui := mockUi{t: t}
 	s := api.Secret{Data: map[string]interface{}{"k": "something"}}
-	if err := outputWithFormat(ui, "table", &s, &s); err != 0 {
+	if err := outputWithFormat(ui, &s, &s); err != 0 {
 		t.Fatal(err)
 	}
 	if !strings.Contains(output, "something") {
