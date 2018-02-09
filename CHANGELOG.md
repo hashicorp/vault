@@ -26,6 +26,8 @@ BUG FIXES:
  * plugin/gRPC: Fix panic when special paths are not set [GH-3946]
  * secret/pki: Verify a name is a valid hostname before adding to DNS SANs
    [GH-3918]
+ * secret/transit: Fix auditing when reading a key after it has been backed up
+   or restored [GH-3919]
  * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
  * storage/etcd3: Fix large lists (like token loading at startup) not being
    handled [GH-3772]
