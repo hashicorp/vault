@@ -339,7 +339,6 @@ type mfaFactor struct {
 	Id          string
 	FactorType  string
 	Provider    string
-	Profile     map[string]string
 }
 
 // verifyMfaHandler verifies a single type of Okta MFA factor.
