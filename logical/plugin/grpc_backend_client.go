@@ -79,6 +79,10 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 		return nil
 	}
 
+	if reply.Paths == nil {
+		return nil
+	}
+
 	return &logical.Paths{
 		Root:            reply.Paths.Root,
 		Unauthenticated: reply.Paths.Unauthenticated,
