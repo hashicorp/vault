@@ -25,6 +25,7 @@ BUG FIXES:
  * storage/zookeeper: Update vendoring to fix freezing issues [GH-3896]
  * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
    plugins using gRPC transport [GH-3881]
+ * plugin/gRPC: Fix panic when special paths are not set [GH-3946]
 
 ## 0.9.3 (January 28th, 2018)
 
