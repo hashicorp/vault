@@ -99,14 +99,16 @@ func (c *AuditListCommand) Run(args []string) int {
 		return 0
 	}
 
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 		if c.flagDetailed {
-			return OutputWithFormat(c.UI, c.flagFormat, c.detailedAudits(audits))
+			c.UI.Output(tableOutput(c.detailedAudits(audits), nil))
+			return 0
 		}
-		return OutputWithFormat(c.UI, c.flagFormat, c.simpleAudits(audits))
+		c.UI.Output(tableOutput(c.simpleAudits(audits), nil))
+		return 0
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, audits)
+		return OutputData(c.UI, audits)
 	}
 }
 

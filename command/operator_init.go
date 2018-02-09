@@ -432,10 +432,10 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		return 2
 	}
 
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, newMachineInit(req, resp))
+		return OutputData(c.UI, newMachineInit(req, resp))
 	}
 
 	for i, key := range resp.Keys {

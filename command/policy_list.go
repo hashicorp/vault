@@ -69,11 +69,13 @@ func (c *PolicyListCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
-		out := append([]string{"Policies"}, policies...)
-		return OutputWithFormat(c.UI, c.flagFormat, out)
+		for _, p := range policies {
+			c.UI.Output(p)
+		}
+		return 0
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, policies)
+		return OutputData(c.UI, policies)
 	}
 }

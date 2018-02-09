@@ -534,7 +534,7 @@ func (c *OperatorRekeyCommand) backupRetrieve(client *api.Client) int {
 		Data: structs.New(storedKeys).Map(),
 	}
 
-	return OutputSecret(c.UI, c.flagFormat, secret)
+	return OutputSecret(c.UI, secret)
 }
 
 // backupDelete deletes the stored backup keys.
@@ -563,6 +563,7 @@ func (c *OperatorRekeyCommand) backupDelete(client *api.Client) int {
 
 // printStatus dumps the status to output
 func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int {
+	// FIXME: make the table case do something more sane, possibly via stuffing these k/v into an api.Secret
 	out := []string{}
 	out = append(out, "Key | Value")
 	out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
@@ -579,19 +580,20 @@ func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int 
 		out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
 	}
 
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
-		return OutputWithFormat(c.UI, c.flagFormat, out)
+		c.UI.Output(tableOutput(out, nil))
+		return 0
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, status)
+		return OutputData(c.UI, status)
 	}
 }
 
 func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
-	switch c.flagFormat {
+	switch Format() {
 	case "table":
 	default:
-		return OutputWithFormat(c.UI, c.flagFormat, resp)
+		return OutputData(c.UI, resp)
 	}
 
 	// Space between the key prompt, if any, and the output

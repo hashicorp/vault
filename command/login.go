@@ -274,7 +274,7 @@ func (c *LoginCommand) Run(args []string) int {
 			return PrintRawField(c.UI, secret, "wrapping_token")
 		}
 		if c.flagNoStore {
-			return OutputSecret(c.UI, c.flagFormat, secret)
+			return OutputSecret(c.UI, secret)
 		}
 	}
 
@@ -308,7 +308,7 @@ func (c *LoginCommand) Run(args []string) int {
 			c.UI.Error(wrapAtLength(
 				"Authentication was successful, but the token was not persisted. The "+
 					"resulting token is shown below for your records.") + "\n")
-			OutputSecret(c.UI, c.flagFormat, secret)
+			OutputSecret(c.UI, secret)
 			return 2
 		}
 
@@ -335,7 +335,7 @@ func (c *LoginCommand) Run(args []string) int {
 	}
 
 	// Print some yay! text, but only in table mode.
-	if c.flagFormat == "table" {
+	if Format() == "table" {
 		c.UI.Output(wrapAtLength(
 			"Success! You are now authenticated. The token information displayed "+
 				"below is already stored in the token helper. You do NOT need to run "+
@@ -343,7 +343,7 @@ func (c *LoginCommand) Run(args []string) int {
 				"this token.") + "\n")
 	}
 
-	return OutputSecret(c.UI, c.flagFormat, secret)
+	return OutputSecret(c.UI, secret)
 }
 
 // extractToken extracts the token from the given secret, automatically

@@ -79,7 +79,7 @@ func (c *StatusCommand) Run(args []string) int {
 
 	// Do not return the int here yet, since we may want to return a custom error
 	// code depending on the seal status.
-	code := OutputSealStatus(c.UI, c.flagFormat, client, status)
+	code := OutputSealStatus(c.UI, client, status)
 
 	if status.Sealed {
 		return 2
