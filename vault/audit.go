@@ -330,17 +330,16 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
+		defer view.setReadOnlyErr(nil)
 
 		// Initialize the backend
 		backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
 		if err != nil {
 			c.logger.Error("core: failed to create audit entry", "path", entry.Path, "error", err)
-			view.setReadOnlyErr(nil)
 			continue
 		}
 		if backend == nil {
 			c.logger.Error("core: created audit entry was nil", "path", entry.Path, "type", entry.Type)
-			view.setReadOnlyErr(nil)
 			continue
 		}
 
@@ -348,8 +347,6 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		broker.Register(entry.Path, backend, view)
 
 		successCount += 1
-
-		view.setReadOnlyErr(nil)
 	}
 
 	if len(c.audit.Entries) > 0 && successCount == 0 {

@@ -728,7 +728,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	var view *BarrierView
 	var backendType logical.BackendType
 
 	for _, entry := range c.mounts.Entries {
@@ -740,12 +739,13 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		}
 
 		// Create a barrier view using the UUID
-		view = NewBarrierView(c.barrier, barrierPath)
+		view := NewBarrierView(c.barrier, barrierPath)
 
 		// Mark the view as read-only until the mounting is complete and
 		// ensure that it is reset after. This ensures that there will be no
 		// writes during the construction of the backend.
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
+		defer view.setReadOnlyErr(nil)
 
 		var backend logical.Backend
 		var err error
@@ -766,18 +766,15 @@ func (c *Core) setupMounts(ctx context.Context) error {
 				c.logger.Warn("core: skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
-			view.setReadOnlyErr(nil)
 			return errLoadMountsFailed
 		}
 		if backend == nil {
-			view.setReadOnlyErr(nil)
 			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
 		}
 
 		// Check for the correct backend type
 		backendType = backend.Type()
 		if entry.Type == "plugin" && backendType != logical.TypeLogical {
-			view.setReadOnlyErr(nil)
 			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 		}
 
@@ -787,7 +784,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {
-			view.setReadOnlyErr(nil)
 			c.logger.Error("core: failed to mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
 		}
@@ -800,8 +796,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		if entry.Tainted {
 			c.router.Taint(entry.Path)
 		}
-
-		view.setReadOnlyErr(nil)
 	}
 	return nil
 }
