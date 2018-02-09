@@ -69,7 +69,7 @@ func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			secret, err = client.Logical().Write("auth/approle/login", map[string]interface{}{
+			secret, err := client.Logical().Write("auth/approle/login", map[string]interface{}{
 				"role_id":   roleID,
 				"secret_id": secretID,
 			})
