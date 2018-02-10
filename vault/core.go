@@ -75,6 +75,9 @@ const (
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
 
+	//maxLeaseThreshold is the maximum lease count before generating log warning
+	maxLeaseThreshold = 256000
+
 	// coreKeyringCanaryPath is used as a canary to indicate to replicated
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
@@ -1651,6 +1654,7 @@ func (c *Core) postUnseal() (retErr error) {
 	}
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
+	go c.checkLeaseCount(c.metricsCh)
 	c.logger.Info("core: post-unseal setup complete")
 	return nil
 }
@@ -2141,6 +2145,22 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 				c.expiration.emitMetrics()
 			}
 			c.metricsMutex.Unlock()
+		case <-stopCh:
+			return
+		}
+	}
+}
+
+// checkLeaseCount is used to periodically check for lease count
+func (c *Core) checkLeaseCount(stopCh chan struct{}) {
+	for {
+		select {
+		case <-time.After(time.Minute):
+			if c.expiration != nil {
+				if len(c.expiration.pending) > maxLeaseThreshold {
+					c.logger.Warn("core: lease count exceeds maximum lease threshold")
+				}
+			}
 		case <-stopCh:
 			return
 		}
