@@ -1647,8 +1647,8 @@
 		{
 			"checksumSHA1": "RcrB7tgYS/GMW4QrwVdMOTNqIU8=",
 			"path": "golang.org/x/net/idna",
-			"revision": "0ed95abb35c445290478a5348a7b38bb154135fd",
-			"revisionTime": "2018-01-24T06:08:02Z"
+			"revision": "f5dfe339be1d06f81b22525fe34671ee7d2c8904",
+			"revisionTime": "2018-02-04T03:50:36Z"
 		},
 		{
 			"checksumSHA1": "5JWn/wMC+EWNDKI/AYE4JifQF54=",
