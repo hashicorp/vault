@@ -6,6 +6,8 @@ IMPROVEMENTS:
  * audit: Always log failure metrics, even if zero, to ensure the values appear
    on dashboards [GH-3937]
  * secret/pki: Add a flag to make the common name optional on certs [GH-3940]
+ * secret/pki: Ensure only DNS-compatible names go into DNS SANs; additionally,
+   properly handle IDNA transformations for these DNS names [GH-3953]
 
 BUG FIXES:
 
