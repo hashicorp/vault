@@ -15,6 +15,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
 	"time"
 
@@ -91,6 +92,11 @@ func (b *caInfoBundle) GetCAChain() []*certutil.CertBlock {
 }
 
 var (
+	// A note on hostnameRegex: although we set the StrictDomainName option
+	// when doing the idna conversion, this appears to only affect output, not
+	// input, so it will allow e.g. host^123.example.com straight through. So
+	// we still need to use this to check the output.
+	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 )
 
@@ -300,8 +306,11 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 				idna.StrictDomainName(true),
 				idna.VerifyDNSLength(true),
 			)
-			_, err := p.ToASCII(sanitizedName)
+			converted, err := p.ToASCII(sanitizedName)
 			if err != nil {
+				return name
+			}
+			if !hostnameRegex.MatchString(converted) {
 				return name
 			}
 		}
@@ -652,7 +661,10 @@ func generateCreationBundle(b *backend,
 					idna.VerifyDNSLength(true),
 				)
 				converted, err := p.ToASCII(cn)
-				if err == nil {
+				if err != nil {
+					return nil, errutil.UserError{Err: err.Error()}
+				}
+				if hostnameRegex.MatchString(converted) {
 					dnsNames = append(dnsNames, converted)
 				}
 			}
@@ -673,7 +685,10 @@ func generateCreationBundle(b *backend,
 							idna.VerifyDNSLength(true),
 						)
 						converted, err := p.ToASCII(v)
-						if err == nil {
+						if err != nil {
+							return nil, errutil.UserError{Err: err.Error()}
+						}
+						if hostnameRegex.MatchString(converted) {
 							dnsNames = append(dnsNames, converted)
 						}
 					}
