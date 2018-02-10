@@ -94,6 +94,30 @@ func (n *NoopAudit) Invalidate(ctx context.Context) {
 	n.salt = nil
 }
 
+func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+		err := config.SaltView.Put(ctx, &logical.StorageEntry{
+			Key:   "bar",
+			Value: []byte("baz"),
+		})
+		if err == nil || !strings.Contains(err.Error(), logical.ErrSetupReadOnly.Error()) {
+			t.Fatalf("expected a read-only error")
+		}
+		return &NoopAudit{}, nil
+	}
+
+	me := &MountEntry{
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err := c.enableAudit(context.Background(), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+}
+
 func TestCore_EnableAudit(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {

@@ -1062,8 +1062,7 @@ func testConnState(certPath, keyPath, rootCertPath string) (tls.ConnectionState,
 		InsecureSkipVerify: false,
 		RootCAs:            rootCAs,
 	}
-	dialConf := new(tls.Config)
-	*dialConf = *listenConf
+	dialConf := listenConf.Clone()
 	// start a server
 	list, err := tls.Listen("tcp", "127.0.0.1:0", listenConf)
 	if err != nil {

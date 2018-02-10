@@ -1003,10 +1003,10 @@
 			"revisionTime": "2017-12-04T18:29:08Z"
 		},
 		{
-			"checksumSHA1": "y3op+t01flBlSBKlzUNqH5d4XHQ=",
+			"checksumSHA1": "7SheX5w6+xGsTMxPI3LiJx0iz7s=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "e53f54cbf51efde642d4711313e829a1ff0c236d",
-			"revisionTime": "2018-01-25T19:04:38Z"
+			"revision": "4b17561773d85e482ea040884ee3e288425d4174",
+			"revisionTime": "2018-02-06T18:30:35Z"
 		},
 		{
 			"checksumSHA1": "yzoWV7yrS/TvOrKy5ZrdUjsYaOA=",
@@ -1659,8 +1659,8 @@
 		{
 			"checksumSHA1": "RcrB7tgYS/GMW4QrwVdMOTNqIU8=",
 			"path": "golang.org/x/net/idna",
-			"revision": "0ed95abb35c445290478a5348a7b38bb154135fd",
-			"revisionTime": "2018-01-24T06:08:02Z"
+			"revision": "f5dfe339be1d06f81b22525fe34671ee7d2c8904",
+			"revisionTime": "2018-02-04T03:50:36Z"
 		},
 		{
 			"checksumSHA1": "5JWn/wMC+EWNDKI/AYE4JifQF54=",

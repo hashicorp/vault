@@ -45,7 +45,6 @@ type BaseCommand struct {
 
 	tokenHelper token.TokenHelper
 
-	// For testing
 	client *api.Client
 }
 
@@ -109,6 +108,8 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	if token != "" {
 		client.SetToken(token)
 	}
+
+	c.client = client
 
 	return client, nil
 }

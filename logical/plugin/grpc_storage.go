@@ -25,7 +25,7 @@ type GRPCStorageClient struct {
 func (s *GRPCStorageClient) List(ctx context.Context, prefix string) ([]string, error) {
 	reply, err := s.client.List(ctx, &pb.StorageListArgs{
 		Prefix: prefix,
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		return reply.Keys, err
 	}
@@ -38,7 +38,7 @@ func (s *GRPCStorageClient) List(ctx context.Context, prefix string) ([]string, 
 func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
 	reply, err := s.client.Get(ctx, &pb.StorageGetArgs{
 		Key: key,
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.Stora
 func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry) error {
 	reply, err := s.client.Put(ctx, &pb.StoragePutArgs{
 		Entry: pb.LogicalStorageEntryToProtoStorageEntry(entry),
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		return err
 	}
