@@ -83,9 +83,7 @@ func newCCResolverWrapper(cc *ClientConn) (*ccResolverWrapper, error) {
 	}
 
 	var err error
-	ccr.resolver, err = rb.Build(cc.parsedTarget, ccr, resolver.BuildOption{
-		UserOptions: cc.dopts.resolverBuildUserOptions,
-	})
+	ccr.resolver, err = rb.Build(cc.parsedTarget, ccr, resolver.BuildOption{})
 	if err != nil {
 		return nil, err
 	}
