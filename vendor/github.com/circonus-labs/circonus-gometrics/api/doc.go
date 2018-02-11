@@ -56,7 +56,7 @@ Verbs
     Delete  remove an item          - e.g. DeleteAnnotation, DeleteAnnotationByCID
     Search  search for item(s)      - e.g. SearchAnnotations
     New     new item config         - e.g. NewAnnotation (returns an empty item,
-                                           any applicable defautls defined)
+                                           any applicable defaults defined)
 
     Not all endpoints support all verbs.
 */
