@@ -43,9 +43,10 @@ func OutputData(ui cli.Ui, data interface{}) int {
 }
 
 func outputWithFormat(ui cli.Ui, secret *api.Secret, data interface{}) int {
-	formatter, ok := Formatters[Format()]
+	format := Format(ui)
+	formatter, ok := Formatters[format]
 	if !ok {
-		ui.Error(fmt.Sprintf("Invalid output format: %s", Format()))
+		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
 		return 1
 	}
 
@@ -67,12 +68,20 @@ var Formatters = map[string]Formatter{
 	"yml":   YamlFormatter{},
 }
 
-func Format() string {
+func format() string {
 	format := os.Getenv(EnvVaultFormat)
 	if format == "" {
 		format = "table"
 	}
 	return format
+}
+
+func Format(ui cli.Ui) string {
+	switch ui.(type) {
+	case *VaultUI:
+		return ui.(*VaultUI).format
+	}
+	return format()
 }
 
 // An output formatter for json output of an object
@@ -240,7 +249,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
 func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
-	switch Format() {
+	switch Format(ui) {
 	case "table":
 	default:
 		return OutputData(ui, status)

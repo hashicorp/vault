@@ -99,7 +99,7 @@ func (c *AuditListCommand) Run(args []string) int {
 		return 0
 	}
 
-	switch Format() {
+	switch Format(c.UI) {
 	case "table":
 		if c.flagDetailed {
 			c.UI.Output(tableOutput(c.detailedAudits(audits), nil))

@@ -156,7 +156,7 @@ func (c *DeprecatedCommand) Help() string {
 
 // Run wraps the embedded Run command and prints a warning about deprecation.
 func (c *DeprecatedCommand) Run(args []string) int {
-	if Format() == "table" {
+	if Format(c.UI) == "table" {
 		c.warn()
 	}
 	return c.Command.Run(args)
@@ -564,7 +564,7 @@ func initCommands(ui, serverCmdUi cli.Ui) {
 
 	// Deprecated commands
 	//
-	// TODO: Remove in 0.9.0
+	// TODO: Remove not before 0.11.0
 	DeprecatedCommands = map[string]cli.CommandFactory{
 		"audit-disable": func() (cli.Command, error) {
 			return &DeprecatedCommand{

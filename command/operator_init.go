@@ -432,7 +432,7 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		return 2
 	}
 
-	switch Format() {
+	switch Format(c.UI) {
 	case "table":
 	default:
 		return OutputData(c.UI, newMachineInit(req, resp))

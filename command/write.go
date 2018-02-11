@@ -135,7 +135,7 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 	if secret == nil {
 		// Don't output anything unless using the "table" format
-		if Format() == "table" {
+		if Format(c.UI) == "table" {
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
 		return 0

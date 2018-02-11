@@ -16,6 +16,7 @@ import (
 type VaultUI struct {
 	cli.Ui
 	isTerminal bool
+	format     string
 }
 
 func (u *VaultUI) Output(m string) {
@@ -48,10 +49,6 @@ func setupEnv(args []string) []string {
 			break
 		}
 
-		if arg == "-no-color" {
-			os.Setenv(EnvVaultCLINoColor, "true")
-		}
-
 		// Parse a given flag here, which overrides the env var
 		if strings.HasPrefix(arg, "-format=") {
 			format = strings.TrimPrefix(arg, "-format=")
@@ -62,9 +59,10 @@ func setupEnv(args []string) []string {
 		}
 	}
 
+	envVaultFormat := os.Getenv(EnvVaultFormat)
 	// If we did not parse a value, fetch the env var
-	if format == "" && os.Getenv(EnvVaultFormat) != "" {
-		format = os.Getenv(EnvVaultFormat)
+	if format == "" && envVaultFormat != "" {
+		format = envVaultFormat
 	}
 	// Lowercase for consistency
 	format = strings.ToLower(format)
@@ -86,7 +84,7 @@ func Run(args []string) int {
 		color = false
 	}
 
-	format := Format()
+	format := format()
 
 	isTerminal := terminal.IsTerminal(int(os.Stdout.Fd()))
 
@@ -96,12 +94,14 @@ func Run(args []string) int {
 			ErrorWriter: os.Stderr,
 		},
 		isTerminal: isTerminal,
+		format:     format,
 	}
 	serverCmdUi := &VaultUI{
 		Ui: &cli.BasicUi{
 			Writer: os.Stdout,
 		},
 		isTerminal: isTerminal,
+		format:     format,
 	}
 
 	if _, ok := Formatters[format]; !ok {

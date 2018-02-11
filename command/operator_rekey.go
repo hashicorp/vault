@@ -579,7 +579,7 @@ func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int 
 		out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
 	}
 
-	switch Format() {
+	switch Format(c.UI) {
 	case "table":
 		c.UI.Output(tableOutput(out, nil))
 		return 0
@@ -589,7 +589,7 @@ func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int 
 }
 
 func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
-	switch Format() {
+	switch Format(c.UI) {
 	case "table":
 	default:
 		return OutputData(c.UI, resp)

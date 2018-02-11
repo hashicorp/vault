@@ -335,7 +335,7 @@ func (c *LoginCommand) Run(args []string) int {
 	}
 
 	// Print some yay! text, but only in table mode.
-	if Format() == "table" {
+	if Format(c.UI) == "table" {
 		c.UI.Output(wrapAtLength(
 			"Success! You are now authenticated. The token information displayed "+
 				"below is already stored in the token helper. You do NOT need to run "+

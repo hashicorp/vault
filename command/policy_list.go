@@ -69,7 +69,7 @@ func (c *PolicyListCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch Format() {
+	switch Format(c.UI) {
 	case "table":
 		for _, p := range policies {
 			c.UI.Output(p)

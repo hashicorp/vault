@@ -40,9 +40,8 @@ type BaseCommand struct {
 	flagTLSSkipVerify bool
 	flagWrapTTL       time.Duration
 
-	flagFormat  string
-	flagField   string
-	flagNoColor bool
+	flagFormat string
+	flagField  string
 
 	tokenHelper token.TokenHelper
 
@@ -242,15 +241,6 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					"TTL. The response is available via the \"vault unwrap\" command. " +
 					"The TTL is specified as a numeric string with suffix like \"30s\" " +
 					"or \"5m\".",
-			})
-
-			f.BoolVar(&BoolVar{
-				Name:    "no-color",
-				Target:  &c.flagNoColor,
-				Default: false,
-				Hidden:  true,
-				EnvVar:  EnvVaultCLINoColor,
-				Usage:   "Print the output without ANSI color escape sequences.",
 			})
 		}
 

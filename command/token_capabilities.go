@@ -94,7 +94,7 @@ func (c *TokenCapabilitiesCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch Format() {
+	switch Format(c.UI) {
 	case "table":
 		sort.Strings(capabilities)
 		c.UI.Output(strings.Join(capabilities, ", "))

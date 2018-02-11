@@ -82,7 +82,7 @@ func (c *PolicyReadCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch Format() {
+	switch Format(c.UI) {
 	case "table":
 		c.UI.Output(strings.TrimSpace(rules))
 		return 0

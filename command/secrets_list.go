@@ -96,7 +96,7 @@ func (c *SecretsListCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch Format() {
+	switch Format(c.UI) {
 	case "table":
 		if c.flagDetailed {
 			c.UI.Output(tableOutput(c.detailedMounts(mounts), nil))
