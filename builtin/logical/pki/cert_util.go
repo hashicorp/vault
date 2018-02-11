@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/ryanuber/go-glob"
+	"golang.org/x/net/idna"
 )
 
 type certExtKeyUsage int
@@ -91,7 +92,11 @@ func (b *caInfoBundle) GetCAChain() []*certutil.CertBlock {
 }
 
 var (
-	hostnameRegex                = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+	// A note on hostnameRegex: although we set the StrictDomainName option
+	// when doing the idna conversion, this appears to only affect output, not
+	// input, so it will allow e.g. host^123.example.com straight through. So
+	// we still need to use this to check the output.
+	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 )
 
@@ -297,7 +302,15 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 		// ensure that we are not either checking a full email address or a
 		// wildcard prefix.
 		if role.EnforceHostnames {
-			if !hostnameRegex.MatchString(sanitizedName) {
+			p := idna.New(
+				idna.StrictDomainName(true),
+				idna.VerifyDNSLength(true),
+			)
+			converted, err := p.ToASCII(sanitizedName)
+			if err != nil {
+				return name
+			}
+			if !hostnameRegex.MatchString(converted) {
 				return name
 			}
 		}
@@ -413,7 +426,6 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 			}
 		}
 
-		//panic(fmt.Sprintf("\nName is %s\nRole is\n%#v\n", name, role))
 		return name
 	}
 
@@ -623,8 +635,8 @@ func generateCreationBundle(b *backend,
 		}
 		if cn == "" {
 			cn = data.Get("common_name").(string)
-			if cn == "" {
-				return nil, errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true`}
+			if cn == "" && role.RequireCN {
+				return nil, errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true, unless "require_cn" is set to false`}
 			}
 		}
 
@@ -633,7 +645,7 @@ func generateCreationBundle(b *backend,
 			emailAddresses = csr.EmailAddresses
 		}
 
-		if !data.Get("exclude_cn_from_sans").(bool) {
+		if cn != "" && !data.Get("exclude_cn_from_sans").(bool) {
 			if strings.Contains(cn, "@") {
 				// Note: emails are not disallowed if the role's email protection
 				// flag is false, because they may well be included for
@@ -642,7 +654,19 @@ func generateCreationBundle(b *backend,
 				// used for the purpose for which they are presented
 				emailAddresses = append(emailAddresses, cn)
 			} else {
-				dnsNames = append(dnsNames, cn)
+				// Only add to dnsNames if it's actually a DNS name but convert
+				// idn first
+				p := idna.New(
+					idna.StrictDomainName(true),
+					idna.VerifyDNSLength(true),
+				)
+				converted, err := p.ToASCII(cn)
+				if err != nil {
+					return nil, errutil.UserError{Err: err.Error()}
+				}
+				if hostnameRegex.MatchString(converted) {
+					dnsNames = append(dnsNames, converted)
+				}
 			}
 		}
 
@@ -654,7 +678,19 @@ func generateCreationBundle(b *backend,
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
 					} else {
-						dnsNames = append(dnsNames, v)
+						// Only add to dnsNames if it's actually a DNS name but
+						// convert idn first
+						p := idna.New(
+							idna.StrictDomainName(true),
+							idna.VerifyDNSLength(true),
+						)
+						converted, err := p.ToASCII(v)
+						if err != nil {
+							return nil, errutil.UserError{Err: err.Error()}
+						}
+						if hostnameRegex.MatchString(converted) {
+							dnsNames = append(dnsNames, converted)
+						}
 					}
 				}
 			}
@@ -662,14 +698,16 @@ func generateCreationBundle(b *backend,
 
 		// Check the CN. This ensures that the CN is checked even if it's
 		// excluded from SANs.
-		badName := validateNames(req, []string{cn}, role)
-		if len(badName) != 0 {
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"common name %s not allowed by this role", badName)}
+		if cn != "" {
+			badName := validateNames(req, []string{cn}, role)
+			if len(badName) != 0 {
+				return nil, errutil.UserError{Err: fmt.Sprintf(
+					"common name %s not allowed by this role", badName)}
+			}
 		}
 
 		// Check for bad email and/or DNS names
-		badName = validateNames(req, dnsNames, role)
+		badName := validateNames(req, dnsNames, role)
 		if len(badName) != 0 {
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"subject alternate name %s not allowed by this role", badName)}

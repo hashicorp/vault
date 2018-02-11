@@ -120,7 +120,8 @@ func FromProto(s *spb.Status) *Status {
 }
 
 // FromError returns a Status representing err if it was produced from this
-// package, otherwise it returns nil, false.
+// package. Otherwise, ok is false and a Status is returned with codes.Unknown
+// and the original error message.
 func FromError(err error) (s *Status, ok bool) {
 	if err == nil {
 		return &Status{s: &spb.Status{Code: int32(codes.OK)}}, true
@@ -128,7 +129,14 @@ func FromError(err error) (s *Status, ok bool) {
 	if se, ok := err.(*statusError); ok {
 		return se.status(), true
 	}
-	return nil, false
+	return New(codes.Unknown, err.Error()), false
+}
+
+// Convert is a convenience function which removes the need to handle the
+// boolean return value from FromError.
+func Convert(err error) *Status {
+	s, _ := FromError(err)
+	return s
 }
 
 // WithDetails returns a new status with the provided details messages appended to the status.

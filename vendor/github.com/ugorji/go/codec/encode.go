@@ -219,7 +219,9 @@ func (z *ioEncWriter) writen2(b1, b2 byte) {
 
 func (z *ioEncWriter) atEndOfEncode() {
 	if z.fw != nil {
-		z.fw.Flush()
+		if err := z.fw.Flush(); err != nil {
+			panic(err)
+		}
 	}
 }
 

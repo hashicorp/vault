@@ -697,13 +697,13 @@ func (e ConnectionError) Origin() error {
 var (
 	// ErrConnClosing indicates that the transport is closing.
 	ErrConnClosing = connectionErrorf(true, nil, "transport is closing")
-	// errStreamDrain indicates that the stream is rejected by the server because
-	// the server stops accepting new RPCs.
-	// TODO: delete this error; it is no longer necessary.
-	errStreamDrain = streamErrorf(codes.Unavailable, "the server stops accepting new RPCs")
+	// errStreamDrain indicates that the stream is rejected because the
+	// connection is draining. This could be caused by goaway or balancer
+	// removing the address.
+	errStreamDrain = streamErrorf(codes.Unavailable, "the connection is draining")
 	// StatusGoAway indicates that the server sent a GOAWAY that included this
 	// stream's ID in unprocessed RPCs.
-	statusGoAway = status.New(codes.Unavailable, "the server stopped accepting new RPCs")
+	statusGoAway = status.New(codes.Unavailable, "the stream is rejected because server is draining the connection")
 )
 
 // TODO: See if we can replace StreamError with status package errors.
