@@ -96,9 +96,9 @@ to specify where the configuration is.
     LimitMEMLOCK=infinity
     ```
 
-- `disable_sealwrap` `(bool: false)` – Disables using seal wrapping for any
-  value except the master key. If this value is toggled, the new behavior will
-  happen lazily (as values are read or written).
+- `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
+  for any value except the master key. If this value is toggled, the new
+  behavior will happen lazily (as values are read or written).
 
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
