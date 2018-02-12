@@ -372,7 +372,7 @@ func (p *Policy) Persist(ctx context.Context, storage logical.Storage) (retErr e
 	// roll back keys, but better safe than sorry and this doesn't happen
 	// enough to worry about the speed tradeoff.
 	priorArchiveVersion := p.ArchiveVersion
-	priorKeys := keyEntryMap(nil)
+	var priorKeys keyEntryMap
 
 	if p.Keys != nil {
 		priorKeys = keyEntryMap{}
@@ -455,7 +455,7 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) (retErr e
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
 	priorConvergentVersion := p.ConvergentVersion
-	priorKeys := keyEntryMap(nil)
+	var priorKeys keyEntryMap
 
 	if p.Keys != nil {
 		priorKeys = keyEntryMap{}
@@ -1002,7 +1002,7 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr error) {
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
-	priorKeys := keyEntryMap(nil)
+	var priorKeys keyEntryMap
 
 	if p.Keys != nil {
 		priorKeys = keyEntryMap{}
