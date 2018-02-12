@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -125,7 +126,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 
 	roleEnt := &roleEntry{
 		Statements: dbplugin.Statements{
-			CreationStatements: "test",
+			CreationStatements: []string{"test"},
 		},
 	}
 
@@ -143,7 +144,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(role, roleEnt) {
-		t.Fatal("bad role %#v", role)
+		t.Fatalf("bad role %#v", role)
 	}
 
 	// Upgrade case
@@ -162,7 +163,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(role, roleEnt) {
-		t.Fatal("bad role %#v", role)
+		t.Fatalf("bad role %#v", role)
 	}
 
 }
@@ -206,7 +207,8 @@ func TestBackend_config_connection(t *testing.T) {
 		"connection_details": map[string]interface{}{
 			"connection_url": "sample_connection_url",
 		},
-		"allowed_roles": []string{"*"},
+		"allowed_roles":                []string{"*"},
+		"credential_rotate_statements": []string{},
 	}
 	configReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), configReq)
@@ -467,7 +469,8 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"connection_details": map[string]interface{}{
 			"connection_url": connURL,
 		},
-		"allowed_roles": []string{"plugin-role-test"},
+		"allowed_roles":                []string{"plugin-role-test"},
+		"credential_rotate_statements": []string{},
 	}
 	req.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), req)
@@ -602,15 +605,15 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 
 	expected := dbplugin.Statements{
-		CreationStatements:   testRole,
-		RevocationStatements: defaultRevocationSQL,
+		CreationStatements:   []string{strings.TrimSpace(testRole)},
+		RevocationStatements: []string{strings.TrimSpace(defaultRevocationSQL)},
 	}
 
 	actual := dbplugin.Statements{
-		CreationStatements:   resp.Data["creation_statements"].(string),
-		RevocationStatements: resp.Data["revocation_statements"].(string),
-		RollbackStatements:   resp.Data["rollback_statements"].(string),
-		RenewStatements:      resp.Data["renew_statements"].(string),
+		CreationStatements:   resp.Data["creation_statements"].([]string),
+		RevocationStatements: resp.Data["revocation_statements"].([]string),
+		RollbackStatements:   resp.Data["rollback_statements"].([]string),
+		RenewStatements:      resp.Data["renew_statements"].([]string),
 	}
 
 	if !reflect.DeepEqual(expected, actual) {

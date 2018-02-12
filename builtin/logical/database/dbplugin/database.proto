@@ -26,15 +26,15 @@ message RevokeUserRequest {
 }
 
 message RotateRootCredentialsRequest {
-	string statements = 1;
+	repeated string statements = 1;
 	bytes config = 2;
 }
 
 message Statements {
-	string creation_statements = 1;
-	string revocation_statements = 2;
-	string rollback_statements  = 3;
-	string renew_statements = 4;
+	repeated string creation_statements = 1;
+	repeated string revocation_statements = 2;
+	repeated string rollback_statements  = 3;
+	repeated string renew_statements = 4;
 }
 
 message UsernameConfig {

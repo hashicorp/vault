@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -89,13 +90,24 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 		return "", "", err
 	}
 
-	creationCQL := statements.CreationStatements
-	if creationCQL == "" {
+	var creationCQL string
+	switch len(statements.CreationStatements) {
+	case 0:
 		creationCQL = defaultUserCreationCQL
+	case 1:
+		creationCQL = statements.CreationStatements[0]
+	default:
+		return "", "", fmt.Errorf("expected 0 or 1 creation statements, got %d", len(statements.CreationStatements))
 	}
-	rollbackCQL := statements.RollbackStatements
-	if rollbackCQL == "" {
+
+	var rollbackCQL string
+	switch len(statements.RollbackStatements) {
+	case 0:
 		rollbackCQL = defaultUserDeletionCQL
+	case 1:
+		rollbackCQL = statements.RollbackStatements[0]
+	default:
+		return "", "", fmt.Errorf("expected 0 or 1 rollback statements, got %d", len(statements.RollbackStatements))
 	}
 
 	username, err = c.GenerateUsername(usernameConfig)
@@ -157,9 +169,14 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 		return err
 	}
 
-	revocationCQL := statements.RevocationStatements
-	if revocationCQL == "" {
+	var revocationCQL string
+	switch len(statements.RevocationStatements) {
+	case 0:
 		revocationCQL = defaultUserDeletionCQL
+	case 1:
+		revocationCQL = statements.RevocationStatements[0]
+	default:
+		return fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(statements.RevocationStatements))
 	}
 
 	var result *multierror.Error
@@ -180,7 +197,7 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 }
 
 // RotateRootCredentials is not supported on Cassandra, so this is a no-op.
-func (c *Cassandra) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (map[string]interface{}, error) {
+func (c *Cassandra) RotateRootCredentials(ctx context.Context, statements []string, conf map[string]interface{}) (map[string]interface{}, error) {
 	// NOOP
 	return nil, nil
 }

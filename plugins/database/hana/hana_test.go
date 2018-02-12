@@ -26,7 +26,7 @@ func TestHANA_Initialize(t *testing.T) {
 	dbRaw, _ := New()
 	db := dbRaw.(*HANA)
 
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -56,7 +56,7 @@ func TestHANA_CreateUser(t *testing.T) {
 	dbRaw, _ := New()
 	db := dbRaw.(*HANA)
 
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -73,7 +73,7 @@ func TestHANA_CreateUser(t *testing.T) {
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testHANARole,
+		CreationStatements: []string{testHANARole},
 	}
 
 	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Hour))
@@ -99,13 +99,13 @@ func TestHANA_RevokeUser(t *testing.T) {
 	dbRaw, _ := New()
 	db := dbRaw.(*HANA)
 
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testHANARole,
+		CreationStatements: []string{testHANARole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -139,7 +139,7 @@ func TestHANA_RevokeUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	statements.RevocationStatements = testHANADrop
+	statements.RevocationStatements = []string{testHANADrop}
 	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)

@@ -91,10 +91,18 @@ type upgradeStatements struct {
 	RenewStatements      string `json:"renew_statements"`
 }
 
+type oldStatements struct {
+	CreationStatements   string `json:"creation_statements"`
+	RevocationStatements string `json:"revocation_statements"`
+	RollbackStatements   string `json:"rollback_statements"`
+	RenewStatements      string `json:"renew_statements"`
+}
+
 type upgradeCheck struct {
 	// This json tag has a typo in it, the new version does not. This
 	// necessitates this upgrade logic.
-	Statements upgradeStatements `json:"statments"`
+	Statements    *upgradeStatements `json:"statments,omitempty"`
+	OldStatements *oldStatements     `json:"statements,omitempty"`
 }
 
 func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
@@ -116,12 +124,37 @@ func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName 
 		return nil, err
 	}
 
-	empty := upgradeCheck{}
-	if upgradeCh != empty {
-		result.Statements.CreationStatements = upgradeCh.Statements.CreationStatements
-		result.Statements.RevocationStatements = upgradeCh.Statements.RevocationStatements
-		result.Statements.RollbackStatements = upgradeCh.Statements.RollbackStatements
-		result.Statements.RenewStatements = upgradeCh.Statements.RenewStatements
+	switch {
+	case upgradeCh.Statements != nil:
+		var stmts dbplugin.Statements
+		if upgradeCh.Statements.CreationStatements != "" {
+			stmts.CreationStatements = []string{upgradeCh.Statements.CreationStatements}
+		}
+		if upgradeCh.Statements.RevocationStatements != "" {
+			stmts.RevocationStatements = []string{upgradeCh.Statements.RevocationStatements}
+		}
+		if upgradeCh.Statements.RollbackStatements != "" {
+			stmts.RollbackStatements = []string{upgradeCh.Statements.RollbackStatements}
+		}
+		if upgradeCh.Statements.RenewStatements != "" {
+			stmts.RenewStatements = []string{upgradeCh.Statements.RenewStatements}
+		}
+		result.Statements = stmts
+	case upgradeCh.OldStatements != nil:
+		var stmts dbplugin.Statements
+		if upgradeCh.OldStatements.CreationStatements != "" {
+			stmts.CreationStatements = []string{upgradeCh.OldStatements.CreationStatements}
+		}
+		if upgradeCh.OldStatements.RevocationStatements != "" {
+			stmts.RevocationStatements = []string{upgradeCh.OldStatements.RevocationStatements}
+		}
+		if upgradeCh.OldStatements.RollbackStatements != "" {
+			stmts.RollbackStatements = []string{upgradeCh.OldStatements.RollbackStatements}
+		}
+		if upgradeCh.OldStatements.RenewStatements != "" {
+			stmts.RenewStatements = []string{upgradeCh.OldStatements.RenewStatements}
+		}
+		result.Statements = stmts
 	}
 
 	return &result, nil

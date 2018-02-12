@@ -90,7 +90,7 @@ func TestCassandra_Initialize(t *testing.T) {
 	db := dbRaw.(*Cassandra)
 	connProducer := db.ConnectionProducer.(*cassandraConnectionProducer)
 
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -113,7 +113,7 @@ func TestCassandra_Initialize(t *testing.T) {
 		"protocol_version": "4",
 	}
 
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -136,13 +136,13 @@ func TestCassandra_CreateUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testCassandraRole,
+		CreationStatements: []string{testCassandraRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -177,13 +177,13 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testCassandraRole,
+		CreationStatements: []string{testCassandraRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -223,13 +223,13 @@ func TestCassandra_RevokeUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testCassandraRole,
+		CreationStatements: []string{testCassandraRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{

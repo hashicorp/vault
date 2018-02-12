@@ -31,7 +31,7 @@ func TestMSSQL_Initialize(t *testing.T) {
 	dbRaw, _ := New()
 	db := dbRaw.(*MSSQL)
 
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -52,7 +52,7 @@ func TestMSSQL_Initialize(t *testing.T) {
 		"max_open_connections": "5",
 	}
 
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -70,7 +70,7 @@ func TestMSSQL_CreateUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*MSSQL)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -87,7 +87,7 @@ func TestMSSQL_CreateUser(t *testing.T) {
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testMSSQLRole,
+		CreationStatements: []string{testMSSQLRole},
 	}
 
 	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
@@ -112,13 +112,13 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*MSSQL)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testMSSQLRole,
+		CreationStatements: []string{testMSSQLRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -155,7 +155,7 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 	}
 
 	// Test custom revoke statememt
-	statements.RevocationStatements = testMSSQLDrop
+	statements.RevocationStatements = []string{testMSSQLDrop}
 	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)

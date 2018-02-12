@@ -107,7 +107,7 @@ func (dr *databasePluginRPCClient) RevokeUser(_ context.Context, statements Stat
 	return dr.client.Call("Plugin.RevokeUser", req, &struct{}{})
 }
 
-func (dr *databasePluginRPCClient) RotateRootCredentials(_ context.Context, statements string, conf map[string]interface{}) (saveConf map[string]interface{}, err error) {
+func (dr *databasePluginRPCClient) RotateRootCredentials(_ context.Context, statements []string, conf map[string]interface{}) (saveConf map[string]interface{}, err error) {
 	req := RotateRootCredentialsRequestRPC{
 		Statements: statements,
 		Config:     conf,
@@ -165,6 +165,6 @@ type RevokeUserRequestRPC struct {
 }
 
 type RotateRootCredentialsRequestRPC struct {
-	Statements string
+	Statements []string
 	Config     map[string]interface{}
 }

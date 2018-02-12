@@ -25,7 +25,7 @@ type DatabaseConfig struct {
 	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
 	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
 
-	RootCredentialsRotateStatements string `json:"root_credentials_rotate_statements" structs:"credential_rotate_statements" mapstructure:"credential_rotate_statements"`
+	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"credential_rotate_statements" mapstructure:"credential_rotate_statements"`
 }
 
 // pathResetConnection configures a path to reset a plugin.
@@ -99,18 +99,11 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 			},
 
 			"root_rotation_statements": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: ``,
-			},
-
-			"root_rotation_interval": &framework.FieldSchema{
-				Type:        framework.TypeDurationSecond,
-				Description: ``,
-			},
-
-			"root_credentials": &framework.FieldSchema{
-				Type:        framework.TypeKVPairs,
-				Description: ``,
+				Type: framework.TypeStringSlice,
+				Description: `Specifies the database statements to be executed
+				to rotate the root user's credentials. See the plugin's API 
+				page for more information on support and formatting for this 
+				parameter.`,
 			},
 		},
 
@@ -212,7 +205,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		verifyConnection := data.Get("verify_connection").(bool)
 		allowedRoles := data.Get("allowed_roles").([]string)
-		rootRotationStatements := data.Get("root_rotation_statements").(string)
+		rootRotationStatements := data.Get("root_rotation_statements").([]string)
 
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.

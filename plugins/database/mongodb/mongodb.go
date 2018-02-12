@@ -88,7 +88,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	m.Lock()
 	defer m.Unlock()
 
-	if statements.CreationStatements == "" {
+	if len(statements.CreationStatements) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -109,7 +109,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 
 	// Unmarshal statements.CreationStatements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(statements.CreationStatements), &mongoCS)
+	err = json.Unmarshal([]byte(statements.CreationStatements[0]), &mongoCS)
 	if err != nil {
 		return "", "", err
 	}
@@ -164,9 +164,14 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	}
 
 	// If no revocation statements provided, pass in empty JSON
-	revocationStatement := statements.RevocationStatements
-	if revocationStatement == "" {
+	var revocationStatement string
+	switch len(statements.RevocationStatements) {
+	case 0:
 		revocationStatement = `{}`
+	case 1:
+		revocationStatement = statements.RevocationStatements[0]
+	default:
+		return fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(statements.RevocationStatements))
 	}
 
 	// Unmarshal revocation statements into mongodbRoles
@@ -205,7 +210,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 }
 
 // RotateRootCredentials is not supported on MongoDB, so this is a no-op.
-func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (map[string]interface{}, error) {
+func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string, conf map[string]interface{}) (map[string]interface{}, error) {
 	// NOOP
 	return nil, nil
 }

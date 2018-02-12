@@ -62,7 +62,7 @@ func (s *gRPCServer) RevokeUser(ctx context.Context, req *RevokeUserRequest) (*E
 }
 
 func (s *gRPCServer) RotateRootCredentials(ctx context.Context, req *RotateRootCredentialsRequest) (*RotateRootCredentialsResponse, error) {
-	config := make(map[string]interface{})
+	config := map[string]interface{}{}
 	err := json.Unmarshal(req.Config, &config)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,6 @@ func (s *gRPCServer) RotateRootCredentials(ctx context.Context, req *RotateRootC
 
 func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*InitializeResponse, error) {
 	config := map[string]interface{}{}
-
 	err := json.Unmarshal(req.Config, &config)
 	if err != nil {
 		return nil, err
@@ -205,7 +204,7 @@ func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, user
 	return nil
 }
 
-func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (saveConf map[string]interface{}, err error) {
+func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements []string, conf map[string]interface{}) (saveConf map[string]interface{}, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
 	defer close(quitCh)
@@ -229,7 +228,7 @@ func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements strin
 		return nil, err
 	}
 
-	if err := json.Unmarshal(resp.Config, conf); err != nil {
+	if err := json.Unmarshal(resp.Config, &conf); err != nil {
 		return nil, err
 	}
 
@@ -259,7 +258,7 @@ func (c *gRPCClient) Initialize(ctx context.Context, conf map[string]interface{}
 		return nil, err
 	}
 
-	if err := json.Unmarshal(resp.Config, conf); err != nil {
+	if err := json.Unmarshal(resp.Config, &conf); err != nil {
 		return nil, err
 	}
 	return conf, nil

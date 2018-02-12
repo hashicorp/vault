@@ -85,7 +85,7 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 		return "", "", err
 	}
 
-	if statements.CreationStatements == "" {
+	if len(statements.CreationStatements) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -112,23 +112,25 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
+	for _, stmt := range statements.CreationStatements {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name":       username,
-			"password":   password,
-			"expiration": expirationStr,
-		}))
-		if err != nil {
-			return "", "", err
-		}
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return "", "", err
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"name":       username,
+				"password":   password,
+				"expiration": expirationStr,
+			}))
+			if err != nil {
+				return "", "", err
+			}
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return "", "", err
+			}
 		}
 	}
 
@@ -150,7 +152,7 @@ func (m *MSSQL) RenewUser(ctx context.Context, statements dbplugin.Statements, u
 // then kill pending connections from that user, and finally drop the user and login from the
 // database instance.
 func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	if statements.RevocationStatements == "" {
+	if len(statements.RevocationStatements) == 0 {
 		return m.revokeUserDefault(ctx, username)
 	}
 
@@ -168,21 +170,23 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(statements.RevocationStatements, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
+	for _, stmt := range statements.RevocationStatements {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name": username,
-		}))
-		if err != nil {
-			return err
-		}
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return err
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"name": username,
+			}))
+			if err != nil {
+				return err
+			}
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -303,7 +307,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 }
 
 // RotateRootCredentials is not supported on MSSQL, so this is a no-op.
-func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements string, conf map[string]interface{}) (map[string]interface{}, error) {
+func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string, conf map[string]interface{}) (map[string]interface{}, error) {
 	// NOOP
 	return nil, nil
 }
