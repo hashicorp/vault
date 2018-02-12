@@ -1278,6 +1278,8 @@ func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.Fi
 		}
 		ret.Data[path] = pathCap
 	}
+
+	// This is only here for backwards compatibility
 	if len(paths) == 1 {
 		ret.Data["capabilities"] = ret.Data[paths[0]]
 	}
