@@ -28,7 +28,7 @@ func (u *VaultUI) Output(m string) {
 }
 
 // setupEnv parses args and may replace them and sets some env vars to known
-// values based on color/format options
+// values based on format options
 func setupEnv(args []string) []string {
 	var format string
 	var nextArgFormat bool
@@ -50,11 +50,14 @@ func setupEnv(args []string) []string {
 		}
 
 		// Parse a given flag here, which overrides the env var
+		if strings.HasPrefix(arg, "--format=") {
+			format = strings.TrimPrefix(arg, "--format=")
+		}
 		if strings.HasPrefix(arg, "-format=") {
 			format = strings.TrimPrefix(arg, "-format=")
 		}
 		// For backwards compat, it could be specified without an equal sign
-		if arg == "-format" {
+		if arg == "-format" || arg == "--format" {
 			nextArgFormat = true
 		}
 	}
