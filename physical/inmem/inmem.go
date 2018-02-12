@@ -2,8 +2,10 @@ package inmem
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/hashicorp/vault/physical"
 	log "github.com/mgutz/logxi/v1"
@@ -19,6 +21,13 @@ var _ physical.Lock = (*InmemLock)(nil)
 var _ physical.Transactional = (*TransactionalInmemBackend)(nil)
 var _ physical.Transactional = (*TransactionalInmemHABackend)(nil)
 
+var (
+	PutDisabledError    = errors.New("put operations disabled in inmem backend")
+	GetDisabledError    = errors.New("get operations disabled in inmem backend")
+	DeleteDisabledError = errors.New("delete operations disabled in inmem backend")
+	ListDisabledError   = errors.New("list operations disabled in inmem backend")
+)
+
 // InmemBackend is an in-memory only physical backend. It is useful
 // for testing and development situations where the data is not
 // expected to be durable.
@@ -27,6 +36,10 @@ type InmemBackend struct {
 	root       *radix.Tree
 	permitPool *physical.PermitPool
 	logger     log.Logger
+	FailGet    *uint32
+	FailPut    *uint32
+	FailDelete *uint32
+	FailList   *uint32
 }
 
 type TransactionalInmemBackend struct {
@@ -39,6 +52,10 @@ func NewInmem(_ map[string]string, logger log.Logger) (physical.Backend, error) 
 		root:       radix.New(),
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
 		logger:     logger,
+		FailGet:    new(uint32),
+		FailPut:    new(uint32),
+		FailDelete: new(uint32),
+		FailList:   new(uint32),
 	}
 	return in, nil
 }
@@ -51,6 +68,10 @@ func NewTransactionalInmem(_ map[string]string, logger log.Logger) (physical.Bac
 			root:       radix.New(),
 			permitPool: physical.NewPermitPool(1),
 			logger:     logger,
+			FailGet:    new(uint32),
+			FailPut:    new(uint32),
+			FailDelete: new(uint32),
+			FailList:   new(uint32),
 		},
 	}
 	return in, nil
@@ -68,6 +89,10 @@ func (i *InmemBackend) Put(ctx context.Context, entry *physical.Entry) error {
 }
 
 func (i *InmemBackend) PutInternal(ctx context.Context, entry *physical.Entry) error {
+	if i.FailPut != nil && atomic.LoadUint32(i.FailPut) != 0 {
+		return PutDisabledError
+	}
+
 	i.root.Insert(entry.Key, entry.Value)
 	return nil
 }
@@ -84,6 +109,10 @@ func (i *InmemBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 }
 
 func (i *InmemBackend) GetInternal(ctx context.Context, key string) (*physical.Entry, error) {
+	if i.FailGet != nil && atomic.LoadUint32(i.FailGet) != 0 {
+		return nil, GetDisabledError
+	}
+
 	if raw, ok := i.root.Get(key); ok {
 		return &physical.Entry{
 			Key:   key,
@@ -105,6 +134,10 @@ func (i *InmemBackend) Delete(ctx context.Context, key string) error {
 }
 
 func (i *InmemBackend) DeleteInternal(ctx context.Context, key string) error {
+	if i.FailDelete != nil && atomic.LoadUint32(i.FailDelete) != 0 {
+		return DeleteDisabledError
+	}
+
 	i.root.Delete(key)
 	return nil
 }
@@ -122,6 +155,10 @@ func (i *InmemBackend) List(ctx context.Context, prefix string) ([]string, error
 }
 
 func (i *InmemBackend) ListInternal(prefix string) ([]string, error) {
+	if i.FailList != nil && atomic.LoadUint32(i.FailList) != 0 {
+		return nil, ListDisabledError
+	}
+
 	var out []string
 	seen := make(map[string]interface{})
 	walkFn := func(s string, v interface{}) bool {
