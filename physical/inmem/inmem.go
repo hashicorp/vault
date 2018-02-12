@@ -36,10 +36,10 @@ type InmemBackend struct {
 	root       *radix.Tree
 	permitPool *physical.PermitPool
 	logger     log.Logger
-	FailGet    *uint32
-	FailPut    *uint32
-	FailDelete *uint32
-	FailList   *uint32
+	failGet    uint32
+	failPut    uint32
+	failDelete uint32
+	failList   uint32
 }
 
 type TransactionalInmemBackend struct {
@@ -52,10 +52,6 @@ func NewInmem(_ map[string]string, logger log.Logger) (physical.Backend, error) 
 		root:       radix.New(),
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
 		logger:     logger,
-		FailGet:    new(uint32),
-		FailPut:    new(uint32),
-		FailDelete: new(uint32),
-		FailList:   new(uint32),
 	}
 	return in, nil
 }
@@ -68,10 +64,6 @@ func NewTransactionalInmem(_ map[string]string, logger log.Logger) (physical.Bac
 			root:       radix.New(),
 			permitPool: physical.NewPermitPool(1),
 			logger:     logger,
-			FailGet:    new(uint32),
-			FailPut:    new(uint32),
-			FailDelete: new(uint32),
-			FailList:   new(uint32),
 		},
 	}
 	return in, nil
@@ -89,12 +81,20 @@ func (i *InmemBackend) Put(ctx context.Context, entry *physical.Entry) error {
 }
 
 func (i *InmemBackend) PutInternal(ctx context.Context, entry *physical.Entry) error {
-	if i.FailPut != nil && atomic.LoadUint32(i.FailPut) != 0 {
+	if atomic.LoadUint32(&i.failPut) != 0 {
 		return PutDisabledError
 	}
 
 	i.root.Insert(entry.Key, entry.Value)
 	return nil
+}
+
+func (i *InmemBackend) FailPut(fail bool) {
+	var val uint32
+	if fail {
+		val = 1
+	}
+	atomic.StoreUint32(&i.failPut, val)
 }
 
 // Get is used to fetch an entry
@@ -109,7 +109,7 @@ func (i *InmemBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 }
 
 func (i *InmemBackend) GetInternal(ctx context.Context, key string) (*physical.Entry, error) {
-	if i.FailGet != nil && atomic.LoadUint32(i.FailGet) != 0 {
+	if atomic.LoadUint32(&i.failGet) != 0 {
 		return nil, GetDisabledError
 	}
 
@@ -120,6 +120,14 @@ func (i *InmemBackend) GetInternal(ctx context.Context, key string) (*physical.E
 		}, nil
 	}
 	return nil, nil
+}
+
+func (i *InmemBackend) FailGet(fail bool) {
+	var val uint32
+	if fail {
+		val = 1
+	}
+	atomic.StoreUint32(&i.failGet, val)
 }
 
 // Delete is used to permanently delete an entry
@@ -134,12 +142,20 @@ func (i *InmemBackend) Delete(ctx context.Context, key string) error {
 }
 
 func (i *InmemBackend) DeleteInternal(ctx context.Context, key string) error {
-	if i.FailDelete != nil && atomic.LoadUint32(i.FailDelete) != 0 {
+	if atomic.LoadUint32(&i.failDelete) != 0 {
 		return DeleteDisabledError
 	}
 
 	i.root.Delete(key)
 	return nil
+}
+
+func (i *InmemBackend) FailDelete(fail bool) {
+	var val uint32
+	if fail {
+		val = 1
+	}
+	atomic.StoreUint32(&i.failDelete, val)
 }
 
 // List is used ot list all the keys under a given
@@ -155,7 +171,7 @@ func (i *InmemBackend) List(ctx context.Context, prefix string) ([]string, error
 }
 
 func (i *InmemBackend) ListInternal(prefix string) ([]string, error) {
-	if i.FailList != nil && atomic.LoadUint32(i.FailList) != 0 {
+	if atomic.LoadUint32(&i.failList) != 0 {
 		return nil, ListDisabledError
 	}
 
@@ -178,6 +194,14 @@ func (i *InmemBackend) ListInternal(prefix string) ([]string, error) {
 	i.root.WalkPrefix(prefix, walkFn)
 
 	return out, nil
+}
+
+func (i *InmemBackend) FailList(fail bool) {
+	var val uint32
+	if fail {
+		val = 1
+	}
+	atomic.StoreUint32(&i.failList, val)
 }
 
 // Implements the transaction interface
