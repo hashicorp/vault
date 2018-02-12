@@ -1,5 +1,9 @@
 ## 0.9.4 (Unreleased)
 
+FEATURES:
+
+ * **Manta Storage**: Manta can now be used for Vault storage
+
 IMPROVEMENTS:
 
  * auth/centrify: Add CLI helper
@@ -13,6 +17,7 @@ IMPROVEMENTS:
  * secret/pki: Ensure only DNS-compatible names go into DNS SANs; additionally,
    properly handle IDNA transformations for these DNS names [GH-3953]
  * secret/ssh: Add `valid-principles` flag to CLI for CA mode [GH-3922]
+ * storage/manta: Add Manta storage [GH-3270]
 
 BUG FIXES:
 
