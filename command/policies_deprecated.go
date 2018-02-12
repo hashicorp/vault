@@ -29,6 +29,7 @@ func (c *PoliciesDeprecatedCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
+
 	args = f.Args()
 
 	// Got an arg, this is trying to read a policy

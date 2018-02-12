@@ -212,6 +212,10 @@ model](/docs/internals/security.html).
 
 Name to use as the SNI host when connecting via TLS.
 
+### `VAULT_CLI_NO_COLOR`
+
+If provided, Vault output will not include ANSI color escape sequence characters.
+
 ### `VAULT_MFA`
 
 **ENTERPRISE ONLY**

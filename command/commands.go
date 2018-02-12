@@ -64,6 +64,13 @@ import (
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 )
 
+const (
+	// EnvVaultCLINoColor is an env var that toggles colored UI output.
+	EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
+	// EnvVaultFormat is the output format
+	EnvVaultFormat = `VAULT_FORMAT`
+)
+
 var (
 	auditBackends = map[string]audit.Factory{
 		"file":   auditFile.Factory,
@@ -149,7 +156,9 @@ func (c *DeprecatedCommand) Help() string {
 
 // Run wraps the embedded Run command and prints a warning about deprecation.
 func (c *DeprecatedCommand) Run(args []string) int {
-	c.warn()
+	if Format(c.UI) == "table" {
+		c.warn()
+	}
 	return c.Command.Run(args)
 }
 
@@ -166,24 +175,7 @@ func (c *DeprecatedCommand) warn() {
 var Commands map[string]cli.CommandFactory
 var DeprecatedCommands map[string]cli.CommandFactory
 
-func init() {
-	ui := &cli.ColoredUi{
-		ErrorColor: cli.UiColorRed,
-		WarnColor:  cli.UiColorYellow,
-		Ui: &cli.BasicUi{
-			Writer:      os.Stdout,
-			ErrorWriter: os.Stderr,
-		},
-	}
-
-	serverCmdUi := &cli.ColoredUi{
-		ErrorColor: cli.UiColorRed,
-		WarnColor:  cli.UiColorYellow,
-		Ui: &cli.BasicUi{
-			Writer: os.Stdout,
-		},
-	}
-
+func initCommands(ui, serverCmdUi cli.Ui) {
 	loginHandlers := map[string]LoginHandler{
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
@@ -572,7 +564,7 @@ func init() {
 
 	// Deprecated commands
 	//
-	// TODO: Remove in 0.9.0
+	// TODO: Remove not before 0.11.0
 	DeprecatedCommands = map[string]cli.CommandFactory{
 		"audit-disable": func() (cli.Command, error) {
 			return &DeprecatedCommand{

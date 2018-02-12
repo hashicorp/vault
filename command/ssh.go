@@ -386,10 +386,10 @@ func (c *SSHCommand) handleTypeCA(username, hostname, ip string, sshArgs []strin
 
 	// Handle no-exec
 	if c.flagNoExec {
-		if c.flagFormat != "" {
+		if c.flagField != "" {
 			return PrintRawField(c.UI, secret, c.flagField)
 		}
-		return OutputSecret(c.UI, c.flagFormat, secret)
+		return OutputSecret(c.UI, secret)
 	}
 
 	// Extract public key
@@ -490,10 +490,10 @@ func (c *SSHCommand) handleTypeOTP(username, ip string, sshArgs []string) int {
 
 	// Handle no-exec
 	if c.flagNoExec {
-		if c.flagFormat != "" {
+		if c.flagField != "" {
 			return PrintRawField(c.UI, secret, c.flagField)
 		}
-		return OutputSecret(c.UI, c.flagFormat, secret)
+		return OutputSecret(c.UI, secret)
 	}
 
 	var cmd *exec.Cmd
@@ -572,10 +572,10 @@ func (c *SSHCommand) handleTypeDynamic(username, ip string, sshArgs []string) in
 
 	// Handle no-exec
 	if c.flagNoExec {
-		if c.flagFormat != "" {
+		if c.flagField != "" {
 			return PrintRawField(c.UI, secret, c.flagField)
 		}
-		return OutputSecret(c.UI, c.flagFormat, secret)
+		return OutputSecret(c.UI, secret)
 	}
 
 	// Write the dynamic key to disk
