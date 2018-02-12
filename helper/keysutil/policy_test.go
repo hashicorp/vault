@@ -436,7 +436,7 @@ func Test_StorageErrorSafety(t *testing.T) {
 	}
 }
 
-func Test_Upgrade(t *testing.T) {
+func Test_BadUpgrade(t *testing.T) {
 	ctx := context.Background()
 	lm := NewLockManager(false)
 	storage := &logical.InmemStorage{}
@@ -496,5 +496,82 @@ func Test_Upgrade(t *testing.T) {
 	}
 	if p.Key == nil {
 		t.Fatal("non-upgraded key not found")
+	}
+}
+
+func Test_BadArchive(t *testing.T) {
+	ctx := context.Background()
+	lm := NewLockManager(false)
+	storage := &logical.InmemStorage{}
+	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+		Storage: storage,
+		KeyType: KeyType_AES256_GCM96,
+		Name:    "test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil || lock == nil {
+		t.Fatal("nil policy or lock")
+	}
+	lock.RUnlock()
+
+	for i := 2; i <= 10; i++ {
+		err = p.Rotate(ctx, storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	p.MinDecryptionVersion = 5
+	if err := p.Persist(ctx, storage); err != nil {
+		t.Fatal(err)
+	}
+	if p.ArchiveVersion != 10 {
+		t.Fatalf("unexpected archive version %d", p.ArchiveVersion)
+	}
+	if len(p.Keys) != 6 {
+		t.Fatalf("unexpected key length %d", len(p.Keys))
+	}
+
+	// Set back
+	p.MinDecryptionVersion = 1
+	if err := p.Persist(ctx, storage); err != nil {
+		t.Fatal(err)
+	}
+	if p.ArchiveVersion != 10 {
+		t.Fatalf("unexpected archive version %d", p.ArchiveVersion)
+	}
+	if len(p.Keys) != 10 {
+		t.Fatalf("unexpected key length %d", len(p.Keys))
+	}
+
+	// Run it again but we'll turn off storage along the way
+	p.MinDecryptionVersion = 5
+	if err := p.Persist(ctx, storage); err != nil {
+		t.Fatal(err)
+	}
+	if p.ArchiveVersion != 10 {
+		t.Fatalf("unexpected archive version %d", p.ArchiveVersion)
+	}
+	if len(p.Keys) != 6 {
+		t.Fatalf("unexpected key length %d", len(p.Keys))
+	}
+
+	underlying := storage.Underlying()
+	underlying.FailPut(true)
+
+	// Set back, which should cause p.Keys to be changed if the persist works,
+	// but it doesn't
+	p.MinDecryptionVersion = 1
+	if err := p.Persist(ctx, storage); err == nil {
+		t.Fatal("expected error during put")
+	}
+	if p.ArchiveVersion != 10 {
+		t.Fatalf("unexpected archive version %d", p.ArchiveVersion)
+	}
+	// Here's the expected change
+	if len(p.Keys) != 6 {
+		t.Fatalf("unexpected key length %d", len(p.Keys))
 	}
 }

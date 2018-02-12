@@ -326,7 +326,6 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 
 	if !keysContainsMinimum {
 		// Need to move keys *from* archive
-
 		for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
 			p.Keys[strconv.Itoa(i)] = archive.Keys[i]
 		}
@@ -367,7 +366,29 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 	return nil
 }
 
-func (p *Policy) Persist(ctx context.Context, storage logical.Storage) error {
+func (p *Policy) Persist(ctx context.Context, storage logical.Storage) (retErr error) {
+	// Other functions will take care of restoring other values; this is just
+	// responsible for archiving and keys since the archive function can modify
+	// keys. At the moment one of the other functions calling persist will also
+	// roll back keys, but better safe than sorry and this doesn't happen
+	// enough to worry about the speed tradeoff.
+	priorArchiveVersion := p.ArchiveVersion
+	priorKeys := keyEntryMap(nil)
+
+	if p.Keys != nil {
+		priorKeys = keyEntryMap{}
+		for k, v := range p.Keys {
+			priorKeys[k] = v
+		}
+	}
+
+	defer func() {
+		if retErr != nil {
+			p.ArchiveVersion = priorArchiveVersion
+			p.Keys = priorKeys
+		}
+	}()
+
 	err := p.handleArchiving(ctx, storage)
 	if err != nil {
 		return err
