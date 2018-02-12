@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/go-units"
+	units "github.com/docker/go-units"
 	"golang.org/x/net/context"
 )
 
@@ -300,6 +300,7 @@ type Config struct {
 	ExposedPorts      map[Port]struct{}   `json:"ExposedPorts,omitempty" yaml:"ExposedPorts,omitempty" toml:"ExposedPorts,omitempty"`
 	PublishService    string              `json:"PublishService,omitempty" yaml:"PublishService,omitempty" toml:"PublishService,omitempty"`
 	StopSignal        string              `json:"StopSignal,omitempty" yaml:"StopSignal,omitempty" toml:"StopSignal,omitempty"`
+	StopTimeout       int                 `json:"StopTimeout,omitempty" yaml:"StopTimeout,omitempty" toml:"StopTimeout,omitempty"`
 	Env               []string            `json:"Env,omitempty" yaml:"Env,omitempty" toml:"Env,omitempty"`
 	Cmd               []string            `json:"Cmd" yaml:"Cmd" toml:"Cmd"`
 	Healthcheck       *HealthConfig       `json:"Healthcheck,omitempty" yaml:"Healthcheck,omitempty" toml:"Healthcheck,omitempty"`
@@ -752,7 +753,7 @@ type HostConfig struct {
 	MemoryReservation    int64                  `json:"MemoryReservation,omitempty" yaml:"MemoryReservation,omitempty" toml:"MemoryReservation,omitempty"`
 	KernelMemory         int64                  `json:"KernelMemory,omitempty" yaml:"KernelMemory,omitempty" toml:"KernelMemory,omitempty"`
 	MemorySwap           int64                  `json:"MemorySwap,omitempty" yaml:"MemorySwap,omitempty" toml:"MemorySwap,omitempty"`
-	MemorySwappiness     int64                  `json:"MemorySwappiness" yaml:"MemorySwappiness" toml:"MemorySwappiness"`
+	MemorySwappiness     int64                  `json:"MemorySwappiness,omitempty" yaml:"MemorySwappiness,omitempty" toml:"MemorySwappiness,omitempty"`
 	CPUShares            int64                  `json:"CpuShares,omitempty" yaml:"CpuShares,omitempty" toml:"CpuShares,omitempty"`
 	CPUSet               string                 `json:"Cpuset,omitempty" yaml:"Cpuset,omitempty" toml:"Cpuset,omitempty"`
 	CPUSetCPUs           string                 `json:"CpusetCpus,omitempty" yaml:"CpusetCpus,omitempty" toml:"CpusetCpus,omitempty"`
@@ -1051,6 +1052,7 @@ type CPUStats struct {
 		UsageInKernelmode uint64   `json:"usage_in_kernelmode,omitempty" yaml:"usage_in_kernelmode,omitempty" toml:"usage_in_kernelmode,omitempty"`
 	} `json:"cpu_usage,omitempty" yaml:"cpu_usage,omitempty" toml:"cpu_usage,omitempty"`
 	SystemCPUUsage uint64 `json:"system_cpu_usage,omitempty" yaml:"system_cpu_usage,omitempty" toml:"system_cpu_usage,omitempty"`
+	OnlineCPUs     uint64 `json:"online_cpus,omitempty" yaml:"online_cpus,omitempty" toml:"online_cpus,omitempty"`
 	ThrottlingData struct {
 		Periods          uint64 `json:"periods,omitempty"`
 		ThrottledPeriods uint64 `json:"throttled_periods,omitempty"`
@@ -1186,10 +1188,18 @@ func (c *Client) KillContainer(opts KillContainerOptions) error {
 	path := "/containers/" + opts.ID + "/kill" + "?" + queryString(opts)
 	resp, err := c.do("POST", path, doOptions{context: opts.Context})
 	if err != nil {
-		if e, ok := err.(*Error); ok && e.Status == http.StatusNotFound {
-			return &NoSuchContainer{ID: opts.ID}
+		e, ok := err.(*Error)
+		if !ok {
+			return err
 		}
-		return err
+		switch e.Status {
+		case http.StatusNotFound:
+			return &NoSuchContainer{ID: opts.ID}
+		case http.StatusConflict:
+			return &ContainerNotRunning{ID: opts.ID}
+		default:
+			return err
+		}
 	}
 	resp.Body.Close()
 	return nil

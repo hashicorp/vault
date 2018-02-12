@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -44,7 +45,7 @@ Defaults to 'client'.`,
 			},
 
 			"lease": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeDurationSecond,
 				Description: "Lease time of the role.",
 			},
 		},
@@ -57,9 +58,8 @@ Defaults to 'client'.`,
 	}
 }
 
-func (b *backend) pathRoleList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("policy/")
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}
@@ -67,11 +67,10 @@ func (b *backend) pathRoleList(
 	return logical.ListResponse(entries), nil
 }
 
-func pathRolesRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get("policy/" + name)
+	entry, err := req.Storage.Get(ctx, "policy/"+name)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +90,7 @@ func pathRolesRead(
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"lease":      result.Lease.String(),
+			"lease":      int64(result.Lease.Seconds()),
 			"token_type": result.TokenType,
 		},
 	}
@@ -101,8 +100,7 @@ func pathRolesRead(
 	return resp, nil
 }
 
-func pathRolesWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	tokenType := d.Get("token_type").(string)
 
 	switch tokenType {
@@ -130,13 +128,9 @@ func pathRolesWrite(
 	}
 
 	var lease time.Duration
-	leaseParam := d.Get("lease").(string)
-	if leaseParam != "" {
-		lease, err = time.ParseDuration(leaseParam)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"error parsing given lease of %s: %s", leaseParam, err)), nil
-		}
+	leaseParamRaw, ok := d.GetOk("lease")
+	if ok {
+		lease = time.Second * time.Duration(leaseParamRaw.(int))
 	}
 
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
@@ -148,17 +142,16 @@ func pathRolesWrite(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func pathRolesDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	if err := req.Storage.Delete("policy/" + name); err != nil {
+	if err := req.Storage.Delete(ctx, "policy/"+name); err != nil {
 		return nil, err
 	}
 	return nil, nil

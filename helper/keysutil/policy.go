@@ -2,6 +2,7 @@ package keysutil
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
@@ -50,6 +51,16 @@ const (
 )
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
+
+type RestoreInfo struct {
+	Time    time.Time `json:"time"`
+	Version int       `json:"version"`
+}
+
+type BackupInfo struct {
+	Time    time.Time `json:"time"`
+	Version int       `json:"version"`
+}
 
 type SigningResult struct {
 	Signature string
@@ -117,6 +128,11 @@ func (kt KeyType) String() string {
 	}
 
 	return "[unknown]"
+}
+
+type KeyData struct {
+	Policy       *Policy       `json:"policy"`
+	ArchivedKeys *archivedKeys `json:"archived_keys"`
 }
 
 // KeyEntry stores the key and metadata
@@ -213,6 +229,17 @@ type Policy struct {
 
 	// The type of key
 	Type KeyType `json:"type"`
+
+	// BackupInfo indicates the information about the backup action taken on
+	// this policy
+	BackupInfo *BackupInfo `json:"backup_info"`
+
+	// RestoreInfo indicates the information about the restore action taken on
+	// this policy
+	RestoreInfo *RestoreInfo `json:"restore_info"`
+
+	// AllowPlaintextBackup allows taking backup of the policy in plaintext
+	AllowPlaintextBackup bool `json:"allow_plaintext_backup"`
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -221,10 +248,10 @@ type archivedKeys struct {
 	Keys []KeyEntry `json:"keys"`
 }
 
-func (p *Policy) LoadArchive(storage logical.Storage) (*archivedKeys, error) {
+func (p *Policy) LoadArchive(ctx context.Context, storage logical.Storage) (*archivedKeys, error) {
 	archive := &archivedKeys{}
 
-	raw, err := storage.Get("archive/" + p.Name)
+	raw, err := storage.Get(ctx, "archive/"+p.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +267,7 @@ func (p *Policy) LoadArchive(storage logical.Storage) (*archivedKeys, error) {
 	return archive, nil
 }
 
-func (p *Policy) storeArchive(archive *archivedKeys, storage logical.Storage) error {
+func (p *Policy) storeArchive(ctx context.Context, storage logical.Storage, archive *archivedKeys) error {
 	// Encode the policy
 	buf, err := json.Marshal(archive)
 	if err != nil {
@@ -248,7 +275,7 @@ func (p *Policy) storeArchive(archive *archivedKeys, storage logical.Storage) er
 	}
 
 	// Write the policy into storage
-	err = storage.Put(&logical.StorageEntry{
+	err = storage.Put(ctx, &logical.StorageEntry{
 		Key:   "archive/" + p.Name,
 		Value: buf,
 	})
@@ -262,7 +289,7 @@ func (p *Policy) storeArchive(archive *archivedKeys, storage logical.Storage) er
 // handleArchiving manages the movement of keys to and from the policy archive.
 // This should *ONLY* be called from Persist() since it assumes that the policy
 // will be persisted afterwards.
-func (p *Policy) handleArchiving(storage logical.Storage) error {
+func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) error {
 	// We need to move keys that are no longer accessible to archivedKeys, and keys
 	// that now need to be accessible back here.
 	//
@@ -291,7 +318,7 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 			p.MinDecryptionVersion, p.LatestVersion)
 	}
 
-	archive, err := p.LoadArchive(storage)
+	archive, err := p.LoadArchive(ctx, storage)
 	if err != nil {
 		return err
 	}
@@ -325,7 +352,7 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 		p.ArchiveVersion = i
 	}
 
-	err = p.storeArchive(archive, storage)
+	err = p.storeArchive(ctx, storage, archive)
 	if err != nil {
 		return err
 	}
@@ -339,8 +366,8 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	return nil
 }
 
-func (p *Policy) Persist(storage logical.Storage) error {
-	err := p.handleArchiving(storage)
+func (p *Policy) Persist(ctx context.Context, storage logical.Storage) error {
+	err := p.handleArchiving(ctx, storage)
 	if err != nil {
 		return err
 	}
@@ -352,7 +379,7 @@ func (p *Policy) Persist(storage logical.Storage) error {
 	}
 
 	// Write the policy into storage
-	err = storage.Put(&logical.StorageEntry{
+	err = storage.Put(ctx, &logical.StorageEntry{
 		Key:   "policy/" + p.Name,
 		Value: buf,
 	})
@@ -402,7 +429,7 @@ func (p *Policy) NeedsUpgrade() bool {
 	return false
 }
 
-func (p *Policy) Upgrade(storage logical.Storage) error {
+func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) error {
 	persistNeeded := false
 	// Ensure we've moved from Key -> Keys
 	if p.Key != nil && len(p.Key) > 0 {
@@ -446,7 +473,7 @@ func (p *Policy) Upgrade(storage logical.Storage) error {
 	}
 
 	if persistNeeded {
-		err := p.Persist(storage)
+		err := p.Persist(ctx, storage)
 		if err != nil {
 			return err
 		}
@@ -926,11 +953,9 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
-
-	return false, errutil.InternalError{Err: "no valid key type found"}
 }
 
-func (p *Policy) Rotate(storage logical.Storage) error {
+func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) error {
 	if p.Keys == nil {
 		// This is an initial key rotation when generating a new policy. We
 		// don't need to call migrate here because if we've called getPolicy to
@@ -1011,7 +1036,7 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 		p.MinDecryptionVersion = 1
 	}
 
-	return p.Persist(storage)
+	return p.Persist(ctx, storage)
 }
 
 func (p *Policy) MigrateKeyToKeysMap() {
@@ -1024,4 +1049,44 @@ func (p *Policy) MigrateKeyToKeysMap() {
 		},
 	}
 	p.Key = nil
+}
+
+// Backup should be called with an exclusive lock held on the policy
+func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (string, error) {
+	if !p.Exportable {
+		return "", fmt.Errorf("exporting is disallowed on the policy")
+	}
+
+	if !p.AllowPlaintextBackup {
+		return "", fmt.Errorf("plaintext backup is disallowed on the policy")
+	}
+
+	// Create a record of this backup operation in the policy
+	p.BackupInfo = &BackupInfo{
+		Time:    time.Now(),
+		Version: p.LatestVersion,
+	}
+	err := p.Persist(ctx, storage)
+	if err != nil {
+		return "", fmt.Errorf("failed to persist policy with backup info: %v", err)
+	}
+
+	// Load the archive only after persisting the policy as the archive can get
+	// adjusted while persisting the policy
+	archivedKeys, err := p.LoadArchive(ctx, storage)
+	if err != nil {
+		return "", err
+	}
+
+	keyData := &KeyData{
+		Policy:       p,
+		ArchivedKeys: archivedKeys,
+	}
+
+	encodedBackup, err := jsonutil.EncodeJSON(keyData)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(encodedBackup), nil
 }

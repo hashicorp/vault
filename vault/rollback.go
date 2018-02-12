@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"strings"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ type RollbackManager struct {
 	shutdown     bool
 	shutdownCh   chan struct{}
 	shutdownLock sync.Mutex
+	quitContext  context.Context
 }
 
 // rollbackState is used to track the state of a single rollback attempt
@@ -56,15 +58,16 @@ type rollbackState struct {
 }
 
 // NewRollbackManager is used to create a new rollback manager
-func NewRollbackManager(logger log.Logger, backendsFunc func() []*MountEntry, router *Router) *RollbackManager {
+func NewRollbackManager(logger log.Logger, backendsFunc func() []*MountEntry, router *Router, ctx context.Context) *RollbackManager {
 	r := &RollbackManager{
-		logger:     logger,
-		backends:   backendsFunc,
-		router:     router,
-		period:     rollbackPeriod,
-		inflight:   make(map[string]*rollbackState),
-		doneCh:     make(chan struct{}),
-		shutdownCh: make(chan struct{}),
+		logger:      logger,
+		backends:    backendsFunc,
+		router:      router,
+		period:      rollbackPeriod,
+		inflight:    make(map[string]*rollbackState),
+		doneCh:      make(chan struct{}),
+		shutdownCh:  make(chan struct{}),
+		quitContext: ctx,
 	}
 	return r
 }
@@ -140,12 +143,12 @@ func (m *RollbackManager) startRollback(path string) *rollbackState {
 	m.inflightLock.Lock()
 	m.inflight[path] = rs
 	m.inflightLock.Unlock()
-	go m.attemptRollback(path, rs)
+	go m.attemptRollback(m.quitContext, path, rs)
 	return rs
 }
 
 // attemptRollback invokes a RollbackOperation for the given path
-func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err error) {
+func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *rollbackState) (err error) {
 	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(path, "/", "-", -1)}, time.Now())
 	if m.logger.IsTrace() {
 		m.logger.Trace("rollback: attempting rollback", "path", path)
@@ -165,11 +168,15 @@ func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err e
 		Operation: logical.RollbackOperation,
 		Path:      path,
 	}
-	_, err = m.router.Route(req)
+	_, err = m.router.Route(ctx, req)
 
 	// If the error is an unsupported operation, then it doesn't
 	// matter, the backend doesn't support it.
 	if err == logical.ErrUnsupportedOperation {
+		err = nil
+	}
+	// If we failed due to read-only storage, we can't do anything; ignore
+	if err != nil && strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 		err = nil
 	}
 	if err != nil {
@@ -222,7 +229,7 @@ func (c *Core) startRollback() error {
 		}
 		return ret
 	}
-	c.rollback = NewRollbackManager(c.logger, backendsFunc, c.router)
+	c.rollback = NewRollbackManager(c.logger, backendsFunc, c.router, c.activeContext)
 	c.rollback.Start()
 	return nil
 }

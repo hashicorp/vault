@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise UI"
+page_title: "UI - Vault Enterprise"
 sidebar_current: "docs-vault-enterprise-ui"
 description: |-
   Vault Enterprise features a user interface for interacting with Vault. Easily
@@ -8,7 +8,7 @@ description: |-
   the Vault Enterprise UI.
 ---
 
-# Vault UI
+# Vault Enterprise UI
 
 Vault Enterprise features a user interface for interacting with Vault. Easily
 create, read, update, and delete secrets, authenticate, unseal, and more with

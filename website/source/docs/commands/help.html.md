@@ -27,11 +27,11 @@ properly to execute this command to look up paths.
 Before using `path-help`, it is important to understand "paths" within Vault.
 Paths are the parameters used for `vault read`, `vault write`, etc. An
 example path is `secret/foo`, or `aws/config/root`. The paths available
-depend on the mounted secret backends. Because of this, the interactive
+depend on the enabled secrets engines. Because of this, the interactive
 help is an indispensable tool to finding what paths are supported.
 
 To discover what paths are supported, use `vault path-help <mount point>`.
-For example, if you mounted the AWS secret backend, you can use
+For example, if you mounted the AWS secrets engine, you can use
 `vault path-help aws` to find the paths supported by that backend. The paths
 will be shown with regular expressions, which can make them hard to
 parse, but they're also extremely exact.

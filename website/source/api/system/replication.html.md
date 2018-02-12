@@ -99,7 +99,7 @@ primary, it will look something like:
 			],
 			"last_wal": 43,
 			"merkle_root": "86d67839f47045f7d24beb4f39b14504d15a146c",
-			"mode": "dr-primary",
+			"mode": "primary",
 			"primary_cluster_addr": ""
 		},
 		"performance": {
@@ -109,7 +109,7 @@ primary, it will look something like:
 			],
 			"last_wal": 43,
 			"merkle_root": "e0531d566b23403101b0868e85b63d6774ba0ef2",
-			"mode": "perf-primary",
+			"mode": "primary",
 			"primary_cluster_addr": ""
 		}
 	},

@@ -345,6 +345,10 @@ func readByteLenType(ti *typeInfo, r *tdsBuffer) interface{} {
 		default:
 			badStreamPanicf("Invalid size for MONEYNTYPE")
 		}
+	case typeDateTim4:
+		return decodeDateTim4(buf)
+	case typeDateTime:
+		return decodeDateTime(buf)
 	case typeDateTimeN:
 		switch len(buf) {
 		case 4:
@@ -964,6 +968,8 @@ func makeGoLangScanType(ti typeInfo) reflect.Type {
 		return reflect.TypeOf("")
 	case typeImage:
 		return reflect.TypeOf([]byte{})
+	case typeBigBinary:
+		return reflect.TypeOf([]byte{})
 	case typeVariant:
 		return reflect.TypeOf(nil)
 	default:
@@ -1052,10 +1058,10 @@ func makeDecl(ti typeInfo) string {
 		}
 	case typeBit, typeBitN:
 		return "bit"
-	case typeDateTim4:
-		return "smalldatetime"
 	case typeDateN:
 		return "date"
+	case typeDateTim4:
+		return "smalldatetime"
 	case typeDateTime:
 		return "datetime"
 	case typeDateTimeN:
@@ -1143,6 +1149,10 @@ func makeGoLangTypeName(ti typeInfo) string {
 		default:
 			panic("invalid size of MONEYN")
 		}
+	case typeDateTim4:
+		return "SMALLDATETIME"
+	case typeDateTime:
+		return "DATETIME"
 	case typeDateTimeN:
 		switch ti.Size {
 		case 4:
@@ -1178,6 +1188,8 @@ func makeGoLangTypeName(ti typeInfo) string {
 		return "IMAGE"
 	case typeVariant:
 		return "SQL_VARIANT"
+	case typeBigBinary:
+		return "BINARY"
 	default:
 		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
 	}
@@ -1244,6 +1256,8 @@ func makeGoLangTypeLength(ti typeInfo) (int64, bool) {
 		default:
 			panic("invalid size of MONEYN")
 		}
+	case typeDateTim4, typeDateTime:
+		return 0, false
 	case typeDateTimeN:
 		switch ti.Size {
 		case 4:
@@ -1296,6 +1310,8 @@ func makeGoLangTypeLength(ti typeInfo) (int64, bool) {
 	case typeImage:
 		return 2147483647, true
 	case typeVariant:
+		return 0, false
+	case typeBigBinary:
 		return 0, false
 	default:
 		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
@@ -1363,6 +1379,8 @@ func makeGoLangTypePrecisionScale(ti typeInfo) (int64, int64, bool) {
 		default:
 			panic("invalid size of MONEYN")
 		}
+	case typeDateTim4, typeDateTime:
+		return 0, 0, false
 	case typeDateTimeN:
 		switch ti.Size {
 		case 4:
@@ -1403,6 +1421,8 @@ func makeGoLangTypePrecisionScale(ti typeInfo) (int64, int64, bool) {
 	case typeImage:
 		return 0, 0, false
 	case typeVariant:
+		return 0, 0, false
+	case typeBigBinary:
 		return 0, 0, false
 	default:
 		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))

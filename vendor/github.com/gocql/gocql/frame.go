@@ -40,6 +40,7 @@ const (
 	protoVersion2      = 0x02
 	protoVersion3      = 0x03
 	protoVersion4      = 0x04
+	protoVersion5      = 0x05
 
 	maxFrameSize = 256 * 1024 * 1024
 )
@@ -1112,7 +1113,24 @@ func (f schemaChangeTable) String() string {
 	return fmt.Sprintf("[event schema_change change=%q keyspace=%q object=%q]", f.change, f.keyspace, f.object)
 }
 
+type schemaChangeType struct {
+	frameHeader
+
+	change   string
+	keyspace string
+	object   string
+}
+
 type schemaChangeFunction struct {
+	frameHeader
+
+	change   string
+	keyspace string
+	name     string
+	args     []string
+}
+
+type schemaChangeAggregate struct {
 	frameHeader
 
 	change   string
@@ -1156,7 +1174,7 @@ func (f *framer) parseResultSchemaChange() frame {
 			frame.keyspace = f.readString()
 
 			return frame
-		case "TABLE", "TYPE":
+		case "TABLE":
 			frame := &schemaChangeTable{
 				frameHeader: *f.header,
 				change:      change,
@@ -1166,8 +1184,29 @@ func (f *framer) parseResultSchemaChange() frame {
 			frame.object = f.readString()
 
 			return frame
-		case "FUNCTION", "AGGREGATE":
+		case "TYPE":
+			frame := &schemaChangeType{
+				frameHeader: *f.header,
+				change:      change,
+			}
+
+			frame.keyspace = f.readString()
+			frame.object = f.readString()
+
+			return frame
+		case "FUNCTION":
 			frame := &schemaChangeFunction{
+				frameHeader: *f.header,
+				change:      change,
+			}
+
+			frame.keyspace = f.readString()
+			frame.name = f.readString()
+			frame.args = f.readStringList()
+
+			return frame
+		case "AGGREGATE":
+			frame := &schemaChangeAggregate{
 				frameHeader: *f.header,
 				change:      change,
 			}
@@ -1517,10 +1556,13 @@ func (f *framer) writeBatchFrame(streamID int, w *writeBatchFrame) error {
 
 		f.writeShort(uint16(len(b.values)))
 		for j := range b.values {
-			col := &b.values[j]
+			col := b.values[j]
 			if f.proto > protoVersion2 && col.name != "" {
 				// TODO: move this check into the caller and set a flag on writeBatchFrame
 				// to indicate using named values
+				if f.proto <= protoVersion5 {
+					return fmt.Errorf("gocql: named query values are not supported in batches, please see https://issues.apache.org/jira/browse/CASSANDRA-10246")
+				}
 				flags |= flagWithNameValues
 				f.writeString(col.name)
 			}

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -22,7 +23,7 @@ func TestHandler_cors(t *testing.T) {
 
 	// Enable CORS and allow from any origin for testing.
 	corsConfig := core.CORSConfig()
-	err := corsConfig.Enable([]string{addr}, nil)
+	err := corsConfig.Enable(context.Background(), []string{addr}, nil)
 	if err != nil {
 		t.Fatalf("Error enabling CORS: %s", err)
 	}
@@ -378,5 +379,24 @@ func TestHandler_error(t *testing.T) {
 	if w3.Code != 503 {
 		t.Fatalf("expected 503, got %d", w3.Code)
 	}
+}
 
+func TestHandler_nonPrintableChars(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/mounts\n", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	testResponseStatus(t, resp, 400)
 }

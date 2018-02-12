@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 
 // reloadPluginMounts reloads provided mounts, regardless of
 // plugin name, as long as the backend type is plugin.
-func (c *Core) reloadMatchingPluginMounts(mounts []string) error {
+func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
@@ -30,7 +31,7 @@ func (c *Core) reloadMatchingPluginMounts(mounts []string) error {
 		}
 
 		if entry.Type == "plugin" {
-			err := c.reloadPluginCommon(entry, isAuth)
+			err := c.reloadPluginCommon(ctx, entry, isAuth)
 			if err != nil {
 				errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %s: %v", mount, err))
 				continue
@@ -44,14 +45,14 @@ func (c *Core) reloadMatchingPluginMounts(mounts []string) error {
 // reloadPlugin reloads all mounted backends that are of
 // plugin pluginName (name of the plugin as registered in
 // the plugin catalog).
-func (c *Core) reloadMatchingPlugin(pluginName string) error {
+func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
 	// Filter mount entries that only matches the plugin name
 	for _, entry := range c.mounts.Entries {
 		if entry.Config.PluginName == pluginName && entry.Type == "plugin" {
-			err := c.reloadPluginCommon(entry, false)
+			err := c.reloadPluginCommon(ctx, entry, false)
 			if err != nil {
 				return err
 			}
@@ -62,7 +63,7 @@ func (c *Core) reloadMatchingPlugin(pluginName string) error {
 	// Filter auth mount entries that ony matches the plugin name
 	for _, entry := range c.auth.Entries {
 		if entry.Config.PluginName == pluginName && entry.Type == "plugin" {
-			err := c.reloadPluginCommon(entry, true)
+			err := c.reloadPluginCommon(ctx, entry, true)
 			if err != nil {
 				return err
 			}
@@ -76,8 +77,12 @@ func (c *Core) reloadMatchingPlugin(pluginName string) error {
 // reloadPluginCommon is a generic method to reload a backend provided a
 // MountEntry. entry.Type should be checked by the caller to ensure that
 // it's a "plugin" type.
-func (c *Core) reloadPluginCommon(entry *MountEntry, isAuth bool) error {
+func (c *Core) reloadPluginCommon(ctx context.Context, entry *MountEntry, isAuth bool) error {
 	path := entry.Path
+
+	if isAuth {
+		path = credentialRoutePrefix + path
+	}
 
 	// Fast-path out if the backend doesn't exist
 	raw, ok := c.router.root.Get(path)
@@ -85,9 +90,13 @@ func (c *Core) reloadPluginCommon(entry *MountEntry, isAuth bool) error {
 		return nil
 	}
 
-	// Call backend's Cleanup routine
 	re := raw.(*routeEntry)
-	re.backend.Cleanup()
+
+	// Only call Cleanup if backend is initialized
+	if re.backend != nil {
+		// Call backend's Cleanup routine
+		re.backend.Cleanup(ctx)
+	}
 
 	view := re.storageView
 
@@ -101,21 +110,15 @@ func (c *Core) reloadPluginCommon(entry *MountEntry, isAuth bool) error {
 	var err error
 	if !isAuth {
 		// Dispense a new backend
-		backend, err = c.newLogicalBackend(entry.Type, sysView, view, conf)
+		backend, err = c.newLogicalBackend(ctx, entry.Type, sysView, view, conf)
 	} else {
-		backend, err = c.newCredentialBackend(entry.Type, sysView, view, conf)
+		backend, err = c.newCredentialBackend(ctx, entry.Type, sysView, view, conf)
 	}
 	if err != nil {
 		return err
 	}
 	if backend == nil {
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
-	}
-
-	// Call initialize; this takes care of init tasks that must be run after
-	// the ignore paths are collected.
-	if err := backend.Initialize(); err != nil {
-		return err
 	}
 
 	// Set the backend back

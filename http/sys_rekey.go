@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -27,13 +28,16 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 			return
 		}
 
+		ctx, cancel := core.GetContext()
+		defer cancel()
+
 		switch {
 		case recovery && !core.SealAccess().RecoveryKeySupported():
 			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"))
 		case r.Method == "GET":
-			handleSysRekeyInitGet(core, recovery, w, r)
+			handleSysRekeyInitGet(ctx, core, recovery, w, r)
 		case r.Method == "POST" || r.Method == "PUT":
-			handleSysRekeyInitPut(core, recovery, w, r)
+			handleSysRekeyInitPut(ctx, core, recovery, w, r)
 		case r.Method == "DELETE":
 			handleSysRekeyInitDelete(core, recovery, w, r)
 		default:
@@ -42,8 +46,8 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 	})
 }
 
-func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	barrierConfig, err := core.SealAccess().BarrierConfig()
+func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -68,7 +72,7 @@ func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWrite
 		return
 	}
 
-	sealThreshold, err := core.RekeyThreshold(recovery)
+	sealThreshold, err := core.RekeyThreshold(ctx, recovery)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -100,7 +104,7 @@ func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWrite
 	respondOk(w, status)
 }
 
-func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
+func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req RekeyRequest
 	if err := parseRequest(r, w, &req); err != nil {
@@ -140,7 +144,7 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 		return
 	}
 
-	handleSysRekeyInitGet(core, recovery, w, r)
+	handleSysRekeyInitGet(ctx, core, recovery, w, r)
 }
 
 func handleSysRekeyInitDelete(core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
@@ -189,8 +193,11 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			}
 		}
 
+		ctx, cancel := core.GetContext()
+		defer cancel()
+
 		// Use the key to make progress on rekey
-		result, err := core.RekeyUpdate(key, req.Nonce, recovery)
+		result, err := core.RekeyUpdate(ctx, key, req.Nonce, recovery)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
@@ -215,7 +222,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			resp.KeysB64 = keysB64
 			respondOk(w, resp)
 		} else {
-			handleSysRekeyInitGet(core, recovery, w, r)
+			handleSysRekeyInitGet(ctx, core, recovery, w, r)
 		}
 	})
 }

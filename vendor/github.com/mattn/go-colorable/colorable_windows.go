@@ -448,7 +448,10 @@ loop:
 			break loop
 		}
 
-		if c2 == ']' {
+		switch c2 {
+		case '>':
+			continue
+		case ']':
 			w.rest.WriteByte(c1)
 			w.rest.WriteByte(c2)
 			er.WriteTo(&w.rest)
@@ -462,8 +465,17 @@ loop:
 			}
 			w.rest.Reset()
 			continue
-		}
-		if c2 != 0x5b {
+		// https://github.com/mattn/go-colorable/issues/27
+		case '7':
+			procGetConsoleScreenBufferInfo.Call(uintptr(handle), uintptr(unsafe.Pointer(&csbi)))
+			w.oldpos = csbi.cursorPosition
+			continue
+		case '8':
+			procSetConsoleCursorPosition.Call(uintptr(handle), *(*uintptr)(unsafe.Pointer(&w.oldpos)))
+			continue
+		case 0x5b:
+			// execute part after switch
+		default:
 			continue
 		}
 
@@ -589,13 +601,13 @@ loop:
 			switch n {
 			case 0:
 				cursor = coord{x: csbi.cursorPosition.x, y: csbi.cursorPosition.y}
-				count = dword(csbi.size.x - csbi.cursorPosition.x + (csbi.size.y-csbi.cursorPosition.y)*csbi.size.x)
+				count = dword(csbi.size.x) - dword(csbi.cursorPosition.x) + dword(csbi.size.y-csbi.cursorPosition.y)*dword(csbi.size.x)
 			case 1:
 				cursor = coord{x: csbi.window.left, y: csbi.window.top}
-				count = dword(csbi.size.x - csbi.cursorPosition.x + (csbi.window.top-csbi.cursorPosition.y)*csbi.size.x)
+				count = dword(csbi.size.x) - dword(csbi.cursorPosition.x) + dword(csbi.window.top-csbi.cursorPosition.y)*dword(csbi.size.x)
 			case 2:
 				cursor = coord{x: csbi.window.left, y: csbi.window.top}
-				count = dword(csbi.size.x - csbi.cursorPosition.x + (csbi.size.y-csbi.cursorPosition.y)*csbi.size.x)
+				count = dword(csbi.size.x) - dword(csbi.cursorPosition.x) + dword(csbi.size.y-csbi.cursorPosition.y)*dword(csbi.size.x)
 			}
 			procFillConsoleOutputCharacter.Call(uintptr(handle), uintptr(' '), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&written)))
 			procFillConsoleOutputAttribute.Call(uintptr(handle), uintptr(csbi.attributes), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&written)))
@@ -615,10 +627,10 @@ loop:
 				cursor = coord{x: csbi.cursorPosition.x, y: csbi.cursorPosition.y}
 				count = dword(csbi.size.x - csbi.cursorPosition.x)
 			case 1:
-				cursor = coord{x: csbi.window.left, y: csbi.window.top + csbi.cursorPosition.y}
+				cursor = coord{x: csbi.window.left, y: csbi.cursorPosition.y}
 				count = dword(csbi.size.x - csbi.cursorPosition.x)
 			case 2:
-				cursor = coord{x: csbi.window.left, y: csbi.window.top + csbi.cursorPosition.y}
+				cursor = coord{x: csbi.window.left, y: csbi.cursorPosition.y}
 				count = dword(csbi.size.x)
 			}
 			procFillConsoleOutputCharacter.Call(uintptr(handle), uintptr(' '), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&written)))

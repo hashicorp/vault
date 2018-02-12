@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ func TestRequestHandling_Wrapping(t *testing.T) {
 	core.logicalBackends["kv"] = PassthroughBackendFactory
 
 	meUUID, _ := uuid.GenerateUUID()
-	err := core.mount(&MountEntry{
+	err := core.mount(context.Background(), &MountEntry{
 		Table: mountTableType,
 		UUID:  meUUID,
 		Path:  "wraptest",
@@ -65,7 +66,7 @@ func TestRequestHandling_Wrapping(t *testing.T) {
 func TestRequestHandling_LoginWrapping(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 
-	if err := core.loadMounts(); err != nil {
+	if err := core.loadMounts(context.Background()); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 

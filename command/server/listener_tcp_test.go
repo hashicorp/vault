@@ -10,13 +10,15 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/mitchellh/cli"
 )
 
 func TestTCPListener(t *testing.T) {
 	ln, _, _, err := tcpListenerFactory(map[string]interface{}{
 		"address":     "127.0.0.1:0",
 		"tls_disable": "1",
-	}, nil)
+	}, nil, cli.NewMockUi())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -34,7 +36,7 @@ func TestTCPListener_tls(t *testing.T) {
 	wd, _ := os.Getwd()
 	wd += "/test-fixtures/reload/"
 
-	td, err := ioutil.TempDir("", fmt.Sprintf("vault-test-%d", rand.New(rand.NewSource(time.Now().Unix())).Int63))
+	td, err := ioutil.TempDir("", fmt.Sprintf("vault-test-%d", rand.New(rand.NewSource(time.Now().Unix())).Int63()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +56,7 @@ func TestTCPListener_tls(t *testing.T) {
 		"tls_key_file":                       wd + "reload_foo.key",
 		"tls_require_and_verify_client_cert": "true",
 		"tls_client_ca_file":                 wd + "reload_ca.pem",
-	}, nil)
+	}, nil, cli.NewMockUi())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -93,7 +95,7 @@ func TestTCPListener_tls(t *testing.T) {
 		"tls_require_and_verify_client_cert": "true",
 		"tls_disable_client_certs":           "true",
 		"tls_client_ca_file":                 wd + "reload_ca.pem",
-	}, nil)
+	}, nil, cli.NewMockUi())
 	if err == nil {
 		t.Fatal("expected error due to mutually exclusive client cert options")
 	}
@@ -104,7 +106,7 @@ func TestTCPListener_tls(t *testing.T) {
 		"tls_key_file":             wd + "reload_foo.key",
 		"tls_disable_client_certs": "true",
 		"tls_client_ca_file":       wd + "reload_ca.pem",
-	}, nil)
+	}, nil, cli.NewMockUi())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

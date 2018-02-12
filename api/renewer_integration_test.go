@@ -5,20 +5,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database"
-	"github.com/hashicorp/vault/builtin/logical/pki"
-	"github.com/hashicorp/vault/builtin/logical/transit"
-	"github.com/hashicorp/vault/logical"
 )
 
 func TestRenewer_Renew(t *testing.T) {
 	t.Parallel()
 
-	client, vaultDone := testVaultServerBackends(t, map[string]logical.Factory{
-		"database": database.Factory,
-		"pki":      pki.Factory,
-		"transit":  transit.Factory,
-	})
+	client, vaultDone := testVaultServer(t)
 	defer vaultDone()
 
 	pgURL, pgDone := testPostgresDB(t)

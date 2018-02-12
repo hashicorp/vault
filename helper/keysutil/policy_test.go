@@ -1,6 +1,7 @@
 package keysutil
 
 import (
+	"context"
 	"reflect"
 	"strconv"
 	"testing"
@@ -9,14 +10,6 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
-
-var (
-	keysArchive []KeyEntry
-)
-
-func resetKeysArchive() {
-	keysArchive = []KeyEntry{KeyEntry{}}
-}
 
 func TestPolicy_KeyEntryMapUpgrade(t *testing.T) {
 	now := time.Now()
@@ -62,8 +55,10 @@ func Test_KeyUpgrade(t *testing.T) {
 }
 
 func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
+	ctx := context.Background()
+
 	storage := &logical.InmemStorage{}
-	p, lock, upserted, err := lm.GetPolicyUpsert(PolicyRequest{
+	p, lock, upserted, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
 		Storage: storage,
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
@@ -104,7 +99,7 @@ func Test_ArchivingUpgrade(t *testing.T) {
 }
 
 func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
-	resetKeysArchive()
+	ctx := context.Background()
 
 	// First, we generate a policy and rotate it a number of times. Each time
 	// we'll ensure that we have the expected number of keys in the archive and
@@ -112,7 +107,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(PolicyRequest{
+	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
 		Storage: storage,
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
@@ -126,20 +121,20 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	lock.RUnlock()
 
 	// Store the initial key in the archive
-	keysArchive = append(keysArchive, p.Keys["1"])
-	checkKeys(t, p, storage, "initial", 1, 1, 1)
+	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
+	checkKeys(t, ctx, p, storage, keysArchive, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
-		err = p.Rotate(storage)
+		err = p.Rotate(ctx, storage)
 		if err != nil {
 			t.Fatal(err)
 		}
 		keysArchive = append(keysArchive, p.Keys[strconv.Itoa(i)])
-		checkKeys(t, p, storage, "rotate", i, i, i)
+		checkKeys(t, ctx, p, storage, keysArchive, "rotate", i, i, i)
 	}
 
 	// Now, wipe the archive and set the archive version to zero
-	err = storage.Delete("archive/test")
+	err = storage.Delete(ctx, "archive/test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +148,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// Write the policy into storage
-	err = storage.Put(&logical.StorageEntry{
+	err = storage.Put(ctx, &logical.StorageEntry{
 		Key:   "policy/" + p.Name,
 		Value: buf,
 	})
@@ -168,7 +163,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// Now get the policy again; the upgrade should happen automatically
-	p, lock, err = lm.GetPolicyShared(storage, "test")
+	p, lock, err = lm.GetPolicyShared(ctx, storage, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +172,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 	lock.RUnlock()
 
-	checkKeys(t, p, storage, "upgrade", 10, 10, 10)
+	checkKeys(t, ctx, p, storage, keysArchive, "upgrade", 10, 10, 10)
 
 	// Let's check some deletion logic while we're at it
 
@@ -187,7 +182,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// First we'll do this wrong, by not setting the deletion flag
-	err = lm.DeletePolicy(storage, "test")
+	err = lm.DeletePolicy(ctx, storage, "test")
 	if err == nil {
 		t.Fatal("got nil error, but should not have been able to delete since we didn't set the deletion flag on the policy")
 	}
@@ -197,7 +192,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 		t.Fatal("nil policy in cache")
 	}
 
-	p, lock, err = lm.GetPolicyShared(storage, "test")
+	p, lock, err = lm.GetPolicyShared(ctx, storage, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,11 +203,11 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 
 	// Now do it properly
 	p.DeletionAllowed = true
-	err = p.Persist(storage)
+	err = p.Persist(ctx, storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = lm.DeletePolicy(storage, "test")
+	err = lm.DeletePolicy(ctx, storage, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +217,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 		t.Fatal("non-nil policy in cache")
 	}
 
-	p, lock, err = lm.GetPolicyShared(storage, "test")
+	p, lock, err = lm.GetPolicyShared(ctx, storage, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +232,7 @@ func Test_Archiving(t *testing.T) {
 }
 
 func testArchivingCommon(t *testing.T, lm *LockManager) {
-	resetKeysArchive()
+	ctx := context.Background()
 
 	// First, we generate a policy and rotate it a number of times. Each time
 	// we'll ensure that we have the expected number of keys in the archive and
@@ -245,7 +240,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(PolicyRequest{
+	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
 		Storage: storage,
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
@@ -261,23 +256,23 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// Store the initial key in the archive
-	keysArchive = append(keysArchive, p.Keys["1"])
-	checkKeys(t, p, storage, "initial", 1, 1, 1)
+	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
+	checkKeys(t, ctx, p, storage, keysArchive, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
-		err = p.Rotate(storage)
+		err = p.Rotate(ctx, storage)
 		if err != nil {
 			t.Fatal(err)
 		}
 		keysArchive = append(keysArchive, p.Keys[strconv.Itoa(i)])
-		checkKeys(t, p, storage, "rotate", i, i, i)
+		checkKeys(t, ctx, p, storage, keysArchive, "rotate", i, i, i)
 	}
 
 	// Move the min decryption version up
 	for i := 1; i <= 10; i++ {
 		p.MinDecryptionVersion = i
 
-		err = p.Persist(storage)
+		err = p.Persist(ctx, storage)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -289,14 +284,14 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 		// 10, you'd need 7, 8, 9, and 10 -- IOW, latest version - min
 		// decryption version plus 1 (the min decryption version key
 		// itself)
-		checkKeys(t, p, storage, "minadd", 10, 10, p.LatestVersion-p.MinDecryptionVersion+1)
+		checkKeys(t, ctx, p, storage, keysArchive, "minadd", 10, 10, p.LatestVersion-p.MinDecryptionVersion+1)
 	}
 
 	// Move the min decryption version down
 	for i := 10; i >= 1; i-- {
 		p.MinDecryptionVersion = i
 
-		err = p.Persist(storage)
+		err = p.Persist(ctx, storage)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -308,13 +303,15 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 		// 10, you'd need 7, 8, 9, and 10 -- IOW, latest version - min
 		// decryption version plus 1 (the min decryption version key
 		// itself)
-		checkKeys(t, p, storage, "minsub", 10, 10, p.LatestVersion-p.MinDecryptionVersion+1)
+		checkKeys(t, ctx, p, storage, keysArchive, "minsub", 10, 10, p.LatestVersion-p.MinDecryptionVersion+1)
 	}
 }
 
 func checkKeys(t *testing.T,
+	ctx context.Context,
 	p *Policy,
 	storage logical.Storage,
+	keysArchive []KeyEntry,
 	action string,
 	archiveVer, latestVer, keysSize int) {
 
@@ -324,7 +321,7 @@ func checkKeys(t *testing.T,
 			"but keys archive is of size %d", latestVer, latestVer+1, len(keysArchive))
 	}
 
-	archive, err := p.LoadArchive(storage)
+	archive, err := p.LoadArchive(ctx, storage)
 	if err != nil {
 		t.Fatal(err)
 	}

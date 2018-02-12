@@ -15,8 +15,8 @@ import (
 //
 // https://developer.github.com/changes/2016-04-04-git-signing-api-preview/
 type GPGKey struct {
-	ID                *int       `json:"id,omitempty"`
-	PrimaryKeyID      *int       `json:"primary_key_id,omitempty"`
+	ID                *int64     `json:"id,omitempty"`
+	PrimaryKeyID      *int64     `json:"primary_key_id,omitempty"`
 	KeyID             *string    `json:"key_id,omitempty"`
 	PublicKey         *string    `json:"public_key,omitempty"`
 	Emails            []GPGEmail `json:"emails,omitempty"`
@@ -78,7 +78,7 @@ func (s *UsersService) ListGPGKeys(ctx context.Context, user string, opt *ListOp
 // via Basic Auth or via OAuth with at least read:gpg_key scope.
 //
 // GitHub API docs: https://developer.github.com/v3/users/gpg_keys/#get-a-single-gpg-key
-func (s *UsersService) GetGPGKey(ctx context.Context, id int) (*GPGKey, *Response, error) {
+func (s *UsersService) GetGPGKey(ctx context.Context, id int64) (*GPGKey, *Response, error) {
 	u := fmt.Sprintf("user/gpg_keys/%v", id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *UsersService) CreateGPGKey(ctx context.Context, armoredPublicKey string
 // via OAuth with at least admin:gpg_key scope.
 //
 // GitHub API docs: https://developer.github.com/v3/users/gpg_keys/#delete-a-gpg-key
-func (s *UsersService) DeleteGPGKey(ctx context.Context, id int) (*Response, error) {
+func (s *UsersService) DeleteGPGKey(ctx context.Context, id int64) (*Response, error) {
 	u := fmt.Sprintf("user/gpg_keys/%v", id)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {

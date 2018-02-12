@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -26,6 +27,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/physical"
@@ -64,6 +66,12 @@ const (
 )
 
 type notifyEvent struct{}
+
+// Verify ConsulBackend satisfies the correct interfaces
+var _ physical.Backend = (*ConsulBackend)(nil)
+var _ physical.HABackend = (*ConsulBackend)(nil)
+var _ physical.Lock = (*ConsulLock)(nil)
+var _ physical.Transactional = (*ConsulBackend)(nil)
 
 // ConsulBackend is a physical backend that stores data at specific
 // prefix within Consul. It is used for most production situations as
@@ -113,7 +121,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	disableReg, ok := conf["disable_registration"]
 	var disableRegistration bool
 	if ok && disableReg != "" {
-		b, err := strconv.ParseBool(disableReg)
+		b, err := parseutil.ParseBool(disableReg)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed parsing disable_registration parameter: {{err}}", err)
 		}
@@ -251,8 +259,14 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	}
 
 	insecureSkipVerify := false
-	if _, ok := conf["tls_skip_verify"]; ok {
-		insecureSkipVerify = true
+	tlsSkipVerify, ok := conf["tls_skip_verify"]
+
+	if ok && tlsSkipVerify != "" {
+		b, err := parseutil.ParseBool(tlsSkipVerify)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing tls_skip_verify parameter: {{err}}", err)
+		}
+		insecureSkipVerify = b
 	}
 
 	tlsMinVersionStr, ok := conf["tls_min_version"]
@@ -303,7 +317,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 }
 
 // Used to run multiple entries via a transaction
-func (c *ConsulBackend) Transaction(txns []*physical.TxnEntry) error {
+func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	if len(txns) == 0 {
 		return nil
 	}
@@ -347,7 +361,7 @@ func (c *ConsulBackend) Transaction(txns []*physical.TxnEntry) error {
 }
 
 // Put is used to insert or update an entry
-func (c *ConsulBackend) Put(entry *physical.Entry) error {
+func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"consul", "put"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -363,7 +377,7 @@ func (c *ConsulBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch an entry
-func (c *ConsulBackend) Get(key string) (*physical.Entry, error) {
+func (c *ConsulBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"consul", "get"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -391,7 +405,7 @@ func (c *ConsulBackend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (c *ConsulBackend) Delete(key string) error {
+func (c *ConsulBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"consul", "delete"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -403,7 +417,7 @@ func (c *ConsulBackend) Delete(key string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (c *ConsulBackend) List(prefix string) ([]string, error) {
+func (c *ConsulBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"consul", "list"}, time.Now())
 	scan := c.path + prefix
 

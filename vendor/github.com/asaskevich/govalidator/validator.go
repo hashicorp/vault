@@ -2,8 +2,14 @@
 package govalidator
 
 import (
+	"bytes"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"reflect"
@@ -56,7 +62,13 @@ func IsURL(str string) bool {
 	if str == "" || utf8.RuneCountInString(str) >= maxURLRuneCount || len(str) <= minURLRuneCount || strings.HasPrefix(str, ".") {
 		return false
 	}
-	u, err := url.Parse(str)
+	strTemp := str
+	if strings.Index(str, ":") >= 0 && strings.Index(str, "://") == -1 {
+		// support no indicated urlscheme but with colon for port number
+		// http:// is appended so url.Parse will succeed, strTemp used so it does not impact rxURL.MatchString
+		strTemp = "http://" + str
+	}
+	u, err := url.Parse(strTemp)
 	if err != nil {
 		return false
 	}
@@ -67,7 +79,6 @@ func IsURL(str string) bool {
 		return false
 	}
 	return rxURL.MatchString(str)
-
 }
 
 // IsRequestURL check if the string rawurl, assuming
@@ -218,6 +229,22 @@ func IsUpperCase(str string) bool {
 		return true
 	}
 	return str == strings.ToUpper(str)
+}
+
+// HasLowerCase check if the string contains at least 1 lowercase. Empty string is valid.
+func HasLowerCase(str string) bool {
+	if IsNull(str) {
+		return true
+	}
+	return rxHasLowerCase.MatchString(str)
+}
+
+// HasUpperCase check if the string contians as least 1 uppercase. Empty string is valid.
+func HasUpperCase(str string) bool {
+	if IsNull(str) {
+		return true
+	}
+	return rxHasUpperCase.MatchString(str)
 }
 
 // IsInt check if the string is an integer. Empty string is valid.
@@ -488,6 +515,33 @@ func IsDNSName(str string) bool {
 	return !IsIP(str) && rxDNSName.MatchString(str)
 }
 
+// IsHash checks if a string is a hash of type algorithm.
+// Algorithm is one of ['md4', 'md5', 'sha1', 'sha256', 'sha384', 'sha512', 'ripemd128', 'ripemd160', 'tiger128', 'tiger160', 'tiger192', 'crc32', 'crc32b']
+func IsHash(str string, algorithm string) bool {
+	len := "0"
+	algo := strings.ToLower(algorithm)
+
+	if algo == "crc32" || algo == "crc32b" {
+		len = "8"
+	} else if algo == "md5" || algo == "md4" || algo == "ripemd128" || algo == "tiger128" {
+		len = "32"
+	} else if algo == "sha1" || algo == "ripemd160" || algo == "tiger160" {
+		len = "40"
+	} else if algo == "tiger192" {
+		len = "48"
+	} else if algo == "sha256" {
+		len = "64"
+	} else if algo == "sha384" {
+		len = "96"
+	} else if algo == "sha512" {
+		len = "128"
+	} else {
+		return false
+	}
+
+	return Matches(str, "^[a-f0-9]{"+len+"}$")
+}
+
 // IsDialString validates the given string for usage with the various Dial() functions
 func IsDialString(str string) bool {
 
@@ -562,6 +616,40 @@ func IsLongitude(str string) bool {
 	return rxLongitude.MatchString(str)
 }
 
+// IsRsaPublicKey check if a string is valid public key with provided length
+func IsRsaPublicKey(str string, keylen int) bool {
+	bb := bytes.NewBufferString(str)
+	pemBytes, err := ioutil.ReadAll(bb)
+	if err != nil {
+		return false
+	}
+	block, _ := pem.Decode(pemBytes)
+	if block != nil && block.Type != "PUBLIC KEY" {
+		return false
+	}
+	var der []byte
+
+	if block != nil {
+		der = block.Bytes
+	} else {
+		der, err = base64.StdEncoding.DecodeString(str)
+		if err != nil {
+			return false
+		}
+	}
+
+	key, err := x509.ParsePKIXPublicKey(der)
+	if err != nil {
+		return false
+	}
+	pubkey, ok := key.(*rsa.PublicKey)
+	if !ok {
+		return false
+	}
+	bitlen := len(pubkey.N.Bytes()) * 8
+	return bitlen == int(keylen)
+}
+
 func toJSONName(tag string) string {
 	if tag == "" {
 		return ""
@@ -606,7 +694,9 @@ func ValidateStruct(s interface{}) (bool, error) {
 			continue // Private field
 		}
 		structResult := true
-		if valueField.Kind() == reflect.Struct && typeField.Tag.Get(tagName) != "-" {
+		if (valueField.Kind() == reflect.Struct ||
+			(valueField.Kind() == reflect.Ptr && valueField.Elem().Kind() == reflect.Struct)) &&
+			typeField.Tag.Get(tagName) != "-" {
 			var err error
 			structResult, err = ValidateStruct(valueField.Interface())
 			if err != nil {
@@ -743,6 +833,17 @@ func RuneLength(str string, params ...string) bool {
 	return StringLength(str, params...)
 }
 
+// IsRsaPub check whether string is valid RSA key
+// Alias for IsRsaPublicKey
+func IsRsaPub(str string, params ...string) bool {
+	if len(params) == 1 {
+		len, _ := ToInt(params[0])
+		return IsRsaPublicKey(str, int(len))
+	}
+
+	return false
+}
+
 // StringMatches checks if a string matches a given pattern.
 func StringMatches(s string, params ...string) bool {
 	if len(params) == 1 {
@@ -807,7 +908,7 @@ func checkRequired(v reflect.Value, t reflect.StructField, options tagOptionsMap
 		}
 		return false, Error{t.Name, fmt.Errorf("non zero value required"), false, "required"}
 	} else if _, isOptional := options["optional"]; fieldsRequiredByDefault && !isOptional {
-		return false, Error{t.Name, fmt.Errorf("All fields are required to at least have one validation defined"), false, "required"}
+		return false, Error{t.Name, fmt.Errorf("Missing required field"), false, "required"}
 	}
 	// not required and empty is valid
 	return true, nil

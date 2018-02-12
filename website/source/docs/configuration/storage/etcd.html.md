@@ -45,7 +45,7 @@ storage "etcd" {
   version is 3.1+ and there has been no data written using the v2 API, the
   auto-detected default is v3.
 
-- `ha_enabled` `(bool: false)` – Specifies if high availability should be
+- `ha_enabled` `(string: "false")` – Specifies if high availability should be
   enabled. This can also be provided via the environment variable
   `ETCD_HA_ENABLED`.
 
@@ -117,7 +117,7 @@ This example show enabling high availability for the Etcd storage backend.
 api_addr = "https://vault-leader.my-company.internal"
 
 storage "etcd" {
-  ha_enabled    = true
+  ha_enabled    = "true"
   ...
 }
 ```

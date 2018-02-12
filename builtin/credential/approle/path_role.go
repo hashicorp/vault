@@ -1,6 +1,7 @@
 package approle
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -57,6 +58,10 @@ type roleStorageEntry struct {
 	// value is not modified on the role. If the `Period` in the role is modified,
 	// a token will pick up the new value during its next renewal.
 	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
+
+	// LowerCaseRoleName enforces the lower casing of role names for all the
+	// roles that get created since this field was introduced.
+	LowerCaseRoleName bool `json:"lower_case_role_name" mapstructure:"lower_case_role_name" structs:"lower_case_role_name"`
 }
 
 // roleIDStorageEntry represents the reverse mapping from RoleID to Role
@@ -508,7 +513,7 @@ the role.`,
 }
 
 // pathRoleExistenceCheck returns whether the role with the given name exists or not.
-func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return false, fmt.Errorf("missing role_name")
@@ -518,7 +523,7 @@ func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.F
 	lock.RLock()
 	defer lock.RUnlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return false, err
 	}
@@ -527,13 +532,13 @@ func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.F
 }
 
 // pathRoleList is used to list all the Roles registered with the backend.
-func (b *backend) pathRoleList(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	lock := b.roleLock("")
 
 	lock.RLock()
 	defer lock.RUnlock()
 
-	roles, err := req.Storage.List("role/")
+	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -541,7 +546,7 @@ func (b *backend) pathRoleList(req *logical.Request, data *framework.FieldData) 
 }
 
 // pathRoleSecretIDList is used to list all the 'secret_id_accessor's issued against the role.
-func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -552,12 +557,16 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 	defer lock.RUnlock()
 
 	// Get the role entry
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("role %q does not exist", roleName)), nil
+	}
+
+	if role.LowerCaseRoleName {
+		roleName = strings.ToLower(roleName)
 	}
 
 	// Guard the list operation with an outer lock
@@ -571,7 +580,7 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 
 	// Listing works one level at a time. Get the first level of data
 	// which could then be used to get the actual SecretID storage entries.
-	secretIDHMACs, err := req.Storage.List(fmt.Sprintf("secret_id/%s/", roleNameHMAC))
+	secretIDHMACs, err := req.Storage.List(ctx, fmt.Sprintf("secret_id/%s/", roleNameHMAC))
 	if err != nil {
 		return nil, err
 	}
@@ -597,7 +606,7 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 		secretIDLock.RLock()
 
 		result := secretIDStorageEntry{}
-		if entry, err := req.Storage.Get(entryIndex); err != nil {
+		if entry, err := req.Storage.Get(ctx, entryIndex); err != nil {
 			secretIDLock.RUnlock()
 			return nil, err
 		} else if entry == nil {
@@ -634,7 +643,7 @@ func validateRoleConstraints(role *roleStorageEntry) error {
 
 // setRoleEntry persists the role and creates an index from roleID to role
 // name.
-func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleStorageEntry, previousRoleID string) error {
+func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName string, role *roleStorageEntry, previousRoleID string) error {
 	if roleName == "" {
 		return fmt.Errorf("missing role name")
 	}
@@ -658,7 +667,7 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 	}
 
 	// Check if the index from the role_id to role already exists
-	roleIDIndex, err := b.roleIDEntry(s, role.RoleID)
+	roleIDIndex, err := b.roleIDEntry(ctx, s, role.RoleID)
 	if err != nil {
 		return fmt.Errorf("failed to read role_id index: %v", err)
 	}
@@ -671,13 +680,13 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 	// When role_id is getting updated, delete the old index before
 	// a new one is created
 	if previousRoleID != "" && previousRoleID != role.RoleID {
-		if err = b.roleIDEntryDelete(s, previousRoleID); err != nil {
+		if err = b.roleIDEntryDelete(ctx, s, previousRoleID); err != nil {
 			return fmt.Errorf("failed to delete previous role ID index")
 		}
 	}
 
 	// Save the role entry only after all the validations
-	if err = s.Put(entry); err != nil {
+	if err = s.Put(ctx, entry); err != nil {
 		return err
 	}
 
@@ -688,20 +697,20 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 
 	// Create a storage entry for reverse mapping of RoleID to role.
 	// Note that secondary index is created when the roleLock is held.
-	return b.setRoleIDEntry(s, role.RoleID, &roleIDStorageEntry{
+	return b.setRoleIDEntry(ctx, s, role.RoleID, &roleIDStorageEntry{
 		Name: roleName,
 	})
 }
 
 // roleEntry reads the role from storage
-func (b *backend) roleEntry(s logical.Storage, roleName string) (*roleStorageEntry, error) {
+func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName string) (*roleStorageEntry, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("missing role_name")
 	}
 
 	var role roleStorageEntry
 
-	if entry, err := s.Get("role/" + strings.ToLower(roleName)); err != nil {
+	if entry, err := s.Get(ctx, "role/"+strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -714,7 +723,7 @@ func (b *backend) roleEntry(s logical.Storage, roleName string) (*roleStorageEnt
 
 // pathRoleCreateUpdate registers a new role with the backend or updates the options
 // of an existing role
-func (b *backend) pathRoleCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -725,7 +734,7 @@ func (b *backend) pathRoleCreateUpdate(req *logical.Request, data *framework.Fie
 	defer lock.Unlock()
 
 	// Check if the role already exists
-	role, err := b.roleEntry(req.Storage, roleName)
+	role, err := b.roleEntry(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -737,7 +746,8 @@ func (b *backend) pathRoleCreateUpdate(req *logical.Request, data *framework.Fie
 			return nil, fmt.Errorf("failed to create role_id: %v\n", err)
 		}
 		role = &roleStorageEntry{
-			HMACKey: hmacKey,
+			HMACKey:           hmacKey,
+			LowerCaseRoleName: true,
 		}
 	} else if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid role name")), nil
@@ -845,11 +855,11 @@ func (b *backend) pathRoleCreateUpdate(req *logical.Request, data *framework.Fie
 	}
 
 	// Store the entry.
-	return resp, b.setRoleEntry(req.Storage, roleName, role, previousRoleID)
+	return resp, b.setRoleEntry(ctx, req.Storage, roleName, role, previousRoleID)
 }
 
 // pathRoleRead grabs a read lock and reads the options set on the role from the storage
-func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -859,7 +869,7 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 	lock.RLock()
 	lockRelease := lock.RUnlock
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		lockRelease()
 		return nil, err
@@ -892,7 +902,7 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 
 	// For sanity, verify that the index still exists. If the index is missing,
 	// add one and return a warning so it can be reported.
-	roleIDIndex, err := b.roleIDEntry(req.Storage, role.RoleID)
+	roleIDIndex, err := b.roleIDEntry(ctx, req.Storage, role.RoleID)
 	if err != nil {
 		lockRelease()
 		return nil, err
@@ -905,7 +915,7 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 		lockRelease = lock.Unlock
 
 		// Check again if the index is missing
-		roleIDIndex, err = b.roleIDEntry(req.Storage, role.RoleID)
+		roleIDIndex, err = b.roleIDEntry(ctx, req.Storage, role.RoleID)
 		if err != nil {
 			lockRelease()
 			return nil, err
@@ -913,7 +923,7 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 
 		if roleIDIndex == nil {
 			// Create a new index
-			err = b.setRoleIDEntry(req.Storage, role.RoleID, &roleIDStorageEntry{
+			err = b.setRoleIDEntry(ctx, req.Storage, role.RoleID, &roleIDStorageEntry{
 				Name: roleName,
 			})
 			if err != nil {
@@ -930,7 +940,7 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 }
 
 // pathRoleDelete removes the role from the storage
-func (b *backend) pathRoleDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -940,7 +950,7 @@ func (b *backend) pathRoleDelete(req *logical.Request, data *framework.FieldData
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -949,17 +959,17 @@ func (b *backend) pathRoleDelete(req *logical.Request, data *framework.FieldData
 	}
 
 	// Just before the role is deleted, remove all the SecretIDs issued as part of the role.
-	if err = b.flushRoleSecrets(req.Storage, roleName, role.HMACKey); err != nil {
+	if err = b.flushRoleSecrets(ctx, req.Storage, roleName, role.HMACKey); err != nil {
 		return nil, fmt.Errorf("failed to invalidate the secrets belonging to role %q: %v", roleName, err)
 	}
 
 	// Delete the reverse mapping from RoleID to the role
-	if err = b.roleIDEntryDelete(req.Storage, role.RoleID); err != nil {
+	if err = b.roleIDEntryDelete(ctx, req.Storage, role.RoleID); err != nil {
 		return nil, fmt.Errorf("failed to delete the mapping from RoleID to role %q: %v", roleName, err)
 	}
 
 	// After deleting the SecretIDs and the RoleID, delete the role itself
-	if err = req.Storage.Delete("role/" + strings.ToLower(roleName)); err != nil {
+	if err = req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName)); err != nil {
 		return nil, err
 	}
 
@@ -967,7 +977,7 @@ func (b *backend) pathRoleDelete(req *logical.Request, data *framework.FieldData
 }
 
 // Returns the properties of the SecretID
-func (b *backend) pathRoleSecretIDLookupUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDLookupUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -983,12 +993,16 @@ func (b *backend) pathRoleSecretIDLookupUpdate(req *logical.Request, data *frame
 	defer lock.RUnlock()
 
 	// Fetch the role
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
 	if role == nil {
 		return nil, fmt.Errorf("role %q does not exist", roleName)
+	}
+
+	if role.LowerCaseRoleName {
+		roleName = strings.ToLower(roleName)
 	}
 
 	// Create the HMAC of the secret ID using the per-role HMAC key
@@ -1006,16 +1020,16 @@ func (b *backend) pathRoleSecretIDLookupUpdate(req *logical.Request, data *frame
 	// Create the index at which the secret_id would've been stored
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
 
-	return b.secretIDCommon(req.Storage, entryIndex, secretIDHMAC)
+	return b.secretIDCommon(ctx, req.Storage, entryIndex, secretIDHMAC)
 }
 
-func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC string) (*logical.Response, error) {
+func (b *backend) secretIDCommon(ctx context.Context, s logical.Storage, entryIndex, secretIDHMAC string) (*logical.Response, error) {
 	lock := b.secretIDLock(secretIDHMAC)
 	lock.RLock()
 	defer lock.RUnlock()
 
 	result := secretIDStorageEntry{}
-	if entry, err := s.Get(entryIndex); err != nil {
+	if entry, err := s.Get(ctx, entryIndex); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -1046,7 +1060,7 @@ func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC str
 	return resp, nil
 }
 
-func (b *backend) pathRoleSecretIDDestroyUpdateDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1061,7 +1075,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(req *logical.Request, data
 	roleLock.RLock()
 	defer roleLock.RUnlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1086,7 +1100,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(req *logical.Request, data
 	defer lock.Unlock()
 
 	result := secretIDStorageEntry{}
-	if entry, err := req.Storage.Get(entryIndex); err != nil {
+	if entry, err := req.Storage.Get(ctx, entryIndex); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -1095,12 +1109,12 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(req *logical.Request, data
 	}
 
 	// Delete the accessor of the SecretID first
-	if err := b.deleteSecretIDAccessorEntry(req.Storage, result.SecretIDAccessor); err != nil {
+	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, result.SecretIDAccessor); err != nil {
 		return nil, err
 	}
 
 	// Delete the storage entry that corresponds to the SecretID
-	if err := req.Storage.Delete(entryIndex); err != nil {
+	if err := req.Storage.Delete(ctx, entryIndex); err != nil {
 		return nil, fmt.Errorf("failed to delete secret_id: %v", err)
 	}
 
@@ -1109,7 +1123,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(req *logical.Request, data
 
 // pathRoleSecretIDAccessorLookupUpdate returns the properties of the SecretID
 // given its accessor
-func (b *backend) pathRoleSecretIDAccessorLookupUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDAccessorLookupUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1128,7 +1142,7 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(req *logical.Request, dat
 	lock.RLock()
 	defer lock.RUnlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1136,7 +1150,7 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(req *logical.Request, dat
 		return nil, fmt.Errorf("role %q does not exist", roleName)
 	}
 
-	accessorEntry, err := b.secretIDAccessorEntry(req.Storage, secretIDAccessor)
+	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor)
 	if err != nil {
 		return nil, err
 	}
@@ -1151,10 +1165,10 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(req *logical.Request, dat
 
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, accessorEntry.SecretIDHMAC)
 
-	return b.secretIDCommon(req.Storage, entryIndex, accessorEntry.SecretIDHMAC)
+	return b.secretIDCommon(ctx, req.Storage, entryIndex, accessorEntry.SecretIDHMAC)
 }
 
-func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1169,7 +1183,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(req *logical.Reque
 	// Get the role details to fetch the RoleID and accessor to get
 	// the HMACed SecretID.
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1177,7 +1191,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(req *logical.Reque
 		return nil, fmt.Errorf("role %q does not exist", roleName)
 	}
 
-	accessorEntry, err := b.secretIDAccessorEntry(req.Storage, secretIDAccessor)
+	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDAccessor)
 	if err != nil {
 		return nil, err
 	}
@@ -1197,19 +1211,19 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(req *logical.Reque
 	defer lock.Unlock()
 
 	// Delete the accessor of the SecretID first
-	if err := b.deleteSecretIDAccessorEntry(req.Storage, secretIDAccessor); err != nil {
+	if err := b.deleteSecretIDAccessorEntry(ctx, req.Storage, secretIDAccessor); err != nil {
 		return nil, err
 	}
 
 	// Delete the storage entry that corresponds to the SecretID
-	if err := req.Storage.Delete(entryIndex); err != nil {
+	if err := req.Storage.Delete(ctx, entryIndex); err != nil {
 		return nil, fmt.Errorf("failed to delete secret_id: %v", err)
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathRoleBoundCIDRListUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleBoundCIDRListUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1220,7 +1234,7 @@ func (b *backend) pathRoleBoundCIDRListUpdate(req *logical.Request, data *framew
 	defer lock.Unlock()
 
 	// Re-read the role after grabbing the lock
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1243,10 +1257,10 @@ func (b *backend) pathRoleBoundCIDRListUpdate(req *logical.Request, data *framew
 		}
 	}
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleBoundCIDRListRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleBoundCIDRListRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1256,7 +1270,7 @@ func (b *backend) pathRoleBoundCIDRListRead(req *logical.Request, data *framewor
 	lock.Lock()
 	defer lock.Unlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1269,7 +1283,7 @@ func (b *backend) pathRoleBoundCIDRListRead(req *logical.Request, data *framewor
 	}
 }
 
-func (b *backend) pathRoleBoundCIDRListDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleBoundCIDRListDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1279,7 +1293,7 @@ func (b *backend) pathRoleBoundCIDRListDelete(req *logical.Request, data *framew
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1290,10 +1304,10 @@ func (b *backend) pathRoleBoundCIDRListDelete(req *logical.Request, data *framew
 	// Deleting a field implies setting the value to it's default value.
 	role.BoundCIDRList = data.GetDefaultOrZero("bound_cidr_list").(string)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleBindSecretIDUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleBindSecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1303,7 +1317,7 @@ func (b *backend) pathRoleBindSecretIDUpdate(req *logical.Request, data *framewo
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1313,13 +1327,13 @@ func (b *backend) pathRoleBindSecretIDUpdate(req *logical.Request, data *framewo
 
 	if bindSecretIDRaw, ok := data.GetOk("bind_secret_id"); ok {
 		role.BindSecretID = bindSecretIDRaw.(bool)
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing bind_secret_id"), nil
 	}
 }
 
-func (b *backend) pathRoleBindSecretIDRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleBindSecretIDRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1329,7 +1343,7 @@ func (b *backend) pathRoleBindSecretIDRead(req *logical.Request, data *framework
 	lock.RLock()
 	defer lock.RUnlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1342,7 +1356,7 @@ func (b *backend) pathRoleBindSecretIDRead(req *logical.Request, data *framework
 	}
 }
 
-func (b *backend) pathRoleBindSecretIDDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleBindSecretIDDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1352,7 +1366,7 @@ func (b *backend) pathRoleBindSecretIDDelete(req *logical.Request, data *framewo
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1363,10 +1377,10 @@ func (b *backend) pathRoleBindSecretIDDelete(req *logical.Request, data *framewo
 	// Deleting a field implies setting the value to it's default value.
 	role.BindSecretID = data.GetDefaultOrZero("bind_secret_id").(bool)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRolePoliciesUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolePoliciesUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1376,7 +1390,7 @@ func (b *backend) pathRolePoliciesUpdate(req *logical.Request, data *framework.F
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1391,10 +1405,10 @@ func (b *backend) pathRolePoliciesUpdate(req *logical.Request, data *framework.F
 
 	role.Policies = policyutil.ParsePolicies(policiesRaw)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRolePoliciesRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolePoliciesRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1404,7 +1418,7 @@ func (b *backend) pathRolePoliciesRead(req *logical.Request, data *framework.Fie
 	lock.RLock()
 	defer lock.RUnlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1417,7 +1431,7 @@ func (b *backend) pathRolePoliciesRead(req *logical.Request, data *framework.Fie
 	}
 }
 
-func (b *backend) pathRolePoliciesDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolePoliciesDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1427,7 +1441,7 @@ func (b *backend) pathRolePoliciesDelete(req *logical.Request, data *framework.F
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1437,10 +1451,10 @@ func (b *backend) pathRolePoliciesDelete(req *logical.Request, data *framework.F
 
 	role.Policies = []string{}
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleSecretIDNumUsesUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDNumUsesUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1450,7 +1464,7 @@ func (b *backend) pathRoleSecretIDNumUsesUpdate(req *logical.Request, data *fram
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1463,13 +1477,13 @@ func (b *backend) pathRoleSecretIDNumUsesUpdate(req *logical.Request, data *fram
 		if role.SecretIDNumUses < 0 {
 			return logical.ErrorResponse("secret_id_num_uses cannot be negative"), nil
 		}
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing secret_id_num_uses"), nil
 	}
 }
 
-func (b *backend) pathRoleRoleIDUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleRoleIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1479,7 +1493,7 @@ func (b *backend) pathRoleRoleIDUpdate(req *logical.Request, data *framework.Fie
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1493,10 +1507,10 @@ func (b *backend) pathRoleRoleIDUpdate(req *logical.Request, data *framework.Fie
 		return logical.ErrorResponse("missing role_id"), nil
 	}
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, previousRoleID)
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, previousRoleID)
 }
 
-func (b *backend) pathRoleRoleIDRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleRoleIDRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1506,7 +1520,7 @@ func (b *backend) pathRoleRoleIDRead(req *logical.Request, data *framework.Field
 	lock.RLock()
 	defer lock.RUnlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1519,7 +1533,7 @@ func (b *backend) pathRoleRoleIDRead(req *logical.Request, data *framework.Field
 	}
 }
 
-func (b *backend) pathRoleSecretIDNumUsesRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDNumUsesRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1529,7 +1543,7 @@ func (b *backend) pathRoleSecretIDNumUsesRead(req *logical.Request, data *framew
 	lock.RLock()
 	defer lock.RUnlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1542,7 +1556,7 @@ func (b *backend) pathRoleSecretIDNumUsesRead(req *logical.Request, data *framew
 	}
 }
 
-func (b *backend) pathRoleSecretIDNumUsesDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDNumUsesDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1552,7 +1566,7 @@ func (b *backend) pathRoleSecretIDNumUsesDelete(req *logical.Request, data *fram
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1562,10 +1576,10 @@ func (b *backend) pathRoleSecretIDNumUsesDelete(req *logical.Request, data *fram
 
 	role.SecretIDNumUses = data.GetDefaultOrZero("secret_id_num_uses").(int)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleSecretIDTTLUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDTTLUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1575,7 +1589,7 @@ func (b *backend) pathRoleSecretIDTTLUpdate(req *logical.Request, data *framewor
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1585,13 +1599,13 @@ func (b *backend) pathRoleSecretIDTTLUpdate(req *logical.Request, data *framewor
 
 	if secretIDTTLRaw, ok := data.GetOk("secret_id_ttl"); ok {
 		role.SecretIDTTL = time.Second * time.Duration(secretIDTTLRaw.(int))
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing secret_id_ttl"), nil
 	}
 }
 
-func (b *backend) pathRoleSecretIDTTLRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDTTLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1601,7 +1615,7 @@ func (b *backend) pathRoleSecretIDTTLRead(req *logical.Request, data *framework.
 	lock.RLock()
 	defer lock.RUnlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1615,7 +1629,7 @@ func (b *backend) pathRoleSecretIDTTLRead(req *logical.Request, data *framework.
 	}
 }
 
-func (b *backend) pathRoleSecretIDTTLDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDTTLDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1625,7 +1639,7 @@ func (b *backend) pathRoleSecretIDTTLDelete(req *logical.Request, data *framewor
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1635,10 +1649,10 @@ func (b *backend) pathRoleSecretIDTTLDelete(req *logical.Request, data *framewor
 
 	role.SecretIDTTL = time.Second * time.Duration(data.GetDefaultOrZero("secret_id_ttl").(int))
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRolePeriodUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolePeriodUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1648,7 +1662,7 @@ func (b *backend) pathRolePeriodUpdate(req *logical.Request, data *framework.Fie
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1661,13 +1675,13 @@ func (b *backend) pathRolePeriodUpdate(req *logical.Request, data *framework.Fie
 		if role.Period > b.System().MaxLeaseTTL() {
 			return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", role.Period.String(), b.System().MaxLeaseTTL().String())), nil
 		}
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing period"), nil
 	}
 }
 
-func (b *backend) pathRolePeriodRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolePeriodRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1677,7 +1691,7 @@ func (b *backend) pathRolePeriodRead(req *logical.Request, data *framework.Field
 	lock.RLock()
 	defer lock.RUnlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1691,7 +1705,7 @@ func (b *backend) pathRolePeriodRead(req *logical.Request, data *framework.Field
 	}
 }
 
-func (b *backend) pathRolePeriodDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolePeriodDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1701,7 +1715,7 @@ func (b *backend) pathRolePeriodDelete(req *logical.Request, data *framework.Fie
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1711,10 +1725,10 @@ func (b *backend) pathRolePeriodDelete(req *logical.Request, data *framework.Fie
 
 	role.Period = time.Second * time.Duration(data.GetDefaultOrZero("period").(int))
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleTokenNumUsesUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleTokenNumUsesUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1724,7 +1738,7 @@ func (b *backend) pathRoleTokenNumUsesUpdate(req *logical.Request, data *framewo
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1734,13 +1748,13 @@ func (b *backend) pathRoleTokenNumUsesUpdate(req *logical.Request, data *framewo
 
 	if tokenNumUsesRaw, ok := data.GetOk("token_num_uses"); ok {
 		role.TokenNumUses = tokenNumUsesRaw.(int)
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing token_num_uses"), nil
 	}
 }
 
-func (b *backend) pathRoleTokenNumUsesRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleTokenNumUsesRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1750,7 +1764,7 @@ func (b *backend) pathRoleTokenNumUsesRead(req *logical.Request, data *framework
 	lock.RLock()
 	defer lock.RUnlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1763,7 +1777,7 @@ func (b *backend) pathRoleTokenNumUsesRead(req *logical.Request, data *framework
 	}
 }
 
-func (b *backend) pathRoleTokenNumUsesDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleTokenNumUsesDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1773,7 +1787,7 @@ func (b *backend) pathRoleTokenNumUsesDelete(req *logical.Request, data *framewo
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1783,10 +1797,10 @@ func (b *backend) pathRoleTokenNumUsesDelete(req *logical.Request, data *framewo
 
 	role.TokenNumUses = data.GetDefaultOrZero("token_num_uses").(int)
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleTokenTTLUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleTokenTTLUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1796,7 +1810,7 @@ func (b *backend) pathRoleTokenTTLUpdate(req *logical.Request, data *framework.F
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1809,13 +1823,13 @@ func (b *backend) pathRoleTokenTTLUpdate(req *logical.Request, data *framework.F
 		if role.TokenMaxTTL > time.Duration(0) && role.TokenTTL > role.TokenMaxTTL {
 			return logical.ErrorResponse("token_ttl should not be greater than token_max_ttl"), nil
 		}
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing token_ttl"), nil
 	}
 }
 
-func (b *backend) pathRoleTokenTTLRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleTokenTTLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1825,7 +1839,7 @@ func (b *backend) pathRoleTokenTTLRead(req *logical.Request, data *framework.Fie
 	lock.RLock()
 	defer lock.RUnlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1839,7 +1853,7 @@ func (b *backend) pathRoleTokenTTLRead(req *logical.Request, data *framework.Fie
 	}
 }
 
-func (b *backend) pathRoleTokenTTLDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleTokenTTLDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1849,7 +1863,7 @@ func (b *backend) pathRoleTokenTTLDelete(req *logical.Request, data *framework.F
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1859,10 +1873,10 @@ func (b *backend) pathRoleTokenTTLDelete(req *logical.Request, data *framework.F
 
 	role.TokenTTL = time.Second * time.Duration(data.GetDefaultOrZero("token_ttl").(int))
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleTokenMaxTTLUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleTokenMaxTTLUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1872,7 +1886,7 @@ func (b *backend) pathRoleTokenMaxTTLUpdate(req *logical.Request, data *framewor
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1885,13 +1899,13 @@ func (b *backend) pathRoleTokenMaxTTLUpdate(req *logical.Request, data *framewor
 		if role.TokenMaxTTL > time.Duration(0) && role.TokenTTL > role.TokenMaxTTL {
 			return logical.ErrorResponse("token_max_ttl should be greater than or equal to token_ttl"), nil
 		}
-		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+		return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 	} else {
 		return logical.ErrorResponse("missing token_max_ttl"), nil
 	}
 }
 
-func (b *backend) pathRoleTokenMaxTTLRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleTokenMaxTTLRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1901,7 +1915,7 @@ func (b *backend) pathRoleTokenMaxTTLRead(req *logical.Request, data *framework.
 	lock.RLock()
 	defer lock.RUnlock()
 
-	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+	if role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName)); err != nil {
 		return nil, err
 	} else if role == nil {
 		return nil, nil
@@ -1915,7 +1929,7 @@ func (b *backend) pathRoleTokenMaxTTLRead(req *logical.Request, data *framework.
 	}
 }
 
-func (b *backend) pathRoleTokenMaxTTLDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleTokenMaxTTLDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1925,7 +1939,7 @@ func (b *backend) pathRoleTokenMaxTTLDelete(req *logical.Request, data *framewor
 	lock.Lock()
 	defer lock.Unlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -1935,22 +1949,22 @@ func (b *backend) pathRoleTokenMaxTTLDelete(req *logical.Request, data *framewor
 
 	role.TokenMaxTTL = time.Second * time.Duration(data.GetDefaultOrZero("token_max_ttl").(int))
 
-	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	return nil, b.setRoleEntry(ctx, req.Storage, roleName, role, "")
 }
 
-func (b *backend) pathRoleSecretIDUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	secretID, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate secret_id: %v", err)
 	}
-	return b.handleRoleSecretIDCommon(req, data, secretID)
+	return b.handleRoleSecretIDCommon(ctx, req, data, secretID)
 }
 
-func (b *backend) pathRoleCustomSecretIDUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.handleRoleSecretIDCommon(req, data, data.Get("secret_id").(string))
+func (b *backend) pathRoleCustomSecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRoleSecretIDCommon(ctx, req, data, data.Get("secret_id").(string))
 }
 
-func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework.FieldData, secretID string) (*logical.Response, error) {
+func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, secretID string) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1964,7 +1978,7 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 	lock.RLock()
 	defer lock.RUnlock()
 
-	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	role, err := b.roleEntry(ctx, req.Storage, strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -2008,7 +2022,11 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
 	}
 
-	if secretIDStorage, err = b.registerSecretIDEntry(req.Storage, roleName, secretID, role.HMACKey, secretIDStorage); err != nil {
+	if role.LowerCaseRoleName {
+		roleName = strings.ToLower(roleName)
+	}
+
+	if secretIDStorage, err = b.registerSecretIDEntry(ctx, req.Storage, roleName, secretID, role.HMACKey, secretIDStorage); err != nil {
 		return nil, fmt.Errorf("failed to store secret_id: %v", err)
 	}
 
@@ -2029,7 +2047,7 @@ func (b *backend) roleLock(roleName string) *locksutil.LockEntry {
 }
 
 // setRoleIDEntry creates a storage entry that maps RoleID to Role
-func (b *backend) setRoleIDEntry(s logical.Storage, roleID string, roleIDEntry *roleIDStorageEntry) error {
+func (b *backend) setRoleIDEntry(ctx context.Context, s logical.Storage, roleID string, roleIDEntry *roleIDStorageEntry) error {
 	lock := b.roleIDLock(roleID)
 	lock.Lock()
 	defer lock.Unlock()
@@ -2044,14 +2062,14 @@ func (b *backend) setRoleIDEntry(s logical.Storage, roleID string, roleIDEntry *
 	if err != nil {
 		return err
 	}
-	if err = s.Put(entry); err != nil {
+	if err = s.Put(ctx, entry); err != nil {
 		return err
 	}
 	return nil
 }
 
 // roleIDEntry is used to read the storage entry that maps RoleID to Role
-func (b *backend) roleIDEntry(s logical.Storage, roleID string) (*roleIDStorageEntry, error) {
+func (b *backend) roleIDEntry(ctx context.Context, s logical.Storage, roleID string) (*roleIDStorageEntry, error) {
 	if roleID == "" {
 		return nil, fmt.Errorf("missing roleID")
 	}
@@ -2068,7 +2086,7 @@ func (b *backend) roleIDEntry(s logical.Storage, roleID string) (*roleIDStorageE
 	}
 	entryIndex := "role_id/" + salt.SaltID(roleID)
 
-	if entry, err := s.Get(entryIndex); err != nil {
+	if entry, err := s.Get(ctx, entryIndex); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -2081,7 +2099,7 @@ func (b *backend) roleIDEntry(s logical.Storage, roleID string) (*roleIDStorageE
 
 // roleIDEntryDelete is used to remove the secondary index that maps the
 // RoleID to the Role itself.
-func (b *backend) roleIDEntryDelete(s logical.Storage, roleID string) error {
+func (b *backend) roleIDEntryDelete(ctx context.Context, s logical.Storage, roleID string) error {
 	if roleID == "" {
 		return fmt.Errorf("missing roleID")
 	}
@@ -2096,7 +2114,7 @@ func (b *backend) roleIDEntryDelete(s logical.Storage, roleID string) error {
 	}
 	entryIndex := "role_id/" + salt.SaltID(roleID)
 
-	return s.Delete(entryIndex)
+	return s.Delete(ctx, entryIndex)
 }
 
 var roleHelp = map[string][2]string{
@@ -2113,7 +2131,7 @@ role registered here will have access to the role. If a SecretID is desired
 to be generated against only this specific role, it can be done via
 'role/<role_name>/secret-id' and 'role/<role_name>/custom-secret-id' endpoints.
 The properties of the SecretID created against the role and the properties
-of the token issued with the SecretID generated againt the role, can be
+of the token issued with the SecretID generated against the role, can be
 configured using the parameters of this endpoint.`,
 	},
 	"role-bind-secret-id": {

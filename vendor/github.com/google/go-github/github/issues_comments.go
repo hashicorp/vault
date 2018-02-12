@@ -13,7 +13,7 @@ import (
 
 // IssueComment represents a comment left on an issue.
 type IssueComment struct {
-	ID        *int       `json:"id,omitempty"`
+	ID        *int64     `json:"id,omitempty"`
 	Body      *string    `json:"body,omitempty"`
 	User      *User      `json:"user,omitempty"`
 	Reactions *Reactions `json:"reactions,omitempty"`

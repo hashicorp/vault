@@ -19,7 +19,7 @@ type UsersService service
 // User represents a GitHub user.
 type User struct {
 	Login             *string    `json:"login,omitempty"`
-	ID                *int       `json:"id,omitempty"`
+	ID                *int64     `json:"id,omitempty"`
 	AvatarURL         *string    `json:"avatar_url,omitempty"`
 	HTMLURL           *string    `json:"html_url,omitempty"`
 	GravatarID        *string    `json:"gravatar_id,omitempty"`
@@ -99,7 +99,7 @@ func (s *UsersService) Get(ctx context.Context, user string) (*User, *Response, 
 // GetByID fetches a user.
 //
 // Note: GetByID uses the undocumented GitHub API endpoint /user/:id.
-func (s *UsersService) GetByID(ctx context.Context, id int) (*User, *Response, error) {
+func (s *UsersService) GetByID(ctx context.Context, id int64) (*User, *Response, error) {
 	u := fmt.Sprintf("user/%d", id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -138,7 +138,7 @@ func (s *UsersService) Edit(ctx context.Context, user *User) (*User, *Response, 
 // method.
 type UserListOptions struct {
 	// ID of the last user seen
-	Since int `url:"since,omitempty"`
+	Since int64 `url:"since,omitempty"`
 
 	ListOptions
 }
@@ -199,7 +199,7 @@ func (s *UsersService) ListInvitations(ctx context.Context, opt *ListOptions) ([
 // authenticated user.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/invitations/#accept-a-repository-invitation
-func (s *UsersService) AcceptInvitation(ctx context.Context, invitationID int) (*Response, error) {
+func (s *UsersService) AcceptInvitation(ctx context.Context, invitationID int64) (*Response, error) {
 	u := fmt.Sprintf("user/repository_invitations/%v", invitationID)
 	req, err := s.client.NewRequest("PATCH", u, nil)
 	if err != nil {
@@ -216,7 +216,7 @@ func (s *UsersService) AcceptInvitation(ctx context.Context, invitationID int) (
 // authenticated user.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/invitations/#decline-a-repository-invitation
-func (s *UsersService) DeclineInvitation(ctx context.Context, invitationID int) (*Response, error) {
+func (s *UsersService) DeclineInvitation(ctx context.Context, invitationID int64) (*Response, error) {
 	u := fmt.Sprintf("user/repository_invitations/%v", invitationID)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {

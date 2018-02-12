@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"encoding/base64"
 	"strconv"
 	"strings"
@@ -31,13 +32,13 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 			"type": "ecdsa-p256",
 		},
 	}
-	_, err := b.HandleRequest(req)
+	_, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Now, change the key value to something we control
-	p, lock, err := b.lm.GetPolicyShared(storage, "foo")
+	p, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +80,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 		t.Fatal("could not set D")
 	}
 	p.Keys[strconv.Itoa(p.LatestVersion)] = keyEntry
-	if err = p.Persist(storage); err != nil {
+	if err = p.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
 	req.Data = map[string]interface{}{
@@ -88,7 +89,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 
 	signRequest := func(req *logical.Request, errExpected bool, postpath string) string {
 		req.Path = "sign/foo" + postpath
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			t.Fatal(err)
 		}
@@ -114,7 +115,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	verifyRequest := func(req *logical.Request, errExpected bool, postpath, sig string) {
 		req.Path = "verify/foo" + postpath
 		req.Data["signature"] = sig
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			t.Fatalf("got error: %v, sig was %v", err, sig)
 		}
@@ -188,17 +189,17 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	signRequest(req, true, "")
 
 	// Rotate and set min decryption version
-	err = p.Rotate(storage)
+	err = p.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = p.Rotate(storage)
+	err = p.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	p.MinDecryptionVersion = 2
-	if err = p.Persist(storage); err != nil {
+	if err = p.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
 
@@ -230,7 +231,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			"type": "ed25519",
 		},
 	}
-	_, err := b.HandleRequest(req)
+	_, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,20 +246,20 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			"derived": true,
 		},
 	}
-	_, err = b.HandleRequest(req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get the keys for later
-	fooP, lock, err := b.lm.GetPolicyShared(storage, "foo")
+	fooP, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	// We don't care as we're the only one using this
 	lock.RUnlock()
 
-	barP, lock, err := b.lm.GetPolicyShared(storage, "bar")
+	barP, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "bar")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +269,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		// Delete any key that exists in the request
 		delete(req.Data, "public_key")
 		req.Path = "sign/" + postpath
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			t.Fatal(err)
 		}
@@ -298,7 +299,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	verifyRequest := func(req *logical.Request, errExpected bool, postpath, sig string) {
 		req.Path = "verify/" + postpath
 		req.Data["signature"] = sig
-		resp, err := b.HandleRequest(req)
+		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
 			t.Fatalf("got error: %v, sig was %v", err, sig)
 		}
@@ -334,7 +335,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 				Operation: logical.ReadOperation,
 				Path:      "keys/" + postpath,
 			}
-			keyReadResp, err := b.HandleRequest(keyReadReq)
+			keyReadResp, err := b.HandleRequest(context.Background(), keyReadReq)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -349,7 +350,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			keyReadReq.Data = map[string]interface{}{
 				"context": "abcd",
 			}
-			keyReadResp, err = b.HandleRequest(keyReadReq)
+			keyReadResp, err = b.HandleRequest(context.Background(), keyReadReq)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -382,28 +383,28 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	v1sig := sig
 
 	// Rotate and set min decryption version
-	err = fooP.Rotate(storage)
+	err = fooP.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = fooP.Rotate(storage)
+	err = fooP.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fooP.MinDecryptionVersion = 2
-	if err = fooP.Persist(storage); err != nil {
+	if err = fooP.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
-	err = barP.Rotate(storage)
+	err = barP.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = barP.Rotate(storage)
+	err = barP.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 	barP.MinDecryptionVersion = 2
-	if err = barP.Persist(storage); err != nil {
+	if err = barP.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
 

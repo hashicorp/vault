@@ -25,9 +25,9 @@ import (
 // data format version
 const (
 	dfvBaseline intType = 1
-	dfvDoNotUse         = 3
-	dfvSPS06            = 4 //see docu
-	dfvBINTEXT          = 6
+	dfvDoNotUse intType = 3
+	dfvSPS06    intType = 4 //see docu
+	dfvBINTEXT  intType = 6
 )
 
 // client distribution mode

@@ -8,50 +8,68 @@ const (
 	OldReplicationSecondary
 	OldReplicationBootstrapping
 
-	ReplicationDisabled           ReplicationState = 0
+	ReplicationUnknown            ReplicationState = 0
 	ReplicationPerformancePrimary ReplicationState = 1 << iota
 	ReplicationPerformanceSecondary
-	ReplicationBootstrapping
+	OldSplitReplicationBootstrapping
 	ReplicationDRPrimary
 	ReplicationDRSecondary
+	ReplicationPerformanceBootstrapping
+	ReplicationDRBootstrapping
+	ReplicationPerformanceDisabled
+	ReplicationDRDisabled
 )
 
-func (r ReplicationState) String() string {
+func (r ReplicationState) string() string {
 	switch r {
 	case ReplicationPerformanceSecondary:
-		return "perf-secondary"
+		return "secondary"
 	case ReplicationPerformancePrimary:
-		return "perf-primary"
-	case ReplicationBootstrapping:
+		return "primary"
+	case ReplicationPerformanceBootstrapping:
 		return "bootstrapping"
+	case ReplicationPerformanceDisabled:
+		return "disabled"
 	case ReplicationDRPrimary:
-		return "dr-primary"
+		return "primary"
 	case ReplicationDRSecondary:
-		return "dr-secondary"
+		return "secondary"
+	case ReplicationDRBootstrapping:
+		return "bootstrapping"
+	case ReplicationDRDisabled:
+		return "disabled"
 	}
 
-	return "disabled"
+	return "unknown"
 }
 
 func (r ReplicationState) GetDRString() string {
 	switch {
+	case r.HasState(ReplicationDRBootstrapping):
+		return ReplicationDRBootstrapping.string()
 	case r.HasState(ReplicationDRPrimary):
-		return ReplicationDRPrimary.String()
+		return ReplicationDRPrimary.string()
 	case r.HasState(ReplicationDRSecondary):
-		return ReplicationDRSecondary.String()
+		return ReplicationDRSecondary.string()
+	case r.HasState(ReplicationDRDisabled):
+		return ReplicationDRDisabled.string()
 	default:
-		return ReplicationDisabled.String()
+		return "unknown"
 	}
 }
 
 func (r ReplicationState) GetPerformanceString() string {
 	switch {
+	case r.HasState(ReplicationPerformanceBootstrapping):
+		return ReplicationPerformanceBootstrapping.string()
 	case r.HasState(ReplicationPerformancePrimary):
-		return ReplicationPerformancePrimary.String()
+		return ReplicationPerformancePrimary.string()
 	case r.HasState(ReplicationPerformanceSecondary):
-		return ReplicationPerformanceSecondary.String()
+		return ReplicationPerformanceSecondary.string()
+	case r.HasState(ReplicationPerformanceDisabled):
+		return ReplicationPerformanceDisabled.string()
 	default:
-		return ReplicationDisabled.String()
+		return "unknown"
 	}
 }
 

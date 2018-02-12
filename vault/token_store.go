@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -69,12 +70,12 @@ var (
 	// pathSuffixSanitize is used to ensure a path suffix in a role is valid.
 	pathSuffixSanitize = regexp.MustCompile("\\w[\\w-.]+\\w")
 
-	destroyCubbyhole = func(ts *TokenStore, saltedID string) error {
+	destroyCubbyhole = func(ctx context.Context, ts *TokenStore, saltedID string) error {
 		if ts.cubbyholeBackend == nil {
 			// Should only ever happen in testing
 			return nil
 		}
-		return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
+		return ts.cubbyholeBackend.revoke(ctx, salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 	}
 )
 
@@ -94,20 +95,19 @@ type TokenStore struct {
 
 	tokenLocks []*locksutil.LockEntry
 
-	cubbyholeDestroyer func(*TokenStore, string) error
+	cubbyholeDestroyer func(context.Context, *TokenStore, string) error
 
 	logger log.Logger
 
-	saltLock   sync.RWMutex
-	salt       *salt.Salt
-	saltConfig *salt.Config
+	saltLock sync.RWMutex
+	salt     *salt.Salt
 
 	tidyLock int64
 }
 
 // NewTokenStore is used to construct a token store that is
 // backed by the given barrier view.
-func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) {
+func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) (*TokenStore, error) {
 	// Create a sub-view
 	view := c.systemBarrierView.SubView(tokenSubPath)
 
@@ -122,7 +122,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	if c.policyStore != nil {
 		t.policyLookupFunc = func(name string) (*Policy, error) {
-			return c.policyStore.GetPolicy(name, PolicyTypeToken)
+			return c.policyStore.GetPolicy(ctx, name, PolicyTypeToken)
 		}
 	}
 
@@ -473,30 +473,14 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				HelpDescription: strings.TrimSpace(tokenTidyDesc),
 			},
 		},
-
-		Init: t.Initialize,
 	}
 
-	t.Backend.Setup(config)
+	t.Backend.Setup(ctx, config)
 
 	return t, nil
 }
 
-func (ts *TokenStore) Initialize() error {
-	ts.saltLock.Lock()
-
-	// Setup the salt config
-	ts.saltConfig = &salt.Config{
-		HashFunc: salt.SHA1Hash,
-		Location: salt.DefaultLocation,
-	}
-	ts.salt = nil
-	ts.saltLock.Unlock()
-
-	return nil
-}
-
-func (ts *TokenStore) Invalidate(key string) {
+func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
 	//ts.logger.Trace("token: invalidating key", "key", key)
 
 	switch key {
@@ -519,7 +503,10 @@ func (ts *TokenStore) Salt() (*salt.Salt, error) {
 	if ts.salt != nil {
 		return ts.salt, nil
 	}
-	salt, err := salt.NewSalt(ts.view, ts.saltConfig)
+	salt, err := salt.NewSalt(ts.view, &salt.Config{
+		HashFunc: salt.SHA1Hash,
+		Location: salt.DefaultLocation,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -690,22 +677,21 @@ func (ts *TokenStore) SaltID(id string) (string, error) {
 }
 
 // RootToken is used to generate a new token with root privileges and no parent
-func (ts *TokenStore) rootToken() (*TokenEntry, error) {
+func (ts *TokenStore) rootToken(ctx context.Context) (*TokenEntry, error) {
 	te := &TokenEntry{
 		Policies:     []string{"root"},
 		Path:         "auth/token/root",
 		DisplayName:  "root",
 		CreationTime: time.Now().Unix(),
 	}
-	if err := ts.create(te); err != nil {
+	if err := ts.create(ctx, te); err != nil {
 		return nil, err
 	}
 	return te, nil
 }
 
-func (ts *TokenStore) tokenStoreAccessorList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := ts.view.List(accessorPrefix)
+func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := ts.view.List(ctx, accessorPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -714,7 +700,7 @@ func (ts *TokenStore) tokenStoreAccessorList(
 
 	ret := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		aEntry, err := ts.lookupBySaltedAccessor(entry, false)
+		aEntry, err := ts.lookupBySaltedAccessor(ctx, entry, false)
 		if err != nil {
 			resp.AddWarning("Found an accessor entry that could not be successfully decoded")
 			continue
@@ -734,7 +720,7 @@ func (ts *TokenStore) tokenStoreAccessorList(
 
 // createAccessor is used to create an identifier for the token ID.
 // A storage index, mapping the accessor to the token ID is also created.
-func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
+func (ts *TokenStore) createAccessor(ctx context.Context, entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "createAccessor"}, time.Now())
 
 	// Create a random accessor
@@ -761,7 +747,7 @@ func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
 	}
 
 	le := &logical.StorageEntry{Key: path, Value: aEntryBytes}
-	if err := ts.view.Put(le); err != nil {
+	if err := ts.view.Put(ctx, le); err != nil {
 		return fmt.Errorf("failed to persist accessor index entry: %v", err)
 	}
 	return nil
@@ -769,7 +755,7 @@ func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
 
 // Create is used to create a new token entry. The entry is assigned
 // a newly generated ID if not provided.
-func (ts *TokenStore) create(entry *TokenEntry) error {
+func (ts *TokenStore) create(ctx context.Context, entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
 	// Generate an ID if necessary
 	if entry.ID == "" {
@@ -784,31 +770,31 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 	if err != nil {
 		return err
 	}
-	exist, _ := ts.lookupSalted(saltedId, true)
+	exist, _ := ts.lookupSalted(ctx, saltedId, true)
 	if exist != nil {
 		return fmt.Errorf("cannot create a token with a duplicate ID")
 	}
 
 	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
 
-	err = ts.createAccessor(entry)
+	err = ts.createAccessor(ctx, entry)
 	if err != nil {
 		return err
 	}
 
-	return ts.storeCommon(entry, true)
+	return ts.storeCommon(ctx, entry, true)
 }
 
 // Store is used to store an updated token entry without writing the
 // secondary index.
-func (ts *TokenStore) store(entry *TokenEntry) error {
+func (ts *TokenStore) store(ctx context.Context, entry *TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "store"}, time.Now())
-	return ts.storeCommon(entry, false)
+	return ts.storeCommon(ctx, entry, false)
 }
 
 // storeCommon handles the actual storage of an entry, possibly generating
 // secondary indexes
-func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error {
+func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeSecondary bool) error {
 	saltedId, err := ts.SaltID(entry.ID)
 	if err != nil {
 		return err
@@ -827,7 +813,7 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 		// escaping the revocation chain.
 		if entry.Parent != "" {
 			// Ensure the parent exists
-			parent, err := ts.Lookup(entry.Parent)
+			parent, err := ts.Lookup(ctx, entry.Parent)
 			if err != nil {
 				return fmt.Errorf("failed to lookup parent: %v", err)
 			}
@@ -842,7 +828,7 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 			}
 			path := parentPrefix + parentSaltedID + "/" + saltedId
 			le := &logical.StorageEntry{Key: path}
-			if err := ts.view.Put(le); err != nil {
+			if err := ts.view.Put(ctx, le); err != nil {
 				return fmt.Errorf("failed to persist entry: %v", err)
 			}
 		}
@@ -854,7 +840,7 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
 		le.SealWrap = true
 	}
-	if err := ts.view.Put(le); err != nil {
+	if err := ts.view.Put(ctx, le); err != nil {
 		return fmt.Errorf("failed to persist entry: %v", err)
 	}
 	return nil
@@ -866,7 +852,7 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 // locking here isn't perfect, as other parts of the code may update an entry,
 // but usually none after the entry is already created...so this is pretty
 // good.
-func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
+func (ts *TokenStore) UseToken(ctx context.Context, te *TokenEntry) (*TokenEntry, error) {
 	if te == nil {
 		return nil, fmt.Errorf("invalid token entry provided for use count decrementing")
 	}
@@ -894,7 +880,7 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 		return nil, err
 	}
 
-	te, err = ts.lookupSalted(saltedID, false)
+	te, err = ts.lookupSalted(ctx, saltedID, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh entry: %v", err)
 	}
@@ -918,7 +904,7 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 		te.NumUses -= 1
 	}
 
-	err = ts.storeCommon(te, false)
+	err = ts.storeCommon(ctx, te, false)
 	if err != nil {
 		return nil, err
 	}
@@ -926,17 +912,17 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 	return te, nil
 }
 
-func (ts *TokenStore) UseTokenByID(id string) (*TokenEntry, error) {
-	te, err := ts.Lookup(id)
+func (ts *TokenStore) UseTokenByID(ctx context.Context, id string) (*TokenEntry, error) {
+	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return te, err
 	}
 
-	return ts.UseToken(te)
+	return ts.UseToken(ctx, te)
 }
 
 // Lookup is used to find a token given its ID. It acquires a read lock, then calls lookupSalted.
-func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
+func (ts *TokenStore) Lookup(ctx context.Context, id string) (*TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
@@ -950,12 +936,12 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ts.lookupSalted(saltedID, false)
+	return ts.lookupSalted(ctx, saltedID, false)
 }
 
 // lookupTainted is used to find a token that may or maynot be tainted given its
 // ID. It acquires a read lock, then calls lookupSalted.
-func (ts *TokenStore) lookupTainted(id string) (*TokenEntry, error) {
+func (ts *TokenStore) lookupTainted(ctx context.Context, id string) (*TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
@@ -969,16 +955,16 @@ func (ts *TokenStore) lookupTainted(id string) (*TokenEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ts.lookupSalted(saltedID, true)
+	return ts.lookupSalted(ctx, saltedID, true)
 }
 
 // lookupSalted is used to find a token given its salted ID. If tainted is
 // true, entries that are in some revocation state (currently, indicated by num
 // uses < 0), the entry will be returned anyways
-func (ts *TokenStore) lookupSalted(saltedID string, tainted bool) (*TokenEntry, error) {
+func (ts *TokenStore) lookupSalted(ctx context.Context, saltedID string, tainted bool) (*TokenEntry, error) {
 	// Lookup token
 	path := lookupPrefix + saltedID
-	raw, err := ts.view.Get(path)
+	raw, err := ts.view.Get(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read entry: %v", err)
 	}
@@ -1049,7 +1035,7 @@ func (ts *TokenStore) lookupSalted(saltedID string, tainted bool) (*TokenEntry, 
 
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {
-		if err := ts.storeCommon(entry, false); err != nil {
+		if err := ts.storeCommon(ctx, entry, false); err != nil {
 			return nil, fmt.Errorf("failed to persist token upgrade: %v", err)
 		}
 	}
@@ -1059,7 +1045,7 @@ func (ts *TokenStore) lookupSalted(saltedID string, tainted bool) (*TokenEntry, 
 
 // Revoke is used to invalidate a given token, any child tokens
 // will be orphaned.
-func (ts *TokenStore) Revoke(id string) error {
+func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke"}, time.Now())
 	if id == "" {
 		return fmt.Errorf("cannot revoke blank token")
@@ -1069,16 +1055,16 @@ func (ts *TokenStore) Revoke(id string) error {
 	if err != nil {
 		return err
 	}
-	return ts.revokeSalted(saltedID)
+	return ts.revokeSalted(ctx, saltedID)
 }
 
 // revokeSalted is used to invalidate a given salted token,
 // any child tokens will be orphaned.
-func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
+func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret error) {
 	// Protect the entry lookup/writing with locks. The rub here is that we
 	// don't know the ID until we look it up once, so first we look it up, then
 	// do a locked lookup.
-	entry, err := ts.lookupSalted(saltedId, true)
+	entry, err := ts.lookupSalted(ctx, saltedId, true)
 	if err != nil {
 		return err
 	}
@@ -1090,7 +1076,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 	lock.Lock()
 
 	// Lookup the token first
-	entry, err = ts.lookupSalted(saltedId, true)
+	entry, err = ts.lookupSalted(ctx, saltedId, true)
 	if err != nil {
 		lock.Unlock()
 		return err
@@ -1114,7 +1100,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 	// around until after the rest of this function is attempted, and a
 	// tidy function can key off of this value to try again.
 	entry.NumUses = tokenRevocationInProgress
-	err = ts.storeCommon(entry, false)
+	err = ts.storeCommon(ctx, entry, false)
 	lock.Unlock()
 	if err != nil {
 		return err
@@ -1130,7 +1116,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 
 			// Lookup the token again to make sure something else didn't
 			// revoke in the interim
-			entry, err := ts.lookupSalted(saltedId, true)
+			entry, err := ts.lookupSalted(ctx, saltedId, true)
 			if err != nil {
 				return
 			}
@@ -1139,14 +1125,14 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 			// out what it means if it's already -3 after the -2 above
 			if entry != nil {
 				entry.NumUses = tokenRevocationFailed
-				ts.storeCommon(entry, false)
+				ts.storeCommon(ctx, entry, false)
 			}
 		}
 	}()
 
 	// Destroy the token's cubby. This should go first as it's a
 	// security-sensitive item.
-	err = ts.cubbyholeDestroyer(ts, saltedId)
+	err = ts.cubbyholeDestroyer(ctx, ts, saltedId)
 	if err != nil {
 		return err
 	}
@@ -1165,7 +1151,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 		}
 
 		path := parentPrefix + parentSaltedID + "/" + saltedId
-		if err = ts.view.Delete(path); err != nil {
+		if err = ts.view.Delete(ctx, path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
@@ -1178,14 +1164,14 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 		}
 
 		path := accessorPrefix + accessorSaltedID
-		if err = ts.view.Delete(path); err != nil {
+		if err = ts.view.Delete(ctx, path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
 
 	// Now that the entry is not usable for any revocation tasks, nuke it
 	path := lookupPrefix + saltedId
-	if err = ts.view.Delete(path); err != nil {
+	if err = ts.view.Delete(ctx, path); err != nil {
 		return fmt.Errorf("failed to delete entry: %v", err)
 	}
 
@@ -1194,7 +1180,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 
 // RevokeTree is used to invalide a given token and all
 // child tokens.
-func (ts *TokenStore) RevokeTree(id string) error {
+func (ts *TokenStore) RevokeTree(ctx context.Context, id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
 	// Verify the token is not blank
 	if id == "" {
@@ -1208,43 +1194,52 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	}
 
 	// Nuke the entire tree recursively
-	if err := ts.revokeTreeSalted(saltedId); err != nil {
+	if err := ts.revokeTreeSalted(ctx, saltedId); err != nil {
 		return err
 	}
 	return nil
 }
 
-// revokeTreeSalted is used to invalide a given token and all
+// revokeTreeSalted is used to invalidate a given token and all
 // child tokens using a saltedID.
-func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
-	// Scan for child tokens
-	path := parentPrefix + saltedId + "/"
-	children, err := ts.view.List(path)
-	if err != nil {
-		return fmt.Errorf("failed to scan for children: %v", err)
-	}
+// Updated to be non-recursive and revoke child tokens
+// before parent tokens(DFS).
+func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedId string) error {
+	var dfs []string
+	dfs = append(dfs, saltedId)
 
-	// Recursively nuke the children. The subtle nuance here is that
-	// we don't have the acutal ID of the child, but we have the salted
-	// value. Turns out, this is good enough!
-	for _, child := range children {
-		if err := ts.revokeTreeSalted(child); err != nil {
-			return err
+	for l := len(dfs); l > 0; l = len(dfs) {
+		id := dfs[0]
+		path := parentPrefix + id + "/"
+		children, err := ts.view.List(ctx, path)
+		if err != nil {
+			return fmt.Errorf("failed to scan for children: %v", err)
+		}
+		// If the length of the children array is zero,
+		// then we are at a leaf node.
+		if len(children) == 0 {
+			if err := ts.revokeSalted(ctx, id); err != nil {
+				return fmt.Errorf("failed to revoke entry: %v", err)
+			}
+			// If the length of l is equal to 1, then the last token has been deleted
+			if l == 1 {
+				return nil
+			}
+			dfs = dfs[1:]
+		} else {
+			// If we make it here, there are children and they must
+			// be prepended.
+			dfs = append(children, dfs...)
 		}
 	}
 
-	// Revoke this entry
-	if err := ts.revokeSalted(saltedId); err != nil {
-		return fmt.Errorf("failed to revoke entry: %v", err)
-	}
 	return nil
 }
 
 // handleCreateAgainstRole handles the auth/token/create path for a role
-func (ts *TokenStore) handleCreateAgainstRole(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleCreateAgainstRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("role_name").(string)
-	roleEntry, err := ts.tokenStoreRole(name)
+	roleEntry, err := ts.tokenStoreRole(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -1252,19 +1247,19 @@ func (ts *TokenStore) handleCreateAgainstRole(
 		return logical.ErrorResponse(fmt.Sprintf("unknown role %s", name)), nil
 	}
 
-	return ts.handleCreateCommon(req, d, false, roleEntry)
+	return ts.handleCreateCommon(ctx, req, d, false, roleEntry)
 }
 
-func (ts *TokenStore) lookupByAccessor(accessor string, tainted bool) (accessorEntry, error) {
+func (ts *TokenStore) lookupByAccessor(ctx context.Context, accessor string, tainted bool) (accessorEntry, error) {
 	saltedID, err := ts.SaltID(accessor)
 	if err != nil {
 		return accessorEntry{}, err
 	}
-	return ts.lookupBySaltedAccessor(saltedID, tainted)
+	return ts.lookupBySaltedAccessor(ctx, saltedID, tainted)
 }
 
-func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string, tainted bool) (accessorEntry, error) {
-	entry, err := ts.view.Get(accessorPrefix + saltedAccessor)
+func (ts *TokenStore) lookupBySaltedAccessor(ctx context.Context, saltedAccessor string, tainted bool) (accessorEntry, error) {
+	entry, err := ts.view.Get(ctx, accessorPrefix+saltedAccessor)
 	var aEntry accessorEntry
 
 	if err != nil {
@@ -1282,7 +1277,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string, tainted bool
 			return accessorEntry{}, err
 		}
 
-		te, err := ts.lookupSalted(saltedID, tainted)
+		te, err := ts.lookupSalted(ctx, saltedID, tainted)
 		if err != nil {
 			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %s", err)
 		}
@@ -1302,7 +1297,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string, tainted bool
 
 // handleTidy handles the cleaning up of leaked accessor storage entries and
 // cleaning up of leases that are associated to tokens that are expired.
-func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var tidyErrors *multierror.Error
 
 	if !atomic.CompareAndSwapInt64(&ts.tidyLock, 0, 1) {
@@ -1316,13 +1311,13 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	defer ts.logger.Info("token: finished tidy operation on tokens")
 
 	// List out all the accessors
-	saltedAccessorList, err := ts.view.List(accessorPrefix)
+	saltedAccessorList, err := ts.view.List(ctx, accessorPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch accessor index entries: %v", err)
 	}
 
 	// First, clean up secondary index entries that are no longer valid
-	parentList, err := ts.view.List(parentPrefix)
+	parentList, err := ts.view.List(ctx, parentPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
 	}
@@ -1332,7 +1327,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	// Scan through the secondary index entries; if there is an entry
 	// with the token's salt ID at the end, remove it
 	for _, parent := range parentList {
-		children, err := ts.view.List(parentPrefix + parent)
+		children, err := ts.view.List(ctx, parentPrefix+parent)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read secondary index: %v", err))
 			continue
@@ -1347,11 +1342,11 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			// Look up tainted entries so we can be sure that if this isn't
 			// found, it doesn't exist. Doing the following without locking
 			// since appropriate locks cannot be held with salted token IDs.
-			te, _ := ts.lookupSalted(child, true)
+			te, _ := ts.lookupSalted(ctx, child, true)
 			if te == nil {
 				index := parentPrefix + parent + child
 				ts.logger.Trace("token: deleting invalid secondary index", "index", index)
-				err = ts.view.Delete(index)
+				err = ts.view.Delete(ctx, index)
 				if err != nil {
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index: %v", err))
 				}
@@ -1374,7 +1369,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			ts.logger.Info("token: checking if accessors contain valid tokens", "progress", countAccessorList)
 		}
 
-		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor, true)
+		accessorEntry, err := ts.lookupBySaltedAccessor(ctx, saltedAccessor, true)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor index: %v", err))
 			continue
@@ -1387,7 +1382,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			index := accessorPrefix + saltedAccessor
 			// If deletion of accessor fails, move on to the next
 			// item since this is just a best-effort operation
-			err = ts.view.Delete(index)
+			err = ts.view.Delete(ctx, index)
 			if err != nil {
 				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete the accessor index: %v", err))
 				continue
@@ -1406,7 +1401,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			lock.RUnlock()
 			continue
 		}
-		te, err := ts.lookupSalted(saltedId, true)
+		te, err := ts.lookupSalted(ctx, saltedId, true)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup tainted ID: %v", err))
 			lock.RUnlock()
@@ -1443,7 +1438,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			// this is just a best-effort operation. We do this last so that on
 			// next run if something above failed we still have the accessor
 			// entry to try again.
-			err = ts.view.Delete(index)
+			err = ts.view.Delete(ctx, index)
 			if err != nil {
 				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
 				continue
@@ -1464,7 +1459,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
 // the properties of the token associated with the accessor
-func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
@@ -1475,7 +1470,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 		urlaccessor = true
 	}
 
-	aEntry, err := ts.lookupByAccessor(accessor, false)
+	aEntry, err := ts.lookupByAccessor(ctx, accessor, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1492,7 +1487,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 			},
 		},
 	}
-	resp, err := ts.handleLookup(req, d)
+	resp, err := ts.handleLookup(ctx, req, d)
 	if err != nil {
 		return nil, err
 	}
@@ -1518,7 +1513,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 
 // handleUpdateRevokeAccessor handles the auth/token/revoke-accessor path for revoking
 // the token associated with the accessor
-func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
@@ -1529,13 +1524,13 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 		urlaccessor = true
 	}
 
-	aEntry, err := ts.lookupByAccessor(accessor, true)
+	aEntry, err := ts.lookupByAccessor(ctx, accessor, true)
 	if err != nil {
 		return nil, err
 	}
 
 	// Revoke the token and its children
-	if err := ts.RevokeTree(aEntry.TokenID); err != nil {
+	if err := ts.RevokeTree(ctx, aEntry.TokenID); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -1550,23 +1545,20 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 
 // handleCreate handles the auth/token/create path for creation of new orphan
 // tokens
-func (ts *TokenStore) handleCreateOrphan(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return ts.handleCreateCommon(req, d, true, nil)
+func (ts *TokenStore) handleCreateOrphan(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return ts.handleCreateCommon(ctx, req, d, true, nil)
 }
 
 // handleCreate handles the auth/token/create path for creation of new non-orphan
 // tokens
-func (ts *TokenStore) handleCreate(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return ts.handleCreateCommon(req, d, false, nil)
+func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return ts.handleCreateCommon(ctx, req, d, false, nil)
 }
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
-func (ts *TokenStore) handleCreateCommon(
-	req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
+func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
 	// Read the parent policy
-	parent, err := ts.Lookup(req.ClientToken)
+	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil || parent == nil {
 		return logical.ErrorResponse("parent token lookup failed"), logical.ErrInvalidRequest
 	}
@@ -1579,7 +1571,7 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 
 	// Check if the client token has sudo/root privileges for the requested path
-	isSudo := ts.System().SudoPrivilege(req.MountPoint+req.Path, req.ClientToken)
+	isSudo := ts.System().SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
 
 	// Read and parse the fields
 	var data struct {
@@ -1831,19 +1823,23 @@ func (ts *TokenStore) handleCreateCommon(
 
 	var periodToUse time.Duration
 	if data.Period != "" {
-		if !isSudo {
-			return logical.ErrorResponse("root or sudo privileges required to create periodic token"),
-				logical.ErrInvalidRequest
-		}
 		dur, err := parseutil.ParseDurationSecond(data.Period)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
-		if dur < 0 {
+
+		switch {
+		case dur < 0:
 			return logical.ErrorResponse("period must be positive"), logical.ErrInvalidRequest
+		case dur == 0:
+		default:
+			if !isSudo {
+				return logical.ErrorResponse("root or sudo privileges required to create periodic token"),
+					logical.ErrInvalidRequest
+			}
+			te.Period = dur
+			periodToUse = dur
 		}
-		te.Period = dur
-		periodToUse = dur
 	}
 
 	// Parse the TTL/lease if any
@@ -1944,7 +1940,7 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 
 	// Create the token
-	if err := ts.create(&te); err != nil {
+	if err := ts.create(ctx, &te); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -1981,10 +1977,9 @@ func (ts *TokenStore) handleCreateCommon(
 // handleRevokeSelf handles the auth/token/revoke-self path for revocation of tokens
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
-func (ts *TokenStore) handleRevokeSelf(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Revoke the token and its children
-	if err := ts.RevokeTree(req.ClientToken); err != nil {
+	if err := ts.RevokeTree(ctx, req.ClientToken); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
@@ -1993,8 +1988,7 @@ func (ts *TokenStore) handleRevokeSelf(
 // handleRevokeTree handles the auth/token/revoke/id path for revocation of tokens
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
-func (ts *TokenStore) handleRevokeTree(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
@@ -2006,7 +2000,7 @@ func (ts *TokenStore) handleRevokeTree(
 	}
 
 	// Revoke the token and its children
-	if err := ts.RevokeTree(id); err != nil {
+	if err := ts.RevokeTree(ctx, id); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -2022,8 +2016,7 @@ func (ts *TokenStore) handleRevokeTree(
 // handleRevokeOrphan handles the auth/token/revoke-orphan/id path for revocation of tokens
 // in a way that leaves child tokens orphaned. Normally, using sys/revoke/leaseID will revoke
 // the token and all children.
-func (ts *TokenStore) handleRevokeOrphan(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urltoken bool
 	// Parse the id
 	id := data.Get("token").(string)
@@ -2035,7 +2028,7 @@ func (ts *TokenStore) handleRevokeOrphan(
 		urltoken = true
 	}
 
-	parent, err := ts.Lookup(req.ClientToken)
+	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("parent token lookup failed: %s", err.Error())), logical.ErrInvalidRequest
 	}
@@ -2044,7 +2037,7 @@ func (ts *TokenStore) handleRevokeOrphan(
 	}
 
 	// Check if the client token has sudo/root privileges for the requested path
-	isSudo := ts.System().SudoPrivilege(req.MountPoint+req.Path, req.ClientToken)
+	isSudo := ts.System().SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
 
 	if !isSudo {
 		return logical.ErrorResponse("root or sudo privileges required to revoke and orphan"),
@@ -2052,7 +2045,7 @@ func (ts *TokenStore) handleRevokeOrphan(
 	}
 
 	// Revoke and orphan
-	if err := ts.Revoke(id); err != nil {
+	if err := ts.Revoke(ctx, id); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -2065,16 +2058,14 @@ func (ts *TokenStore) handleRevokeOrphan(
 	return nil, nil
 }
 
-func (ts *TokenStore) handleLookupSelf(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleLookupSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	data.Raw["token"] = req.ClientToken
-	return ts.handleLookup(req, data)
+	return ts.handleLookup(ctx, req, data)
 }
 
 // handleLookup handles the auth/token/lookup/id path for querying information about
 // a particular token. This can be used to see which policies are applicable.
-func (ts *TokenStore) handleLookup(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
@@ -2099,7 +2090,7 @@ func (ts *TokenStore) handleLookup(
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	out, err := ts.lookupSalted(saltedId, true)
+	out, err := ts.lookupSalted(ctx, saltedId, true)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -2166,16 +2157,14 @@ func (ts *TokenStore) handleLookup(
 	return resp, nil
 }
 
-func (ts *TokenStore) handleRenewSelf(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRenewSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	data.Raw["token"] = req.ClientToken
-	return ts.handleRenew(req, data)
+	return ts.handleRenew(ctx, req, data)
 }
 
 // handleRenew handles the auth/token/renew/id path for renewal of tokens.
 // This is used to prevent token expiration and revocation.
-func (ts *TokenStore) handleRenew(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
@@ -2191,7 +2180,7 @@ func (ts *TokenStore) handleRenew(
 	increment := time.Duration(incrementRaw) * time.Second
 
 	// Lookup the token
-	te, err := ts.Lookup(id)
+	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -2211,21 +2200,20 @@ func (ts *TokenStore) handleRenew(
 	return resp, err
 }
 
-func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
+func (ts *TokenStore) destroyCubbyhole(ctx context.Context, saltedID string) error {
 	if ts.cubbyholeBackend == nil {
 		// Should only ever happen in testing
 		return nil
 	}
-	return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
+	return ts.cubbyholeBackend.revoke(ctx, salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 }
 
-func (ts *TokenStore) authRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.Auth == nil {
 		return nil, fmt.Errorf("request auth is nil")
 	}
 
-	te, err := ts.Lookup(req.Auth.ClientToken)
+	te, err := ts.Lookup(ctx, req.Auth.ClientToken)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up token: %s", err)
 	}
@@ -2262,10 +2250,10 @@ func (ts *TokenStore) authRenew(
 				return &logical.Response{Auth: req.Auth}, nil
 			}
 		}
-		return f(req, d)
+		return f(ctx, req, d)
 	}
 
-	role, err := ts.tokenStoreRole(te.Role)
+	role, err := ts.tokenStoreRole(ctx, te.Role)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up role %s: %s", te.Role, err)
 	}
@@ -2294,11 +2282,11 @@ func (ts *TokenStore) authRenew(
 		}
 	}
 
-	return f(req, d)
+	return f(ctx, req, d)
 }
 
-func (ts *TokenStore) tokenStoreRole(name string) (*tsRoleEntry, error) {
-	entry, err := ts.view.Get(fmt.Sprintf("%s%s", rolesPrefix, name))
+func (ts *TokenStore) tokenStoreRole(ctx context.Context, name string) (*tsRoleEntry, error) {
+	entry, err := ts.view.Get(ctx, fmt.Sprintf("%s%s", rolesPrefix, name))
 	if err != nil {
 		return nil, err
 	}
@@ -2314,9 +2302,8 @@ func (ts *TokenStore) tokenStoreRole(name string) (*tsRoleEntry, error) {
 	return &result, nil
 }
 
-func (ts *TokenStore) tokenStoreRoleList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := ts.view.List(rolesPrefix)
+func (ts *TokenStore) tokenStoreRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := ts.view.List(ctx, rolesPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -2329,9 +2316,8 @@ func (ts *TokenStore) tokenStoreRoleList(
 	return logical.ListResponse(ret), nil
 }
 
-func (ts *TokenStore) tokenStoreRoleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := ts.view.Delete(fmt.Sprintf("%s%s", rolesPrefix, data.Get("role_name").(string)))
+func (ts *TokenStore) tokenStoreRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	err := ts.view.Delete(ctx, fmt.Sprintf("%s%s", rolesPrefix, data.Get("role_name").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -2339,9 +2325,8 @@ func (ts *TokenStore) tokenStoreRoleDelete(
 	return nil, nil
 }
 
-func (ts *TokenStore) tokenStoreRoleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := ts.tokenStoreRole(data.Get("role_name").(string))
+func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	role, err := ts.tokenStoreRole(ctx, data.Get("role_name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -2365,12 +2350,12 @@ func (ts *TokenStore) tokenStoreRoleRead(
 	return resp, nil
 }
 
-func (ts *TokenStore) tokenStoreRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+func (ts *TokenStore) tokenStoreRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	name := data.Get("role_name").(string)
 	if name == "" {
 		return false, fmt.Errorf("role name cannot be empty")
 	}
-	role, err := ts.tokenStoreRole(name)
+	role, err := ts.tokenStoreRole(ctx, name)
 	if err != nil {
 		return false, err
 	}
@@ -2378,13 +2363,12 @@ func (ts *TokenStore) tokenStoreRoleExistenceCheck(req *logical.Request, data *f
 	return role != nil, nil
 }
 
-func (ts *TokenStore) tokenStoreRoleCreateUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("role_name").(string)
 	if name == "" {
 		return logical.ErrorResponse("role name cannot be empty"), nil
 	}
-	entry, err := ts.tokenStoreRole(name)
+	entry, err := ts.tokenStoreRole(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -2482,7 +2466,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 	if err != nil {
 		return nil, err
 	}
-	if err := ts.view.Put(jsonEntry); err != nil {
+	if err := ts.view.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
 

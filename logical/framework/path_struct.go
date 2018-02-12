@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -22,8 +23,8 @@ type PathStruct struct {
 }
 
 // Get reads the structure.
-func (p *PathStruct) Get(s logical.Storage) (map[string]interface{}, error) {
-	entry, err := s.Get(fmt.Sprintf("struct/%s", p.Name))
+func (p *PathStruct) Get(ctx context.Context, s logical.Storage) (map[string]interface{}, error) {
+	entry, err := s.Get(ctx, fmt.Sprintf("struct/%s", p.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -40,21 +41,21 @@ func (p *PathStruct) Get(s logical.Storage) (map[string]interface{}, error) {
 }
 
 // Put writes the structure.
-func (p *PathStruct) Put(s logical.Storage, v map[string]interface{}) error {
+func (p *PathStruct) Put(ctx context.Context, s logical.Storage, v map[string]interface{}) error {
 	bytes, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
 
-	return s.Put(&logical.StorageEntry{
+	return s.Put(ctx, &logical.StorageEntry{
 		Key:   fmt.Sprintf("struct/%s", p.Name),
 		Value: bytes,
 	})
 }
 
 // Delete removes the structure.
-func (p *PathStruct) Delete(s logical.Storage) error {
-	return s.Delete(fmt.Sprintf("struct/%s", p.Name))
+func (p *PathStruct) Delete(ctx context.Context, s logical.Storage) error {
+	return s.Delete(ctx, fmt.Sprintf("struct/%s", p.Name))
 }
 
 // Paths are the paths to append to the Backend paths.
@@ -65,12 +66,12 @@ func (p *PathStruct) Paths() []*Path {
 		Fields:  p.Schema,
 
 		Callbacks: map[logical.Operation]OperationFunc{
-			logical.CreateOperation: p.pathWrite,
-			logical.UpdateOperation: p.pathWrite,
-			logical.DeleteOperation: p.pathDelete,
+			logical.CreateOperation: p.pathWrite(),
+			logical.UpdateOperation: p.pathWrite(),
+			logical.DeleteOperation: p.pathDelete(),
 		},
 
-		ExistenceCheck: p.pathExistenceCheck,
+		ExistenceCheck: p.pathExistenceCheck(),
 
 		HelpSynopsis:    p.HelpSynopsis,
 		HelpDescription: p.HelpDescription,
@@ -78,42 +79,46 @@ func (p *PathStruct) Paths() []*Path {
 
 	// If we support reads, add that
 	if p.Read {
-		path.Callbacks[logical.ReadOperation] = p.pathRead
+		path.Callbacks[logical.ReadOperation] = p.pathRead()
 	}
 
 	return []*Path{path}
 }
 
-func (p *PathStruct) pathRead(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	v, err := p.Get(req.Storage)
-	if err != nil {
+func (p *PathStruct) pathRead() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		v, err := p.Get(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: v,
+		}, nil
+	}
+}
+
+func (p *PathStruct) pathWrite() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		err := p.Put(ctx, req.Storage, d.Raw)
 		return nil, err
 	}
-
-	return &logical.Response{
-		Data: v,
-	}, nil
 }
 
-func (p *PathStruct) pathWrite(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	err := p.Put(req.Storage, d.Raw)
-	return nil, err
-}
-
-func (p *PathStruct) pathDelete(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	err := p.Delete(req.Storage)
-	return nil, err
-}
-
-func (p *PathStruct) pathExistenceCheck(
-	req *logical.Request, d *FieldData) (bool, error) {
-	v, err := p.Get(req.Storage)
-	if err != nil {
-		return false, err
+func (p *PathStruct) pathDelete() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		err := p.Delete(ctx, req.Storage)
+		return nil, err
 	}
+}
 
-	return v != nil, nil
+func (p *PathStruct) pathExistenceCheck() ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (bool, error) {
+		v, err := p.Get(ctx, req.Storage)
+		if err != nil {
+			return false, err
+		}
+
+		return v != nil, nil
+	}
 }

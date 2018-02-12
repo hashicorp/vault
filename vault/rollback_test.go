@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -39,7 +40,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
-	rb := NewRollbackManager(logger, mountsFunc, router)
+	rb := NewRollbackManager(logger, mountsFunc, router, context.Background())
 	rb.period = 10 * time.Millisecond
 	return rb, backend
 }

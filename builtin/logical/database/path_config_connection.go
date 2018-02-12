@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -48,7 +49,7 @@ func pathResetConnection(b *databaseBackend) *framework.Path {
 // pathConnectionReset resets a plugin by closing the existing instance and
 // creating a new one.
 func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
 			return logical.ErrorResponse(respErrEmptyName), nil
@@ -62,7 +63,7 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 		b.clearConnection(name)
 
 		// Execute plugin again, we don't need the object so throw away.
-		_, err := b.createDBObj(req.Storage, name)
+		_, err := b.createDBObj(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
@@ -129,8 +130,8 @@ func pathListPluginConnection(b *databaseBackend) *framework.Path {
 }
 
 func (b *databaseBackend) connectionListHandler() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		entries, err := req.Storage.List("config/")
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		entries, err := req.Storage.List(ctx, "config/")
 		if err != nil {
 			return nil, err
 		}
@@ -141,13 +142,13 @@ func (b *databaseBackend) connectionListHandler() framework.OperationFunc {
 
 // connectionReadHandler reads out the connection configuration
 func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		entry, err := req.Storage.Get(fmt.Sprintf("config/%s", name))
+		entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
 			return nil, errors.New("failed to read connection configuration")
 		}
@@ -167,13 +168,13 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 
 // connectionDeleteHandler deletes the connection configuration
 func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		err := req.Storage.Delete(fmt.Sprintf("config/%s", name))
+		err := req.Storage.Delete(ctx, fmt.Sprintf("config/%s", name))
 		if err != nil {
 			return nil, errors.New("failed to delete connection configuration")
 		}
@@ -197,7 +198,7 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 // connectionWriteHandler returns a handler function for creating and updating
 // both builtin and plugin database types.
 func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		pluginName := data.Get("plugin_name").(string)
 		if pluginName == "" {
 			return logical.ErrorResponse(respErrEmptyPluginName), nil
@@ -225,12 +226,12 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			AllowedRoles:      allowedRoles,
 		}
 
-		db, err := dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
+		db, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
 
-		err = db.Initialize(config.ConnectionDetails, verifyConnection)
+		err = db.Initialize(ctx, config.ConnectionDetails, verifyConnection)
 		if err != nil {
 			db.Close()
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
@@ -251,7 +252,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
-		if err := req.Storage.Put(entry); err != nil {
+		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 

@@ -1,6 +1,7 @@
 package mssql
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -48,8 +49,8 @@ func pathRoles(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + n)
+func (b *backend) Role(ctx context.Context, s logical.Storage, n string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, "role/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -65,9 +66,8 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathRoleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("role/" + data.Get("name").(string))
+func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +75,8 @@ func (b *backend) pathRoleDelete(
 	return nil, nil
 }
 
-func (b *backend) pathRoleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := b.Role(req.Storage, data.Get("name").(string))
+func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +91,8 @@ func (b *backend) pathRoleRead(
 	}, nil
 }
 
-func (b *backend) pathRoleList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -102,13 +100,12 @@ func (b *backend) pathRoleList(
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathRoleCreate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	sql := data.Get("sql").(string)
 
 	// Get our connection
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +135,7 @@ func (b *backend) pathRoleCreate(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -157,7 +154,7 @@ This path lets you manage the roles that can be created with this backend.
 
 The "sql" parameter customizes the SQL string used to create the login to
 the server.  The parameter can be a sequence of SQL queries, each semi-colon
-seperated. Some substitution will be done to the SQL string for certain keys.
+separated. Some substitution will be done to the SQL string for certain keys.
 The names of the variables must be surrounded by "{{" and "}}" to be replaced.
 
   * "name" - The random username generated for the DB user.

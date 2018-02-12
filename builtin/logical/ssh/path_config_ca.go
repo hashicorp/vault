@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -61,9 +62,8 @@ Read operations will return the public key, if already stored/generated.`,
 	}
 }
 
-func (b *backend) pathConfigCARead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	publicKeyEntry, err := caKey(req.Storage, caPublicKey)
+func (b *backend) pathConfigCARead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA public key: %v", err)
 	}
@@ -81,18 +81,17 @@ func (b *backend) pathConfigCARead(
 	return response, nil
 }
 
-func (b *backend) pathConfigCADelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if err := req.Storage.Delete(caPrivateKeyStoragePath); err != nil {
+func (b *backend) pathConfigCADelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if err := req.Storage.Delete(ctx, caPrivateKeyStoragePath); err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Delete(caPublicKeyStoragePath); err != nil {
+	if err := req.Storage.Delete(ctx, caPublicKeyStoragePath); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-func caKey(storage logical.Storage, keyType string) (*keyStorageEntry, error) {
+func caKey(ctx context.Context, storage logical.Storage, keyType string) (*keyStorageEntry, error) {
 	var path, deprecatedPath string
 	switch keyType {
 	case caPrivateKey:
@@ -105,7 +104,7 @@ func caKey(storage logical.Storage, keyType string) (*keyStorageEntry, error) {
 		return nil, fmt.Errorf("unrecognized key type %q", keyType)
 	}
 
-	entry, err := storage.Get(path)
+	entry, err := storage.Get(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA key of type %q: %v", keyType, err)
 	}
@@ -113,7 +112,7 @@ func caKey(storage logical.Storage, keyType string) (*keyStorageEntry, error) {
 	if entry == nil {
 		// If the entry is not found, look at an older path. If found, upgrade
 		// it.
-		entry, err = storage.Get(deprecatedPath)
+		entry, err = storage.Get(ctx, deprecatedPath)
 		if err != nil {
 			return nil, err
 		}
@@ -124,10 +123,10 @@ func caKey(storage logical.Storage, keyType string) (*keyStorageEntry, error) {
 			if err != nil {
 				return nil, err
 			}
-			if err := storage.Put(entry); err != nil {
+			if err := storage.Put(ctx, entry); err != nil {
 				return nil, err
 			}
-			if err = storage.Delete(deprecatedPath); err != nil {
+			if err = storage.Delete(ctx, deprecatedPath); err != nil {
 				return nil, err
 			}
 		}
@@ -144,7 +143,7 @@ func caKey(storage logical.Storage, keyType string) (*keyStorageEntry, error) {
 	return &keyEntry, nil
 }
 
-func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 	publicKey := data.Get("public_key").(string)
 	privateKey := data.Get("private_key").(string)
@@ -201,12 +200,12 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 		return nil, fmt.Errorf("failed to generate or parse the keys")
 	}
 
-	publicKeyEntry, err := caKey(req.Storage, caPublicKey)
+	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA public key: %v", err)
 	}
 
-	privateKeyEntry, err := caKey(req.Storage, caPrivateKey)
+	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA private key: %v", err)
 	}
@@ -223,7 +222,7 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 	}
 
 	// Save the public key
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +235,7 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 	}
 
 	// Save the private key
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		var mErr *multierror.Error
 
@@ -244,7 +243,7 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 
 		// If storing private key fails, the corresponding public key should be
 		// removed
-		if delErr := req.Storage.Delete(caPublicKeyStoragePath); delErr != nil {
+		if delErr := req.Storage.Delete(ctx, caPublicKeyStoragePath); delErr != nil {
 			mErr = multierror.Append(mErr, fmt.Errorf("failed to cleanup CA public key: %v", delErr))
 			return nil, mErr
 		}

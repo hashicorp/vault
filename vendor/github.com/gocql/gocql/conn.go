@@ -895,7 +895,7 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 		return iter
 	case *resultKeyspaceFrame:
 		return &Iter{framer: framer}
-	case *schemaChangeKeyspace, *schemaChangeTable, *schemaChangeFunction:
+	case *schemaChangeKeyspace, *schemaChangeTable, *schemaChangeFunction, *schemaChangeAggregate, *schemaChangeType:
 		iter := &Iter{framer: framer}
 		if err := c.awaitSchemaAgreement(); err != nil {
 			// TODO: should have this behind a flag

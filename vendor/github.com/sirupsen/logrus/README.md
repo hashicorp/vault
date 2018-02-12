@@ -220,7 +220,7 @@ Logrus comes with [built-in hooks](hooks/). Add those, or your custom hook, in
 ```go
 import (
   log "github.com/sirupsen/logrus"
-  "gopkg.in/gemnasium/logrus-airbrake-hook.v2" // the package is named "aibrake"
+  "gopkg.in/gemnasium/logrus-airbrake-hook.v2" // the package is named "airbrake"
   logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
   "log/syslog"
 )
@@ -247,6 +247,7 @@ Note: Syslog hook also support connecting to local syslog (Ex. "/dev/log" or "/v
 | [Airbrake](https://github.com/gemnasium/logrus-airbrake-hook) | Send errors to the Airbrake API V3. Uses the official [`gobrake`](https://github.com/airbrake/gobrake) behind the scenes. |
 | [Amazon Kinesis](https://github.com/evalphobia/logrus_kinesis) | Hook for logging to [Amazon Kinesis](https://aws.amazon.com/kinesis/) |
 | [Amqp-Hook](https://github.com/vladoatanasov/logrus_amqp) | Hook for logging to Amqp broker (Like RabbitMQ) |
+| [Application Insights](https://github.com/jjcollinge/logrus-appinsights) | Hook for logging to [Application Insights](https://azure.microsoft.com/en-us/services/application-insights/)
 | [AzureTableHook](https://github.com/kpfaulkner/azuretablehook/) | Hook for logging to Azure Table Storage|
 | [Bugsnag](https://github.com/Shopify/logrus-bugsnag/blob/master/bugsnag.go) | Send errors to the Bugsnag exception tracking service. |
 | [DeferPanic](https://github.com/deferpanic/dp-logrus) | Hook for logging to DeferPanic |
@@ -263,6 +264,7 @@ Note: Syslog hook also support connecting to local syslog (Ex. "/dev/log" or "/v
 | [Journalhook](https://github.com/wercker/journalhook) | Hook for logging to `systemd-journald` |
 | [KafkaLogrus](https://github.com/tracer0tong/kafkalogrus) | Hook for logging to Kafka |
 | [LFShook](https://github.com/rifflock/lfshook) | Hook for logging to the local filesystem |
+| [Logbeat](https://github.com/macandmia/logbeat) | Hook for logging to [Opbeat](https://opbeat.com/) |
 | [Logentries](https://github.com/jcftang/logentriesrus) | Hook for logging to [Logentries](https://logentries.com/) |
 | [Logentrus](https://github.com/puddingfactory/logentrus) | Hook for logging to [Logentries](https://logentries.com/) |
 | [Logmatic.io](https://github.com/logmatic/logmatic-go) | Hook for logging to [Logmatic.io](http://logmatic.io/) |
@@ -275,6 +277,7 @@ Note: Syslog hook also support connecting to local syslog (Ex. "/dev/log" or "/v
 | [Octokit](https://github.com/dorajistyle/logrus-octokit-hook) | Hook for logging to github via octokit |
 | [Papertrail](https://github.com/polds/logrus-papertrail-hook) | Send errors to the [Papertrail](https://papertrailapp.com) hosted logging service via UDP. |
 | [PostgreSQL](https://github.com/gemnasium/logrus-postgresql-hook) | Send logs to [PostgreSQL](http://postgresql.org) |
+| [Promrus](https://github.com/weaveworks/promrus) | Expose number of log messages as [Prometheus](https://prometheus.io/) metrics |
 | [Pushover](https://github.com/toorop/logrus_pushover) | Send error via [Pushover](https://pushover.net) |
 | [Raygun](https://github.com/squirkle/logrus-raygun-hook) | Hook for logging to [Raygun.io](http://raygun.io/) |
 | [Redis-Hook](https://github.com/rogierlommers/logrus-redis-hook) | Hook for logging to a ELK stack (through Redis) |
@@ -374,7 +377,7 @@ The built-in logging formatters are:
 
 Third party logging formatters:
 
-* [`FluentdFormatter`](https://github.com/joonix/log). Formats entries that can by parsed by Kubernetes and Google Container Engine.
+* [`FluentdFormatter`](https://github.com/joonix/log). Formats entries that can be parsed by Kubernetes and Google Container Engine.
 * [`logstash`](https://github.com/bshuster-repo/logrus-logstash-hook). Logs fields as [Logstash](http://logstash.net) Events.
 * [`prefixed`](https://github.com/x-cray/logrus-prefixed-formatter). Displays log entry source along with alternative layout.
 * [`zalgo`](https://github.com/aybabtme/logzalgo). Invoking the P͉̫o̳̼̊w̖͈̰͎e̬͔̭͂r͚̼̹̲ ̫͓͉̳͈ō̠͕͖̚f̝͍̠ ͕̲̞͖͑Z̖̫̤̫ͪa͉̬͈̗l͖͎g̳̥o̰̥̅!̣͔̲̻͊̄ ̙̘̦̹̦.

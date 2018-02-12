@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"sync"
@@ -124,10 +125,9 @@ to the min_encryption_version configured on the key.`,
 	}
 }
 
-func (b *backend) pathEncryptExistenceCheck(
-	req *logical.Request, d *framework.FieldData) (bool, error) {
+func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -137,8 +137,7 @@ func (b *backend) pathEncryptExistenceCheck(
 	return p != nil, nil
 }
 
-func (b *backend) pathEncryptWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	var err error
 
@@ -232,10 +231,10 @@ func (b *backend) pathEncryptWrite(
 			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 		}
 
-		p, lock, upserted, err = b.lm.GetPolicyUpsert(polReq)
+		p, lock, upserted, err = b.lm.GetPolicyUpsert(ctx, polReq)
 
 	} else {
-		p, lock, err = b.lm.GetPolicyShared(req.Storage, name)
+		p, lock, err = b.lm.GetPolicyShared(ctx, req.Storage, name)
 	}
 	if lock != nil {
 		defer lock.RUnlock()

@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/base64"
@@ -79,6 +80,13 @@ This allows for all the valid keys
 in the key ring to be exported.`,
 			},
 
+			"allow_plaintext_backup": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `Enables taking a backup of the named
+key in plaintext format. Once set,
+this cannot be disabled.`,
+			},
+
 			"context": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Base64 encoded context for key derivation.
@@ -99,9 +107,8 @@ return the public key for the given context.`,
 	}
 }
 
-func (b *backend) pathKeysList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("policy/")
+func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}
@@ -109,24 +116,25 @@ func (b *backend) pathKeysList(
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathPolicyWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
 	keyType := d.Get("type").(string)
 	exportable := d.Get("exportable").(bool)
+	allowPlaintextBackup := d.Get("allow_plaintext_backup").(bool)
 
 	if !derived && convergent {
 		return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
 	}
 
 	polReq := keysutil.PolicyRequest{
-		Storage:    req.Storage,
-		Name:       name,
-		Derived:    derived,
-		Convergent: convergent,
-		Exportable: exportable,
+		Storage:              req.Storage,
+		Name:                 name,
+		Derived:              derived,
+		Convergent:           convergent,
+		Exportable:           exportable,
+		AllowPlaintextBackup: allowPlaintextBackup,
 	}
 	switch keyType {
 	case "aes256-gcm96":
@@ -143,7 +151,7 @@ func (b *backend) pathPolicyWrite(
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	p, lock, upserted, err := b.lm.GetPolicyUpsert(polReq)
+	p, lock, upserted, err := b.lm.GetPolicyUpsert(ctx, polReq)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -169,11 +177,10 @@ type asymKey struct {
 	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
-func (b *backend) pathPolicyRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -195,11 +202,25 @@ func (b *backend) pathPolicyRead(
 			"min_encryption_version": p.MinEncryptionVersion,
 			"latest_version":         p.LatestVersion,
 			"exportable":             p.Exportable,
+			"allow_plaintext_backup": p.AllowPlaintextBackup,
 			"supports_encryption":    p.Type.EncryptionSupported(),
 			"supports_decryption":    p.Type.DecryptionSupported(),
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
 		},
+	}
+
+	if p.BackupInfo != nil {
+		resp.Data["backup_info"] = map[string]interface{}{
+			"time":    p.BackupInfo.Time,
+			"version": p.BackupInfo.Version,
+		}
+	}
+	if p.RestoreInfo != nil {
+		resp.Data["restore_info"] = map[string]interface{}{
+			"time":    p.RestoreInfo.Time,
+			"version": p.RestoreInfo.Version,
+		}
 	}
 
 	if p.Derived {
@@ -296,12 +317,11 @@ func (b *backend) pathPolicyRead(
 	return resp, nil
 }
 
-func (b *backend) pathPolicyDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	// Delete does its own locking
-	err := b.lm.DeletePolicy(req.Storage, name)
+	err := b.lm.DeletePolicy(ctx, req.Storage, name)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error deleting policy %s: %s", name, err)), err
 	}

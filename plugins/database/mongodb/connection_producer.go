@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -33,7 +34,7 @@ type mongoDBConnectionProducer struct {
 }
 
 // Initialize parses connection configuration.
-func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -75,7 +76,7 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 	c.Initialized = true
 
 	if verifyConnection {
-		if _, err := c.Connection(); err != nil {
+		if _, err := c.Connection(ctx); err != nil {
 			return fmt.Errorf("error verifying connection: %s", err)
 		}
 
@@ -87,14 +88,18 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 	return nil
 }
 
-// Connection creates a database connection.
-func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
+// Connection creates or returns an exisitng a database connection. If the session fails
+// on a ping check, the session will be closed and then re-created.
+func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
 
 	if c.session != nil {
-		return c.session, nil
+		if err := c.session.Ping(); err == nil {
+			return c.session, nil
+		}
+		c.session.Close()
 	}
 
 	dialInfo, err := parseMongoURL(c.ConnectionURL)
@@ -114,7 +119,7 @@ func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
 	c.session.SetSyncTimeout(1 * time.Minute)
 	c.session.SetSocketTimeout(1 * time.Minute)
 
-	return nil, nil
+	return c.session, nil
 }
 
 // Close terminates the database connection.

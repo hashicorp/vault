@@ -66,7 +66,7 @@ at Consul's service discovery layer.
   [consistency mode][consul-consistency]. Possible values are `"default"` or
   `"strong"`.
 
-- `disable_registration` `(bool: false)` – Specifies whether Vault should
+- `disable_registration` `(string: "false")` – Specifies whether Vault should
   register itself with Consul.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent

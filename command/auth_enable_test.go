@@ -1,50 +1,194 @@
 package command
 
 import (
+	"io/ioutil"
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
-func TestAuthEnable(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testAuthEnableCommand(tb testing.TB) (*cli.MockUi, *AuthEnableCommand) {
+	tb.Helper()
 
-	ui := new(cli.MockUi)
-	c := &AuthEnableCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	ui := cli.NewMockUi()
+	return ui, &AuthEnableCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func TestAuthEnableCommand_Run(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"not_enough_args",
+			nil,
+			"Not enough arguments",
+			1,
+		},
+		{
+			"too_many_args",
+			[]string{"foo", "bar"},
+			"Too many arguments",
+			1,
+		},
+		{
+			"not_a_valid_auth",
+			[]string{"nope_definitely_not_a_valid_mount_like_ever"},
+			"",
+			2,
 		},
 	}
 
-	args := []string{
-		"-address", addr,
-		"noop",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			ui, cmd := testAuthEnableCommand(t)
+			cmd.client = client
+
+			code := cmd.Run(tc.args)
+			if code != tc.code {
+				t.Errorf("expected %d to be %d", code, tc.code)
+			}
+
+			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+			if !strings.Contains(combined, tc.out) {
+				t.Errorf("expected %q to contain %q", combined, tc.out)
+			}
+		})
 	}
 
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	t.Run("integration", func(t *testing.T) {
+		t.Parallel()
 
-	mounts, err := client.Sys().ListAuth()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		client, closer := testVaultServer(t)
+		defer closer()
 
-	mount, ok := mounts["noop/"]
-	if !ok {
-		t.Fatal("should have noop mount")
-	}
-	if mount.Type != "noop" {
-		t.Fatal("should be noop type")
-	}
+		ui, cmd := testAuthEnableCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-path", "auth_integration/",
+			"-description", "The best kind of test",
+			"userpass",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! Enabled userpass auth method at:"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		auths, err := client.Sys().ListAuth()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		authInfo, ok := auths["auth_integration/"]
+		if !ok {
+			t.Fatalf("expected mount to exist")
+		}
+		if exp := "userpass"; authInfo.Type != exp {
+			t.Errorf("expected %q to be %q", authInfo.Type, exp)
+		}
+		if exp := "The best kind of test"; authInfo.Description != exp {
+			t.Errorf("expected %q to be %q", authInfo.Description, exp)
+		}
+	})
+
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testAuthEnableCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"userpass",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error enabling userpass auth: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testAuthEnableCommand(t)
+		assertNoTabs(t, cmd)
+	})
+
+	t.Run("mount_all", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerAllBackends(t)
+		defer closer()
+
+		files, err := ioutil.ReadDir("../builtin/credential")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var backends []string
+		for _, f := range files {
+			if f.IsDir() {
+				backends = append(backends, f.Name())
+			}
+		}
+
+		plugins, err := ioutil.ReadDir("../vendor/github.com/hashicorp")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range plugins {
+			if p.IsDir() && strings.HasPrefix(p.Name(), "vault-plugin-auth-") {
+				backends = append(backends, strings.TrimPrefix(p.Name(), "vault-plugin-auth-"))
+			}
+		}
+
+		if len(backends) != len(credentialBackends) {
+			t.Fatalf("expected %d credential backends, got %d", len(credentialBackends), len(backends))
+		}
+
+		for _, b := range backends {
+			if b == "token" {
+				continue
+			}
+
+			ui, cmd := testAuthEnableCommand(t)
+			cmd.client = client
+
+			code := cmd.Run([]string{
+				b,
+			})
+			if exp := 0; code != exp {
+				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+			}
+		}
+	})
 }

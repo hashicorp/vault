@@ -1,9 +1,11 @@
 package appId
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
@@ -12,13 +14,13 @@ func TestBackend_basic(t *testing.T) {
 	var b *backend
 	var err error
 	var storage logical.Storage
-	factory := func(conf *logical.BackendConfig) (logical.Backend, error) {
+	factory := func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 		b, err = Backend(conf)
 		if err != nil {
 			t.Fatal(err)
 		}
 		storage = conf.StorageView
-		if err := b.Setup(conf); err != nil {
+		if err := b.Setup(ctx, conf); err != nil {
 			return nil, err
 		}
 		return b, nil
@@ -41,7 +43,7 @@ func TestBackend_basic(t *testing.T) {
 		Operation: logical.ListOperation,
 		Storage:   storage,
 	}
-	resp, err := b.HandleRequest(req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,11 +54,11 @@ func TestBackend_basic(t *testing.T) {
 	if len(keys) != 1 {
 		t.Fatalf("expected 1 key, got %d", len(keys))
 	}
-	salt, err := b.Salt()
+	bSalt, err := b.Salt()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if keys[0] != salt.SaltID("foo") {
+	if keys[0] != "s"+bSalt.SaltIDHashFunc("foo", salt.SHA256Hash) {
 		t.Fatal("value was improperly salted")
 	}
 }
@@ -141,7 +143,7 @@ func testAccStepMapUserIdCidr(t *testing.T, cidr string) logicaltest.TestStep {
 func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 	checkTTL := func(resp *logical.Response) error {
 		if resp.Auth.LeaseOptions.TTL.String() != "768h0m0s" {
-			return fmt.Errorf("invalid TTL")
+			return fmt.Errorf("invalid TTL: got %s", resp.Auth.LeaseOptions.TTL)
 		}
 		return nil
 	}
@@ -165,7 +167,7 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 func testAccLoginAppIDInPath(t *testing.T, display string) logicaltest.TestStep {
 	checkTTL := func(resp *logical.Response) error {
 		if resp.Auth.LeaseOptions.TTL.String() != "768h0m0s" {
-			return fmt.Errorf("invalid TTL")
+			return fmt.Errorf("invalid TTL: got %s", resp.Auth.LeaseOptions.TTL)
 		}
 		return nil
 	}

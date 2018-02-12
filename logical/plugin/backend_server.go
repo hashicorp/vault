@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"errors"
 	"net/rpc"
 	"os"
@@ -19,7 +20,7 @@ var (
 type backendPluginServer struct {
 	broker  *plugin.MuxBroker
 	backend logical.Backend
-	factory func(*logical.BackendConfig) (logical.Backend, error)
+	factory logical.Factory
 
 	loggerClient  *rpc.Client
 	sysViewClient *rpc.Client
@@ -38,7 +39,7 @@ func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *Hand
 	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
 
-	resp, err := b.backend.HandleRequest(args.Request)
+	resp, err := b.backend.HandleRequest(context.Background(), args.Request)
 	*reply = HandleRequestReply{
 		Response: resp,
 		Error:    wrapError(err),
@@ -62,7 +63,7 @@ func (b *backendPluginServer) HandleExistenceCheck(args *HandleExistenceCheckArg
 	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
 
-	checkFound, exists, err := b.backend.HandleExistenceCheck(args.Request)
+	checkFound, exists, err := b.backend.HandleExistenceCheck(context.TODO(), args.Request)
 	*reply = HandleExistenceCheckReply{
 		CheckFound: checkFound,
 		Exists:     exists,
@@ -73,7 +74,7 @@ func (b *backendPluginServer) HandleExistenceCheck(args *HandleExistenceCheckArg
 }
 
 func (b *backendPluginServer) Cleanup(_ interface{}, _ *struct{}) error {
-	b.backend.Cleanup()
+	b.backend.Cleanup(context.Background())
 
 	// Close rpc clients
 	b.loggerClient.Close()
@@ -82,21 +83,12 @@ func (b *backendPluginServer) Cleanup(_ interface{}, _ *struct{}) error {
 	return nil
 }
 
-func (b *backendPluginServer) Initialize(_ interface{}, _ *struct{}) error {
-	if inMetadataMode() {
-		return ErrServerInMetadataMode
-	}
-
-	err := b.backend.Initialize()
-	return err
-}
-
 func (b *backendPluginServer) InvalidateKey(args string, _ *struct{}) error {
 	if inMetadataMode() {
 		return ErrServerInMetadataMode
 	}
 
-	b.backend.InvalidateKey(args)
+	b.backend.InvalidateKey(context.Background(), args)
 	return nil
 }
 
@@ -152,7 +144,7 @@ func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 
 	// Call the underlying backend factory after shims have been created
 	// to set b.backend
-	backend, err := b.factory(config)
+	backend, err := b.factory(context.Background(), config)
 	if err != nil {
 		*reply = SetupReply{
 			Error: wrapError(err),
@@ -166,21 +158,6 @@ func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 func (b *backendPluginServer) Type(_ interface{}, reply *TypeReply) error {
 	*reply = TypeReply{
 		Type: b.backend.Type(),
-	}
-
-	return nil
-}
-
-func (b *backendPluginServer) RegisterLicense(args *RegisterLicenseArgs, reply *RegisterLicenseReply) error {
-	if inMetadataMode() {
-		return ErrServerInMetadataMode
-	}
-
-	err := b.backend.RegisterLicense(args.License)
-	if err != nil {
-		*reply = RegisterLicenseReply{
-			Error: wrapError(err),
-		}
 	}
 
 	return nil

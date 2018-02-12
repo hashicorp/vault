@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 		Storage:   s,
 		Data:      encData,
 	}
-	resp, err = b.HandleRequest(encReq)
+	resp, err = b.HandleRequest(context.Background(), encReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -49,7 +50,7 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 		Storage:   s,
 	}
 
-	resp, err = b.HandleRequest(policyReq)
+	resp, err = b.HandleRequest(context.Background(), policyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -63,13 +64,13 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 		Path:      "keys/upserted_key/rotate",
 		Storage:   s,
 	}
-	resp, err = b.HandleRequest(rotateReq)
+	resp, err = b.HandleRequest(context.Background(), rotateReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	// Read the policy again and the latest version is 2
-	resp, err = b.HandleRequest(policyReq)
+	resp, err = b.HandleRequest(context.Background(), policyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -86,7 +87,7 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 		Data:      rewrapData,
 	}
 
-	resp, err = b.HandleRequest(rewrapReq)
+	resp, err = b.HandleRequest(context.Background(), rewrapReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -121,7 +122,7 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 		Storage:   s,
 		Data:      encData,
 	}
-	resp, err = b.HandleRequest(encReq)
+	resp, err = b.HandleRequest(context.Background(), encReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -144,7 +145,7 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 		Storage:   s,
 	}
 
-	resp, err = b.HandleRequest(policyReq)
+	resp, err = b.HandleRequest(context.Background(), policyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -158,13 +159,13 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 		Path:      "keys/upserted_key/rotate",
 		Storage:   s,
 	}
-	resp, err = b.HandleRequest(rotateReq)
+	resp, err = b.HandleRequest(context.Background(), rotateReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	// Read the policy again and the latest version is 2
-	resp, err = b.HandleRequest(policyReq)
+	resp, err = b.HandleRequest(context.Background(), policyReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -181,7 +182,7 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 		Data:      rewrapData,
 	}
 
-	resp, err = b.HandleRequest(rewrapReq)
+	resp, err = b.HandleRequest(context.Background(), rewrapReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -215,7 +216,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		Storage:   s,
 		Data:      batchEncryptionData,
 	}
-	resp, err = b.HandleRequest(batchReq)
+	resp, err = b.HandleRequest(context.Background(), batchReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -236,7 +237,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		Path:      "keys/upserted_key/rotate",
 		Storage:   s,
 	}
-	resp, err = b.HandleRequest(rotateReq)
+	resp, err = b.HandleRequest(context.Background(), rotateReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -248,7 +249,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		Data:      batchRewrapData,
 	}
 
-	resp, err = b.HandleRequest(rewrapReq)
+	resp, err = b.HandleRequest(context.Background(), rewrapReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -280,7 +281,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 			"ciphertext": rItem.Ciphertext,
 		}
 
-		resp, err = b.HandleRequest(decReq)
+		resp, err = b.HandleRequest(context.Background(), decReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v", err, resp)
 		}
