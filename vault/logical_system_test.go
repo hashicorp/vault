@@ -374,7 +374,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		Path:      "capabilities",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"path":  []string{path1, path2, path3, path4},
+			"paths": []string{path1, path2, path3, path4},
 			"token": rootToken,
 		},
 	})
@@ -389,7 +389,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		Path:        "capabilities-self",
 		Operation:   logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"path": []string{path1, path2, path3, path4},
+			"paths": []string{path1, path2, path3, path4},
 		},
 	})
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -408,7 +408,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		Path:      "capabilities-accessor",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"path":     []string{path1, path2, path3, path4},
+			"paths":    []string{path1, path2, path3, path4},
 			"accessor": te.Accessor,
 		},
 	})
@@ -439,7 +439,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		Path:      "capabilities",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"path":  []string{path1, path2, path3, path4},
+			"paths": []string{path1, path2, path3, path4},
 			"token": "tokenid",
 		},
 	})
@@ -455,7 +455,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		Path:        "capabilities-self",
 		Operation:   logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"path": []string{path1, path2, path3, path4},
+			"paths": []string{path1, path2, path3, path4},
 		},
 	})
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -475,7 +475,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		Path:      "capabilities-accessor",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"path":     []string{path1, path2, path3, path4},
+			"paths":    []string{path1, path2, path3, path4},
 			"accessor": te.Accessor,
 		},
 	})

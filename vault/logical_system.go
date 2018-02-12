@@ -102,7 +102,11 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					},
 					"path": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
-						Description: "Path on which capabilities are being queried.",
+						Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					},
+					"paths": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Paths on which capabilities are being queried.",
 					},
 				},
 
@@ -152,7 +156,11 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					},
 					"path": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
-						Description: "Path on which capabilities are being queried.",
+						Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					},
+					"paths": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Paths on which capabilities are being queried.",
 					},
 				},
 
@@ -174,7 +182,11 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					},
 					"path": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
-						Description: "Path on which capabilities are being queried.",
+						Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					},
+					"paths": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Paths on which capabilities are being queried.",
 					},
 				},
 
@@ -1300,7 +1312,16 @@ func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Req
 		Data: map[string]interface{}{},
 	}
 
-	paths := d.Get("path").([]string)
+	paths := d.Get("paths").([]string)
+	if len(paths) == 0 {
+		// Read from the deprecated field
+		paths = d.Get("path").([]string)
+	}
+
+	if len(paths) == 0 {
+		return nil, nil
+	}
+
 	for _, path := range paths {
 		pathCap, err := b.Core.Capabilities(ctx, token, path)
 		if err != nil {
