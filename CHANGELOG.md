@@ -8,6 +8,7 @@ IMPROVEMENTS:
  * secret/pki: Add a flag to make the common name optional on certs [GH-3940]
  * secret/pki: Ensure only DNS-compatible names go into DNS SANs; additionally,
    properly handle IDNA transformations for these DNS names [GH-3953]
+ * secret/ssh: Add `valid-principles` flag to CLI for CA mode [GH-3922]
 
 BUG FIXES:
 
