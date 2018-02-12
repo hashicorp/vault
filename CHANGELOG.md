@@ -30,6 +30,7 @@ BUG FIXES:
    [GH-3918]
  * secret/transit: Fix auditing when reading a key after it has been backed up
    or restored [GH-3919]
+ * storage/consul: Validate that service names are RFC 1123 compliant [GH-3960]
  * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
  * storage/etcd3: Fix large lists (like token loading at startup) not being
    handled [GH-3772]
