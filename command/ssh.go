@@ -38,6 +38,7 @@ type SSHCommand struct {
 	flagPrivateKeyPath    string
 	flagHostKeyMountPoint string
 	flagHostKeyHostnames  string
+	flagValidPrincipals   string
 }
 
 func (c *SSHCommand) Synopsis() string {
@@ -191,6 +192,16 @@ func (c *SSHCommand) Flags() *FlagSets {
 			"list of values.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:       "valid-principals",
+		Target:     &c.flagValidPrincipals,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "List of valid principal names to include in the generated " +
+			"user certificate. This is specified as a comma-separated list of values.",
+	})
+
 	return set
 }
 
@@ -232,7 +243,7 @@ func (c *SSHCommand) Run(args []string) int {
 	}
 
 	// Extract the username and IP.
-	username, ip, err := c.userAndIP(args[0])
+	username, hostname, ip, err := c.userHostAndIP(args[0])
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error parsing user and IP: %s", err))
 		return 1
@@ -317,7 +328,7 @@ func (c *SSHCommand) Run(args []string) int {
 
 	switch strings.ToLower(c.flagMode) {
 	case ssh.KeyTypeCA:
-		return c.handleTypeCA(username, ip, sshArgs)
+		return c.handleTypeCA(username, hostname, ip, sshArgs)
 	case ssh.KeyTypeOTP:
 		return c.handleTypeOTP(username, ip, sshArgs)
 	case ssh.KeyTypeDynamic:
@@ -329,7 +340,7 @@ func (c *SSHCommand) Run(args []string) int {
 }
 
 // handleTypeCA is used to handle SSH logins using the "CA" key type.
-func (c *SSHCommand) handleTypeCA(username, ip string, sshArgs []string) int {
+func (c *SSHCommand) handleTypeCA(username, hostname, ip string, sshArgs []string) int {
 	// Read the key from disk
 	publicKey, err := ioutil.ReadFile(c.flagPublicKeyPath)
 	if err != nil {
@@ -340,12 +351,17 @@ func (c *SSHCommand) handleTypeCA(username, ip string, sshArgs []string) int {
 
 	sshClient := c.client.SSHWithMountPoint(c.flagMountPoint)
 
+	var principals = username
+	if c.flagValidPrincipals != "" {
+		principals = c.flagValidPrincipals
+	}
+
 	// Attempt to sign the public key
 	secret, err := sshClient.SignKey(c.flagRole, map[string]interface{}{
 		// WARNING: publicKey is []byte, which is b64 encoded on JSON upload. We
 		// have to convert it to a string. SV lost many hours to this...
 		"public_key":       string(publicKey),
-		"valid_principals": username,
+		"valid_principals": principals,
 		"cert_type":        "user",
 
 		// TODO: let the user configure these. In the interim, if users want to
@@ -436,7 +452,7 @@ func (c *SSHCommand) handleTypeCA(username, ip string, sshArgs []string) int {
 		"-i", signedPublicKeyPath,
 		"-o UserKnownHostsFile=" + userKnownHostsFile,
 		"-o StrictHostKeyChecking=" + strictHostKeyChecking,
-		username + "@" + ip,
+		username + "@" + hostname,
 	}, sshArgs...)
 
 	cmd := exec.Command("ssh", args...)
@@ -709,7 +725,7 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 
 // userAndIP takes an argument in the format foo@1.2.3.4 and separates the IP
 // and user parts, returning any errors.
-func (c *SSHCommand) userAndIP(s string) (string, string, error) {
+func (c *SSHCommand) userHostAndIP(s string) (string, string, string, error) {
 	// split the parameter username@ip
 	input := strings.Split(s, "@")
 	var username, address string
@@ -722,22 +738,22 @@ func (c *SSHCommand) userAndIP(s string) (string, string, error) {
 	case 1:
 		u, err := user.Current()
 		if err != nil {
-			return "", "", errors.Wrap(err, "failed to fetch current user")
+			return "", "", "", errors.Wrap(err, "failed to fetch current user")
 		}
 		username, address = u.Username, input[0]
 	case 2:
 		username, address = input[0], input[1]
 	default:
-		return "", "", fmt.Errorf("invalid arguments: %q", s)
+		return "", "", "", fmt.Errorf("invalid arguments: %q", s)
 	}
 
 	// Resolving domain names to IP address on the client side.
 	// Vault only deals with IP addresses.
 	ipAddr, err := net.ResolveIPAddr("ip", address)
 	if err != nil {
-		return "", "", errors.Wrap(err, "failed to resolve IP address")
+		return "", "", "", errors.Wrap(err, "failed to resolve IP address")
 	}
 	ip := ipAddr.String()
 
-	return username, ip, nil
+	return username, address, ip, nil
 }
