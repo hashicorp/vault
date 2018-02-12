@@ -40,7 +40,7 @@ func (b *backend) pathReadCode(ctx context.Context, req *logical.Request, data *
 	name := data.Get("name").(string)
 
 	// Get the key
-	key, err := b.Key(req.Storage, name)
+	key, err := b.Key(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, da
 	}
 
 	// Get the key's stored values
-	key, err := b.Key(req.Storage, name)
+	key, err := b.Key(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}

@@ -23,7 +23,7 @@ type ResponseWrapInfo struct {
 
 	// WrappedEntityID is the entity identifier of the caller who initiated the
 	// wrapping request
-	WrappedEntityID string `json:"wrapped_entity_id" structs:"wrapped_entity_id" mapstructure:"wrapped_entity_id sentinel:"""`
+	WrappedEntityID string `json:"wrapped_entity_id" structs:"wrapped_entity_id" mapstructure:"wrapped_entity_id" sentinel:""`
 
 	// The format to use. This doesn't get returned, it's only internal.
 	Format string `json:"format" structs:"format" mapstructure:"format" sentinel:""`

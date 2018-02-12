@@ -241,7 +241,7 @@ long maximum life time for the certificate; since it honors the maximum mount
 TTL, first we adjust that:
 
 ```text
-$ vault mount-tune -max-lease-ttl=87600h pki
+$ vault secrets tune -max-lease-ttl=87600h pki
 Successfully tuned mount 'pki'!
 ```
 
@@ -442,7 +442,7 @@ Successfully mounted 'pki' at 'pki_int'!
 #### Configure an Intermediate CA
 
 ```text
-$ vault mount-tune -max-lease-ttl=43800h pki_int
+$ vault secrets tune -max-lease-ttl=43800h pki_int
 Successfully tuned mount 'pki_int'!
 ```
 

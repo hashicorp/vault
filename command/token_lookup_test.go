@@ -45,18 +45,6 @@ func TestTokenLookupCommand_Run(t *testing.T) {
 			"Too many arguments",
 			1,
 		},
-		{
-			"format",
-			[]string{"-format", "json"},
-			"{",
-			0,
-		},
-		{
-			"format_bad",
-			[]string{"-format", "nope-not-real"},
-			"Invalid output format",
-			1,
-		},
 	}
 
 	t.Run("validations", func(t *testing.T) {

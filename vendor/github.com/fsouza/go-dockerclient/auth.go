@@ -129,6 +129,9 @@ func authConfigs(confs map[string]dockerConfig) (*AuthConfigurations, error) {
 		Configs: make(map[string]AuthConfiguration),
 	}
 	for reg, conf := range confs {
+		if conf.Auth == "" {
+			continue
+		}
 		data, err := base64.StdEncoding.DecodeString(conf.Auth)
 		if err != nil {
 			return nil, err

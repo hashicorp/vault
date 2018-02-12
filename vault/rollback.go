@@ -175,6 +175,10 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, path string, rs *
 	if err == logical.ErrUnsupportedOperation {
 		err = nil
 	}
+	// If we failed due to read-only storage, we can't do anything; ignore
+	if err != nil && strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+		err = nil
+	}
 	if err != nil {
 		m.logger.Error("rollback: error rolling back", "path", path, "error", err)
 	}
@@ -225,7 +229,7 @@ func (c *Core) startRollback() error {
 		}
 		return ret
 	}
-	c.rollback = NewRollbackManager(c.logger, backendsFunc, c.router, c.requestContext)
+	c.rollback = NewRollbackManager(c.logger, backendsFunc, c.router, c.activeContext)
 	c.rollback.Start()
 	return nil
 }

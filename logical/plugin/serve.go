@@ -2,7 +2,9 @@ package plugin
 
 import (
 	"crypto/tls"
+	"os"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
@@ -12,21 +14,31 @@ import (
 // dispensed rom the plugin server.
 const BackendPluginName = "backend"
 
-type BackendFactoryFunc func(*logical.BackendConfig) (logical.Backend, error)
 type TLSProdiverFunc func() (*tls.Config, error)
 
 type ServeOpts struct {
-	BackendFactoryFunc BackendFactoryFunc
+	BackendFactoryFunc logical.Factory
 	TLSProviderFunc    TLSProdiverFunc
+	Logger             hclog.Logger
 }
 
 // Serve is a helper function used to serve a backend plugin. This
 // should be ran on the plugin's main process.
 func Serve(opts *ServeOpts) error {
+	logger := opts.Logger
+	if logger == nil {
+		logger = hclog.New(&hclog.LoggerOptions{
+			Level:      hclog.Trace,
+			Output:     os.Stderr,
+			JSONFormat: true,
+		})
+	}
+
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"backend": &BackendPlugin{
 			Factory: opts.BackendFactoryFunc,
+			Logger:  logger,
 		},
 	}
 
@@ -35,12 +47,22 @@ func Serve(opts *ServeOpts) error {
 		return err
 	}
 
-	// If FetchMetadata is true, run without TLSProvider
-	plugin.Serve(&plugin.ServeConfig{
+	serveOpts := &plugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		TLSProvider:     opts.TLSProviderFunc,
-	})
+		Logger:          logger,
+
+		// A non-nil value here enables gRPC serving for this plugin...
+		GRPCServer: plugin.DefaultGRPCServer,
+	}
+
+	if !pluginutil.GRPCSupport() {
+		serveOpts.GRPCServer = nil
+	}
+
+	// If FetchMetadata is true, run without TLSProvider
+	plugin.Serve(serveOpts)
 
 	return nil
 }

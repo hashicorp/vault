@@ -417,7 +417,7 @@ If a GCE token is provided for login under an `iam` role, the service account as
 #### Enable GCP authentication in Vault
 
 ```
-$ vault auth-enable gcp
+$ vault auth enable gcp
 ```
 
 #### Configure the GCP Auth Method

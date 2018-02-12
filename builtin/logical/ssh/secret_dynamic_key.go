@@ -54,7 +54,7 @@ func (b *backend) secretDynamicKeyRevoke(ctx context.Context, req *logical.Reque
 	}
 
 	// Fetch the host key using the key name
-	hostKey, err := b.getKey(req.Storage, intSec.HostKeyName)
+	hostKey, err := b.getKey(ctx, req.Storage, intSec.HostKeyName)
 	if err != nil {
 		return nil, fmt.Errorf("key %q not found error: %v", intSec.HostKeyName, err)
 	}

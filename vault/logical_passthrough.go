@@ -15,19 +15,19 @@ import (
 
 // PassthroughBackendFactory returns a PassthroughBackend
 // with leases switched off
-func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, false)
+func PassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	return LeaseSwitchedPassthroughBackend(ctx, conf, false)
 }
 
 // LeasedPassthroughBackendFactory returns a PassthroughBackend
 // with leases switched on
-func LeasedPassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, true)
+func LeasedPassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	return LeaseSwitchedPassthroughBackend(ctx, conf, true)
 }
 
 // LeaseSwitchedPassthroughBackend returns a PassthroughBackend
 // with leases switched on or off
-func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
+func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
 	var b PassthroughBackend
 	b.generateLeases = leases
 	b.Backend = &framework.Backend{
@@ -71,7 +71,7 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (
 	if conf == nil {
 		return nil, fmt.Errorf("Configuation passed into backend is nil")
 	}
-	b.Backend.Setup(conf)
+	b.Backend.Setup(ctx, conf)
 
 	return &b, nil
 }
@@ -91,7 +91,7 @@ func (b *PassthroughBackend) handleRevoke(ctx context.Context, req *logical.Requ
 }
 
 func (b *PassthroughBackend) handleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	out, err := req.Storage.Get(req.Path)
+	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return false, fmt.Errorf("existence check failed: %v", err)
 	}
@@ -101,7 +101,7 @@ func (b *PassthroughBackend) handleExistenceCheck(ctx context.Context, req *logi
 
 func (b *PassthroughBackend) handleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Read the path
-	out, err := req.Storage.Get(req.Path)
+	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return nil, fmt.Errorf("read failed: %v", err)
 	}
@@ -182,7 +182,7 @@ func (b *PassthroughBackend) handleWrite(ctx context.Context, req *logical.Reque
 		Key:   req.Path,
 		Value: buf,
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, fmt.Errorf("failed to write: %v", err)
 	}
 
@@ -191,7 +191,7 @@ func (b *PassthroughBackend) handleWrite(ctx context.Context, req *logical.Reque
 
 func (b *PassthroughBackend) handleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Delete the key at the request path
-	if err := req.Storage.Delete(req.Path); err != nil {
+	if err := req.Storage.Delete(ctx, req.Path); err != nil {
 		return nil, err
 	}
 
@@ -208,7 +208,7 @@ func (b *PassthroughBackend) handleList(ctx context.Context, req *logical.Reques
 	}
 
 	// List the keys at the prefix given by the request
-	keys, err := req.Storage.List(path)
+	keys, err := req.Storage.List(ctx, path)
 	if err != nil {
 		return nil, err
 	}

@@ -40,7 +40,7 @@ If not specified, will use the OAuth2 library default. Useful for testing.`,
 }
 
 func (b *GcpAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	config, err := b.config(req.Storage)
+	config, err := b.config(ctx, req.Storage)
 
 	if err != nil {
 		return nil, err
@@ -58,14 +58,14 @@ func (b *GcpAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
 func (b *GcpAuthBackend) pathConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	config, err := b.config(req.Storage)
+	config, err := b.config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -128,9 +128,9 @@ func (config *gcpConfig) Update(data *framework.FieldData) error {
 
 // config reads the backend's gcpConfig from storage.
 // This assumes the caller has already obtained the backend's config lock.
-func (b *GcpAuthBackend) config(s logical.Storage) (*gcpConfig, error) {
+func (b *GcpAuthBackend) config(ctx context.Context, s logical.Storage) (*gcpConfig, error) {
 	config := &gcpConfig{}
-	entry, err := s.Get("config")
+	entry, err := s.Get(ctx, "config")
 
 	if err != nil {
 		return nil, err

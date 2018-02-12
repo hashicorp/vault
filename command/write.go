@@ -135,7 +135,7 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 	if secret == nil {
 		// Don't output anything unless using the "table" format
-		if c.flagFormat == "table" {
+		if Format(c.UI) == "table" {
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
 		return 0
@@ -146,5 +146,5 @@ func (c *WriteCommand) Run(args []string) int {
 		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
-	return OutputSecret(c.UI, c.flagFormat, secret)
+	return OutputSecret(c.UI, secret)
 }

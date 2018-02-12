@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"context"
 	"strings"
 	"sync"
 
@@ -30,17 +31,17 @@ type ShutdownChannel chan struct{}
 // are expected to be thread safe.
 type Backend interface {
 	// Put is used to insert or update an entry
-	Put(entry *Entry) error
+	Put(ctx context.Context, entry *Entry) error
 
 	// Get is used to fetch an entry
-	Get(key string) (*Entry, error)
+	Get(ctx context.Context, key string) (*Entry, error)
 
 	// Delete is used to permanently delete an entry
-	Delete(key string) error
+	Delete(ctx context.Context, key string) error
 
 	// List is used ot list all the keys under a given
 	// prefix, up to the next prefix.
-	List(prefix string) ([]string, error)
+	List(ctx context.Context, prefix string) ([]string, error)
 }
 
 // HABackend is an extensions to the standard physical
@@ -55,10 +56,12 @@ type HABackend interface {
 	HAEnabled() bool
 }
 
-// Purgable is an optional interface for backends that support
-// purging of their caches.
-type Purgable interface {
-	Purge()
+// ToggleablePurgemonster is an interface for backends that can toggle on or
+// off special functionality and/or support purging. This is only used for the
+// cache, don't use it for other things.
+type ToggleablePurgemonster interface {
+	Purge(ctx context.Context)
+	SetEnabled(bool)
 }
 
 // RedirectDetect is an optional interface that an HABackend

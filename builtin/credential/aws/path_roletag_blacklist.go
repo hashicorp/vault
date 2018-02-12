@@ -50,7 +50,7 @@ func (b *backend) pathRoletagBlacklistsList(ctx context.Context, req *logical.Re
 	b.blacklistMutex.RLock()
 	defer b.blacklistMutex.RUnlock()
 
-	tags, err := req.Storage.List("blacklist/roletag/")
+	tags, err := req.Storage.List(ctx, "blacklist/roletag/")
 	if err != nil {
 		return nil, err
 	}
@@ -71,15 +71,15 @@ func (b *backend) pathRoletagBlacklistsList(ctx context.Context, req *logical.Re
 
 // Fetch an entry from the role tag blacklist for a given tag.
 // This method takes a role tag in its original form and not a base64 encoded form.
-func (b *backend) lockedBlacklistRoleTagEntry(s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
+func (b *backend) lockedBlacklistRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
 	b.blacklistMutex.RLock()
 	defer b.blacklistMutex.RUnlock()
 
-	return b.nonLockedBlacklistRoleTagEntry(s, tag)
+	return b.nonLockedBlacklistRoleTagEntry(ctx, s, tag)
 }
 
-func (b *backend) nonLockedBlacklistRoleTagEntry(s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
-	entry, err := s.Get("blacklist/roletag/" + base64.StdEncoding.EncodeToString([]byte(tag)))
+func (b *backend) nonLockedBlacklistRoleTagEntry(ctx context.Context, s logical.Storage, tag string) (*roleTagBlacklistEntry, error) {
+	entry, err := s.Get(ctx, "blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)))
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (b *backend) pathRoletagBlacklistDelete(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("missing role_tag"), nil
 	}
 
-	return nil, req.Storage.Delete("blacklist/roletag/" + base64.StdEncoding.EncodeToString([]byte(tag)))
+	return nil, req.Storage.Delete(ctx, "blacklist/roletag/"+base64.StdEncoding.EncodeToString([]byte(tag)))
 }
 
 // If the given role tag is blacklisted, returns the details of the blacklist entry.
@@ -115,7 +115,7 @@ func (b *backend) pathRoletagBlacklistRead(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("missing role_tag"), nil
 	}
 
-	entry, err := b.lockedBlacklistRoleTagEntry(req.Storage, tag)
+	entry, err := b.lockedBlacklistRoleTagEntry(ctx, req.Storage, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 	}
 
 	// Parse and verify the role tag from string form to a struct form and verify it.
-	rTag, err := b.parseAndVerifyRoleTagValue(req.Storage, tag)
+	rTag, err := b.parseAndVerifyRoleTagValue(ctx, req.Storage, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 	}
 
 	// Get the entry for the role mentioned in the role tag.
-	roleEntry, err := b.lockedAWSRole(req.Storage, rTag.Role)
+	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, rTag.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 	defer b.blacklistMutex.Unlock()
 
 	// Check if the role tag is already blacklisted. If yes, update it.
-	blEntry, err := b.nonLockedBlacklistRoleTagEntry(req.Storage, tag)
+	blEntry, err := b.nonLockedBlacklistRoleTagEntry(ctx, req.Storage, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 	}
 
 	// Store the blacklist entry.
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

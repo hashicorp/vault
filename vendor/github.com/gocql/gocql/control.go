@@ -99,7 +99,7 @@ func (c *controlConn) heartBeat() {
 
 var hostLookupPreferV4 = os.Getenv("GOCQL_HOST_LOOKUP_PREFER_V4") == "true"
 
-func hostInfo(addr string, defaultPort int) (*HostInfo, error) {
+func hostInfo(addr string, defaultPort int) ([]*HostInfo, error) {
 	var port int
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -112,33 +112,40 @@ func hostInfo(addr string, defaultPort int) (*HostInfo, error) {
 		}
 	}
 
-	ip := net.ParseIP(host)
-	if ip == nil {
-		ips, err := net.LookupIP(host)
-		if err != nil {
-			return nil, err
-		} else if len(ips) == 0 {
-			return nil, fmt.Errorf("No IP's returned from DNS lookup for %q", addr)
-		}
+	var hosts []*HostInfo
 
-		if hostLookupPreferV4 {
-			for _, v := range ips {
-				if v4 := v.To4(); v4 != nil {
-					ip = v4
-					break
-				}
-			}
-			if ip == nil {
-				ip = ips[0]
-			}
-		} else {
-			// TODO(zariel): should we check that we can connect to any of the ips?
-			ip = ips[0]
-		}
-
+	// Check if host is a literal IP address
+	if ip := net.ParseIP(host); ip != nil {
+		hosts = append(hosts, &HostInfo{connectAddress: ip, port: port})
+		return hosts, nil
 	}
 
-	return &HostInfo{connectAddress: ip, port: port}, nil
+	// Look up host in DNS
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return nil, err
+	} else if len(ips) == 0 {
+		return nil, fmt.Errorf("No IP's returned from DNS lookup for %q", addr)
+	}
+
+	// Filter to v4 addresses if any present
+	if hostLookupPreferV4 {
+		var preferredIPs []net.IP
+		for _, v := range ips {
+			if v4 := v.To4(); v4 != nil {
+				preferredIPs = append(preferredIPs, v4)
+			}
+		}
+		if len(preferredIPs) != 0 {
+			ips = preferredIPs
+		}
+	}
+
+	for _, ip := range ips {
+		hosts = append(hosts, &HostInfo{connectAddress: ip, port: port})
+	}
+
+	return hosts, nil
 }
 
 func shuffleHosts(hosts []*HostInfo) []*HostInfo {

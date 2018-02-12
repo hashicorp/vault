@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/mongodb"
 	"github.com/hashicorp/vault/builtin/logical/mssql"
 	"github.com/hashicorp/vault/builtin/logical/mysql"
+	"github.com/hashicorp/vault/builtin/logical/nomad"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
 	"github.com/hashicorp/vault/builtin/logical/rabbitmq"
@@ -31,6 +32,7 @@ import (
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
+	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
@@ -63,6 +65,80 @@ import (
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 )
 
+const (
+	// EnvVaultCLINoColor is an env var that toggles colored UI output.
+	EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
+	// EnvVaultFormat is the output format
+	EnvVaultFormat = `VAULT_FORMAT`
+)
+
+var (
+	auditBackends = map[string]audit.Factory{
+		"file":   auditFile.Factory,
+		"socket": auditSocket.Factory,
+		"syslog": auditSyslog.Factory,
+	}
+
+	credentialBackends = map[string]logical.Factory{
+		"app-id":     credAppId.Factory,
+		"approle":    credAppRole.Factory,
+		"aws":        credAws.Factory,
+		"centrify":   credCentrify.Factory,
+		"cert":       credCert.Factory,
+		"gcp":        credGcp.Factory,
+		"github":     credGitHub.Factory,
+		"kubernetes": credKube.Factory,
+		"ldap":       credLdap.Factory,
+		"okta":       credOkta.Factory,
+		"plugin":     plugin.Factory,
+		"radius":     credRadius.Factory,
+		"userpass":   credUserpass.Factory,
+	}
+
+	logicalBackends = map[string]logical.Factory{
+		"aws":        aws.Factory,
+		"cassandra":  cassandra.Factory,
+		"consul":     consul.Factory,
+		"database":   database.Factory,
+		"mongodb":    mongodb.Factory,
+		"mssql":      mssql.Factory,
+		"mysql":      mysql.Factory,
+		"nomad":      nomad.Factory,
+		"pki":        pki.Factory,
+		"plugin":     plugin.Factory,
+		"postgresql": postgresql.Factory,
+		"rabbitmq":   rabbitmq.Factory,
+		"ssh":        ssh.Factory,
+		"totp":       totp.Factory,
+		"transit":    transit.Factory,
+	}
+
+	physicalBackends = map[string]physical.Factory{
+		"azure":                  physAzure.NewAzureBackend,
+		"cassandra":              physCassandra.NewCassandraBackend,
+		"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
+		"consul":                 physConsul.NewConsulBackend,
+		"couchdb_transactional":  physCouchDB.NewTransactionalCouchDBBackend,
+		"couchdb":                physCouchDB.NewCouchDBBackend,
+		"dynamodb":               physDynamoDB.NewDynamoDBBackend,
+		"etcd":                   physEtcd.NewEtcdBackend,
+		"file_transactional":     physFile.NewTransactionalFileBackend,
+		"file":                   physFile.NewFileBackend,
+		"gcs":                    physGCS.NewGCSBackend,
+		"inmem_ha":               physInmem.NewInmemHA,
+		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
+		"inmem_transactional":    physInmem.NewTransactionalInmem,
+		"inmem":                  physInmem.NewInmem,
+    "manta":                  physManta.NewMantaBackend,
+		"mssql":                  physMSSQL.NewMSSQLBackend,
+		"mysql":                  physMySQL.NewMySQLBackend,
+		"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
+		"s3":                     physS3.NewS3Backend,
+		"swift":                  physSwift.NewSwiftBackend,
+		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
+	}
+)
+
 // DeprecatedCommand is a command that wraps an existing command and prints a
 // deprecation notice and points the user to the new command. Deprecated
 // commands are always hidden from help output.
@@ -82,15 +158,16 @@ func (c *DeprecatedCommand) Help() string {
 
 // Run wraps the embedded Run command and prints a warning about deprecation.
 func (c *DeprecatedCommand) Run(args []string) int {
-	c.warn()
+	if Format(c.UI) == "table" {
+		c.warn()
+	}
 	return c.Command.Run(args)
 }
 
 func (c *DeprecatedCommand) warn() {
 	c.UI.Warn(wrapAtLength(fmt.Sprintf(
 		"WARNING! The \"vault %s\" command is deprecated. Please use \"vault %s\" "+
-			"instead. This command will be removed in the next major release of "+
-			"Vault.",
+			"instead. This command will be removed in Vault 0.11 (or later).",
 		c.Old,
 		c.New)))
 	c.UI.Warn("")
@@ -100,22 +177,14 @@ func (c *DeprecatedCommand) warn() {
 var Commands map[string]cli.CommandFactory
 var DeprecatedCommands map[string]cli.CommandFactory
 
-func init() {
-	ui := &cli.ColoredUi{
-		ErrorColor: cli.UiColorRed,
-		WarnColor:  cli.UiColorYellow,
-		Ui: &cli.BasicUi{
-			Writer:      os.Stdout,
-			ErrorWriter: os.Stderr,
-		},
-	}
-
+func initCommands(ui, serverCmdUi cli.Ui) {
 	loginHandlers := map[string]LoginHandler{
-		"aws":    &credAws.CLIHandler{},
-		"cert":   &credCert.CLIHandler{},
-		"github": &credGitHub.CLIHandler{},
-		"ldap":   &credLdap.CLIHandler{},
-		"okta":   &credOkta.CLIHandler{},
+		"aws":      &credAws.CLIHandler{},
+		"centrify": &credCentrify.CLIHandler{},
+		"cert":     &credCert.CLIHandler{},
+		"github":   &credGitHub.CLIHandler{},
+		"ldap":     &credLdap.CLIHandler{},
+		"okta":     &credOkta.CLIHandler{},
 		"radius": &credUserpass.CLIHandler{
 			DefaultMount: "radius",
 		},
@@ -405,69 +474,14 @@ func init() {
 		"server": func() (cli.Command, error) {
 			return &ServerCommand{
 				BaseCommand: &BaseCommand{
-					UI: ui,
+					UI: serverCmdUi,
 				},
-				AuditBackends: map[string]audit.Factory{
-					"file":   auditFile.Factory,
-					"socket": auditSocket.Factory,
-					"syslog": auditSyslog.Factory,
-				},
-				CredentialBackends: map[string]logical.Factory{
-					"app-id":     credAppId.Factory,
-					"approle":    credAppRole.Factory,
-					"aws":        credAws.Factory,
-					"cert":       credCert.Factory,
-					"gcp":        credGcp.Factory,
-					"github":     credGitHub.Factory,
-					"kubernetes": credKube.Factory,
-					"ldap":       credLdap.Factory,
-					"okta":       credOkta.Factory,
-					"plugin":     plugin.Factory,
-					"radius":     credRadius.Factory,
-					"userpass":   credUserpass.Factory,
-				},
-				LogicalBackends: map[string]logical.Factory{
-					"aws":        aws.Factory,
-					"cassandra":  cassandra.Factory,
-					"consul":     consul.Factory,
-					"database":   database.Factory,
-					"mongodb":    mongodb.Factory,
-					"mssql":      mssql.Factory,
-					"mysql":      mysql.Factory,
-					"pki":        pki.Factory,
-					"plugin":     plugin.Factory,
-					"postgresql": postgresql.Factory,
-					"rabbitmq":   rabbitmq.Factory,
-					"ssh":        ssh.Factory,
-					"totp":       totp.Factory,
-					"transit":    transit.Factory,
-				},
-				PhysicalBackends: map[string]physical.Factory{
-					"azure":                  physAzure.NewAzureBackend,
-					"cassandra":              physCassandra.NewCassandraBackend,
-					"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
-					"consul":                 physConsul.NewConsulBackend,
-					"couchdb_transactional":  physCouchDB.NewTransactionalCouchDBBackend,
-					"couchdb":                physCouchDB.NewCouchDBBackend,
-					"dynamodb":               physDynamoDB.NewDynamoDBBackend,
-					"etcd":                   physEtcd.NewEtcdBackend,
-					"file_transactional":     physFile.NewTransactionalFileBackend,
-					"file":                   physFile.NewFileBackend,
-					"gcs":                    physGCS.NewGCSBackend,
-					"inmem_ha":               physInmem.NewInmemHA,
-					"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
-					"inmem_transactional":    physInmem.NewTransactionalInmem,
-					"inmem":                  physInmem.NewInmem,
-					"manta":                  physManta.NewMantaBackend,
-					"mssql":                  physMSSQL.NewMSSQLBackend,
-					"mysql":                  physMySQL.NewMySQLBackend,
-					"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
-					"s3":                     physS3.NewS3Backend,
-					"swift":                  physSwift.NewSwiftBackend,
-					"zookeeper":              physZooKeeper.NewZooKeeperBackend,
-				},
-				ShutdownCh: MakeShutdownCh(),
-				SighupCh:   MakeSighupCh(),
+				AuditBackends:      auditBackends,
+				CredentialBackends: credentialBackends,
+				LogicalBackends:    logicalBackends,
+				PhysicalBackends:   physicalBackends,
+				ShutdownCh:         MakeShutdownCh(),
+				SighupCh:           MakeSighupCh(),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {
@@ -552,7 +566,7 @@ func init() {
 
 	// Deprecated commands
 	//
-	// TODO: Remove in 0.9.0
+	// TODO: Remove not before 0.11.0
 	DeprecatedCommands = map[string]cli.CommandFactory{
 		"audit-disable": func() (cli.Command, error) {
 			return &DeprecatedCommand{

@@ -19,7 +19,7 @@ type AppsService service
 
 // App represents a GitHub App.
 type App struct {
-	ID          *int       `json:"id,omitempty"`
+	ID          *int64     `json:"id,omitempty"`
 	Owner       *User      `json:"owner,omitempty"`
 	Name        *string    `json:"name,omitempty"`
 	Description *string    `json:"description,omitempty"`
@@ -97,7 +97,7 @@ func (s *AppsService) ListInstallations(ctx context.Context, opt *ListOptions) (
 // GetInstallation returns the specified installation.
 //
 // GitHub API docs: https://developer.github.com/v3/apps/#get-a-single-installation
-func (s *AppsService) GetInstallation(ctx context.Context, id int) (*Installation, *Response, error) {
+func (s *AppsService) GetInstallation(ctx context.Context, id int64) (*Installation, *Response, error) {
 	u := fmt.Sprintf("app/installations/%v", id)
 
 	req, err := s.client.NewRequest("GET", u, nil)
@@ -148,7 +148,7 @@ func (s *AppsService) ListUserInstallations(ctx context.Context, opt *ListOption
 // CreateInstallationToken creates a new installation token.
 //
 // GitHub API docs: https://developer.github.com/v3/apps/#create-a-new-installation-token
-func (s *AppsService) CreateInstallationToken(ctx context.Context, id int) (*InstallationToken, *Response, error) {
+func (s *AppsService) CreateInstallationToken(ctx context.Context, id int64) (*InstallationToken, *Response, error) {
 	u := fmt.Sprintf("installations/%v/access_tokens", id)
 
 	req, err := s.client.NewRequest("POST", u, nil)

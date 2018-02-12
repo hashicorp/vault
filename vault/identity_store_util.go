@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -16,18 +17,18 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func (c *Core) loadIdentityStoreArtifacts() error {
+func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	var err error
 	if c.identityStore == nil {
 		return fmt.Errorf("identity store is not setup")
 	}
 
-	err = c.identityStore.loadEntities()
+	err = c.identityStore.loadEntities(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = c.identityStore.loadGroups()
+	err = c.identityStore.loadGroups(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,9 +36,9 @@ func (c *Core) loadIdentityStoreArtifacts() error {
 	return nil
 }
 
-func (i *IdentityStore) loadGroups() error {
+func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("identity loading groups")
-	existing, err := i.groupPacker.View().List(groupBucketsPrefix)
+	existing, err := i.groupPacker.View().List(ctx, groupBucketsPrefix)
 	if err != nil {
 		return fmt.Errorf("failed to scan for groups: %v", err)
 	}
@@ -88,10 +89,10 @@ func (i *IdentityStore) loadGroups() error {
 	return nil
 }
 
-func (i *IdentityStore) loadEntities() error {
+func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	// Accumulate existing entities
 	i.logger.Debug("identity: loading entities")
-	existing, err := i.entityPacker.View().List(storagepacker.StoragePackerBucketsPrefix)
+	existing, err := i.entityPacker.View().List(ctx, storagepacker.StoragePackerBucketsPrefix)
 	if err != nil {
 		return fmt.Errorf("failed to scan for entities: %v", err)
 	}
@@ -665,12 +666,29 @@ func (i *IdentityStore) MemDBAliasByFactors(mountAccessor, aliasName string, clo
 		return nil, fmt.Errorf("missing mount accessor")
 	}
 
+	txn := i.db.Txn(false)
+
+	return i.MemDBAliasByFactorsInTxn(txn, mountAccessor, aliasName, clone, groupAlias)
+}
+
+func (i *IdentityStore) MemDBAliasByFactorsInTxn(txn *memdb.Txn, mountAccessor, aliasName string, clone bool, groupAlias bool) (*identity.Alias, error) {
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+
+	if aliasName == "" {
+		return nil, fmt.Errorf("missing alias name")
+	}
+
+	if mountAccessor == "" {
+		return nil, fmt.Errorf("missing mount accessor")
+	}
+
 	tableName := entityAliasesTable
 	if groupAlias {
 		tableName = groupAliasesTable
 	}
 
-	txn := i.db.Txn(false)
 	aliasRaw, err := txn.First(tableName, "factors", mountAccessor, aliasName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch alias from memdb using factors: %v", err)
@@ -1321,6 +1339,11 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 }
 
 func (i *IdentityStore) validateMemberGroupID(groupID string, memberGroupID string) error {
+	// Detect self loop
+	if groupID == memberGroupID {
+		return fmt.Errorf("member group ID %q is same as the ID of the group", groupID)
+	}
+
 	group, err := i.MemDBGroupByID(groupID, true)
 	if err != nil {
 		return err
@@ -1330,11 +1353,6 @@ func (i *IdentityStore) validateMemberGroupID(groupID string, memberGroupID stri
 	// okay to add any group as its member group.
 	if group == nil {
 		return nil
-	}
-
-	// Detect self loop
-	if groupID == memberGroupID {
-		fmt.Errorf("member group ID %q is same as the ID of the group")
 	}
 
 	// If adding the memberGroupID to groupID creates a cycle, then groupID must

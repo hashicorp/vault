@@ -32,7 +32,7 @@ func TestTransit_HMAC(t *testing.T) {
 	}
 
 	// Now, change the key value to something we control
-	p, lock, err := b.lm.GetPolicyShared(storage, "foo")
+	p, lock, err := b.lm.GetPolicyShared(context.Background(), storage, "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestTransit_HMAC(t *testing.T) {
 	keyEntry := p.Keys[latestVersion]
 	keyEntry.HMACKey = []byte("01234567890123456789012345678901")
 	p.Keys[latestVersion] = keyEntry
-	if err = p.Persist(storage); err != nil {
+	if err = p.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
 
@@ -127,7 +127,7 @@ func TestTransit_HMAC(t *testing.T) {
 	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
 	// Rotate
-	err = p.Rotate(storage)
+	err = p.Rotate(context.Background(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestTransit_HMAC(t *testing.T) {
 	// Set to another value we control
 	keyEntry.HMACKey = []byte("12345678901234567890123456789012")
 	p.Keys["2"] = keyEntry
-	if err = p.Persist(storage); err != nil {
+	if err = p.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
 
@@ -171,7 +171,7 @@ func TestTransit_HMAC(t *testing.T) {
 
 	// Set min decryption version, attempt to verify
 	p.MinDecryptionVersion = 2
-	if err = p.Persist(storage); err != nil {
+	if err = p.Persist(context.Background(), storage); err != nil {
 		t.Fatal(err)
 	}
 

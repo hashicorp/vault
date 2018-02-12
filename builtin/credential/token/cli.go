@@ -37,7 +37,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		// Override the output
 		stdout := h.testStdout
 		if stdout == nil {
-			stdout = os.Stdout
+			stdout = os.Stderr
 		}
 
 		// No arguments given, read the token from user input
@@ -150,7 +150,7 @@ Usage: vault login TOKEN [CONFIG K=V...]
       $ vault login token=96ddf4bc-d217-f3ba-f9bd-017055595017 lookup=false
 
   This token usually comes from a different source such as the API or via the
-  built-in "vault token-create" command.
+  built-in "vault token create" command.
 
 Configuration:
 

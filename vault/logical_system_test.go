@@ -17,7 +17,6 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
@@ -362,7 +361,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 	}
 
 	policy, _ := ParseACLPolicy(capabilitiesPolicy)
-	err = core.policyStore.SetPolicy(policy)
+	err = core.policyStore.SetPolicy(context.Background(), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -389,7 +388,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 
 func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
 	core, b, rootToken := testCoreSystemBackend(t)
-	te, err := core.tokenStore.Lookup(rootToken)
+	te, err := core.tokenStore.Lookup(context.Background(), rootToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -414,14 +413,14 @@ func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
 	}
 
 	policy, _ := ParseACLPolicy(capabilitiesPolicy)
-	err = core.policyStore.SetPolicy(policy)
+	err = core.policyStore.SetPolicy(context.Background(), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
 
-	te, err = core.tokenStore.Lookup("tokenid")
+	te, err = core.tokenStore.Lookup(context.Background(), "tokenid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1093,7 +1092,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 		},
 	}
 	b := NewSystemBackend(core)
-	err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1104,12 +1103,12 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 		ID:   "foo",
 		Path: "auth/github/login/bar",
 	}
-	err = ts.create(te)
+	err = ts.create(context.Background(), te)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	te, err = ts.Lookup("foo")
+	te, err = ts.Lookup(context.Background(), "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1138,7 +1137,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	te, err = ts.Lookup(te.ID)
+	te, err = ts.Lookup(context.Background(), te.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1157,7 +1156,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 		},
 	}
 	b := NewSystemBackend(core)
-	err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1168,12 +1167,12 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 		ID:   "foo",
 		Path: "auth/github/login/bar",
 	}
-	err = ts.create(te)
+	err = ts.create(context.Background(), te)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	te, err = ts.Lookup("foo")
+	te, err = ts.Lookup(context.Background(), "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1202,7 +1201,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	te, err = ts.Lookup(te.ID)
+	te, err = ts.Lookup(context.Background(), te.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1239,7 +1238,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 
 func TestSystemBackend_enableAuth(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
@@ -1309,7 +1308,7 @@ func TestSystemBackend_enableAuth_invalid(t *testing.T) {
 
 func TestSystemBackend_disableAuth(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
@@ -1444,7 +1443,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 
 func TestSystemBackend_enableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
 		}, nil
@@ -1464,9 +1463,9 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		view := &logical.InmemStorage{}
-		view.Put(&logical.StorageEntry{
+		view.Put(context.Background(), &logical.StorageEntry{
 			Key:   "salt",
 			Value: []byte("foo"),
 		})
@@ -1526,7 +1525,7 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 
 func TestSystemBackend_auditTable(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
 		}, nil
@@ -1565,7 +1564,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 
 func TestSystemBackend_disableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
 		}, nil
@@ -1586,6 +1585,19 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_rawRead_Compressed(t *testing.T) {
+	b := testSystemBackendRaw(t)
+
+	req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.HasPrefix(resp.Data["value"].(string), "{\"type\":\"mounts\"") {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -1655,7 +1667,7 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 		Name: "test",
 		Type: PolicyTypeACL,
 	}
-	err := c.policyStore.SetPolicy(p)
+	err := c.policyStore.SetPolicy(context.Background(), p)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1672,7 +1684,7 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 
 	// Policy should be gone
 	c.policyStore.tokenPoliciesLRU.Purge()
-	out, err := c.policyStore.GetPolicy("test", PolicyTypeToken)
+	out, err := c.policyStore.GetPolicy(context.Background(), "test", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1755,7 +1767,7 @@ func testSystemBackendInternal(t *testing.T, c *Core) logical.Backend {
 	}
 
 	b := NewSystemBackend(c)
-	err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1787,14 +1799,15 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	actualRespData := resp.Data
-
-	expectedBuiltin := &pluginutil.PluginRunner{
-		Name:    "mysql-database-plugin",
-		Builtin: true,
+	expectedRespData := map[string]interface{}{
+		"name":    "mysql-database-plugin",
+		"command": "",
+		"args":    []string(nil),
+		"sha256":  "",
+		"builtin": true,
 	}
-	expectedRespData := structs.New(expectedBuiltin).Map()
-
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
 	}
@@ -1806,13 +1819,24 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 	defer file.Close()
 
+	// Check we can only specify args in one of command or args.
 	command := fmt.Sprintf("%s --test", filepath.Base(file.Name()))
 	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/test-plugin")
+	req.Data["args"] = []string{"--foo"}
 	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
 	req.Data["command"] = command
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+	if resp.Error().Error() != "must not speficy args in command and args field" {
+		t.Fatalf("err: %v", resp.Error())
+	}
+
+	delete(req.Data, "args")
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/test-plugin")
@@ -1820,17 +1844,15 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	actual := resp.Data
-
-	expectedRunner := &pluginutil.PluginRunner{
-		Name:    "test-plugin",
-		Command: filepath.Join(sym, filepath.Base(file.Name())),
-		Args:    []string{"--test"},
-		Sha256:  []byte{'1'},
-		Builtin: false,
+	expected := map[string]interface{}{
+		"name":    "test-plugin",
+		"command": filepath.Base(file.Name()),
+		"args":    []string{"--test"},
+		"sha256":  "31",
+		"builtin": false,
 	}
-	expected := structs.New(expectedRunner).Map()
-
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
 	}

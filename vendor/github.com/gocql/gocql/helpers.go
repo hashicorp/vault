@@ -68,7 +68,7 @@ func dereference(i interface{}) interface{} {
 	return reflect.Indirect(reflect.ValueOf(i)).Interface()
 }
 
-func getCassandraType(name string) Type {
+func getCassandraBaseType(name string) Type {
 	switch name {
 	case "ascii":
 		return TypeAscii
@@ -92,8 +92,10 @@ func getCassandraType(name string) Type {
 		return TypeTimestamp
 	case "uuid":
 		return TypeUUID
-	case "varchar", "text":
+	case "varchar":
 		return TypeVarchar
+	case "text":
+		return TypeText
 	case "varint":
 		return TypeVarint
 	case "timeuuid":
@@ -109,16 +111,50 @@ func getCassandraType(name string) Type {
 	case "TupleType":
 		return TypeTuple
 	default:
-		if strings.HasPrefix(name, "set") {
-			return TypeSet
-		} else if strings.HasPrefix(name, "list") {
-			return TypeList
-		} else if strings.HasPrefix(name, "map") {
-			return TypeMap
-		} else if strings.HasPrefix(name, "tuple") {
-			return TypeTuple
-		}
 		return TypeCustom
+	}
+}
+
+func getCassandraType(name string) TypeInfo {
+	if strings.HasPrefix(name, "frozen<") {
+		return getCassandraType(strings.TrimPrefix(name[:len(name)-1], "frozen<"))
+	} else if strings.HasPrefix(name, "set<") {
+		return CollectionType{
+			NativeType: NativeType{typ: TypeSet},
+			Elem:       getCassandraType(strings.TrimPrefix(name[:len(name)-1], "set<")),
+		}
+	} else if strings.HasPrefix(name, "list<") {
+		return CollectionType{
+			NativeType: NativeType{typ: TypeList},
+			Elem:       getCassandraType(strings.TrimPrefix(name[:len(name)-1], "list<")),
+		}
+	} else if strings.HasPrefix(name, "map<") {
+		names := strings.Split(strings.TrimPrefix(name[:len(name)-1], "map<"), ", ")
+		if len(names) != 2 {
+			panic(fmt.Sprintf("invalid map type: %v", name))
+		}
+
+		return CollectionType{
+			NativeType: NativeType{typ: TypeMap},
+			Key:        getCassandraType(names[0]),
+			Elem:       getCassandraType(names[1]),
+		}
+	} else if strings.HasPrefix(name, "tuple<") {
+		names := strings.Split(strings.TrimPrefix(name[:len(name)-1], "tuple<"), ", ")
+		types := make([]TypeInfo, len(names))
+
+		for i, name := range names {
+			types[i] = getCassandraType(name)
+		}
+
+		return TupleTypeInfo{
+			NativeType: NativeType{typ: TypeTuple},
+			Elems:      types,
+		}
+	} else {
+		return NativeType{
+			typ: getCassandraBaseType(name),
+		}
 	}
 }
 

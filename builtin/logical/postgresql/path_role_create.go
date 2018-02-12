@@ -40,7 +40,7 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 
 	// Get the role
 	b.logger.Trace("postgres/pathRoleCreateRead: getting role")
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 
 	// Determine if we have a lease
 	b.logger.Trace("postgres/pathRoleCreateRead: getting lease")
-	lease, err := b.Lease(req.Storage)
+	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +61,11 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		lease = &configLease{
 			Lease: b.System().DefaultLeaseTTL(),
 		}
+	}
+
+	ttl := lease.Lease
+	if ttl == 0 || (lease.LeaseMax > 0 && ttl > lease.LeaseMax) {
+		ttl = lease.LeaseMax
 	}
 
 	// Generate the username, password and expiration. PG limits user to 63 characters
@@ -81,12 +86,12 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 	expiration := time.Now().
-		Add(lease.Lease).
+		Add(ttl).
 		Format("2006-01-02 15:04:05-0700")
 
 	// Get our handle
 	b.logger.Trace("postgres/pathRoleCreateRead: getting database handle")
-	db, err := b.DB(req.Storage)
+	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +147,7 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		"username": username,
 		"role":     name,
 	})
-	resp.Secret.TTL = lease.Lease
+	resp.Secret.TTL = ttl
 	return resp, nil
 }
 

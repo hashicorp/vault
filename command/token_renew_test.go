@@ -53,18 +53,6 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 			"",
 			0,
 		},
-		{
-			"format",
-			[]string{"-format", "json"},
-			"{",
-			0,
-		},
-		{
-			"format_bad",
-			[]string{"-format", "nope-not-real"},
-			"Invalid output format",
-			1,
-		},
 	}
 
 	t.Run("validations", func(t *testing.T) {

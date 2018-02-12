@@ -296,7 +296,7 @@ $ curl \
     https://vault.rocks/v1/auth/cert/certs/cert1
 ```
 
-## Login with TLS Certiicate Method
+## Login with TLS Certificate Method
 
 Log in and fetch a token. If there is a valid chain to a CA configured in the
 method and all role constraints are matched, a token will be issued.

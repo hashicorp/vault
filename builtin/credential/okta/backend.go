@@ -1,6 +1,7 @@
 package okta
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/chrismalek/oktasdk-go/okta"
@@ -9,9 +10,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -54,8 +55,8 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) Login(req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
-	cfg, err := b.Config(req.Storage)
+func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
+	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -71,6 +72,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	type authResult struct {
 		Embedded embeddedResult `json:"_embedded"`
+		Status   string         `json:"status"`
 	}
 
 	authReq, err := client.NewRequest("POST", "authn", map[string]interface{}{
@@ -94,6 +96,54 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		Data: map[string]interface{}{},
 	}
 
+	// If lockout failures are not configured to be hidden, the status needs to
+	// be inspected for LOCKED_OUT status. Otherwise, it is handled above by an
+	// error returned during the authentication request.
+	switch result.Status {
+	case "LOCKED_OUT":
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/okta: user is locked out", "user", username)
+		}
+		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
+
+	case "PASSWORD_EXPIRED":
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/okta: password is expired", "user", username)
+		}
+		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
+
+	case "PASSWORD_WARN":
+		oktaResponse.AddWarning("Your Okta password is in warning state and needs to be changed soon.")
+
+	case "MFA_REQUIRED", "MFA_ENROLL":
+		if !cfg.BypassOktaMFA {
+			return nil, logical.ErrorResponse("okta mfa required for this account but mfa bypass not set in config"), nil, nil
+		}
+
+	case "SUCCESS":
+		// Do nothing here
+
+	default:
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/okta: unhandled result status", "status", result.Status)
+		}
+		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
+	}
+
+	// Verify result status again in case a switch case above modifies result
+	switch {
+	case result.Status == "SUCCESS",
+		result.Status == "PASSWORD_WARN",
+		result.Status == "MFA_REQUIRED" && cfg.BypassOktaMFA,
+		result.Status == "MFA_ENROLL" && cfg.BypassOktaMFA:
+		// Allowed
+	default:
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/okta: authentication returned a non-success status", "status", result.Status)
+		}
+		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
+	}
+
 	var allGroups []string
 	// Only query the Okta API for group membership if we have a token
 	if cfg.Token != "" {
@@ -110,7 +160,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	// Import the custom added groups from okta backend
-	user, err := b.User(req.Storage, username)
+	user, err := b.User(ctx, req.Storage, username)
 	if err != nil {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/okta: error looking up user", "error", err)
@@ -126,7 +176,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// Retrieve policies
 	var policies []string
 	for _, groupName := range allGroups {
-		entry, _, err := b.Group(req.Storage, groupName)
+		entry, _, err := b.Group(ctx, req.Storage, groupName)
 		if err != nil {
 			if b.Logger().IsDebug() {
 				b.Logger().Debug("auth/okta: error looking up group policies", "error", err)

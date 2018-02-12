@@ -26,7 +26,7 @@ by providing all the required values:
 
 ```hcl
 seal "awskms" {
-  aws_region = "us-east-1"
+  region     = "us-east-1"
   access_key = "AKIAIOSFODNN7EXAMPLE"
   secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
   kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"

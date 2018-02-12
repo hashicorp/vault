@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -32,7 +33,7 @@ type AuditedHeadersConfig struct {
 }
 
 // add adds or overwrites a header in the config and updates the barrier view
-func (a *AuditedHeadersConfig) add(header string, hmac bool) error {
+func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool) error {
 	if header == "" {
 		return fmt.Errorf("header value cannot be empty")
 	}
@@ -51,7 +52,7 @@ func (a *AuditedHeadersConfig) add(header string, hmac bool) error {
 		return fmt.Errorf("failed to persist audited headers config: %v", err)
 	}
 
-	if err := a.view.Put(entry); err != nil {
+	if err := a.view.Put(ctx, entry); err != nil {
 		return fmt.Errorf("failed to persist audited headers config: %v", err)
 	}
 
@@ -59,7 +60,7 @@ func (a *AuditedHeadersConfig) add(header string, hmac bool) error {
 }
 
 // remove deletes a header out of the header config and updates the barrier view
-func (a *AuditedHeadersConfig) remove(header string) error {
+func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error {
 	if header == "" {
 		return fmt.Errorf("header value cannot be empty")
 	}
@@ -79,7 +80,7 @@ func (a *AuditedHeadersConfig) remove(header string) error {
 		return fmt.Errorf("failed to persist audited headers config: %v", err)
 	}
 
-	if err := a.view.Put(entry); err != nil {
+	if err := a.view.Put(ctx, entry); err != nil {
 		return fmt.Errorf("failed to persist audited headers config: %v", err)
 	}
 
@@ -126,12 +127,12 @@ func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc
 }
 
 // Initalize the headers config by loading from the barrier view
-func (c *Core) setupAuditedHeadersConfig() error {
+func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 	// Create a sub-view
 	view := c.systemBarrierView.SubView(auditedHeadersSubPath)
 
 	// Create the config
-	out, err := view.Get(auditedHeadersEntry)
+	out, err := view.Get(ctx, auditedHeadersEntry)
 	if err != nil {
 		return fmt.Errorf("failed to read config: %v", err)
 	}

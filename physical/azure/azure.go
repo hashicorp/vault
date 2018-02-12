@@ -1,6 +1,7 @@
 package azure
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -30,6 +31,9 @@ type AzureBackend struct {
 	logger     log.Logger
 	permitPool *physical.PermitPool
 }
+
+// Verify AzureBackend satisfies the correct interfaces
+var _ physical.Backend = (*AzureBackend)(nil)
 
 // NewAzureBackend constructs an Azure backend using a pre-existing
 // bucket. Credentials can be provided to the backend, sourced
@@ -95,7 +99,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 }
 
 // Put is used to insert or update an entry
-func (a *AzureBackend) Put(entry *physical.Entry) error {
+func (a *AzureBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"azure", "put"}, time.Now())
 
 	if len(entry.Value) >= MaxBlobSize {
@@ -121,7 +125,7 @@ func (a *AzureBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch an entry
-func (a *AzureBackend) Get(key string) (*physical.Entry, error) {
+func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"azure", "get"}, time.Now())
 
 	a.permitPool.Acquire()
@@ -155,7 +159,7 @@ func (a *AzureBackend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (a *AzureBackend) Delete(key string) error {
+func (a *AzureBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"azure", "delete"}, time.Now())
 
 	blob := &storage.Blob{
@@ -172,7 +176,7 @@ func (a *AzureBackend) Delete(key string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (a *AzureBackend) List(prefix string) ([]string, error) {
+func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"azure", "list"}, time.Now())
 
 	a.permitPool.Acquire()

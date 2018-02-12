@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"net/rpc"
 	"time"
 
@@ -36,7 +37,7 @@ func (s *SystemViewClient) MaxLeaseTTL() time.Duration {
 	return reply.MaxLeaseTTL
 }
 
-func (s *SystemViewClient) SudoPrivilege(path string, token string) bool {
+func (s *SystemViewClient) SudoPrivilege(ctx context.Context, path string, token string) bool {
 	var reply SudoPrivilegeReply
 	args := &SudoPrivilegeArgs{
 		Path:  path,
@@ -78,13 +79,13 @@ func (s *SystemViewClient) ReplicationState() consts.ReplicationState {
 
 	err := s.client.Call("Plugin.ReplicationState", new(interface{}), &reply)
 	if err != nil {
-		return consts.ReplicationDisabled
+		return consts.ReplicationUnknown
 	}
 
 	return reply.ReplicationState
 }
 
-func (s *SystemViewClient) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (s *SystemViewClient) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	var reply ResponseWrapDataReply
 	// Do not allow JWTs to be returned
 	args := &ResponseWrapDataArgs{
@@ -104,7 +105,7 @@ func (s *SystemViewClient) ResponseWrapData(data map[string]interface{}, ttl tim
 	return reply.ResponseWrapInfo, nil
 }
 
-func (s *SystemViewClient) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+func (s *SystemViewClient) LookupPlugin(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
 	return nil, fmt.Errorf("cannot call LookupPlugin from a plugin backend")
 }
 
@@ -116,6 +117,16 @@ func (s *SystemViewClient) MlockEnabled() bool {
 	}
 
 	return reply.MlockEnabled
+}
+
+func (s *SystemViewClient) LocalMount() bool {
+	var reply LocalMountReply
+	err := s.client.Call("Plugin.LocalMount", new(interface{}), &reply)
+	if err != nil {
+		return false
+	}
+
+	return reply.Local
 }
 
 type SystemViewServer struct {
@@ -141,7 +152,7 @@ func (s *SystemViewServer) MaxLeaseTTL(_ interface{}, reply *MaxLeaseTTLReply) e
 }
 
 func (s *SystemViewServer) SudoPrivilege(args *SudoPrivilegeArgs, reply *SudoPrivilegeReply) error {
-	sudo := s.impl.SudoPrivilege(args.Path, args.Token)
+	sudo := s.impl.SudoPrivilege(context.Background(), args.Path, args.Token)
 	*reply = SudoPrivilegeReply{
 		Sudo: sudo,
 	}
@@ -178,7 +189,7 @@ func (s *SystemViewServer) ReplicationState(_ interface{}, reply *ReplicationSta
 
 func (s *SystemViewServer) ResponseWrapData(args *ResponseWrapDataArgs, reply *ResponseWrapDataReply) error {
 	// Do not allow JWTs to be returned
-	info, err := s.impl.ResponseWrapData(args.Data, args.TTL, false)
+	info, err := s.impl.ResponseWrapData(context.Background(), args.Data, args.TTL, false)
 	if err != nil {
 		*reply = ResponseWrapDataReply{
 			Error: wrapError(err),
@@ -196,6 +207,15 @@ func (s *SystemViewServer) MlockEnabled(_ interface{}, reply *MlockEnabledReply)
 	enabled := s.impl.MlockEnabled()
 	*reply = MlockEnabledReply{
 		MlockEnabled: enabled,
+	}
+
+	return nil
+}
+
+func (s *SystemViewServer) LocalMount(_ interface{}, reply *LocalMountReply) error {
+	local := s.impl.LocalMount()
+	*reply = LocalMountReply{
+		Local: local,
 	}
 
 	return nil
@@ -243,4 +263,8 @@ type ResponseWrapDataReply struct {
 
 type MlockEnabledReply struct {
 	MlockEnabled bool
+}
+
+type LocalMountReply struct {
+	Local bool
 }

@@ -54,7 +54,7 @@ of version 0.6.1, there are only three ways to create root tokens:
    expiration
 2. By using another root token; a root token with an expiration cannot create a
    root token that never expires
-3. By using `vault generate-root` ([example](/guides/generate-root.html))
+3. By using `vault generate-root` ([example](/guides/configuration/generate-root.html))
    with the permission of a quorum of unseal key holders
 
 Root tokens are useful in development but should be extremely carefully guarded
@@ -132,7 +132,7 @@ current TTL is up, the token will no longer function -- it, and its associated
 leases, are revoked.
 
 If the token is renewable, Vault can be asked to extend the token validity
-period using `vault token-renew` or the appropriate renewal endpoint. At this
+period using `vault token renew` or the appropriate renewal endpoint. At this
 time, various factors come into play. What happens depends upon whether the
 token is a periodic token (available for creation by `root`/`sudo` users, token
 store roles, or some auth methods), has an explicit maximum TTL

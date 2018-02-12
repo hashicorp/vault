@@ -32,7 +32,7 @@ Usage: vault operator key-status [options]
 }
 
 func (c *OperatorKeyStatusCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *OperatorKeyStatusCommand) AutocompleteArgs() complete.Predictor {
@@ -69,6 +69,11 @@ func (c *OperatorKeyStatusCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Output(printKeyStatus(status))
-	return 0
+	switch Format(c.UI) {
+	case "table":
+		c.UI.Output(printKeyStatus(status))
+		return 0
+	default:
+		return OutputData(c.UI, status)
+	}
 }

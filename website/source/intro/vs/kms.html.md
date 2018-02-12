@@ -28,7 +28,7 @@ including database credentials, API keys, PKI keys, and encryption keys.  Vault
 also supports dynamic secrets, generating credentials on-demand for
 fine-grained security controls, auditing, and non-repudiation.
 
-Lastly Vault forces a mandatory lease contract with clients. All secrets read
+Lastly, Vault forces a mandatory lease contract with clients. All secrets read
 from Vault have an associated lease which enables operations to audit key
 usage, perform key rolling, and ensure automatic revocation. Vault provides
 multiple revocation mechanisms to give operators a clear "break glass"

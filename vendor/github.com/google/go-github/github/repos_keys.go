@@ -39,7 +39,7 @@ func (s *RepositoriesService) ListKeys(ctx context.Context, owner string, repo s
 // GetKey fetches a single deploy key.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/keys/#get
-func (s *RepositoriesService) GetKey(ctx context.Context, owner string, repo string, id int) (*Key, *Response, error) {
+func (s *RepositoriesService) GetKey(ctx context.Context, owner string, repo string, id int64) (*Key, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/keys/%v", owner, repo, id)
 
 	req, err := s.client.NewRequest("GET", u, nil)

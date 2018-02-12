@@ -394,7 +394,7 @@ $ vault read sys/policy/default
 To disable attachment of the default policy:
 
 ```sh
-$ vault token-create -no-default-policy
+$ vault token create -no-default-policy
 ```
 
 or via the API:
@@ -422,7 +422,7 @@ controlled users and authentication should be used.
 To revoke a root token, run:
 
 ```sh
-$ vault token-revoke "<token>"
+$ vault token revoke "<token>"
 ```
 
 or via the API:
@@ -437,8 +437,8 @@ $ curl \
 
 For more information, please read:
 
-- [Production Hardening](/guides/production.html)
-- [Generating a Root Token](/guides/generate-root.html)
+- [Production Hardening](/guides/operations/production.html)
+- [Generating a Root Token](/guides/configuration/generate-root.html)
 
 ## Managing Policies
 
@@ -472,7 +472,7 @@ Policies may be created (uploaded) via the CLI or via the API. To create a new
 policy in Vault:
 
 ```sh
-$ vault write sys/policy/my-policy rules=@my-policy.hcl
+$ vault write sys/policy/my-policy policy=@my-policy.hcl
 ```
 
 -> The `@` tells Vault to read from a file on disk. In the example above, Vault
@@ -485,7 +485,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data '{"rules":"path \"...\" {...} "}' \
+  --data '{"policy":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-policy
 ```
 
@@ -500,7 +500,7 @@ API. To update an existing policy in Vault, follow the same steps as creating a
 policy, but use an existing policy name:
 
 ```sh
-$ vault write sys/policy/my-existing-policy rules=@updated-policy.json
+$ vault write sys/policy/my-existing-policy policy=@updated-policy.json
 ```
 
 or via the API:
@@ -509,7 +509,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data '{"rules":"path \"...\" {...} "}' \
+  --data '{"policy":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-existing-policy
 ```
 
@@ -569,7 +569,7 @@ authenticated user.
 Tokens are associated with their policies at creation time. For example:
 
 ```sh
-$ vault token-create -policy=dev-readonly -policy=logs
+$ vault token create -policy=dev-readonly -policy=logs
 ```
 
 Child tokens can be associated with a subset of a parent's policies. Root users

@@ -49,7 +49,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	// Scan the storage with the count func set
-	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+	if err = logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -70,7 +70,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	count = 0
-	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+	if err = logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -87,7 +87,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	count = 0
-	if err := logical.ScanView(exp.idView, countFunc); err != nil {
+	if err := logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -105,7 +105,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	count = 0
-	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+	if err = logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -122,7 +122,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	count = 0
-	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+	if err = logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -148,7 +148,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	count = 0
-	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+	if err = logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -180,7 +180,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	count = 0
-	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+	if err = logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -217,7 +217,7 @@ func TestExpiration_Tidy(t *testing.T) {
 		t.Fatalf("expected at least one of err1 or err2 to be set; err1: %#v\n err2:%#v\n", err1, err2)
 	}
 
-	root, err := exp.tokenStore.rootToken()
+	root, err := exp.tokenStore.rootToken(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +235,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	count = 0
-	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+	if err = logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -460,7 +460,7 @@ func TestExpiration_Register(t *testing.T) {
 
 func TestExpiration_RegisterAuth(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.rootToken()
+	root, err := exp.tokenStore.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -485,7 +485,7 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 
 func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.rootToken()
+	root, err := exp.tokenStore.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -512,7 +512,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 
 	// Verify token does not get revoked
-	out, err := exp.tokenStore.Lookup(root.ID)
+	out, err := exp.tokenStore.Lookup(context.Background(), root.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -765,7 +765,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 
 func TestExpiration_RenewToken(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.rootToken()
+	root, err := exp.tokenStore.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -790,13 +790,125 @@ func TestExpiration_RenewToken(t *testing.T) {
 	}
 
 	if auth.ClientToken != out.Auth.ClientToken {
-		t.Fatalf("Bad: %#v", out)
+		t.Fatalf("bad: %#v", out)
+	}
+}
+
+func TestExpiration_RenewToken_period(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.rootToken(context.Background())
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Register a token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+		Period: time.Minute,
+	}
+	err = exp.RegisterAuth("auth/token/login", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Renew the token
+	out, err := exp.RenewToken(&logical.Request{}, "auth/token/login", root.ID, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if auth.ClientToken != out.Auth.ClientToken {
+		t.Fatalf("bad: %#v", out)
+	}
+
+	if out.Auth.TTL > time.Minute {
+		t.Fatalf("expected TTL to be less than 1 minute, got: %s", out.Auth.TTL)
+	}
+}
+
+func TestExpiration_RenewToken_period_backend(t *testing.T) {
+	exp := mockExpiration(t)
+	root, err := exp.tokenStore.rootToken(context.Background())
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Mount a noop backend
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Auth: &logical.Auth{
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       10 * time.Second,
+					Renewable: true,
+				},
+				Period: 5 * time.Second,
+			},
+		},
+		DefaultLeaseTTL: 5 * time.Second,
+		MaxLeaseTTL:     5 * time.Second,
+	}
+
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, credentialBarrierPrefix)
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register a token
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       10 * time.Second,
+			Renewable: true,
+			IssueTime: time.Now(),
+		},
+		Period: 5 * time.Second,
+	}
+
+	err = exp.RegisterAuth("auth/foo/login", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Wait 3 seconds
+	time.Sleep(3 * time.Second)
+	resp, err := exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("expected a response")
+	}
+	if resp.Auth.TTL > 5*time.Second {
+		t.Fatalf("expected TTL to be less than or equal to period, got: %s", resp.Auth.TTL)
+	}
+
+	// Wait another 3 seconds. If period works correctly, this should not fail
+	time.Sleep(3 * time.Second)
+	resp, err = exp.RenewToken(&logical.Request{}, "auth/foo/login", root.ID, 0)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("expected a response")
+	}
+	if resp.Auth.TTL < 4*time.Second || resp.Auth.TTL > 5*time.Second {
+		t.Fatalf("expected TTL to be around period's value, got: %s", resp.Auth.TTL)
 	}
 }
 
 func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.rootToken()
+	root, err := exp.tokenStore.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1069,7 +1181,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 
 func TestExpiration_revokeEntry_token(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.rootToken()
+	root, err := exp.tokenStore.rootToken(context.Background())
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1122,7 +1234,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := exp.tokenStore.Lookup(le.ClientToken)
+	out, err := exp.tokenStore.Lookup(context.Background(), le.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1222,7 +1334,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		},
 	}
 	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "auth/foo/")
+	view := NewBarrierView(barrier, "auth/")
 	meUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
@@ -1404,7 +1516,7 @@ func TestExpiration_RevokeForce(t *testing.T) {
 		Accessor: "badrenewaccessor",
 	}
 
-	err := core.mount(me)
+	err := core.mount(context.Background(), me)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1441,7 +1553,7 @@ func TestExpiration_RevokeForce(t *testing.T) {
 	}
 }
 
-func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+func badRenewFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	be := &framework.Backend{
 		Paths: []*framework.Path{
 			&framework.Path{
@@ -1472,7 +1584,7 @@ func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 		},
 	}
 
-	err := be.Setup(conf)
+	err := be.Setup(context.Background(), conf)
 	if err != nil {
 		return nil, err
 	}

@@ -59,6 +59,15 @@ This endpoint is used to install a license into Vault.
 | :------- | :--------------------------- | :--------------------- |
 | `PUT`    | `/sys/license`                | `204 (empty body)` |
 
+### Parameters
+
+- `text` `(string: <required>)` – The text of the license.
+
+*DR Secondary Specific Parameters*
+
+  - `dr_operation_token` `(string: <required>)` - DR operation token used to authorize this request.
+
+
 ### Sample Payload
 
 ```json

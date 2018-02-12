@@ -151,6 +151,7 @@ type HostDiskStats struct {
 // NodeListStub is a subset of information returned during
 // node list operations.
 type NodeListStub struct {
+	Address           string
 	ID                string
 	Datacenter        string
 	Name              string

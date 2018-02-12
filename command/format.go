@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -19,29 +20,38 @@ const (
 	hopeDelim = "♨"
 )
 
-func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
-	return outputWithFormat(ui, format, secret, secret)
+type FormatOptions struct {
+	Format string
 }
 
-func OutputList(ui cli.Ui, format string, secret *api.Secret) int {
-	return outputWithFormat(ui, format, secret, secret.Data["keys"])
+func OutputSecret(ui cli.Ui, secret *api.Secret) int {
+	return outputWithFormat(ui, secret, secret)
 }
 
-func outputWithFormat(ui cli.Ui, format string, secret *api.Secret, data interface{}) int {
-	// If we had a colored UI, pull out the nested ui so we don't add escape
-	// sequences for outputting json, etc.
-	colorUI, ok := ui.(*cli.ColoredUi)
-	if ok {
-		ui = colorUI.Ui
+func OutputList(ui cli.Ui, data interface{}) int {
+	switch data.(type) {
+	case *api.Secret:
+		secret := data.(*api.Secret)
+		return outputWithFormat(ui, secret, secret.Data["keys"])
+	default:
+		return outputWithFormat(ui, nil, data)
 	}
+}
 
-	formatter, ok := Formatters[strings.ToLower(format)]
+func OutputData(ui cli.Ui, data interface{}) int {
+	return outputWithFormat(ui, nil, data)
+}
+
+func outputWithFormat(ui cli.Ui, secret *api.Secret, data interface{}) int {
+	format := Format(ui)
+	formatter, ok := Formatters[format]
 	if !ok {
 		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
 		return 1
 	}
+
 	if err := formatter.Output(ui, secret, data); err != nil {
-		ui.Error(fmt.Sprintf("Could not output secret: %s", err.Error()))
+		ui.Error(fmt.Sprintf("Could not parse output: %s", err.Error()))
 		return 1
 	}
 	return 0
@@ -56,6 +66,22 @@ var Formatters = map[string]Formatter{
 	"table": TableFormatter{},
 	"yaml":  YamlFormatter{},
 	"yml":   YamlFormatter{},
+}
+
+func format() string {
+	format := os.Getenv(EnvVaultFormat)
+	if format == "" {
+		format = "table"
+	}
+	return format
+}
+
+func Format(ui cli.Ui) string {
+	switch ui.(type) {
+	case *VaultUI:
+		return ui.(*VaultUI).format
+	}
+	return format()
 }
 
 // An output formatter for json output of an object
@@ -87,18 +113,31 @@ type TableFormatter struct {
 }
 
 func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	// TODO: this should really use reflection like the other formatters do
-	if s, ok := data.(*api.Secret); ok {
-		return t.OutputSecret(ui, s)
+	switch data.(type) {
+	case *api.Secret:
+		return t.OutputSecret(ui, secret)
+	case []interface{}:
+		return t.OutputList(ui, secret, data)
+	case []string:
+		return t.OutputList(ui, nil, data)
+	default:
+		return errors.New("Cannot use the table formatter for this type")
 	}
-	if s, ok := data.([]interface{}); ok {
-		return t.OutputList(ui, secret, s)
-	}
-	return errors.New("Cannot use the table formatter for this type")
 }
 
-func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, list []interface{}) error {
+func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	t.printWarnings(ui, secret)
+
+	switch data.(type) {
+	case []interface{}:
+	case []string:
+		ui.Output(tableOutput(data.([]string), nil))
+		return nil
+	default:
+		return errors.New("Error: table formatter cannot output list for this data type")
+	}
+
+	list := data.([]interface{})
 
 	if len(list) > 0 {
 		keys := make([]string, len(list))
@@ -208,7 +247,14 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	return nil
 }
 
+// OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
 func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
+	switch Format(ui) {
+	case "table":
+	default:
+		return OutputData(ui, status)
+	}
+
 	var sealPrefix string
 	if status.RecoverySeal {
 		sealPrefix = "Recovery "

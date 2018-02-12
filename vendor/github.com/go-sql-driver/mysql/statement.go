@@ -137,6 +137,12 @@ func (c converter) ConvertValue(v interface{}) (driver.Value, error) {
 		return v, nil
 	}
 
+	if v != nil {
+		if valuer, ok := v.(driver.Valuer); ok {
+			return valuer.Value()
+		}
+	}
+
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 	case reflect.Ptr:
@@ -157,6 +163,16 @@ func (c converter) ConvertValue(v interface{}) (driver.Value, error) {
 		return int64(u64), nil
 	case reflect.Float32, reflect.Float64:
 		return rv.Float(), nil
+	case reflect.Bool:
+		return rv.Bool(), nil
+	case reflect.Slice:
+		ek := rv.Type().Elem().Kind()
+		if ek == reflect.Uint8 {
+			return rv.Bytes(), nil
+		}
+		return nil, fmt.Errorf("unsupported type %T, a slice of %s", v, ek)
+	case reflect.String:
+		return rv.String(), nil
 	}
 	return nil, fmt.Errorf("unsupported type %T, a %s", v, rv.Kind())
 }

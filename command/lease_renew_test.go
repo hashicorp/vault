@@ -74,18 +74,6 @@ func TestLeaseRenewCommand_Run(t *testing.T) {
 			"foo",
 			0,
 		},
-		{
-			"format",
-			[]string{"-format", "json"},
-			"{",
-			0,
-		},
-		{
-			"format_bad",
-			[]string{"-format", "nope-not-real"},
-			"Invalid output format",
-			1,
-		},
 	}
 
 	t.Run("group", func(t *testing.T) {

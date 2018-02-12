@@ -1,6 +1,7 @@
 package command
 
 import (
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -140,5 +141,54 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 
 		_, cmd := testAuthEnableCommand(t)
 		assertNoTabs(t, cmd)
+	})
+
+	t.Run("mount_all", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerAllBackends(t)
+		defer closer()
+
+		files, err := ioutil.ReadDir("../builtin/credential")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var backends []string
+		for _, f := range files {
+			if f.IsDir() {
+				backends = append(backends, f.Name())
+			}
+		}
+
+		plugins, err := ioutil.ReadDir("../vendor/github.com/hashicorp")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range plugins {
+			if p.IsDir() && strings.HasPrefix(p.Name(), "vault-plugin-auth-") {
+				backends = append(backends, strings.TrimPrefix(p.Name(), "vault-plugin-auth-"))
+			}
+		}
+
+		if len(backends) != len(credentialBackends) {
+			t.Fatalf("expected %d credential backends, got %d", len(credentialBackends), len(backends))
+		}
+
+		for _, b := range backends {
+			if b == "token" {
+				continue
+			}
+
+			ui, cmd := testAuthEnableCommand(t)
+			cmd.client = client
+
+			code := cmd.Run([]string{
+				b,
+			})
+			if exp := 0; code != exp {
+				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+			}
+		}
 	})
 }

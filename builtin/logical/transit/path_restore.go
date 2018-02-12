@@ -36,7 +36,7 @@ func (b *backend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("'backup' must be supplied"), nil
 	}
 
-	return nil, b.lm.RestorePolicy(req.Storage, d.Get("name").(string), backupB64)
+	return nil, b.lm.RestorePolicy(ctx, req.Storage, d.Get("name").(string), backupB64)
 }
 
 const pathRestoreHelpSyn = `Restore the named key`

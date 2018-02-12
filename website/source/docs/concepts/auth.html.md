@@ -108,5 +108,5 @@ the specific auth method in use. It is specific to each backend
 how leasing is implemented.
 
 And just like secrets, identities can be renewed without having to
-completely reauthenticate. Just use `vault token-renew <token>` with the
+completely reauthenticate. Just use `vault token renew <token>` with the
 leased token associated with your identity to renew it.
