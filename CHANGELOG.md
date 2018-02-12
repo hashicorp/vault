@@ -5,6 +5,10 @@ IMPROVEMENTS:
  * auth/centrify: Add CLI helper
  * audit: Always log failure metrics, even if zero, to ensure the values appear
    on dashboards [GH-3937]
+ * cli: Disable color when output is not a TTY [GH-3897]
+ * cli: Add `-format` flag to all subcommands [GH-3897]
+ * cli: Do not display deprecation warnings when the format is not table
+   [GH-3897]
  * secret/pki: Add a flag to make the common name optional on certs [GH-3940]
  * secret/pki: Ensure only DNS-compatible names go into DNS SANs; additionally,
    properly handle IDNA transformations for these DNS names [GH-3953]
