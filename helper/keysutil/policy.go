@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/kdf"
 	"github.com/hashicorp/vault/logical"
+	"github.com/mitchellh/copystructure"
 )
 
 // Careful with iota; don't put anything before it in this const block because
@@ -429,7 +430,26 @@ func (p *Policy) NeedsUpgrade() bool {
 	return false
 }
 
-func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) error {
+func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) (retErr error) {
+	priorKey := p.Key
+	priorLatestVersion := p.LatestVersion
+	priorMinDecryptionVersion := p.MinDecryptionVersion
+	priorConvergentVersion := p.ConvergentVersion
+	priorKeys, err := copystructure.Copy(p.Keys)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if retErr != nil {
+			p.Key = priorKey
+			p.LatestVersion = priorLatestVersion
+			p.MinDecryptionVersion = priorMinDecryptionVersion
+			p.ConvergentVersion = priorConvergentVersion
+			p.Keys = priorKeys.(keyEntryMap)
+		}
+	}()
+
 	persistNeeded := false
 	// Ensure we've moved from Key -> Keys
 	if p.Key != nil && len(p.Key) > 0 {
@@ -955,7 +975,26 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 	}
 }
 
-func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) error {
+func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr error) {
+	priorLatestVersion := p.LatestVersion
+	priorMinDecryptionVersion := p.MinDecryptionVersion
+	priorKeys := keyEntryMap(nil)
+
+	if p.Keys != nil {
+		priorKeys = keyEntryMap{}
+		for k, v := range p.Keys {
+			priorKeys[k] = v
+		}
+	}
+
+	defer func() {
+		if retErr != nil {
+			p.LatestVersion = priorLatestVersion
+			p.MinDecryptionVersion = priorMinDecryptionVersion
+			p.Keys = priorKeys
+		}
+	}()
+
 	if p.Keys == nil {
 		// This is an initial key rotation when generating a new policy. We
 		// don't need to call migrate here because if we've called getPolicy to
@@ -1052,7 +1091,7 @@ func (p *Policy) MigrateKeyToKeysMap() {
 }
 
 // Backup should be called with an exclusive lock held on the policy
-func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (string, error) {
+func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (out string, retErr error) {
 	if !p.Exportable {
 		return "", fmt.Errorf("exporting is disallowed on the policy")
 	}
@@ -1060,6 +1099,14 @@ func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (string, e
 	if !p.AllowPlaintextBackup {
 		return "", fmt.Errorf("plaintext backup is disallowed on the policy")
 	}
+
+	priorBackupInfo := p.BackupInfo
+
+	defer func() {
+		if retErr != nil {
+			p.BackupInfo = priorBackupInfo
+		}
+	}()
 
 	// Create a record of this backup operation in the policy
 	p.BackupInfo = &BackupInfo{
