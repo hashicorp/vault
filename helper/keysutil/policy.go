@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/kdf"
 	"github.com/hashicorp/vault/logical"
-	"github.com/mitchellh/copystructure"
 )
 
 // Careful with iota; don't put anything before it in this const block because
@@ -456,9 +455,13 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) (retErr e
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
 	priorConvergentVersion := p.ConvergentVersion
-	priorKeys, err := copystructure.Copy(p.Keys)
-	if err != nil {
-		return err
+	priorKeys := keyEntryMap(nil)
+
+	if p.Keys != nil {
+		priorKeys = keyEntryMap{}
+		for k, v := range p.Keys {
+			priorKeys[k] = v
+		}
 	}
 
 	defer func() {
@@ -467,7 +470,7 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) (retErr e
 			p.LatestVersion = priorLatestVersion
 			p.MinDecryptionVersion = priorMinDecryptionVersion
 			p.ConvergentVersion = priorConvergentVersion
-			p.Keys = priorKeys.(keyEntryMap)
+			p.Keys = priorKeys
 		}
 	}()
 
