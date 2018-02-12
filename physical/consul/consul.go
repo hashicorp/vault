@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -73,6 +74,10 @@ var _ physical.HABackend = (*ConsulBackend)(nil)
 var _ physical.Lock = (*ConsulLock)(nil)
 var _ physical.Transactional = (*ConsulBackend)(nil)
 
+var (
+	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+)
+
 // ConsulBackend is a physical backend that stores data at specific
 // prefix within Consul. It is used for most production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.
@@ -135,6 +140,9 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	service, ok := conf["service"]
 	if !ok {
 		service = DefaultServiceName
+	}
+	if !hostnameRegex.MatchString(service) {
+		return nil, errors.New("service name must be valid per RFC 1123 and can contain only alphanumeric characters or dashes")
 	}
 	if logger.IsDebug() {
 		logger.Debug("physical/consul: config service set", "service", service)
