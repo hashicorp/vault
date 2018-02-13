@@ -221,6 +221,47 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 
 }
 
+func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
+	cleanup, connURL := preparePostgresTestContainer(t)
+	defer cleanup()
+
+	connURL = strings.Replace(connURL, "postgres:secret", `{{username}}:{{password}}`, -1)
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":       connURL,
+		"max_open_connections": 5,
+		"username":             "postgres",
+		"password":             "secret",
+	}
+
+	dbRaw, _ := New()
+	db := dbRaw.(*PostgreSQL)
+
+	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
+
+	_, err := db.Initialize(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !connProducer.Initialized {
+		t.Fatal("Database should be initalized")
+	}
+
+	newConf, err := db.RotateRootCredentials(context.Background(), nil, connectionDetails)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if newConf["password"] == "secret" {
+		t.Fatal("password was not updated")
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
 func TestPostgreSQL_RevokeUser(t *testing.T) {
 	cleanup, connURL := preparePostgresTestContainer(t)
 	defer cleanup()

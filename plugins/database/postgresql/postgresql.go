@@ -26,7 +26,7 @@ const (
 ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
 `
 	defaultPostgresRotateRootCredentialsSQL = `
-ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
+ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
 )
 

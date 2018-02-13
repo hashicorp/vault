@@ -28,12 +28,7 @@ type SQLConfig struct {
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type SQLConnectionProducer struct {
-	ConnectionURL            string      `json:"connection_url" mapstructure:"connection_url"`
-	MaxOpenConnections       int         `json:"max_open_connections" mapstructure:"max_open_connections"`
-	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections"`
-	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
-	Username                 string      `json:"username" mapstructure:"username"`
-	Password                 string      `json:"password" mapstructure:"password"`
+	SQLConfig
 
 	Type                  string
 	maxConnectionLifetime time.Duration
@@ -46,7 +41,7 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 	c.Lock()
 	defer c.Unlock()
 
-	err = mapstructure.WeakDecode(conf, c)
+	err = mapstructure.WeakDecode(conf, &c.SQLConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +56,7 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 			return nil, fmt.Errorf("connection_url must be templated if username and password are provided")
 		}
 
-		dbutil.QueryHelper(connURL, map[string]string{
+		c.ConnectionURL = dbutil.QueryHelper(connURL, map[string]string{
 			"username": c.Username,
 			"password": c.Password,
 		})
