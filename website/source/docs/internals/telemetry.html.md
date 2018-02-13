@@ -64,11 +64,21 @@ These metrics represent operational aspects of the running Vault instance.
 
 ### vault.audit.log_request
 
-**[S]** Summary (Number of requests): Number of audit log requests
+**[S]** Summary (Nanoseconds): Duration of time taken by all audit log requests across all audit log backends
 
 ### vault.audit.log_response
 
-**[S]** Summary (Number of responses): Number of audit log responses
+**[S]** Summary (Nanoseconds): Duration of time taken by audit log responses across all audit log backends
+
+Additionally, per audit log backend metrics such as those for a specific backend like `file` will be present as:
+
+### vault.audit.file.log_request
+
+**[S]** Summary (Nanoseconds): Duration of time taken by audit log requests for the file based audit backend mounted as `file`
+
+### vault.audit.file.log_response
+
+**[S]** Summary (Nanoseconds): Duration of time taken by audit log responses for the file based audit backend mounted as `file`
 
 ### vault.audit.log_request_failure
 
