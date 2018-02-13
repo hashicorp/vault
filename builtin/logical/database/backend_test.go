@@ -29,6 +29,7 @@ var (
 )
 
 func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cleanup func(), retURL string) {
+	t.Helper()
 	if os.Getenv("PG_URL") != "" {
 		return func() {}, os.Getenv("PG_URL")
 	}
@@ -236,6 +237,58 @@ func TestBackend_config_connection(t *testing.T) {
 	}
 }
 
+func TestBackend_BadConnectionString(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	cleanup, _ := preparePostgresTestContainer(t, config.StorageView, b)
+	defer cleanup()
+
+	respCheck := func(req *logical.Request) {
+		t.Helper()
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp == nil || !resp.IsError() {
+			t.Fatalf("expected error, resp:%#v", resp)
+		}
+		err = resp.Error()
+		if strings.Contains(err.Error(), "localhost") {
+			t.Fatalf("error should not contain connection info")
+		}
+	}
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url": "postgresql://:pw@[localhost",
+		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	respCheck(req)
+
+	req.Data["connection_url"] = "postgres//user:pw@localhost"
+	respCheck(req)
+
+	time.Sleep(1 * time.Second)
+}
+
 func TestBackend_basic(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
@@ -391,7 +444,6 @@ func TestBackend_basic(t *testing.T) {
 	if testCredsExist(t, credsResp, connURL) {
 		t.Fatalf("Creds should not exist")
 	}
-
 }
 
 func TestBackend_connectionCrud(t *testing.T) {

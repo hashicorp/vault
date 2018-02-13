@@ -234,20 +234,15 @@ func (mw *databaseErrorSanitizerMiddleware) Close() (err error) {
 }
 
 // sanitize
-func (mw *databaseErrorSanitizerMiddleware) sanitize(err error) (retErr error) {
-	walkFunc := func(inner error) {
-		if errwrap.ContainsType(inner, new(url.Error)) {
-			urlErr := inner.Error()
-			if strings.Index(urlErr, ":") != -1 {
-				start := strings.Index(urlErr, ":") + 2
-				if len(urlErr)-1 < start {
-					start = len(urlErr) - 1
-				}
-				inner = errors.New(urlErr[start:])
-			}
-		}
-		retErr = errwrap.Wrapf("{{err}}", inner)
+func (mw *databaseErrorSanitizerMiddleware) sanitize(err error) error {
+	if err == nil {
+		return nil
 	}
-	errwrap.Walk(err, walkFunc)
-	return
+	errStr := err.Error()
+	if errwrap.ContainsType(err, new(url.Error)) ||
+		strings.Contains(errStr, "//") ||
+		strings.Contains(errStr, "@") {
+		return errors.New("unable to parse connection url")
+	}
+	return err
 }

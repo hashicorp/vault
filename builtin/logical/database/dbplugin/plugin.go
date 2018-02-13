@@ -77,11 +77,6 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
 	}
 
-	// Wrap with error sanitizer
-	db = &databaseErrorSanitizerMiddleware{
-		next: db,
-	}
-
 	// Wrap with metrics middleware
 	db = &databaseMetricsMiddleware{
 		next:    db,
@@ -121,7 +116,11 @@ type DatabasePlugin struct {
 }
 
 func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	return &databasePluginRPCServer{impl: d.impl}, nil
+	impl := &databaseErrorSanitizerMiddleware{
+		next: d.impl,
+	}
+
+	return &databasePluginRPCServer{impl: impl}, nil
 }
 
 func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
@@ -129,7 +128,11 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 }
 
 func (d DatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
-	RegisterDatabaseServer(s, &gRPCServer{impl: d.impl})
+	impl := &databaseErrorSanitizerMiddleware{
+		next: d.impl,
+	}
+
+	RegisterDatabaseServer(s, &gRPCServer{impl: impl})
 	return nil
 }
 
