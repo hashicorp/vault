@@ -46,7 +46,7 @@ Usage: vault auth list [options]
 }
 
 func (c *AuthListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -55,7 +55,8 @@ func (c *AuthListCommand) Flags() *FlagSets {
 		Target:  &c.flagDetailed,
 		Default: false,
 		Usage: "Print detailed information such as configuration and replication " +
-			"status about each auth method.",
+			"status about each auth method. This option is only applicable to " +
+			"table-formatted output.",
 	})
 
 	return set
@@ -95,13 +96,17 @@ func (c *AuthListCommand) Run(args []string) int {
 		return 2
 	}
 
-	if c.flagDetailed {
-		c.UI.Output(tableOutput(c.detailedMounts(auths), nil))
+	switch Format(c.UI) {
+	case "table":
+		if c.flagDetailed {
+			c.UI.Output(tableOutput(c.detailedMounts(auths), nil))
+			return 0
+		}
+		c.UI.Output(tableOutput(c.simpleMounts(auths), nil))
 		return 0
+	default:
+		return OutputData(c.UI, auths)
 	}
-
-	c.UI.Output(tableOutput(c.simpleMounts(auths), nil))
-	return 0
 }
 
 func (c *AuthListCommand) simpleMounts(auths map[string]*api.AuthMount) []string {

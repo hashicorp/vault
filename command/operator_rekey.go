@@ -96,7 +96,7 @@ Usage: vault rekey [options] [KEY]
 }
 
 func (c *OperatorRekeyCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Common Options")
 
@@ -534,7 +534,7 @@ func (c *OperatorRekeyCommand) backupRetrieve(client *api.Client) int {
 		Data: structs.New(storedKeys).Map(),
 	}
 
-	return OutputSecret(c.UI, "table", secret)
+	return OutputSecret(c.UI, secret)
 }
 
 // backupDelete deletes the stored backup keys.
@@ -579,11 +579,22 @@ func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int 
 		out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
 	}
 
-	c.UI.Output(tableOutput(out, nil))
-	return 0
+	switch Format(c.UI) {
+	case "table":
+		c.UI.Output(tableOutput(out, nil))
+		return 0
+	default:
+		return OutputData(c.UI, status)
+	}
 }
 
 func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
+	switch Format(c.UI) {
+	case "table":
+	default:
+		return OutputData(c.UI, resp)
+	}
+
 	// Space between the key prompt, if any, and the output
 	c.UI.Output("")
 

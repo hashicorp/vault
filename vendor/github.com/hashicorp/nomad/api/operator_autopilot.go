@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -19,7 +20,7 @@ type AutopilotConfiguration struct {
 
 	// LastContactThreshold is the limit on the amount of time a server can go
 	// without leader contact before being considered unhealthy.
-	LastContactThreshold *ReadableDuration
+	LastContactThreshold time.Duration
 
 	// MaxTrailingLogs is the amount of entries in the Raft Log that a server can
 	// be behind before being considered unhealthy.
@@ -28,20 +29,19 @@ type AutopilotConfiguration struct {
 	// ServerStabilizationTime is the minimum amount of time a server must be
 	// in a stable, healthy state before it can be added to the cluster. Only
 	// applicable with Raft protocol version 3 or higher.
-	ServerStabilizationTime *ReadableDuration
+	ServerStabilizationTime time.Duration
 
-	// (Enterprise-only) RedundancyZoneTag is the node tag to use for separating
-	// servers into zones for redundancy. If left blank, this feature will be disabled.
-	RedundancyZoneTag string
+	// (Enterprise-only) EnableRedundancyZones specifies whether to enable redundancy zones.
+	EnableRedundancyZones bool
 
 	// (Enterprise-only) DisableUpgradeMigration will disable Autopilot's upgrade migration
 	// strategy of waiting until enough newer-versioned servers have been added to the
 	// cluster before promoting them to voters.
 	DisableUpgradeMigration bool
 
-	// (Enterprise-only) UpgradeVersionTag is the node tag to use for version info when
-	// performing upgrade migrations. If left blank, the Nomad version will be used.
-	UpgradeVersionTag string
+	// (Enterprise-only) EnableCustomUpgrades specifies whether to enable using custom
+	// upgrade versions when performing migrations.
+	EnableCustomUpgrades bool
 
 	// CreateIndex holds the index corresponding the creation of this configuration.
 	// This is a read-only field.
@@ -52,6 +52,45 @@ type AutopilotConfiguration struct {
 	// AutopilotCASConfiguration will perform a check-and-set operation which ensures
 	// there hasn't been a subsequent update since the configuration was retrieved.
 	ModifyIndex uint64
+}
+
+func (u *AutopilotConfiguration) MarshalJSON() ([]byte, error) {
+	type Alias AutopilotConfiguration
+	return json.Marshal(&struct {
+		LastContactThreshold    string
+		ServerStabilizationTime string
+		*Alias
+	}{
+		LastContactThreshold:    u.LastContactThreshold.String(),
+		ServerStabilizationTime: u.ServerStabilizationTime.String(),
+		Alias: (*Alias)(u),
+	})
+}
+
+func (u *AutopilotConfiguration) UnmarshalJSON(data []byte) error {
+	type Alias AutopilotConfiguration
+	aux := &struct {
+		LastContactThreshold    string
+		ServerStabilizationTime string
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	var err error
+	if aux.LastContactThreshold != "" {
+		if u.LastContactThreshold, err = time.ParseDuration(aux.LastContactThreshold); err != nil {
+			return err
+		}
+	}
+	if aux.ServerStabilizationTime != "" {
+		if u.ServerStabilizationTime, err = time.ParseDuration(aux.ServerStabilizationTime); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ServerHealth is the health (from the leader's point of view) of a server.
@@ -75,7 +114,7 @@ type ServerHealth struct {
 	Leader bool
 
 	// LastContact is the time since this node's last contact with the leader.
-	LastContact *ReadableDuration
+	LastContact time.Duration
 
 	// LastTerm is the highest leader term this server has a record of in its Raft log.
 	LastTerm uint64
@@ -94,6 +133,37 @@ type ServerHealth struct {
 	StableSince time.Time
 }
 
+func (u *ServerHealth) MarshalJSON() ([]byte, error) {
+	type Alias ServerHealth
+	return json.Marshal(&struct {
+		LastContact string
+		*Alias
+	}{
+		LastContact: u.LastContact.String(),
+		Alias:       (*Alias)(u),
+	})
+}
+
+func (u *ServerHealth) UnmarshalJSON(data []byte) error {
+	type Alias ServerHealth
+	aux := &struct {
+		LastContact string
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	var err error
+	if aux.LastContact != "" {
+		if u.LastContact, err = time.ParseDuration(aux.LastContact); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // OperatorHealthReply is a representation of the overall health of the cluster
 type OperatorHealthReply struct {
 	// Healthy is true if all the servers in the cluster are healthy.
@@ -105,46 +175,6 @@ type OperatorHealthReply struct {
 
 	// Servers holds the health of each server.
 	Servers []ServerHealth
-}
-
-// ReadableDuration is a duration type that is serialized to JSON in human readable format.
-type ReadableDuration time.Duration
-
-func NewReadableDuration(dur time.Duration) *ReadableDuration {
-	d := ReadableDuration(dur)
-	return &d
-}
-
-func (d *ReadableDuration) String() string {
-	return d.Duration().String()
-}
-
-func (d *ReadableDuration) Duration() time.Duration {
-	if d == nil {
-		return time.Duration(0)
-	}
-	return time.Duration(*d)
-}
-
-func (d *ReadableDuration) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%s"`, d.Duration().String())), nil
-}
-
-func (d *ReadableDuration) UnmarshalJSON(raw []byte) error {
-	if d == nil {
-		return fmt.Errorf("cannot unmarshal to nil pointer")
-	}
-
-	str := string(raw)
-	if len(str) < 2 || str[0] != '"' || str[len(str)-1] != '"' {
-		return fmt.Errorf("must be enclosed with quotes: %s", str)
-	}
-	dur, err := time.ParseDuration(str[1 : len(str)-1])
-	if err != nil {
-		return err
-	}
-	*d = ReadableDuration(dur)
-	return nil
 }
 
 // AutopilotGetConfiguration is used to query the current Autopilot configuration.

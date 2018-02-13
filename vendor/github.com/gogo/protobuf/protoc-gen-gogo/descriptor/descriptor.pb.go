@@ -1100,7 +1100,8 @@ type FileOptions struct {
 	// is empty. When this option is empty, the package name will be used for
 	// determining the namespace.
 	PhpNamespace *string `protobuf:"bytes,41,opt,name=php_namespace,json=phpNamespace" json:"php_namespace,omitempty"`
-	// The parser stores options it doesn't recognize here. See above.
+	// The parser stores options it doesn't recognize here.
+	// See the documentation for the "Options" section above.
 	UninterpretedOption          []*UninterpretedOption `protobuf:"bytes,999,rep,name=uninterpreted_option,json=uninterpretedOption" json:"uninterpreted_option,omitempty"`
 	proto.XXX_InternalExtensions `json:"-"`
 	XXX_unrecognized             []byte `json:"-"`

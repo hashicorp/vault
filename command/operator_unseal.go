@@ -50,7 +50,7 @@ Usage: vault operator unseal [options] [KEY]
 }
 
 func (c *OperatorUnsealCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 

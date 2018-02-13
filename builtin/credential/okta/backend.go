@@ -115,6 +115,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	case "PASSWORD_WARN":
 		oktaResponse.AddWarning("Your Okta password is in warning state and needs to be changed soon.")
 
+	case "MFA_REQUIRED", "MFA_ENROLL":
+		if !cfg.BypassOktaMFA {
+			return nil, logical.ErrorResponse("okta mfa required for this account but mfa bypass not set in config"), nil, nil
+		}
+
 	case "SUCCESS":
 		// Do nothing here
 
@@ -126,7 +131,13 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 
 	// Verify result status again in case a switch case above modifies result
-	if result.Status != "SUCCESS" && result.Status != "PASSWORD_WARN" {
+	switch {
+	case result.Status == "SUCCESS",
+		result.Status == "PASSWORD_WARN",
+		result.Status == "MFA_REQUIRED" && cfg.BypassOktaMFA,
+		result.Status == "MFA_ENROLL" && cfg.BypassOktaMFA:
+		// Allowed
+	default:
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/okta: authentication returned a non-success status", "status", result.Status)
 		}
@@ -207,7 +218,7 @@ func (b *backend) getOktaGroups(client *okta.Client, user *okta.User) ([]string,
 		oktaGroups = append(oktaGroups, group.Profile.Name)
 	}
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/okta: Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", oktaGroups)
+		b.Logger().Debug("auth/okta: Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", fmt.Sprintf("%#v", oktaGroups))
 	}
 	return oktaGroups, nil
 }

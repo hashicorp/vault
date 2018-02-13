@@ -115,6 +115,8 @@ func PrintRaw(ui cli.Ui, str string) int {
 // type, this falls back to os.Stdout.
 func getWriterFromUI(ui cli.Ui) io.Writer {
 	switch t := ui.(type) {
+	case *VaultUI:
+		return getWriterFromUI(t.Ui)
 	case *cli.BasicUi:
 		return t.Writer
 	case *cli.ColoredUi:

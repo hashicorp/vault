@@ -16,7 +16,7 @@ import (
 
 // Some tagging information for error messages.
 const (
-	msgBadDesc            = "Unrecognized descriptor byte"
+	msgBadDesc            = "unrecognized descriptor byte"
 	msgDecCannotExpandArr = "cannot expand go array from %v to stream length: %v"
 )
 

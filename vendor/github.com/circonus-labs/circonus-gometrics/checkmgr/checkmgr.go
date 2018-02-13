@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package checkmgr provides a check management interace to circonus-gometrics
+// Package checkmgr provides a check management interface to circonus-gometrics
 package checkmgr
 
 import (
@@ -37,7 +37,7 @@ import (
 //  - configuration parameters other than Check.SubmissionUrl, Debug and Log are ignored
 //  - note: SubmissionUrl is **required** in this case as there is no way to derive w/o api
 // configure with api token - check management enabled
-//  - all otehr configuration parameters affect how the trap url is obtained
+//  - all other configuration parameters affect how the trap url is obtained
 //    1. provided (Check.SubmissionUrl)
 //    2. via check lookup (CheckConfig.Id)
 //    3. via a search using CheckConfig.InstanceId + CheckConfig.SearchTag
@@ -103,7 +103,7 @@ type BrokerConfig struct {
 	// for a broker to be considered viable it must respond to a
 	// connection attempt within this amount of time e.g. 200ms, 2s, 1m
 	MaxResponseTime string
-	// TLS configuration to use when communicating wtih broker
+	// TLS configuration to use when communicating within broker
 	TLSConfig *tls.Config
 }
 
@@ -221,11 +221,13 @@ func New(cfg *Config) (*CheckManager, error) {
 		cm.Log = log.New(ioutil.Discard, "", log.LstdFlags)
 	}
 
-	rx, err := regexp.Compile(`^http\+unix://(?P<sockfile>.+)/write/(?P<id>.+)$`)
-	if err != nil {
-		return nil, errors.Wrap(err, "compiling socket regex")
+	{
+		rx, err := regexp.Compile(`^http\+unix://(?P<sockfile>.+)/write/(?P<id>.+)$`)
+		if err != nil {
+			return nil, errors.Wrap(err, "compiling socket regex")
+		}
+		cm.sockRx = rx
 	}
-	cm.sockRx = rx
 
 	if cfg.Check.SubmissionURL != "" {
 		cm.checkSubmissionURL = api.URLType(cfg.Check.SubmissionURL)
@@ -410,7 +412,6 @@ func (cm *CheckManager) GetSubmissionURL() (*Trap, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "get submission url")
 	}
-
 	trap.URL = u
 
 	if u.Scheme == "http+unix" {
@@ -435,11 +436,12 @@ func (cm *CheckManager) GetSubmissionURL() (*Trap, error) {
 			return nil, errors.Errorf("get submission url - invalid socket url (%s)", cm.trapURL)
 		}
 
-		u, err := url.Parse(fmt.Sprintf("http+unix://%s/write/%s", service, metricID))
+		u, err = url.Parse(fmt.Sprintf("http+unix://%s/write/%s", service, metricID))
 		if err != nil {
 			return nil, errors.Wrap(err, "get submission url")
 		}
 		trap.URL = u
+
 		trap.SockTransport = &httpunix.Transport{
 			DialTimeout:           100 * time.Millisecond,
 			RequestTimeout:        1 * time.Second,

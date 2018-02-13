@@ -68,22 +68,6 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 			"not present in secret",
 			1,
 		},
-		{
-			"format",
-			[]string{
-				"-format", "json",
-			},
-			"{",
-			0,
-		},
-		{
-			"format_bad",
-			[]string{
-				"-format", "nope-not-real",
-			},
-			"Invalid output format",
-			1,
-		},
 	}
 
 	t.Run("validations", func(t *testing.T) {

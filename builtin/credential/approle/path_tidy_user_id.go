@@ -38,6 +38,16 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 		return err
 	}
 
+	// List all the accessors and add them all to a map
+	accessorHashes, err := s.List(ctx, "accessor/")
+	if err != nil {
+		return err
+	}
+	accessorMap := make(map[string]bool, len(accessorHashes))
+	for _, accessorHash := range accessorHashes {
+		accessorMap[accessorHash] = true
+	}
+
 	var result error
 	for _, roleNameHMAC := range roleNameHMACs {
 		// roleNameHMAC will already have a '/' suffix. Don't append another one.
@@ -77,14 +87,46 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 
 			// ExpirationTime not being set indicates non-expiring SecretIDs
 			if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
+				// Clean up the accessor of the secret ID first
+				err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor)
+				if err != nil {
+					lock.Unlock()
+					return err
+				}
+
 				if err := s.Delete(ctx, entryIndex); err != nil {
 					lock.Unlock()
 					return fmt.Errorf("error deleting SecretID %s from storage: %s", secretIDHMAC, err)
 				}
 			}
+
+			// At this point, the secret ID is not expired and is valid. Delete
+			// the corresponding accessor from the accessorMap. This will leave
+			// only the dangling accessors in the map which can then be cleaned
+			// up later.
+			salt, err := b.Salt()
+			if err != nil {
+				lock.Unlock()
+				return err
+			}
+			delete(accessorMap, salt.SaltID(result.SecretIDAccessor))
+
 			lock.Unlock()
 		}
 	}
+
+	// Accessor indexes were not getting cleaned up until 0.9.3. This is a fix
+	// to clean up the dangling accessor entries.
+	for accessorHash, _ := range accessorMap {
+		// Ideally, locking should be performed here. But for that, accessors
+		// are required in plaintext, which are not available. Hence performing
+		// a racy cleanup.
+		err = s.Delete(ctx, "accessor/"+accessorHash)
+		if err != nil {
+			return err
+		}
+	}
+
 	return result
 }
 

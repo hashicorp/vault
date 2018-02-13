@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestIdentityStore_CreateEntity(t *testing.T) {
+func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 	is, ghAccessor, _ := testIdentityStoreWithGithubAuth(t)
 	alias := &logical.Alias{
 		MountType:     "github",
@@ -17,7 +17,7 @@ func TestIdentityStore_CreateEntity(t *testing.T) {
 		Name:          "githubuser",
 	}
 
-	entity, err := is.CreateEntity(alias)
+	entity, err := is.CreateOrFetchEntity(alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,10 +33,20 @@ func TestIdentityStore_CreateEntity(t *testing.T) {
 		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 
-	// Try recreating an entity with the same alias details. It should fail.
-	entity, err = is.CreateEntity(alias)
-	if err == nil {
-		t.Fatalf("expected an error")
+	entity, err = is.CreateOrFetchEntity(alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity == nil {
+		t.Fatalf("expected a non-nil entity")
+	}
+
+	if len(entity.Aliases) != 1 {
+		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(entity.Aliases))
+	}
+
+	if entity.Aliases[0].Name != alias.Name {
+		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 }
 

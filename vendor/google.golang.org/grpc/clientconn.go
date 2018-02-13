@@ -32,6 +32,7 @@ import (
 	"golang.org/x/net/trace"
 	"google.golang.org/grpc/balancer"
 	_ "google.golang.org/grpc/balancer/roundrobin" // To register roundrobin.
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
@@ -40,17 +41,17 @@ import (
 	_ "google.golang.org/grpc/resolver/dns"         // To register dns resolver.
 	_ "google.golang.org/grpc/resolver/passthrough" // To register passthrough resolver.
 	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/transport"
 )
 
 var (
 	// ErrClientConnClosing indicates that the operation is illegal because
 	// the ClientConn is closing.
-	ErrClientConnClosing = errors.New("grpc: the client connection is closing")
-	// ErrClientConnTimeout indicates that the ClientConn cannot establish the
-	// underlying connections within the specified timeout.
-	// DEPRECATED: Please use context.DeadlineExceeded instead.
-	ErrClientConnTimeout = errors.New("grpc: timed out when dialing")
+	//
+	// Deprecated: this error should not be relied upon by users; use the status
+	// code of Canceled instead.
+	ErrClientConnClosing = status.Error(codes.Canceled, "grpc: the client connection is closing")
 	// errConnDrain indicates that the connection starts to be drained and does not accept any new RPCs.
 	errConnDrain = errors.New("grpc: the connection is drained")
 	// errConnClosing indicates that the connection is closing.
@@ -98,10 +99,8 @@ type dialOptions struct {
 	// balancer, and also by WithBalancerName dial option.
 	balancerBuilder balancer.Builder
 	// This is to support grpclb.
-	resolverBuilder resolver.Builder
-	// Custom user options for resolver.Build.
-	resolverBuildUserOptions interface{}
-	waitForHandshake         bool
+	resolverBuilder  resolver.Builder
+	waitForHandshake bool
 }
 
 const (
@@ -232,14 +231,6 @@ func WithBalancerName(balancerName string) DialOption {
 func withResolverBuilder(b resolver.Builder) DialOption {
 	return func(o *dialOptions) {
 		o.resolverBuilder = b
-	}
-}
-
-// WithResolverUserOptions returns a DialOption which sets the UserOptions
-// field of resolver's BuildOption.
-func WithResolverUserOptions(userOpt interface{}) DialOption {
-	return func(o *dialOptions) {
-		o.resolverBuildUserOptions = userOpt
 	}
 }
 
@@ -1384,3 +1375,10 @@ func (ac *addrConn) getState() connectivity.State {
 	defer ac.mu.Unlock()
 	return ac.state
 }
+
+// ErrClientConnTimeout indicates that the ClientConn cannot establish the
+// underlying connections within the specified timeout.
+//
+// Deprecated: This error is never returned by grpc and should not be
+// referenced by users.
+var ErrClientConnTimeout = errors.New("grpc: timed out when dialing")

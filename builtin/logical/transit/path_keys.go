@@ -207,9 +207,20 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			"supports_decryption":    p.Type.DecryptionSupported(),
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
-			"backup_info":            p.BackupInfo,
-			"restore_info":           p.RestoreInfo,
 		},
+	}
+
+	if p.BackupInfo != nil {
+		resp.Data["backup_info"] = map[string]interface{}{
+			"time":    p.BackupInfo.Time,
+			"version": p.BackupInfo.Version,
+		}
+	}
+	if p.RestoreInfo != nil {
+		resp.Data["restore_info"] = map[string]interface{}{
+			"time":    p.RestoreInfo.Time,
+			"version": p.RestoreInfo.Version,
+		}
 	}
 
 	if p.Derived {

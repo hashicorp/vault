@@ -33,6 +33,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/net/idna"
 )
 
 var (
@@ -40,6 +41,97 @@ var (
 	serialUnderTest         string
 	parsedKeyUsageUnderTest int
 )
+
+func TestPKI_RequireCN(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+
+	// Create a role which does require CN (default)
+	_, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+		"max_ttl":            "2h",
+	})
+
+	// Issue a cert with require_cn set to true and with common name supplied.
+	// It should succeed.
+	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{
+		"common_name": "foobar.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue a cert with require_cn set to true and with out supplying the
+	// common name. It should error out.
+	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{})
+	if err == nil {
+		t.Fatalf("expected an error due to missing common_name")
+	}
+
+	// Modify the role to make the common name optional
+	_, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+		"max_ttl":            "2h",
+		"require_cn":         false,
+	})
+
+	// Issue a cert with require_cn set to false and without supplying the
+	// common name. It should succeed.
+	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data["certificate"] == "" {
+		t.Fatalf("expected a cert to be generated")
+	}
+
+	// Issue a cert with require_cn set to false and with a common name. It
+	// should succeed.
+	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data["certificate"] == "" {
+		t.Fatalf("expected a cert to be generated")
+	}
+}
 
 // Performs basic tests on CA functionality
 // Uses the RSA CA key
@@ -61,8 +153,6 @@ func TestBackend_RSAKey(t *testing.T) {
 		Backend: b,
 		Steps:   []logicaltest.TestStep{},
 	}
-
-	stepCount = len(testCase.Steps)
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
@@ -92,8 +182,6 @@ func TestBackend_ECKey(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
 	testCase.Steps = append(testCase.Steps, generateCATestingSteps(t, ecCACert, ecCAKey, rsaCACert, intdata, reqdata)...)
@@ -120,8 +208,6 @@ func TestBackend_CSRValues(t *testing.T) {
 		Steps:   []logicaltest.TestStep{},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
 	testCase.Steps = append(testCase.Steps, generateCSRSteps(t, ecCACert, ecCAKey, intdata, reqdata)...)
@@ -147,8 +233,6 @@ func TestBackend_URLsCRUD(t *testing.T) {
 		Backend: b,
 		Steps:   []logicaltest.TestStep{},
 	}
-
-	stepCount = len(testCase.Steps)
 
 	intdata := map[string]interface{}{}
 	reqdata := map[string]interface{}{}
@@ -187,12 +271,10 @@ func TestBackend_RSARoles(t *testing.T) {
 		},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
 		}
 	}
 
@@ -229,12 +311,10 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 		},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
 		}
 	}
 
@@ -271,12 +351,10 @@ func TestBackend_ECRoles(t *testing.T) {
 		},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
 		}
 	}
 
@@ -313,12 +391,10 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 		},
 	}
 
-	stepCount = len(testCase.Steps)
-
 	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
+			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
 		}
 	}
 
@@ -497,7 +573,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
-				"common_name": "Intermediate Cert",
+				"common_name": "intermediate.cert.com",
 				"csr":         string(csrPem1024),
 				"format":      "der",
 			},
@@ -518,7 +594,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
-				"common_name": "Intermediate Cert",
+				"common_name": "intermediate.cert.com",
 				"csr":         string(csrPem2048),
 				"format":      "der",
 			},
@@ -547,8 +623,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
 				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
 					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
-				case !reflect.DeepEqual([]string{"Intermediate Cert"}, cert.DNSNames):
-					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", []string{"Intermediate Cert"}, cert.DNSNames)
+				case !reflect.DeepEqual([]string{"intermediate.cert.com"}, cert.DNSNames):
+					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", []string{"intermediate.cert.com"}, cert.DNSNames)
 				}
 
 				return nil
@@ -560,7 +636,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
-				"common_name":          "Intermediate Cert",
+				"common_name":          "intermediate.cert.com",
 				"csr":                  string(csrPem2048),
 				"format":               "der",
 				"exclude_cn_from_sans": true,
@@ -900,7 +976,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.UpdateOperation,
 			Path:      "intermediate/generate/exported",
 			Data: map[string]interface{}{
-				"common_name": "Intermediate Cert",
+				"common_name": "intermediate.cert.com",
 			},
 			Check: func(resp *logical.Response) error {
 				intdata["intermediatecsr"] = resp.Data["csr"].(string)
@@ -918,7 +994,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				delete(reqdata, "pem_bundle")
 				delete(reqdata, "ttl")
 				reqdata["csr"] = intdata["intermediatecsr"].(string)
-				reqdata["common_name"] = "Intermediate Cert"
+				reqdata["common_name"] = "intermediate.cert.com"
 				reqdata["ttl"] = "10s"
 				return nil
 			},
@@ -1053,7 +1129,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				"format":      "der",
 				"key_type":    "ec",
 				"key_bits":    384,
-				"common_name": "Intermediate Cert",
+				"common_name": "intermediate.cert.com",
 			},
 			Check: func(resp *logical.Response) error {
 				csrBytes, _ := base64.StdEncoding.DecodeString(resp.Data["csr"].(string))
@@ -1080,7 +1156,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				delete(reqdata, "pem_bundle")
 				delete(reqdata, "ttl")
 				reqdata["csr"] = intdata["intermediatecsr"].(string)
-				reqdata["common_name"] = "Intermediate Cert"
+				reqdata["common_name"] = "intermediate.cert.com"
 				reqdata["ttl"] = "10s"
 				return nil
 			},
@@ -1555,7 +1631,18 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				retName = cert.EmailAddresses[0]
 			}
 			if retName != name {
-				return fmt.Errorf("Error: returned certificate has a DNS SAN of %s but %s was requested", retName, name)
+				// Check IDNA
+				p := idna.New(
+					idna.StrictDomainName(true),
+					idna.VerifyDNSLength(true),
+				)
+				converted, err := p.ToUnicode(retName)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if converted != name {
+					return fmt.Errorf("Error: returned certificate has a DNS SAN of %s (from idna: %s) but %s was requested", retName, converted, name)
+				}
 			}
 			return nil
 		}
@@ -1571,7 +1658,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		SubSubdomain         bool `structs:"foo.bar.example.com"`
 		SubSubdomainWildcard bool `structs:"*.bar.example.com"`
 		GlobDomain           bool `structs:"fooexample.com"`
-		NonHostname          bool `structs:"daɪˈɛrɨsɨs"`
+		IDN                  bool `structs:"daɪˈɛrɨsɨs"`
 		AnyHost              bool `structs:"porkslap.beer"`
 	}
 
@@ -1785,10 +1872,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		roleVals.AllowAnyName = true
 		roleVals.EnforceHostnames = true
 		commonNames.AnyHost = true
+		commonNames.IDN = true
 		addCnTests()
 
 		roleVals.EnforceHostnames = false
-		commonNames.NonHostname = true
 		addCnTests()
 
 		// Ensure that we end up with acceptable key sizes since they won't be

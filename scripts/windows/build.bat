@@ -60,7 +60,7 @@ echo ==^> Building...
 gox^
  -os="%_XC_OS%"^
  -arch="%_XC_ARCH%"^
- -ldflags "-X github.com/hashicorp/vault/version.GitCommit %_GIT_COMMIT%%_GIT_DIRTY%"^
+ -ldflags "-X github.com/hashicorp/vault/version.GitCommit=%_GIT_COMMIT%%_GIT_DIRTY%"^
  -output "pkg/{{.OS}}_{{.Arch}}/vault"^
  .
 

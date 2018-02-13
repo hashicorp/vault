@@ -53,7 +53,7 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 
 	reply, err := b.client.HandleRequest(ctx, &pb.HandleRequestArgs{
 		Request: protoReq,
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		if b.doneCtx.Err() != nil {
 			return nil, ErrPluginShutdown
@@ -73,9 +73,12 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 }
 
 func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
-	// Timeout the connection
 	reply, err := b.client.SpecialPaths(b.doneCtx, &pb.Empty{})
 	if err != nil {
+		return nil
+	}
+
+	if reply.Paths == nil {
 		return nil
 	}
 
@@ -115,7 +118,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	defer cancel()
 	reply, err := b.client.HandleExistenceCheck(ctx, &pb.HandleExistenceCheckArgs{
 		Request: protoReq,
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		if b.doneCtx.Err() != nil {
 			return false, false, ErrPluginShutdown

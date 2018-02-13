@@ -29,6 +29,25 @@ bit length be returned to them, encrypted with the named key. Normally this will
 also return the key in plaintext to allow for immediate use, but this can be
 disabled to accommodate auditing requirements.
 
+## Working Set Management
+
+This secrets engine does not currently delete keys. Keys that are out of the
+working set (earlier than a key's specified `min_decryption_version` are
+instead archived. This is a performance consideration to keep key loading fast,
+as well as a security consideration: by disallowing decryption of old versions
+of keys, found ciphertext corresponding to obsolete (but sensitive) data can
+not be decrypted by most users, but in an emergency the
+`min_decryption_version` can be moved back to allow for legitimate decryption.
+
+Currently this archive is stored in a single storage entry. With some storage
+backends, notably those using Raft or Paxos for HA capabilities, frequent
+rotation may lead to a storage entry size for the archive that is larger than
+the storage backend can handle. For frequent rotation needs, using named keys
+that correspond to time bounds (e.g. five-minute periods floored to the closest
+multiple of five) may provide a good alternative, allowing for several keys to
+be live at once and a deterministic way to decide which key to use at any given
+time.
+
 ## Setup
 
 Most secrets engines must be configured in advance before they can perform their

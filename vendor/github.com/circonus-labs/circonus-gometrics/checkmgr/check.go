@@ -166,7 +166,7 @@ func (cm *CheckManager) initializeTrapURL() error {
 			// new search (check.target != instanceid, instanceid encoded in notes field)
 			searchCriteria := fmt.Sprintf(
 				"(active:1)(type:\"%s\")(tags:%s)", cm.checkType, strings.Join(cm.checkSearchTag, ","))
-			filterCriteria := map[string][]string{"f_notes": []string{*cm.getNotes()}}
+			filterCriteria := map[string][]string{"f_notes": {*cm.getNotes()}}
 			checkBundle, err = cm.checkBundleSearch(searchCriteria, filterCriteria)
 			if err != nil {
 				return err
