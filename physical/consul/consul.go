@@ -731,7 +731,7 @@ func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc p
 		Name:              c.serviceName,
 		Tags:              tags,
 		Port:              int(c.redirectPort),
-		Address:           c.redirectHost,
+		Address:           "",
 		EnableTagOverride: false,
 	}
 
