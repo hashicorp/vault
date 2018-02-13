@@ -129,7 +129,7 @@ var (
 		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
 		"inmem_transactional":    physInmem.NewTransactionalInmem,
 		"inmem":                  physInmem.NewInmem,
-    "manta":                  physManta.NewMantaBackend,
+		"manta":                  physManta.NewMantaBackend,
 		"mssql":                  physMSSQL.NewMSSQLBackend,
 		"mysql":                  physMySQL.NewMySQLBackend,
 		"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
