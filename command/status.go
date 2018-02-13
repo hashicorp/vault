@@ -39,7 +39,7 @@ Usage: vault status [options]
 }
 
 func (c *StatusCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *StatusCommand) AutocompleteArgs() complete.Predictor {
@@ -77,13 +77,13 @@ func (c *StatusCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Do not return the int here, since we want to return a custom error code
-	// depending on the seal status.
-	OutputSealStatus(c.UI, client, status)
+	// Do not return the int here yet, since we may want to return a custom error
+	// code depending on the seal status.
+	code := OutputSealStatus(c.UI, client, status)
 
 	if status.Sealed {
 		return 2
 	}
 
-	return 0
+	return code
 }

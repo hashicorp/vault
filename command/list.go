@@ -89,7 +89,7 @@ func (c *ListCommand) Run(args []string) int {
 
 	// If the secret is wrapped, return the wrapped response.
 	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
-		return OutputSecret(c.UI, c.flagFormat, secret)
+		return OutputSecret(c.UI, secret)
 	}
 
 	if _, ok := extractListData(secret); !ok {
@@ -97,5 +97,5 @@ func (c *ListCommand) Run(args []string) int {
 		return 2
 	}
 
-	return OutputList(c.UI, c.flagFormat, secret)
+	return OutputList(c.UI, secret)
 }

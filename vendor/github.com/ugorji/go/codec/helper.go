@@ -391,6 +391,10 @@ var immutableKindsSet = [32]bool{
 // Any type which implements Selfer will be able to encode or decode itself.
 // Consequently, during (en|de)code, this takes precedence over
 // (text|binary)(M|Unm)arshal or extension support.
+//
+// Note: *the first set of bytes of any value MUST NOT represent nil in the format*.
+// This is because, during each decode, we first check the the next set of bytes
+// represent nil, and if so, we just set the value to nil.
 type Selfer interface {
 	CodecEncodeSelf(*Encoder)
 	CodecDecodeSelf(*Decoder)

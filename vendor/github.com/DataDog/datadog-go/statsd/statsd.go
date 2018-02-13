@@ -77,7 +77,7 @@ var (
 // A statsdWriter offers a standard interface regardless of the underlying
 // protocol. For now UDS and UPD writers are available.
 type statsdWriter interface {
-	Write(data []byte) error
+	Write(data []byte) (n int, err error)
 	SetWriteTimeout(time.Duration) error
 	Close() error
 }
@@ -112,7 +112,7 @@ func New(addr string) (*Client, error) {
 		}
 		return NewWithWriter(w)
 	}
-	w, err := newUdpWriter(addr)
+	w, err := newUDPWriter(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +273,7 @@ func (c *Client) flushLocked() error {
 	var err error
 	cmdsFlushed := 0
 	for i, data := range frames {
-		e := c.writer.Write(data)
+		_, e := c.writer.Write(data)
 		if e != nil {
 			err = e
 			break
@@ -303,7 +303,7 @@ func (c *Client) sendMsg(msg string) error {
 		return c.append(msg)
 	}
 
-	err := c.writer.Write([]byte(msg))
+	_, err := c.writer.Write([]byte(msg))
 
 	if c.SkipErrors {
 		return nil

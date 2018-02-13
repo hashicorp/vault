@@ -26,9 +26,14 @@ func (h HandlerFunc) ServeRADIUS(w ResponseWriter, r *Request) {
 
 // Request is an incoming RADIUS request that is being handled by the server.
 type Request struct {
-	LocalAddr  net.Addr
+	// LocalAddr is the local address on which the incoming RADIUS request
+	// was received.
+	LocalAddr net.Addr
+	// RemoteAddr is the address from which the incoming RADIUS request
+	// was sent.
 	RemoteAddr net.Addr
 
+	// Packet is the RADIUS packet sent in the request.
 	*Packet
 
 	ctx context.Context

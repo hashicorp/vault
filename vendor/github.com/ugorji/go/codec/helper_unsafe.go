@@ -186,14 +186,12 @@ func (x *atomicTypeInfoSlice) load() []rtid2ti {
 		return nil
 	}
 	return *(*[]rtid2ti)(unsafe.Pointer(&unsafeSlice{Data: atomic.LoadPointer(&x.v), Len: l, Cap: l}))
-	// return (*[]rtid2ti)(atomic.LoadPointer(&x.v))
 }
 
 func (x *atomicTypeInfoSlice) store(p []rtid2ti) {
 	s := (*unsafeSlice)(unsafe.Pointer(&p))
 	atomic.StorePointer(&x.v, s.Data)
 	atomic.StoreInt64(&x.l, int64(s.Len))
-	// atomic.StorePointer(&x.v, unsafe.Pointer(p))
 }
 
 // --------------------------

@@ -1,13 +1,11 @@
 package command
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"runtime"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/mitchellh/cli"
@@ -434,15 +432,10 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		return 2
 	}
 
-	switch c.flagFormat {
-	case "yaml", "yml":
-		return c.initOutputYAML(req, resp)
-	case "json":
-		return c.initOutputJSON(req, resp)
+	switch Format(c.UI) {
 	case "table":
 	default:
-		c.UI.Error(fmt.Sprintf("Unknown format: %s", c.flagFormat))
-		return 1
+		return OutputData(c.UI, newMachineInit(req, resp))
 	}
 
 	for i, key := range resp.Keys {
@@ -501,26 +494,6 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 	}
 
 	return 0
-}
-
-// initOutputYAML outputs the init output as YAML.
-func (c *OperatorInitCommand) initOutputYAML(req *api.InitRequest, resp *api.InitResponse) int {
-	b, err := yaml.Marshal(newMachineInit(req, resp))
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error marshaling YAML: %s", err))
-		return 2
-	}
-	return PrintRaw(c.UI, strings.TrimSpace(string(b)))
-}
-
-// initOutputJSON outputs the init output as JSON.
-func (c *OperatorInitCommand) initOutputJSON(req *api.InitRequest, resp *api.InitResponse) int {
-	b, err := json.Marshal(newMachineInit(req, resp))
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error marshaling JSON: %s", err))
-		return 2
-	}
-	return PrintRaw(c.UI, strings.TrimSpace(string(b)))
 }
 
 // status inspects the init status of vault and returns an appropriate error
