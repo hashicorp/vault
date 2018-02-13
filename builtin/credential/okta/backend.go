@@ -156,17 +156,6 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 		return nil, logical.ErrorResponse("okta authentication failed"), nil, nil
 
-	case "MFA_ENROLL", "MFA_ENROLL_ACTIVATE":
-		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/okta: user must enroll or complete mfa enrollment", "user", username)
-		}
-		return nil, logical.ErrorResponse("okta authentication failed: you must complete MFA enrollment to continue"), nil, nil
-
-	case "MFA_REQUIRED":
-		if result, err = b.completeMfa(ctx, client, result); err != nil {
-			return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v", err)), nil, nil
-		}
-
 	case "PASSWORD_EXPIRED":
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/okta: password is expired", "user", username)
@@ -176,9 +165,18 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	case "PASSWORD_WARN":
 		oktaResponse.AddWarning("Your Okta password is in warning state and needs to be changed soon.")
 
-	case "MFA_REQUIRED", "MFA_ENROLL":
-		if !cfg.BypassOktaMFA {
-			return nil, logical.ErrorResponse("okta mfa required for this account but mfa bypass not set in config"), nil, nil
+	case "MFA_REQUIRED", "MFA_ENROLL", "MFA_ENROLL_ACTIVATE":
+		if cfg.BypassOktaMFA {
+			b.Logger().Debug("auth/okta: bypassing Okta MFA requirement")
+			break
+		}
+		if result.Status == "MFA_REQUIRED" {
+			if result, err = b.completeMfa(ctx, client, result); err != nil {
+				return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed: %v", err)), nil, nil
+			}
+		} else {
+			b.Logger().Debug("auth/okta: user must enroll or complete mfa enrollment", "user", username)
+			return nil, logical.ErrorResponse("okta authentication failed: you must complete MFA enrollment to continue"), nil, nil
 		}
 
 	case "SUCCESS":
