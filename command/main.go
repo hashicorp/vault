@@ -23,7 +23,9 @@ func (u *VaultUI) Output(m string) {
 	if u.isTerminal {
 		u.Ui.Output(m)
 	} else {
-		getWriterFromUI(u.Ui).Write([]byte(m))
+		writer := getWriterFromUI(u.Ui)
+		writer.Write([]byte(m))
+		writer.Write([]byte("\n"))
 	}
 }
 
