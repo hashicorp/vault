@@ -435,6 +435,12 @@ can be set in a CSR are supported.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `format` `(string: "")` – Specifies the format for returned data. This can be
   `pem`, `der`, or `pem_bundle`; defaults to `pem`. If `der`, the output is
   base64 encoded. If `pem_bundle`, the `csr` field will contain the private key
@@ -552,6 +558,12 @@ need to request a new certificate.**
 - `ip_sans` `(string: "")` – Specifies requested IP Subject Alternative Names,
   in a comma-delimited list. Only valid if the role allows IP SANs (which is the
   default).
+
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
 
 - `ttl` `(string: "")` – Specifies requested Time To Live. Cannot be greater
   than the role's `max_ttl` value. If not provided, the role's `ttl` value will
@@ -719,6 +731,11 @@ request is denied.
 - `allow_ip_sans` `(bool: true)` – Specifies if clients can request IP Subject
   Alternative Names. No authorization checking is performed except to verify
   that the given values are valid IP addresses.
+
+- `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
+  SANs. This field supports globbing. The format is the same as OpenSSL:
+  `<oid>;<type>:<value>` where the only current valid type is `UTF8`. This can
+  be a comma-delimited list or a JSON string slice.
 
 - `server_flag` `(bool: true)` – Specifies if certificates are flagged for
   server use.
@@ -935,6 +952,12 @@ existing cert/key with new values.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
   certificate will be expired). This cannot be larger than the engine's max (or,
   if not set, the system max).
@@ -1052,6 +1075,12 @@ verbatim.
 
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
+
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
   certificate will be expired). This cannot be larger than the engine's max (or,
@@ -1206,6 +1235,12 @@ root CA need be in a client's trust store.
   Names, in a comma-delimited list. These can be host names or email addresses;
   they will be parsed into their respective fields. If any requested names do
   not match role policy, the entire request will be denied.
+
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
 
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list. Only valid if the role allows IP SANs (which
