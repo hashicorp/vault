@@ -18,12 +18,12 @@ var _ ConnectionProducer = &SQLConnectionProducer{}
 
 // SQLConfig contains the config options for SQL database engines
 type SQLConfig struct {
-	ConnectionURL            string      `json:"connection_url" mapstructure:"connection_url"`
-	MaxOpenConnections       int         `json:"max_open_connections" mapstructure:"max_open_connections"`
-	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections"`
-	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
-	Username                 string      `json:"username" mapstructure:"username"`
-	Password                 string      `json:"password" mapstructure:"password"`
+	ConnectionURL            string      `json:"connection_url" mapstructure:"connection_url" structs:"connection_url"`
+	MaxOpenConnections       int         `json:"max_open_connections" mapstructure:"max_open_connections" structs:"max_open_connections"`
+	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections" structs:"max_idle_connections"`
+	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
+	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
+	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
 }
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases

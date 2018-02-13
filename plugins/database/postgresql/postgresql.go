@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
@@ -45,8 +46,8 @@ func New() (interface{}, error) {
 	}
 
 	dbType := &PostgreSQL{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
 
 	return dbType, nil
@@ -65,7 +66,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 }
 
 type PostgreSQL struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -385,12 +386,12 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	return nil
 }
 
-func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []string, conf map[string]interface{}) (map[string]interface{}, error) {
+func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	p.Lock()
 	defer p.Unlock()
 
 	c := new(connutil.SQLConfig)
-	err := mapstructure.WeakDecode(conf, c)
+	err := mapstructure.WeakDecode(p.SQLConnectionProducer.SQLConfig, c)
 	if err != nil {
 		return nil, err
 	}
@@ -447,6 +448,10 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 		return nil, err
 	}
 
-	conf["password"] = password
-	return conf, nil
+	if err := db.Close(); err != nil {
+		return nil, err
+	}
+
+	c.Password = password
+	return structs.Map(p.SQLConnectionProducer.SQLConfig), nil
 }

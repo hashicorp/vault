@@ -27,7 +27,6 @@ message RevokeUserRequest {
 
 message RotateRootCredentialsRequest {
 	repeated string statements = 1;
-	bytes config = 2;
 }
 
 message Statements {

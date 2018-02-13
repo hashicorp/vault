@@ -21,7 +21,7 @@ type Database interface {
 	RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error
 	RevokeUser(ctx context.Context, statements Statements, username string) error
 
-	RotateRootCredentials(ctx context.Context, statements []string, config map[string]interface{}) (saveConfig map[string]interface{}, err error)
+	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
 
 	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
 	Close() error
