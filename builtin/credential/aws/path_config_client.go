@@ -47,6 +47,10 @@ func pathConfigClient(b *backend) *framework.Path {
 				Default:     "",
 				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
 			},
+			"max_retries": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
+			},
 		},
 
 		ExistenceCheck: b.pathConfigClientExistenceCheck,
@@ -254,6 +258,7 @@ type clientConfig struct {
 	IAMEndpoint            string `json:"iam_endpoint" structs:"iam_endpoint" mapstructure:"iam_endpoint"`
 	STSEndpoint            string `json:"sts_endpoint" structs:"sts_endpoint" mapstructure:"sts_endpoint"`
 	IAMServerIdHeaderValue string `json:"iam_server_id_header_value" structs:"iam_server_id_header_value" mapstructure:"iam_server_id_header_value"`
+	MaxRetries             int    `json:"max_retries"`
 }
 
 const pathConfigClientHelpSyn = `
