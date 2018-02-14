@@ -213,10 +213,11 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Usage:   "",
 	})
 
+	// Kept to keep scripts passing the flag working, but not used
 	f.IntVar(&IntVar{
 		Name:    "stored-shares",
 		Target:  &c.flagStoredShares,
-		Default: 0, // No default, because we need to check if was supplied
+		Default: 0,
 		Hidden:  true,
 		Usage:   "",
 	})

@@ -232,6 +232,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Usage:   "",
 	})
 
+	// Kept to keep scripts passing the flag working, but not used
 	f.IntVar(&IntVar{
 		Name:    "stored-shares",
 		Target:  &c.flagStoredShares,
