@@ -292,7 +292,6 @@ func (p *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
 				"username": c.Username,
 				"password": password,
-				"hostname": c.Hostname,
 			}))
 			if err != nil {
 				return nil, err

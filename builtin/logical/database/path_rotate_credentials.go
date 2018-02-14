@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -33,7 +34,10 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		conf, err := b.DatabaseConfig(ctx, req.Storage, name)
+		b.Lock()
+		defer b.Unlock()
+
+		config, err := b.DatabaseConfig(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
@@ -44,13 +48,32 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		_, err = db.RotateRootCredentials(ctx, conf.RootCredentialsRotateStatements)
+		connectionDetails, err := db.RotateRootCredentials(ctx, config.RootCredentialsRotateStatements)
 		if err != nil {
 			return nil, err
 		}
 
-		// SAVE CONF
+		config.ConnectionDetails = connectionDetails
+		entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+
+		if err := b.clearConnection(name); err != nil {
+			return nil, err
+		}
 
 		return nil, nil
 	}
 }
+
+const pathRotateCredentialsUpdateHelpSyn = `
+Request to rotate the root credentials for a certain database connection.
+`
+
+const pathRotateCredentialsUpdateHelpDesc = `
+This path attempts to rotate the root credentials for the given database. 
+`

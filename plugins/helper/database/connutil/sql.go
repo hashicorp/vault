@@ -25,7 +25,6 @@ type SQLConfig struct {
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
-	Hostname                 string      `json:"hostname" mapstructure:"hostname" structs:"hostname"`
 }
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
@@ -57,7 +56,6 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 	c.connectionURL = dbutil.QueryHelper(c.connectionURL, map[string]string{
 		"username": c.Username,
 		"password": c.Password,
-		"hostname": c.Hostname,
 	})
 
 	if c.MaxOpenConnections == 0 {
