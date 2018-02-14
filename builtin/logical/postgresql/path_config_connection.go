@@ -81,12 +81,27 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	connValue := data.Get("value").(string)
 	connURL := data.Get("connection_url").(string)
+
+	// Try "value" string
 	if connURL == "" {
-		if connValue == "" {
-			return logical.ErrorResponse("connection_url parameter must be supplied"), nil
-		} else {
-			connURL = connValue
+		connURL = connValue
+	}
+
+	// Try "connection_details" object
+	if connURL == "" {
+		connDetailsGeneric, ok := data.GetOk("connection_details")
+
+		if ok {
+			connURLGeneric, ok := connDetailsGeneric.(map[string]interface{})["connection_url"]
+
+			if ok {
+				connURL = connURLGeneric.(string)
+			}
 		}
+	}
+
+	if connURL == "" {
+		return logical.ErrorResponse("connection_url parameter must be supplied"), nil
 	}
 
 	maxOpenConns := data.Get("max_open_connections").(int)

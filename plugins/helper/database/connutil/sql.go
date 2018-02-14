@@ -36,6 +36,18 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 	}
 
 	if len(c.ConnectionURL) == 0 {
+		connDetailsGeneric, ok := conf["connection_details"]
+
+		if ok {
+			connURLGeneric, ok := connDetailsGeneric.(map[string]interface{})["connection_url"]
+
+			if ok {
+				c.ConnectionURL = connURLGeneric.(string)
+			}
+		}
+	}
+
+	if len(c.ConnectionURL) == 0 {
 		return fmt.Errorf("connection_url cannot be empty")
 	}
 

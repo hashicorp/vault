@@ -87,6 +87,37 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	// Test connection_deatils object
+	connectionDetails = map[string]interface{}{
+		"connection_details": map[string]interface{}{
+			"connection_url": connURL,
+		},
+		"max_open_connections": 5,
+	}
+
+	dbRaw, _ = New()
+	db = dbRaw.(*PostgreSQL)
+
+	connProducer = db.ConnectionProducer.(*connutil.SQLConnectionProducer)
+
+	err = db.Initialize(connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !connProducer.Initialized {
+		t.Fatal("Database should be initalized")
+	}
+
+	if connProducer.ConnectionURL != connURL {
+		t.Fatal("Connection URL should match the one passed in")
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
 	// Test decoding a string value for max_open_connections
 	connectionDetails = map[string]interface{}{
 		"connection_url":       connURL,
