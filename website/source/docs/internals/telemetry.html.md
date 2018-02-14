@@ -64,107 +64,107 @@ These metrics represent operational aspects of the running Vault instance.
 
 ### vault.audit.log_request
 
-**[S]** Summary (Nanoseconds): Duration of time taken by all audit log requests across all audit log backends
+**[S]** Summary (Milliseconds): Duration of time taken by all audit log requests across all audit log devices
 
 ### vault.audit.log_response
 
-**[S]** Summary (Nanoseconds): Duration of time taken by audit log responses across all audit log backends
+**[S]** Summary (Milliseconds): Duration of time taken by audit log responses across all audit log devices
 
-Additionally, per audit log backend metrics such as those for a specific backend like `file` will be present as:
+Additionally, per audit log device metrics such as those for a specific backend like `file` will be present as:
 
 ### vault.audit.file.log_request
 
-**[S]** Summary (Nanoseconds): Duration of time taken by audit log requests for the file based audit backend mounted as `file`
+**[S]** Summary (Milliseconds): Duration of time taken by audit log requests for the file based audit device mounted as `file`
 
 ### vault.audit.file.log_response
 
-**[S]** Summary (Nanoseconds): Duration of time taken by audit log responses for the file based audit backend mounted as `file`
+**[S]** Summary (Milliseconds): Duration of time taken by audit log responses for the file based audit device mounted as `file`
 
 ### vault.audit.log_request_failure
 
 **[C]** Counter (Number of failures): Number of audit log request failures
 
-**NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to make an audit log request to any of the configured audit log backends; **when Vault cannot log to any of the configured audit log backends it ceases all user operations**, and you should begin troubleshooting the audit log backends immediately if this metric continually increases.
+**NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to make an audit log request to any of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases.
 
 ### vault.audit.log_response_failure
 
 **[C]** Counter (Number of failures): Number of audit log response failures
 
-**NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to receive a response to a request made to one of the configured audit log backends; **when Vault cannot log to any of the configured audit log backends it ceases all user operations**, and you should begin troubleshooting the audit log backends immediately if this metric continually increases.
+**NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to receive a response to a request made to one of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases.
 
 ### vault.barrier.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations at the barrier
+**[S]** Summary (Milliseconds): Duration of time taken by DELETE operations at the barrier
 
 ### vault.barrier.get
 
-**[S]** Summary (Number of operations): Number of GET operations at the barrier
+**[S]** Summary (Milliseconds): Duration of time taken by GET operations at the barrier
 
 ### vault.barrier.put
 
-**[S]** Summary (Number of operations): Number of PUT operations at the barrier
+**[S]** Summary (Milliseconds)): Duration of time taken by PUT operations at the barrier
 
 ### vault.barrier.list
 
-**[S]** Summary (Number of operations): Number of LIST operations at the barrier
+**[S]** Summary (Milliseconds): Duration of time taken by LIST operations at the barrier
 
 ### vault.core.check_token
 
-**[S]** Summary (Number of checks): Number of token checks handled by Vault core
+**[S]** Summary (Milliseconds): Duration of time taken by token checks handled by Vault core
 
 ### vault.core.fetch_acl_and_token
 
-**[S]** Summary (Number of fetches): Number of ACL and corresponding token entry fetches handled by Vault core
+**[S]** Summary (Milliseconds): Duration of time taken by ACL and corresponding token entry fetches handled by Vault core
 
 ### vault.core.handle_request
 
-**[S]** Summary (Number of requests) Number of requests handled by Vault core
+**[S]** Summary (Milliseconds) Duration of time taken by requests handled by Vault core
 
 ### vault.core.handle_login_request
 
-**[S]** Summary (Number of requests): Number of login requests handled by Vault core
+**[S]** Summary (Milliseconds): Duration of time taken by login requests handled by Vault core
 
 ### vault.core.leadership_setup_failed
 
-**[S]** Summary (Number of failures): Number of cluster leadership setup failures which have occurred in a highly available Vault cluster
+**[S]** Summary (Milliseconds): Duration of time taken by cluster leadership setup failures which have occurred in a highly available Vault cluster
 
 This should be monitored and alerted on for overall cluster leadership status
 
 ### vault.core.leadership_lost
 
-**[S]** Summary (Number of losses): Number of cluster leadership losses which have occurred in a highly available Vault cluster
+**[S]** Summary (Milliseconds): Duration of time taken by cluster leadership losses which have occurred in a highly available Vault cluster
 
 This should be monitored and alerted on for overall cluster leadership status
 
 ### vault.core.post_unseal
 
-**[G]** Gauge (Number of operations): Number of post-unseal operations handled by Vault core
+**[G]** Gauge (Milliseconds): Duration of time taken by post-unseal operations handled by Vault core
 
 ### vault.core.pre_seal
 
-**[G]** Gauge (Number of operations) Number of pre-seal operations
+**[G]** Gauge (Milliseconds): Duration of time taken by pre-seal operations
 
 ### vault.core.seal-with-request
 
-**[G]** Gauge (Number of operations): Number of requested seal operations
+**[G]** Gauge (Milliseconds): Duration of time taken by requested seal operations
 
 ### vault.core.seal
 
-**[G]** Gauge (Number of operations): Number of seal operations
+**[G]** Gauge (Milliseconds): Duration of time taken by seal operations
 
 ### vault.core.seal-internal
 
-**[G]** Gauge (Number of operations): Number of internal seal operations
+**[G]** Gauge (Milliseconds): Duration of time taken by internal seal operations
 
 ### vault.core.step_down
 
-**[S]** Summary (Number of step downs): Number of cluster leadership step downs
+**[S]** Summary (Milliseconds):Duration of time taken by cluster leadership step downs
 
 This should be monitored and alerted on for overall cluster leadership status
 
 ### vault.core.unseal
 
-**[S]** Summary (Number of operations): Number of unseal operations
+**[S]** Summary (Milliseconds): Duration of time taken by unseal operations
 
 ### vault.runtime.alloc_bytes
 
@@ -278,7 +278,7 @@ Thes operations take a request and response with an associated lease and registe
 
 ### vault.token.createAccessor
 
-**[S]** Summary (Milliseconds): The time taken to create a token
+**[S]** Summary (Milliseconds): The time taken to create a token accessor
 
 ### vault.token.lookup
 
@@ -296,25 +296,25 @@ Thes operations take a request and response with an associated lease and registe
 
 **[S]** Summary (Milliseconds): Time taken to store an updated token entry without writing to the secondary index
 
-## Authentication Backend Metrics
+## Auth Methods Metrics
 
 These metrics relate to supported authentication methods.
 
 ### vault.rollback.attempt.auth-token-
 
-**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [token authentication backend][token-auth-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [token auth method][token-auth-backend]
 
 ### vault.rollback.attempt.auth-ldap-
 
-**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [LDAP authentication backend][ldap-auth-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [LDAP auth method][ldap-auth-backend]
 
 ### vault.rollback.attempt.cubbyhole-
 
-**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [Cubbyhole secret backend][cubbyhole-secret-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine]
 
 ### vault.rollback.attempt.secret-
 
-**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [K/V secret backend][kv-secret-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [K/V secret backend][kv-secrets-engine]
 
 ### vault.rollback.attempt.sys-
 
@@ -322,27 +322,131 @@ These metrics relate to supported authentication methods.
 
 ### vault.route.rollback.auth-ldap-
 
-**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [LDAP authentication backend][ldap-auth-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [LDAP auth method][ldap-auth-backend]
 
 ### vault.route.rollback.auth-token-
 
-**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [token authentication backend][token-auth-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [token auth method][token-auth-backend]
 
 ### vault.route.rollback.cubbyhole-
 
-**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [Cubbyhole secret backend][cubbyhole-secret-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine]
 
 ### vault.route.rollback.secret-
 
-**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [K/V secret backend][kv-secret-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [K/V secret backend][kv-secrets-engine]
 
 ### vault.route.rollback.sys-
 
 **[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the system backend
 
+## Secrets Engines Metrics
+
+These metrics relate to the supported [secrets engines][secrets-engines].
+
+### database.Initialize
+
+**[S]** Summary (Milliseconds): Time taken to initialize a database secret engine across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of database secrets engine initialization operations across database secrets engines
+
+### database.<name>.Initialize
+
+**[S]** Summary (Milliseconds): Time taken to initialize a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize`
+
+**[C]** Counter (Number of operations): Number of database secrets engine initialization operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize`
+
+### database.Initialize.error
+
+**[C]** Counter (Number of errors): Number of database secrets engine initialization operation errors across all database secrets engines
+
+### database.<name>.Initialize.error
+
+**[C]** Counter (Number of errors): Number of database secrets engine initialization operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize.error`
+
+### database.Close
+
+**[S]** Summary (Milliseconds): Time taken to close a database secret engine across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of database secrets engine close operations across database secrets engines
+
+### database.<name>.Close
+
+**[S]** Summary (Milliseconds): Time taken to close a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close`
+
+**[C]** Counter (Number of operations): Number of database secrets engine close operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close`
+
+### database.Close.error
+
+**[C]** Counter (Number of errors): Number of database secrets engine close operation errors across all database secrets engines
+
+### database.<name>.Close.error
+
+**[C]** Counter (Number of errors): Number of database secrets engine close operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close.error`
+
+### database.CreateUser
+
+**[S]** Summary (Milliseconds): Time taken to create a user across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of user creation operations across database secrets engines
+
+### database.<name>.CreateUser
+
+**[S]** Summary (Milliseconds): Time taken to create a user for the named database secrets engine `<name>`
+
+**[C]** Counter (Number of operations): Number of user creation operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.CreateUser`
+
+### database.CreateUser.error
+
+**[C]** Counter (Number of errors): Number of user creation operation errors across all database secrets engines
+
+### database.<name>.CreateUser.error
+
+**[C]** Counter (Number of operations): Number of user creation operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.CreateUser.error`
+
+### database.RenewUser
+
+**[S]** Summary (Milliseconds): Time taken to renew a user across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of user renewal operations across database secrets engines
+
+### database.<name>.RenewUser
+
+**[S]** Summary (Milliseconds): Time taken to renew a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser`
+
+**[C]** Counter (Number of operations): Number of user renewal operations for the named database secrets engine `<name>`
+
+### database.RenewUser.error
+
+**[C]** Counter (Number of errors): Number of user renewal operation errors across all database secrets engines
+
+### database.<name>.RenewUser.error
+
+**[C]** Counter (Number of errors): Number of user renewal operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser.error`
+
+### database.RevokeUser
+
+**[S]** Summary (Milliseconds): Time taken to revoke a user across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of user revocation operations across database secrets engines
+
+### database.<name>.RevokeUser
+
+**[S]** Summary (Milliseconds): Time taken to revoke a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser`
+
+**[C]** Counter (Number of operations): Number of user revocation operations for the named database secrets engine `<name>`
+
+### database.RevokeUser.error
+
+**[C]** Counter (Number of errors): Number of user revocation operation errors across all database secrets engines
+
+### database.<name>.RevokeUser.error
+
+**[C]** Counter (Number of errors): Number of user revocation operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser.error`
+
 ## Storage Backend Metrics
 
-These metrics relate to the supported storage backends.
+These metrics relate to the supported [storage backends][storage-backends].
 
 ### vault.azure.put
 
@@ -568,9 +672,11 @@ These metrics relate to the supported storage backends.
 
 **[S]** Summary (Milliseconds):  Duration of a LIST operation against the [ZooKeeper storage backend][zookeeper-storage-backend]
 
+[secrets-engines]: /docs/secrets/index.html
+[storage-backends]: /docs/configuration/storage/index.html
 [telemetry-stanza]: /docs/configuration/telemetry.html
-[cubbyhole-secret-backend]: /docs/secrets/cubbyhole/index.html
-[kv-secret-backend]: /docs/secrets/kv/index.html
+[cubbyhole-secrets-engine]: /docs/secrets/cubbyhole/index.html
+[kv-secrets-engine]: /docs/secrets/kv/index.html
 [ldap-auth-backend]: /docs/auth/ldap.html
 [token-auth-backend]: /docs/auth/token.html
 [azure-storage-backend]: /docs/configuration/storage/azure.html
