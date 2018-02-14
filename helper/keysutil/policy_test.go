@@ -51,19 +51,17 @@ func TestPolicy_KeyEntryMapUpgrade(t *testing.T) {
 }
 
 func Test_KeyUpgrade(t *testing.T) {
-	testKeyUpgradeCommon(t, NewLockManager(false), KeyType_AES256_GCM96)
-	testKeyUpgradeCommon(t, NewLockManager(true), KeyType_AES256_GCM96)
-	testKeyUpgradeCommon(t, NewLockManager(false), KeyType_ChaCha20_Poly1305)
-	testKeyUpgradeCommon(t, NewLockManager(true), KeyType_ChaCha20_Poly1305)
+	testKeyUpgradeCommon(t, NewLockManager(false))
+	testKeyUpgradeCommon(t, NewLockManager(true))
 }
 
-func testKeyUpgradeCommon(t *testing.T, lm *LockManager, keyType KeyType) {
+func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	ctx := context.Background()
 
 	storage := &logical.InmemStorage{}
 	p, lock, upserted, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
 		Storage: storage,
-		KeyType: keyType,
+		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
 	if lock != nil {
@@ -97,13 +95,11 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager, keyType KeyType) {
 }
 
 func Test_ArchivingUpgrade(t *testing.T) {
-	testArchivingUpgradeCommon(t, NewLockManager(false), KeyType_AES256_GCM96)
-	testArchivingUpgradeCommon(t, NewLockManager(true), KeyType_AES256_GCM96)
-	testArchivingUpgradeCommon(t, NewLockManager(false), KeyType_ChaCha20_Poly1305)
-	testArchivingUpgradeCommon(t, NewLockManager(true), KeyType_ChaCha20_Poly1305)
+	testArchivingUpgradeCommon(t, NewLockManager(false))
+	testArchivingUpgradeCommon(t, NewLockManager(true))
 }
 
-func testArchivingUpgradeCommon(t *testing.T, lm *LockManager, keyType KeyType) {
+func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	ctx := context.Background()
 
 	// First, we generate a policy and rotate it a number of times. Each time
@@ -114,7 +110,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager, keyType KeyType) 
 	storage := &logical.InmemStorage{}
 	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
 		Storage: storage,
-		KeyType: keyType,
+		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
 	if err != nil {
@@ -232,13 +228,11 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager, keyType KeyType) 
 }
 
 func Test_Archiving(t *testing.T) {
-	testArchivingCommon(t, NewLockManager(false), KeyType_AES256_GCM96)
-	testArchivingCommon(t, NewLockManager(true), KeyType_AES256_GCM96)
-	testArchivingCommon(t, NewLockManager(false), KeyType_ChaCha20_Poly1305)
-	testArchivingCommon(t, NewLockManager(true), KeyType_ChaCha20_Poly1305)
+	testArchivingCommon(t, NewLockManager(false))
+	testArchivingCommon(t, NewLockManager(true))
 }
 
-func testArchivingCommon(t *testing.T, lm *LockManager, keyType KeyType) {
+func testArchivingCommon(t *testing.T, lm *LockManager) {
 	ctx := context.Background()
 
 	// First, we generate a policy and rotate it a number of times. Each time
@@ -249,7 +243,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager, keyType KeyType) {
 	storage := &logical.InmemStorage{}
 	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
 		Storage: storage,
-		KeyType: keyType,
+		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
 	if err != nil {
@@ -395,18 +389,13 @@ func checkKeys(t *testing.T,
 }
 
 func Test_StorageErrorSafety(t *testing.T) {
-	testStorageErrorSafety(t, KeyType_AES256_GCM96)
-	testStorageErrorSafety(t, KeyType_ChaCha20_Poly1305)
-}
-
-func testStorageErrorSafety(t *testing.T, keyType KeyType) {
 	ctx := context.Background()
 	lm := NewLockManager(false)
 
 	storage := &logical.InmemStorage{}
 	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
 		Storage: storage,
-		KeyType: keyType,
+		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
 	if err != nil {
@@ -448,17 +437,12 @@ func testStorageErrorSafety(t *testing.T, keyType KeyType) {
 }
 
 func Test_BadUpgrade(t *testing.T) {
-	testBadUpgrade(t, KeyType_AES256_GCM96)
-	testBadUpgrade(t, KeyType_ChaCha20_Poly1305)
-}
-
-func testBadUpgrade(t *testing.T, keyType KeyType) {
 	ctx := context.Background()
 	lm := NewLockManager(false)
 	storage := &logical.InmemStorage{}
 	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
 		Storage: storage,
-		KeyType: keyType,
+		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
 	if err != nil {
@@ -516,17 +500,12 @@ func testBadUpgrade(t *testing.T, keyType KeyType) {
 }
 
 func Test_BadArchive(t *testing.T) {
-	testBadArchive(t, KeyType_AES256_GCM96)
-	testBadArchive(t, KeyType_ChaCha20_Poly1305)
-}
-
-func testBadArchive(t *testing.T, keyType KeyType) {
 	ctx := context.Background()
 	lm := NewLockManager(false)
 	storage := &logical.InmemStorage{}
 	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
 		Storage: storage,
-		KeyType: keyType,
+		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
 	if err != nil {
