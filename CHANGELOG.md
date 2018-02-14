@@ -13,6 +13,10 @@ IMPROVEMENTS:
  * cli: Add `-format` flag to all subcommands [GH-3897]
  * cli: Do not display deprecation warnings when the format is not table
    [GH-3897]
+ * core: If over a predefined lease count (256k), log a warning not more than
+   once a minute. Too many leases can be problematic for many of the storage
+   backends and often this number of leases is indicative of a need for
+   workflow improvements. [GH-3957]
  * secret/pki: Add a flag to make the common name optional on certs [GH-3940]
  * secret/pki: Ensure only DNS-compatible names go into DNS SANs; additionally,
    properly handle IDNA transformations for these DNS names [GH-3953]
