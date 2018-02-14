@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
@@ -71,7 +70,7 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	dbRaw, _ := New()
 	db := dbRaw.(*PostgreSQL)
 
-	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
+	connProducer := db.SQLConnectionProducer
 
 	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
@@ -237,7 +236,7 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 	dbRaw, _ := New()
 	db := dbRaw.(*PostgreSQL)
 
-	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
+	connProducer := db.SQLConnectionProducer
 
 	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
@@ -248,7 +247,7 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 		t.Fatal("Database should be initalized")
 	}
 
-	newConf, err := db.RotateRootCredentials(context.Background(), nil, connectionDetails)
+	newConf, err := db.RotateRootCredentials(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

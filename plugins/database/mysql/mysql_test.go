@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
@@ -107,7 +106,7 @@ func TestMySQL_Initialize(t *testing.T) {
 	f := New(MetadataLen, MetadataLen, UsernameLen)
 	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
-	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
+	connProducer := db.SQLConnectionProducer
 
 	_, err := db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
