@@ -137,6 +137,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 
 	case "MFA_REQUIRED":
+		// Per Okta documentation: Users are challenged for MFA (MFA_REQUIRED)
+		// before the Status of PASSWORD_EXPIRED is exposed (if they have an
+		// active factor enrollment). This bypass removes visibility
+		// into the authenticating user's password expiry, but still ensures the
+		// credentials are valid and the user is not locked out.
 		if cfg.BypassOktaMFA {
 			result.Status = "SUCCESS"
 			break
@@ -196,7 +201,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			case "TIMEOUT":
 				return nil, logical.ErrorResponse("failed to complete multi-factor authentication"), nil, nil
 			case "SUCCESS":
-				fallthrough
+				// Allowed
 			default:
 				if b.Logger().IsDebug() {
 					b.Logger().Debug("auth/okta: unhandled result status", "status", result.Status, "factorstatus", result.FactorResult)
