@@ -38,6 +38,7 @@ BUG FIXES:
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens. [GH-3880]
+ * command/rekey: Re-add lost `stored-shares` parameter [GH-3974]
  * command/ssh: Create and reuse the api client [GH-3909]
  * identity: Fix race when creating entities [GH-3932]
  * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
