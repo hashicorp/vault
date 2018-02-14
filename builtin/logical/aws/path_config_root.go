@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -35,6 +36,7 @@ func pathConfigRoot() *framework.Path {
 			},
 			"max_retries": &framework.FieldSchema{
 				Type:        framework.TypeInt,
+				Default:     aws.UseServiceDefaultRetries,
 				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
 			},
 		},

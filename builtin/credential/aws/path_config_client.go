@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -49,6 +50,7 @@ func pathConfigClient(b *backend) *framework.Path {
 			},
 			"max_retries": &framework.FieldSchema{
 				Type:        framework.TypeInt,
+				Default:     aws.UseServiceDefaultRetries,
 				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
 			},
 		},
