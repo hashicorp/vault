@@ -316,9 +316,7 @@ func (b *Backend) Transaction(ctx context.Context, txns []*physical.TxnEntry) er
 	defer b.permitPool.Release()
 
 	// Transactivate!
-	if _, err := b.client.ReadWriteTransaction(ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-		return txn.BufferWrite(ms)
-	}); err != nil {
+	if _, err := b.client.Apply(ctx, ms); err != nil {
 		return errors.Wrap(err, "failed to commit transaction")
 	}
 
