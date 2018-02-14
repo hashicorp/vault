@@ -442,7 +442,7 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 	var chains [][]*x509.Certificate
 	var err error
 	switch {
-	case len(certs[0].PermittedDNSDomains) > 0:
+	case len(certs[0].DNSNames) > 0:
 		for _, dnsName := range certs[0].DNSNames {
 			opts.DNSName = dnsName
 			chains, err = certs[0].Verify(opts)
