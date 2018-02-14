@@ -3,9 +3,11 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
 
+	"github.com/fatih/structs"
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
@@ -14,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -21,6 +24,11 @@ const (
 		REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
 		DROP USER '{{name}}'@'%'
 	`
+
+	defaultMySQLRotateRootCredentialsSQL = `
+		ALTER USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+	`
+
 	mySQLTypeName = "mysql"
 )
 
@@ -34,7 +42,7 @@ var (
 var _ dbplugin.Database = &MySQL{}
 
 type MySQL struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -52,8 +60,8 @@ func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, erro
 		}
 
 		dbType := &MySQL{
-			ConnectionProducer:  connProducer,
-			CredentialsProducer: credsProducer,
+			SQLConnectionProducer: connProducer,
+			CredentialsProducer:   credsProducer,
 		}
 
 		return dbType, nil
@@ -238,8 +246,73 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	return nil
 }
 
-// RotateRootCredentials is not supported on MySQL, so this is a no-op.
-func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	// NOOP
-	return nil, nil
+func (p *MySQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+	p.Lock()
+	defer p.Unlock()
+
+	c := new(connutil.SQLConfig)
+	err := mapstructure.WeakDecode(p.SQLConnectionProducer.SQLConfig, c)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(c.Username) == 0 || len(c.Password) == 0 {
+		return nil, errors.New("username and password are required to rotate")
+	}
+
+	rotateStatents := statements
+	if len(rotateStatents) == 0 {
+		rotateStatents = []string{defaultMySQLRotateRootCredentialsSQL}
+	}
+
+	db, err := p.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		tx.Rollback()
+	}()
+
+	password, err := p.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, stmt := range rotateStatents {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"username": c.Username,
+				"password": password,
+				"hostname": c.Hostname,
+			}))
+			if err != nil {
+				return nil, err
+			}
+
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	if err := db.Close(); err != nil {
+		return nil, err
+	}
+
+	c.Password = password
+	return structs.Map(p.SQLConnectionProducer.SQLConfig), nil
 }

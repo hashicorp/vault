@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	postgreSQLTypeName      string = "postgres"
-	defaultPostgresRenewSQL        = `
+	postgreSQLTypeName      = "postgres"
+	defaultPostgresRenewSQL = `
 ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
 `
 	defaultPostgresRotateRootCredentialsSQL = `
