@@ -1,11 +1,13 @@
 package spanner
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	"cloud.google.com/go/spanner"
 	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/physical"
 	"github.com/pkg/errors"
@@ -100,7 +102,7 @@ func (b *Backend) HAEnabled() bool {
 func (b *Backend) LockWith(key, value string) (physical.Lock, error) {
 	identity, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, errors.Wrap(err, "lock with")
+		return nil, errwrap.Wrapf("lock with: {{err}}", err)
 	}
 	return &Lock{
 		backend:  b,
@@ -133,7 +135,7 @@ func (l *Lock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	// occurs.
 	acquired, err := l.attemptLock(stopCh)
 	if err != nil {
-		return nil, errors.Wrap(err, "Lock")
+		return nil, errwrap.Wrapf("lock: {{err}}", err)
 	}
 	if !acquired {
 		return nil, nil
@@ -190,7 +192,7 @@ func (l *Lock) Unlock() error {
 
 		var r LockRecord
 		if derr := row.ToStruct(&r); derr != nil {
-			return errors.Wrap(derr, "failed to decode to struct")
+			return errwrap.Wrapf("failed to decode to struct: {{err}}", derr)
 		}
 
 		// If the identity is different, that means that between the time that after
@@ -204,7 +206,7 @@ func (l *Lock) Unlock() error {
 			spanner.Delete(l.backend.haTable, spanner.Key{l.key}),
 		})
 	}); err != nil {
-		return errors.Wrap(err, "unlock")
+		return errwrap.Wrapf("unlock: {{err}}", err)
 	}
 
 	// We are no longer holding the lock
@@ -239,7 +241,7 @@ func (l *Lock) attemptLock(stopCh <-chan struct{}) (bool, error) {
 		case <-ticker.C:
 			acquired, err := l.writeLock()
 			if err != nil {
-				return false, errors.Wrap(err, "attempt lock")
+				return false, errwrap.Wrapf("attempt lock: {{err}}", err)
 			}
 			if !acquired {
 				continue
@@ -351,7 +353,7 @@ func (l *Lock) writeLock() (bool, error) {
 		if row != nil {
 			var r LockRecord
 			if derr := row.ToStruct(&r); derr != nil {
-				return errors.Wrap(derr, "failed to decode to struct")
+				return errwrap.Wrapf("failed to decode to struct: {{err}}", derr)
 			}
 
 			// If the key is empty or the identity is ours or the ttl expired, we can
@@ -368,10 +370,10 @@ func (l *Lock) writeLock() (bool, error) {
 			Timestamp: time.Now().UTC(),
 		})
 		if err != nil {
-			return errors.Wrap(err, "failed to generate struct")
+			return errwrap.Wrapf("failed to generate struct: {{err}}", err)
 		}
 		if err := txn.BufferWrite([]*spanner.Mutation{m}); err != nil {
-			return errors.Wrap(err, "failed to write")
+			return errwrap.Wrapf("failed to write: {{err}}", err)
 		}
 
 		// Mark that the lock was acquired
@@ -380,7 +382,7 @@ func (l *Lock) writeLock() (bool, error) {
 		return nil
 	})
 	if err != nil {
-		return false, errors.Wrap(err, "write lock")
+		return false, errwrap.Wrapf("write lock: {{err}}", err)
 	}
 
 	return lockWritten, nil
@@ -398,12 +400,12 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read value for %q", l.key)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read value for %q: {{err}}", l.key), err)
 	}
 
 	var r LockRecord
 	if err := row.ToStruct(&r); err != nil {
-		return nil, errors.Wrap(err, "failed to decode lock")
+		return nil, errwrap.Wrapf("failed to decode lock: {{err}}", err)
 	}
 	return &r, nil
 }

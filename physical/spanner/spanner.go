@@ -9,6 +9,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
 	log "github.com/mgutz/logxi/v1"
@@ -130,14 +131,14 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		var err error
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse HA enabled")
+			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
 		}
 	}
 
 	// Max parallel
 	maxParallel, err := extractInt(c["max_parallel"])
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse max_parallel")
+		return nil, errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
 	}
 
 	logger.Debug("physical/spanner: configuration",
@@ -152,7 +153,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	ctx := context.Background()
 	client, err := spanner.NewClient(ctx, database)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create spanner client")
+		return nil, errwrap.Wrapf("failed to create spanner client: {{err}}", err)
 	}
 
 	return &Backend{
@@ -181,7 +182,7 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 		"Value": entry.Value,
 	})
 	if _, err := b.client.Apply(ctx, []*spanner.Mutation{m}); err != nil {
-		return errors.Wrap(err, "failed to put data")
+		return errwrap.Wrapf("failed to put data: {{err}}", err)
 	}
 	return nil
 }
@@ -200,12 +201,12 @@ func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read value for %q", key)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read value for %q: {{err}}", key), err)
 	}
 
 	var value []byte
 	if err := row.Column(0, &value); err != nil {
-		return nil, errors.Wrap(err, "failed to decode value into bytes")
+		return nil, errwrap.Wrapf("failed to decode value into bytes: {{err}}", err)
 	}
 
 	return &physical.Entry{
@@ -225,7 +226,7 @@ func (b *Backend) Delete(ctx context.Context, key string) error {
 	// Delete
 	m := spanner.Delete(b.table, spanner.Key{key})
 	if _, err := b.client.Apply(ctx, []*spanner.Mutation{m}); err != nil {
-		return errors.Wrap(err, "failed to delete key")
+		return errwrap.Wrapf("failed to delete key: {{err}}", err)
 	}
 
 	return nil
@@ -259,12 +260,12 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 			break
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read row")
+			return nil, errwrap.Wrapf("failed to read row: {{err}}", err)
 		}
 
 		var key string
 		if err := row.Column(0, &key); err != nil {
-			return nil, errors.Wrap(err, "failed to decode key into string")
+			return nil, errwrap.Wrapf("failed to decode key into string: {{err}}", err)
 		}
 
 		// The results will include the full prefix (folder) and any deeply-nested
@@ -317,7 +318,7 @@ func (b *Backend) Transaction(ctx context.Context, txns []*physical.TxnEntry) er
 
 	// Transactivate!
 	if _, err := b.client.Apply(ctx, ms); err != nil {
-		return errors.Wrap(err, "failed to commit transaction")
+		return errwrap.Wrapf("failed to commit transaction: {{err}}", err)
 	}
 
 	return nil
