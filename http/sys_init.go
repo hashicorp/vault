@@ -69,36 +69,28 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	// need to be a way to actually allow fetching of the generated keys by
 	// operators.
 	if core.SealAccess().StoredKeysSupported() {
-		if barrierConfig.SecretShares != 1 {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("secret shares must be 1"))
-			return
-		}
-		if barrierConfig.SecretThreshold != barrierConfig.SecretShares {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("secret threshold must be same as secret shares"))
-			return
-		}
-		if barrierConfig.StoredShares != barrierConfig.SecretShares {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("stored shares must be same as secret shares"))
-			return
-		}
-		if barrierConfig.PGPKeys != nil && len(barrierConfig.PGPKeys) > 0 {
+		if len(barrierConfig.PGPKeys) > 0 {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("PGP keys not supported when storing shares"))
 			return
 		}
+		barrierConfig.SecretShares = 1
+		barrierConfig.SecretThreshold = 1
+		barrierConfig.StoredShares = 1
+		core.Logger().Warn("init: stored keys supported, forcing shares/threshold to 1")
 	} else {
 		if barrierConfig.StoredShares > 0 {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("stored keys are not supported"))
+			respondError(w, http.StatusBadRequest, fmt.Errorf("stored keys are not supported by the current seal type"))
 			return
 		}
 	}
 
-	if len(barrierConfig.PGPKeys) > 0 && len(barrierConfig.PGPKeys) != barrierConfig.SecretShares-barrierConfig.StoredShares {
+	if len(barrierConfig.PGPKeys) > 0 && len(barrierConfig.PGPKeys) != barrierConfig.SecretShares {
 		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys"))
 		return
 	}
 
 	if core.SealAccess().RecoveryKeySupported() {
-		if len(recoveryConfig.PGPKeys) > 0 && len(recoveryConfig.PGPKeys) != recoveryConfig.SecretShares-recoveryConfig.StoredShares {
+		if len(recoveryConfig.PGPKeys) > 0 && len(recoveryConfig.PGPKeys) != recoveryConfig.SecretShares {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for recovery"))
 			return
 		}
