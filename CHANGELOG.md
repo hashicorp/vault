@@ -2,6 +2,9 @@
 
 FEATURES:
 
+ * **ChaCha20-Poly1305 support in `transit`**: You can now encrypt and decrypt
+   with ChaCha20-Poly1305 in `transit`. Key derivation and convergent
+   encryption is also supported.
  * **Manta Storage**: Manta can now be used for Vault storage
 
 IMPROVEMENTS:
