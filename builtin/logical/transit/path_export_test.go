@@ -12,9 +12,11 @@ import (
 
 func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
 	verifyExportsCorrectVersion(t, "encryption-key", "aes256-gcm96")
+	verifyExportsCorrectVersion(t, "encryption-key", "chacha20-poly1305")
 	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p256")
 	verifyExportsCorrectVersion(t, "signing-key", "ed25519")
 	verifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96")
+	verifyExportsCorrectVersion(t, "hmac-key", "chacha20-poly1305")
 	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p256")
 	verifyExportsCorrectVersion(t, "hmac-key", "ed25519")
 }

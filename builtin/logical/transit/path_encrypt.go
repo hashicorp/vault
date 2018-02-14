@@ -225,6 +225,8 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		switch keyType {
 		case "aes256-gcm96":
 			polReq.KeyType = keysutil.KeyType_AES256_GCM96
+		case "chacha20-poly1305":
+			polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
 		case "ecdsa-p256":
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
 		default:

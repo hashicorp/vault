@@ -48,6 +48,24 @@ multiple of five) may provide a good alternative, allowing for several keys to
 be live at once and a deterministic way to decide which key to use at any given
 time.
 
+## Key Types
+
+As of now, the transit secrets engine supports the following key types (all key
+types also generate separate HMAC keys):
+
+* `aes256-gcm96`: AES-GCM with a 256-bit AES key and a 96-bit nonce; supports
+  encryption, decryption, key derivation, and convergent encryption
+* `chacha20-poly1305`: ChaCha20-Poly1305 with a 256-bit key; supports
+  encryption, decryption, key derivation, and convergent encryption
+* `ed25519`: Ed25519; supports signing, signature verification, and key
+  derivation
+* `ecdsa-p256`: ECDSA using curve P256; supports signing and signature
+  verification
+* `rsa-2048`: 2048-bit RSA key; supports encryption, decryption, signing, and
+  signature verification 
+* `rsa-4096`: 4096-bit RSA key; supports encryption, decryption, signing, and
+  signature verification
+
 ## Setup
 
 Most secrets engines must be configured in advance before they can perform their
