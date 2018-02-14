@@ -4,104 +4,157 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
 
-func TestUnwrap(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testUnwrapCommand(tb testing.TB) (*cli.MockUi, *UnwrapCommand) {
+	tb.Helper()
 
-	ui := new(cli.MockUi)
-	c := &UnwrapCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	ui := cli.NewMockUi()
+	return ui, &UnwrapCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func testUnwrapWrappedToken(tb testing.TB, client *api.Client, data map[string]interface{}) string {
+	tb.Helper()
+
+	wrapped, err := client.Logical().Write("sys/wrapping/wrap", data)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if wrapped == nil || wrapped.WrapInfo == nil || wrapped.WrapInfo.Token == "" {
+		tb.Fatalf("missing wrap info: %v", wrapped)
+	}
+	return wrapped.WrapInfo.Token
+}
+
+func TestUnwrapCommand_Run(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"too_many_args",
+			[]string{"foo", "bar"},
+			"Too many arguments",
+			1,
+		},
+		{
+			"default",
+			nil, // Token comes in the test func
+			"bar",
+			0,
+		},
+		{
+			"field",
+			[]string{"-field", "foo"},
+			"bar",
+			0,
+		},
+		{
+			"field_not_found",
+			[]string{"-field", "not-a-real-field"},
+			"not present in secret",
+			1,
 		},
 	}
 
-	args := []string{
-		"-address", addr,
-		"-field", "zip",
-	}
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
 
-	// Run once so the client is setup, ignore errors
-	c.Run(args)
+		for _, tc := range cases {
+			tc := tc
 
-	// Get the client so we can write data
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 
-	wrapLookupFunc := func(method, path string) string {
-		if method == "GET" && path == "secret/foo" {
-			return "60s"
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				wrappedToken := testUnwrapWrappedToken(t, client, map[string]interface{}{
+					"foo": "bar",
+				})
+
+				ui, cmd := testUnwrapCommand(t)
+				cmd.client = client
+
+				tc.args = append(tc.args, wrappedToken)
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			})
 		}
-		if method == "LIST" && path == "secret" {
-			return "60s"
+	})
+
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testUnwrapCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"foo",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
 		}
-		return ""
-	}
-	client.SetWrappingLookupFunc(wrapLookupFunc)
 
-	data := map[string]interface{}{"zip": "zap"}
-	if _, err := client.Logical().Write("secret/foo", data); err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		expected := "Error unwrapping: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
 
-	outer, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if outer == nil {
-		t.Fatal("outer response was nil")
-	}
-	if outer.WrapInfo == nil {
-		t.Fatalf("outer wrapinfo was nil, response was %#v", *outer)
-	}
+	// This test needs its own client and server because it modifies the client
+	// to the wrapping token
+	t.Run("local_token", func(t *testing.T) {
+		t.Parallel()
 
-	args = append(args, outer.WrapInfo.Token)
+		client, closer := testVaultServer(t)
+		defer closer()
 
-	// Run the read
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+		wrappedToken := testUnwrapWrappedToken(t, client, map[string]interface{}{
+			"foo": "bar",
+		})
 
-	output := ui.OutputWriter.String()
-	if output != "zap\n" {
-		t.Fatalf("unexpectd output:\n%s", output)
-	}
+		ui, cmd := testUnwrapCommand(t)
+		cmd.client = client
+		cmd.client.SetToken(wrappedToken)
 
-	// Now test with list handling, specifically that it will be called with
-	// the list output formatter
-	ui.OutputWriter.Reset()
+		// Intentionally don't pass the token here - it shoudl use the local token
+		code := cmd.Run([]string{})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
 
-	outer, err = client.Logical().List("secret")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if outer == nil {
-		t.Fatal("outer response was nil")
-	}
-	if outer.WrapInfo == nil {
-		t.Fatalf("outer wrapinfo was nil, response was %#v", *outer)
-	}
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, "bar") {
+			t.Errorf("expected %q to contain %q", combined, "bar")
+		}
+	})
 
-	args = []string{
-		"-address", addr,
-		outer.WrapInfo.Token,
-	}
-	// Run the read
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
 
-	output = ui.OutputWriter.String()
-	if strings.TrimSpace(output) != "Keys\n----\nfoo" {
-		t.Fatalf("unexpected output:\n%s", output)
-	}
+		_, cmd := testUnwrapCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }

@@ -330,7 +330,7 @@ func marshalSmallInt(info TypeInfo, value interface{}) ([]byte, error) {
 			return nil, marshalErrorf("marshal smallint: value %d out of range", v)
 		}
 		return encShort(int16(v)), nil
-	default:
+	case reflect.Ptr:
 		if rv.IsNil() {
 			return nil, nil
 		}
@@ -414,7 +414,7 @@ func marshalTinyInt(info TypeInfo, value interface{}) ([]byte, error) {
 			return nil, marshalErrorf("marshal tinyint: value %d out of range", v)
 		}
 		return []byte{byte(v)}, nil
-	default:
+	case reflect.Ptr:
 		if rv.IsNil() {
 			return nil, nil
 		}
@@ -486,7 +486,7 @@ func marshalInt(info TypeInfo, value interface{}) ([]byte, error) {
 			return nil, marshalErrorf("marshal int: value %d out of range", v)
 		}
 		return encInt(int32(v)), nil
-	default:
+	case reflect.Ptr:
 		if rv.IsNil() {
 			return nil, nil
 		}
@@ -2051,6 +2051,17 @@ func (c CollectionType) String() string {
 type TupleTypeInfo struct {
 	NativeType
 	Elems []TypeInfo
+}
+
+func (t TupleTypeInfo) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("%s(", t.typ))
+	for _, elem := range t.Elems {
+		buf.WriteString(fmt.Sprintf("%s, ", elem))
+	}
+	buf.Truncate(buf.Len() - 2)
+	buf.WriteByte(')')
+	return buf.String()
 }
 
 func (t TupleTypeInfo) New() interface{} {

@@ -7,126 +7,83 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/kv-builder"
-	"github.com/hashicorp/vault/meta"
-	"github.com/mitchellh/mapstructure"
+	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-// AuditEnableCommand is a Command that mounts a new mount.
+var _ cli.Command = (*AuditEnableCommand)(nil)
+var _ cli.CommandAutocomplete = (*AuditEnableCommand)(nil)
+
 type AuditEnableCommand struct {
-	meta.Meta
+	*BaseCommand
 
-	// A test stdin that can be used for tests
-	testStdin io.Reader
-}
+	flagDescription string
+	flagPath        string
+	flagLocal       bool
 
-func (c *AuditEnableCommand) Run(args []string) int {
-	var desc, path string
-	var local bool
-	flags := c.Meta.FlagSet("audit-enable", meta.FlagSetDefault)
-	flags.StringVar(&desc, "description", "", "")
-	flags.StringVar(&path, "path", "", "")
-	flags.BoolVar(&local, "local", false, "")
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
-		return 1
-	}
-
-	args = flags.Args()
-	if len(args) < 1 {
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\naudit-enable expects at least one argument: the type to enable"))
-		return 1
-	}
-
-	auditType := args[0]
-	if path == "" {
-		path = auditType
-	}
-
-	// Build the options
-	var stdin io.Reader = os.Stdin
-	if c.testStdin != nil {
-		stdin = c.testStdin
-	}
-	builder := &kvbuilder.Builder{Stdin: stdin}
-	if err := builder.Add(args[1:]...); err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error parsing options: %s", err))
-		return 1
-	}
-
-	var opts map[string]string
-	if err := mapstructure.WeakDecode(builder.Map(), &opts); err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error parsing options: %s", err))
-		return 1
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
-		return 1
-	}
-
-	err = client.Sys().EnableAuditWithOptions(path, &api.EnableAuditOptions{
-		Type:        auditType,
-		Description: desc,
-		Options:     opts,
-		Local:       local,
-	})
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error enabling audit backend: %s", err))
-		return 1
-	}
-
-	c.Ui.Output(fmt.Sprintf(
-		"Successfully enabled audit backend '%s' with path '%s'!", auditType, path))
-	return 0
+	testStdin io.Reader // For tests
 }
 
 func (c *AuditEnableCommand) Synopsis() string {
-	return "Enable an audit backend"
+	return "Enables an audit device"
 }
 
 func (c *AuditEnableCommand) Help() string {
 	helpText := `
-Usage: vault audit-enable [options] type [config...]
+Usage: vault audit enable [options] TYPE [CONFIG K=V...]
 
-  Enable an audit backend.
+  Enables an audit device at a given path.
 
-  This command enables an audit backend of type "type". Additional
-  options for configuring the audit backend can be specified after the
-  type in the same format as the "vault write" command in key/value pairs.
+  This command enables an audit device of TYPE. Additional options for
+  configuring the audit device can be specified after the type in the same
+  format as the "vault write" command in key/value pairs.
 
-  For example, to configure the file audit backend to write audit logs at
-  the path /var/log/audit.log:
+  For example, to configure the file audit device to write audit logs at the
+  path "/var/log/audit.log":
 
-      $ vault audit-enable file file_path=/var/log/audit.log
+      $ vault audit enable file file_path=/var/log/audit.log
 
-  For information on available configuration options, please see the
-  documentation.
+` + c.Flags().Help()
 
-General Options:
-` + meta.GeneralOptionsUsage() + `
-Audit Enable Options:
-
-  -description=<desc>     A human-friendly description for the backend. This
-                          shows up only when querying the enabled backends.
-
-  -path=<path>            Specify a unique path for this audit backend. This
-                          is purely for referencing this audit backend. By
-                          default this will be the backend type.
-
-  -local                  Mark the mount as a local mount. Local mounts
-                          are not replicated nor (if a secondary)
-                          removed by replication.
-`
 	return strings.TrimSpace(helpText)
+}
+
+func (c *AuditEnableCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.StringVar(&StringVar{
+		Name:       "description",
+		Target:     &c.flagDescription,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "Human-friendly description for the purpose of this audit " +
+			"device.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "path",
+		Target:     &c.flagPath,
+		Default:    "", // The default is complex, so we have to manually document
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "Place where the audit device will be accessible. This must be " +
+			"unique across all audit devices. This defaults to the \"type\" of the " +
+			"audit device.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "local",
+		Target:  &c.flagLocal,
+		Default: false,
+		EnvVar:  "",
+		Usage: "Mark the audit device as a local-only device. Local devices " +
+			"are not replicated or removed by replication.",
+	})
+
+	return set
 }
 
 func (c *AuditEnableCommand) AutocompleteArgs() complete.Predictor {
@@ -138,9 +95,60 @@ func (c *AuditEnableCommand) AutocompleteArgs() complete.Predictor {
 }
 
 func (c *AuditEnableCommand) AutocompleteFlags() complete.Flags {
-	return complete.Flags{
-		"-description": complete.PredictNothing,
-		"-path":        complete.PredictNothing,
-		"-local":       complete.PredictNothing,
+	return c.Flags().Completions()
+}
+
+func (c *AuditEnableCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
+
+	args = f.Args()
+	if len(args) < 1 {
+		c.UI.Error("Missing TYPE!")
+		return 1
+	}
+
+	// Grab the type
+	auditType := strings.TrimSpace(args[0])
+
+	auditPath := c.flagPath
+	if auditPath == "" {
+		auditPath = auditType
+	}
+	auditPath = ensureTrailingSlash(auditPath)
+
+	// Pull our fake stdin if needed
+	stdin := (io.Reader)(os.Stdin)
+	if c.testStdin != nil {
+		stdin = c.testStdin
+	}
+
+	options, err := parseArgsDataString(stdin, args[1:])
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
+		return 1
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	if err := client.Sys().EnableAuditWithOptions(auditPath, &api.EnableAuditOptions{
+		Type:        auditType,
+		Description: c.flagDescription,
+		Options:     options,
+		Local:       c.flagLocal,
+	}); err != nil {
+		c.UI.Error(fmt.Sprintf("Error enabling audit device: %s", err))
+		return 2
+	}
+
+	c.UI.Output(fmt.Sprintf("Success! Enabled the %s audit device at: %s", auditType, auditPath))
+	return 0
 }

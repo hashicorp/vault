@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -29,12 +30,11 @@ func pathUser(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathUserRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	policyName := d.Get("name").(string)
 
 	// Read the policy
-	policy, err := req.Storage.Get("policy/" + policyName)
+	policy, err := req.Storage.Get(ctx, "policy/"+policyName)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
@@ -45,10 +45,10 @@ func (b *backend) pathUserRead(
 
 	// Use the helper to create the secret
 	return b.secretAccessKeysCreate(
-		req.Storage, req.DisplayName, policyName, string(policy.Value))
+		ctx, req.Storage, req.DisplayName, policyName, string(policy.Value))
 }
 
-func pathUserRollback(req *logical.Request, _kind string, data interface{}) error {
+func pathUserRollback(ctx context.Context, req *logical.Request, _kind string, data interface{}) error {
 	var entry walUser
 	if err := mapstructure.Decode(data, &entry); err != nil {
 		return err
@@ -56,7 +56,7 @@ func pathUserRollback(req *logical.Request, _kind string, data interface{}) erro
 	username := entry.UserName
 
 	// Get the client
-	client, err := clientIAM(req.Storage)
+	client, err := clientIAM(ctx, req.Storage)
 	if err != nil {
 		return err
 	}

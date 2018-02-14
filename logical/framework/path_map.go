@@ -1,11 +1,12 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/vault/helper/salt"
+	saltpkg "github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -20,8 +21,8 @@ type PathMap struct {
 	Name          string
 	Schema        map[string]*FieldSchema
 	CaseSensitive bool
-	Salt          *salt.Salt
-	SaltFunc      func() (*salt.Salt, error)
+	Salt          *saltpkg.Salt
+	SaltFunc      func() (*saltpkg.Salt, error)
 
 	once sync.Once
 }
@@ -42,7 +43,7 @@ func (p *PathMap) init() {
 }
 
 // pathStruct returns the pathStruct for this mapping
-func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
+func (p *PathMap) pathStruct(ctx context.Context, s logical.Storage, k string) (*PathStruct, error) {
 	p.once.Do(p.init)
 
 	// If we don't care about casing, store everything lowercase
@@ -63,7 +64,7 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		}
 	}
 	if salt != nil {
-		k = salt.SaltID(k)
+		k = "s" + salt.SaltIDHashFunc(k, saltpkg.SHA256Hash)
 	}
 
 	finalName := fmt.Sprintf("map/%s/%s", p.Name, k)
@@ -72,18 +73,23 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		Schema: p.Schema,
 	}
 
-	// Check for unsalted version and upgrade if so
-	if k != origKey {
-		// Generate the unsalted name
-		unsaltedName := fmt.Sprintf("map/%s/%s", p.Name, origKey)
-		// Set the path struct to use the unsalted name
-		ps.Name = unsaltedName
+	if !strings.HasPrefix(origKey, "s") && k != origKey {
 		// Ensure that no matter what happens what is returned is the final
 		// path
 		defer func() {
 			ps.Name = finalName
 		}()
-		val, err := ps.Get(s)
+
+		//
+		// Check for unsalted version and upgrade if so
+		//
+
+		// Generate the unsalted name
+		unsaltedName := fmt.Sprintf("map/%s/%s", p.Name, origKey)
+		// Set the path struct to use the unsalted name
+		ps.Name = unsaltedName
+
+		val, err := ps.Get(ctx, s)
 		if err != nil {
 			return nil, err
 		}
@@ -91,13 +97,45 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 		if val != nil {
 			// Set the path struct to use the desired final name
 			ps.Name = finalName
-			err = ps.Put(s, val)
+			err = ps.Put(ctx, s, val)
 			if err != nil {
 				return nil, err
 			}
 			// Set it back to the old path and delete
 			ps.Name = unsaltedName
-			err = ps.Delete(s)
+			err = ps.Delete(ctx, s)
+			if err != nil {
+				return nil, err
+			}
+			// We'll set this in the deferred function but doesn't hurt here
+			ps.Name = finalName
+		}
+
+		//
+		// Check for SHA1 hashed version and upgrade if so
+		//
+
+		// Generate the SHA1 hash suffixed path name
+		sha1SuffixedName := fmt.Sprintf("map/%s/%s", p.Name, salt.SaltID(origKey))
+
+		// Set the path struct to use the SHA1 hash suffixed path name
+		ps.Name = sha1SuffixedName
+
+		val, err = ps.Get(ctx, s)
+		if err != nil {
+			return nil, err
+		}
+		// If not nil, we have an SHA1 hash suffixed entry -- upgrade it
+		if val != nil {
+			// Set the path struct to use the desired final name
+			ps.Name = finalName
+			err = ps.Put(ctx, s, val)
+			if err != nil {
+				return nil, err
+			}
+			// Set it back to the old path and delete
+			ps.Name = sha1SuffixedName
+			err = ps.Delete(ctx, s)
 			if err != nil {
 				return nil, err
 			}
@@ -110,37 +148,37 @@ func (p *PathMap) pathStruct(s logical.Storage, k string) (*PathStruct, error) {
 }
 
 // Get reads a value out of the mapping
-func (p *PathMap) Get(s logical.Storage, k string) (map[string]interface{}, error) {
-	ps, err := p.pathStruct(s, k)
+func (p *PathMap) Get(ctx context.Context, s logical.Storage, k string) (map[string]interface{}, error) {
+	ps, err := p.pathStruct(ctx, s, k)
 	if err != nil {
 		return nil, err
 	}
-	return ps.Get(s)
+	return ps.Get(ctx, s)
 }
 
 // Put writes a value into the mapping
-func (p *PathMap) Put(s logical.Storage, k string, v map[string]interface{}) error {
-	ps, err := p.pathStruct(s, k)
+func (p *PathMap) Put(ctx context.Context, s logical.Storage, k string, v map[string]interface{}) error {
+	ps, err := p.pathStruct(ctx, s, k)
 	if err != nil {
 		return err
 	}
-	return ps.Put(s, v)
+	return ps.Put(ctx, s, v)
 }
 
 // Delete removes a value from the mapping
-func (p *PathMap) Delete(s logical.Storage, k string) error {
-	ps, err := p.pathStruct(s, k)
+func (p *PathMap) Delete(ctx context.Context, s logical.Storage, k string) error {
+	ps, err := p.pathStruct(ctx, s, k)
 	if err != nil {
 		return err
 	}
-	return ps.Delete(s)
+	return ps.Delete(ctx, s)
 }
 
 // List reads the keys under a given path
-func (p *PathMap) List(s logical.Storage, prefix string) ([]string, error) {
+func (p *PathMap) List(ctx context.Context, s logical.Storage, prefix string) ([]string, error) {
 	stripPrefix := fmt.Sprintf("struct/map/%s/", p.Name)
 	fullPrefix := fmt.Sprintf("%s%s", stripPrefix, prefix)
-	out, err := s.List(fullPrefix)
+	out, err := s.List(ctx, fullPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -170,8 +208,8 @@ func (p *PathMap) Paths() []*Path {
 			Pattern: fmt.Sprintf("%s/%s/?$", p.Prefix, p.Name),
 
 			Callbacks: map[logical.Operation]OperationFunc{
-				logical.ListOperation: p.pathList,
-				logical.ReadOperation: p.pathList,
+				logical.ListOperation: p.pathList(),
+				logical.ReadOperation: p.pathList(),
 			},
 
 			HelpSynopsis: fmt.Sprintf("Read mappings for %s", p.Name),
@@ -183,58 +221,63 @@ func (p *PathMap) Paths() []*Path {
 			Fields: schema,
 
 			Callbacks: map[logical.Operation]OperationFunc{
-				logical.CreateOperation: p.pathSingleWrite,
-				logical.ReadOperation:   p.pathSingleRead,
-				logical.UpdateOperation: p.pathSingleWrite,
-				logical.DeleteOperation: p.pathSingleDelete,
+				logical.CreateOperation: p.pathSingleWrite(),
+				logical.ReadOperation:   p.pathSingleRead(),
+				logical.UpdateOperation: p.pathSingleWrite(),
+				logical.DeleteOperation: p.pathSingleDelete(),
 			},
 
 			HelpSynopsis: fmt.Sprintf("Read/write/delete a single %s mapping", p.Name),
 
-			ExistenceCheck: p.pathSingleExistenceCheck,
+			ExistenceCheck: p.pathSingleExistenceCheck(),
 		},
 	}
 }
 
-func (p *PathMap) pathList(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	keys, err := p.List(req.Storage, "")
-	if err != nil {
+func (p *PathMap) pathList() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		keys, err := p.List(ctx, req.Storage, "")
+		if err != nil {
+			return nil, err
+		}
+
+		return logical.ListResponse(keys), nil
+	}
+}
+
+func (p *PathMap) pathSingleRead() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		v, err := p.Get(ctx, req.Storage, d.Get("key").(string))
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: v,
+		}, nil
+	}
+}
+
+func (p *PathMap) pathSingleWrite() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		err := p.Put(ctx, req.Storage, d.Get("key").(string), d.Raw)
 		return nil, err
 	}
-
-	return logical.ListResponse(keys), nil
 }
 
-func (p *PathMap) pathSingleRead(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	v, err := p.Get(req.Storage, d.Get("key").(string))
-	if err != nil {
+func (p *PathMap) pathSingleDelete() OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (*logical.Response, error) {
+		err := p.Delete(ctx, req.Storage, d.Get("key").(string))
 		return nil, err
 	}
-
-	return &logical.Response{
-		Data: v,
-	}, nil
 }
 
-func (p *PathMap) pathSingleWrite(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	err := p.Put(req.Storage, d.Get("key").(string), d.Raw)
-	return nil, err
-}
-
-func (p *PathMap) pathSingleDelete(
-	req *logical.Request, d *FieldData) (*logical.Response, error) {
-	err := p.Delete(req.Storage, d.Get("key").(string))
-	return nil, err
-}
-
-func (p *PathMap) pathSingleExistenceCheck(
-	req *logical.Request, d *FieldData) (bool, error) {
-	v, err := p.Get(req.Storage, d.Get("key").(string))
-	if err != nil {
-		return false, err
+func (p *PathMap) pathSingleExistenceCheck() ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, d *FieldData) (bool, error) {
+		v, err := p.Get(ctx, req.Storage, d.Get("key").(string))
+		if err != nil {
+			return false, err
+		}
+		return v != nil, nil
 	}
-	return v != nil, nil
 }

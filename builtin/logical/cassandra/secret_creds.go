@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -30,8 +31,7 @@ func secretCreds(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretCredsRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the lease information
 	roleRaw, ok := req.Secret.InternalData["role"]
 	if !ok {
@@ -42,16 +42,15 @@ func (b *backend) secretCredsRenew(
 		return nil, fmt.Errorf("error converting role internal data to string")
 	}
 
-	role, err := getRole(req.Storage, roleName)
+	role, err := getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load role: %s", err)
 	}
 
-	return framework.LeaseExtend(role.Lease, 0, b.System())(req, d)
+	return framework.LeaseExtend(role.Lease, 0, b.System())(ctx, req, d)
 }
 
-func (b *backend) secretCredsRevoke(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
@@ -62,7 +61,7 @@ func (b *backend) secretCredsRevoke(
 		return nil, fmt.Errorf("error converting username internal data to string")
 	}
 
-	session, err := b.DB(req.Storage)
+	session, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("error getting session")
 	}

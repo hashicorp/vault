@@ -35,7 +35,7 @@ manually re-type it.
 ## `TTL` Field in Token Lookup
 
 Previously, the `ttl` field returned when calling `lookup` or `lookup-self` on
-the token authentication backend displayed the TTL set at token creation. It
+the token auth method displayed the TTL set at token creation. It
 now displays the time remaining (in seconds) for the token's validity period.
 The original behavior has been moved to a field named `creation_ttl`.
 
@@ -122,7 +122,7 @@ cannot be less restrictive than the mount's maximum TTL.)
 - `userpass` – The renew function now uses the backend's configured maximum TTL,
   if set; otherwise the mount maximum TTL is used.
 
-#### Secret Backends
+#### Secrets Engines
 
 - `aws` – New IAM roles no longer always have a default TTL of one hour, instead
   honoring the configured default if available and the mount default TTL if not

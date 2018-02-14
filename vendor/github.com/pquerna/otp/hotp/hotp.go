@@ -77,6 +77,10 @@ func GenerateCodeCustom(secret string, counter uint64, opts ValidateOpts) (passc
 		secret = secret + strings.Repeat("=", 8-n)
 	}
 
+	// As noted in issue #24 Google has started producing base32 in lower case,
+	// but the StdEncoding (and the RFC), expect a dictionary of only upper case letters.
+	secret = strings.ToUpper(secret)
+
 	secretBytes, err := base32.StdEncoding.DecodeString(secret)
 	if err != nil {
 		return "", otp.ErrValidateSecretInvalidBase32

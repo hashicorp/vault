@@ -1,25 +1,25 @@
 ---
 layout: "api"
-page_title: "PostgreSQL Secret Backend - HTTP API"
+page_title: "PostgreSQL - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-postgresql"
 description: |-
-  This is the API documentation for the Vault PostgreSQL secret backend.
+  This is the API documentation for the Vault PostgreSQL secrets engine.
 ---
 
-# PostgreSQL Secret Backend HTTP API
+# PostgreSQL Secrets Engine (API)
 
-~> **Deprecation Note:** This backend is deprecated in favor of the
-combined databases backend added in v0.7.1. See the API documentation for
-the new implementation of this backend at
-[PostgreSQL Database Plugin HTTP API](/api/secret/databases/postgresql.html).
+~> **Deprecation Note:** This secrets engine is deprecated in favor of the
+combined databases secrets engine added in v0.7.1. See the API documentation for
+the new implementation of this secrets engine at
+[PostgreSQL database plugin HTTP API](/api/secret/databases/postgresql.html).
 
-This is the API documentation for the Vault PostgreSQL secret backend. For
-general information about the usage and operation of the PostgreSQL backend,
-please see the
-[Vault PostgreSQL backend documentation](/docs/secrets/postgresql/index.html).
+This is the API documentation for the Vault PostgreSQL secrets engine. For
+general information about the usage and operation of the PostgreSQL secrets
+engine, please see the [PostgreSQL
+documentation](/docs/secrets/postgresql/index.html).
 
-This documentation assumes the PostgreSQL backend is mounted at the
-`/postgresql` path in Vault. Since it is possible to mount secret backends at
+This documentation assumes the PostgreSQL secrets engine is enabled at the
+`/postgresql` path in Vault. Since it is possible to enable secrets engines at
 any location, please update your API calls accordingly.
 
 ## Configure Connection
@@ -184,7 +184,6 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/postgresql/roles`          | `200 application/json` |
-| `GET`    | `/postgresql/roles?list=true` | `200 application/json` |
 
 ### Sample Request
 

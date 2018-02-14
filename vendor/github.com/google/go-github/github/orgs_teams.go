@@ -15,7 +15,7 @@ import (
 // Team represents a team within a GitHub organization. Teams are used to
 // manage access to an organization's repositories.
 type Team struct {
-	ID          *int    `json:"id,omitempty"`
+	ID          *int64  `json:"id,omitempty"`
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
 	URL         *string `json:"url,omitempty"`
@@ -49,7 +49,7 @@ func (t Team) String() string {
 
 // Invitation represents a team member's invitation status.
 type Invitation struct {
-	ID    *int    `json:"id,omitempty"`
+	ID    *int64  `json:"id,omitempty"`
 	Login *string `json:"login,omitempty"`
 	Email *string `json:"email,omitempty"`
 	// Role can be one of the values - 'direct_member', 'admin', 'billing_manager', 'hiring_manager', or 'reinstate'.
@@ -92,7 +92,7 @@ func (s *OrganizationsService) ListTeams(ctx context.Context, org string, opt *L
 // GetTeam fetches a team by ID.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#get-team
-func (s *OrganizationsService) GetTeam(ctx context.Context, team int) (*Team, *Response, error) {
+func (s *OrganizationsService) GetTeam(ctx context.Context, team int64) (*Team, *Response, error) {
 	u := fmt.Sprintf("teams/%v", team)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -117,7 +117,7 @@ type NewTeam struct {
 	Description  *string  `json:"description,omitempty"`
 	Maintainers  []string `json:"maintainers,omitempty"`
 	RepoNames    []string `json:"repo_names,omitempty"`
-	ParentTeamID *int     `json:"parent_team_id,omitempty"`
+	ParentTeamID *int64   `json:"parent_team_id,omitempty"`
 
 	// Deprecated: Permission is deprecated when creating or editing a team in an org
 	// using the new GitHub permission model. It no longer identifies the
@@ -167,7 +167,7 @@ func (s *OrganizationsService) CreateTeam(ctx context.Context, org string, team 
 // EditTeam edits a team.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#edit-team
-func (s *OrganizationsService) EditTeam(ctx context.Context, id int, team *NewTeam) (*Team, *Response, error) {
+func (s *OrganizationsService) EditTeam(ctx context.Context, id int64, team *NewTeam) (*Team, *Response, error) {
 	u := fmt.Sprintf("teams/%v", id)
 	req, err := s.client.NewRequest("PATCH", u, team)
 	if err != nil {
@@ -189,7 +189,7 @@ func (s *OrganizationsService) EditTeam(ctx context.Context, id int, team *NewTe
 // DeleteTeam deletes a team.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#delete-team
-func (s *OrganizationsService) DeleteTeam(ctx context.Context, team int) (*Response, error) {
+func (s *OrganizationsService) DeleteTeam(ctx context.Context, team int64) (*Response, error) {
 	u := fmt.Sprintf("teams/%v", team)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
@@ -214,7 +214,7 @@ type OrganizationListTeamMembersOptions struct {
 // ListChildTeams lists child teams for a team.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#list-child-teams
-func (s *OrganizationsService) ListChildTeams(ctx context.Context, teamID int, opt *ListOptions) ([]*Team, *Response, error) {
+func (s *OrganizationsService) ListChildTeams(ctx context.Context, teamID int64, opt *ListOptions) ([]*Team, *Response, error) {
 	u := fmt.Sprintf("teams/%v/teams", teamID)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -241,7 +241,7 @@ func (s *OrganizationsService) ListChildTeams(ctx context.Context, teamID int, o
 // team.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#list-team-members
-func (s *OrganizationsService) ListTeamMembers(ctx context.Context, team int, opt *OrganizationListTeamMembersOptions) ([]*User, *Response, error) {
+func (s *OrganizationsService) ListTeamMembers(ctx context.Context, team int64, opt *OrganizationListTeamMembersOptions) ([]*User, *Response, error) {
 	u := fmt.Sprintf("teams/%v/members", team)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -270,7 +270,7 @@ func (s *OrganizationsService) ListTeamMembers(ctx context.Context, team int, op
 //
 // Deprecated: This API has been marked as deprecated in the Github API docs,
 // OrganizationsService.GetTeamMembership method should be used instead.
-func (s *OrganizationsService) IsTeamMember(ctx context.Context, team int, user string) (bool, *Response, error) {
+func (s *OrganizationsService) IsTeamMember(ctx context.Context, team int64, user string) (bool, *Response, error) {
 	u := fmt.Sprintf("teams/%v/members/%v", team, user)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -285,7 +285,7 @@ func (s *OrganizationsService) IsTeamMember(ctx context.Context, team int, user 
 // ListTeamRepos lists the repositories that the specified team has access to.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#list-team-repos
-func (s *OrganizationsService) ListTeamRepos(ctx context.Context, team int, opt *ListOptions) ([]*Repository, *Response, error) {
+func (s *OrganizationsService) ListTeamRepos(ctx context.Context, team int64, opt *ListOptions) ([]*Repository, *Response, error) {
 	u := fmt.Sprintf("teams/%v/repos", team)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -315,7 +315,7 @@ func (s *OrganizationsService) ListTeamRepos(ctx context.Context, team int, opt 
 // permissions team has for that repo.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#check-if-a-team-manages-a-repository
-func (s *OrganizationsService) IsTeamRepo(ctx context.Context, team int, owner string, repo string) (*Repository, *Response, error) {
+func (s *OrganizationsService) IsTeamRepo(ctx context.Context, team int64, owner string, repo string) (*Repository, *Response, error) {
 	u := fmt.Sprintf("teams/%v/repos/%v/%v", team, owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -352,7 +352,7 @@ type OrganizationAddTeamRepoOptions struct {
 // belongs, or a direct fork of a repository owned by the organization.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#add-team-repo
-func (s *OrganizationsService) AddTeamRepo(ctx context.Context, team int, owner string, repo string, opt *OrganizationAddTeamRepoOptions) (*Response, error) {
+func (s *OrganizationsService) AddTeamRepo(ctx context.Context, team int64, owner string, repo string, opt *OrganizationAddTeamRepoOptions) (*Response, error) {
 	u := fmt.Sprintf("teams/%v/repos/%v/%v", team, owner, repo)
 	req, err := s.client.NewRequest("PUT", u, opt)
 	if err != nil {
@@ -367,7 +367,7 @@ func (s *OrganizationsService) AddTeamRepo(ctx context.Context, team int, owner 
 // from the team.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#remove-team-repo
-func (s *OrganizationsService) RemoveTeamRepo(ctx context.Context, team int, owner string, repo string) (*Response, error) {
+func (s *OrganizationsService) RemoveTeamRepo(ctx context.Context, team int64, owner string, repo string) (*Response, error) {
 	u := fmt.Sprintf("teams/%v/repos/%v/%v", team, owner, repo)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
@@ -406,7 +406,7 @@ func (s *OrganizationsService) ListUserTeams(ctx context.Context, opt *ListOptio
 // GetTeamMembership returns the membership status for a user in a team.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#get-team-membership
-func (s *OrganizationsService) GetTeamMembership(ctx context.Context, team int, user string) (*Membership, *Response, error) {
+func (s *OrganizationsService) GetTeamMembership(ctx context.Context, team int64, user string) (*Membership, *Response, error) {
 	u := fmt.Sprintf("teams/%v/memberships/%v", team, user)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -456,7 +456,7 @@ type OrganizationAddTeamMembershipOptions struct {
 // added as a member of the team.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#add-team-membership
-func (s *OrganizationsService) AddTeamMembership(ctx context.Context, team int, user string, opt *OrganizationAddTeamMembershipOptions) (*Membership, *Response, error) {
+func (s *OrganizationsService) AddTeamMembership(ctx context.Context, team int64, user string, opt *OrganizationAddTeamMembershipOptions) (*Membership, *Response, error) {
 	u := fmt.Sprintf("teams/%v/memberships/%v", team, user)
 	req, err := s.client.NewRequest("PUT", u, opt)
 	if err != nil {
@@ -475,7 +475,7 @@ func (s *OrganizationsService) AddTeamMembership(ctx context.Context, team int, 
 // RemoveTeamMembership removes a user from a team.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#remove-team-membership
-func (s *OrganizationsService) RemoveTeamMembership(ctx context.Context, team int, user string) (*Response, error) {
+func (s *OrganizationsService) RemoveTeamMembership(ctx context.Context, team int64, user string) (*Response, error) {
 	u := fmt.Sprintf("teams/%v/memberships/%v", team, user)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
@@ -490,7 +490,7 @@ func (s *OrganizationsService) RemoveTeamMembership(ctx context.Context, team in
 // Preview features are not supported for production use.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/teams/#list-pending-team-invitations
-func (s *OrganizationsService) ListPendingTeamInvitations(ctx context.Context, team int, opt *ListOptions) ([]*Invitation, *Response, error) {
+func (s *OrganizationsService) ListPendingTeamInvitations(ctx context.Context, team int64, opt *ListOptions) ([]*Invitation, *Response, error) {
 	u := fmt.Sprintf("teams/%v/invitations", team)
 	u, err := addOptions(u, opt)
 	if err != nil {

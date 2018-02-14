@@ -35,7 +35,7 @@ primary, it will look something like:
 
 ```json
 {
-  "mode": "perf-primary",
+  "mode": "primary",
   "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
   "known_secondaries": [],
   "last_wal": 0,

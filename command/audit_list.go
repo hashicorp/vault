@@ -5,83 +5,162 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/vault/meta"
-	"github.com/ryanuber/columnize"
+	"github.com/hashicorp/vault/api"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
-// AuditListCommand is a Command that lists the enabled audits.
+var _ cli.Command = (*AuditListCommand)(nil)
+var _ cli.CommandAutocomplete = (*AuditListCommand)(nil)
+
 type AuditListCommand struct {
-	meta.Meta
+	*BaseCommand
+
+	flagDetailed bool
+}
+
+func (c *AuditListCommand) Synopsis() string {
+	return "Lists enabled audit devices"
+}
+
+func (c *AuditListCommand) Help() string {
+	helpText := `
+Usage: vault audit list [options]
+
+  Lists the enabled audit devices in the Vault server. The output lists the
+  enabled audit devices and the options for those devices.
+
+  List all audit devices:
+
+      $ vault audit list
+
+  List detailed output about the audit devices:
+
+      $ vault audit list -detailed
+
+` + c.Flags().Help()
+
+	return strings.TrimSpace(helpText)
+}
+
+func (c *AuditListCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:    "detailed",
+		Target:  &c.flagDetailed,
+		Default: false,
+		EnvVar:  "",
+		Usage: "Print detailed information such as options and replication " +
+			"status about each auth device.",
+	})
+
+	return set
+}
+
+func (c *AuditListCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (c *AuditListCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
 }
 
 func (c *AuditListCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("audit-list", meta.FlagSetDefault)
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = f.Args()
+	if len(args) > 0 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
 		return 1
 	}
 
 	client, err := c.Client()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
+		c.UI.Error(err.Error())
 		return 2
 	}
 
 	audits, err := client.Sys().ListAudit()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error reading audits: %s", err))
+		c.UI.Error(fmt.Sprintf("Error listing audits: %s", err))
 		return 2
 	}
 
 	if len(audits) == 0 {
-		c.Ui.Error(fmt.Sprintf(
-			"No audit backends are enabled. Use `vault audit-enable` to\n" +
-				"enable an audit backend."))
-		return 1
+		c.UI.Output(fmt.Sprintf("No audit devices are enabled."))
+		return 0
 	}
 
+	switch Format(c.UI) {
+	case "table":
+		if c.flagDetailed {
+			c.UI.Output(tableOutput(c.detailedAudits(audits), nil))
+			return 0
+		}
+		c.UI.Output(tableOutput(c.simpleAudits(audits), nil))
+		return 0
+	default:
+		return OutputData(c.UI, audits)
+	}
+}
+
+func (c *AuditListCommand) simpleAudits(audits map[string]*api.Audit) []string {
 	paths := make([]string, 0, len(audits))
 	for path, _ := range audits {
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Description | Replication Behavior | Options"}
+	columns := []string{"Path | Type | Description"}
 	for _, path := range paths {
 		audit := audits[path]
+		columns = append(columns, fmt.Sprintf("%s | %s | %s",
+			audit.Path,
+			audit.Type,
+			audit.Description,
+		))
+	}
+
+	return columns
+}
+
+func (c *AuditListCommand) detailedAudits(audits map[string]*api.Audit) []string {
+	paths := make([]string, 0, len(audits))
+	for path, _ := range audits {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	columns := []string{"Path | Type | Description | Replication | Options"}
+	for _, path := range paths {
+		audit := audits[path]
+
 		opts := make([]string, 0, len(audit.Options))
 		for k, v := range audit.Options {
 			opts = append(opts, k+"="+v)
 		}
-		replicatedBehavior := "replicated"
+
+		replication := "replicated"
 		if audit.Local {
-			replicatedBehavior = "local"
+			replication = "local"
 		}
-		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s | %s", audit.Path, audit.Type, audit.Description, replicatedBehavior, strings.Join(opts, " ")))
+
+		columns = append(columns, fmt.Sprintf("%s | %s | %s | %s | %s",
+			audit.Path,
+			audit.Type,
+			audit.Description,
+			replication,
+			strings.Join(opts, " "),
+		))
 	}
 
-	c.Ui.Output(columnize.SimpleFormat(columns))
-	return 0
-}
-
-func (c *AuditListCommand) Synopsis() string {
-	return "Lists enabled audit backends in Vault"
-}
-
-func (c *AuditListCommand) Help() string {
-	helpText := `
-Usage: vault audit-list [options]
-
-  List the enabled audit backends.
-
-  The output lists the enabled audit backends and the options for those
-  backends. The options may contain sensitive information, and therefore
-  only a root Vault user can view this.
-
-General Options:
-` + meta.GeneralOptionsUsage()
-	return strings.TrimSpace(helpText)
+	return columns
 }

@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
@@ -30,12 +31,12 @@ func secretDynamicKey(b *backend) *framework.Secret {
 	}
 }
 
-func (b *backend) secretDynamicKeyRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretDynamicKeyRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	f := framework.LeaseExtend(0, 0, b.System())
-	return f(req, d)
+	return f(ctx, req, d)
 }
 
-func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretDynamicKeyRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	type sec struct {
 		AdminUser        string `mapstructure:"admin_user"`
 		Username         string `mapstructure:"username"`
@@ -53,7 +54,7 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 	}
 
 	// Fetch the host key using the key name
-	hostKey, err := b.getKey(req.Storage, intSec.HostKeyName)
+	hostKey, err := b.getKey(ctx, req.Storage, intSec.HostKeyName)
 	if err != nil {
 		return nil, fmt.Errorf("key %q not found error: %v", intSec.HostKeyName, err)
 	}

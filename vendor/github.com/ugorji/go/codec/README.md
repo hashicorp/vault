@@ -31,15 +31,14 @@ Rich Feature Set includes:
 
   - Simple but extremely powerful and feature-rich API
   - Support for go1.4 and above, while selectively using newer APIs for later releases
-  - Good code coverage ( > 70% )
+  - Excellent code coverage ( > 90% )
   - Very High Performance.
     Our extensive benchmarks show us outperforming Gob, Json, Bson, etc by 2-4X.
   - Careful selected use of 'unsafe' for targeted performance gains.
     100% mode exists where 'unsafe' is not used at all.
   - Lock-free (sans mutex) concurrency for scaling to 100's of cores
-  - Multiple conversions:
-    Package coerces types where appropriate 
-    e.g. decode an int in the stream into a float, etc.
+  - Coerce types where appropriate
+    e.g. decode an int in the stream into a float, decode numbers from formatted strings, etc
   - Corner Cases: 
     Overflows, nil maps/slices, nil values in streams are handled correctly
   - Standard field renaming via tags
@@ -48,10 +47,16 @@ Rich Feature Set includes:
     (struct, slice, map, primitives, pointers, interface{}, etc)
   - Extensions to support efficient encoding/decoding of any named types
   - Support encoding.(Binary|Text)(M|Unm)arshaler interfaces
+  - Support IsZero() bool to determine if a value is a zero value.
+    Analogous to time.Time.IsZero() bool.
   - Decoding without a schema (into a interface{}).
     Includes Options to configure what specific map or slice type to use
     when decoding an encoded list or map into a nil interface{}
+  - Mapping a non-interface type to an interface, so we can decode appropriately
+    into any interface type with a correctly configured non-interface value.
   - Encode a struct as an array, and decode struct from an array in the data stream
+  - Option to encode struct keys as numbers (instead of strings)
+    (to support structured streams with fields encoded as numeric codes)
   - Comprehensive support for anonymous fields
   - Fast (no-reflection) encoding/decoding of common maps and slices
   - Code-generation for faster performance.
@@ -107,7 +112,7 @@ This symmetry is important to reduce chances of issues happening because the
 encoding and decoding sides are out of sync e.g. decoded via very specific
 encoding.TextUnmarshaler but encoded via kind-specific generalized mode.
 
-Consequently, if a type only defines one-half of the symetry
+Consequently, if a type only defines one-half of the symmetry
 (e.g. it implements UnmarshalJSON() but not MarshalJSON() ),
 then that type doesn't satisfy the check and we will continue walking down the
 decision tree.
@@ -185,3 +190,17 @@ You can run the tag 'safe' to run tests or build in safe mode. e.g.
 
 Please see http://github.com/ugorji/go-codec-bench .
 
+## Caveats
+
+Struct fields matching the following are ignored during encoding and decoding
+
+  - struct tag value set to -
+  - func, complex numbers, unsafe pointers
+  - unexported and not embedded
+  - unexported and embedded and not struct kind
+  - unexported and embedded pointers (from go1.10)
+
+Every other field in a struct will be encoded/decoded.
+
+Embedded fields are encoded as if they exist in the top-level struct,
+with some caveats. See Encode documentation.

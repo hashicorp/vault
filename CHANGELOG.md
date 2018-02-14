@@ -1,9 +1,159 @@
-## 0.9.2 (Unreleased)
+## 0.9.4 (Unreleased)
+
+FEATURES:
+
+ * **Manta Storage**: Manta can now be used for Vault storage
 
 IMPROVEMENTS:
 
+ * auth/centrify: Add CLI helper
+ * audit: Always log failure metrics, even if zero, to ensure the values appear
+   on dashboards [GH-3937]
+ * cli: Disable color when output is not a TTY [GH-3897]
+ * cli: Add `-format` flag to all subcommands [GH-3897]
+ * cli: Do not display deprecation warnings when the format is not table
+   [GH-3897]
+ * core: If over a predefined lease count (256k), log a warning not more than
+   once a minute. Too many leases can be problematic for many of the storage
+   backends and often this number of leases is indicative of a need for
+   workflow improvements. [GH-3957]
+ * secret/pki: Add a flag to make the common name optional on certs [GH-3940]
+ * secret/pki: Ensure only DNS-compatible names go into DNS SANs; additionally,
+   properly handle IDNA transformations for these DNS names [GH-3953]
+ * secret/ssh: Add `valid-principles` flag to CLI for CA mode [GH-3922]
+ * storage/manta: Add Manta storage [GH-3270]
+
+BUG FIXES:
+
+ * api/renewer: Honor increment value in renew auth calls [GH-3904]
+ * auth/approle: Fix inability to use limited-use-count secret IDs on
+   replication performance secondaries
+ * auth/approle: Cleanup of secret ID accessors during tidy and removal of
+   dangling accessor entries [GH-3924]
+ * auth/aws-ec2: Avoid masking of role tag response [GH-3941]
+ * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
+ * auth/token: Token creation via the CLI no longer forces periodic token
+   creation. Passing an explicit zero value for the period no longer create
+   periodic tokens. [GH-3880]
+ * command/ssh: Create and reuse the api client [GH-3909]
+ * identity: Fix race when creating entities [GH-3932]
+ * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
+   plugins using gRPC transport [GH-3881]
+ * plugin/gRPC: Fix panic when special paths are not set [GH-3946]
+ * secret/pki: Verify a name is a valid hostname before adding to DNS SANs
+   [GH-3918]
+ * secret/transit: Fix auditing when reading a key after it has been backed up
+   or restored [GH-3919]
+ * secret/transit: Fix storage/memory consistency when persistence fails
+   [GH-3959]
+ * storage/consul: Validate that service names are RFC 1123 compliant [GH-3960]
+ * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
+ * storage/etcd3: Fix large lists (like token loading at startup) not being
+   handled [GH-3772]
+ * storage/zookeeper: Update vendoring to fix freezing issues [GH-3896]
+
+## 0.9.3 (January 28th, 2018)
+
+A regression from a feature merge disabled the Nomad secrets backend in 0.9.2.
+This release re-enables the Nomad secrets backend; it is otherwise identical to
+0.9.2.
+
+## 0.9.2 (January 26th, 2018)
+
+SECURITY:
+
+ * Okta Auth Backend: While the Okta auth backend was successfully verifying
+   usernames and passwords, it was not checking the returned state of the
+   account, so accounts that had been marked locked out could still be used to
+   log in. Only accounts in SUCCESS or PASSWORD_WARN states are now allowed.
+ * Periodic Tokens: A regression in 0.9.1 meant that periodic tokens created by
+   the AppRole, AWS, and Cert auth backends would expire when the max TTL for
+   the backend/mount/system was hit instead of their stated behavior of living
+   as long as they are renewed. This is now fixed; existing tokens do not have
+   to be reissued as this was purely a regression in the renewal logic.
+ * Seal Wrapping: During certain replication states values written marked for
+   seal wrapping may not be wrapped on the secondaries. This has been fixed,
+   and existing values will be wrapped on next read or write. This does not
+   affect the barrier keys.
+
+DEPRECATIONS/CHANGES:
+
+ * `sys/health` DR Secondary Reporting: The `replication_dr_secondary` bool
+   returned by `sys/health` could be misleading since it would be `false` both
+   when a cluster was not a DR secondary but also when the node is a standby in
+   the cluster and has not yet fully received state from the active node. This
+   could cause health checks on LBs to decide that the node was acceptable for
+   traffic even though DR secondaries cannot handle normal Vault traffic. (In
+   other words, the bool could only convey "yes" or "no" but not "not sure
+   yet".) This has been replaced by `replication_dr_mode` and
+   `replication_perf_mode` which are string values that convey the current
+   state of the node; a value of `disabled` indicates that replication is
+   disabled or the state is still being discovered. As a result, an LB check
+   can positively verify that the node is both not `disabled` and is not a DR
+   secondary, and avoid sending traffic to it if either is true.
+ * PKI Secret Backend Roles parameter types: For `ou` and `organization` 
+   in role definitions in the PKI secret backend, input can now be a 
+   comma-separated string or an array of strings. Reading a role will 
+   now return arrays for these parameters.
+ * Plugin API Changes: The plugin API has been updated to utilize golang's
+   context.Context package. Many function signatures now accept a context
+   object as the first parameter. Existing plugins will need to pull in the
+   latest Vault code and update their function signatures to begin using 
+   context and the new gRPC transport.
+
+FEATURES:
+
+ * **gRPC Backend Plugins**: Backend plugins now use gRPC for transport, 
+   allowing them to be written in other languages.
+ * **Brand New CLI**: Vault has a brand new CLI interface that is significantly
+   streamlined, supports autocomplete, and is almost entirely backwards
+   compatible.
+ * **UI: PKI Secret Backend (Enterprise)**: Configure PKI secret backends, 
+   create and browse roles and certificates, and issue and sign certificates via
+   the listed roles.
+
+IMPROVEMENTS:
+
+ * auth/aws: Handle IAM headers produced by clients that formulate numbers as
+   ints rather than strings [GH-3763]
+ * auth/okta: Support JSON lists when specifying groups and policies [GH-3801]
+ * autoseal/hsm: Attempt reconnecting to the HSM on certain kinds of issues, 
+   including HA scenarios for some Gemalto HSMs.
+   (Enterprise)
+ * cli: Output password prompts to stderr to make it easier to pipe an output
+   token to another command [GH-3782]
+ * core: Report replication status in `sys/health` [GH-3810]
  * physical/s3: Allow using paths with S3 for non-AWS deployments [GH-3730]
  * physical/s3: Add ability to disable SSL for non-AWS deployments [GH-3730]
+ * plugins: Args for plugins can now be specified separately from the command,
+   allowing the same output format and input format for plugin information
+   [GH-3778]
+ * secret/pki: `ou` and `organization` can now be specified as a
+   comma-separated string or an array of strings [GH-3804]
+ * plugins: Plugins will fall back to using netrpc as the communication protocol
+   on older versions of Vault [GH-3833]
+
+BUG FIXES:
+
+ * auth/(approle,aws,cert): Fix behavior where periodic tokens generated by
+   these backends could not have their TTL renewed beyond the system/mount max
+   TTL value [GH-3803]
+ * auth/aws: Fix error returned if `bound_iam_principal_arn` was given to an
+   existing role update [GH-3843]
+ * core/sealwrap: Speed improvements and bug fixes (Enterprise)
+ * identity: Delete group alias when an external group is deleted [GH-3773]
+ * legacymfa/duo: Fix intermittent panic when Duo could not be reached
+   [GH-2030]
+ * secret/database: Fix a location where a lock could potentially not be
+   released, leading to deadlock [GH-3774]
+ * secret/(all databases) Fix behavior where if a max TTL was specified but no
+   default TTL was specified the system/mount default TTL would be used but not
+   be capped by the local max TTL [GH-3814]
+ * secret/database: Fix an issue where plugins were not closed properly if they
+   failed to initialize [GH-3768]
+ * ui: mounting a secret backend will now properly set `max_lease_ttl` and 
+   `default_lease_ttl` when specified - previously both fields set 
+   `default_lease_ttl`.
 
 ## 0.9.1 (December 21st, 2017)
 
@@ -291,14 +441,14 @@ IMPROVEMENTS:
    (PID) in a file [GH-3321]
  * mfa (Enterprise): Add the ability to use identity metadata in username format
  * mfa/okta (Enterprise): Add support for configuring base_url for API calls
- * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value 
+ * secret/pki: `sign-intermediate` will now allow specifying a `ttl` value
    longer than the signing CA certificate's NotAfter value. [GH-3325]
  * sys/raw: Raw storage access is now disabled by default [GH-3329]
 
 BUG FIXES:
 
  * auth/okta: Fix regression that removed the ability to set base_url [GH-3313]
- * core: Fix panic while loading leases at startup on ARM processors 
+ * core: Fix panic while loading leases at startup on ARM processors
    [GH-3314]
  * secret/pki: Fix `sign-self-issued` encoding the wrong subject public key
    [GH-3325]
@@ -348,7 +498,7 @@ IMPROVEMENTS:
  * auth/okta: Compare groups case-insensitively since Okta is only
    case-preserving [GH-3240]
  * auth/okta: Standardize Okta configuration APIs across backends [GH-3245]
- * cli: Add subcommand autocompletion that can be enabled with 
+ * cli: Add subcommand autocompletion that can be enabled with
    `vault -autocomplete-install` [GH-3223]
  * cli: Add ability to handle wrapped responses when using `vault auth`. What
    is output depends on the other given flags; see the help output for that

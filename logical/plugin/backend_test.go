@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -20,7 +21,7 @@ func TestBackendPlugin_HandleRequest(t *testing.T) {
 	b, cleanup := testBackend(t)
 	defer cleanup()
 
-	resp, err := b.HandleRequest(&logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "kv/foo",
 		Data: map[string]interface{}{
@@ -76,7 +77,7 @@ func TestBackendPlugin_HandleExistenceCheck(t *testing.T) {
 	b, cleanup := testBackend(t)
 	defer cleanup()
 
-	checkFound, exists, err := b.HandleExistenceCheck(&logical.Request{
+	checkFound, exists, err := b.HandleExistenceCheck(context.Background(), &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "kv/foo",
 		Data:      map[string]interface{}{"value": "bar"},
@@ -96,24 +97,16 @@ func TestBackendPlugin_Cleanup(t *testing.T) {
 	b, cleanup := testBackend(t)
 	defer cleanup()
 
-	b.Cleanup()
-}
-
-func TestBackendPlugin_Initialize(t *testing.T) {
-	b, cleanup := testBackend(t)
-	defer cleanup()
-
-	err := b.Initialize()
-	if err != nil {
-		t.Fatal(err)
-	}
+	b.Cleanup(context.Background())
 }
 
 func TestBackendPlugin_InvalidateKey(t *testing.T) {
 	b, cleanup := testBackend(t)
 	defer cleanup()
 
-	resp, err := b.HandleRequest(&logical.Request{
+	ctx := context.Background()
+
+	resp, err := b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "internal",
 	})
@@ -124,9 +117,9 @@ func TestBackendPlugin_InvalidateKey(t *testing.T) {
 		t.Fatalf("bad: %#v, expected non-empty value", resp)
 	}
 
-	b.InvalidateKey("internal")
+	b.InvalidateKey(ctx, "internal")
 
-	resp, err = b.HandleRequest(&logical.Request{
+	resp, err = b.HandleRequest(ctx, &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "internal",
 	})
@@ -150,7 +143,7 @@ func testBackend(t *testing.T) (logical.Backend, func()) {
 			Factory: mock.Factory,
 		},
 	}
-	client, _ := gplugin.TestPluginRPCConn(t, pluginMap)
+	client, _ := gplugin.TestPluginRPCConn(t, pluginMap, nil)
 	cleanup := func() {
 		client.Close()
 	}
@@ -162,7 +155,7 @@ func testBackend(t *testing.T) (logical.Backend, func()) {
 	}
 	b := raw.(logical.Backend)
 
-	err = b.Setup(&logical.BackendConfig{
+	err = b.Setup(context.Background(), &logical.BackendConfig{
 		Logger: logformat.NewVaultLogger(log.LevelTrace),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 300 * time.Second,

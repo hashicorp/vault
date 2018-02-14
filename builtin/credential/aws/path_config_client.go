@@ -1,6 +1,8 @@
 package awsauth
 
 import (
+	"context"
+
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -63,10 +65,8 @@ func pathConfigClient(b *backend) *framework.Path {
 
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
-func (b *backend) pathConfigClientExistenceCheck(
-	req *logical.Request, data *framework.FieldData) (bool, error) {
-
-	entry, err := b.lockedClientConfigEntry(req.Storage)
+func (b *backend) pathConfigClientExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	entry, err := b.lockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return false, err
 	}
@@ -74,16 +74,16 @@ func (b *backend) pathConfigClientExistenceCheck(
 }
 
 // Fetch the client configuration required to access the AWS API, after acquiring an exclusive lock.
-func (b *backend) lockedClientConfigEntry(s logical.Storage) (*clientConfig, error) {
+func (b *backend) lockedClientConfigEntry(ctx context.Context, s logical.Storage) (*clientConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.nonLockedClientConfigEntry(s)
+	return b.nonLockedClientConfigEntry(ctx, s)
 }
 
 // Fetch the client configuration required to access the AWS API.
-func (b *backend) nonLockedClientConfigEntry(s logical.Storage) (*clientConfig, error) {
-	entry, err := s.Get("config/client")
+func (b *backend) nonLockedClientConfigEntry(ctx context.Context, s logical.Storage) (*clientConfig, error) {
+	entry, err := s.Get(ctx, "config/client")
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +98,8 @@ func (b *backend) nonLockedClientConfigEntry(s logical.Storage) (*clientConfig, 
 	return &result, nil
 }
 
-func (b *backend) pathConfigClientRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := b.lockedClientConfigEntry(req.Storage)
+func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	clientConfig, err := b.lockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +113,11 @@ func (b *backend) pathConfigClientRead(
 	}, nil
 }
 
-func (b *backend) pathConfigClientDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigClientDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	if err := req.Storage.Delete("config/client"); err != nil {
+	if err := req.Storage.Delete(ctx, "config/client"); err != nil {
 		return nil, err
 	}
 
@@ -137,12 +135,11 @@ func (b *backend) pathConfigClientDelete(
 
 // pathConfigClientCreateUpdate is used to register the 'aws_secret_key' and 'aws_access_key'
 // that can be used to interact with AWS EC2 API.
-func (b *backend) pathConfigClientCreateUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.nonLockedClientConfigEntry(req.Storage)
+	configEntry, err := b.nonLockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +231,7 @@ func (b *backend) pathConfigClientCreateUpdate(
 	}
 
 	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
-		if err := req.Storage.Put(entry); err != nil {
+		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 	}
@@ -264,7 +261,7 @@ Configure AWS IAM credentials that are used to query instance and role details f
 `
 
 const pathConfigClientHelpDesc = `
-The aws-ec2 auth backend makes AWS API queries to retrieve information
+The aws-ec2 auth method makes AWS API queries to retrieve information
 regarding EC2 instances that perform login operations. The 'aws_secret_key' and
 'aws_access_key' parameters configured here should map to an AWS IAM user that
 has permission to make the following API queries:

@@ -29,12 +29,11 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLoginAliasLookahead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	token := data.Get("token").(string)
 
 	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(req, token); err != nil {
+	if verifyResponse, resp, err := b.verifyCredentials(ctx, req, token); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -51,12 +50,11 @@ func (b *backend) pathLoginAliasLookahead(
 	}, nil
 }
 
-func (b *backend) pathLogin(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	token := data.Get("token").(string)
 
 	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(req, token); err != nil {
+	if verifyResponse, resp, err := b.verifyCredentials(ctx, req, token); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -64,7 +62,7 @@ func (b *backend) pathLogin(
 		verifyResp = verifyResponse
 	}
 
-	config, err := b.Config(req.Storage)
+	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -107,9 +105,7 @@ func (b *backend) pathLogin(
 	return resp, nil
 }
 
-func (b *backend) pathLoginRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.Auth == nil {
 		return nil, fmt.Errorf("request auth was nil")
 	}
@@ -121,7 +117,7 @@ func (b *backend) pathLoginRenew(
 	token := tokenRaw.(string)
 
 	var verifyResp *verifyCredentialsResp
-	if verifyResponse, resp, err := b.verifyCredentials(req, token); err != nil {
+	if verifyResponse, resp, err := b.verifyCredentials(ctx, req, token); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -132,12 +128,12 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies do not match")
 	}
 
-	config, err := b.Config(req.Storage)
+	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(req, d)
+	resp, err := framework.LeaseExtend(config.TTL, config.MaxTTL, b.System())(ctx, req, d)
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +150,8 @@ func (b *backend) pathLoginRenew(
 	return resp, nil
 }
 
-func (b *backend) verifyCredentials(req *logical.Request, token string) (*verifyCredentialsResp, *logical.Response, error) {
-	config, err := b.Config(req.Storage)
+func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, token string) (*verifyCredentialsResp, *logical.Response, error) {
+	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -178,7 +174,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	}
 
 	// Get the user
-	user, _, err := client.Users.Get(context.Background(), "")
+	user, _, err := client.Users.Get(ctx, "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -192,7 +188,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 
 	var allOrgs []*github.Organization
 	for {
-		orgs, resp, err := client.Organizations.List(context.Background(), "", orgOpt)
+		orgs, resp, err := client.Organizations.List(ctx, "", orgOpt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -222,7 +218,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 
 	var allTeams []*github.Team
 	for {
-		teams, resp, err := client.Organizations.ListUserTeams(context.Background(), teamOpt)
+		teams, resp, err := client.Organizations.ListUserTeams(ctx, teamOpt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -246,13 +242,13 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 		}
 	}
 
-	groupPoliciesList, err := b.TeamMap.Policies(req.Storage, teamNames...)
+	groupPoliciesList, err := b.TeamMap.Policies(ctx, req.Storage, teamNames...)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	userPoliciesList, err := b.UserMap.Policies(req.Storage, []string{*user.Login}...)
+	userPoliciesList, err := b.UserMap.Policies(ctx, req.Storage, []string{*user.Login}...)
 
 	if err != nil {
 		return nil, nil, err

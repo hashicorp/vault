@@ -36,59 +36,59 @@ After installing Vault, verify the installation worked by opening a new
 terminal session and checking that the `vault` binary is available. By executing
 `vault`, you should see help output similar to the following:
 
-```
+```text
 $ vault
-usage: vault [-version] [-help] <command> [args]
+Usage: vault <command> [args]
 
 Common commands:
-    delete           Delete operation on secrets in Vault
-    path-help        Look up the help for a path
-    read             Read data or secrets from Vault
-    renew            Renew the lease of a secret
-    revoke           Revoke a secret.
-    server           Start a Vault server
-    status           Outputs status of whether Vault is sealed and if HA mode is enabled
-    unwrap           Unwrap a wrapped secret
-    write            Write secrets or configuration into Vault
+    read        Read data and retrieves secrets
+    write       Write data, configuration, and secrets
+    delete      Delete secrets and configuration
+    list        List data or secrets
+    login       Authenticate locally
+    server      Start a Vault server
+    status      Print seal and HA status
+    unwrap      Unwrap a wrapped secret
 
-All other commands:
-    audit-disable    Disable an audit backend
-    audit-enable     Enable an audit backend
-    audit-list       Lists enabled audit backends in Vault
-    auth             Prints information about how to authenticate with Vault
-    auth-disable     Disable an auth provider
-    auth-enable      Enable a new auth provider
-    capabilities     Fetch the capabilities of a token on a given path
-    generate-root    Generates a new root token
-    init             Initialize a new Vault server
-    key-status       Provides information about the active encryption key
-    list             List data or secrets in Vault
-    mount            Mount a logical backend
-    mount-tune       Tune mount configuration parameters
-    mounts           Lists mounted backends in Vault
-    policies         List the policies on the server
-    policy-delete    Delete a policy from the server
-    policy-write     Write a policy to the server
-    rekey            Rekeys Vault to generate new unseal keys
-    remount          Remount a secret backend to a new path
-    rotate           Rotates the backend encryption key used to persist data
-    seal             Seals the vault server
-    ssh              Initiate a SSH session
-    step-down        Force the Vault node to give up active duty
-    token-create     Create a new auth token
-    token-lookup     Display information about the specified token
-    token-renew      Renew an auth token if there is an associated lease
-    token-revoke     Revoke one or more auth tokens
-    unmount          Unmount a secret backend
-    unseal           Unseals the vault server
-    version          Prints the Vault version
+Other commands:
+    audit          Interact with audit devices
+    auth           Interact with auth methods
+    lease          Interact with leases
+    operator       Perform operator-specific tasks
+    path-help      Retrieve API help for paths
+    policy         Interact with policies
+    secrets        Interact with secrets engines
+    ssh            Initiate an SSH session
+    token          Interact with tokens
 ```
 
-If you get an error that the binary could not be found, then your `PATH` environment
-variable was not setup properly. Please go back and ensure that your `PATH`
-variable contains the directory where Vault was installed.
+If you get an error that the binary could not be found, then your `PATH`
+environment variable was not setup properly. Please go back and ensure that your
+`PATH` variable contains the directory where Vault was installed.
 
 Otherwise, Vault is installed and ready to go!
+
+## Command Completion
+
+Vault also includes command-line completion for subcommands, flags, and path
+arguments where supported. To install command-line completion, you must be using
+Bash, ZSH or Fish. Unfortunately other shells are not supported at this time.
+
+To install completions, run:
+
+```sh
+$ vault -autocomplete-install
+```
+
+This will automatically install the helpers in your `~/.bashrc` or `~/.zshrc`, or to
+`~/.config/fish/completions/vault.fish` for Fish users. Then restart your terminal
+or reload your shell:
+```sh
+$ exec $SHELL
+```
+
+Now when you type `vault <tab>`, Vault will suggest options. This is very
+helpful for beginners and advanced Vault users.
 
 ## Next
 

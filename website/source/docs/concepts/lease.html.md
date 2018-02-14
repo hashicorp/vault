@@ -26,7 +26,7 @@ to check in routinely.
 
 In addition to renewals, a lease can be _revoked_. When a lease is revoked, it
 invalidates that secret immediately and prevents any further renewals. For
-example, with the [AWS secret backend](/docs/secrets/aws/index.html), the
+example, with the [AWS secrets engine](/docs/secrets/aws/index.html), the
 access keys will be deleted from AWS the moment a lease is revoked. This
 renders the access keys invalid from that point forward.
 

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestIdentityStore_CreateEntity(t *testing.T) {
+func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 	is, ghAccessor, _ := testIdentityStoreWithGithubAuth(t)
 	alias := &logical.Alias{
 		MountType:     "github",
@@ -16,7 +17,7 @@ func TestIdentityStore_CreateEntity(t *testing.T) {
 		Name:          "githubuser",
 	}
 
-	entity, err := is.CreateEntity(alias)
+	entity, err := is.CreateOrFetchEntity(alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,10 +33,20 @@ func TestIdentityStore_CreateEntity(t *testing.T) {
 		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 
-	// Try recreating an entity with the same alias details. It should fail.
-	entity, err = is.CreateEntity(alias)
-	if err == nil {
-		t.Fatalf("expected an error")
+	entity, err = is.CreateOrFetchEntity(alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity == nil {
+		t.Fatalf("expected a non-nil entity")
+	}
+
+	if len(entity.Aliases) != 1 {
+		t.Fatalf("bad: length of aliases; expected: 1, actual: %d", len(entity.Aliases))
+	}
+
+	if entity.Aliases[0].Name != alias.Name {
+		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 }
 
@@ -58,7 +69,7 @@ func TestIdentityStore_EntityByAliasFactors(t *testing.T) {
 	}
 
 	// Register the entity
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -82,7 +93,7 @@ func TestIdentityStore_EntityByAliasFactors(t *testing.T) {
 		Data:      aliasData,
 	}
 
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -121,7 +132,7 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 	}
 
 	// Register the entity
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -143,7 +154,7 @@ func TestIdentityStore_WrapInfoInheritance(t *testing.T) {
 		EntityID: entityID,
 	}
 
-	if err := ts.create(te); err != nil {
+	if err := ts.create(context.Background(), te); err != nil {
 		t.Fatal(err)
 	}
 
@@ -183,7 +194,7 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 		EntityID: "testentityid",
 	}
 
-	if err := ts.create(te); err != nil {
+	if err := ts.create(context.Background(), te); err != nil {
 		t.Fatal(err)
 	}
 
@@ -194,7 +205,7 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 		ClientToken: te.ID,
 	}
 
-	resp, err := ts.HandleRequest(tokenReq)
+	resp, err := ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v err: %v", err, resp)
 	}
@@ -205,7 +216,7 @@ func TestIdentityStore_TokenEntityInheritance(t *testing.T) {
 
 	// Create an orphan token; this should not inherit the EntityID
 	tokenReq.Path = "create-orphan"
-	resp, err = ts.HandleRequest(tokenReq)
+	resp, err = ts.HandleRequest(context.Background(), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v err: %v", err, resp)
 	}
@@ -252,7 +263,7 @@ func testIdentityStoreWithGithubAuthRoot(t *testing.T) (*IdentityStore, string, 
 		Description: "github auth",
 	}
 
-	err = c.enableCredential(meGH)
+	err = c.enableCredential(context.Background(), meGH)
 	if err != nil {
 		t.Fatal(err)
 	}

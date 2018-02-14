@@ -35,7 +35,7 @@ primary, it will look something like:
 
 ```json
 {
-  "mode": "dr-primary",
+  "mode": "primary",
   "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
   "known_secondaries": [],
   "last_wal": 0,
@@ -274,7 +274,7 @@ same secondary token.
 
 This endpoint requires a DR Operation Token to be provided as means of
 authorization. See the [DR Operation Token API
-docs](/api/system/replication-dr.html#sys-generate-dr-operation-token) for more information.
+docs](/api/system/replication-dr.html#generate-disaster-recovery-operation-token) for more information.
 
 !> Only one performance primary should be active at a given time. Multiple primaries may
 result in data loss!
@@ -338,7 +338,7 @@ secondary activation token. This does not wipe all data in the cluster.
 
 This endpoint requires a DR Operation Token to be provided as means of
 authorization. See the [DR Operation Token API
-docs](/api/system/replication-dr.html#sys-generate-dr-operation-token) for more information.
+docs](/api/system/replication-dr.html#generate-disaster-recovery-operation-token) for more information.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -385,7 +385,7 @@ $ curl \
     https://vault.rocks/v1/sys/replication/dr/secondary/update-primary
 ```
 
-# `/sys/replication/dr/secondary/generate-operation-token`
+# Generate Disaster Recovery Operation Token
 
 The `/sys/replication/dr/secondary/generate-operation-token` endpoint is used to create a new Disaster
 Recovery operation token for a DR secondary. These tokens are used to authorize

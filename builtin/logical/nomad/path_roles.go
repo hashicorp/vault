@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"errors"
 
 	"github.com/hashicorp/errwrap"
@@ -60,21 +61,21 @@ Defaults to 'client'.`,
 
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
-func (b *backend) rolesExistenceCheck(req *logical.Request, d *framework.FieldData) (bool, error) {
+func (b *backend) rolesExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	entry, err := b.Role(req.Storage, name)
+	entry, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-func (b *backend) Role(storage logical.Storage, name string) (*roleConfig, error) {
+func (b *backend) Role(ctx context.Context, storage logical.Storage, name string) (*roleConfig, error) {
 	if name == "" {
 		return nil, errors.New("invalid role name")
 	}
 
-	entry, err := storage.Get("role/" + name)
+	entry, err := storage.Get(ctx, "role/"+name)
 	if err != nil {
 		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
 	}
@@ -89,9 +90,8 @@ func (b *backend) Role(storage logical.Storage, name string) (*roleConfig, error
 	return &result, nil
 }
 
-func (b *backend) pathRoleList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -99,11 +99,10 @@ func (b *backend) pathRoleList(
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathRolesRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -122,11 +121,10 @@ func (b *backend) pathRolesRead(
 	return resp, nil
 }
 
-func (b *backend) pathRolesWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	role, err := b.Role(req.Storage, name)
+	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -166,17 +164,16 @@ func (b *backend) pathRolesWrite(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathRolesDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	if err := req.Storage.Delete("role/" + name); err != nil {
+	if err := req.Storage.Delete(ctx, "role/"+name); err != nil {
 		return nil, err
 	}
 	return nil, nil

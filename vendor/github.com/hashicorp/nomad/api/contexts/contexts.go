@@ -10,5 +10,6 @@ const (
 	Jobs        Context = "jobs"
 	Nodes       Context = "nodes"
 	Namespaces  Context = "namespaces"
+	Quotas      Context = "quotas"
 	All         Context = "all"
 )

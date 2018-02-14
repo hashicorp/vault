@@ -4,62 +4,82 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
-// PolicyDeleteCommand is a Command that enables a new endpoint.
+var _ cli.Command = (*PolicyDeleteCommand)(nil)
+var _ cli.CommandAutocomplete = (*PolicyDeleteCommand)(nil)
+
 type PolicyDeleteCommand struct {
-	meta.Meta
+	*BaseCommand
+}
+
+func (c *PolicyDeleteCommand) Synopsis() string {
+	return "Deletes a policy by name"
+}
+
+func (c *PolicyDeleteCommand) Help() string {
+	helpText := `
+Usage: vault policy delete [options] NAME
+
+  Deletes the policy named NAME in the Vault server. Once the policy is deleted,
+  all tokens associated with the policy are affected immediately.
+
+  Delete the policy named "my-policy":
+
+      $ vault policy delete my-policy
+
+  Note that it is not possible to delete the "default" or "root" policies.
+  These are built-in policies.
+
+` + c.Flags().Help()
+
+	return strings.TrimSpace(helpText)
+}
+
+func (c *PolicyDeleteCommand) Flags() *FlagSets {
+	return c.flagSet(FlagSetHTTP)
+}
+
+func (c *PolicyDeleteCommand) AutocompleteArgs() complete.Predictor {
+	return c.PredictVaultPolicies()
+}
+
+func (c *PolicyDeleteCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
 }
 
 func (c *PolicyDeleteCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("policy-delete", meta.FlagSetDefault)
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
 		return 1
 	}
 
-	args = flags.Args()
-	if len(args) != 1 {
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\npolicy-delete expects exactly one argument"))
+	args = f.Args()
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		return 1
+	case len(args) > 1:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
 	}
 
 	client, err := c.Client()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
+		c.UI.Error(err.Error())
 		return 2
 	}
 
-	name := args[0]
+	name := strings.TrimSpace(strings.ToLower(args[0]))
 	if err := client.Sys().DeletePolicy(name); err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error: %s", err))
-		return 1
+		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", name, err))
+		return 2
 	}
 
-	c.Ui.Output(fmt.Sprintf("Policy '%s' deleted.", name))
+	c.UI.Output(fmt.Sprintf("Success! Deleted policy: %s", name))
 	return 0
-}
-
-func (c *PolicyDeleteCommand) Synopsis() string {
-	return "Delete a policy from the server"
-}
-
-func (c *PolicyDeleteCommand) Help() string {
-	helpText := `
-Usage: vault policy-delete [options] name
-
-  Delete a policy with the given name.
-
-  Once the policy is deleted, all users associated with the policy will
-  be affected immediately. When a user is associated with a policy that
-  doesn't exist, it is identical to not being associated with that policy.
-
-General Options:
-` + meta.GeneralOptionsUsage()
-	return strings.TrimSpace(helpText)
 }

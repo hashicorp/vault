@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -39,7 +40,7 @@ func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (c
 
 	cid, connErr := dockertest.ConnectToPostgreSQL(60, 500*time.Millisecond, func(connURL string) bool {
 		// This will cause a validation to run
-		resp, err := b.HandleRequest(&logical.Request{
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
 			Storage:   s,
 			Operation: logical.UpdateOperation,
 			Path:      "config/connection",
@@ -78,7 +79,7 @@ func TestBackend_config_connection(t *testing.T) {
 	var err error
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,13 +98,13 @@ func TestBackend_config_connection(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      configData,
 	}
-	resp, err = b.HandleRequest(configReq)
+	resp, err = b.HandleRequest(context.Background(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
 	configReq.Operation = logical.ReadOperation
-	resp, err = b.HandleRequest(configReq)
+	resp, err = b.HandleRequest(context.Background(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -117,7 +118,7 @@ func TestBackend_config_connection(t *testing.T) {
 func TestBackend_basic(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +144,7 @@ func TestBackend_basic(t *testing.T) {
 func TestBackend_roleCrud(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +172,7 @@ func TestBackend_roleCrud(t *testing.T) {
 func TestBackend_BlockStatements(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +204,7 @@ func TestBackend_BlockStatements(t *testing.T) {
 func TestBackend_roleReadOnly(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +237,7 @@ func TestBackend_roleReadOnly(t *testing.T) {
 func TestBackend_roleReadOnly_revocationSQL(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -379,7 +380,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 				t.Fatalf("did not get expected number of rows, got %d", userRows)
 			}
 
-			resp, err = b.HandleRequest(&logical.Request{
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
 				Operation: logical.RevokeOperation,
 				Storage:   s,
 				Secret: &logical.Secret{
@@ -441,7 +442,7 @@ func testAccStepCreateTable(t *testing.T, b logical.Backend, s logical.Storage, 
 				t.Fatal(err)
 			}
 
-			resp, err = b.HandleRequest(&logical.Request{
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
 				Operation: logical.RevokeOperation,
 				Storage:   s,
 				Secret: &logical.Secret{
@@ -496,7 +497,7 @@ func testAccStepDropTable(t *testing.T, b logical.Backend, s logical.Storage, na
 				t.Fatal(err)
 			}
 
-			resp, err = b.HandleRequest(&logical.Request{
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
 				Operation: logical.RevokeOperation,
 				Storage:   s,
 				Secret: &logical.Secret{

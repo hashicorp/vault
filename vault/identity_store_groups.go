@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -55,7 +56,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupRegister,
+				logical.UpdateOperation: i.pathGroupRegister(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["register"][0]),
@@ -99,9 +100,9 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupIDUpdate,
-				logical.ReadOperation:   i.pathGroupIDRead,
-				logical.DeleteOperation: i.pathGroupIDDelete,
+				logical.UpdateOperation: i.pathGroupIDUpdate(),
+				logical.ReadOperation:   i.pathGroupIDRead(),
+				logical.DeleteOperation: i.pathGroupIDDelete(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-by-id"][0]),
@@ -110,7 +111,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 		{
 			Pattern: "group/id/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathGroupIDList,
+				logical.ListOperation: i.pathGroupIDList(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["group-id-list"][0]),
@@ -119,36 +120,40 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 	}
 }
 
-func (i *IdentityStore) pathGroupRegister(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	_, ok := d.GetOk("id")
-	if ok {
-		return i.pathGroupIDUpdate(req, d)
+func (i *IdentityStore) pathGroupRegister() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		_, ok := d.GetOk("id")
+		if ok {
+			return i.pathGroupIDUpdate()(ctx, req, d)
+		}
+
+		i.groupLock.Lock()
+		defer i.groupLock.Unlock()
+
+		return i.handleGroupUpdateCommon(req, d, nil)
 	}
-
-	i.groupLock.Lock()
-	defer i.groupLock.Unlock()
-
-	return i.handleGroupUpdateCommon(req, d, nil)
 }
 
-func (i *IdentityStore) pathGroupIDUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groupID := d.Get("id").(string)
-	if groupID == "" {
-		return logical.ErrorResponse("empty group ID"), nil
-	}
+func (i *IdentityStore) pathGroupIDUpdate() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupID := d.Get("id").(string)
+		if groupID == "" {
+			return logical.ErrorResponse("empty group ID"), nil
+		}
 
-	i.groupLock.Lock()
-	defer i.groupLock.Unlock()
+		i.groupLock.Lock()
+		defer i.groupLock.Unlock()
 
-	group, err := i.MemDBGroupByID(groupID, true)
-	if err != nil {
-		return nil, err
-	}
-	if group == nil {
-		return logical.ErrorResponse("invalid group ID"), nil
-	}
+		group, err := i.MemDBGroupByID(groupID, true)
+		if err != nil {
+			return nil, err
+		}
+		if group == nil {
+			return logical.ErrorResponse("invalid group ID"), nil
+		}
 
-	return i.handleGroupUpdateCommon(req, d, group)
+		return i.handleGroupUpdateCommon(req, d, group)
+	}
 }
 
 func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framework.FieldData, group *identity.Group) (*logical.Response, error) {
@@ -246,18 +251,20 @@ func (i *IdentityStore) handleGroupUpdateCommon(req *logical.Request, d *framewo
 	}, nil
 }
 
-func (i *IdentityStore) pathGroupIDRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groupID := d.Get("id").(string)
-	if groupID == "" {
-		return logical.ErrorResponse("empty group id"), nil
-	}
+func (i *IdentityStore) pathGroupIDRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupID := d.Get("id").(string)
+		if groupID == "" {
+			return logical.ErrorResponse("empty group id"), nil
+		}
 
-	group, err := i.MemDBGroupByID(groupID, false)
-	if err != nil {
-		return nil, err
-	}
+		group, err := i.MemDBGroupByID(groupID, false)
+		if err != nil {
+			return nil, err
+		}
 
-	return i.handleGroupReadCommon(group)
+		return i.handleGroupReadCommon(group)
+	}
 }
 
 func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.Response, error) {
@@ -303,32 +310,36 @@ func (i *IdentityStore) handleGroupReadCommon(group *identity.Group) (*logical.R
 	}, nil
 }
 
-func (i *IdentityStore) pathGroupIDDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groupID := d.Get("id").(string)
-	if groupID == "" {
-		return logical.ErrorResponse("empty group ID"), nil
+func (i *IdentityStore) pathGroupIDDelete() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupID := d.Get("id").(string)
+		if groupID == "" {
+			return logical.ErrorResponse("empty group ID"), nil
+		}
+		return nil, i.deleteGroupByID(groupID)
 	}
-	return nil, i.deleteGroupByID(groupID)
 }
 
 // pathGroupIDList lists the IDs of all the groups in the identity store
-func (i *IdentityStore) pathGroupIDList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ws := memdb.NewWatchSet()
-	iter, err := i.MemDBGroupIterator(ws)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch iterator for group in memdb: %v", err)
-	}
-
-	var groupIDs []string
-	for {
-		raw := iter.Next()
-		if raw == nil {
-			break
+func (i *IdentityStore) pathGroupIDList() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		ws := memdb.NewWatchSet()
+		iter, err := i.MemDBGroupIterator(ws)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch iterator for group in memdb: %v", err)
 		}
-		groupIDs = append(groupIDs, raw.(*identity.Group).ID)
-	}
 
-	return logical.ListResponse(groupIDs), nil
+		var groupIDs []string
+		for {
+			raw := iter.Next()
+			if raw == nil {
+				break
+			}
+			groupIDs = append(groupIDs, raw.(*identity.Group).ID)
+		}
+
+		return logical.ListResponse(groupIDs), nil
+	}
 }
 
 var groupHelp = map[string][2]string{

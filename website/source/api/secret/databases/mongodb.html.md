@@ -1,15 +1,15 @@
 ---
 layout: "api"
-page_title: "MongoDB Database Plugin - HTTP API"
+page_title: "MongoDB - Database - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-databases-mongodb"
 description: |-
-  The MongoDB plugin for Vault's Database backend generates database credentials to access MongoDB servers.
+  The MongoDB plugin for Vault's database secrets engine generates database credentials to access MongoDB servers.
 ---
 
 # MongoDB Database Plugin HTTP API
 
-The MongoDB Database Plugin is one of the supported plugins for the Database
-backend. This plugin generates database credentials dynamically based on
+The MongoDB database plugin is one of the supported plugins for the database
+secrets engine. This plugin generates database credentials dynamically based on
 configured roles for the MongoDB database.
 
 ## Configure Connection
@@ -58,7 +58,7 @@ $ curl \
 Statements are configured during role creation and are used by the plugin to
 determine what is sent to the datatabse on user creation, renewing, and
 revocation. For more information on configuring roles see the [Role
-API](/api/secret/databases/index.html#create-role) in the Database Backend docs.
+API](/api/secret/databases/index.html#create-role) in the database secrets engine docs.
 
 ### Parameters
 
@@ -67,7 +67,7 @@ list the plugin does not support that statement type.
 
 - `creation_statements` `(string: <required>)` – Specifies the database
   statements executed to create and configure a user. Must be a
-  serialized JSON object, or a base64-encoded serialized JSON object. 
+  serialized JSON object, or a base64-encoded serialized JSON object.
   The object can optionally contain a "db" string for session connection,
   and must contain a "roles" array. This array contains objects that holds
   a "role", and an optional "db" value, and is similar to the BSON document that
@@ -88,11 +88,10 @@ list the plugin does not support that statement type.
   "roles": [
     {
       "role": "read",
-      "db": "foo",
+      "db": "foo"
     }
   ]
 }
 ```
-
 [mongodb-write-concern]: https://docs.mongodb.com/manual/reference/write-concern/
 [mgo-safe]: https://godoc.org/gopkg.in/mgo.v2#Safe

@@ -238,7 +238,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 
 // Start deprecated NOP, automatic flush is started in New if flush interval > 0.
 func (m *CirconusMetrics) Start() {
-	return
+	// nop
 }
 
 // Ready returns true or false indicating if the check is ready to accept metrics

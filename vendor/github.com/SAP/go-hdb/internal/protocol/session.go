@@ -323,7 +323,8 @@ func (s *Session) authenticateScramsha256() error {
 	co.set(coDistributionProtocolVersion, booleanType(false))
 	co.set(coSelectForUpdateSupported, booleanType(false))
 	co.set(coSplitBatchCommands, booleanType(true))
-	co.set(coDataFormatVersion, dfvBaseline)
+	// cannot use due to HDB protocol error with secondtime datatype
+	//co.set(coDataFormatVersion2, dfvSPS06)
 	co.set(coDataFormatVersion2, dfvBaseline)
 	co.set(coCompleteArrayExecution, booleanType(true))
 	co.set(coClientLocale, stringType(s.prm.Locale))

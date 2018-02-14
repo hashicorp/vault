@@ -1,137 +1,137 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
-func TestRead(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testReadCommand(tb testing.TB) (*cli.MockUi, *ReadCommand) {
+	tb.Helper()
 
-	ui := new(cli.MockUi)
-	c := &ReadCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	ui := cli.NewMockUi()
+	return ui, &ReadCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
 		},
-	}
-
-	args := []string{
-		"-address", addr,
-		"sys/mounts",
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 }
 
-func TestRead_notFound(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func TestReadCommand_Run(t *testing.T) {
+	t.Parallel()
 
-	ui := new(cli.MockUi)
-	c := &ReadCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"not_enough_args",
+			[]string{},
+			"Not enough arguments",
+			1,
+		},
+		{
+			"too_many_args",
+			[]string{"foo", "bar"},
+			"Too many arguments",
+			1,
+		},
+		{
+			"not_found",
+			[]string{"nope/not/once/never"},
+			"",
+			2,
+		},
+		{
+			"default",
+			[]string{"secret/read/foo"},
+			"foo",
+			0,
+		},
+		{
+			"field",
+			[]string{
+				"-field", "foo",
+				"secret/read/foo",
+			},
+			"bar",
+			0,
+		},
+		{
+			"field_not_found",
+			[]string{
+				"-field", "not-a-real-field",
+				"secret/read/foo",
+			},
+			"not present in secret",
+			1,
 		},
 	}
 
-	args := []string{
-		"-address", addr,
-		"secret/nope",
-	}
-	if code := c.Run(args); code != 1 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-}
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
 
-func TestRead_field(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+		for _, tc := range cases {
+			tc := tc
 
-	ui := new(cli.MockUi)
-	c := &ReadCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
-		},
-	}
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 
-	args := []string{
-		"-address", addr,
-		"-field", "value",
-		"secret/foo",
-	}
+				client, closer := testVaultServer(t)
+				defer closer()
 
-	// Run once so the client is setup, ignore errors
-	c.Run(args)
+				if _, err := client.Logical().Write("secret/read/foo", map[string]interface{}{
+					"foo": "bar",
+				}); err != nil {
+					t.Fatal(err)
+				}
 
-	// Get the client so we can write data
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+				ui, cmd := testReadCommand(t)
+				cmd.client = client
 
-	data := map[string]interface{}{"value": "bar"}
-	if _, err := client.Logical().Write("secret/foo", data); err != nil {
-		t.Fatalf("err: %s", err)
-	}
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
 
-	// Run the read
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			})
+		}
+	})
 
-	output := ui.OutputWriter.String()
-	if output != "bar\n" {
-		t.Fatalf("unexpectd output:\n%s", output)
-	}
-}
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
 
-func TestRead_field_notFound(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+		client, closer := testVaultServerBad(t)
+		defer closer()
 
-	ui := new(cli.MockUi)
-	c := &ReadCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
-		},
-	}
+		ui, cmd := testReadCommand(t)
+		cmd.client = client
 
-	args := []string{
-		"-address", addr,
-		"-field", "nope",
-		"secret/foo",
-	}
+		code := cmd.Run([]string{
+			"secret/foo",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
 
-	// Run once so the client is setup, ignore errors
-	c.Run(args)
+		expected := "Error reading secret/foo: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
 
-	// Get the client so we can write data
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
 
-	data := map[string]interface{}{"value": "bar"}
-	if _, err := client.Logical().Write("secret/foo", data); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// Run the read
-	if code := c.Run(args); code != 1 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+		_, cmd := testReadCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }

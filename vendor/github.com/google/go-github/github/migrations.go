@@ -21,7 +21,7 @@ type MigrationService service
 
 // Migration represents a GitHub migration (archival).
 type Migration struct {
-	ID   *int    `json:"id,omitempty"`
+	ID   *int64  `json:"id,omitempty"`
 	GUID *string `json:"guid,omitempty"`
 	// State is the current state of a migration.
 	// Possible values are:
@@ -128,7 +128,7 @@ func (s *MigrationService) ListMigrations(ctx context.Context, org string) ([]*M
 // id is the migration ID.
 //
 // GitHub API docs: https://developer.github.com/v3/migration/migrations/#get-the-status-of-a-migration
-func (s *MigrationService) MigrationStatus(ctx context.Context, org string, id int) (*Migration, *Response, error) {
+func (s *MigrationService) MigrationStatus(ctx context.Context, org string, id int64) (*Migration, *Response, error) {
 	u := fmt.Sprintf("orgs/%v/migrations/%v", org, id)
 
 	req, err := s.client.NewRequest("GET", u, nil)
@@ -152,7 +152,7 @@ func (s *MigrationService) MigrationStatus(ctx context.Context, org string, id i
 // id is the migration ID.
 //
 // GitHub API docs: https://developer.github.com/v3/migration/migrations/#download-a-migration-archive
-func (s *MigrationService) MigrationArchiveURL(ctx context.Context, org string, id int) (url string, err error) {
+func (s *MigrationService) MigrationArchiveURL(ctx context.Context, org string, id int64) (url string, err error) {
 	u := fmt.Sprintf("orgs/%v/migrations/%v/archive", org, id)
 
 	req, err := s.client.NewRequest("GET", u, nil)
@@ -189,7 +189,7 @@ func (s *MigrationService) MigrationArchiveURL(ctx context.Context, org string, 
 // id is the migration ID.
 //
 // GitHub API docs: https://developer.github.com/v3/migration/migrations/#delete-a-migration-archive
-func (s *MigrationService) DeleteMigration(ctx context.Context, org string, id int) (*Response, error) {
+func (s *MigrationService) DeleteMigration(ctx context.Context, org string, id int64) (*Response, error) {
 	u := fmt.Sprintf("orgs/%v/migrations/%v/archive", org, id)
 
 	req, err := s.client.NewRequest("DELETE", u, nil)
@@ -209,7 +209,7 @@ func (s *MigrationService) DeleteMigration(ctx context.Context, org string, id i
 // is complete and you no longer need the source data.
 //
 // GitHub API docs: https://developer.github.com/v3/migration/migrations/#unlock-a-repository
-func (s *MigrationService) UnlockRepo(ctx context.Context, org string, id int, repo string) (*Response, error) {
+func (s *MigrationService) UnlockRepo(ctx context.Context, org string, id int64, repo string) (*Response, error) {
 	u := fmt.Sprintf("orgs/%v/migrations/%v/repos/%v/lock", org, id, repo)
 
 	req, err := s.client.NewRequest("DELETE", u, nil)

@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"context"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -32,9 +33,7 @@ func pathConfigLease(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConfigLeaseWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathConfigLeaseWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config/lease", &configLease{
 		TTL:    time.Second * time.Duration(d.Get("ttl").(int)),
 		MaxTTL: time.Second * time.Duration(d.Get("max_ttl").(int)),
@@ -42,16 +41,15 @@ func (b *backend) pathConfigLeaseWrite(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathConfigLeaseRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	leaseConfig, err := b.LeaseConfig(req.Storage)
+func (b *backend) pathConfigLeaseRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	leaseConfig, err := b.LeaseConfig(ctx, req.Storage)
 
 	if err != nil {
 		return nil, err

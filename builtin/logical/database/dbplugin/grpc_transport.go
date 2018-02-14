@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
 var (
@@ -83,20 +83,12 @@ func (s *gRPCServer) Close(_ context.Context, _ *Empty) (*Empty, error) {
 type gRPCClient struct {
 	client     DatabaseClient
 	clientConn *grpc.ClientConn
+
+	doneCtx context.Context
 }
 
 func (c gRPCClient) Type() (string, error) {
-	// If the plugin has already shutdown, this will hang forever so we give it
-	// a one second timeout.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	switch c.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return "", ErrPluginShutdown
-	}
-	resp, err := c.client.Type(ctx, &Empty{})
+	resp, err := c.client.Type(c.doneCtx, &Empty{})
 	if err != nil {
 		return "", err
 	}
@@ -110,11 +102,10 @@ func (c gRPCClient) CreateUser(ctx context.Context, statements Statements, usern
 		return "", "", err
 	}
 
-	switch c.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return "", "", ErrPluginShutdown
-	}
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
+	defer close(quitCh)
+	defer cancel()
 
 	resp, err := c.client.CreateUser(ctx, &CreateUserRequest{
 		Statements:     &statements,
@@ -122,6 +113,10 @@ func (c gRPCClient) CreateUser(ctx context.Context, statements Statements, usern
 		Expiration:     t,
 	})
 	if err != nil {
+		if c.doneCtx.Err() != nil {
+			return "", "", ErrPluginShutdown
+		}
+
 		return "", "", err
 	}
 
@@ -134,33 +129,47 @@ func (c *gRPCClient) RenewUser(ctx context.Context, statements Statements, usern
 		return err
 	}
 
-	switch c.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return ErrPluginShutdown
-	}
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
+	defer close(quitCh)
+	defer cancel()
 
 	_, err = c.client.RenewUser(ctx, &RenewUserRequest{
 		Statements: &statements,
 		Username:   username,
 		Expiration: t,
 	})
+	if err != nil {
+		if c.doneCtx.Err() != nil {
+			return ErrPluginShutdown
+		}
 
-	return err
+		return err
+	}
+
+	return nil
 }
 
 func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, username string) error {
-	switch c.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return ErrPluginShutdown
-	}
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
+	defer close(quitCh)
+	defer cancel()
+
 	_, err := c.client.RevokeUser(ctx, &RevokeUserRequest{
 		Statements: &statements,
 		Username:   username,
 	})
 
-	return err
+	if err != nil {
+		if c.doneCtx.Err() != nil {
+			return ErrPluginShutdown
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error {
@@ -169,30 +178,27 @@ func (c *gRPCClient) Initialize(ctx context.Context, config map[string]interface
 		return err
 	}
 
-	switch c.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-	default:
-		return ErrPluginShutdown
-	}
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
+	defer close(quitCh)
+	defer cancel()
 
 	_, err = c.client.Initialize(ctx, &InitializeRequest{
 		Config:           configRaw,
 		VerifyConnection: verifyConnection,
 	})
+	if err != nil {
+		if c.doneCtx.Err() != nil {
+			return ErrPluginShutdown
+		}
 
-	return err
-}
-
-func (c *gRPCClient) Close() error {
-	// If the plugin has already shutdown, this will hang forever so we give it
-	// a one second timeout.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	switch c.clientConn.GetState() {
-	case connectivity.Ready, connectivity.Idle:
-		_, err := c.client.Close(ctx, &Empty{})
 		return err
 	}
 
 	return nil
+}
+
+func (c *gRPCClient) Close() error {
+	_, err := c.client.Close(c.doneCtx, &Empty{})
+	return err
 }

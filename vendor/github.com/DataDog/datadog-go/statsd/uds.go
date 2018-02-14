@@ -2,7 +2,6 @@ package statsd
 
 import (
 	"net"
-	"strings"
 	"time"
 )
 
@@ -41,25 +40,28 @@ func (w *udsWriter) SetWriteTimeout(d time.Duration) error {
 
 // Write data to the UDS connection with write timeout and minimal error handling:
 // create the connection if nil, and destroy it if the statsd server has disconnected
-func (w *udsWriter) Write(data []byte) error {
+func (w *udsWriter) Write(data []byte) (int, error) {
 	// Try connecting (first packet or connection lost)
 	if w.conn == nil {
 		conn, err := net.Dial(w.addr.Network(), w.addr.String())
 		if err != nil {
-			return err
+			return 0, err
 		}
 		w.conn = conn
 	}
 	w.conn.SetWriteDeadline(time.Now().Add(w.writeTimeout))
-	_, e := w.conn.Write(data)
-	if e != nil && strings.Contains(e.Error(), "transport endpoint is not connected") {
+	n, e := w.conn.Write(data)
+	if e != nil {
 		// Statsd server disconnected, retry connecting at next packet
 		w.conn = nil
-		return e
+		return 0, e
 	}
-	return e
+	return n, e
 }
 
 func (w *udsWriter) Close() error {
-	return w.conn.Close()
+	if w.conn != nil {
+		return w.conn.Close()
+	}
+	return nil
 }

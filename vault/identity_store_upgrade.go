@@ -38,7 +38,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasRegister,
+				logical.UpdateOperation: i.pathAliasRegister(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
@@ -73,9 +73,9 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasIDUpdate,
-				logical.ReadOperation:   i.pathAliasIDRead,
-				logical.DeleteOperation: i.pathAliasIDDelete,
+				logical.UpdateOperation: i.pathAliasIDUpdate(),
+				logical.ReadOperation:   i.pathAliasIDRead(),
+				logical.DeleteOperation: i.pathAliasIDDelete(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id"][0]),
@@ -84,7 +84,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 		{
 			Pattern: "persona/id/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathAliasIDList,
+				logical.ListOperation: i.pathAliasIDList(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id-list"][0]),
@@ -123,7 +123,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasRegister,
+				logical.UpdateOperation: i.pathAliasRegister(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias"][0]),
@@ -163,9 +163,9 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathAliasIDUpdate,
-				logical.ReadOperation:   i.pathAliasIDRead,
-				logical.DeleteOperation: i.pathAliasIDDelete,
+				logical.UpdateOperation: i.pathAliasIDUpdate(),
+				logical.ReadOperation:   i.pathAliasIDRead(),
+				logical.DeleteOperation: i.pathAliasIDDelete(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id"][0]),
@@ -174,7 +174,7 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 		{
 			Pattern: "alias/id/?$",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathAliasIDList,
+				logical.ListOperation: i.pathAliasIDList(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id-list"][0]),

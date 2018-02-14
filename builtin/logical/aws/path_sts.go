@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -39,13 +40,12 @@ the session for AWS account owners defaults to one hour.`,
 	}
 }
 
-func (b *backend) pathSTSRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSTSRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	policyName := d.Get("name").(string)
 	ttl := int64(d.Get("ttl").(int))
 
 	// Read the policy
-	policy, err := req.Storage.Get("policy/" + policyName)
+	policy, err := req.Storage.Get(ctx, "policy/"+policyName)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %s", err)
 	}
@@ -57,6 +57,7 @@ func (b *backend) pathSTSRead(
 	if strings.HasPrefix(policyValue, "arn:") {
 		if strings.Contains(policyValue, ":role/") {
 			return b.assumeRole(
+				ctx,
 				req.Storage,
 				req.DisplayName, policyName, policyValue,
 				ttl,
@@ -69,6 +70,7 @@ func (b *backend) pathSTSRead(
 	}
 	// Use the helper to create the secret
 	return b.secretTokenCreate(
+		ctx,
 		req.Storage,
 		req.DisplayName, policyName, policyValue,
 		ttl,
@@ -87,6 +89,6 @@ then "aws/sts/deploy" would generate access keys for the "deploy" role.
 
 Note, these credentials are instantiated using the AWS STS backend.
 
-The access keys will have a lease associated with them. The access keys
-can be revoked by using the lease ID.
+The access keys will have a lease associated with them, but revoking the lease
+does not revoke the access keys.
 `
