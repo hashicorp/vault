@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
@@ -18,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/lib/pq"
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -390,13 +388,7 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 	p.Lock()
 	defer p.Unlock()
 
-	c := new(connutil.SQLConfig)
-	err := mapstructure.WeakDecode(p.SQLConnectionProducer.SQLConfig, c)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(c.Username) == 0 || len(c.Password) == 0 {
+	if len(p.Username) == 0 || len(p.Password) == 0 {
 		return nil, errors.New("username and password are required to rotate")
 	}
 
@@ -430,7 +422,7 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 				continue
 			}
 			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-				"username": c.Username,
+				"username": p.Username,
 				"password": password,
 			}))
 			if err != nil {
@@ -448,10 +440,11 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 		return nil, err
 	}
 
+	// Close the database connection to ensure no new connections come in
 	if err := db.Close(); err != nil {
 		return nil, err
 	}
 
-	c.Password = password
-	return structs.Map(p.SQLConnectionProducer.SQLConfig), nil
+	p.RawConfig["password"] = password
+	return p.RawConfig, nil
 }

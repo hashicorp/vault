@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
@@ -17,22 +16,17 @@ import (
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
 
-// SQLConfig contains the config options for SQL database engines
-type SQLConfig struct {
+// SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
+type SQLConnectionProducer struct {
 	ConnectionURL            string      `json:"connection_url" mapstructure:"connection_url" structs:"connection_url"`
 	MaxOpenConnections       int         `json:"max_open_connections" mapstructure:"max_open_connections" structs:"max_open_connections"`
 	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections" structs:"max_idle_connections"`
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
-}
-
-// SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
-type SQLConnectionProducer struct {
-	SQLConfig
 
 	Type                  string
-	connectionURL         string
+	RawConfig             map[string]interface{}
 	maxConnectionLifetime time.Duration
 	Initialized           bool
 	db                    *sql.DB
@@ -43,17 +37,18 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 	c.Lock()
 	defer c.Unlock()
 
-	err = mapstructure.WeakDecode(conf, &c.SQLConfig)
+	c.RawConfig = conf
+
+	err = mapstructure.WeakDecode(conf, &c)
 	if err != nil {
 		return nil, err
 	}
 
-	c.connectionURL = c.ConnectionURL
-	if len(c.connectionURL) == 0 {
+	if len(c.ConnectionURL) == 0 {
 		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
 
-	c.connectionURL = dbutil.QueryHelper(c.connectionURL, map[string]string{
+	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
 		"username": c.Username,
 		"password": c.Password,
 	})
@@ -91,7 +86,7 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 		}
 	}
 
-	return structs.Map(c.SQLConfig), nil
+	return c.RawConfig, nil
 }
 
 func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
@@ -116,7 +111,7 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	}
 
 	// Otherwise, attempt to make connection
-	conn := c.connectionURL
+	conn := c.ConnectionURL
 
 	// Ensure timezone is set to UTC for all the conenctions
 	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {

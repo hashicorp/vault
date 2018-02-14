@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/structs"
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
@@ -16,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -246,17 +244,11 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	return nil
 }
 
-func (p *MySQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	p.Lock()
-	defer p.Unlock()
+func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+	m.Lock()
+	defer m.Unlock()
 
-	c := new(connutil.SQLConfig)
-	err := mapstructure.WeakDecode(p.SQLConnectionProducer.SQLConfig, c)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(c.Username) == 0 || len(c.Password) == 0 {
+	if len(m.Username) == 0 || len(m.Password) == 0 {
 		return nil, errors.New("username and password are required to rotate")
 	}
 
@@ -265,7 +257,7 @@ func (p *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 		rotateStatents = []string{defaultMySQLRotateRootCredentialsSQL}
 	}
 
-	db, err := p.getConnection(ctx)
+	db, err := m.getConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +270,7 @@ func (p *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 		tx.Rollback()
 	}()
 
-	password, err := p.GeneratePassword()
+	password, err := m.GeneratePassword()
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +282,7 @@ func (p *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 				continue
 			}
 			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-				"username": c.Username,
+				"username": m.Username,
 				"password": password,
 			}))
 			if err != nil {
@@ -312,6 +304,6 @@ func (p *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 		return nil, err
 	}
 
-	c.Password = password
-	return structs.Map(p.SQLConnectionProducer.SQLConfig), nil
+	m.RawConfig["password"] = password
+	return m.RawConfig, nil
 }

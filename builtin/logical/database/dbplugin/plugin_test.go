@@ -61,13 +61,16 @@ func (m *mockPlugin) RevokeUser(_ context.Context, statements dbplugin.Statement
 	delete(m.users, username)
 	return nil
 }
-func (m *mockPlugin) Initialize(_ context.Context, conf map[string]interface{}, _ bool) error {
+func (m *mockPlugin) RotateRootCredentials(_ context.Context, statements []string) (map[string]interface{}, error) {
+	return nil, nil
+}
+func (m *mockPlugin) Initialize(_ context.Context, conf map[string]interface{}, _ bool) (map[string]interface{}, error) {
 	err := errors.New("err")
 	if len(conf) != 1 {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return conf, nil
 }
 func (m *mockPlugin) Close() error {
 	m.users = nil
@@ -145,7 +148,7 @@ func TestPlugin_Initialize(t *testing.T) {
 		"test": 1,
 	}
 
-	err = dbRaw.Initialize(context.Background(), connectionDetails, true)
+	_, err = dbRaw.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -170,7 +173,7 @@ func TestPlugin_CreateUser(t *testing.T) {
 		"test": 1,
 	}
 
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -209,7 +212,7 @@ func TestPlugin_RenewUser(t *testing.T) {
 	connectionDetails := map[string]interface{}{
 		"test": 1,
 	}
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -243,7 +246,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	connectionDetails := map[string]interface{}{
 		"test": 1,
 	}
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -285,7 +288,7 @@ func TestPlugin_NetRPC_Initialize(t *testing.T) {
 		"test": 1,
 	}
 
-	err = dbRaw.Initialize(context.Background(), connectionDetails, true)
+	_, err = dbRaw.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -310,7 +313,7 @@ func TestPlugin_NetRPC_CreateUser(t *testing.T) {
 		"test": 1,
 	}
 
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -349,7 +352,7 @@ func TestPlugin_NetRPC_RenewUser(t *testing.T) {
 	connectionDetails := map[string]interface{}{
 		"test": 1,
 	}
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -383,7 +386,7 @@ func TestPlugin_NetRPC_RevokeUser(t *testing.T) {
 	connectionDetails := map[string]interface{}{
 		"test": 1,
 	}
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Initialize(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

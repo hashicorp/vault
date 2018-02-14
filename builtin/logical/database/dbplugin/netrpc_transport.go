@@ -115,7 +115,7 @@ func (dr *databasePluginRPCClient) RotateRootCredentials(_ context.Context, stat
 	var resp RotateRootCredentialsResponse
 	err = dr.client.Call("Plugin.RotateRootCredentials", req, &resp)
 
-	err = json.Unmarshal(resp.Config, saveConf)
+	err = json.Unmarshal(resp.Config, &saveConf)
 	return saveConf, err
 }
 
@@ -131,7 +131,7 @@ func (dr *databasePluginRPCClient) Initialize(_ context.Context, conf map[string
 		return nil, err
 	}
 
-	err = json.Unmarshal(resp.Config, saveConf)
+	err = json.Unmarshal(resp.Config, &saveConf)
 	return saveConf, err
 }
 
