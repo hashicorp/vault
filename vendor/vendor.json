@@ -451,10 +451,10 @@
 			"revisionTime": "2018-01-19T17:31:02Z"
 		},
 		{
-			"checksumSHA1": "sFjc2R+KS9AeXIPMV4KCw+GwX5I=",
+			"checksumSHA1": "1Rvwxu0e4go24iSScwsszMUHjKQ=",
 			"path": "github.com/chrismalek/oktasdk-go/okta",
-			"revision": "ae553c909ca06a4c34eb41ee435e83871a7c2496",
-			"revisionTime": "2017-09-11T15:31:29Z"
+			"revision": "d0c464c6e7d0c3407d2ec2da7a5818536e600515",
+			"revisionTime": "2018-02-13T20:42:57Z"
 		},
 		{
 			"checksumSHA1": "l8gIVOjlnOrceuJLONvgA8p4FI4=",
@@ -1225,6 +1225,36 @@
 			"revisionTime": "2018-02-06T20:15:40Z"
 		},
 		{
+			"checksumSHA1": "QMy7OtWBVChgvZg52PojtXuGRTA=",
+			"path": "github.com/joyent/triton-go",
+			"revision": "8b12b82dc02a9395ca1506bc6a8ed0dbfc46977a",
+			"revisionTime": "2018-02-12T15:06:50Z"
+		},
+		{
+			"checksumSHA1": "Y03+L+I0FVZ2bMGWt1MHTDEyWM4=",
+			"path": "github.com/joyent/triton-go/authentication",
+			"revision": "8b12b82dc02a9395ca1506bc6a8ed0dbfc46977a",
+			"revisionTime": "2018-02-12T15:06:50Z"
+		},
+		{
+			"checksumSHA1": "MuJsGBr6HlXQYxZY9cM5rBk+Lns=",
+			"path": "github.com/joyent/triton-go/client",
+			"revision": "8b12b82dc02a9395ca1506bc6a8ed0dbfc46977a",
+			"revisionTime": "2018-02-12T15:06:50Z"
+		},
+		{
+			"checksumSHA1": "d/Py6j/uMgOAFNFGpsQrNnSsO+k=",
+			"path": "github.com/joyent/triton-go/errors",
+			"revision": "8b12b82dc02a9395ca1506bc6a8ed0dbfc46977a",
+			"revisionTime": "2018-02-12T15:06:50Z"
+		},
+		{
+			"checksumSHA1": "ZN94TTnBIL3l/gTUdmm+a3jEE24=",
+			"path": "github.com/joyent/triton-go/storage",
+			"revision": "8b12b82dc02a9395ca1506bc6a8ed0dbfc46977a",
+			"revisionTime": "2018-02-12T15:06:50Z"
+		},
+		{
 			"checksumSHA1": "VJk3rOWfxEV9Ilig5lgzH1qg8Ss=",
 			"path": "github.com/keybase/go-crypto/brainpool",
 			"revision": "8bab6ce2ea76875dcf28c287110f9cdf17fee30c",
@@ -1577,6 +1607,12 @@
 			"path": "golang.org/x/crypto/blowfish",
 			"revision": "5119cf507ed5294cc409c092980c7497ee5d6fd2",
 			"revisionTime": "2018-01-22T10:39:14Z"
+		},
+		{
+			"checksumSHA1": "1zB843WyoSh8oMdbeDfgByEa2TE=",
+			"path": "golang.org/x/crypto/chacha20poly1305",
+			"revision": "650f4a345ab4e5b245a3034b110ebc7299e68186",
+			"revisionTime": "2017-09-27T09:16:38Z"
 		},
 		{
 			"checksumSHA1": "IQkUIOnvlf0tYloFx9mLaXSvXWQ=",

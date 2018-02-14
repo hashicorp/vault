@@ -1,13 +1,11 @@
 package command
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"runtime"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/mitchellh/cli"
@@ -198,15 +196,6 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 			"is only used in HSM mode.",
 	})
 
-	f.IntVar(&IntVar{
-		Name:       "stored-shares",
-		Target:     &c.flagStoredShares,
-		Default:    0, // No default, because we need to check if was supplied
-		Completion: complete.PredictAnything,
-		Usage: "Number of unseal keys to store on an HSM. This must be equal to " +
-			"-key-shares. This is only used in HSM mode.",
-	})
-
 	// Deprecations
 	// TODO: remove in 0.9.0
 	f.BoolVar(&BoolVar{
@@ -220,6 +209,15 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Name:    "auto", // prefer -consul-auto
 		Target:  &c.flagAuto,
 		Default: false,
+		Hidden:  true,
+		Usage:   "",
+	})
+
+	// Kept to keep scripts passing the flag working, but not used
+	f.IntVar(&IntVar{
+		Name:    "stored-shares",
+		Target:  &c.flagStoredShares,
+		Default: 0,
 		Hidden:  true,
 		Usage:   "",
 	})
@@ -434,15 +432,10 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		return 2
 	}
 
-	switch c.flagFormat {
-	case "yaml", "yml":
-		return c.initOutputYAML(req, resp)
-	case "json":
-		return c.initOutputJSON(req, resp)
+	switch Format(c.UI) {
 	case "table":
 	default:
-		c.UI.Error(fmt.Sprintf("Unknown format: %s", c.flagFormat))
-		return 1
+		return OutputData(c.UI, newMachineInit(req, resp))
 	}
 
 	for i, key := range resp.Keys {
@@ -463,7 +456,7 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 	c.UI.Output("")
 	c.UI.Output(fmt.Sprintf("Initial Root Token: %s", resp.RootToken))
 
-	if req.StoredShares < 1 {
+	if len(resp.Keys) > 0 {
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"Vault initialized with %d key shares and a key threshold of %d. Please "+
@@ -501,26 +494,6 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 	}
 
 	return 0
-}
-
-// initOutputYAML outputs the init output as YAML.
-func (c *OperatorInitCommand) initOutputYAML(req *api.InitRequest, resp *api.InitResponse) int {
-	b, err := yaml.Marshal(newMachineInit(req, resp))
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error marshaling YAML: %s", err))
-		return 2
-	}
-	return PrintRaw(c.UI, strings.TrimSpace(string(b)))
-}
-
-// initOutputJSON outputs the init output as JSON.
-func (c *OperatorInitCommand) initOutputJSON(req *api.InitRequest, resp *api.InitResponse) int {
-	b, err := json.Marshal(newMachineInit(req, resp))
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error marshaling JSON: %s", err))
-		return 2
-	}
-	return PrintRaw(c.UI, strings.TrimSpace(string(b)))
 }
 
 // status inspects the init status of vault and returns an appropriate error
