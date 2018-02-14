@@ -794,7 +794,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		switch {
 		case err != nil:
 			return errutil.UserError{Err: err.Error()}
-		case len(badName) != 0:
+		case len(badName) > 0:
 			return errutil.UserError{Err: fmt.Sprintf(
 				"other SAN %s not allowed for OID %s by this role", badName, badOID)}
 		case len(badOID) > 0:
@@ -1442,7 +1442,7 @@ func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 
 	// Marshal and add to ExtraExtensions
 	ext := pkix.Extension{
-		Id: []int{2, 5, 29, 17},
+		Id: asn1.ObjectIdentifier{2, 5, 29, 17},
 	}
 	var err error
 	ext.Value, err = asn1.Marshal(rawValues)
@@ -1477,8 +1477,8 @@ func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP) []asn1
 }
 
 func stringToOid(in string) (asn1.ObjectIdentifier, error) {
-	ret := []int{}
 	split := strings.Split(in, ".")
+	ret := make(asn1.ObjectIdentifier, 0, len(split))
 	for _, v := range split {
 		i, err := strconv.Atoi(v)
 		if err != nil {

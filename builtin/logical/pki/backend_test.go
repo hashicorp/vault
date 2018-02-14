@@ -2811,13 +2811,13 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // checks to verify that the OID SAN logic doesn't screw up other SANs, then
 // will spit out the PEM. This can be validated independently.
 //
-// You want the hex dump of the octet string corresponding tot he X509v3
-// Subject Alternative Name. Unfortunately, openssl asn1parse doesn't seem to
-// be particularly good at then dumping this in a meaningful way, and neither
-// does dumpasn1. However, there's a nice online utility at
-// https://lapo.it/asn1js You can view the structure of an openssl-generated
-// other SAN at
+// You want the hex dump of the octet string corresponding to the X509v3
+// Subject Alternative Name. There's a nice online utility at
+// https://lapo.it/asn1js that can be used to view the structure of an
+// openssl-generated other SAN at
 // https://lapo.it/asn1js/#3022A020060A2B060104018237140203A0120C106465766F7073406C6F63616C686F7374
+// (openssl asn1parse can also be used with -strparse using an offset of the
+// hex blob for the subject alternative names extension).
 //
 // The structure output from here should match that precisely (even if the OID
 // itself doesn't) in the second test.
@@ -2826,7 +2826,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // top-level sequence; see
 // https://lapo.it/asn1js/#3046A020060A2B060104018237140203A0120C106465766F7073406C6F63616C686F7374A022060A2B060104018237140204A0140C12322D6465766F7073406C6F63616C686F7374 for an openssl-generated example.
 //
-// The good news is that it's valid to simply copy and paste the ouput from
+// The good news is that it's valid to simply copy and paste the PEM ouput from
 // here into the form at that site as it will do the right thing so it's pretty
 // easy to validate.
 func TestBackend_OID_SANs(t *testing.T) {
