@@ -121,11 +121,11 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	// HA configuration
+	haEnabled := false
 	haEnabledStr := os.Getenv(envHAEnabled)
 	if haEnabledStr == "" {
 		haEnabledStr = c["ha_enabled"]
 	}
-	haEnabled := true
 	if haEnabledStr != "" {
 		var err error
 		haEnabled, err = strconv.ParseBool(haEnabledStr)

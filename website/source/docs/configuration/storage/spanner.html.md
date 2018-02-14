@@ -105,7 +105,7 @@ https://www.googleapis.com/auth/spanner.data
 
 ### High Availability Parameters
 
-- `ha_enabled` `(string: "true")` - Specifies if high availability mode is
+- `ha_enabled` `(string: "false")` - Specifies if high availability mode is
   enabled. This is a boolean value, but it is specified as a string like "true"
   or "false".
 
@@ -118,24 +118,12 @@ https://www.googleapis.com/auth/spanner.data
 ### High Availability
 
 This example shows configuring Google Cloud Spanner with high availability
-enabled. Note that Google Cloud Spanner is globally consistent and provides HA
-by default.
-
-```hcl
-storage "spanner" {
-  database = "projects/demo/instances/abc123/databases/vault-data"
-}
-```
-
-### Disable HA
-
-This example shows disabling HA in the Google Cloud Spanner Vault storage
-backend.
+enabled.
 
 ```hcl
 storage "spanner" {
   database   = "projects/demo/instances/abc123/databases/vault-data"
-  ha_enabled = "false"
+  ha_enabled = "true"
 }
 ```
 
