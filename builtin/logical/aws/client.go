@@ -17,7 +17,7 @@ import (
 func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
 	var endpoint string
-	var maxRetries int
+	var maxRetries int = aws.UseServiceDefaultRetries
 
 	entry, err := s.Get(ctx, "config/root")
 	if err != nil {
