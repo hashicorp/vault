@@ -9,6 +9,8 @@ FEATURES:
    required within Okta, an Okta Push MFA flow can be used to successfully
    finish authentication.
  * **Manta Storage**: Joyent Triton Manta can now be used for Vault storage
+ * **Google Cloud Spanner Storage**: Google Cloud Spanner can now be used for
+   Vault storage
 
 IMPROVEMENTS:
 
