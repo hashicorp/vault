@@ -34,7 +34,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 	}
 
 	endpoint := aws.String("")
-	var maxRetries int
+	var maxRetries int = aws.UseServiceDefaultRetries
 	if config != nil {
 		// Override the default endpoint with the configured endpoint.
 		switch {
