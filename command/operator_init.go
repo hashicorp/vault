@@ -196,15 +196,6 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 			"is only used in HSM mode.",
 	})
 
-	f.IntVar(&IntVar{
-		Name:       "stored-shares",
-		Target:     &c.flagStoredShares,
-		Default:    0, // No default, because we need to check if was supplied
-		Completion: complete.PredictAnything,
-		Usage: "Number of unseal keys to store on an HSM. This must be equal to " +
-			"-key-shares. This is only used in HSM mode.",
-	})
-
 	// Deprecations
 	// TODO: remove in 0.9.0
 	f.BoolVar(&BoolVar{
@@ -218,6 +209,15 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Name:    "auto", // prefer -consul-auto
 		Target:  &c.flagAuto,
 		Default: false,
+		Hidden:  true,
+		Usage:   "",
+	})
+
+	// Kept to keep scripts passing the flag working, but not used
+	f.IntVar(&IntVar{
+		Name:    "stored-shares",
+		Target:  &c.flagStoredShares,
+		Default: 0,
 		Hidden:  true,
 		Usage:   "",
 	})
@@ -456,7 +456,7 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 	c.UI.Output("")
 	c.UI.Output(fmt.Sprintf("Initial Root Token: %s", resp.RootToken))
 
-	if req.StoredShares < 1 {
+	if len(resp.Keys) > 0 {
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"Vault initialized with %d key shares and a key threshold of %d. Please "+

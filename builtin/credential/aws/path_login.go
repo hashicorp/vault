@@ -1505,6 +1505,9 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	// the endpoint to talk to alternate web addresses
 	request := buildHttpRequest(method, endpoint, parsedUrl, body, headers)
 	client := cleanhttp.DefaultClient()
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %v", err)

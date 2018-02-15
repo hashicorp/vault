@@ -61,6 +61,7 @@ import (
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
 	physPostgreSQL "github.com/hashicorp/vault/physical/postgresql"
 	physS3 "github.com/hashicorp/vault/physical/s3"
+	physSpanner "github.com/hashicorp/vault/physical/spanner"
 	physSwift "github.com/hashicorp/vault/physical/swift"
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 )
@@ -134,6 +135,7 @@ var (
 		"mysql":                  physMySQL.NewMySQLBackend,
 		"postgresql":             physPostgreSQL.NewPostgreSQLBackend,
 		"s3":                     physS3.NewS3Backend,
+		"spanner":                physSpanner.NewBackend,
 		"swift":                  physSwift.NewSwiftBackend,
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}

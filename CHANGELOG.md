@@ -2,7 +2,15 @@
 
 FEATURES:
 
- * **Manta Storage**: Manta can now be used for Vault storage
+ * **ChaCha20-Poly1305 support in `transit`**: You can now encrypt and decrypt
+   with ChaCha20-Poly1305 in `transit`. Key derivation and convergent
+   encryption is also supported.
+ * **Okta Push support in Okta Auth Backend**: If a user account has MFA
+   required within Okta, an Okta Push MFA flow can be used to successfully
+   finish authentication.
+ * **Manta Storage**: Joyent Triton Manta can now be used for Vault storage
+ * **Google Cloud Spanner Storage**: Google Cloud Spanner can now be used for
+   Vault storage
 
 IMPROVEMENTS:
 
@@ -13,6 +21,10 @@ IMPROVEMENTS:
  * cli: Add `-format` flag to all subcommands [GH-3897]
  * cli: Do not display deprecation warnings when the format is not table
    [GH-3897]
+ * core: If over a predefined lease count (256k), log a warning not more than
+   once a minute. Too many leases can be problematic for many of the storage
+   backends and often this number of leases is indicative of a need for
+   workflow improvements. [GH-3957]
  * secret/pki: Add a flag to make the common name optional on certs [GH-3940]
  * secret/pki: Ensure only DNS-compatible names go into DNS SANs; additionally,
    properly handle IDNA transformations for these DNS names [GH-3953]
@@ -31,6 +43,7 @@ BUG FIXES:
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens. [GH-3880]
+ * command/rekey: Re-add lost `stored-shares` parameter [GH-3974]
  * command/ssh: Create and reuse the api client [GH-3909]
  * identity: Fix race when creating entities [GH-3932]
  * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 

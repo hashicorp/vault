@@ -37,9 +37,10 @@ type OperatorRekeyCommand struct {
 
 	// Deprecations
 	// TODO: remove in 0.9.0
-	flagDelete      bool
-	flagRecoveryKey bool
-	flagRetrieve    bool
+	flagDelete       bool
+	flagRecoveryKey  bool
+	flagRetrieve     bool
+	flagStoredShares int
 
 	testStdin io.Reader // for tests
 }
@@ -231,6 +232,15 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Usage:   "",
 	})
 
+	// Kept to keep scripts passing the flag working, but not used
+	f.IntVar(&IntVar{
+		Name:    "stored-shares",
+		Target:  &c.flagStoredShares,
+		Default: 0,
+		Hidden:  true,
+		Usage:   "",
+	})
+
 	return set
 }
 
@@ -323,6 +333,7 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 	status, err := fn(&api.RekeyInitRequest{
 		SecretShares:    c.flagKeyShares,
 		SecretThreshold: c.flagKeyThreshold,
+		StoredShares:    c.flagStoredShares,
 		PGPKeys:         c.flagPGPKeys,
 		Backup:          c.flagBackup,
 	})
