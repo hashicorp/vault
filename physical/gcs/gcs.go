@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
 	log "github.com/mgutz/logxi/v1"
 
@@ -84,8 +85,8 @@ func newGCSClient(ctx context.Context, conf map[string]string, logger log.Logger
 	// else use application default credentials
 	credentialsFile, ok := conf["credentials_file"]
 	if ok {
-		client, err := storage.NewClient(
-			ctx,
+		client, err := storage.NewClient(ctx,
+			option.WithUserAgent(useragent.String()),
 			option.WithServiceAccountFile(credentialsFile),
 		)
 
@@ -95,7 +96,9 @@ func newGCSClient(ctx context.Context, conf map[string]string, logger log.Logger
 		return client, nil
 	}
 
-	client, err := storage.NewClient(ctx)
+	client, err := storage.NewClient(ctx,
+		option.WithUserAgent(useragent.String()),
+	)
 	if err != nil {
 		return nil, errwrap.Wrapf("error with application default credentials: {{err}}", err)
 	}

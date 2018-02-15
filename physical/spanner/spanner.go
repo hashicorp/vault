@@ -11,9 +11,11 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
 	log "github.com/mgutz/logxi/v1"
 	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 
 	"cloud.google.com/go/spanner"
@@ -151,7 +153,9 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	logger.Debug("physical/spanner: creating client")
 
 	ctx := context.Background()
-	client, err := spanner.NewClient(ctx, database)
+	client, err := spanner.NewClient(ctx, database,
+		option.WithUserAgent(useragent.String()),
+	)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create spanner client: {{err}}", err)
 	}
