@@ -7,7 +7,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -138,6 +140,8 @@ Defaults to "sha2-256". Not valid for all key types.`,
 }
 
 func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "sign_data"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "sign_data"}, 1)
 	name := d.Get("name").(string)
 	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
@@ -218,6 +222,8 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "verify_write"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "verify_write"}, 1)
 
 	sig := d.Get("signature").(string)
 	hmac := d.Get("hmac").(string)

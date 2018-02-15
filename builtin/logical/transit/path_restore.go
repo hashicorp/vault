@@ -2,7 +2,9 @@ package transit
 
 import (
 	"context"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -31,6 +33,8 @@ func (b *backend) pathRestore() *framework.Path {
 }
 
 func (b *backend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "restore_key"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "restore_key"}, 1)
 	backupB64 := d.Get("backup").(string)
 	if backupB64 == "" {
 		return logical.ErrorResponse("'backup' must be supplied"), nil

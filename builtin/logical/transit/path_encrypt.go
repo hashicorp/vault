@@ -5,7 +5,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -138,6 +140,8 @@ func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Re
 }
 
 func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "encrypt"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "encrypt"}, 1)
 	name := d.Get("name").(string)
 	var err error
 

@@ -10,7 +10,9 @@ import (
 	"hash"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -65,6 +67,8 @@ to the min_encryption_version configured on the key.`,
 }
 
 func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "generate_hmac"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "generate_hmac"}, 1)
 	name := d.Get("name").(string)
 	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
@@ -138,6 +142,8 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *framework.FieldData, verificationHMAC string) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "hmac_verify"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "hmac_verify"}, 1)
 	name := d.Get("name").(string)
 	inputB64 := d.Get("input").(string)
 	algorithm := d.Get("urlalgorithm").(string)

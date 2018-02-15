@@ -2,7 +2,9 @@ package transit
 
 import (
 	"context"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -27,6 +29,8 @@ func (b *backend) pathRotate() *framework.Path {
 }
 
 func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "rotate_key"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "rotate_key"}, 1)
 	name := d.Get("name").(string)
 
 	// Get the policy

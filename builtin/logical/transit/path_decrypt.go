@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -52,6 +54,8 @@ Vault 0.6.1. Not required for keys created in 0.6.2+.`,
 }
 
 func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "decrypt"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "decrypt"}, 1)
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []BatchRequestItem
 	var err error

@@ -8,7 +8,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -57,6 +59,8 @@ Defaults to "sha2-256".`,
 }
 
 func (b *backend) pathHashWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "hash_data"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "hash_data"}, 1)
 	inputB64 := d.Get("input").(string)
 	format := d.Get("format").(string)
 	algorithm := d.Get("urlalgorithm").(string)

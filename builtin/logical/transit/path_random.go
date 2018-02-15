@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
+	"time"
 
+	"github.com/armon/go-metrics"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -44,6 +46,8 @@ func (b *backend) pathRandom() *framework.Path {
 }
 
 func (b *backend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "random_bytes"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "random_bytes"}, 1)
 	bytes := 0
 	var err error
 	strBytes := d.Get("urlbytes").(string)

@@ -2,7 +2,9 @@ package transit
 
 import (
 	"context"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -27,6 +29,8 @@ func (b *backend) pathBackup() *framework.Path {
 }
 
 func (b *backend) pathBackupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "backup_key"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "backup_key"}, 1)
 	backup, err := b.lm.BackupPolicy(ctx, req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err

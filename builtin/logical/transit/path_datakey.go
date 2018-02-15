@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -62,6 +64,8 @@ min_encryption_version configured on the key.`,
 }
 
 func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "data_key_encrypt"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "data_key_encrypt"}, 1)
 	name := d.Get("name").(string)
 	ver := d.Get("key_version").(int)
 

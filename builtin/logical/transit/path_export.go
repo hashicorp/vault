@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -52,6 +54,8 @@ func (b *backend) pathExportKeys() *framework.Path {
 }
 
 func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "export"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "export"}, 1)
 	exportType := d.Get("type").(string)
 	name := d.Get("name").(string)
 	version := d.Get("version").(string)

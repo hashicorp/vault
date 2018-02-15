@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -53,6 +55,8 @@ to the min_encryption_version configured on the key.`,
 }
 
 func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "rewrap_data"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "rewrap_data"}, 1)
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []BatchRequestItem
 	var err error

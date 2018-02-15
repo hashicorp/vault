@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -108,6 +109,8 @@ return the public key for the given context.`,
 }
 
 func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "list_keys"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "list_keys"}, 1)
 	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
@@ -117,6 +120,8 @@ func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "policy_write"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "policy_write"}, 1)
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
@@ -180,6 +185,8 @@ type asymKey struct {
 }
 
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "policy_read"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "policy_read"}, 1)
 	name := d.Get("name").(string)
 
 	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
@@ -320,6 +327,8 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathPolicyDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defer metrics.MeasureSince([]string{"transit", "policy_delete"}, time.Now())
+	metrics.IncrCounter([]string{"transit", "policy_delete"}, 1)
 	name := d.Get("name").(string)
 
 	// Delete does its own locking
