@@ -10,12 +10,32 @@ import (
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/errwrap"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 const databaseConfigPath = "database/config/"
+
+type dbPluginInstance struct {
+	sync.RWMutex
+	dbplugin.Database
+
+	id     string
+	closed bool
+}
+
+func (dbi *dbPluginInstance) Close() error {
+	dbi.Lock()
+	defer dbi.Unlock()
+
+	if dbi.closed {
+		return nil
+	}
+
+	return dbi.Database.Close()
+}
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend(conf)
@@ -55,12 +75,12 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	}
 
 	b.logger = conf.Logger
-	b.connections = make(map[string]dbplugin.Database)
+	b.connections = make(map[string]*dbPluginInstance)
 	return &b
 }
 
 type databaseBackend struct {
-	connections map[string]dbplugin.Database
+	connections map[string]*dbPluginInstance
 	logger      log.Logger
 
 	*framework.Backend
@@ -170,7 +190,7 @@ func (b *databaseBackend) invalidate(ctx context.Context, key string) {
 	}
 }
 
-func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, name string) (dbplugin.Database, error) {
+func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, name string) (*dbPluginInstance, error) {
 	b.RLock()
 	unlockFunc := b.RUnlock
 	defer func() { unlockFunc() }()
@@ -195,18 +215,28 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 		return nil, err
 	}
 
-	db, err = dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
+	id, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = db.Initialize(ctx, config.ConnectionDetails, true)
+	dbp, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
 	if err != nil {
-		db.Close()
 		return nil, err
 	}
+
+	_, err = dbp.Initialize(ctx, config.ConnectionDetails, true)
+	if err != nil {
+		dbp.Close()
+		return nil, err
+	}
+
+	db = &dbPluginInstance{
+		Database: dbp,
+		id:       id,
+	}
+
 	b.connections[name] = db
-
 	return db, nil
 }
 
@@ -229,11 +259,23 @@ func (b *databaseBackend) clearConnection(name string) error {
 	return nil
 }
 
-func (b *databaseBackend) CloseIfShutdown(name string, err error) {
+func (b *databaseBackend) CloseIfShutdown(name string, db *dbPluginInstance, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
 	case rpc.ErrShutdown, dbplugin.ErrPluginShutdown:
-		b.ClearConnection(name)
+		// Put this in a goroutine so that requests can release the read lock
+		// and we will close the connection for the specific id
+		go func() {
+			b.Lock()
+			defer b.Unlock()
+			db.Close()
+
+			// Ensure we are deleting the correct connection
+			mapDB, ok := b.connections[name]
+			if ok && db.id == mapDB.id {
+				delete(b.connections, name)
+			}
+		}()
 	}
 }
 
@@ -245,7 +287,7 @@ func (b *databaseBackend) closeAllDBs(ctx context.Context) {
 	for _, db := range b.connections {
 		db.Close()
 	}
-	b.connections = make(map[string]dbplugin.Database)
+	b.connections = make(map[string]*dbPluginInstance)
 }
 
 const backendHelp = `

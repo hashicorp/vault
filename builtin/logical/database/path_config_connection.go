@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/fatih/structs"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -207,6 +208,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		allowedRoles := data.Get("allowed_roles").([]string)
 		rootRotationStatements := data.Get("root_rotation_statements").([]string)
 
+		id, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
+		}
+
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.
 		delete(data.Raw, "name")
@@ -223,13 +229,21 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
 		connDetails, err := db.Initialize(ctx, data.Raw, verifyConnection)
-		db.Close()
 		if err != nil {
+			db.Close()
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
 
+		b.Lock()
+		defer b.Unlock()
+
 		// Close and remove the old connection
-		b.ClearConnection(name)
+		b.clearConnection(name)
+
+		b.connections[name] = &dbPluginInstance{
+			Database: db,
+			id:       id,
+		}
 
 		// Store it
 		config := &DatabaseConfig{

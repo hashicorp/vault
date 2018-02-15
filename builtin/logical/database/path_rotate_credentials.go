@@ -34,9 +34,6 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		b.Lock()
-		defer b.Unlock()
-
 		config, err := b.DatabaseConfig(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
@@ -47,6 +44,11 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 		if err != nil {
 			return nil, err
 		}
+
+		// Take the write lock instead of read since we are updating the
+		// connection
+		db.Lock()
+		defer db.Unlock()
 
 		connectionDetails, err := db.RotateRootCredentials(ctx, config.RootCredentialsRotateStatements)
 		if err != nil {
@@ -62,7 +64,7 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		if err := b.clearConnection(name); err != nil {
+		if err := b.ClearConnection(name); err != nil {
 			return nil, err
 		}
 

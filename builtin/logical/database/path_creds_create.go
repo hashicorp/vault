@@ -60,6 +60,9 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return nil, err
 		}
 
+		db.RLock()
+		defer db.RUnlock()
+
 		ttl := role.DefaultTTL
 		if ttl == 0 || (role.MaxTTL > 0 && ttl > role.MaxTTL) {
 			ttl = role.MaxTTL
@@ -75,7 +78,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// Create the user
 		username, password, err := db.CreateUser(ctx, role.Statements, usernameConfig, expiration)
 		if err != nil {
-			b.CloseIfShutdown(role.DBName, err)
+			b.CloseIfShutdown(role.DBName, db, err)
 			return nil, err
 		}
 

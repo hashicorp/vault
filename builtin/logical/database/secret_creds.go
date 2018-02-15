@@ -54,11 +54,14 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, err
 		}
 
+		db.RLock()
+		defer db.RUnlock()
+
 		// Make sure we increase the VALID UNTIL endpoint for this user.
 		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
 			err := db.RenewUser(ctx, role.Statements, username, expireTime)
 			if err != nil {
-				b.CloseIfShutdown(role.DBName, err)
+				b.CloseIfShutdown(role.DBName, db, err)
 				return nil, err
 			}
 		}
@@ -96,8 +99,11 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			return nil, err
 		}
 
+		db.RLock()
+		defer db.RUnlock()
+
 		if err := db.RevokeUser(ctx, role.Statements, username); err != nil {
-			b.CloseIfShutdown(role.DBName, err)
+			b.CloseIfShutdown(role.DBName, db, err)
 			return nil, err
 		}
 		return resp, nil
