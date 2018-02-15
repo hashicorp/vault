@@ -220,7 +220,7 @@ func TestBackend_DNSNameVerification(t *testing.T) {
 
 	// Sign the intermediate CSR using /pki
 	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
-		"permitted_dns_names": "myvault.com",
+		"permitted_dns_domains": ".myvault.com",
 		"csr": intermediateCSR,
 	})
 	if err != nil {
