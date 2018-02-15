@@ -59,6 +59,7 @@ func outputWithFormat(ui cli.Ui, secret *api.Secret, data interface{}) int {
 
 type Formatter interface {
 	Output(ui cli.Ui, secret *api.Secret, data interface{}) error
+	Format(data interface{}) ([]byte, error)
 }
 
 var Formatters = map[string]Formatter{
@@ -87,8 +88,12 @@ func Format(ui cli.Ui) string {
 // An output formatter for json output of an object
 type JsonFormatter struct{}
 
+func (j JsonFormatter) Format(data interface{}) ([]byte, error) {
+	return json.MarshalIndent(data, "", "  ")
+}
+
 func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	b, err := json.MarshalIndent(data, "", "  ")
+	b, err := j.Format(data)
 	if err != nil {
 		return err
 	}
@@ -100,8 +105,12 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 type YamlFormatter struct {
 }
 
+func (y YamlFormatter) Format(data interface{}) ([]byte, error) {
+	return yaml.Marshal(data)
+}
+
 func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	b, err := yaml.Marshal(data)
+	b, err := y.Format(data)
 	if err == nil {
 		ui.Output(strings.TrimSpace(string(b)))
 	}
@@ -110,6 +119,11 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 
 // An output formatter for table output of an object
 type TableFormatter struct {
+}
+
+// We don't use this
+func (t TableFormatter) Format(data interface{}) ([]byte, error) {
+	return nil, nil
 }
 
 func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
