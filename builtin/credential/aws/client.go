@@ -34,7 +34,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 	}
 
 	endpoint := aws.String("")
-	var MaxRetries int
+	var maxRetries int
 	if config != nil {
 		// Override the default endpoint with the configured endpoint.
 		switch {
@@ -48,7 +48,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
-		MaxRetries = config.MaxRetries
+		maxRetries = config.MaxRetries
 	}
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
@@ -67,7 +67,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 		Region:      aws.String(region),
 		HTTPClient:  cleanhttp.DefaultClient(),
 		Endpoint:    endpoint,
-		MaxRetries:  aws.Int(MaxRetries),
+		MaxRetries:  aws.Int(maxRetries),
 	}, nil
 }
 
