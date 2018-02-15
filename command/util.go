@@ -76,7 +76,11 @@ func RawField(secret *api.Secret, field string) (interface{}, bool) {
 		case "refresh_interval":
 			val = secret.LeaseDuration
 		case "data":
-			val = secret.Data
+			var ok bool
+			val, ok = secret.Data["data"]
+			if !ok {
+				val = secret.Data
+			}
 		default:
 			val = secret.Data[field]
 		}
