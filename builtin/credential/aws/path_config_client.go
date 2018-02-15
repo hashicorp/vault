@@ -232,7 +232,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.MaxRetries = data.Get("max_retries").(int)
 	}
-	
+
 	// Since this endpoint supports both create operation and update operation,
 	// the error checks for access_key and secret_key not being set are not present.
 	// This allows calling this endpoint multiple times to provide the values.
