@@ -1,0 +1,145 @@
+---
+layout: "docs"
+page_title: "Google Cloud Spanner - Storage Backends - Configuration"
+sidebar_current: "docs-configuration-storage-spanner"
+description: |-
+  The Google Cloud Spanner storage backend is used to persist Vault's data in
+  Spanner, a fully managed, mission-critical, relational database service that
+  offers transactional consistency at global scale.
+---
+
+# Spanner Storage Backend
+
+The Google Cloud Spanner storage backend is used to persist Vault's data in
+[Spanner][spanner-docs], a fully managed, mission-critical, relational database
+service that offers transactional consistency at global scale, schemas, SQL, and
+automatic, synchronous replication for high availability.
+
+- **High Availability** – the Google Cloud Spanner storage backend supports high
+  availability. Because the Google Cloud Spanner storage backend uses the system
+  time on the Vault node to acquire sessions, clock skew across Vault servers
+  can cause lock contention.
+
+- **Community Supported** – the Google Cloud Spanner storage backend is
+  supported by the community. While it has undergone review by HashiCorp
+  employees, they may not be as knowledgeable about the technology. If you
+  encounter problems with them, you may be referred to the original author.
+
+```hcl
+storage "spanner" {
+  database = "projects/my-project/instances/my-instance/databases/my-database"
+}
+```
+
+For more information on schemas or Google Cloud Spanner, please see the [Google
+Cloud Spanner documentation][spanner-docs].
+
+## `spanner` Setup
+
+To use the Google Cloud Spanner Vault storage backend, you must have a Google
+Cloud Platform account. Either using the API or web interface, create a database
+and the following tables:
+
+-> You can choose "Edit as text" and copy-paste the following as the schema.
+These are the default table names. If you choose to use different table names,
+you will need to update the configuration accordingly.
+
+```sql
+CREATE TABLE Vault (
+  Key       STRING(MAX) NOT NULL,
+  Value     BYTES(MAX),
+) PRIMARY KEY (Key);
+
+CREATE TABLE VaultHA (
+  Key           STRING(MAX) NOT NULL,
+  Value         STRING(MAX),
+  Identity      STRING(36) NOT NULL,
+  Timestamp     TIMESTAMP NOT NULL,
+) PRIMARY KEY (Key);
+```
+
+The Google Cloud Spanner storage backend does not support creating the table
+automatically at this time, but this could be a future enhancement. For more
+information on schemas or Google Cloud Spanner, please see the [Google Cloud
+Spanner documentation][spanner-docs].
+
+## `spanner` Authentication
+
+The Google Cloud Spanner Vault storage backend uses the official Google Cloud
+Golang SDK. This means it supports the common ways of [providing credentials to
+Google Cloud][cloud-creds].
+
+1. The environment variable `GOOGLE_APPLICATION_CREDENTIALS`. This is specified
+as the **path** to a Google Cloud credentials file, typically for a service
+account. If this environment variable is present, the resulting credentials are
+used. If the credentials are invalid, an error is returned.
+
+1. Default instance credentials. When no environment variable is present, the
+default service account credentials are used.
+
+For more information on service accounts, please see the [Google Cloud Service
+Accounts documentation][service-accounts].
+
+To use this storage backend, the service account must have the following
+minimum scope(s):
+
+```text
+https://www.googleapis.com/auth/spanner.data
+```
+
+## `spanner` Parameters
+
+- `database` `(string: <required>)` – Specifies the name of the database. Note
+  that this is specified as a "path" including the project ID and instance, for
+  example:
+
+    ```text
+    projects/my-project/instances/my-instance/databases/my-database
+    ```
+
+- `table` `(string: "Vault")` - Specifies the name of the table where
+  data will be stored and retrieved.
+
+- `max_parallel` `(int: 128)` - Specifies the maximum number of parallel
+  operations to take place.
+
+### High Availability Parameters
+
+- `ha_enabled` `(string: "false")` - Specifies if high availability mode is
+  enabled. This is a boolean value, but it is specified as a string like "true"
+  or "false".
+
+- `ha_table` `(string: "VaultHA")` - Specifies the name of the table to use for
+  storing high availability information. By default, this is the name of the
+  `table` suffixed with "HA".
+
+## `spanner` Examples
+
+### High Availability
+
+This example shows configuring Google Cloud Spanner with high availability
+enabled.
+
+```hcl
+storage "spanner" {
+  database   = "projects/demo/instances/abc123/databases/vault-data"
+  ha_enabled = "true"
+}
+```
+
+### Custom Tables
+
+This example shows listing custom table names for data and HA with the Google
+Cloud Spanner Vault storage backend.
+
+```hcl
+storage "spanner" {
+  database = "projects/demo/instances/abc123/databases/vault-data"
+  table    = "VaultData"
+  ha_table = "VaultLeader"
+}
+```
+
+[cloud-creds]: https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
+[service-accounts]: https://cloud.google.com/compute/docs/access/service-accounts
+[spanner-docs]: https://cloud.google.com/spanner/docs/
