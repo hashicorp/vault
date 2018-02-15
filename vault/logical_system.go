@@ -18,6 +18,7 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
@@ -282,6 +283,31 @@ func NewSystemBackend(core *Core) *SystemBackend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mount_tune"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["mount_tune"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "mounts/(?P<path>.+?)/tune/(?P<config_key>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["mount_path"][0]),
+					},
+					"config_key": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["mount_path"][0]),
+					},
+					"values": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["mount_path"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handleMountTuneConfigRead,
+					logical.UpdateOperation: b.handleMountTuneConfigWrite,
+					logical.DeleteOperation: b.handleMountTuneConfigDelete,
+				},
 			},
 
 			&framework.Path{
@@ -837,6 +863,34 @@ func NewSystemBackend(core *Core) *SystemBackend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "config/(?P<config_key>.+)/(?P<type>.+?)/(?P<backend>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"config_key": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"type": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"backend": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"values": &framework.FieldSchema{
+						Type: framework.TypeCommaStringSlice,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handleConfigRead,
+					logical.UpdateOperation: b.handleConfigWrite,
+					logical.DeleteOperation: b.handleConfigDelete,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
 			},
 
 			&framework.Path{
@@ -1774,6 +1828,353 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("core: mount tuning of description successful", "path", path)
 		}
+	}
+
+	return nil, nil
+}
+
+// handleMountTuneConfigRead reads the cached configuration value from a particular mount entry.
+func (b *SystemBackend) handleMountTuneConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	configKey := data.Get("config_key").(string)
+	if configKey == "" {
+		return logical.ErrorResponse("config_key must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	path = sanitizeMountPath(path)
+	mountEntry := b.Core.router.MatchingMountEntry(path)
+	if mountEntry == nil {
+		b.Backend.Logger().Error("sys: cannot fetch mount entry", "path", path)
+		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %s", path))
+	}
+
+	respData := map[string]interface{}{}
+
+	// Map config_key to the MountEntry object
+	switch configKey {
+	case "audit_request_hmac_values":
+		if rawVal, ok := mountEntry.synthesizedConfigCache.Load(configKey); ok {
+			if sliceVal, ok := rawVal.([]string); ok && sliceVal != nil && len(sliceVal) > 0 {
+				respData[configKey] = sliceVal
+			}
+		}
+	default:
+		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	}
+
+	if len(respData) == 0 {
+		return nil, nil
+	}
+
+	resp := &logical.Response{
+		Data: respData,
+	}
+	return resp, nil
+}
+
+func (b *SystemBackend) handleMountTuneConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	configKey := data.Get("config_key").(string)
+	if configKey == "" {
+		return logical.ErrorResponse("config_key must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	path = sanitizeMountPath(path)
+	mountEntry := b.Core.router.MatchingMountEntry(path)
+	if mountEntry == nil {
+		b.Backend.Logger().Error("sys: cannot fetch mount entry", "path", path)
+		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %s", path))
+	}
+
+	var lock *sync.RWMutex
+	switch {
+	case strings.HasPrefix(path, credentialRoutePrefix):
+		lock = &b.Core.authLock
+	default:
+		lock = &b.Core.mountsLock
+	}
+
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Map config_key to the MountEntry object
+	switch configKey {
+	case "audit_request_hmac_values":
+		rawVals, ok := data.GetOk("values")
+		if !ok {
+			return logical.ErrorResponse("no values provided"), logical.ErrInvalidRequest
+		}
+
+		oldVal := mountEntry.Config.AuditRequestHMACValues
+		mountEntry.Config.AuditRequestHMACValues = rawVals.([]string)
+
+		// Persist the change
+		err := b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		if err != nil {
+			mountEntry.Config.AuditRequestHMACValues = oldVal
+			return handleError(err)
+		}
+
+		// Cache the value
+		err = b.Core.updateMountEntriesCache(ctx, mountEntry.Table, mountEntry.Type, configKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update cache: %v", err)
+		}
+	default:
+		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleMountTuneConfigDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	configKey := data.Get("config_key").(string)
+	if configKey == "" {
+		return logical.ErrorResponse("config_key must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	path = sanitizeMountPath(path)
+	mountEntry := b.Core.router.MatchingMountEntry(path)
+	if mountEntry == nil {
+		b.Backend.Logger().Error("sys: cannot fetch mount entry", "path", path)
+		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %s", path))
+	}
+
+	var lock *sync.RWMutex
+	switch {
+	case strings.HasPrefix(path, credentialRoutePrefix):
+		lock = &b.Core.authLock
+	default:
+		lock = &b.Core.mountsLock
+	}
+
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Map config_key to the MountEntry object
+	switch configKey {
+	case "audit_request_hmac_values":
+		oldVal := mountEntry.Config.AuditRequestHMACValues
+		mountEntry.Config.AuditRequestHMACValues = nil
+
+		// Persist the change
+		err := b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		if err != nil {
+			mountEntry.Config.AuditRequestHMACValues = oldVal
+			return handleError(err)
+		}
+
+		// Delete the entry from the cache
+		err = b.Core.updateMountEntriesCache(ctx, mountEntry.Table, mountEntry.Type, configKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update cache: %v", err)
+		}
+	default:
+		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	configKey := data.Get("config_key").(string)
+	if configKey == "" {
+		return logical.ErrorResponse("config_key must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	logicalType := data.Get("type").(string)
+	if logicalType == "" {
+		return logical.ErrorResponse("type must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	backendType := data.Get("backend").(string)
+	if backendType == "" {
+		return logical.ErrorResponse("backend must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	view := b.Core.systemBarrierView.SubView("config/")
+	entryKey := fmt.Sprintf("%s/%s/%s", configKey, logicalType, backendType)
+
+	// Acquire the lock
+	lock := locksutil.LockForKey(b.Core.synthesizedConfigLocks, entryKey)
+	lock.Lock()
+	defer lock.Unlock()
+
+	entry, err := view.Get(ctx, entryKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to save %s config: %v", configKey, err)
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	// Decode entry into SynthesizableConfig
+	config := new(SynthesizableConfig)
+
+	err = entry.DecodeJSON(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode %s config entry: %v", configKey, err)
+	}
+
+	var respValues []string
+
+	// Map config_key to the MountEntry object
+	switch configKey {
+	case "audit_request_hmac_values":
+		respValues = config.AuditRequestHMACValues
+	default:
+		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	}
+
+	if len(respValues) == 0 {
+		return nil, nil
+	}
+
+	return logical.ValuesResponse(respValues), nil
+}
+
+func (b *SystemBackend) handleConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	configKey := data.Get("config_key").(string)
+	if configKey == "" {
+		return logical.ErrorResponse("config_key must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	logicalType := data.Get("type").(string)
+	if logicalType == "" {
+		return logical.ErrorResponse("type must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	backendType := data.Get("backend").(string)
+	if backendType == "" {
+		return logical.ErrorResponse("backend must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	rawVals, ok := data.GetOk("values")
+	if !ok {
+		return logical.ErrorResponse("no values provided"), logical.ErrInvalidRequest
+	}
+
+	config := &SynthesizableConfig{}
+
+	switch configKey {
+	case "audit_request_hmac_values":
+		config.AuditRequestHMACValues = rawVals.([]string)
+	default:
+		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	}
+
+	entryKey := fmt.Sprintf("%s/%s/%s", configKey, logicalType, backendType)
+
+	// Acquire the lock
+	lock := locksutil.LockForKey(b.Core.synthesizedConfigLocks, entryKey)
+	lock.Lock()
+	defer lock.Unlock()
+
+	entry, err := logical.StorageEntryJSON(entryKey, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create %s config entry: %v", configKey, err)
+	}
+
+	view := b.Core.systemBarrierView.SubView("config/")
+	if err := view.Put(ctx, entry); err != nil {
+		return nil, fmt.Errorf("failed to save %s config: %v", configKey, err)
+	}
+
+	var entriesLock *sync.RWMutex
+	switch logicalType {
+	case "auth":
+		entriesLock = &b.Core.authLock
+	default:
+		entriesLock = &b.Core.mountsLock
+	}
+
+	entriesLock.Lock()
+	defer entriesLock.Unlock()
+
+	err = b.Core.updateMountEntriesCache(ctx, logicalType, backendType, configKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update cache on entries: %v", err)
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleConfigDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	configKey := data.Get("config_key").(string)
+	if configKey == "" {
+		return logical.ErrorResponse("config_key must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	logicalType := data.Get("type").(string)
+	if logicalType == "" {
+		return logical.ErrorResponse("type must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	backendType := data.Get("backend").(string)
+	if backendType == "" {
+		return logical.ErrorResponse("backend must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+
+	switch configKey {
+	case "audit_request_hmac_values":
+	default:
+		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	}
+
+	entryKey := fmt.Sprintf("%s/%s/%s", configKey, logicalType, backendType)
+
+	// Acquire the lock
+	lock := locksutil.LockForKey(b.Core.synthesizedConfigLocks, entryKey)
+	lock.Lock()
+	defer lock.Unlock()
+
+	view := b.Core.systemBarrierView.SubView("config/")
+	if err := view.Delete(ctx, entryKey); err != nil {
+		return nil, fmt.Errorf("failed to save %s config: %v", configKey, err)
+	}
+
+	var entriesLock *sync.RWMutex
+	switch logicalType {
+	case "auth":
+		entriesLock = &b.Core.authLock
+	default:
+		entriesLock = &b.Core.mountsLock
+	}
+
+	entriesLock.Lock()
+	defer entriesLock.Unlock()
+
+	err := b.Core.updateMountEntriesCache(ctx, logicalType, backendType, configKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update cache on entries: %v", err)
 	}
 
 	return nil, nil

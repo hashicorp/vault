@@ -130,3 +130,14 @@ func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Respon
 
 	return resp
 }
+
+// ValuesResponse is used to format a response to a list of values.
+func ValuesResponse(values []string) *Response {
+	resp := &Response{
+		Data: map[string]interface{}{},
+	}
+	if len(values) != 0 {
+		resp.Data["values"] = values
+	}
+	return resp
+}

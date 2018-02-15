@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/reload"
@@ -380,6 +381,10 @@ type Core struct {
 	// going to be shut down, stepped down, or sealed
 	activeContext           context.Context
 	activeContextCancelFunc context.CancelFunc
+
+	// sythesizedConfigLocks is used to lock operations while sythensize config is
+	// being accessed or modified.
+	synthesizedConfigLocks []*locksutil.LockEntry
 }
 
 // CoreConfig is used to parameterize a core
@@ -495,6 +500,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		atomicPrimaryClusterAddrs:        new(atomic.Value),
 		atomicPrimaryFailoverAddrs:       new(atomic.Value),
 		activeNodeReplicationState:       new(uint32),
+		synthesizedConfigLocks:           locksutil.CreateLocks(),
 	}
 
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
@@ -1629,6 +1635,9 @@ func (c *Core) postUnseal() (retErr error) {
 		return err
 	}
 	if err := c.setupAuditedHeadersConfig(c.activeContext); err != nil {
+		return err
+	}
+	if err := c.setupMountsConfigCache(c.activeContext); err != nil {
 		return err
 	}
 

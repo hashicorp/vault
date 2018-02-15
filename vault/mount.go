@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -171,10 +172,14 @@ type MountEntry struct {
 	Local       bool              `json:"local"`             // Local mounts are not replicated or affected by replication
 	SealWrap    bool              `json:"seal_wrap"`         // Whether to wrap CSPs
 	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
+
+	// The synthesizedConfigCache is used to cache merged configuration values
+	synthesizedConfigCache sync.Map
 }
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
+	SynthesizableConfig
 	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache    bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
@@ -183,6 +188,7 @@ type MountConfig struct {
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
 type APIMountConfig struct {
+	SynthesizableConfig
 	DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
@@ -767,6 +773,9 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		}
 
 		c.setCoreBackend(entry, backend, view)
+
+		// Load stored config values into MountEntry caches
+		// entry.synthesizedConfigCache.Store("audit_request_hmac_values", entry.Config.AuditRequestHMACValues)
 
 	ROUTER_MOUNT:
 		// Mount the backend
