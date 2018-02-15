@@ -17,7 +17,7 @@ import (
 func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
 	var endpoint string
-	var MaxRetries int
+	var maxRetries int
 
 	entry, err := s.Get(ctx, "config/root")
 	if err != nil {
@@ -32,7 +32,7 @@ func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
 		credsConfig.Region = config.Region
-		MaxRetries = config.MaxRetries
+		maxRetries = config.MaxRetries
 		switch {
 		case clientType == "iam" && config.IAMEndpoint != "":
 			endpoint = *aws.String(config.IAMEndpoint)
@@ -63,7 +63,7 @@ func getRootConfig(ctx context.Context, s logical.Storage, clientType string) (*
 		Region:      aws.String(credsConfig.Region),
 		Endpoint:    &endpoint,
 		HTTPClient:  cleanhttp.DefaultClient(),
-		MaxRetries:  aws.Int(MaxRetries),
+		MaxRetries:  aws.Int(maxRetries),
 	}, nil
 }
 
