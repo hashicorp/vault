@@ -5,7 +5,10 @@ FEATURES:
  * **ChaCha20-Poly1305 support in `transit`**: You can now encrypt and decrypt
    with ChaCha20-Poly1305 in `transit`. Key derivation and convergent
    encryption is also supported.
- * **Manta Storage**: Manta can now be used for Vault storage
+ * **Okta Push support in Okta Auth Backend**: If a user account has MFA
+   required within Okta, an Okta Push MFA flow can be used to successfully
+   finish authentication.
+ * **Manta Storage**: Joyent Triton Manta can now be used for Vault storage
 
 IMPROVEMENTS:
 
