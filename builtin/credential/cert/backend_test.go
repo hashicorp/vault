@@ -3,6 +3,10 @@ package cert
 import (
 	"context"
 	"crypto/rand"
+	"net/http"
+
+	"golang.org/x/net/http2"
+
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -17,11 +21,19 @@ import (
 	"testing"
 	"time"
 
+	logxi "github.com/mgutz/logxi/v1"
+
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/api"
+	vaulthttp "github.com/hashicorp/vault/http"
+
 	"github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -140,6 +152,221 @@ func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath
 	}
 	// Grab the current state
 	return <-connState, nil
+}
+
+func TestBackend_DNSNameVerification(t *testing.T) {
+	// Enable PKI secret engine and Cert auth method
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       logxi.NullLog,
+		CredentialBackends: map[string]logical.Factory{
+			"cert": Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"pki": pki.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	var err error
+
+	// Mount /pki as a root CA
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set the cluster's certificate as the root CA in /pki
+	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
+	_, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+		"pem_bundle": pemBundleRootCA,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Mount /pki2 to operate as an intermediate CA
+	err = client.Sys().Mount("pki2", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a CSR for the intermediate CA
+	secret, err := client.Logical().Write("pki2/intermediate/generate/internal", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intermediateCSR := secret.Data["csr"].(string)
+
+	// Sign the intermediate CSR using /pki
+	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
+		"permitted_dns_names": "myvault.com",
+		"csr": intermediateCSR,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	intermediateCertPEM := secret.Data["certificate"].(string)
+
+	// Configure the intermediate cert as the CA in /pki2
+	_, err = client.Logical().Write("pki2/intermediate/set-signed", map[string]interface{}{
+		"certificate": intermediateCertPEM,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a role on the intermediate CA mount
+	_, err = client.Logical().Write("pki2/roles/myvault-dot-com", map[string]interface{}{
+		"allowed_domains":  "myvault.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "5m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue a leaf cert using the intermediate CA
+	secret, err = client.Logical().Write("pki2/issue/myvault-dot-com", map[string]interface{}{
+		"common_name": "cert.myvault.com",
+		"format":      "pem",
+		"ip_sans":     "127.0.0.1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leafCertPEM := secret.Data["certificate"].(string)
+	leafCertKeyPEM := secret.Data["private_key"].(string)
+
+	// Enable the cert auth method
+	err = client.Sys().EnableAuthWithOptions("cert", &api.EnableAuthOptions{
+		Type: "cert",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set the intermediate CA cert as a trusted certificate in the backend
+	_, err = client.Logical().Write("auth/cert/certs/myvault-dot-com", map[string]interface{}{
+		"display_name": "myvault.com",
+		"policies":     "default",
+		"certificate":  intermediateCertPEM,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create temporary files for CA cert, client cert and client cert key.
+	// This is used to configure TLS in the api client.
+	caCertFile, err := ioutil.TempFile("", "caCert")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(caCertFile.Name())
+	if _, err := caCertFile.Write([]byte(cluster.CACertPEM)); err != nil {
+		t.Fatal(err)
+	}
+	if err := caCertFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	leafCertFile, err := ioutil.TempFile("", "leafCert")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(leafCertFile.Name())
+	if _, err := leafCertFile.Write([]byte(leafCertPEM)); err != nil {
+		t.Fatal(err)
+	}
+	if err := leafCertFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	leafCertKeyFile, err := ioutil.TempFile("", "leafCertKey")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(leafCertKeyFile.Name())
+	if _, err := leafCertKeyFile.Write([]byte(leafCertKeyPEM)); err != nil {
+		t.Fatal(err)
+	}
+	if err := leafCertKeyFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// This function is a copy-pasta from the NewTestCluster, with the
+	// modification to reconfigure the TLS on the api client with the leaf
+	// certificates generated above.
+	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
+		transport := cleanhttp.DefaultPooledTransport()
+		transport.TLSClientConfig = tlsConfig.Clone()
+		if err := http2.ConfigureTransport(transport); err != nil {
+			t.Fatal(err)
+		}
+		client := &http.Client{
+			Transport: transport,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				// This can of course be overridden per-test by using its own client
+				return fmt.Errorf("redirects not allowed in these tests")
+			},
+		}
+		config := api.DefaultConfig()
+		if config.Error != nil {
+			t.Fatal(config.Error)
+		}
+		config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+		config.HttpClient = client
+
+		// Set the above issued certificates as the client certificates
+		config.ConfigureTLS(&api.TLSConfig{
+			CACert:     caCertFile.Name(),
+			ClientCert: leafCertFile.Name(),
+			ClientKey:  leafCertKeyFile.Name(),
+		})
+
+		apiClient, err := api.NewClient(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return apiClient
+	}
+
+	// Create a new api client with the desired TLS configuration
+	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
+
+	// Copy the token from the old client
+	//newClient.SetToken(client.Token())
+
+	// Set the intermediate CA cert as a trusted certificate in the backend
+	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
+		"name": "myvault-dot-com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Auth == nil || secret.Auth.ClientToken == "" {
+		t.Fatalf("expected a successful authentication")
+	}
 }
 
 func TestBackend_NonCAExpiry(t *testing.T) {
