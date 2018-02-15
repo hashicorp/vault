@@ -90,24 +90,14 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 		return "", "", err
 	}
 
-	var creationCQL string
-	switch len(statements.CreationStatements) {
-	case 0:
-		creationCQL = defaultUserCreationCQL
-	case 1:
-		creationCQL = statements.CreationStatements[0]
-	default:
-		return "", "", fmt.Errorf("expected 0 or 1 creation statements, got %d", len(statements.CreationStatements))
+	creationCQL := statements.CreationStatements
+	if len(creationCQL) == 0 {
+		creationCQL = []string{defaultUserCreationCQL}
 	}
 
-	var rollbackCQL string
-	switch len(statements.RollbackStatements) {
-	case 0:
-		rollbackCQL = defaultUserDeletionCQL
-	case 1:
-		rollbackCQL = statements.RollbackStatements[0]
-	default:
-		return "", "", fmt.Errorf("expected 0 or 1 rollback statements, got %d", len(statements.RollbackStatements))
+	rollbackCQL := statements.CreationStatements
+	if len(rollbackCQL) == 0 {
+		rollbackCQL = []string{defaultUserDeletionCQL}
 	}
 
 	username, err = c.GenerateUsername(usernameConfig)
@@ -124,28 +114,32 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 	}
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(creationCQL, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
-
-		err = session.Query(dbutil.QueryHelper(query, map[string]string{
-			"username": username,
-			"password": password,
-		})).Exec()
-		if err != nil {
-			for _, query := range strutil.ParseArbitraryStringSlice(rollbackCQL, ";") {
-				query = strings.TrimSpace(query)
-				if len(query) == 0 {
-					continue
-				}
-
-				session.Query(dbutil.QueryHelper(query, map[string]string{
-					"username": username,
-				})).Exec()
+	for _, stmt := range creationCQL {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
 			}
-			return "", "", err
+
+			err = session.Query(dbutil.QueryHelper(query, map[string]string{
+				"username": username,
+				"password": password,
+			})).Exec()
+			if err != nil {
+				for _, stmt := range rollbackCQL {
+					for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+						query = strings.TrimSpace(query)
+						if len(query) == 0 {
+							continue
+						}
+
+						session.Query(dbutil.QueryHelper(query, map[string]string{
+							"username": username,
+						})).Exec()
+					}
+				}
+				return "", "", err
+			}
 		}
 	}
 
