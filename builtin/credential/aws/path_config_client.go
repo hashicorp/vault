@@ -230,7 +230,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	if ok {
 		configEntry.MaxRetries = maxRetriesInt.(int)
 	} else if req.Operation == logical.CreateOperation {
-		configEntry.MaxRetries = data.Get("max_retries").(string)
+		configEntry.MaxRetries = data.Get("max_retries").(int)
 	}
 	
 	// Since this endpoint supports both create operation and update operation,
