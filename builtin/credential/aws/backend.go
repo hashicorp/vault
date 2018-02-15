@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/patrickmn/go-cache"
@@ -143,29 +144,33 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 	// Run the tidy operations for the first time. Then run it when current
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
-		// safety_buffer defaults to 180 days for roletag blacklist
-		safety_buffer := 15552000
-		tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
-		if err != nil {
-			return err
-		}
-		skipBlacklistTidy := false
-		// check if tidying of role tags was configured
-		if tidyBlacklistConfigEntry != nil {
-			// check if periodic tidying of role tags was disabled
-			if tidyBlacklistConfigEntry.DisablePeriodicTidy {
-				skipBlacklistTidy = true
+		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+			// safety_buffer defaults to 180 days for roletag blacklist
+			safety_buffer := 15552000
+			tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
+			if err != nil {
+				return err
 			}
-			// overwrite the default safety_buffer with the configured value
-			safety_buffer = tidyBlacklistConfigEntry.SafetyBuffer
-		}
-		// tidy role tags if explicitly not disabled
-		if !skipBlacklistTidy {
-			b.tidyBlacklistRoleTag(ctx, req.Storage, safety_buffer)
+			skipBlacklistTidy := false
+			// check if tidying of role tags was configured
+			if tidyBlacklistConfigEntry != nil {
+				// check if periodic tidying of role tags was disabled
+				if tidyBlacklistConfigEntry.DisablePeriodicTidy {
+					skipBlacklistTidy = true
+				}
+				// overwrite the default safety_buffer with the configured value
+				safety_buffer = tidyBlacklistConfigEntry.SafetyBuffer
+			}
+			// tidy role tags if explicitly not disabled
+			if !skipBlacklistTidy {
+				b.tidyBlacklistRoleTag(ctx, req.Storage, safety_buffer)
+			}
 		}
 
-		// reset the safety_buffer to 72h
-		safety_buffer = 259200
+		// We don't check for replication state for whitelist identities as
+		// these are locally stored
+
+		safety_buffer := 259200
 		tidyWhitelistConfigEntry, err := b.lockedConfigTidyIdentities(ctx, req.Storage)
 		if err != nil {
 			return err

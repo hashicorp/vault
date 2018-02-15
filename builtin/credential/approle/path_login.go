@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -51,9 +52,14 @@ func (b *backend) pathLoginUpdateAliasLookahead(ctx context.Context, req *logica
 // Returns the Auth object indicating the authentication and authorization information
 // if the credentials provided are validated by the backend.
 func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, roleName, metadata, _, err := b.validateCredentials(ctx, req, data)
-	if err != nil || role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to validate credentials: %v", err)), nil
+	role, roleName, metadata, _, userErr, intErr := b.validateCredentials(ctx, req, data)
+	switch {
+	case intErr != nil:
+		return nil, errwrap.Wrapf("failed to validate credentials: {{err}}", intErr)
+	case userErr != nil:
+		return logical.ErrorResponse(fmt.Sprintf("failed to validate credentials: %v", userErr)), nil
+	case role == nil:
+		return logical.ErrorResponse("failed to validate credentials; could not find role"), nil
 	}
 
 	// Always include the role name, for later filtering

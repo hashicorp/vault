@@ -36,6 +36,16 @@ func lineInFile(name string, lookFor string) bool {
 	}
 }
 
+func createFile(name string, content string) error {
+	f, err := os.Create(name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(fmt.Sprintf("%s\n", content))
+	return err
+}
+
 func appendToFile(name string, content string) error {
 	f, err := os.OpenFile(name, os.O_RDWR|os.O_APPEND, 0)
 	if err != nil {

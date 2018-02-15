@@ -10,8 +10,9 @@ description: |-
 # Multi-Factor Authentication
 
 ~> **NOTE**: This page describes the legacy MFA system available in the OSS
-edition of Vault. Vault Enterprise contains a significantly more complete and
-flexible MFA system that can be used throughout Vault's API. See the [Vault
+edition of Vault. This system is not supported by HashiCorp. Vault Enterprise
+contains a fully-supported MFA system that is significantly more complete and
+flexible and which can be used throughout Vault's API. See the [Vault
 Enterprise MFA](/docs/enterprise/mfa/index.html) page for more information.
 
 Several auth methods support multi-factor authentication (MFA). Once

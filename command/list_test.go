@@ -57,24 +57,6 @@ func TestListCommand_Run(t *testing.T) {
 			"bar\nbaz\nfoo",
 			0,
 		},
-		{
-			"format",
-			[]string{
-				"-format", "json",
-				"secret/list/",
-			},
-			"[",
-			0,
-		},
-		{
-			"format_bad",
-			[]string{
-				"-format", "nope-not-real",
-				"secret/list/",
-			},
-			"Invalid output format",
-			1,
-		},
 	}
 
 	t.Run("validations", func(t *testing.T) {

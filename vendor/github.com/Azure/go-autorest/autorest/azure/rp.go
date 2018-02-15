@@ -44,7 +44,7 @@ func DoRetryWithRegistration(client autorest.Client) autorest.SendDecorator {
 					return resp, err
 				}
 
-				if resp.StatusCode != http.StatusConflict {
+				if resp.StatusCode != http.StatusConflict || client.SkipResourceProviderRegistration {
 					return resp, err
 				}
 				var re RequestError
@@ -70,11 +70,8 @@ func DoRetryWithRegistration(client autorest.Client) autorest.SendDecorator {
 }
 
 func getProvider(re RequestError) (string, error) {
-	if re.ServiceError != nil {
-		if re.ServiceError.Details != nil && len(*re.ServiceError.Details) > 0 {
-			detail := (*re.ServiceError.Details)[0].(map[string]interface{})
-			return detail["target"].(string), nil
-		}
+	if re.ServiceError != nil && len(re.ServiceError.Details) > 0 {
+		return re.ServiceError.Details[0]["target"].(string), nil
 	}
 	return "", errors.New("provider was not found in the response")
 }
@@ -159,7 +156,7 @@ func register(client autorest.Client, originalReq *http.Request, re RequestError
 		}
 		req.Cancel = originalReq.Cancel
 
-		resp, err := autorest.SendWithSender(client.Sender, req,
+		resp, err := autorest.SendWithSender(client, req,
 			autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...),
 		)
 		if err != nil {

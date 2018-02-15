@@ -294,7 +294,7 @@ func TestBarrierView_Readonly(t *testing.T) {
 	}
 
 	// Enable read only mode
-	view.readonly = true
+	view.readOnlyErr = logical.ErrReadOnly
 
 	// Put should fail in readonly mode
 	if err := view.Put(context.Background(), entry.Logical()); err != logical.ErrReadOnly {

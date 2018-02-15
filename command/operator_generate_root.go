@@ -82,7 +82,7 @@ Usage: vault operator generate-root [options] [KEY]
 }
 
 func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -337,7 +337,13 @@ func (c *OperatorGenerateRootCommand) init(client *api.Client, otp, pgpKey strin
 		c.UI.Error(fmt.Sprintf("Error initializing root generation: %s", err))
 		return 2
 	}
-	return c.printStatus(status)
+
+	switch Format(c.UI) {
+	case "table":
+		return c.printStatus(status)
+	default:
+		return OutputData(c.UI, status)
+	}
 }
 
 // provide prompts the user for the seal key and posts it to the update root
@@ -428,7 +434,12 @@ func (c *OperatorGenerateRootCommand) provide(client *api.Client, key string, dr
 		c.UI.Error(fmt.Sprintf("Error posting unseal key: %s", err))
 		return 2
 	}
-	return c.printStatus(status)
+	switch Format(c.UI) {
+	case "table":
+		return c.printStatus(status)
+	default:
+		return OutputData(c.UI, status)
+	}
 }
 
 // cancel cancels the root token generation
@@ -456,7 +467,12 @@ func (c *OperatorGenerateRootCommand) status(client *api.Client, drToken bool) i
 		c.UI.Error(fmt.Sprintf("Error getting root generation status: %s", err))
 		return 2
 	}
-	return c.printStatus(status)
+	switch Format(c.UI) {
+	case "table":
+		return c.printStatus(status)
+	default:
+		return OutputData(c.UI, status)
+	}
 }
 
 // printStatus dumps the status to output

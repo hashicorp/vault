@@ -90,5 +90,5 @@ func (c *ReadCommand) Run(args []string) int {
 		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
-	return OutputSecret(c.UI, c.flagFormat, secret)
+	return OutputSecret(c.UI, secret)
 }

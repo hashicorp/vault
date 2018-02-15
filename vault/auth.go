@@ -96,6 +96,13 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 	}
 	viewPath := credentialBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
+
+	// Mark the view as read-only until the mounting is complete and
+	// ensure that it is reset after. This ensures that there will be no
+	// writes during the construction of the backend.
+	view.setReadOnlyErr(logical.ErrSetupReadOnly)
+	defer view.setReadOnlyErr(nil)
+
 	var err error
 	var backend logical.Backend
 	sysView := c.mountEntrySysView(entry)
@@ -429,7 +436,6 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, localOnly boo
 func (c *Core) setupCredentials(ctx context.Context) error {
 	var err error
 	var persistNeeded bool
-	var view *BarrierView
 	var backendType logical.BackendType
 
 	c.authLock.Lock()
@@ -445,7 +451,14 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Create a barrier view using the UUID
 		viewPath := credentialBarrierPrefix + entry.UUID + "/"
-		view = NewBarrierView(c.barrier, viewPath)
+		view := NewBarrierView(c.barrier, viewPath)
+
+		// Mark the view as read-only until the mounting is complete and
+		// ensure that it is reset after. This ensures that there will be no
+		// writes during the construction of the backend.
+		view.setReadOnlyErr(logical.ErrSetupReadOnly)
+		defer view.setReadOnlyErr(nil)
+
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
 		conf := make(map[string]string)

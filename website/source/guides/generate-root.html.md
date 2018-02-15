@@ -48,7 +48,7 @@ In this method, an OTP is XORed with the generated token on final output.
 
     The nonce value should be distributed to all unseal key holders.
 
-1. Each unseal key holder providers their unseal key:
+1. Each unseal key holder provides their unseal key:
 
     ```text
     $ vault operator generate-root

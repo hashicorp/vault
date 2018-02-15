@@ -12,7 +12,7 @@ import (
 
 // Key represents a public SSH key used to authenticate a user or deploy script.
 type Key struct {
-	ID       *int    `json:"id,omitempty"`
+	ID       *int64  `json:"id,omitempty"`
 	Key      *string `json:"key,omitempty"`
 	URL      *string `json:"url,omitempty"`
 	Title    *string `json:"title,omitempty"`
@@ -56,7 +56,7 @@ func (s *UsersService) ListKeys(ctx context.Context, user string, opt *ListOptio
 // GetKey fetches a single public key.
 //
 // GitHub API docs: https://developer.github.com/v3/users/keys/#get-a-single-public-key
-func (s *UsersService) GetKey(ctx context.Context, id int) (*Key, *Response, error) {
+func (s *UsersService) GetKey(ctx context.Context, id int64) (*Key, *Response, error) {
 	u := fmt.Sprintf("user/keys/%v", id)
 
 	req, err := s.client.NewRequest("GET", u, nil)
@@ -96,7 +96,7 @@ func (s *UsersService) CreateKey(ctx context.Context, key *Key) (*Key, *Response
 // DeleteKey deletes a public key.
 //
 // GitHub API docs: https://developer.github.com/v3/users/keys/#delete-a-public-key
-func (s *UsersService) DeleteKey(ctx context.Context, id int) (*Response, error) {
+func (s *UsersService) DeleteKey(ctx context.Context, id int64) (*Response, error) {
 	u := fmt.Sprintf("user/keys/%v", id)
 
 	req, err := s.client.NewRequest("DELETE", u, nil)

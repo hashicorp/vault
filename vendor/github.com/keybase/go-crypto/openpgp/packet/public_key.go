@@ -393,6 +393,14 @@ func (pk *PublicKey) parse(r io.Reader) (err error) {
 			return
 		}
 		pk.PublicKey, err = pk.ec.newECDH()
+	case PubKeyAlgoBadElGamal:
+		// Key has ElGamal format but nil-implementation - it will
+		// load but it's not possible to do any operations using this
+		// key.
+		err = pk.parseElGamal(r)
+		if err != nil {
+			pk.PublicKey = nil
+		}
 	default:
 		err = errors.UnsupportedError("public key type: " + strconv.Itoa(int(pk.PubKeyAlgo)))
 	}
@@ -508,7 +516,7 @@ func (pk *PublicKey) SerializeSignaturePrefix(h io.Writer) {
 		pLength += 2 + uint16(len(pk.q.bytes))
 		pLength += 2 + uint16(len(pk.g.bytes))
 		pLength += 2 + uint16(len(pk.y.bytes))
-	case PubKeyAlgoElGamal:
+	case PubKeyAlgoElGamal, PubKeyAlgoBadElGamal:
 		pLength += 2 + uint16(len(pk.p.bytes))
 		pLength += 2 + uint16(len(pk.g.bytes))
 		pLength += 2 + uint16(len(pk.y.bytes))
@@ -539,7 +547,7 @@ func (pk *PublicKey) Serialize(w io.Writer) (err error) {
 		length += 2 + len(pk.q.bytes)
 		length += 2 + len(pk.g.bytes)
 		length += 2 + len(pk.y.bytes)
-	case PubKeyAlgoElGamal:
+	case PubKeyAlgoElGamal, PubKeyAlgoBadElGamal:
 		length += 2 + len(pk.p.bytes)
 		length += 2 + len(pk.g.bytes)
 		length += 2 + len(pk.y.bytes)
@@ -587,7 +595,7 @@ func (pk *PublicKey) serializeWithoutHeaders(w io.Writer) (err error) {
 		return writeMPIs(w, pk.n, pk.e)
 	case PubKeyAlgoDSA:
 		return writeMPIs(w, pk.p, pk.q, pk.g, pk.y)
-	case PubKeyAlgoElGamal:
+	case PubKeyAlgoElGamal, PubKeyAlgoBadElGamal:
 		return writeMPIs(w, pk.p, pk.g, pk.y)
 	case PubKeyAlgoECDSA:
 		return pk.ec.serialize(w)
@@ -910,7 +918,7 @@ func (pk *PublicKey) BitLength() (bitLength uint16, err error) {
 		bitLength = pk.n.bitLength
 	case PubKeyAlgoDSA:
 		bitLength = pk.p.bitLength
-	case PubKeyAlgoElGamal:
+	case PubKeyAlgoElGamal, PubKeyAlgoBadElGamal:
 		bitLength = pk.p.bitLength
 	case PubKeyAlgoECDH:
 		ecdhPublicKey := pk.PublicKey.(*ecdh.PublicKey)
@@ -927,4 +935,13 @@ func (pk *PublicKey) BitLength() (bitLength uint16, err error) {
 		err = errors.InvalidArgumentError("bad public-key algorithm")
 	}
 	return
+}
+
+func (pk *PublicKey) ErrorIfDeprecated() error {
+	switch pk.PubKeyAlgo {
+	case PubKeyAlgoBadElGamal:
+		return errors.DeprecatedKeyError("ElGamal Encrypt or Sign (algo 20) is deprecated")
+	default:
+		return nil
+	}
 }

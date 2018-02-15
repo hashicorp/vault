@@ -6,7 +6,8 @@ set _EXITCODE=0
 REM If no target is provided, default to test.
 if [%1]==[] goto test
 
-set _TARGETS=bin,dev,generate,test,testacc,testrace,vet
+set _TARGETS=bin,bootstrap,dev,generate,test,testacc,testrace,vet
+set _EXTERNAL_TOOLS=github.com/mitchellh/gox,github.com/kardianos/govendor
 
 REM Run target.
 for %%a in (%_TARGETS%) do (if x%1==x%%a goto %%a)
@@ -16,6 +17,11 @@ REM bin generates the releaseable binaries for Vault
 :bin
 	call :generate
 	call .\scripts\windows\build.bat "%CD%"
+	goto :eof
+
+REM bootstrap downloads required build tools
+:bootstrap
+    for %%t in (%_EXTERNAL_TOOLS%) do (go get -u -v %%t)
 	goto :eof
 
 REM dev creates binaries for testing Vault locally. These are put
@@ -28,7 +34,7 @@ REM into ./bin/ as well as %GOPATH%/bin
 REM generate runs `go generate` to build the dynamically generated
 REM source files.
 :generate
-	go list ./... | findstr /v vendor | go generate
+	for /F "usebackq" %%f in (`go list ./... ^| findstr /v vendor`) do @go generate %%f
 	goto :eof
 
 REM test runs the unit tests and vets the code.

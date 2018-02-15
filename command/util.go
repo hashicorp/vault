@@ -34,7 +34,7 @@ func DefaultTokenHelper() (token.TokenHelper, error) {
 
 // RawField extracts the raw field from the given data and returns it as a
 // string for printing purposes.
-func RawField(secret *api.Secret, field string) (string, bool) {
+func RawField(secret *api.Secret, field string) (interface{}, bool) {
 	var val interface{}
 	switch {
 	case secret.Auth != nil:
@@ -75,24 +75,47 @@ func RawField(secret *api.Secret, field string) (string, bool) {
 		switch field {
 		case "refresh_interval":
 			val = secret.LeaseDuration
+		case "data":
+			var ok bool
+			val, ok = secret.Data["data"]
+			if !ok {
+				val = secret.Data
+			}
 		default:
 			val = secret.Data[field]
 		}
 	}
 
-	str := fmt.Sprintf("%v", val)
-	return str, val != nil
+	return val, val != nil
 }
 
 // PrintRawField prints raw field from the secret.
 func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
-	str, ok := RawField(secret, field)
+	val, ok := RawField(secret, field)
 	if !ok {
 		ui.Error(fmt.Sprintf("Field %q not present in secret", field))
 		return 1
 	}
 
-	return PrintRaw(ui, str)
+	format := Format(ui)
+	if format == "" || format == "table" {
+		return PrintRaw(ui, fmt.Sprintf("%v", val))
+	}
+
+	// Handle specific format flags as best as possible
+	formatter, ok := Formatters[format]
+	if !ok {
+		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
+		return 1
+	}
+
+	b, err := formatter.Format(val)
+	if err != nil {
+		ui.Error(fmt.Sprintf("Error formatting output: %s", err))
+		return 1
+	}
+
+	return PrintRaw(ui, string(b))
 }
 
 // PrintRaw prints a raw value to the terminal. If the process is being "piped"
@@ -115,6 +138,8 @@ func PrintRaw(ui cli.Ui, str string) int {
 // type, this falls back to os.Stdout.
 func getWriterFromUI(ui cli.Ui) io.Writer {
 	switch t := ui.(type) {
+	case *VaultUI:
+		return getWriterFromUI(t.Ui)
 	case *cli.BasicUi:
 		return t.Writer
 	case *cli.ColoredUi:

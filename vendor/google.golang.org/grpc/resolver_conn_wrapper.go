@@ -61,12 +61,18 @@ func parseTarget(target string) (ret resolver.Target) {
 // newCCResolverWrapper parses cc.target for scheme and gets the resolver
 // builder for this scheme. It then builds the resolver and starts the
 // monitoring goroutine for it.
+//
+// If withResolverBuilder dial option is set, the specified resolver will be
+// used instead.
 func newCCResolverWrapper(cc *ClientConn) (*ccResolverWrapper, error) {
 	grpclog.Infof("dialing to target with scheme: %q", cc.parsedTarget.Scheme)
 
-	rb := resolver.Get(cc.parsedTarget.Scheme)
+	rb := cc.dopts.resolverBuilder
 	if rb == nil {
-		return nil, fmt.Errorf("could not get resolver for scheme: %q", cc.parsedTarget.Scheme)
+		rb = resolver.Get(cc.parsedTarget.Scheme)
+		if rb == nil {
+			return nil, fmt.Errorf("could not get resolver for scheme: %q", cc.parsedTarget.Scheme)
+		}
 	}
 
 	ccr := &ccResolverWrapper{
@@ -81,8 +87,11 @@ func newCCResolverWrapper(cc *ClientConn) (*ccResolverWrapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	go ccr.watcher()
 	return ccr, nil
+}
+
+func (ccr *ccResolverWrapper) start() {
+	go ccr.watcher()
 }
 
 // watcher processes address updates and service config updates sequencially.
@@ -117,6 +126,10 @@ func (ccr *ccResolverWrapper) watcher() {
 			return
 		}
 	}
+}
+
+func (ccr *ccResolverWrapper) resolveNow(o resolver.ResolveNowOption) {
+	ccr.resolver.ResolveNow(o)
 }
 
 func (ccr *ccResolverWrapper) close() {

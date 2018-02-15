@@ -2,10 +2,10 @@ package logical
 
 import (
 	"context"
-	"strings"
 	"sync"
 
-	radix "github.com/armon/go-radix"
+	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 )
 
 // InmemStorage implements Storage and stores all data in memory. It is
@@ -13,79 +13,55 @@ import (
 // having to load all of physical's dependencies (which are legion) just to
 // have some testing storage.
 type InmemStorage struct {
-	sync.RWMutex
-	root *radix.Tree
-	once sync.Once
+	underlying physical.Backend
+	once       sync.Once
 }
 
 func (s *InmemStorage) Get(ctx context.Context, key string) (*StorageEntry, error) {
 	s.once.Do(s.init)
 
-	s.RLock()
-	defer s.RUnlock()
-
-	if raw, ok := s.root.Get(key); ok {
-		se := raw.(*StorageEntry)
-		return &StorageEntry{
-			Key:   se.Key,
-			Value: se.Value,
-		}, nil
+	entry, err := s.underlying.Get(ctx, key)
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, nil
+	if entry == nil {
+		return nil, nil
+	}
+	return &StorageEntry{
+		Key:      entry.Key,
+		Value:    entry.Value,
+		SealWrap: entry.SealWrap,
+	}, nil
 }
 
 func (s *InmemStorage) Put(ctx context.Context, entry *StorageEntry) error {
 	s.once.Do(s.init)
 
-	s.Lock()
-	defer s.Unlock()
-
-	s.root.Insert(entry.Key, &StorageEntry{
-		Key:   entry.Key,
-		Value: entry.Value,
+	return s.underlying.Put(ctx, &physical.Entry{
+		Key:      entry.Key,
+		Value:    entry.Value,
+		SealWrap: entry.SealWrap,
 	})
-	return nil
 }
 
 func (s *InmemStorage) Delete(ctx context.Context, key string) error {
 	s.once.Do(s.init)
 
-	s.Lock()
-	defer s.Unlock()
-
-	s.root.Delete(key)
-	return nil
+	return s.underlying.Delete(ctx, key)
 }
 
 func (s *InmemStorage) List(ctx context.Context, prefix string) ([]string, error) {
 	s.once.Do(s.init)
 
-	s.RLock()
-	defer s.RUnlock()
+	return s.underlying.List(ctx, prefix)
+}
 
-	var out []string
-	seen := make(map[string]interface{})
-	walkFn := func(s string, v interface{}) bool {
-		trimmed := strings.TrimPrefix(s, prefix)
-		sep := strings.Index(trimmed, "/")
-		if sep == -1 {
-			out = append(out, trimmed)
-		} else {
-			trimmed = trimmed[:sep+1]
-			if _, ok := seen[trimmed]; !ok {
-				out = append(out, trimmed)
-				seen[trimmed] = struct{}{}
-			}
-		}
-		return false
-	}
-	s.root.WalkPrefix(prefix, walkFn)
+func (s *InmemStorage) Underlying() *inmem.InmemBackend {
+	s.once.Do(s.init)
 
-	return out, nil
-
+	return s.underlying.(*inmem.InmemBackend)
 }
 
 func (s *InmemStorage) init() {
-	s.root = radix.New()
+	s.underlying, _ = inmem.NewInmem(nil, nil)
 }

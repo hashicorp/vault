@@ -28,12 +28,13 @@ var (
 // passed in as an argument. If the function returns an error due to the source
 // being disallowed, it should return ErrInvalidUpstream.
 //
-// Behavior is as follows:
-// * If error is not nil, the call to Accept() will fail. If the reason for
+// If error is not nil, the call to Accept() will fail. If the reason for
 // triggering this failure is due to a disallowed source, it should return
 // ErrInvalidUpstream.
-// * If bool is true, the PROXY-set address is used.
-// * If bool is false, the connection's remote address is used, rather than the
+//
+// If bool is true, the PROXY-set address is used.
+//
+// If bool is false, the connection's remote address is used, rather than the
 // address claimed in the PROXY info.
 type SourceChecker func(net.Addr) (bool, error)
 

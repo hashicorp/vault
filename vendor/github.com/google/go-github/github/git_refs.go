@@ -18,6 +18,7 @@ type Reference struct {
 	Ref    *string    `json:"ref"`
 	URL    *string    `json:"url"`
 	Object *GitObject `json:"object"`
+	NodeID *string    `json:"node_id,omitempty"`
 }
 
 func (r Reference) String() string {
@@ -62,6 +63,9 @@ func (s *GitService) GetRef(ctx context.Context, owner string, repo string, ref 
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
+
 	r := new(Reference)
 	resp, err := s.client.Do(ctx, req, r)
 	if _, ok := err.(*json.UnmarshalTypeError); ok {
@@ -92,6 +96,9 @@ func (s *GitService) GetRefs(ctx context.Context, owner string, repo string, ref
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	var rawJSON json.RawMessage
 	resp, err := s.client.Do(ctx, req, &rawJSON)
@@ -147,6 +154,9 @@ func (s *GitService) ListRefs(ctx context.Context, owner, repo string, opt *Refe
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
+
 	var rs []*Reference
 	resp, err := s.client.Do(ctx, req, &rs)
 	if err != nil {
@@ -170,6 +180,9 @@ func (s *GitService) CreateRef(ctx context.Context, owner string, repo string, r
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
+
 	r := new(Reference)
 	resp, err := s.client.Do(ctx, req, r)
 	if err != nil {
@@ -192,6 +205,9 @@ func (s *GitService) UpdateRef(ctx context.Context, owner string, repo string, r
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	r := new(Reference)
 	resp, err := s.client.Do(ctx, req, r)

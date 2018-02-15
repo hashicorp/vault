@@ -115,7 +115,7 @@ discussed in more detail in the next section.
 
 ## Auth Methods
 
-Vault supports many auth methods, but then must be enabled before use. Auth
+Vault supports many auth methods, but they must be enabled before use. Auth
 methods give you flexibility. Enabling and configuration are typically performed
 by a Vault operator or security team. As an example of a human-focused auth
 method, let's authenticate via GitHub.

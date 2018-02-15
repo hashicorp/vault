@@ -682,7 +682,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	rTagMaxTTL := time.Duration(0)
 	var roleTagResp *roleTagLoginResponse
 	if roleEntry.RoleTag != "" {
-		roleTagResp, err := b.handleRoleTagLogin(ctx, req.Storage, roleName, roleEntry, instance)
+		roleTagResp, err = b.handleRoleTagLogin(ctx, req.Storage, roleName, roleEntry, instance)
 		if err != nil {
 			return nil, err
 		}
@@ -1505,6 +1505,9 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	// the endpoint to talk to alternate web addresses
 	request := buildHttpRequest(method, endpoint, parsedUrl, body, headers)
 	client := cleanhttp.DefaultClient()
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %v", err)
