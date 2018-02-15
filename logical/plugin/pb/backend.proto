@@ -10,7 +10,7 @@ message Header {
 }
 
 message ProtoError {
-	// Error type an be one of:
+	// Error type can be one of:
 	// ErrTypeUnknown uint32 = iota
 	// ErrTypeUserError
 	// ErrTypeInternalError

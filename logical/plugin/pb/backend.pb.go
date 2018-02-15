@@ -97,7 +97,7 @@ func (m *Header) GetHeader() []string {
 }
 
 type ProtoError struct {
-	// Error type an be one of:
+	// Error type can be one of:
 	// ErrTypeUnknown uint32 = iota
 	// ErrTypeUserError
 	// ErrTypeInternalError
