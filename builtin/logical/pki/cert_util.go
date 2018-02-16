@@ -1427,6 +1427,7 @@ func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 
 	// Marshal and add to ExtraExtensions
 	ext := pkix.Extension{
+		// This is the defined OID for subjectAltName
 		Id: asn1.ObjectIdentifier{2, 5, 29, 17},
 	}
 	var err error
