@@ -49,6 +49,7 @@ BUG FIXES:
  * auth/approle: Cleanup of secret ID accessors during tidy and removal of
    dangling accessor entries [GH-3924]
  * auth/aws-ec2: Avoid masking of role tag response [GH-3941]
+ * auth/cert: Verify DNS SANs in the authenticating certificate [GH-3982]
  * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
