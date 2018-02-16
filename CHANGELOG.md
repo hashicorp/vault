@@ -368,10 +368,12 @@ IMPROVEMENTS:
  * api: Add ability to set custom headers on each call [GH-3394]
  * command/server: Add config option to disable requesting client certificates
    [GH-3373]
+ * auth/aws: Max retries can now be customized for the AWS client [GH-3965]
  * core: Disallow mounting underneath an existing path, not just over [GH-2919]
  * physical/file: Use `700` as permissions when creating directories. The files
    themselves were `600` and are all encrypted, but this doesn't hurt.
  * secret/aws: Add ability to use custom IAM/STS endpoints [GH-3416]
+ * secret/aws: Max retries can now be customized for the AWS client [GH-3965]
  * secret/cassandra: Work around Cassandra ignoring consistency levels for a
    user listing query [GH-3469]
  * secret/pki: Private keys can now be marshalled as PKCS#8 [GH-3518]
