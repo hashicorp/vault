@@ -316,7 +316,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 
 	// This function is a copy-pasta from the NewTestCluster, with the
 	// modification to reconfigure the TLS on the api client with the leaf
-	// certificates generated above.
+	// certificate generated above.
 	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
 		transport := cleanhttp.DefaultPooledTransport()
 		transport.TLSClientConfig = tlsConfig.Clone()
@@ -353,9 +353,6 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 
 	// Create a new api client with the desired TLS configuration
 	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
-
-	// Copy the token from the old client
-	//newClient.SetToken(client.Token())
 
 	// Set the intermediate CA cert as a trusted certificate in the backend
 	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
