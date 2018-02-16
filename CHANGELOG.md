@@ -60,9 +60,11 @@ BUG FIXES:
  * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
  * storage/etcd3: Fix large lists (like token loading at startup) not being
    handled [GH-3772]
+ * storage/postgresql: Fix compatibility with versions using custom string
+   version tags [GH-3949]
  * storage/zookeeper: Update vendoring to fix freezing issues [GH-3896]
- * ui (Enterprise): Decoding the replication token should no longer error and prevent enabling
-   of a secondary replication cluster via the ui.
+ * ui (Enterprise): Decoding the replication token should no longer error and
+   prevent enabling of a secondary replication cluster via the ui.
 
 ## 0.9.3 (January 28th, 2018)
 
@@ -368,10 +370,12 @@ IMPROVEMENTS:
  * api: Add ability to set custom headers on each call [GH-3394]
  * command/server: Add config option to disable requesting client certificates
    [GH-3373]
+ * auth/aws: Max retries can now be customized for the AWS client [GH-3965]
  * core: Disallow mounting underneath an existing path, not just over [GH-2919]
  * physical/file: Use `700` as permissions when creating directories. The files
    themselves were `600` and are all encrypted, but this doesn't hurt.
  * secret/aws: Add ability to use custom IAM/STS endpoints [GH-3416]
+ * secret/aws: Max retries can now be customized for the AWS client [GH-3965]
  * secret/cassandra: Work around Cassandra ignoring consistency levels for a
    user listing query [GH-3469]
  * secret/pki: Private keys can now be marshalled as PKCS#8 [GH-3518]
