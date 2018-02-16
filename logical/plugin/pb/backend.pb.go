@@ -97,6 +97,17 @@ func (m *Header) GetHeader() []string {
 }
 
 type ProtoError struct {
+	// Error type can be one of:
+	// ErrTypeUnknown uint32 = iota
+	// ErrTypeUserError
+	// ErrTypeInternalError
+	// ErrTypeCodedError
+	// ErrTypeStatusBadRequest
+	// ErrTypeUnsupportedOperation
+	// ErrTypeUnsupportedPath
+	// ErrTypeInvalidRequest
+	// ErrTypePermissionDenied
+	// ErrTypeMultiAuthzPending
 	ErrType uint32 `sentinel:"" protobuf:"varint,1,opt,name=err_type,json=errType" json:"err_type,omitempty"`
 	ErrMsg  string `sentinel:"" protobuf:"bytes,2,opt,name=err_msg,json=errMsg" json:"err_msg,omitempty"`
 	ErrCode int64  `sentinel:"" protobuf:"varint,3,opt,name=err_code,json=errCode" json:"err_code,omitempty"`
@@ -1455,12 +1466,37 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for Backend service
 
 type BackendClient interface {
+	// HandleRequest is used to handle a request and generate a response.
+	// The plugins must check the operation type and handle appropriately.
 	HandleRequest(ctx context.Context, in *HandleRequestArgs, opts ...grpc.CallOption) (*HandleRequestReply, error)
+	// SpecialPaths is a list of paths that are special in some way.
+	// See PathType for the types of special paths. The key is the type
+	// of the special path, and the value is a list of paths for this type.
+	// This is not a regular expression but is an exact match. If the path
+	// ends in '*' then it is a prefix-based match. The '*' can only appear
+	// at the end.
 	SpecialPaths(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SpecialPathsReply, error)
+	// HandleExistenceCheck is used to handle a request and generate a response
+	// indicating whether the given path exists or not; this is used to
+	// understand whether the request must have a Create or Update capability
+	// ACL applied. The first bool indicates whether an existence check
+	// function was found for the backend; the second indicates whether, if an
+	// existence check function was found, the item exists or not.
 	HandleExistenceCheck(ctx context.Context, in *HandleExistenceCheckArgs, opts ...grpc.CallOption) (*HandleExistenceCheckReply, error)
+	// Cleanup is invoked during an unmount of a backend to allow it to
+	// handle any cleanup like connection closing or releasing of file handles.
+	// Cleanup is called right before Vault closes the plugin process.
 	Cleanup(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+	// InvalidateKey may be invoked when an object is modified that belongs
+	// to the backend. The backend can use this to clear any caches or reset
+	// internal state as needed.
 	InvalidateKey(ctx context.Context, in *InvalidateKeyArgs, opts ...grpc.CallOption) (*Empty, error)
+	// Setup is used to set up the backend based on the provided backend
+	// configuration. The plugin's setup implementation should use the provided
+	// broker_id to create a connection back to Vault for use with the Storage
+	// and SystemView clients.
 	Setup(ctx context.Context, in *SetupArgs, opts ...grpc.CallOption) (*SetupReply, error)
+	// Type returns the BackendType for the particular backend
 	Type(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TypeReply, error)
 }
 
@@ -1538,12 +1574,37 @@ func (c *backendClient) Type(ctx context.Context, in *Empty, opts ...grpc.CallOp
 // Server API for Backend service
 
 type BackendServer interface {
+	// HandleRequest is used to handle a request and generate a response.
+	// The plugins must check the operation type and handle appropriately.
 	HandleRequest(context.Context, *HandleRequestArgs) (*HandleRequestReply, error)
+	// SpecialPaths is a list of paths that are special in some way.
+	// See PathType for the types of special paths. The key is the type
+	// of the special path, and the value is a list of paths for this type.
+	// This is not a regular expression but is an exact match. If the path
+	// ends in '*' then it is a prefix-based match. The '*' can only appear
+	// at the end.
 	SpecialPaths(context.Context, *Empty) (*SpecialPathsReply, error)
+	// HandleExistenceCheck is used to handle a request and generate a response
+	// indicating whether the given path exists or not; this is used to
+	// understand whether the request must have a Create or Update capability
+	// ACL applied. The first bool indicates whether an existence check
+	// function was found for the backend; the second indicates whether, if an
+	// existence check function was found, the item exists or not.
 	HandleExistenceCheck(context.Context, *HandleExistenceCheckArgs) (*HandleExistenceCheckReply, error)
+	// Cleanup is invoked during an unmount of a backend to allow it to
+	// handle any cleanup like connection closing or releasing of file handles.
+	// Cleanup is called right before Vault closes the plugin process.
 	Cleanup(context.Context, *Empty) (*Empty, error)
+	// InvalidateKey may be invoked when an object is modified that belongs
+	// to the backend. The backend can use this to clear any caches or reset
+	// internal state as needed.
 	InvalidateKey(context.Context, *InvalidateKeyArgs) (*Empty, error)
+	// Setup is used to set up the backend based on the provided backend
+	// configuration. The plugin's setup implementation should use the provided
+	// broker_id to create a connection back to Vault for use with the Storage
+	// and SystemView clients.
 	Setup(context.Context, *SetupArgs) (*SetupReply, error)
+	// Type returns the BackendType for the particular backend
 	Type(context.Context, *Empty) (*TypeReply, error)
 }
 
@@ -1880,14 +1941,37 @@ var _Storage_serviceDesc = grpc.ServiceDesc{
 // Client API for SystemView service
 
 type SystemViewClient interface {
+	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
 	DefaultLeaseTTL(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TTLReply, error)
+	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
+	// authors should take care not to issue credentials that last longer than
+	// this value, as Vault will revoke them
 	MaxLeaseTTL(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TTLReply, error)
+	// SudoPrivilege returns true if given path has sudo privileges
+	// for the given client token
 	SudoPrivilege(ctx context.Context, in *SudoPrivilegeArgs, opts ...grpc.CallOption) (*SudoPrivilegeReply, error)
+	// Returns true if the mount is tainted. A mount is tainted if it is in the
+	// process of being unmounted. This should only be used in special
+	// circumstances; a primary use-case is as a guard in revocation functions.
+	// If revocation of a backend's leases fails it can keep the unmounting
+	// process from being successful. If the reason for this failure is not
+	// relevant when the mount is tainted (for instance, saving a CRL to disk
+	// when the stored CRL will be removed during the unmounting process
+	// anyways), we can ignore the errors to allow unmounting to complete.
 	Tainted(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TaintedReply, error)
+	// Returns true if caching is disabled. If true, no caches should be used,
+	// despite known slowdowns.
 	CachingDisabled(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*CachingDisabledReply, error)
+	// ReplicationState indicates the state of cluster replication
 	ReplicationState(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ReplicationStateReply, error)
+	// ResponseWrapData wraps the given data in a cubbyhole and returns the
+	// token used to unwrap.
 	ResponseWrapData(ctx context.Context, in *ResponseWrapDataArgs, opts ...grpc.CallOption) (*ResponseWrapDataReply, error)
+	// MlockEnabled returns the configuration setting for enabling mlock on
+	// plugins.
 	MlockEnabled(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MlockEnabledReply, error)
+	// When run from a system view attached to a request, indicates whether the
+	// request is affecting a local mount or not
 	LocalMount(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*LocalMountReply, error)
 }
 
@@ -1983,14 +2067,37 @@ func (c *systemViewClient) LocalMount(ctx context.Context, in *Empty, opts ...gr
 // Server API for SystemView service
 
 type SystemViewServer interface {
+	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
 	DefaultLeaseTTL(context.Context, *Empty) (*TTLReply, error)
+	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
+	// authors should take care not to issue credentials that last longer than
+	// this value, as Vault will revoke them
 	MaxLeaseTTL(context.Context, *Empty) (*TTLReply, error)
+	// SudoPrivilege returns true if given path has sudo privileges
+	// for the given client token
 	SudoPrivilege(context.Context, *SudoPrivilegeArgs) (*SudoPrivilegeReply, error)
+	// Returns true if the mount is tainted. A mount is tainted if it is in the
+	// process of being unmounted. This should only be used in special
+	// circumstances; a primary use-case is as a guard in revocation functions.
+	// If revocation of a backend's leases fails it can keep the unmounting
+	// process from being successful. If the reason for this failure is not
+	// relevant when the mount is tainted (for instance, saving a CRL to disk
+	// when the stored CRL will be removed during the unmounting process
+	// anyways), we can ignore the errors to allow unmounting to complete.
 	Tainted(context.Context, *Empty) (*TaintedReply, error)
+	// Returns true if caching is disabled. If true, no caches should be used,
+	// despite known slowdowns.
 	CachingDisabled(context.Context, *Empty) (*CachingDisabledReply, error)
+	// ReplicationState indicates the state of cluster replication
 	ReplicationState(context.Context, *Empty) (*ReplicationStateReply, error)
+	// ResponseWrapData wraps the given data in a cubbyhole and returns the
+	// token used to unwrap.
 	ResponseWrapData(context.Context, *ResponseWrapDataArgs) (*ResponseWrapDataReply, error)
+	// MlockEnabled returns the configuration setting for enabling mlock on
+	// plugins.
 	MlockEnabled(context.Context, *Empty) (*MlockEnabledReply, error)
+	// When run from a system view attached to a request, indicates whether the
+	// request is affecting a local mount or not
 	LocalMount(context.Context, *Empty) (*LocalMountReply, error)
 }
 
