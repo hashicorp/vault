@@ -52,9 +52,7 @@ type dataBundle struct {
 }
 
 type creationParameters struct {
-	CommonName     string
-	OU             []string
-	Organization   []string
+	Subject        pkix.Name
 	DNSNames       []string
 	EmailAddresses []string
 	IPAddresses    []net.IP
@@ -839,10 +837,15 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 	}
 
-	// Set OU (organizationalUnit) values if specified in the role
-	ou := strutil.RemoveDuplicates(data.role.OU, false)
-	// Set O (organization) values if specified in the role
-	organization := strutil.RemoveDuplicates(data.role.Organization, false)
+	subject := pkix.Name{
+		Country:            strutil.RemoveDuplicates(data.role.Country, false),
+		Organization:       strutil.RemoveDuplicates(data.role.Organization, false),
+		OrganizationalUnit: strutil.RemoveDuplicates(data.role.OU, false),
+		Locality:           strutil.RemoveDuplicates(data.role.Locality, false),
+		Province:           strutil.RemoveDuplicates(data.role.Province, false),
+		StreetAddress:      strutil.RemoveDuplicates(data.role.StreetAddress, false),
+		PostalCode:         strutil.RemoveDuplicates(data.role.PostalCode, false),
+	}
 
 	// Get the TTL and verify it against the max allowed
 	var ttl time.Duration
@@ -909,9 +912,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	}
 
 	data.params = &creationParameters{
-		CommonName:     cn,
-		OU:             ou,
-		Organization:   organization,
+		Subject:        subject,
 		DNSNames:       dnsNames,
 		EmailAddresses: emailAddresses,
 		IPAddresses:    ipAddresses,
@@ -1001,19 +1002,13 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error getting subject key ID: %s", err)}
 	}
 
-	subject := pkix.Name{
-		CommonName:         data.params.CommonName,
-		OrganizationalUnit: data.params.OU,
-		Organization:       data.params.Organization,
-	}
-
 	certTemplate := &x509.Certificate{
 		SerialNumber:   serialNumber,
-		Subject:        subject,
 		NotBefore:      time.Now().Add(-30 * time.Second),
 		NotAfter:       data.params.NotAfter,
 		IsCA:           false,
 		SubjectKeyId:   subjKeyID,
+		Subject:        data.params.Subject,
 		DNSNames:       data.params.DNSNames,
 		EmailAddresses: data.params.EmailAddresses,
 		IPAddresses:    data.params.IPAddresses,
@@ -1119,12 +1114,8 @@ func createCSR(data *dataBundle) (*certutil.ParsedCSRBundle, error) {
 	}
 
 	// Like many root CAs, other information is ignored
-	subject := pkix.Name{
-		CommonName: data.params.CommonName,
-	}
-
 	csrTemplate := &x509.CertificateRequest{
-		Subject:        subject,
+		Subject:        data.params.Subject,
 		DNSNames:       data.params.DNSNames,
 		EmailAddresses: data.params.EmailAddresses,
 		IPAddresses:    data.params.IPAddresses,
@@ -1189,15 +1180,9 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 	caCert := data.signingBundle.Certificate
 
-	subject := pkix.Name{
-		CommonName:         data.params.CommonName,
-		OrganizationalUnit: data.params.OU,
-		Organization:       data.params.Organization,
-	}
-
 	certTemplate := &x509.Certificate{
 		SerialNumber:   serialNumber,
-		Subject:        subject,
+		Subject:        data.params.Subject,
 		NotBefore:      time.Now().Add(-30 * time.Second),
 		NotAfter:       data.params.NotAfter,
 		SubjectKeyId:   subjKeyID[:],

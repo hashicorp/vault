@@ -252,6 +252,13 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	role := &roleEntry{
+		OU:                    data.Get("ou").([]string),
+		Organization:          data.Get("organization").([]string),
+		Country:               data.Get("country").([]string),
+		Locality:              data.Get("locality").([]string),
+		Province:              data.Get("province").([]string),
+		StreetAddress:         data.Get("street_address").([]string),
+		PostalCode:            data.Get("postal_code").([]string),
 		TTL:                   (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		AllowLocalhost:        true,
 		AllowAnyName:          true,
