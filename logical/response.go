@@ -132,6 +132,8 @@ func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Respon
 	return resp
 }
 
+// Respond404WithData takes a response and converts it to a raw response with a
+// 404 Status Code.
 func Respond404WithData(resp *Response) *Response {
 	return &Response{
 		Data: map[string]interface{}{
