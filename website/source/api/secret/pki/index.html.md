@@ -462,6 +462,34 @@ can be set in a CSR are supported.
   Useful if the CN is not a hostname or email address, but is instead some
   human-readable identifier.
 
+- `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` – Specifies the O (Organization) values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
 ### Sample Payload
 
 ```json
@@ -774,10 +802,32 @@ request is denied.
   `use_csr_common_name` for that.
 
 - `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
-  subject field of issued certificates. This is a comma-separated string.
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
 
 - `organization` `(string: "")` – Specifies the O (Organization) values in the
-  subject field of issued certificates. This is a comma-separated string.
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
 
 - `generate_lease` `(bool: false)` – Specifies  if certificates issued/signed
   against this role will have Vault leases attached to them. Certificates can be
@@ -996,6 +1046,34 @@ existing cert/key with new values.
   the domain, as per
   [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
 
+- `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` – Specifies the O (Organization) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
 ### Sample Payload
 
 ```json
@@ -1117,6 +1195,35 @@ verbatim.
   or signed by this CA certificate. Supports subdomains via a `.` in front of
   the domain, as per
   [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+
+- `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` – Specifies the O (Organization) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
 
 ### Sample Payload
 
