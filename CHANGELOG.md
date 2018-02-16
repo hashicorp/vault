@@ -60,9 +60,11 @@ BUG FIXES:
  * storage/etcd3: Fix memory ballooning with standby instances [GH-3798]
  * storage/etcd3: Fix large lists (like token loading at startup) not being
    handled [GH-3772]
+ * storage/postgresql: Fix compatibility with versions using custom string
+   version tags [GH-3949]
  * storage/zookeeper: Update vendoring to fix freezing issues [GH-3896]
- * ui (Enterprise): Decoding the replication token should no longer error and prevent enabling
-   of a secondary replication cluster via the ui.
+ * ui (Enterprise): Decoding the replication token should no longer error and
+   prevent enabling of a secondary replication cluster via the ui.
 
 ## 0.9.3 (January 28th, 2018)
 
