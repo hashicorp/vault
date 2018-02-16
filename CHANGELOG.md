@@ -11,6 +11,10 @@ FEATURES:
  * **Manta Storage**: Joyent Triton Manta can now be used for Vault storage
  * **Google Cloud Spanner Storage**: Google Cloud Spanner can now be used for
    Vault storage
+ * **PKI Improvements**: Custom OID subject alternate names can now be set,
+   subject to allow restrictions that support globbing. Additionally, Country,
+   Locality, Province, Street Address, and Postal Code can now be set in
+   certificate subjects.
 
 IMPROVEMENTS:
 
@@ -25,6 +29,11 @@ IMPROVEMENTS:
    once a minute. Too many leases can be problematic for many of the storage
    backends and often this number of leases is indicative of a need for
    workflow improvements. [GH-3957]
+ * secret/pki: Country, Locality, Province, Street Address, and Postal Code can
+   now be set on certificates [GH-3992]
+ * secret/pki: UTF-8 Other Names can now be set in Subject Alternate Names in
+   issued certs; allowed values can be set per role and support globbing
+   [GH-3889]
  * secret/pki: Add a flag to make the common name optional on certs [GH-3940]
  * secret/pki: Ensure only DNS-compatible names go into DNS SANs; additionally,
    properly handle IDNA transformations for these DNS names [GH-3953]
