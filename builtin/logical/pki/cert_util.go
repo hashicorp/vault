@@ -442,6 +442,10 @@ func validateNames(data *dataBundle, names []string) string {
 	return ""
 }
 
+// validateOtherSANs checks if the values requested are allowed. If an OID
+// isn't allowed, it will be returned as the first string. If a value isn't
+// allowed, it will be returned as the second string. Empty strings + error
+// means everything is okay.
 func validateOtherSANs(data *dataBundle, requested map[string][]string) (string, string, error) {
 	allowed, err := parseOtherSANs(data.role.AllowedOtherSANs)
 	if err != nil {
