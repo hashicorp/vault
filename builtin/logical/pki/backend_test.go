@@ -2801,6 +2801,253 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	}
 }
 
+// This is a really tricky test because the Go stdlib asn1 package is incapable
+// of doing the right thing with custom OID SANs (see comments in the package,
+// it's readily admitted that it's too magic) but that means that any
+// validation logic written for this test isn't being independently verified,
+// as in, if cryptobytes is used to decode it to make the test work, that
+// doesn't mean we're encoding and decoding correctly, only that we made the
+// test pass. Instead, when run verbosely it will first perform a bunch of
+// checks to verify that the OID SAN logic doesn't screw up other SANs, then
+// will spit out the PEM. This can be validated independently.
+//
+// You want the hex dump of the octet string corresponding to the X509v3
+// Subject Alternative Name. There's a nice online utility at
+// https://lapo.it/asn1js that can be used to view the structure of an
+// openssl-generated other SAN at
+// https://lapo.it/asn1js/#3022A020060A2B060104018237140203A0120C106465766F7073406C6F63616C686F7374
+// (openssl asn1parse can also be used with -strparse using an offset of the
+// hex blob for the subject alternative names extension).
+//
+// The structure output from here should match that precisely (even if the OID
+// itself doesn't) in the second test.
+//
+// The test that encodes two should have them be in separate elements in the
+// top-level sequence; see
+// https://lapo.it/asn1js/#3046A020060A2B060104018237140203A0120C106465766F7073406C6F63616C686F7374A022060A2B060104018237140204A0140C12322D6465766F7073406C6F63616C686F7374 for an openssl-generated example.
+//
+// The good news is that it's valid to simply copy and paste the PEM ouput from
+// here into the form at that site as it will do the right thing so it's pretty
+// easy to validate.
+func TestBackend_OID_SANs(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("root", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var resp *api.Secret
+	var certStr string
+	var block *pem.Block
+	var cert *x509.Certificate
+
+	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+		"allowed_domains":    []string{"foobar.com", "zipzap.com"},
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+		"allow_ip_sans":      true,
+		"allowed_other_sans": "1.3.6.1.4.1.311.20.2.3;UTF8:devops@*,1.3.6.1.4.1.311.20.2.4;utf8:d*e@foobar.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get a baseline before adding OID SANs. In the next sections we'll verify
+	// that the SANs are all added even as the OID SAN inclusion forces other
+	// adding logic (custom rather than built-in Golang logic)
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certStr = resp.Data["certificate"].(string)
+	block, _ = pem.Decode([]byte(certStr))
+	cert, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cert.IPAddresses[0].String() != "1.2.3.4" {
+		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
+	}
+	if cert.DNSNames[0] != "foobar.com" ||
+		cert.DNSNames[1] != "bar.foobar.com" ||
+		cert.DNSNames[2] != "foo.foobar.com" {
+		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
+	}
+
+	// First test some bad stuff that shouldn't work
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		// Not a valid value for the first possibility
+		"other_sans": "1.3.6.1.4.1.311.20.2.3;UTF8:devop@nope.com",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		// Not a valid OID for the first possibility
+		"other_sans": "1.3.6.1.4.1.311.20.2.5;UTF8:devops@nope.com",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		// Not a valid name for the second possibility
+		"other_sans": "1.3.6.1.4.1.311.20.2.4;UTF8:d34g@foobar.com",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		// Not a valid OID for the second possibility
+		"other_sans": "1.3.6.1.4.1.311.20.2.5;UTF8:d34e@foobar.com",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		// Not a valid type
+		"other_sans": "1.3.6.1.4.1.311.20.2.5;UTF2:d34e@foobar.com",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Valid for first possibility
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:devops@nope.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certStr = resp.Data["certificate"].(string)
+	block, _ = pem.Decode([]byte(certStr))
+	cert, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cert.IPAddresses[0].String() != "1.2.3.4" {
+		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
+	}
+	if cert.DNSNames[0] != "foobar.com" ||
+		cert.DNSNames[1] != "bar.foobar.com" ||
+		cert.DNSNames[2] != "foo.foobar.com" {
+		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
+	}
+	t.Logf("certificate 1 to check:\n%s", certStr)
+
+	// Valid for second possibility
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"other_sans":  "1.3.6.1.4.1.311.20.2.4;UTF8:d234e@foobar.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certStr = resp.Data["certificate"].(string)
+	block, _ = pem.Decode([]byte(certStr))
+	cert, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cert.IPAddresses[0].String() != "1.2.3.4" {
+		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
+	}
+	if cert.DNSNames[0] != "foobar.com" ||
+		cert.DNSNames[1] != "bar.foobar.com" ||
+		cert.DNSNames[2] != "foo.foobar.com" {
+		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
+	}
+	t.Logf("certificate 2 to check:\n%s", certStr)
+
+	// Valid for both
+	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+		"common_name": "foobar.com",
+		"ip_sans":     "1.2.3.4",
+		"alt_names":   "foo.foobar.com,bar.foobar.com",
+		"ttl":         "1h",
+		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:devops@nope.com,1.3.6.1.4.1.311.20.2.4;utf8:d234e@foobar.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certStr = resp.Data["certificate"].(string)
+	block, _ = pem.Decode([]byte(certStr))
+	cert, err = x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cert.IPAddresses[0].String() != "1.2.3.4" {
+		t.Fatalf("unexpected IP SAN %q", cert.IPAddresses[0].String())
+	}
+	if cert.DNSNames[0] != "foobar.com" ||
+		cert.DNSNames[1] != "bar.foobar.com" ||
+		cert.DNSNames[2] != "foo.foobar.com" {
+		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
+	}
+	t.Logf("certificate 3 to check:\n%s", certStr)
+}
+
 const (
 	rsaCAKey string = `-----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAmPQlK7xD5p+E8iLQ8XlVmll5uU2NKMxKY3UF5tbh+0vkc+Fy
