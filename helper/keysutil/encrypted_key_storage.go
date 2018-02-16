@@ -13,7 +13,9 @@ import (
 )
 
 const (
-	// DefaultCacheSize is used if no cache size is specified for NewEncryptedKeyStorage
+	// DefaultCacheSize is used if no cache size is specified for
+	// NewEncryptedKeyStorage. This value is the number of cache entries to
+	// store, not the size in bytes of the cache.
 	DefaultCacheSize = 16 * 1024
 
 	// DefaultPrefix is used if no prefix is specified for
@@ -137,7 +139,7 @@ func (s *EncryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 	for i, k := range keys {
 		raw, ok := s.lru.Get(k)
 		if ok {
-			// cahce HIT, we can bail early and skip the decode & decrypt operations.
+			// cache HIT, we can bail early and skip the decode & decrypt operations.
 			decryptedKeys[i] = raw.(string)
 			continue
 		}
@@ -224,18 +226,22 @@ func (s *EncryptedKeyStorage) Delete(ctx context.Context, path string) error {
 // plaintext path prefix for the key.
 func (s *EncryptedKeyStorage) encryptPath(path string) (string, error) {
 	path = paths.Clean(path)
+
+	// Trim the prefix if it starts with a "/"
+	path = strings.TrimPrefix(path, "/")
+
 	parts := strings.Split(path, "/")
 
 	encPath := s.prefix
 	context := s.prefix
 	for _, p := range parts {
 		encoded := base64.StdEncoding.EncodeToString([]byte(p))
-		cyphertext, err := s.policy.Encrypt(0, []byte(context), nil, encoded)
+		ciphertext, err := s.policy.Encrypt(0, []byte(context), nil, encoded)
 		if err != nil {
 			return "", err
 		}
 
-		encPath = paths.Join(encPath, base58.Encode([]byte(cyphertext)))
+		encPath = paths.Join(encPath, base58.Encode([]byte(ciphertext)))
 		context = paths.Join(context, p)
 	}
 

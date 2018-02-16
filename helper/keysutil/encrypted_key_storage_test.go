@@ -134,6 +134,16 @@ func TestEncrytedKeysStorage_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Test prefixed with "/"
+	keys, err = es.List(ctx, "/test/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(keys) != 2 || keys[0] != "foo1/" || keys[1] != "foo" {
+		t.Fatalf("bad keys: %#v", keys)
+	}
+
 	// Test the cached value is correct
 	keys, err = es.List(ctx, "test/")
 	if err != nil {
