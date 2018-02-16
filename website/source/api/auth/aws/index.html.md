@@ -35,6 +35,9 @@ capabilities, the credentials are fetched automatically.
 
 ### Parameters
 
+- `max_retries` `(int: -1)` - Number of max retries the client should use for
+  recoverable errors. The default (`-1`) falls back to the AWS SDK's default
+  behavior.
 - `access_key` `(string: "")` - AWS Access key with permissions to query AWS
   APIs. The permissions required depend on the specific configurations. If using
   the `iam` auth method without inferencing, then no credentials are necessary.
