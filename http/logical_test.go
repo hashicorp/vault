@@ -311,13 +311,13 @@ func TestLogical_Responde404WithData(t *testing.T) {
 		},
 	}
 
-	resp404 := logical.Respond404WithData(resp)
-	req := &logical.Request{
-		ID: "id",
+	resp404, err := logical.Respond404WithData(resp, "id")
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	w := httptest.NewRecorder()
-	respondLogical(w, nil, req, false, resp404)
+	respondLogical(w, nil, nil, false, resp404)
 
 	if w.Code != 404 {
 		t.Fatalf("Bad Status code: %d", w.Code)

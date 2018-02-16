@@ -1,6 +1,7 @@
 package logical
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -134,12 +135,20 @@ func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Respon
 
 // Respond404WithData takes a response and converts it to a raw response with a
 // 404 Status Code.
-func Respond404WithData(resp *Response) *Response {
+func Respond404WithData(resp *Response, reqID string) (*Response, error) {
+	httpResp := LogicalResponseToHTTPResponse(resp)
+	httpResp.RequestID = reqID
+
+	body, err := json.Marshal(httpResp)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Response{
 		Data: map[string]interface{}{
 			HTTPContentType: "application/json",
-			HTTPRawBody:     resp,
+			HTTPRawBody:     body,
 			HTTPStatusCode:  http.StatusNotFound,
 		},
-	}
+	}, nil
 }
