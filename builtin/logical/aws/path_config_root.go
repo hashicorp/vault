@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -33,6 +34,11 @@ func pathConfigRoot() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Endpoint to custom STS server URL",
 			},
+			"max_retries": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Default:     aws.UseServiceDefaultRetries,
+				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -48,6 +54,7 @@ func pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framew
 	region := data.Get("region").(string)
 	iamendpoint := data.Get("iam_endpoint").(string)
 	stsendpoint := data.Get("sts_endpoint").(string)
+	maxretries := data.Get("max_retries").(int)
 
 	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
 		AccessKey:   data.Get("access_key").(string),
@@ -55,6 +62,7 @@ func pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framew
 		IAMEndpoint: iamendpoint,
 		STSEndpoint: stsendpoint,
 		Region:      region,
+		MaxRetries:  maxretries,
 	})
 	if err != nil {
 		return nil, err
@@ -73,6 +81,7 @@ type rootConfig struct {
 	IAMEndpoint string `json:"iam_endpoint"`
 	STSEndpoint string `json:"sts_endpoint"`
 	Region      string `json:"region"`
+	MaxRetries  int    `json:"max_retries"`
 }
 
 const pathConfigRootHelpSyn = `
