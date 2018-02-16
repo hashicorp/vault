@@ -22,6 +22,10 @@ const (
 	// NewEncryptedKeyStorage. Prefix must be defined so we can provide context
 	// for the base folder.
 	DefaultPrefix = "encryptedkeys/"
+
+	// EncryptedKeyPolicyVersionTpl is a template that can be used to minimize
+	// the amount of data that's stored with the ciphertext.
+	EncryptedKeyPolicyVersionTpl = "{{version}}:"
 )
 
 var (

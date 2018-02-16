@@ -20,6 +20,7 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
 		ConvergentVersion:    2,
+		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
 	}
 
 	_, err := NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
@@ -38,6 +39,7 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: false,
 		ConvergentVersion:    2,
+		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
 	}
 
 	_, err = NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
@@ -56,6 +58,7 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
 		ConvergentVersion:    1,
+		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
 	}
 
 	_, err = NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
@@ -74,6 +77,7 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
 		ConvergentVersion:    2,
+		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
 	}
 
 	_, err = NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
@@ -95,6 +99,7 @@ func TestEncrytedKeysStorage_CRUD(t *testing.T) {
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
 		ConvergentVersion:    2,
+		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
 	}
 
 	ctx := context.Background()
@@ -186,6 +191,7 @@ func BenchmarkEncrytedKeyStorage_List(b *testing.B) {
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
 		ConvergentVersion:    2,
+		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
 	}
 
 	ctx := context.Background()
@@ -233,6 +239,7 @@ func BenchmarkEncrytedKeyStorage_Put(b *testing.B) {
 		KDF:                  Kdf_hkdf_sha256,
 		ConvergentEncryption: true,
 		ConvergentVersion:    2,
+		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
 	}
 
 	ctx := context.Background()
