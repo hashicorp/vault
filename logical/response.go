@@ -2,6 +2,7 @@ package logical
 
 import (
 	"errors"
+	"net/http"
 
 	"github.com/hashicorp/vault/helper/wrapping"
 )
@@ -129,4 +130,14 @@ func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Respon
 	}
 
 	return resp
+}
+
+func Respond404WithData(resp *Response) *Response {
+	return &Response{
+		Data: map[string]interface{}{
+			HTTPContentType: "application/json",
+			HTTPRawBody:     resp.Data,
+			HTTPStatusCode:  http.StatusNotFound,
+		},
+	}
 }

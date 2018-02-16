@@ -258,6 +258,14 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 			}
 		case []byte:
 			body = bodyRaw.([]byte)
+		case map[string]interface{}:
+			var err error
+			body, err = json.Marshal(bodyRaw.(map[string]interface{}))
+			if err != nil {
+				retErr(w, "cannot decode body")
+				return
+			}
+
 		default:
 			retErr(w, "cannot decode body")
 			return
