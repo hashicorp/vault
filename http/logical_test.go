@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strconv"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -298,5 +301,36 @@ func TestLogical_ListSuffix(t *testing.T) {
 	}
 	if !strings.HasSuffix(lreq.Path, "/") {
 		t.Fatal("trailing slash not found on path")
+	}
+}
+
+func TestLogical_Responde404WithData(t *testing.T) {
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"test-data": "foo",
+		},
+	}
+
+	resp404 := logical.Respond404WithData(resp)
+	req := &logical.Request{
+		ID: "id",
+	}
+
+	w := httptest.NewRecorder()
+	respondLogical(w, nil, req, false, resp404)
+
+	if w.Code != 404 {
+		t.Fatalf("Bad Status code: %d", w.Code)
+	}
+
+	bodyRaw, err := ioutil.ReadAll(w.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := `{"request_id":"id","lease_id":"","renewable":false,"lease_duration":0,"data":{"test-data":"foo"},"wrap_info":null,"warnings":null,"auth":null}`
+
+	if string(bodyRaw[:]) != strings.Trim(expected, "\n") {
+		t.Fatalf("bad response: %s", string(bodyRaw[:]))
 	}
 }

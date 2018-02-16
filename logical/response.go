@@ -136,7 +136,7 @@ func Respond404WithData(resp *Response) *Response {
 	return &Response{
 		Data: map[string]interface{}{
 			HTTPContentType: "application/json",
-			HTTPRawBody:     resp.Data,
+			HTTPRawBody:     resp,
 			HTTPStatusCode:  http.StatusNotFound,
 		},
 	}
