@@ -154,7 +154,7 @@ func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath
 	return <-connState, nil
 }
 
-func TestBackend_DNSNameVerification(t *testing.T) {
+func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Enable PKI secret engine and Cert auth method
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
