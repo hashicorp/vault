@@ -21,8 +21,9 @@ func kvPaths(b *backend) []*framework.Path {
 		&framework.Path{
 			Pattern: "kv/" + framework.GenericNameRegex("key"),
 			Fields: map[string]*framework.FieldSchema{
-				"key":   &framework.FieldSchema{Type: framework.TypeString},
-				"value": &framework.FieldSchema{Type: framework.TypeString},
+				"key":     &framework.FieldSchema{Type: framework.TypeString},
+				"value":   &framework.FieldSchema{Type: framework.TypeString},
+				"version": &framework.FieldSchema{Type: framework.TypeInt},
 			},
 			ExistenceCheck: b.pathExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -45,6 +46,8 @@ func (b *backend) pathExistenceCheck(ctx context.Context, req *logical.Request, 
 }
 
 func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	version := data.Get("version")
+
 	entry, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return nil, err
@@ -60,7 +63,8 @@ func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *fr
 	// Return the secret
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"value": value,
+			"value":   value,
+			"version": version,
 		},
 	}, nil
 }

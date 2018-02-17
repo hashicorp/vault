@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -74,6 +75,34 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 			return nil, http.StatusBadRequest, err
 		}
 	}
+
+	// If we are a read operation, try and parse any parameters
+	if op == logical.ReadOperation {
+		getData := map[string]interface{}{}
+
+		for k, v := range r.URL.Query() {
+
+			fmt.Println(k, v, "=============")
+			// Skip the help key as this is a reserved parameter
+			if k == "help" {
+				continue
+			}
+
+			switch {
+			case len(v) == 0:
+			case len(v) == 1:
+				getData[k] = v[0]
+			default:
+				getData[k] = v
+			}
+		}
+
+		if len(getData) > 0 {
+			data = getData
+		}
+	}
+
+	fmt.Println(data, "================")
 
 	var err error
 	request_id, err := uuid.GenerateUUID()
