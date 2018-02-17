@@ -75,6 +75,7 @@ BUG FIXES:
  * storage/zookeeper: Update vendoring to fix freezing issues [GH-3896]
  * ui (Enterprise): Decoding the replication token should no longer error and
    prevent enabling of a secondary replication cluster via the ui.
+ * plugin/gRPC: Add connection info to the request object [GH-3997]
 
 ## 0.9.3 (January 28th, 2018)
 
