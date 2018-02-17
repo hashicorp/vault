@@ -84,6 +84,48 @@ default TTL is used, in that order. Cannot
 be later than the role max TTL.`,
 	}
 
+	fields["ou"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, OU (OrganizationalUnit) will be set to
+this value.`,
+	}
+
+	fields["organization"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, O (Organization) will be set to
+this value.`,
+	}
+
+	fields["country"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Country will be set to
+this value.`,
+	}
+
+	fields["locality"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Locality will be set to
+this value.`,
+	}
+
+	fields["province"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Province will be set to
+this value.`,
+	}
+
+	fields["street_address"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Street Address will be set to
+this value.`,
+	}
+
+	fields["postal_code"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Postal Code will be set to
+this value.`,
+	}
+
 	return fields
 }
 

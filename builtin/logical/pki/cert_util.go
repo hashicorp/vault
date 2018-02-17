@@ -841,14 +841,115 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 	}
 
+	country := strutil.RemoveDuplicates(data.role.Country, false)
+	organization := strutil.RemoveDuplicates(data.role.Organization, false)
+	ou := strutil.RemoveDuplicates(data.role.OU, false)
+	locality := strutil.RemoveDuplicates(data.role.Locality, false)
+	province := strutil.RemoveDuplicates(data.role.Province, false)
+	streetAddress := strutil.RemoveDuplicates(data.role.StreetAddress, false)
+	postalCode := strutil.RemoveDuplicates(data.role.PostalCode, false)
+
+	var result interface{}
+	// Set C (countryName) values if specified in data and not already set by role
+	result, ok = data.apiData.GetOk("country")
+	if ok && len(result.([]string)) > 0 {
+		if len(country) == 0 {
+			country = strutil.RemoveDuplicates(result.([]string), false)
+		} else if strutil.StrListSubset(country, result.([]string)) {
+			country = strutil.RemoveDuplicates(result.([]string), false)
+		} else {
+			return errutil.UserError{Err: fmt.Sprintf(
+				"Country has been specified for this role (%s), but was provided %s", country, result.([]string))}
+		}
+	}
+
+	// Set O (organizationName) values if specified in data and not already set by role
+	result, ok = data.apiData.GetOk("organization")
+	if ok && len(result.([]string)) > 0 {
+		if len(organization) == 0 {
+			organization = strutil.RemoveDuplicates(result.([]string), false)
+		} else if strutil.StrListSubset(organization, result.([]string)) {
+			organization = strutil.RemoveDuplicates(result.([]string), false)
+		} else {
+			return errutil.UserError{Err: fmt.Sprintf(
+				"Organization has been specified for this role (%s), but was provided %s", organization, result.([]string))}
+		}
+	}
+
+	// Set OU (organizationalUnit) values if specified in data and not already set by role
+	result, ok = data.apiData.GetOk("ou")
+	if ok && len(result.([]string)) > 0 {
+		if len(ou) == 0 {
+			ou = strutil.RemoveDuplicates(result.([]string), false)
+		} else if strutil.StrListSubset(ou, result.([]string)) {
+			ou = strutil.RemoveDuplicates(result.([]string), false)
+		} else {
+			return errutil.UserError{Err: fmt.Sprintf(
+				"Organizational Unit has been specified for this role (%s), but was provided %s", ou, result.([]string))}
+		}
+	}
+
+	// Set L (locality) values if specified in data and not already set by role
+	result, ok = data.apiData.GetOk("locality")
+	if ok && len(result.([]string)) > 0 {
+		if len(locality) == 0 {
+			locality = strutil.RemoveDuplicates(result.([]string), false)
+		} else if strutil.StrListSubset(locality, result.([]string)) {
+			locality = strutil.RemoveDuplicates(result.([]string), false)
+		} else {
+			return errutil.UserError{Err: fmt.Sprintf(
+				"Locality has been specified for this role (%s), but was provided %s", locality, result.([]string))}
+		}
+	}
+
+	// Set ST (stateOrProvince) values if specified in data and not already set by role
+	result, ok = data.apiData.GetOk("province")
+	if ok && len(result.([]string)) > 0 {
+		if len(province) == 0 {
+			province = strutil.RemoveDuplicates(result.([]string), false)
+		} else if strutil.StrListSubset(province, result.([]string)) {
+			province = strutil.RemoveDuplicates(result.([]string), false)
+		} else {
+			return errutil.UserError{Err: fmt.Sprintf(
+				"State or Province has been specified for this role (%s), but was provided %s", province, result.([]string))}
+		}
+	}
+
+	// Set STREET (streetAddress) values if specified in data and not already set by role
+	result, ok = data.apiData.GetOk("street_address")
+	if ok && len(result.([]string)) > 0 {
+		if len(streetAddress) == 0 {
+			streetAddress = strutil.RemoveDuplicates(result.([]string), false)
+		} else if strutil.StrListSubset(streetAddress, result.([]string)) {
+			streetAddress = strutil.RemoveDuplicates(result.([]string), false)
+		} else {
+			return errutil.UserError{Err: fmt.Sprintf(
+				"Street Address has been specified for this role (%s), but was provided %s", streetAddress, result.([]string))}
+		}
+	}
+
+	// Set postalCode values if specified in data and not already set by role
+	result, ok = data.apiData.GetOk("postal_code")
+	if ok && len(result.([]string)) > 0 {
+		if len(postalCode) == 0 {
+			postalCode = strutil.RemoveDuplicates(result.([]string), false)
+		} else if strutil.StrListSubset(postalCode, result.([]string)) {
+			postalCode = strutil.RemoveDuplicates(result.([]string), false)
+		} else {
+			return errutil.UserError{Err: fmt.Sprintf(
+				"Postal Code has been specified for this role (%s), but was provided %s", postalCode, result.([]string))}
+		}
+	}
+
 	subject := pkix.Name{
-		Country:            strutil.RemoveDuplicates(data.role.Country, false),
-		Organization:       strutil.RemoveDuplicates(data.role.Organization, false),
-		OrganizationalUnit: strutil.RemoveDuplicates(data.role.OU, false),
-		Locality:           strutil.RemoveDuplicates(data.role.Locality, false),
-		Province:           strutil.RemoveDuplicates(data.role.Province, false),
-		StreetAddress:      strutil.RemoveDuplicates(data.role.StreetAddress, false),
-		PostalCode:         strutil.RemoveDuplicates(data.role.PostalCode, false),
+		CommonName:         cn,
+		Country:            country,
+		Organization:       organization,
+		OrganizationalUnit: ou,
+		Locality:           locality,
+		Province:           province,
+		StreetAddress:      streetAddress,
+		PostalCode:         postalCode,
 	}
 
 	// Get the TTL and verify it against the max allowed

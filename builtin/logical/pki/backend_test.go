@@ -1555,6 +1555,27 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		ret = append(ret, issueTestStep)
 	}
 
+	getCountryCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.RemoveDuplicates(role.Country, false)
+			if !reflect.DeepEqual(cert.Subject.Country, expected) {
+				return fmt.Errorf("Error: returned certificate has Country of %s but %s was specified in the role.", cert.Subject.Country, expected)
+			}
+			return nil
+		}
+	}
+
 	getOuCheck := func(role roleEntry) logicaltest.TestCheckFunc {
 		var certBundle certutil.CertBundle
 		return func(resp *logical.Response) error {
@@ -1568,7 +1589,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.RemoveDuplicates(role.OU, true)
+			expected := strutil.RemoveDuplicates(role.OU, false)
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
 			}
@@ -1589,9 +1610,93 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.RemoveDuplicates(role.Organization, true)
+			expected := strutil.RemoveDuplicates(role.Organization, false)
 			if !reflect.DeepEqual(cert.Subject.Organization, expected) {
 				return fmt.Errorf("Error: returned certificate has Organization of %s but %s was specified in the role.", cert.Subject.Organization, expected)
+			}
+			return nil
+		}
+	}
+
+	getLocalityCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.RemoveDuplicates(role.Locality, false)
+			if !reflect.DeepEqual(cert.Subject.Locality, expected) {
+				return fmt.Errorf("Error: returned certificate has Locality of %s but %s was specified in the role.", cert.Subject.Locality, expected)
+			}
+			return nil
+		}
+	}
+
+	getProvinceCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.RemoveDuplicates(role.Province, false)
+			if !reflect.DeepEqual(cert.Subject.Province, expected) {
+				return fmt.Errorf("Error: returned certificate has Province of %s but %s was specified in the role.", cert.Subject.Province, expected)
+			}
+			return nil
+		}
+	}
+
+	getStreetAddressCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.RemoveDuplicates(role.StreetAddress, false)
+			if !reflect.DeepEqual(cert.Subject.StreetAddress, expected) {
+				return fmt.Errorf("Error: returned certificate has Street Address of %s but %s was specified in the role.", cert.Subject.StreetAddress, expected)
+			}
+			return nil
+		}
+	}
+
+	getPostalCodeCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.RemoveDuplicates(role.PostalCode, false)
+			if !reflect.DeepEqual(cert.Subject.PostalCode, expected) {
+				return fmt.Errorf("Error: returned certificate has Postal Code of %s but %s was specified in the role.", cert.Subject.PostalCode, expected)
 			}
 			return nil
 		}
@@ -1883,6 +1988,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		keybitSizeRandOff = true
 		addCnTests()
 	}
+	// Country tests
+	{
+		roleVals.Country = []string{"foo"}
+		addTests(getCountryCheck(roleVals))
+
+		roleVals.Country = []string{"foo", "bar"}
+		addTests(getCountryCheck(roleVals))
+	}
 	// OU tests
 	{
 		roleVals.OU = []string{"foo"}
@@ -1898,6 +2011,38 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		roleVals.Organization = []string{"foo", "bar"}
 		addTests(getOrganizationCheck(roleVals))
+	}
+	// Locality tests
+	{
+		roleVals.Locality = []string{"foo"}
+		addTests(getLocalityCheck(roleVals))
+
+		roleVals.Locality = []string{"foo", "bar"}
+		addTests(getLocalityCheck(roleVals))
+	}
+	// Province tests
+	{
+		roleVals.Province = []string{"foo"}
+		addTests(getProvinceCheck(roleVals))
+
+		roleVals.Province = []string{"foo", "bar"}
+		addTests(getProvinceCheck(roleVals))
+	}
+	// StreetAddress tests
+	{
+		roleVals.StreetAddress = []string{"123 Foo Street"}
+		addTests(getStreetAddressCheck(roleVals))
+
+		roleVals.StreetAddress = []string{"123 Foo Street", "789 Bar Street"}
+		addTests(getStreetAddressCheck(roleVals))
+	}
+	// PostalCode tests
+	{
+		roleVals.PostalCode = []string{"F00"}
+		addTests(getPostalCodeCheck(roleVals))
+
+		roleVals.PostalCode = []string{"F00", "B4R"}
+		addTests(getPostalCodeCheck(roleVals))
 	}
 	// IP SAN tests
 	{
