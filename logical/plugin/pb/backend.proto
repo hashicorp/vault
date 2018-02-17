@@ -125,6 +125,11 @@ message Request {
 	// attached. Useful in some situations where the client token is not made
 	// accessible.
 	bool unauthenticated = 19;
+
+   	// Connection will be non-nil only for credential providers to
+	// inspect the connection information and potentially use it for
+	// authentication/protection.
+	Connection connection = 20;
 }
 
 message Alias {
@@ -511,8 +516,8 @@ service SystemView {
 	// anyways), we can ignore the errors to allow unmounting to complete.
 	rpc Tainted(Empty) returns (TaintedReply);
 
-    // CachingDisabled returns true if caching is disabled. If true, no caches
-    // should be used, despite known slowdowns.
+	// CachingDisabled returns true if caching is disabled. If true, no caches
+	// should be used, despite known slowdowns.
 	rpc CachingDisabled(Empty) returns (CachingDisabledReply);
 
    	// ReplicationState indicates the state of cluster replication
@@ -526,7 +531,12 @@ service SystemView {
 	// plugins.
 	rpc MlockEnabled(Empty) returns (MlockEnabledReply);
 
-    // LocalMount, when run from a system view attached to a request, indicates
-    // whether the request is affecting a local mount or not
+	// LocalMount, when run from a system view attached to a request, indicates
+	// whether the request is affecting a local mount or not
 	rpc LocalMount(Empty) returns (LocalMountReply);
+}
+
+message Connection {
+	// RemoteAddr is the network address that sent the request.
+	string remote_addr = 1;
 }

@@ -72,6 +72,9 @@ func TestTranslation_Request(t *testing.T) {
 			EntityID:                 "tester",
 			PolicyOverride:           true,
 			Unauthenticated:          true,
+			Connection: &logical.Connection{
+				RemoteAddr: "localhost",
+			},
 		},
 		&logical.Request{
 			ID:                 "ID",
