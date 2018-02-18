@@ -56,6 +56,8 @@ BUG FIXES:
    periodic tokens. [GH-3880]
  * command/rekey: Re-add lost `stored-shares` parameter [GH-3974]
  * command/ssh: Create and reuse the api client [GH-3909]
+ * command/status: Fix panic when status returns 500 from leadership lookup
+   [GH-3998]
  * identity: Fix race when creating entities [GH-3932]
  * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
    plugins using gRPC transport [GH-3881]
