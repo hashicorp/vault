@@ -842,6 +842,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	}
 
 	subject := pkix.Name{
+		CommonName:         cn,
 		Country:            strutil.RemoveDuplicates(data.role.Country, false),
 		Organization:       strutil.RemoveDuplicates(data.role.Organization, false),
 		OrganizationalUnit: strutil.RemoveDuplicates(data.role.OU, false),
