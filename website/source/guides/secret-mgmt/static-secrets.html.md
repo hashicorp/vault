@@ -94,7 +94,7 @@ path "auth/token/create" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/configuration/policies.html) guide.
+[policies](/guides/identity/policies.html) guide.
 
 
 ## Steps
@@ -545,5 +545,5 @@ $ cat mongodb.txt
 This guide introduced the CLI commands and API endpoints to read and write
 secrets in key/value backend. To keep it simple, the `devops` persona generated a
 token for `apps`.  Read [AppRole Pull
-Authentication](/guides/configuration/authentication.html) guide to learn about
+Authentication](/guides/identity/authentication.html) guide to learn about
 programmatically generate a token for apps.

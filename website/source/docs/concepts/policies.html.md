@@ -113,8 +113,8 @@ path "secret/super-secret" {
   capabilities = ["deny"]
 }
 
-# Policies can also specify allowed, disallowed, and required parameters. Here 
-# the key "secret/restricted" can only contain "foo" (any value) and "bar" (one 
+# Policies can also specify allowed, disallowed, and required parameters. Here
+# the key "secret/restricted" can only contain "foo" (any value) and "bar" (one
 # of "zip" or "zap").
 path "secret/restricted" {
   capabilities = ["create"]
@@ -228,13 +228,13 @@ options are:
 
       ```ruby
       # This requires the user to create "secret/foo" with a parameter named
-      # "bar" and "baz". 
+      # "bar" and "baz".
       path "secret/foo" {
         capabilities = ["create"]
         required_parameters = ["bar", "baz"]
       }
       ```
-  
+
   * `allowed_parameters` - Whitelists a list of keys and values that are
     permitted on the given path.
 
@@ -438,7 +438,7 @@ $ curl \
 For more information, please read:
 
 - [Production Hardening](/guides/operations/production.html)
-- [Generating a Root Token](/guides/configuration/generate-root.html)
+- [Generating a Root Token](/guides/operations/generate-root.html)
 
 ## Managing Policies
 
