@@ -88,7 +88,7 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 		return "", "", err
 	}
 
-	if len(statements.CreationStatements) == 0 {
+	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -127,7 +127,7 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, stmt := range statements.CreationStatements {
+	for _, stmt := range statements.Creation {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -218,7 +218,7 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, stmt := range statements.RevocationStatements {
+	for _, stmt := range statements.Revocation {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {

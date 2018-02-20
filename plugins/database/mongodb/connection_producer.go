@@ -34,8 +34,13 @@ type mongoDBConnectionProducer struct {
 	sync.Mutex
 }
 
+func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+	_, err := c.Init(ctx, conf, verifyConnection)
+	return err
+}
+
 // Initialize parses connection configuration.
-func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
+func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
 	c.Lock()
 	defer c.Unlock()
 

@@ -150,31 +150,31 @@ func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName 
 	case upgradeCh.Statements != nil:
 		var stmts dbplugin.Statements
 		if upgradeCh.Statements.CreationStatements != "" {
-			stmts.CreationStatements = []string{upgradeCh.Statements.CreationStatements}
+			stmts.Creation = []string{upgradeCh.Statements.CreationStatements}
 		}
 		if upgradeCh.Statements.RevocationStatements != "" {
-			stmts.RevocationStatements = []string{upgradeCh.Statements.RevocationStatements}
+			stmts.Revocation = []string{upgradeCh.Statements.RevocationStatements}
 		}
 		if upgradeCh.Statements.RollbackStatements != "" {
-			stmts.RollbackStatements = []string{upgradeCh.Statements.RollbackStatements}
+			stmts.Rollback = []string{upgradeCh.Statements.RollbackStatements}
 		}
 		if upgradeCh.Statements.RenewStatements != "" {
-			stmts.RenewStatements = []string{upgradeCh.Statements.RenewStatements}
+			stmts.Renewal = []string{upgradeCh.Statements.RenewStatements}
 		}
 		result.Statements = stmts
 	case upgradeCh.OldStatements != nil:
 		var stmts dbplugin.Statements
 		if upgradeCh.OldStatements.CreationStatements != "" {
-			stmts.CreationStatements = []string{upgradeCh.OldStatements.CreationStatements}
+			stmts.Creation = []string{upgradeCh.OldStatements.CreationStatements}
 		}
 		if upgradeCh.OldStatements.RevocationStatements != "" {
-			stmts.RevocationStatements = []string{upgradeCh.OldStatements.RevocationStatements}
+			stmts.Revocation = []string{upgradeCh.OldStatements.RevocationStatements}
 		}
 		if upgradeCh.OldStatements.RollbackStatements != "" {
-			stmts.RollbackStatements = []string{upgradeCh.OldStatements.RollbackStatements}
+			stmts.Rollback = []string{upgradeCh.OldStatements.RollbackStatements}
 		}
 		if upgradeCh.OldStatements.RenewStatements != "" {
-			stmts.RenewStatements = []string{upgradeCh.OldStatements.RenewStatements}
+			stmts.Renewal = []string{upgradeCh.OldStatements.RenewStatements}
 		}
 		result.Statements = stmts
 	}
@@ -225,7 +225,7 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 		return nil, err
 	}
 
-	_, err = dbp.Initialize(ctx, config.ConnectionDetails, true)
+	_, err = dbp.Init(ctx, config.ConnectionDetails, true)
 	if err != nil {
 		dbp.Close()
 		return nil, err

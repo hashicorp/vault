@@ -88,7 +88,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	m.Lock()
 	defer m.Unlock()
 
-	if len(statements.CreationStatements) == 0 {
+	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -109,7 +109,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 
 	// Unmarshal statements.CreationStatements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(statements.CreationStatements[0]), &mongoCS)
+	err = json.Unmarshal([]byte(statements.Creation[0]), &mongoCS)
 	if err != nil {
 		return "", "", err
 	}
@@ -165,13 +165,13 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 	// If no revocation statements provided, pass in empty JSON
 	var revocationStatement string
-	switch len(statements.RevocationStatements) {
+	switch len(statements.Revocation) {
 	case 0:
 		revocationStatement = `{}`
 	case 1:
-		revocationStatement = statements.RevocationStatements[0]
+		revocationStatement = statements.Revocation[0]
 	default:
-		return fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(statements.RevocationStatements))
+		return fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(statements.Revocation))
 	}
 
 	// Unmarshal revocation statements into mongodbRoles

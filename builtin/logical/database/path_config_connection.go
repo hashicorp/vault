@@ -228,7 +228,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
-		connDetails, err := db.Initialize(ctx, data.Raw, verifyConnection)
+		connDetails, err := db.Init(ctx, data.Raw, verifyConnection)
 		if err != nil {
 			db.Close()
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil

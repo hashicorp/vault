@@ -90,12 +90,12 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 		return "", "", err
 	}
 
-	creationCQL := statements.CreationStatements
+	creationCQL := statements.Creation
 	if len(creationCQL) == 0 {
 		creationCQL = []string{defaultUserCreationCQL}
 	}
 
-	rollbackCQL := statements.CreationStatements
+	rollbackCQL := statements.Rollback
 	if len(rollbackCQL) == 0 {
 		rollbackCQL = []string{defaultUserDeletionCQL}
 	}
@@ -168,9 +168,9 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 	case 0:
 		revocationCQL = defaultUserDeletionCQL
 	case 1:
-		revocationCQL = statements.RevocationStatements[0]
+		revocationCQL = statements.Revocation[0]
 	default:
-		return fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(statements.RevocationStatements))
+		return fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(statements.Revocation))
 	}
 
 	var result *multierror.Error

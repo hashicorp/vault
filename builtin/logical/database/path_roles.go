@@ -156,10 +156,10 @@ func (b *databaseBackend) pathRoleCreate() framework.OperationFunc {
 		maxTTL := time.Duration(maxTTLRaw) * time.Second
 
 		statements := dbplugin.Statements{
-			CreationStatements:   creationStmts,
-			RevocationStatements: revocationStmts,
-			RollbackStatements:   rollbackStmts,
-			RenewStatements:      renewStmts,
+			Creation:   creationStmts,
+			Revocation: revocationStmts,
+			Rollback:   rollbackStmts,
+			Renewal:    renewStmts,
 		}
 
 		// Store it

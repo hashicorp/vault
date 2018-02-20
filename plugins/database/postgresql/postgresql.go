@@ -124,7 +124,7 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	// Return the secret
 
 	// Execute each query
-	for _, stmt := range statements.CreationStatements {
+	for _, stmt := range statements.Creation {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -161,7 +161,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 	p.Lock()
 	defer p.Unlock()
 
-	renewStmts := statements.RenewStatements
+	renewStmts := statements.Renewal
 	if len(renewStmts) == 0 {
 		renewStmts = []string{defaultPostgresRenewSQL}
 	}
@@ -221,7 +221,7 @@ func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Stateme
 		return p.defaultRevokeUser(ctx, username)
 	}
 
-	return p.customRevokeUser(ctx, username, statements.RevocationStatements)
+	return p.customRevokeUser(ctx, username, statements.Revocation)
 }
 
 func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revocationStmts []string) error {

@@ -23,8 +23,11 @@ type Database interface {
 
 	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
 
-	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
+	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
 	Close() error
+
+	// DEPRECATED, will be removed in 0.12
+	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)
 }
 
 // PluginFactory is used to build plugin database types. It wraps the database

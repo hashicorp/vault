@@ -4,6 +4,12 @@ package dbplugin;
 import "google/protobuf/timestamp.proto";
 
 message InitializeRequest {
+	option deprecated = true;
+	bytes config = 1;
+	bool verify_connection = 2;
+}
+
+message InitRequest {
 	bytes config = 1;
 	bool verify_connection = 2;
 }
@@ -30,10 +36,19 @@ message RotateRootCredentialsRequest {
 }
 
 message Statements {
-	repeated string creation_statements = 1;
-	repeated string revocation_statements = 2;
-	repeated string rollback_statements  = 3;
-	repeated string renew_statements = 4;
+	// DEPRECATED, will be removed in 0.12
+	string creation_statements = 1;
+	// DEPRECATED, will be removed in 0.12
+	string revocation_statements = 2;
+	// DEPRECATED, will be removed in 0.12
+	string rollback_statements  = 3;
+	// DEPRECATED, will be removed in 0.12
+	string renew_statements = 4;
+
+	repeated string creation = 5;
+	repeated string revocation = 6;
+	repeated string rollback  = 7;
+	repeated string renewal = 8;
 }
 
 message UsernameConfig {
@@ -41,7 +56,7 @@ message UsernameConfig {
 	string RoleName = 2;
 }
 
-message InitializeResponse {
+message InitResponse {
 	bytes config = 1;
 }
 
@@ -66,6 +81,10 @@ service Database {
     rpc RenewUser(RenewUserRequest) returns (Empty);
     rpc RevokeUser(RevokeUserRequest) returns (Empty);
     rpc RotateRootCredentials(RotateRootCredentialsRequest) returns (RotateRootCredentialsResponse);
-    rpc Initialize(InitializeRequest) returns (InitializeResponse);
-    rpc Close(Empty) returns (Empty);
+    rpc Init(InitRequest) returns (InitResponse);
+	rpc Close(Empty) returns (Empty);
+	
+    rpc Initialize(InitializeRequest) returns (Empty) {
+		option deprecated = true;
+	};
 }

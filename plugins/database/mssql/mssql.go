@@ -113,7 +113,7 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, stmt := range statements.CreationStatements {
+	for _, stmt := range statements.Creation {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -153,7 +153,7 @@ func (m *MSSQL) RenewUser(ctx context.Context, statements dbplugin.Statements, u
 // then kill pending connections from that user, and finally drop the user and login from the
 // database instance.
 func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	if len(statements.RevocationStatements) == 0 {
+	if len(statements.Revocation) == 0 {
 		return m.revokeUserDefault(ctx, username)
 	}
 
@@ -171,7 +171,7 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, stmt := range statements.RevocationStatements {
+	for _, stmt := range statements.Revocation {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {

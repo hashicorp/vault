@@ -144,7 +144,7 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, stmt := range statements.CreationStatements {
+	for _, stmt := range statements.Creation {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -205,7 +205,7 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 		return err
 	}
 
-	revocationStmts := statements.RevocationStatements
+	revocationStmts := statements.Revocation
 	// Use a default SQL statement for revocation if one cannot be fetched from the role
 	if len(revocationStmts) == 0 {
 		revocationStmts = []string{defaultMysqlRevocationStmts}

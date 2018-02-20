@@ -47,8 +47,15 @@ func (ds *databasePluginRPCServer) RotateRootCredentials(args *RotateRootCredent
 	return err
 }
 
-func (ds *databasePluginRPCServer) Initialize(args *InitializeRequestRPC, resp *InitializeResponse) error {
-	config, err := ds.impl.Initialize(context.Background(), args.Config, args.VerifyConnection)
+func (ds *databasePluginRPCServer) Initialize(args *InitializeRequestRPC, _ *struct{}) error {
+	return ds.Init(&InitRequestRPC{
+		Config:           args.Config,
+		VerifyConnection: args.VerifyConnection,
+	}, &InitResponse{})
+}
+
+func (ds *databasePluginRPCServer) Init(args *InitRequestRPC, resp *InitResponse) error {
+	config, err := ds.impl.Init(context.Background(), args.Config, args.VerifyConnection)
 	if err != nil {
 		return err
 	}
@@ -119,14 +126,19 @@ func (dr *databasePluginRPCClient) RotateRootCredentials(_ context.Context, stat
 	return saveConf, err
 }
 
-func (dr *databasePluginRPCClient) Initialize(_ context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
+func (dr *databasePluginRPCClient) Initialize(_ context.Context, conf map[string]interface{}, verifyConnection bool) error {
+	_, err := dr.Init(nil, conf, verifyConnection)
+	return err
+}
+
+func (dr *databasePluginRPCClient) Init(_ context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
 	req := InitializeRequestRPC{
 		Config:           conf,
 		VerifyConnection: verifyConnection,
 	}
 
-	var resp InitializeResponse
-	err = dr.client.Call("Plugin.Initialize", req, &resp)
+	var resp InitResponse
+	err = dr.client.Call("Plugin.Init", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +154,11 @@ func (dr *databasePluginRPCClient) Close() error {
 // ---- RPC Request Args Domain ----
 
 type InitializeRequestRPC struct {
+	Config           map[string]interface{}
+	VerifyConnection bool
+}
+
+type InitRequestRPC struct {
 	Config           map[string]interface{}
 	VerifyConnection bool
 }

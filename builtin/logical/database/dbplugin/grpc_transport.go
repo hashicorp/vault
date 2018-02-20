@@ -78,14 +78,22 @@ func (s *gRPCServer) RotateRootCredentials(ctx context.Context, req *RotateRootC
 	}, err
 }
 
-func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*InitializeResponse, error) {
+func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*Empty, error) {
+	_, err := s.Init(ctx, &InitRequest{
+		Config:           req.Config,
+		VerifyConnection: req.VerifyConnection,
+	})
+	return &Empty{}, err
+}
+
+func (s *gRPCServer) Init(ctx context.Context, req *InitRequest) (*InitResponse, error) {
 	config := map[string]interface{}{}
 	err := json.Unmarshal(req.Config, &config)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := s.impl.Initialize(ctx, config, req.VerifyConnection)
+	resp, err := s.impl.Init(ctx, config, req.VerifyConnection)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +103,7 @@ func (s *gRPCServer) Initialize(ctx context.Context, req *InitializeRequest) (*I
 		return nil, err
 	}
 
-	return &InitializeResponse{
+	return &InitResponse{
 		Config: respConfig,
 	}, err
 }
@@ -224,7 +232,12 @@ func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements []str
 	return conf, nil
 }
 
-func (c *gRPCClient) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
+func (c *gRPCClient) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+	_, err := c.Init(ctx, conf, verifyConnection)
+	return err
+}
+
+func (c *gRPCClient) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
 	configRaw, err := json.Marshal(conf)
 	if err != nil {
 		return nil, err
@@ -235,7 +248,7 @@ func (c *gRPCClient) Initialize(ctx context.Context, conf map[string]interface{}
 	defer close(quitCh)
 	defer cancel()
 
-	resp, err := c.client.Initialize(ctx, &InitializeRequest{
+	resp, err := c.client.Init(ctx, &InitRequest{
 		Config:           configRaw,
 		VerifyConnection: verifyConnection,
 	})
