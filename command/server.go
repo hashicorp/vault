@@ -698,7 +698,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.reloadFuncsLock.Unlock()
 	if !disableClustering {
 		if c.logger.IsTrace() {
-			c.logger.Trace("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
+			c.logger.Trace("core: cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
 		}
 	}
 

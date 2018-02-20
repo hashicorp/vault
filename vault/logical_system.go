@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatih/structs"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -1856,16 +1857,8 @@ func (b *SystemBackend) handleMountTuneConfigRead(ctx context.Context, req *logi
 
 	respData := map[string]interface{}{}
 
-	// Map config_key to the MountEntry object
-	switch configKey {
-	case "audit_request_hmac_values":
-		if rawVal, ok := mountEntry.synthesizedConfigCache.Load(configKey); ok {
-			if sliceVal, ok := rawVal.([]string); ok && sliceVal != nil && len(sliceVal) > 0 {
-				respData[configKey] = sliceVal
-			}
-		}
-	default:
-		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load(configKey); ok {
+		respData["values"] = rawVal
 	}
 
 	if len(respData) == 0 {
@@ -1909,31 +1902,37 @@ func (b *SystemBackend) handleMountTuneConfigWrite(ctx context.Context, req *log
 	lock.Lock()
 	defer lock.Unlock()
 
-	// Map config_key to the MountEntry object
-	switch configKey {
-	case "audit_request_hmac_values":
-		rawVals, ok := data.GetOk("values")
-		if !ok {
-			return logical.ErrorResponse("no values provided"), logical.ErrInvalidRequest
-		}
+	rawVals, ok := data.GetOk("values")
+	if !ok {
+		return logical.ErrorResponse("no values provided"), logical.ErrInvalidRequest
+	}
 
-		oldVal := mountEntry.Config.AuditRequestHMACValues
-		mountEntry.Config.AuditRequestHMACValues = rawVals.([]string)
+	rawMap := map[string]interface{}{
+		configKey: rawVals,
+	}
 
-		// Persist the change
-		err := b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
-		if err != nil {
-			mountEntry.Config.AuditRequestHMACValues = oldVal
-			return handleError(err)
-		}
+	md := &mapstructure.Metadata{}
+	err := mapstructure.DecodeMetadata(rawMap, &mountEntry.Config.SynthesizableConfig, md)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode value into a synthesizable configuration value: %v", err)
+	}
 
-		// Cache the value
-		err = b.Core.updateMountEntriesCache(ctx, mountEntry.Table, mountEntry.Type, configKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update cache: %v", err)
-		}
-	default:
-		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	// If the value was not decoded, then it means that it's an invalid config_key
+	if len(md.Keys) == 0 {
+		return logical.ErrorResponse("invalid config_key provided"), logical.ErrInvalidRequest
+	}
+
+	oldVal := mountEntry.Config.SynthesizableConfig
+
+	err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+	if err != nil {
+		mountEntry.Config.SynthesizableConfig = oldVal
+		return handleError(err)
+	}
+
+	err = b.Core.updateMountEntriesCache(ctx, mountEntry.Table, mountEntry.Type, configKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update cache: %v", err)
 	}
 
 	return nil, nil
@@ -1970,26 +1969,41 @@ func (b *SystemBackend) handleMountTuneConfigDelete(ctx context.Context, req *lo
 	lock.Lock()
 	defer lock.Unlock()
 
-	// Map config_key to the MountEntry object
-	switch configKey {
-	case "audit_request_hmac_values":
-		oldVal := mountEntry.Config.AuditRequestHMACValues
-		mountEntry.Config.AuditRequestHMACValues = nil
+	rawMap := map[string]interface{}{
+		configKey: nil,
+	}
 
-		// Persist the change
-		err := b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
-		if err != nil {
-			mountEntry.Config.AuditRequestHMACValues = oldVal
-			return handleError(err)
-		}
+	var md mapstructure.Metadata
+	decoderConfig := &mapstructure.DecoderConfig{
+		Metadata:   &md,
+		Result:     &mountEntry.Config.SynthesizableConfig,
+		ZeroFields: true,
+	}
 
-		// Delete the entry from the cache
-		err = b.Core.updateMountEntriesCache(ctx, mountEntry.Table, mountEntry.Type, configKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update cache: %v", err)
-		}
-	default:
-		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	decoder, err := mapstructure.NewDecoder(decoderConfig)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create decoder: %v", err)
+	}
+
+	if err := decoder.Decode(rawMap); err != nil {
+		return nil, fmt.Errorf("unable to decode value into a synthesizable configuration value: %v", err)
+	}
+
+	// If the value was not decoded, then it means that it's an invalid config_key
+	if len(md.Keys) == 0 {
+		return logical.ErrorResponse("invalid config_key provided"), logical.ErrInvalidRequest
+	}
+
+	oldVal := mountEntry.Config.SynthesizableConfig
+	err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+	if err != nil {
+		mountEntry.Config.SynthesizableConfig = oldVal
+		return handleError(err)
+	}
+
+	err = b.Core.updateMountEntriesCache(ctx, mountEntry.Table, mountEntry.Type, configKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update cache: %v", err)
 	}
 
 	return nil, nil
@@ -2038,21 +2052,20 @@ func (b *SystemBackend) handleConfigRead(ctx context.Context, req *logical.Reque
 		return nil, fmt.Errorf("failed to decode %s config entry: %v", configKey, err)
 	}
 
-	var respValues []string
+	mapStruct := structs.Map(config)
 
-	// Map config_key to the MountEntry object
-	switch configKey {
-	case "audit_request_hmac_values":
-		respValues = config.AuditRequestHMACValues
-	default:
-		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
-	}
-
-	if len(respValues) == 0 {
+	values, ok := mapStruct[configKey]
+	if !ok {
 		return nil, nil
 	}
 
-	return logical.ValuesResponse(respValues), nil
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"values": values,
+		},
+	}
+
+	return resp, nil
 }
 
 func (b *SystemBackend) handleConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -2080,12 +2093,19 @@ func (b *SystemBackend) handleConfigWrite(ctx context.Context, req *logical.Requ
 	}
 
 	config := &SynthesizableConfig{}
+	rawMap := map[string]interface{}{
+		configKey: rawVals,
+	}
 
-	switch configKey {
-	case "audit_request_hmac_values":
-		config.AuditRequestHMACValues = rawVals.([]string)
-	default:
-		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
+	md := &mapstructure.Metadata{}
+	err := mapstructure.DecodeMetadata(rawMap, config, md)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode value into a synthesizable configuration value: %v", err)
+	}
+
+	// If the value was not decoded, then it means that it's an invalid config_key
+	if len(md.Keys) == 0 {
+		return logical.ErrorResponse("invalid config_key provided"), logical.ErrInvalidRequest
 	}
 
 	entryKey := fmt.Sprintf("%s/%s/%s", configKey, logicalType, backendType)
@@ -2143,9 +2163,9 @@ func (b *SystemBackend) handleConfigDelete(ctx context.Context, req *logical.Req
 			logical.ErrInvalidRequest
 	}
 
-	switch configKey {
-	case "audit_request_hmac_values":
-	default:
+	// Use structs to check if config_key is a valid field
+	m := structs.Map(&SynthesizableConfig{})
+	if _, ok := m[configKey]; !ok {
 		return logical.ErrorResponse("invalid config_key value provided"), logical.ErrInvalidRequest
 	}
 

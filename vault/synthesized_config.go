@@ -3,15 +3,17 @@ package vault
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/imdario/mergo"
 )
 
 // SynthesizableConfig holds configuration values that can be synthesized.
 // Synthesized values are those that can be configured at the sys/config and
 // mount/tune endpoints.
 type SynthesizableConfig struct {
-	AuditRequestHMACValues []string `json:"audit_request_hmac_values,omitempty" structs:"audit_request_hmac_values,omitempty" mapstructure:"audit_request_hmac_values"`
+	AuditRequestHMACValues []string `json:"audit_request_hmac_values,omitempty" structs:"audit_request_hmac_values" mapstructure:"audit_request_hmac_values"`
 }
 
 // BackendsConfig holds synthesizable backend configuration
@@ -46,31 +48,27 @@ func (c *Core) updateMountEntriesCache(ctx context.Context, logicalType, backend
 	}
 
 	// Decode entry into SynthesizableConfig
-	var config SynthesizableConfig
+	var sysConfig SynthesizableConfig
 	if entry != nil {
-		err := entry.DecodeJSON(&config)
+		err := entry.DecodeJSON(&sysConfig)
 		if err != nil {
 			return fmt.Errorf("failed to decode %s config entry: %v", configKey, err)
 		}
 	}
 
+	// Iterage through all entries and perform proper merging of sys + mount values
 	for _, entry := range table.Entries {
 		// TODO: Handle plugin type
-		valToStore := config.AuditRequestHMACValues
 		if entry.Type == backendType {
-			// Get MountConfigValue
-			switch configKey {
-			case "audit_request_hmac_values":
-				mountVal := entry.Config.AuditRequestHMACValues
-				if len(mountVal) > 0 {
-					// TODO: Proper merging of any typed value
-					valToStore = append(valToStore, mountVal...)
-				}
+			mergedConfig := sysConfig
+			err := mergo.Merge(&mergedConfig, entry.Config.SynthesizableConfig, mergo.WithOverride)
+			if err != nil {
+				return fmt.Errorf("failed to merge values: %v", err)
 			}
 
 			// If there's anything to store, it's an update, otherwise it's a delete
-			if len(valToStore) > 0 {
-				entry.synthesizedConfigCache.Store(configKey, valToStore)
+			if !reflect.DeepEqual(mergedConfig, SynthesizableConfig{}) {
+				entry.synthesizedConfigCache.Store(configKey, mergedConfig)
 			} else {
 				entry.synthesizedConfigCache.Delete(configKey)
 			}
