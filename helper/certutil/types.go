@@ -188,7 +188,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 		result.CertificateBytes = pemBlock.Bytes
 		result.Certificate, err = x509.ParseCertificate(result.CertificateBytes)
 		if err != nil {
-			return nil, errutil.UserError{Err: "Error encountered parsing certificate bytes from raw bundle"}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle: %v", err)}
 		}
 	}
 	switch {
@@ -201,7 +201,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 
 			parsedCert, err := x509.ParseCertificate(pemBlock.Bytes)
 			if err != nil {
-				return nil, errutil.UserError{Err: "Error encountered parsing certificate bytes from raw bundle"}
+				return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via CA chain: %v", err)}
 			}
 
 			certBlock := &CertBlock{
@@ -220,7 +220,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 
 		parsedCert, err := x509.ParseCertificate(pemBlock.Bytes)
 		if err != nil {
-			return nil, errutil.UserError{Err: "Error encountered parsing certificate bytes from raw bundle3"}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via issuing CA: %v", err)}
 		}
 
 		result.SerialNumber = result.Certificate.SerialNumber
@@ -444,7 +444,7 @@ func (c *CSRBundle) ToParsedCSRBundle() (*ParsedCSRBundle, error) {
 		result.CSRBytes = pemBlock.Bytes
 		result.CSR, err = x509.ParseCertificateRequest(result.CSRBytes)
 		if err != nil {
-			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle: %v", err)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via CSR: %v", err)}
 		}
 	}
 

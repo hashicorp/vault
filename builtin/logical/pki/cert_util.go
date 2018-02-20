@@ -1351,7 +1351,7 @@ func convertRespToPKCS8(resp *logical.Response) error {
 		return errwrap.Wrapf("error converting response to pkcs8: error parsing previous key: {{err}}", err)
 	}
 
-	keyData, err = certutil.MarshalPKCS8PrivateKey(signer)
+	keyData, err = x509.MarshalPKCS8PrivateKey(signer)
 	if err != nil {
 		return errwrap.Wrapf("error converting response to pkcs8: error marshaling pkcs8 key: {{err}}", err)
 	}

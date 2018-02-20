@@ -49,25 +49,25 @@ func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 	}
 	defer resp.Body.Close()
 
-	type publicKeys struct {
+	type PublicKeys struct {
 		Primary struct {
 			Bundle string
 		}
 	}
 
-	type them struct {
-		publicKeys `json:"public_keys"`
+	type LThem struct {
+		PublicKeys `json:"public_keys"`
 	}
 
-	type kbResp struct {
+	type KbResp struct {
 		Status struct {
 			Name string
 		}
-		Them []them
+		Them []LThem
 	}
 
-	out := &kbResp{
-		Them: []them{},
+	out := &KbResp{
+		Them: []LThem{},
 	}
 
 	if err := jsonutil.DecodeJSONFromReader(resp.Body, out); err != nil {
