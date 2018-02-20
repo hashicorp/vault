@@ -1071,8 +1071,8 @@
 		{
 			"checksumSHA1": "7SheX5w6+xGsTMxPI3LiJx0iz7s=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "4b17561773d85e482ea040884ee3e288425d4174",
-			"revisionTime": "2018-02-06T18:30:35Z"
+			"revision": "baa83ead6ff956b3f99bcd609ae3499c028e019e",
+			"revisionTime": "2018-02-16T15:44:16Z"
 		},
 		{
 			"checksumSHA1": "yzoWV7yrS/TvOrKy5ZrdUjsYaOA=",
@@ -1717,6 +1717,12 @@
 			"revisionTime": "2018-01-22T10:39:14Z"
 		},
 		{
+			"checksumSHA1": "1zB843WyoSh8oMdbeDfgByEa2TE=",
+			"path": "golang.org/x/crypto/chacha20poly1305",
+			"revision": "650f4a345ab4e5b245a3034b110ebc7299e68186",
+			"revisionTime": "2017-09-27T09:16:38Z"
+		},
+		{
 			"checksumSHA1": "t3UubYn5RuLw3vTUghV1Q1Q9VEY=",
 			"path": "golang.org/x/crypto/cryptobyte",
 			"revision": "1875d0a70c90e57f11972aefd42276df65e895b9",
@@ -1727,12 +1733,6 @@
 			"path": "golang.org/x/crypto/cryptobyte/asn1",
 			"revision": "1875d0a70c90e57f11972aefd42276df65e895b9",
 			"revisionTime": "2018-01-27T19:02:20Z"
-		},
-		{
-			"checksumSHA1": "1zB843WyoSh8oMdbeDfgByEa2TE=",
-			"path": "golang.org/x/crypto/chacha20poly1305",
-			"revision": "650f4a345ab4e5b245a3034b110ebc7299e68186",
-			"revisionTime": "2017-09-27T09:16:38Z"
 		},
 		{
 			"checksumSHA1": "IQkUIOnvlf0tYloFx9mLaXSvXWQ=",
