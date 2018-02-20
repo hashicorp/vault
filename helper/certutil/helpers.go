@@ -119,7 +119,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	for len(pemBytes) > 0 {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
 		if pemBlock == nil {
-			return nil, errutil.UserError{Err: "no data found"}
+			return nil, errutil.UserError{Err: "no data found in PEM block"}
 		}
 
 		if signer, err := x509.ParseECPrivateKey(pemBlock.Bytes); err == nil {
