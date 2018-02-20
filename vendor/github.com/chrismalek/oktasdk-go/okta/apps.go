@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// AppsService is a service to retreives applications from OKTA.
 type AppsService service
 
 // AppFilterOptions is used to generate a "Filter" to search for different Apps
@@ -17,6 +18,7 @@ type AppFilterOptions struct {
 	Limit         int      `url:"limit,omitempty"`
 }
 
+// App is the Model for an OKTA Application
 type App struct {
 	ID            string    `json:"id"`
 	Name          string    `json:"name"`
@@ -138,6 +140,7 @@ func (a *AppsService) GetByID(appID string) (*App, *Response, error) {
 	return app, resp, err
 }
 
+// AppUser is the model for a user of an OKTA App
 type AppUser struct {
 	ID              string     `json:"id"`
 	ExternalID      string     `json:"externalId"`
@@ -227,10 +230,9 @@ func (a *AppsService) GetUsers(appID string, opt *AppFilterOptions) (appUsers []
 
 				if err != nil {
 					return appUsers, resp, err
-				} else {
-					appUsers = append(appUsers, userPage...)
-					pagesRetreived++
 				}
+				appUsers = append(appUsers, userPage...)
+				pagesRetreived++
 			} else {
 				break
 			}

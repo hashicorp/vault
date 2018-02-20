@@ -35,5 +35,11 @@ deny
 
 ## Usage
 
-There are no flags beyond the [standard set of flags](/docs/commands/index.html)
-included on all commands.
+The following flags are available in addition to the [standard set of
+flags](/docs/commands/index.html) included on all commands.
+
+### Output Options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.

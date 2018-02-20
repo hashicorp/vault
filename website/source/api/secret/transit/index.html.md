@@ -34,10 +34,7 @@ values set here cannot be changed after key creation.
   convergent encryption, where the same plaintext creates the same ciphertext.
   This requires _derived_ to be set to `true`. When enabled, each
   encryption(/decryption/rewrap/datakey) operation will derive a `nonce` value
-  rather than randomly generate it. Note that while this is useful for
-  particular situations, all nonce values used with a given context value **must
-  be unique** or it will compromise the security of your key, and the key space
-  for nonces is 96 bit -- not as large as the AES key itself.
+  rather than randomly generate it.
 
 - `derived` `(bool: false)` – Specifies if key derivation is to be used. If
   enabled, all encrypt/decrypt requests to this named key must provide a context
@@ -53,8 +50,10 @@ values set here cannot be changed after key creation.
 - `type` `(string: "aes256-gcm96")` – Specifies the type of key to create. The
   currently-supported types are:
 
-    - `aes256-gcm96` – AES-256 wrapped with GCM using a 12-byte nonce size
-      (symmetric, supports derivation)
+    - `aes256-gcm96` – AES-256 wrapped with GCM using a 96-bit nonce size AEAD
+      (symmetric, supports derivation and convergent encryption)
+    - `chacha20-poly1305` – ChaCha20-Poly1305 AEAD (symmetric, supports
+      derivation and convergent encryption)
     - `ecdsa-p256` – ECDSA using the P-256 elliptic curve (asymmetric)
     - `ed25519` – ED25519 (asymmetric, supports derivation)
     - `rsa-2048` - RSA with bit size of 2048 (asymmetric)

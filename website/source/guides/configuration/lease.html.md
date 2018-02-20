@@ -648,7 +648,7 @@ $ cat payload.json
   "allowed_policies": [
 		"jenkins"
 	],
-  "period": "72h"
+  "period": "72h"  
 }
 ```
 

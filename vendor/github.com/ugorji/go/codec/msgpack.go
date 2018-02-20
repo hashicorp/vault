@@ -82,6 +82,86 @@ const (
 var mpTimeExtTag int8 = -1
 var mpTimeExtTagU = uint8(mpTimeExtTag)
 
+// var mpdesc = map[byte]string{
+// 	mpPosFixNumMin: "PosFixNumMin",
+// 	mpPosFixNumMax: "PosFixNumMax",
+// 	mpFixMapMin:    "FixMapMin",
+// 	mpFixMapMax:    "FixMapMax",
+// 	mpFixArrayMin:  "FixArrayMin",
+// 	mpFixArrayMax:  "FixArrayMax",
+// 	mpFixStrMin:    "FixStrMin",
+// 	mpFixStrMax:    "FixStrMax",
+// 	mpNil:          "Nil",
+// 	mpFalse:        "False",
+// 	mpTrue:         "True",
+// 	mpFloat:        "Float",
+// 	mpDouble:       "Double",
+// 	mpUint8:        "Uint8",
+// 	mpUint16:       "Uint16",
+// 	mpUint32:       "Uint32",
+// 	mpUint64:       "Uint64",
+// 	mpInt8:         "Int8",
+// 	mpInt16:        "Int16",
+// 	mpInt32:        "Int32",
+// 	mpInt64:        "Int64",
+// 	mpBin8:         "Bin8",
+// 	mpBin16:        "Bin16",
+// 	mpBin32:        "Bin32",
+// 	mpExt8:         "Ext8",
+// 	mpExt16:        "Ext16",
+// 	mpExt32:        "Ext32",
+// 	mpFixExt1:      "FixExt1",
+// 	mpFixExt2:      "FixExt2",
+// 	mpFixExt4:      "FixExt4",
+// 	mpFixExt8:      "FixExt8",
+// 	mpFixExt16:     "FixExt16",
+// 	mpStr8:         "Str8",
+// 	mpStr16:        "Str16",
+// 	mpStr32:        "Str32",
+// 	mpArray16:      "Array16",
+// 	mpArray32:      "Array32",
+// 	mpMap16:        "Map16",
+// 	mpMap32:        "Map32",
+// 	mpNegFixNumMin: "NegFixNumMin",
+// 	mpNegFixNumMax: "NegFixNumMax",
+// }
+
+func mpdesc(bd byte) string {
+	switch bd {
+	case mpNil:
+		return "nil"
+	case mpFalse:
+		return "false"
+	case mpTrue:
+		return "true"
+	case mpFloat, mpDouble:
+		return "float"
+	case mpUint8, mpUint16, mpUint32, mpUint64:
+		return "uint"
+	case mpInt8, mpInt16, mpInt32, mpInt64:
+		return "int"
+	default:
+		switch {
+		case bd >= mpPosFixNumMin && bd <= mpPosFixNumMax:
+			return "int"
+		case bd >= mpNegFixNumMin && bd <= mpNegFixNumMax:
+			return "int"
+		case bd == mpStr8, bd == mpStr16, bd == mpStr32, bd >= mpFixStrMin && bd <= mpFixStrMax:
+			return "string|bytes"
+		case bd == mpBin8, bd == mpBin16, bd == mpBin32:
+			return "bytes"
+		case bd == mpArray16, bd == mpArray32, bd >= mpFixArrayMin && bd <= mpFixArrayMax:
+			return "array"
+		case bd == mpMap16, bd == mpMap32, bd >= mpFixMapMin && bd <= mpFixMapMax:
+			return "map"
+		case bd >= mpFixExt1 && bd <= mpFixExt16, bd >= mpExt8 && bd <= mpExt32:
+			return "ext"
+		default:
+			return "unknown"
+		}
+	}
+}
+
 // MsgpackSpecRpcMultiArgs is a special type which signifies to the MsgpackSpecRpcCodec
 // that the backend RPC service takes multiple arguments, which have been arranged
 // in sequence in the slice.
@@ -442,7 +522,7 @@ func (d *msgpackDecDriver) DecodeNaked() {
 				n.l = d.r.readx(clen)
 			}
 		default:
-			d.d.errorf("Nil-Deciphered DecodeValue: %s: hex: %x, dec: %d", msgBadDesc, bd, bd)
+			d.d.errorf("cannot infer value: %s: Ox%x/%d/%s", msgBadDesc, bd, bd, mpdesc(bd))
 		}
 	}
 	if !decodeFurther {
@@ -484,7 +564,7 @@ func (d *msgpackDecDriver) DecodeInt64() (i int64) {
 		case d.bd >= mpNegFixNumMin && d.bd <= mpNegFixNumMax:
 			i = int64(int8(d.bd))
 		default:
-			d.d.errorf("Unhandled single-byte unsigned integer value: %s: %x", msgBadDesc, d.bd)
+			d.d.errorf("cannot decode signed integer: %s: %x/%s", msgBadDesc, d.bd, mpdesc(d.bd))
 			return
 		}
 	}
@@ -510,28 +590,28 @@ func (d *msgpackDecDriver) DecodeUint64() (ui uint64) {
 		if i := int64(int8(d.r.readn1())); i >= 0 {
 			ui = uint64(i)
 		} else {
-			d.d.errorf("Assigning negative signed value: %v, to unsigned type", i)
+			d.d.errorf("assigning negative signed value: %v, to unsigned type", i)
 			return
 		}
 	case mpInt16:
 		if i := int64(int16(bigen.Uint16(d.r.readx(2)))); i >= 0 {
 			ui = uint64(i)
 		} else {
-			d.d.errorf("Assigning negative signed value: %v, to unsigned type", i)
+			d.d.errorf("assigning negative signed value: %v, to unsigned type", i)
 			return
 		}
 	case mpInt32:
 		if i := int64(int32(bigen.Uint32(d.r.readx(4)))); i >= 0 {
 			ui = uint64(i)
 		} else {
-			d.d.errorf("Assigning negative signed value: %v, to unsigned type", i)
+			d.d.errorf("assigning negative signed value: %v, to unsigned type", i)
 			return
 		}
 	case mpInt64:
 		if i := int64(bigen.Uint64(d.r.readx(8))); i >= 0 {
 			ui = uint64(i)
 		} else {
-			d.d.errorf("Assigning negative signed value: %v, to unsigned type", i)
+			d.d.errorf("assigning negative signed value: %v, to unsigned type", i)
 			return
 		}
 	default:
@@ -539,10 +619,10 @@ func (d *msgpackDecDriver) DecodeUint64() (ui uint64) {
 		case d.bd >= mpPosFixNumMin && d.bd <= mpPosFixNumMax:
 			ui = uint64(d.bd)
 		case d.bd >= mpNegFixNumMin && d.bd <= mpNegFixNumMax:
-			d.d.errorf("Assigning negative signed value: %v, to unsigned type", int(d.bd))
+			d.d.errorf("assigning negative signed value: %v, to unsigned type", int(d.bd))
 			return
 		default:
-			d.d.errorf("Unhandled single-byte unsigned integer value: %s: %x", msgBadDesc, d.bd)
+			d.d.errorf("cannot decode unsigned integer: %s: %x/%s", msgBadDesc, d.bd, mpdesc(d.bd))
 			return
 		}
 	}
@@ -576,7 +656,7 @@ func (d *msgpackDecDriver) DecodeBool() (b bool) {
 	} else if d.bd == mpTrue || d.bd == 1 {
 		b = true
 	} else {
-		d.d.errorf("Invalid single-byte value for bool: %s: %x", msgBadDesc, d.bd)
+		d.d.errorf("cannot decode bool: %s: %x/%s", msgBadDesc, d.bd, mpdesc(d.bd))
 		return
 	}
 	d.bdRead = false
@@ -699,7 +779,7 @@ func (d *msgpackDecDriver) readContainerLen(ct msgpackContainerType) (clen int) 
 	} else if (ct.bFixMin & bd) == ct.bFixMin {
 		clen = int(ct.bFixMin ^ bd)
 	} else {
-		d.d.errorf("readContainerLen: %s: hex: %x, decimal: %d", msgBadDesc, bd, bd)
+		d.d.errorf("cannot read container length: %s: hex: %x, decimal: %d", msgBadDesc, bd, bd)
 		return
 	}
 	d.bdRead = false
@@ -800,7 +880,7 @@ func (d *msgpackDecDriver) decodeTime(clen int) (t time.Time) {
 
 func (d *msgpackDecDriver) DecodeExt(rv interface{}, xtag uint64, ext Ext) (realxtag uint64) {
 	if xtag > 0xff {
-		d.d.errorf("decodeExt: tag must be <= 0xff; got: %v", xtag)
+		d.d.errorf("ext: tag must be <= 0xff; got: %v", xtag)
 		return
 	}
 	realxtag1, xbs := d.decodeExtV(ext != nil, uint8(xtag))
@@ -829,7 +909,7 @@ func (d *msgpackDecDriver) decodeExtV(verifyTag bool, tag byte) (xtag byte, xbs 
 		clen := d.readExtLen()
 		xtag = d.r.readn1()
 		if verifyTag && xtag != tag {
-			d.d.errorf("Wrong extension tag. Got %b. Expecting: %v", xtag, tag)
+			d.d.errorf("wrong extension tag - got %b, expecting %v", xtag, tag)
 			return
 		}
 		xbs = d.r.readx(clen)
@@ -970,13 +1050,13 @@ func (c *msgpackSpecRpcCodec) parseCustomHeader(expectTypeByte byte, msgid *uint
 
 	var b = ba[0]
 	if b != fia {
-		err = fmt.Errorf("Unexpected value for array descriptor: Expecting %v. Received %v", fia, b)
+		err = fmt.Errorf("not array - %s %x/%s", msgBadDesc, b, mpdesc(b))
 	} else {
 		err = c.read(&b)
 		if err == nil {
 			if b != expectTypeByte {
-				err = fmt.Errorf("Unexpected byte descriptor. Expecting %v; Received %v",
-					expectTypeByte, b)
+				err = fmt.Errorf("%s - expecting %v but got %x/%s",
+					msgBadDesc, expectTypeByte, b, mpdesc(b))
 			} else {
 				err = c.read(msgid)
 				if err == nil {

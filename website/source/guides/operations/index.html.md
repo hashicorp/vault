@@ -4,7 +4,7 @@ page_title: "Vault Operations - Guides"
 sidebar_current: "guides-operations"
 description: |-
   Vault architecture guide covers Vault infrastructure discussions including
-  installation.
+  installation.   
 ---
 
 # Vault Operations

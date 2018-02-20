@@ -44,7 +44,7 @@ Usage: vault rotate [options]
 }
 
 func (c *OperatorRotateCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *OperatorRotateCommand) AutocompleteArgs() complete.Predictor {
@@ -89,8 +89,13 @@ func (c *OperatorRotateCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Output("Success! Rotated key")
-	c.UI.Output("")
-	c.UI.Output(printKeyStatus(status))
-	return 0
+	switch Format(c.UI) {
+	case "table":
+		c.UI.Output("Success! Rotated key")
+		c.UI.Output("")
+		c.UI.Output(printKeyStatus(status))
+		return 0
+	default:
+		return OutputData(c.UI, status)
+	}
 }

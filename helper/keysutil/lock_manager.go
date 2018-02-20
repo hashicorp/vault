@@ -352,7 +352,7 @@ func (lm *LockManager) getPolicyCommon(ctx context.Context, req PolicyRequest, l
 		}
 
 		switch req.KeyType {
-		case KeyType_AES256_GCM96:
+		case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 			if req.Convergent && !req.Derived {
 				lm.UnlockPolicy(lock, lockType)
 				return nil, nil, false, fmt.Errorf("convergent encryption requires derivation to be enabled")

@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -46,6 +47,11 @@ func pathConfigClient(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
+			},
+			"max_retries": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Default:     aws.UseServiceDefaultRetries,
+				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
 			},
 		},
 
@@ -220,6 +226,13 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		configEntry.IAMServerIdHeaderValue = data.Get("iam_server_id_header_value").(string)
 	}
 
+	maxRetriesInt, ok := data.GetOk("max_retries")
+	if ok {
+		configEntry.MaxRetries = maxRetriesInt.(int)
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.MaxRetries = data.Get("max_retries").(int)
+	}
+
 	// Since this endpoint supports both create operation and update operation,
 	// the error checks for access_key and secret_key not being set are not present.
 	// This allows calling this endpoint multiple times to provide the values.
@@ -254,6 +267,7 @@ type clientConfig struct {
 	IAMEndpoint            string `json:"iam_endpoint" structs:"iam_endpoint" mapstructure:"iam_endpoint"`
 	STSEndpoint            string `json:"sts_endpoint" structs:"sts_endpoint" mapstructure:"sts_endpoint"`
 	IAMServerIdHeaderValue string `json:"iam_server_id_header_value" structs:"iam_server_id_header_value" mapstructure:"iam_server_id_header_value"`
+	MaxRetries             int    `json:"max_retries"`
 }
 
 const pathConfigClientHelpSyn = `

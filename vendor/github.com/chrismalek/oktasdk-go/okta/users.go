@@ -40,7 +40,7 @@ const (
 type UsersService service
 
 // ActivationResponse - Response coming back from a user activation
-type activationResponse struct {
+type ActivationResponse struct {
 	ActivationURL string `json:"activationUrl"`
 }
 
@@ -128,8 +128,8 @@ type User struct {
 	Status          string          `json:"status,omitempty"`
 	StatusChanged   string          `json:"statusChanged,omitempty"`
 	Links           userLinks       `json:"_links,omitempty"`
-	MFAFactors      []userMFAFactor `json:"-,omitempty"`
-	Groups          []Group         `json:"-,omitempty"`
+	MFAFactors      []userMFAFactor `json:"-,"`
+	Groups          []Group         `json:"-"`
 }
 
 type userMFAFactor struct {
@@ -155,7 +155,8 @@ type newPasswordSet struct {
 	Credentials credentials `json:"credentials"`
 }
 
-type resetPasswordResponse struct {
+// ResetPasswordResponse struct that returns data about the password reset
+type ResetPasswordResponse struct {
 	ResetPasswordURL string `json:"resetPasswordUrl"`
 }
 
@@ -267,13 +268,38 @@ func (s *UsersService) PopulateGroups(user *User) (*Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO: If user has more than 200 groups this will only return those first 200
+	// Get first page of users.
 	resp, err := s.client.Do(req, &user.Groups)
 	if err != nil {
 		return resp, err
 	}
+	// Look for any remaining user group pages.
+	var nextURL string
+	if resp.NextURL != nil {
+		nextURL = resp.NextURL.String()
+	}
+	for {
 
-	return resp, err
+		if nextURL != "" {
+			req, err := s.client.NewRequest("GET", nextURL, nil)
+			userGroupsPages := []Group{}
+
+			resp, err := s.client.Do(req, &userGroupsPages)
+			nextURL = ""
+			if err != nil {
+				return resp, err
+			}
+			user.Groups = append(user.Groups, userGroupsPages...)
+			if resp.NextURL != nil {
+				nextURL = resp.NextURL.String()
+			}
+
+		} else {
+			return resp, err
+		}
+
+	}
+
 }
 
 // PopulateEnrolledFactors will populate the Enrolled MFA Factors a user is a member of.
@@ -404,10 +430,9 @@ func (s *UsersService) ListWithFilter(opt *UserListFilterOptions) ([]User, *Resp
 				userPage, resp, err = s.ListWithFilter(pageOption)
 				if err != nil {
 					return users, resp, err
-				} else {
-					users = append(users, userPage...)
-					pagesRetreived++
 				}
+				users = append(users, userPage...)
+				pagesRetreived++
 			} else {
 				break
 			}
@@ -440,7 +465,7 @@ func (s *UsersService) Create(userIn NewUser, createAsActive bool) (*User, *Resp
 // Activate Activates a user. You can have OKTA send an email by including a "sendEmail=true"
 // If you pass in sendEmail=false, then activationResponse.ActivationURL will have a string URL that
 // can be sent to the end user. You can discard response if sendEmail=true
-func (s *UsersService) Activate(id string, sendEmail bool) (*activationResponse, *Response, error) {
+func (s *UsersService) Activate(id string, sendEmail bool) (*ActivationResponse, *Response, error) {
 	u := fmt.Sprintf("users/%v/lifecycle/activate?sendEmail=%v", id, sendEmail)
 
 	req, err := s.client.NewRequest("POST", u, nil)
@@ -448,7 +473,7 @@ func (s *UsersService) Activate(id string, sendEmail bool) (*activationResponse,
 		return nil, nil, err
 	}
 
-	activationInfo := new(activationResponse)
+	activationInfo := new(ActivationResponse)
 	resp, err := s.client.Do(req, activationInfo)
 
 	if err != nil {
@@ -563,7 +588,7 @@ func (s *UsersService) SetPassword(id string, newPassword string) (*User, *Respo
 // http://developer.okta.com/docs/api/resources/users.html#reset-password
 // If you pass in sendEmail=false, then resetPasswordResponse.resetPasswordUrl will have a string URL that
 // can be sent to the end user. You can discard response if sendEmail=true
-func (s *UsersService) ResetPassword(id string, sendEmail bool) (*resetPasswordResponse, *Response, error) {
+func (s *UsersService) ResetPassword(id string, sendEmail bool) (*ResetPasswordResponse, *Response, error) {
 	u := fmt.Sprintf("users/%v/lifecycle/reset_password?sendEmail=%v", id, sendEmail)
 
 	req, err := s.client.NewRequest("POST", u, nil)
@@ -571,7 +596,7 @@ func (s *UsersService) ResetPassword(id string, sendEmail bool) (*resetPasswordR
 		return nil, nil, err
 	}
 
-	resetInfo := new(resetPasswordResponse)
+	resetInfo := new(ResetPasswordResponse)
 	resp, err := s.client.Do(req, resetInfo)
 
 	if err != nil {

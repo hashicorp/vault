@@ -5,7 +5,7 @@ sidebar_current: "guides-configuration"
 description: |-
   Once a Vault instance has been installed, the next step is to configure auth
   backends, secret backends, and manage keys. Vault configuration guides addresses
-  key concepts in configuring your Vault application.
+  key concepts in configuring your Vault application.   
 ---
 
 # Vault Configuration

@@ -299,7 +299,11 @@ $ curl \
 ## Login with TLS Certificate Method
 
 Log in and fetch a token. If there is a valid chain to a CA configured in the
-method and all role constraints are matched, a token will be issued.
+method and all role constraints are matched, a token will be issued. If the
+certificate has DNS SANs in it, each of those will be verified. If Common Name
+is required to be verified, then it should be a fully qualified DNS domain name
+and must be duplicated as a DNS SAN (see
+https://tools.ietf.org/html/rfc6125#section-2.3)
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

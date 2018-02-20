@@ -45,6 +45,9 @@ const (
 
 	// defaultLeaseDuration is the default lease duration used when no lease is specified
 	defaultLeaseTTL = maxLeaseTTL
+
+	//maxLeaseThreshold is the maximum lease count before generating log warning
+	maxLeaseThreshold = 256000
 )
 
 // ExpirationManager is used by the Core to manage leases. Secrets
@@ -70,8 +73,9 @@ type ExpirationManager struct {
 	restoreLoaded      sync.Map
 	quitCh             chan struct{}
 
-	coreStateLock *sync.RWMutex
-	quitContext   context.Context
+	coreStateLock     *sync.RWMutex
+	quitContext       context.Context
+	leaseCheckCounter uint32
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -91,8 +95,9 @@ func NewExpirationManager(c *Core, view *BarrierView) *ExpirationManager {
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
 
-		coreStateLock: &c.stateLock,
-		quitContext:   c.activeContext,
+		coreStateLock:     &c.stateLock,
+		quitContext:       c.activeContext,
+		leaseCheckCounter: 0,
 	}
 
 	if exp.logger == nil {
@@ -1269,6 +1274,15 @@ func (m *ExpirationManager) emitMetrics() {
 	num := len(m.pending)
 	m.pendingLock.RUnlock()
 	metrics.SetGauge([]string{"expire", "num_leases"}, float32(num))
+	// Check if lease count is greater than the threshold
+	if num > maxLeaseThreshold {
+		if atomic.LoadUint32(&m.leaseCheckCounter) > 59 {
+			m.logger.Warn("expiration: lease count exceeds warning lease threshold")
+			atomic.StoreUint32(&m.leaseCheckCounter, 0)
+		} else {
+			atomic.AddUint32(&m.leaseCheckCounter, 1)
+		}
+	}
 }
 
 // leaseEntry is used to structure the values the expiration

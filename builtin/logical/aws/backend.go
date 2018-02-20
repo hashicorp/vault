@@ -44,7 +44,7 @@ func Backend() *backend {
 			secretAccessKeys(&b),
 		},
 
-		WALRollback:       walRollback,
+		WALRollback:       b.walRollback,
 		WALRollbackMinAge: 5 * time.Minute,
 		BackendType:       logical.TypeLogical,
 	}

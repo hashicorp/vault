@@ -1,0 +1,66 @@
+---
+layout: "docs"
+page_title: "Manta - Storage Backends - Configuration"
+sidebar_current: "docs-configuration-storage-manta"
+description: |-
+  The Manta storage backend is used to persist Vault's data in Triton's Manta Object
+  Storage. The storage folder must already exist.
+---
+
+# Manta Storage Backend
+
+The Manta storage backend is used to persist Vault's data in [Triton's Manta Object 
+Storage][manta-object-store]. The storage folder must already exist.
+
+- **No High Availability** – the Manta storage backend does not support high
+  availability.
+
+- **Community Supported** – the Manta storage backend is supported by the
+  community. While it has undergone review by HashiCorp employees, they may not
+  be as knowledgeable about the technology. If you encounter problems with them,
+  you may be referred to the original author.
+
+```hcl
+storage "manta" {
+  directory   = "manta-directory"
+  user = "myuser"
+  key_id = "40:9d:d3:f9:0b:86:62:48:f4:2e:a5:8e:43:00:2a:9b"
+}
+```
+
+## `manta` Parameters
+
+- `directory` `(string: <required>)` – Specifies the name of the manta directory to use.
+This will be in the `/stor/` folder in the specific manta account
+
+The following settings are used for authenticating to Manta.
+
+- `user` `(string: <required>)` – Specifies the Manta user account name. This can also be provided via
+  the environment variable `MANTA_USER`.
+  
+- `key_id` `(string: <required>)` – The fingerprint of the public key of the SSH key pair to use for authentication with the Manta API. 
+  It is assumed that the SSH agent has the private key corresponding to this key ID loaded. This can also be provided 
+  via the environment variable `MANTA_KEY_ID`.
+  
+- `subuser` - The name of a subuser that has been granted access to the Manta account. This can also be
+  provided via the environment variable `MANTA_SUBUSER`.
+    
+- `url` – Specifies the Manta URL. Defaults to `https://us-east.manta.joyent.com`. This can also be provided via 
+  the environment variable `MANTA_URL`.
+
+- `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
+  requests to Manta.
+
+## `manta` Examples
+
+This example shows configuring the Azure storage backend with a custom number of
+maximum parallel connections.
+
+```hcl
+storage "manta" {
+  directory    = "vault-storage-directory"
+  max_parallel = 512
+}
+```
+
+[manta-object-store]: https://www.joyent.com/triton/object-storage

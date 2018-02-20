@@ -66,7 +66,7 @@ Vault generates a token. This token has policies granting you to perform
 appropriate operations.
 
 How can a Jenkins server programmatically request a token so that it can read
-secrets from Vault?
+secrets from Vault?  
 
 
 ## Solution
@@ -74,7 +74,7 @@ secrets from Vault?
 Enable **AppRole** auth backend so that the Jenkins server can obtain a Vault
 token with appropriate policies attached. Since each AppRole has attached
 policies, you can write fine-grained policies limiting which app can access
-which path.
+which path.  
 
 
 ## Prerequisites
@@ -611,7 +611,7 @@ becomes how to deliver those values to the expecting client.
 
 A common solution involves **three personas** instead of two: `admin`, `app`, and
 `trusted entity`. The `trusted entity` delivers the Role ID and Secret ID to the
-client by separate means.
+client by separate means.   
 
 For example, Terraform as a trusted entity can deliver the Role ID onto the
 virtual machine.  When the app runs on the virtual machine, the Role ID already

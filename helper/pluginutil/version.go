@@ -28,7 +28,9 @@ func GRPCSupport() bool {
 			return true
 		}
 
-		constraint, err := version.NewConstraint(">= 0.9.2")
+		// Due to some regressions on 0.9.2 & 0.9.3 we now require version 0.9.4
+		// to allow the plugin framework to default to gRPC.
+		constraint, err := version.NewConstraint(">= 0.9.4")
 		if err != nil {
 			return true
 		}

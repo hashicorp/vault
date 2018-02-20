@@ -247,7 +247,7 @@ $ curl --header "X-Vault-Wrap-TTL: 120" \
   },
   "warnings": null,
   "auth": null
-}
+}  
 ```
 
 This API call generates a token for `apps` persona using response wrapping with

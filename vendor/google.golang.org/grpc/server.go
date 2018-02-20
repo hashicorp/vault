@@ -694,7 +694,7 @@ func (s *Server) serveUsingHandler(conn net.Conn) {
 // available through grpc-go's HTTP/2 server, and it is currently EXPERIMENTAL
 // and subject to change.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	st, err := transport.NewServerHandlerTransport(w, r)
+	st, err := transport.NewServerHandlerTransport(w, r, s.opts.statsHandler)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

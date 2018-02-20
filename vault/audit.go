@@ -90,6 +90,12 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry) error {
 	viewPath := auditBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
 
+	// Mark the view as read-only until the mounting is complete and
+	// ensure that it is reset after. This ensures that there will be no
+	// writes during the construction of the backend.
+	view.setReadOnlyErr(logical.ErrSetupReadOnly)
+	defer view.setReadOnlyErr(nil)
+
 	// Lookup the new backend
 	backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
 	if err != nil {
@@ -320,6 +326,12 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		viewPath := auditBarrierPrefix + entry.UUID + "/"
 		view := NewBarrierView(c.barrier, viewPath)
 
+		// Mark the view as read-only until the mounting is complete and
+		// ensure that it is reset after. This ensures that there will be no
+		// writes during the construction of the backend.
+		view.setReadOnlyErr(logical.ErrSetupReadOnly)
+		defer view.setReadOnlyErr(nil)
+
 		// Initialize the backend
 		backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
 		if err != nil {
@@ -525,10 +537,11 @@ func (a *AuditBroker) LogRequest(ctx context.Context, auth *logical.Auth, req *l
 		}
 
 		ret = retErr.ErrorOrNil()
-
+		failure := float32(0.0)
 		if ret != nil {
-			metrics.IncrCounter([]string{"audit", "log_request_failure"}, 1.0)
+			failure = 1.0
 		}
+		metrics.IncrCounter([]string{"audit", "log_request_failure"}, failure)
 	}()
 
 	// All logged requests must have an identifier
@@ -588,9 +601,11 @@ func (a *AuditBroker) LogResponse(ctx context.Context, auth *logical.Auth, req *
 
 		ret = retErr.ErrorOrNil()
 
+		failure := float32(0.0)
 		if ret != nil {
-			metrics.IncrCounter([]string{"audit", "log_response_failure"}, 1.0)
+			failure = 1.0
 		}
+		metrics.IncrCounter([]string{"audit", "log_response_failure"}, failure)
 	}()
 
 	headers := req.Headers

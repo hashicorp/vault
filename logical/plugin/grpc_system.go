@@ -123,6 +123,15 @@ func (s *gRPCSystemViewClient) MlockEnabled() bool {
 	return reply.Enabled
 }
 
+func (s *gRPCSystemViewClient) LocalMount() bool {
+	reply, err := s.client.LocalMount(context.Background(), &pb.Empty{})
+	if err != nil {
+		return false
+	}
+
+	return reply.Local
+}
+
 type gRPCSystemViewServer struct {
 	impl logical.SystemView
 }
@@ -198,5 +207,12 @@ func (s *gRPCSystemViewServer) MlockEnabled(ctx context.Context, _ *pb.Empty) (*
 	enabled := s.impl.MlockEnabled()
 	return &pb.MlockEnabledReply{
 		Enabled: enabled,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) LocalMount(ctx context.Context, _ *pb.Empty) (*pb.LocalMountReply, error) {
+	local := s.impl.LocalMount()
+	return &pb.LocalMountReply{
+		Local: local,
 	}, nil
 }

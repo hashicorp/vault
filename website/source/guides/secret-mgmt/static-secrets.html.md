@@ -270,7 +270,7 @@ paths. In this scenario, the `apps` policy must include the following:
 ```shell
 # Read-only permit
 path "secret/eng/apikey/Google" {
-  capabilities = [ "read" ]
+  capabilities = [ "read" ]  
 }
 
 # Read-only permit

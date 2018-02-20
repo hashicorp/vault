@@ -300,6 +300,16 @@ func (c *Client) pester(p params) (*http.Response, error) {
 					return
 				}
 
+				//If the request has been cancelled, skip retries
+				if p.req != nil {
+					ctx := p.req.Context()
+					select {
+					case <-ctx.Done():
+						multiplexCh <- result{resp: resp, err: ctx.Err()}
+						return
+					}
+				}
+
 				// if we are retrying, we should close this response body to free the fd
 				if resp != nil {
 					resp.Body.Close()
