@@ -463,12 +463,6 @@
 			"revisionTime": "2018-02-03T08:01:48Z"
 		},
 		{
-			"checksumSHA1": "oQgLy8KmIOVov04WXH7KgU1bszc=",
-			"path": "github.com/btcsuite/btcutil/base58",
-			"revision": "501929d3d046174c3d39f0ea54ece471aa17238c",
-			"revisionTime": "2017-07-02T00:39:31Z"
-		},
-		{
 			"checksumSHA1": "Zlk5zPiw+3u9pyy4kNThpKDaYmE=",
 			"path": "github.com/cenkalti/backoff",
 			"revision": "2ea60e5f094469f9e65adb9cd103795b73ae743e",

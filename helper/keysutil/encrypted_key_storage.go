@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"math/big"
 	paths "path"
 	"strings"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/logical"
 )
@@ -156,7 +156,7 @@ func (s *EncryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 			k = strings.TrimSuffix(k, "/")
 		}
 
-		decoded := base58.Decode(k)
+		decoded := Base58Decode(k)
 		if len(decoded) == 0 {
 			return nil, errors.New("Could not decode key")
 		}
@@ -245,9 +245,23 @@ func (s *EncryptedKeyStorage) encryptPath(path string) (string, error) {
 			return "", err
 		}
 
-		encPath = paths.Join(encPath, base58.Encode([]byte(ciphertext)))
+		encPath = paths.Join(encPath, Base58Encode([]byte(ciphertext)))
 		context = paths.Join(context, p)
 	}
 
 	return encPath, nil
+}
+
+func Base58Encode(buf []byte) string {
+	encoder := &big.Int{}
+
+	encoder.SetBytes(buf)
+	return encoder.Text(58)
+}
+
+func Base58Decode(input string) []byte {
+	decoder := &big.Int{}
+
+	decoder.SetString(input, 58)
+	return decoder.Bytes()
 }
