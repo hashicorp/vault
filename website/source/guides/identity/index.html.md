@@ -1,6 +1,6 @@
 ---
 layout: "guides"
-page_title: "Vault Configuration - Guides"
+page_title: "Identity and Access Management - Guides"
 sidebar_current: "guides-identity"
 description: |-
   Once a Vault instance has been installed, the next step is to configure auth
@@ -8,9 +8,9 @@ description: |-
   key concepts in configuring your Vault application.   
 ---
 
-# Vault Configuration
+# Identity and Access Management
 
-This guide walks you through Vault configuration topics.
+This guide walks you through Identity and Access Management topics.
 
 - [Policies](/guides/identity/policies.html) are used to instrument
 Role-Based Access Control (RBAC) by specifying access privileges. Authoring of
