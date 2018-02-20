@@ -304,14 +304,14 @@ func TestLogical_ListSuffix(t *testing.T) {
 	}
 }
 
-func TestLogical_Responde404WithData(t *testing.T) {
+func TestLogical_RespondWithStatusCode(t *testing.T) {
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"test-data": "foo",
 		},
 	}
 
-	resp404, err := logical.Respond404WithData(resp, "id")
+	resp404, err := logical.RespondWithStatusCode(resp, "id", http.StatusNotFound)
 	if err != nil {
 		t.Fatal(err)
 	}

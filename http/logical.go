@@ -145,7 +145,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 
 		// Check if this is a raw response
 		if _, ok := resp.Data[logical.HTTPStatusCode]; ok {
-			respondRaw(w, r, req, resp)
+			respondRaw(w, r, resp)
 			return
 		}
 
@@ -183,7 +183,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 // respondRaw is used when the response is using HTTPContentType and HTTPRawBody
 // to change the default response handling. This is only used for specific things like
 // returning the CRL information on the PKI backends.
-func respondRaw(w http.ResponseWriter, r *http.Request, req *logical.Request, resp *logical.Response) {
+func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) {
 	retErr := func(w http.ResponseWriter, err string) {
 		w.Header().Set("X-Vault-Raw-Error", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -258,7 +258,6 @@ func respondRaw(w http.ResponseWriter, r *http.Request, req *logical.Request, re
 			}
 		case []byte:
 			body = bodyRaw.([]byte)
-
 		default:
 			retErr(w, "cannot decode body")
 			return

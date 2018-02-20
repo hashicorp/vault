@@ -3,7 +3,6 @@ package logical
 import (
 	"encoding/json"
 	"errors"
-	"net/http"
 
 	"github.com/hashicorp/vault/helper/wrapping"
 )
@@ -133,9 +132,9 @@ func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Respon
 	return resp
 }
 
-// Respond404WithData takes a response and converts it to a raw response with a
-// 404 Status Code.
-func Respond404WithData(resp *Response, reqID string) (*Response, error) {
+// RespondWithStatusCode takes a response and converts it to a raw response with
+// the provided Status Code.
+func RespondWithStatusCode(resp *Response, reqID string, code int) (*Response, error) {
 	httpResp := LogicalResponseToHTTPResponse(resp)
 	httpResp.RequestID = reqID
 
@@ -148,7 +147,7 @@ func Respond404WithData(resp *Response, reqID string) (*Response, error) {
 		Data: map[string]interface{}{
 			HTTPContentType: "application/json",
 			HTTPRawBody:     body,
-			HTTPStatusCode:  http.StatusNotFound,
+			HTTPStatusCode:  code,
 		},
 	}, nil
 }
