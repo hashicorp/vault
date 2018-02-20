@@ -8,13 +8,13 @@ FEATURES:
  * **Okta Push support in Okta Auth Backend**: If a user account has MFA
    required within Okta, an Okta Push MFA flow can be used to successfully
    finish authentication.
- * **Manta Storage**: Joyent Triton Manta can now be used for Vault storage
- * **Google Cloud Spanner Storage**: Google Cloud Spanner can now be used for
-   Vault storage
  * **PKI Improvements**: Custom OID subject alternate names can now be set,
    subject to allow restrictions that support globbing. Additionally, Country,
    Locality, Province, Street Address, and Postal Code can now be set in
    certificate subjects.
+ * **Manta Storage**: Joyent Triton Manta can now be used for Vault storage
+ * **Google Cloud Spanner Storage**: Google Cloud Spanner can now be used for
+   Vault storage
 
 IMPROVEMENTS:
 
@@ -29,6 +29,7 @@ IMPROVEMENTS:
    once a minute. Too many leases can be problematic for many of the storage
    backends and often this number of leases is indicative of a need for
    workflow improvements. [GH-3957]
+ * secret/nomad: Have generated ACL tokens cap out at 64 characters [GH-4009]
  * secret/pki: Country, Locality, Province, Street Address, and Postal Code can
    now be set on certificates [GH-3992]
  * secret/pki: UTF-8 Other Names can now be set in Subject Alternate Names in
