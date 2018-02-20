@@ -14,7 +14,6 @@ import (
 	"math/big"
 	mathrand "math/rand"
 	"reflect"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -520,7 +519,7 @@ func setCerts() {
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}
-	caCertPEM := strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
+	caCertPEM := string(pem.EncodeToMemory(caCertPEMBlock))
 
 	intKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -555,7 +554,7 @@ func setCerts() {
 		Type:  "CERTIFICATE",
 		Bytes: intBytes,
 	}
-	intCertPEM := strings.TrimSpace(string(pem.EncodeToMemory(intCertPEMBlock)))
+	intCertPEM := string(pem.EncodeToMemory(intCertPEMBlock))
 
 	// EC generation
 	{
@@ -596,7 +595,7 @@ func setCerts() {
 			Type:  "CERTIFICATE REQUEST",
 			Bytes: csrBytes,
 		}
-		csrECPem = strings.TrimSpace(string(pem.EncodeToMemory(csrPEMBlock)))
+		csrECPem = string(pem.EncodeToMemory(csrPEMBlock))
 		certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, intCert, key.Public(), intKey)
 		if err != nil {
 			panic(err)
@@ -605,7 +604,7 @@ func setCerts() {
 			Type:  "CERTIFICATE",
 			Bytes: certBytes,
 		}
-		certECPem = strings.TrimSpace(string(pem.EncodeToMemory(certPEMBlock)))
+		certECPem = string(pem.EncodeToMemory(certPEMBlock))
 		marshaledKey, err := x509.MarshalECPrivateKey(key)
 		if err != nil {
 			panic(err)
@@ -614,7 +613,7 @@ func setCerts() {
 			Type:  "EC PRIVATE KEY",
 			Bytes: marshaledKey,
 		}
-		privECKeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+		privECKeyPem = string(pem.EncodeToMemory(keyPEMBlock))
 		marshaledKey, err = x509.MarshalPKCS8PrivateKey(key)
 		if err != nil {
 			panic(err)
@@ -623,7 +622,7 @@ func setCerts() {
 			Type:  "PRIVATE KEY",
 			Bytes: marshaledKey,
 		}
-		privEC8KeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+		privEC8KeyPem = string(pem.EncodeToMemory(keyPEMBlock))
 	}
 
 	// RSA generation
@@ -665,7 +664,7 @@ func setCerts() {
 			Type:  "CERTIFICATE REQUEST",
 			Bytes: csrBytes,
 		}
-		csrRSAPem = strings.TrimSpace(string(pem.EncodeToMemory(csrPEMBlock)))
+		csrRSAPem = string(pem.EncodeToMemory(csrPEMBlock))
 		certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, intCert, key.Public(), intKey)
 		if err != nil {
 			panic(err)
@@ -674,13 +673,13 @@ func setCerts() {
 			Type:  "CERTIFICATE",
 			Bytes: certBytes,
 		}
-		certRSAPem = strings.TrimSpace(string(pem.EncodeToMemory(certPEMBlock)))
+		certRSAPem = string(pem.EncodeToMemory(certPEMBlock))
 		marshaledKey := x509.MarshalPKCS1PrivateKey(key)
 		keyPEMBlock := &pem.Block{
 			Type:  "RSA PRIVATE KEY",
 			Bytes: marshaledKey,
 		}
-		privRSAKeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+		privRSAKeyPem = string(pem.EncodeToMemory(keyPEMBlock))
 		marshaledKey, err = x509.MarshalPKCS8PrivateKey(key)
 		if err != nil {
 			panic(err)
@@ -689,7 +688,7 @@ func setCerts() {
 			Type:  "PRIVATE KEY",
 			Bytes: marshaledKey,
 		}
-		privRSA8KeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+		privRSA8KeyPem = string(pem.EncodeToMemory(keyPEMBlock))
 	}
 
 	issuingCaChainPem = []string{intCertPEM, caCertPEM}

@@ -109,7 +109,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 		return nil, errutil.UserError{Err: "empty pem bundle"}
 	}
 
-	pemBundle = strings.TrimSpace(pemBundle)
+	pemBundle = pemBundle
 
 	pemBytes := []byte(pemBundle)
 	var pemBlock *pem.Block
