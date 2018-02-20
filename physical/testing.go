@@ -29,7 +29,7 @@ func ExerciseBackend(t testing.TB, b Backend) {
 	// Get should not fail, but be nil
 	out, err := b.Get(context.Background(), "foo")
 	if err != nil {
-		t.Fatal("initial get failed: %v", err)
+		t.Fatalf("initial get failed: %v", err)
 	}
 	if out != nil {
 		t.Errorf("initial get was not nil: %v", out)
