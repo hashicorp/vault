@@ -11,7 +11,7 @@ EXTERNAL_TOOLS=\
 BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
-GO_VERSION_MIN=1.9.1
+GO_VERSION_MIN=1.10
 
 default: dev
 
