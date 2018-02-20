@@ -774,9 +774,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 		c.setCoreBackend(entry, backend, view)
 
-		// Load stored config values into MountEntry caches
-		// entry.synthesizedConfigCache.Store("audit_request_hmac_values", entry.Config.AuditRequestHMACValues)
-
 	ROUTER_MOUNT:
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)

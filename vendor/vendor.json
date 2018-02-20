@@ -1189,6 +1189,12 @@
 			"revisionTime": "2017-12-19T16:50:22Z"
 		},
 		{
+			"checksumSHA1": "/MbkohdDPqGPeAkHq6ZkInB/WD0=",
+			"path": "github.com/imdario/mergo",
+			"revision": "0d4b488675fdec1dde48751b05ab530cf0b630e1",
+			"revisionTime": "2018-01-26T22:59:47Z"
+		},
+		{
 			"checksumSHA1": "cIinEjB62s8j5cpY1u7sxtg4akg=",
 			"path": "github.com/jefferai/jsonx",
 			"revision": "9cc31c3135eef39b8e72585f37efa92b6ca314d0",
@@ -1363,10 +1369,10 @@
 			"revisionTime": "2017-10-04T22:19:16Z"
 		},
 		{
-			"checksumSHA1": "1JtAhgmRN0x794LRNhs0DJ5t8io=",
+			"checksumSHA1": "Yvzge1YQcD/wSDXLD5qNHqmI/0s=",
 			"path": "github.com/mitchellh/mapstructure",
-			"revision": "b4575eea38cca1123ec2dc90c26529b5c5acfcff",
-			"revisionTime": "2018-01-11T00:07:20Z"
+			"revision": "00c29f56e2386353d58c599509e8dc3801b0d716",
+			"revisionTime": "2018-02-20T23:01:11Z"
 		},
 		{
 			"checksumSHA1": "AMU63CNOg4XmIhVR/S/Xttt1/f0=",
