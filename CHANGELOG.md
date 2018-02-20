@@ -1,4 +1,12 @@
-## 0.9.4 (Unreleased)
+## 0.9.4 (February 20th, 2018)
+
+SECURITY:
+
+ * Role Tags used with the EC2 style of AWS auth were being improperly parsed;
+   as a result they were not being used to properly restrict values.
+   Implementations following our suggestion of using these as defense-in-depth
+   rather than the only source of restriction should not have significant
+   impact.
 
 FEATURES:
 
