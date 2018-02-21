@@ -298,6 +298,11 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	leaderStatus, err := client.Sys().Leader()
 	if err != nil && strings.Contains(err.Error(), "Vault is sealed") {
 		leaderStatus = &api.LeaderResponse{HAEnabled: true}
+		err = nil
+	}
+	if err != nil {
+		ui.Error(fmt.Sprintf("Error checking leader status: %s", err))
+		return 1
 	}
 
 	// Output if HA is enabled
@@ -305,16 +310,23 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	if leaderStatus.HAEnabled {
 		mode := "sealed"
 		if !status.Sealed {
+			out = append(out, fmt.Sprintf("HA Cluster | %s", leaderStatus.LeaderClusterAddress))
 			mode = "standby"
+			showLeaderAddr := false
 			if leaderStatus.IsSelf {
 				mode = "active"
+			} else {
+				if leaderStatus.LeaderAddress == "" {
+					leaderStatus.LeaderAddress = "<none>"
+				}
+				showLeaderAddr = true
 			}
-		}
+			out = append(out, fmt.Sprintf("HA Mode | %s", mode))
 
-		out = append(out, fmt.Sprintf("HA Mode | %s", mode))
-
-		if !status.Sealed {
-			out = append(out, fmt.Sprintf("HA Cluster | %s", leaderStatus.LeaderClusterAddress))
+			// This is down here just to keep ordering consistent
+			if showLeaderAddr {
+				out = append(out, fmt.Sprintf("Active Node Address: | %s", leaderStatus.LeaderAddress))
+			}
 		}
 	}
 

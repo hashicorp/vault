@@ -435,6 +435,12 @@ can be set in a CSR are supported.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `format` `(string: "")` – Specifies the format for returned data. This can be
   `pem`, `der`, or `pem_bundle`; defaults to `pem`. If `der`, the output is
   base64 encoded. If `pem_bundle`, the `csr` field will contain the private key
@@ -455,6 +461,34 @@ can be set in a CSR are supported.
   not be included in DNS or Email Subject Alternate Names (as appropriate).
   Useful if the CN is not a hostname or email address, but is instead some
   human-readable identifier.
+
+- `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` – Specifies the O (Organization) values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
 
 ### Sample Payload
 
@@ -552,6 +586,12 @@ need to request a new certificate.**
 - `ip_sans` `(string: "")` – Specifies requested IP Subject Alternative Names,
   in a comma-delimited list. Only valid if the role allows IP SANs (which is the
   default).
+
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
 
 - `ttl` `(string: "")` – Specifies requested Time To Live. Cannot be greater
   than the role's `max_ttl` value. If not provided, the role's `ttl` value will
@@ -720,6 +760,11 @@ request is denied.
   Alternative Names. No authorization checking is performed except to verify
   that the given values are valid IP addresses.
 
+- `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
+  SANs. This field supports globbing. The format is the same as OpenSSL:
+  `<oid>;<type>:<value>` where the only current valid type is `UTF8`. This can
+  be a comma-delimited list or a JSON string slice.
+
 - `server_flag` `(bool: true)` – Specifies if certificates are flagged for
   server use.
 
@@ -757,10 +802,32 @@ request is denied.
   `use_csr_common_name` for that.
 
 - `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
-  subject field of issued certificates. This is a comma-separated string.
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
 
 - `organization` `(string: "")` – Specifies the O (Organization) values in the
-  subject field of issued certificates. This is a comma-separated string.
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
 
 - `generate_lease` `(bool: false)` – Specifies  if certificates issued/signed
   against this role will have Vault leases attached to them. Certificates can be
@@ -935,6 +1002,12 @@ existing cert/key with new values.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
   certificate will be expired). This cannot be larger than the engine's max (or,
   if not set, the system max).
@@ -972,6 +1045,34 @@ existing cert/key with new values.
   or signed by this CA certificate. Supports subdomains via a `.` in front of
   the domain, as per
   [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+
+- `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` – Specifies the O (Organization) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
 
 ### Sample Payload
 
@@ -1053,6 +1154,12 @@ verbatim.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
   certificate will be expired). This cannot be larger than the engine's max (or,
   if not set, the system max). However, this can be after the expiration of the
@@ -1088,6 +1195,35 @@ verbatim.
   or signed by this CA certificate. Supports subdomains via a `.` in front of
   the domain, as per
   [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+
+- `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` – Specifies the O (Organization) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
 
 ### Sample Payload
 
@@ -1206,6 +1342,12 @@ root CA need be in a client's trust store.
   Names, in a comma-delimited list. These can be host names or email addresses;
   they will be parsed into their respective fields. If any requested names do
   not match role policy, the entire request will be denied.
+
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
 
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list. Only valid if the role allows IP SANs (which
