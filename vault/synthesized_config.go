@@ -17,13 +17,8 @@ type SynthesizableConfig struct {
 	AuditRequestHMACValues []string `json:"audit_request_hmac_values,omitempty" structs:"audit_request_hmac_values" mapstructure:"audit_request_hmac_values"`
 }
 
-// BackendsConfig holds synthesizable backend configuration
-type BackendsConfig struct {
-	Auth   map[string]SynthesizableConfig `json:"auth"`
-	Secret map[string]SynthesizableConfig `json:"secret"`
-	Audit  map[string]SynthesizableConfig `json:"audit"`
-}
-
+// ConfigKeys returns the list of field names in the struct as specified in the
+// 'structs' tag.
 func (s SynthesizableConfig) ConfigKeys() []string {
 	st := structs.New(s)
 	m := st.Map()
