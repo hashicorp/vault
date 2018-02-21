@@ -134,9 +134,9 @@ func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Respon
 
 // RespondWithStatusCode takes a response and converts it to a raw response with
 // the provided Status Code.
-func RespondWithStatusCode(resp *Response, reqID string, code int) (*Response, error) {
+func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, error) {
 	httpResp := LogicalResponseToHTTPResponse(resp)
-	httpResp.RequestID = reqID
+	httpResp.RequestID = req.ID
 
 	body, err := json.Marshal(httpResp)
 	if err != nil {

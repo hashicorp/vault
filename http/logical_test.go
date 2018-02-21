@@ -311,7 +311,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 		},
 	}
 
-	resp404, err := logical.RespondWithStatusCode(resp, "id", http.StatusNotFound)
+	resp404, err := logical.RespondWithStatusCode(resp, &logical.Request{ID: "id"}, http.StatusNotFound)
 	if err != nil {
 		t.Fatal(err)
 	}
