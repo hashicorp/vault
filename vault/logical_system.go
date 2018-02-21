@@ -1855,18 +1855,23 @@ func (b *SystemBackend) handleMountTuneConfigRead(ctx context.Context, req *logi
 		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %s", path))
 	}
 
-	respData := map[string]interface{}{}
-
-	if rawVal, ok := mountEntry.synthesizedConfigCache.Load(configKey); ok {
-		respData["values"] = rawVal
+	var sythensizedConfig SynthesizableConfig
+	rawVal, ok := mountEntry.synthesizedConfigCache.Load(configKey)
+	if ok {
+		sythensizedConfig = rawVal.(SynthesizableConfig)
 	}
 
-	if len(respData) == 0 {
+	mapStruct := structs.Map(sythensizedConfig)
+
+	values, ok := mapStruct[configKey]
+	if !ok {
 		return nil, nil
 	}
 
 	resp := &logical.Response{
-		Data: respData,
+		Data: map[string]interface{}{
+			"values": values,
+		},
 	}
 	return resp, nil
 }

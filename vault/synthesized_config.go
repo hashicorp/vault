@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/imdario/mergo"
 )
@@ -21,6 +22,18 @@ type BackendsConfig struct {
 	Auth   map[string]SynthesizableConfig `json:"auth"`
 	Secret map[string]SynthesizableConfig `json:"secret"`
 	Audit  map[string]SynthesizableConfig `json:"audit"`
+}
+
+func (s SynthesizableConfig) ConfigKeys() []string {
+	st := structs.New(s)
+	m := st.Map()
+
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	return keys
 }
 
 // updateMountEntriesCache updates the cached values on the mount. Since this
@@ -84,16 +97,20 @@ func (c *Core) setupMountsConfigCache(ctx context.Context) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	// Get the sys-level config value locks
-	entryKey := fmt.Sprintf("%s/%s/%s", "audit_request_hmac_values", "secret", "kv")
-
-	// Acquire the lock
-	lock := locksutil.LockForKey(c.synthesizedConfigLocks, entryKey)
-	lock.Lock()
-	defer lock.Unlock()
-
 	for _, entry := range c.mounts.Entries {
-		c.updateMountEntriesCache(ctx, "secret", entry.Type, "audit_request_hmac_values")
+		keys := SynthesizableConfig{}.ConfigKeys()
+
+		for _, key := range keys {
+			entryKey := fmt.Sprintf("%s/%s/%s", key, "secret", entry.Type)
+			l := locksutil.LockForKey(c.synthesizedConfigLocks, entryKey)
+			l.Lock()
+			err := c.updateMountEntriesCache(ctx, "secret", entry.Type, key)
+			if err != nil {
+				l.Unlock()
+				return err
+			}
+			l.Unlock()
+		}
 	}
 
 	if c.logger.IsInfo() {
