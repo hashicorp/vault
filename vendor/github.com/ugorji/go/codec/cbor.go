@@ -60,6 +60,46 @@ const (
 	cborBaseSimple      = 0xe0
 )
 
+func cbordesc(bd byte) string {
+	switch bd {
+	case cborBdNil:
+		return "nil"
+	case cborBdFalse:
+		return "false"
+	case cborBdTrue:
+		return "true"
+	case cborBdFloat16, cborBdFloat32, cborBdFloat64:
+		return "float"
+	case cborBdIndefiniteBytes:
+		return "bytes*"
+	case cborBdIndefiniteString:
+		return "string*"
+	case cborBdIndefiniteArray:
+		return "array*"
+	case cborBdIndefiniteMap:
+		return "map*"
+	default:
+		switch {
+		case bd >= cborBaseUint && bd < cborBaseNegInt:
+			return "(u)int"
+		case bd >= cborBaseNegInt && bd < cborBaseBytes:
+			return "int"
+		case bd >= cborBaseBytes && bd < cborBaseString:
+			return "bytes"
+		case bd >= cborBaseString && bd < cborBaseArray:
+			return "string"
+		case bd >= cborBaseArray && bd < cborBaseMap:
+			return "array"
+		case bd >= cborBaseMap && bd < cborBaseTag:
+			return "map"
+		case bd >= cborBaseTag && bd < cborBaseSimple:
+			return "ext"
+		default:
+			return "unknown"
+		}
+	}
+}
+
 // -------------------
 
 type cborEncDriver struct {
@@ -326,7 +366,7 @@ func (d *cborDecDriver) decUint() (ui uint64) {
 		} else if v == 0x1b {
 			ui = uint64(bigen.Uint64(d.r.readx(8)))
 		} else {
-			d.d.errorf("decUint: Invalid descriptor: %v", d.bd)
+			d.d.errorf("invalid descriptor decoding uint: %x/%s", d.bd, cbordesc(d.bd))
 			return
 		}
 	}
@@ -342,7 +382,7 @@ func (d *cborDecDriver) decCheckInteger() (neg bool) {
 	} else if major == cborMajorNegInt {
 		neg = true
 	} else {
-		d.d.errorf("invalid major: %v (bd: %v)", major, d.bd)
+		d.d.errorf("not an integer - invalid major %v from descriptor %x/%s", major, d.bd, cbordesc(d.bd))
 		return
 	}
 	return
@@ -363,7 +403,7 @@ func (d *cborDecDriver) DecodeInt64() (i int64) {
 
 func (d *cborDecDriver) DecodeUint64() (ui uint64) {
 	if d.decCheckInteger() {
-		d.d.errorf("Assigning negative signed value to unsigned type")
+		d.d.errorf("assigning negative signed value to unsigned type")
 		return
 	}
 	ui = d.decUint()
@@ -384,7 +424,7 @@ func (d *cborDecDriver) DecodeFloat64() (f float64) {
 	} else if bd >= cborBaseUint && bd < cborBaseBytes {
 		f = float64(d.DecodeInt64())
 	} else {
-		d.d.errorf("Float only valid from float16/32/64: Invalid descriptor: %v", bd)
+		d.d.errorf("float only valid from float16/32/64 - invalid descriptor %x/%s", bd, cbordesc(bd))
 		return
 	}
 	d.bdRead = false
@@ -400,7 +440,7 @@ func (d *cborDecDriver) DecodeBool() (b bool) {
 		b = true
 	} else if bd == cborBdFalse {
 	} else {
-		d.d.errorf("Invalid single-byte value for bool: %s: %x", msgBadDesc, d.bd)
+		d.d.errorf("not bool - %s %x/%s", msgBadDesc, d.bd, cbordesc(d.bd))
 		return
 	}
 	d.bdRead = false
@@ -441,7 +481,7 @@ func (d *cborDecDriver) decAppendIndefiniteBytes(bs []byte) []byte {
 		}
 		if major := d.bd >> 5; major != cborMajorBytes && major != cborMajorText {
 			d.d.errorf("expect bytes/string major type in indefinite string/bytes;"+
-				" got: %v, byte: %v", major, d.bd)
+				" got major %v from descriptor %x/%x", major, d.bd, cbordesc(d.bd))
 			return nil
 		}
 		n := d.decLen()

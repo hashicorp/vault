@@ -2990,6 +2990,21 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 		t.Fatalf("bad: policies: expected: [default policy1]; actual: %s", resp.Auth.Policies)
 	}
 
+	// A non-root token which has 'default' policy attached and period explicitly
+	// set to its zero value requests for a child token. Child token should be
+	// successfully created and have 'default' policy attached.
+	tokenReq.Data = map[string]interface{}{
+		"period": "0s",
+	}
+	resp, err = ts.HandleRequest(context.Background(), tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
+		t.Fatalf("bad: policies: expected: [default policy1]; actual: %s", resp.Auth.Policies)
+	}
+
 	// A non-root token which has 'default' policy attached, request for a
 	// child token to not have 'default' policy while not sending a list
 	tokenReq.Data = map[string]interface{}{

@@ -62,160 +62,109 @@ The following sections describe available Vault metrics. The metrics interval ca
 
 These metrics represent operational aspects of the running Vault instance.
 
-<<<<<<< HEAD
-| Metric           | Description                       | Unit | Type |
-| ---------------- | ----------------------------------| ---- | ---- |
-|`vault.audit.log_request`| This measures the number of audit log requests | Number of requests | Summary |
-|`vault.audit.log_response`| This measures the number of audit log responses | Number of responses | Summary |
-|`vault.barrier.delete`| This measures the number of delete operations at the barrier | Number of operations | Summary |
-|`vault.barrier.get`| This measures the number of get operations at the barrier | Number of operations | Summary |
-|`vault.barrier.put`| This measures the number of put operations at the barrier | Number of operations | Summary |
-|`vault.barrier.list`| This measures the number of list operations at the barrier | Number of operations | Counter |
-|`vault.core.check_token`| This measures the number of token checks | Number of checks | Summary |
-|`vault.core.fetch_acl_and_token`| This measures the number of ACL and corresponding token entry fetches | Number of fetches | Summary |
-|`vault.core.handle_request`| This measures the number of requests | Number of requests | Summary |
-|`vault.core.handle_login_request`| This measures the number of login requests | Number of requests | Summary |
-|`vault.core.leadership_setup_failed`| This measures the number of cluster leadership setup failures | Number of failures | Summary |
-|`vault.core.leadership_lost`| This measures the number of cluster leadership losses | Number of losses | Summary |
-|`vault.core.post_unseal` | This measures the number of post-unseal operations | Number of operations | Gauge |
-|`vault.core.pre_seal`| This measures the number of pre-seal operations | Number of operations | Gauge |
-|`vault.core.seal-with-request`| This measures the number of requested seal operations | Number of operations | Gauge |
-|`vault.core.seal`| This measures the number of seal operations | Number of operations | Gauge |
-|`vault.core.seal-internal`| This measures the number of internal seal operations | Number of operations | Gauge |
-|`vault.core.step_down`| This measures the number of cluster leadership step downs | Number of stepdowns | Summary |
-|`vault.core.unseal`| This measures the number of unseal operations | Number of operations | Summary |
-|`vault.runtime.alloc_bytes` | This measures the number of bytes allocated by the Vault process. This may burst from time to time but should return to a steady state value.| Number of bytes | Gauge |
-|`vault.runtime.free_count`| This measures the number of `free` operations | Number of operations | Gauge |
-|`vault.runtime.heap_objects`| This measures the number of objects on the heap and is a good general memory pressure indicator | Number of heap objects | Gauge |
-|`vault.runtime.malloc_count`| This measures the number of `malloc` operations | Number of operations | Gauge |
-|`vault.runtime.num_goroutines`| This measures the number of goroutines and serves as a general load indicator | Number of goroutines| Gauge |
-|`vault.runtime.sys_bytes`| This measures the number of bytes allocated to Vault and includes what is being used by the heap and what has been reclaimed but not given back| Number of bytes | Gauge |
-|`vault.runtime.total_gc_pause_ns` | This measures the total garbage collector pause time since the Vault instance was last started | Nanosecond | Summary |
-| `vault.runtime.total_gc_runs` | Total number of garbage collection runs since the Vault instance was last started  | Number of operations | Gauge |
-
-### Policy and Token Metrics
-
-These metrics relate to policies and tokens.
-
-| Metric           | Description                       | Unit | Type |
-| ---------------- | ----------------------------------| ---- | ---- |
-`vault.expire.fetch-lease-times`| This measures the number of lease time fetch operations | Number of operations | Gauge |
-`vault.expire.fetch-lease-times-by-token`| This measures the number of operations which compute lease times by token | Number of operations | Gauge |
-`vault.expire.num_leases`| This measures the number of expired leases | Number of expired leases | Gauge |
-`vault.expire.revoke`| This measures the number of revoke operations | Number of operations | Counter |
-`vault.expire.revoke-force`| This measures the number of forced revoke operations | Number of operations | Counter |
-`vault.expire.revoke-prefix`| This measures the number of operations used to revoke all secrets with a given prefix | Number of operations | Counter |
-`vault.expire.revoke-by-token`| This measures the number of operations used to revoke all secrets issued with a given token | Number of operations | Counter |
-`vault.expire.renew`| This measures the number of renew operations | Number of operations | Counter |
-`vault.expire.renew-token`| This measures the number of renew token operations to renew a token which does not need to invoke a logical backend | Number of operations | Gauge |
-`vault.expire.register`| This measures the number of register operations which  take a request and response with an associated lease and register a lease entry with lease ID | Number of operations | Gauge |
-`vault.expire.register-auth`| This measures the number of register auth operations which create lease entries without lease ID | Number of operations | Gauge |
-`vault.policy.get_policy`| This measures the number of policy get operations | Number of operations | Counter |
-`vault.policy.list_policies`| This measures the number of policy list operations | Number of operations | Counter |
-`vault.policy.delete_policy`| This measures the number of policy delete operations | Number of operations | Counter |
-`vault.policy.set_policy`| This measures the number of policy set operations | Number of operations | Gauge |
-`vault.token.create`| This measures the number of token create operations | Number of operations | Gauge |
-`vault.token.createAccessor`| This measures the number of Token ID identifier operations | Number of operations | Gauge |
-`vault.token.lookup`| This measures the number of token lookups | Number of lookups | Counter |
-`vault.token.revoke`| This measures the number of token revocation operations | Number of operations | Gauge |
-`vault.token.revoke-tree`| This measures the number of revoke tree operations | Number of operations | Gauge |
-`vault.token.store`| This measures the number of operations to store an updated token entry without writing to the secondary index | Number of operations | Gauge |
-
-### Auth Method Metrics
-=======
 ### vault.audit.log_request
 
-**[S]** Summary (Number of requests): Number of audit log requests
+**[S]** Summary (Milliseconds): Duration of time taken by all audit log requests across all audit log devices
 
 ### vault.audit.log_response
 
-**[S]** Summary (Number of responses): Number of audit log responses
+**[S]** Summary (Milliseconds): Duration of time taken by audit log responses across all audit log devices
+
+Additionally, per audit log device metrics such as those for a specific backend like `file` will be present as:
+
+### vault.audit.file.log_request
+
+**[S]** Summary (Milliseconds): Duration of time taken by audit log requests for the file based audit device mounted as `file`
+
+### vault.audit.file.log_response
+
+**[S]** Summary (Milliseconds): Duration of time taken by audit log responses for the file based audit device mounted as `file`
 
 ### vault.audit.log_request_failure
 
 **[C]** Counter (Number of failures): Number of audit log request failures
 
-**NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to make an audit log request to any of the configured audit log backends; **when Vault cannot log to any of the configured audit log backends it ceases all user operations**, and you should begin troubleshooting the audit log backends immediately if this metric continually increases.
+**NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to make an audit log request to any of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases.
 
 ### vault.audit.log_response_failure
 
 **[C]** Counter (Number of failures): Number of audit log response failures
 
-**NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to receive a response to a request made to one of the configured audit log backends; **when Vault cannot log to any of the configured audit log backends it ceases all user operations**, and you should begin troubleshooting the audit log backends immediately if this metric continually increases.
+**NOTE**: This is a particularly important metric. Any non-zero value here indicates that there was a failure to receive a response to a request made to one of the configured audit log devices; **when Vault cannot log to any of the configured audit log devices it ceases all user operations**, and you should begin troubleshooting the audit log devices immediately if this metric continually increases.
 
 ### vault.barrier.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations at the barrier
+**[S]** Summary (Milliseconds): Duration of time taken by DELETE operations at the barrier
 
 ### vault.barrier.get
 
-**[S]** Summary (Number of operations): Number of GET operations at the barrier
+**[S]** Summary (Milliseconds): Duration of time taken by GET operations at the barrier
 
 ### vault.barrier.put
 
-**[S]** Summary (Number of operations): Number of PUT operations at the barrier
+**[S]** Summary (Milliseconds)): Duration of time taken by PUT operations at the barrier
 
 ### vault.barrier.list
 
-**[S]** Summary (Number of operations): Number of LIST operations at the barrier
+**[S]** Summary (Milliseconds): Duration of time taken by LIST operations at the barrier
 
 ### vault.core.check_token
 
-**[S]** Summary (Number of checks): Number of token checks handled by Vault core
+**[S]** Summary (Milliseconds): Duration of time taken by token checks handled by Vault core
 
 ### vault.core.fetch_acl_and_token
 
-**[S]** Summary (Number of fetches): Number of ACL and corresponding token entry fetches handled by Vault core
+**[S]** Summary (Milliseconds): Duration of time taken by ACL and corresponding token entry fetches handled by Vault core
 
 ### vault.core.handle_request
 
-**[S]** Summary (Number of requests) Number of requests handled by Vault core
+**[S]** Summary (Milliseconds) Duration of time taken by requests handled by Vault core
 
 ### vault.core.handle_login_request
 
-**[S]** Summary (Number of requests): Number of login requests handled by Vault core
+**[S]** Summary (Milliseconds): Duration of time taken by login requests handled by Vault core
 
 ### vault.core.leadership_setup_failed
 
-**[S]** Summary (Number of failures): Number of cluster leadership setup failures which have occurred in a highly available Vault cluster
+**[S]** Summary (Milliseconds): Duration of time taken by cluster leadership setup failures which have occurred in a highly available Vault cluster
 
 This should be monitored and alerted on for overall cluster leadership status
 
 ### vault.core.leadership_lost
 
-**[S]** Summary (Number of losses): Number of cluster leadership losses which have occurred in a highly available Vault cluster
+**[S]** Summary (Milliseconds): Duration of time taken by cluster leadership losses which have occurred in a highly available Vault cluster
 
 This should be monitored and alerted on for overall cluster leadership status
 
 ### vault.core.post_unseal
 
-**[G]** Gauge (Number of operations): Number of post-unseal operations handled by Vault core
+**[G]** Gauge (Milliseconds): Duration of time taken by post-unseal operations handled by Vault core
 
 ### vault.core.pre_seal
 
-**[G]** Gauge (Number of operations) Number of pre-seal operations
+**[G]** Gauge (Milliseconds): Duration of time taken by pre-seal operations
 
 ### vault.core.seal-with-request
 
-**[G]** Gauge (Number of operations): Number of requested seal operations
+**[G]** Gauge (Milliseconds): Duration of time taken by requested seal operations
 
 ### vault.core.seal
 
-**[G]** Gauge (Number of operations): Number of seal operations
+**[G]** Gauge (Milliseconds): Duration of time taken by seal operations
 
 ### vault.core.seal-internal
 
-**[G]** Gauge (Number of operations): Number of internal seal operations
+**[G]** Gauge (Milliseconds): Duration of time taken by internal seal operations
 
 ### vault.core.step_down
 
-**[S]** Summary (Number of step downs): Number of cluster leadership step downs
+**[S]** Summary (Milliseconds):Duration of time taken by cluster leadership step downs
 
 This should be monitored and alerted on for overall cluster leadership status
 
 ### vault.core.unseal
 
-**[S]** Summary (Number of operations): Number of unseal operations
+**[S]** Summary (Milliseconds): Duration of time taken by unseal operations
 
 ### vault.runtime.alloc_bytes
 
@@ -251,7 +200,7 @@ This includes what is being used by Vault's heap and what has been reclaimed but
 
 ### vault.runtime.total_gc_pause_ns
 
-**[S]** Summary (Nanoseconds): The total garbage collector pause time since Vault was last started
+**[S]** Summary (Milliseconds): The total garbage collector pause time since Vault was last started
 
 ### vault.runtime.total_gc_runs
 
@@ -263,11 +212,11 @@ These metrics relate to policies and tokens.
 
 ### vault.expire.fetch-lease-times
 
-**[S]** Summary (Nanoseconds): Time taken to fetch lease times
+**[S]** Summary (Milliseconds): Time taken to fetch lease times
 
 ### vault.expire.fetch-lease-times-by-token
 
-**[S]** Summary (Nanoseconds): Time taken to fetch lease times by token
+**[S]** Summary (Milliseconds): Time taken to fetch lease times by token
 
 ### vault.expire.num_leases
 
@@ -275,354 +224,459 @@ These metrics relate to policies and tokens.
 
 ### vault.expire.revoke
 
-**[S]** Summary (Nanoseconds): Time taken to revoke a token
+**[S]** Summary (Milliseconds): Time taken to revoke a token
 
 ### vault.expire.revoke-force
 
-**[S]** Summary (Nanoseconds): Time taken to forcibly revoke a token
+**[S]** Summary (Milliseconds): Time taken to forcibly revoke a token
 
 ### vault.expire.revoke-prefix
 
-**[S]** Summary (Nanoseconds): Time taken to revoke tokens on a prefix
+**[S]** Summary (Milliseconds): Time taken to revoke tokens on a prefix
 
 ### vault.expire.revoke-by-token
 
-**[S]** Summary (Nanoseconds): Time taken to revoke all secrets issued with a given token
+**[S]** Summary (Milliseconds): Time taken to revoke all secrets issued with a given token
 
 ### vault.expire.renew
 
-**[S]** Summary (Nanoseconds): Time taken to renew a lease
+**[S]** Summary (Milliseconds): Time taken to renew a lease
 
 ### vault.expire.renew-token
 
-**[S]** Summary (Nanoseconds): Time taken to renew a token which does not need to invoke a logical backend
+**[S]** Summary (Milliseconds): Time taken to renew a token which does not need to invoke a logical backend
 
 ### vault.expire.register
 
-**[S]** Summary (Nanoseconds): Time taken for register operations
+**[S]** Summary (Milliseconds): Time taken for register operations
 
 Thes operations take a request and response with an associated lease and register a lease entry with lease ID
 
 ### vault.expire.register-auth
 
-**[S]** Summary (Nanoseconds): Time taken for register authentication operations which create lease entries without lease ID
+**[S]** Summary (Milliseconds): Time taken for register authentication operations which create lease entries without lease ID
 
 ### vault.policy.get_policy
 
-**[S]** Summary (Nanoseconds): Time taken to get a policy
+**[S]** Summary (Milliseconds): Time taken to get a policy
 
 ### vault.policy.list_policies
 
-**[S]** Summary (Nanoseconds): Time taken to list policies
+**[S]** Summary (Milliseconds): Time taken to list policies
 
 ### vault.policy.delete_policy
 
-**[S]** Summary (Nanoseconds): Time taken to delete a policy
+**[S]** Summary (Milliseconds): Time taken to delete a policy
 
 ### vault.policy.set_policy
 
-**[S]** Summary (Nanoseconds): Time taken to set a policy
+**[S]** Summary (Milliseconds): Time taken to set a policy
 
 ### vault.token.create
 
-**[S]** Summary (Nanoseconds): The time taken to create a token
+**[S]** Summary (Milliseconds): The time taken to create a token
 
 ### vault.token.createAccessor
 
-**[S]** Summary (Nanoseconds): The time taken to create a token
+**[S]** Summary (Milliseconds): The time taken to create a token accessor
 
 ### vault.token.lookup
 
-**[S]** Summary (Nanoseconds): The time taken to look up a token
+**[S]** Summary (Milliseconds): The time taken to look up a token
 
 ### vault.token.revoke
 
-**[S]** Summary (Nanoseconds): Time taken to revoke a token
+**[S]** Summary (Milliseconds): Time taken to revoke a token
 
 ### vault.token.revoke-tree
 
-**[S]** Summary (Nanoseconds): Time taken to revoke a token tree
+**[S]** Summary (Milliseconds): Time taken to revoke a token tree
 
 ### vault.token.store
 
-**[S]** Summary (Nanoseconds): Time taken to store an updated token entry without writing to the secondary index
+**[S]** Summary (Milliseconds): Time taken to store an updated token entry without writing to the secondary index
 
-## Authentication Backend Metrics
+## Auth Methods Metrics
 
-These metrics relate to supported auth methods.
+These metrics relate to supported authentication methods.
 
 ### vault.rollback.attempt.auth-token-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a rollback operation for the [token authentication backend][token-auth-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [token auth method][token-auth-backend]
 
 ### vault.rollback.attempt.auth-ldap-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a rollback operation for the [LDAP authentication backend][ldap-auth-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [LDAP auth method][ldap-auth-backend]
 
 ### vault.rollback.attempt.cubbyhole-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a rollback operation for the [Cubbyhole secret backend][cubbyhole-secret-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine]
 
 ### vault.rollback.attempt.secret-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a rollback operation for the [K/V secret backend][kv-secret-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the [K/V secret backend][kv-secrets-engine]
 
 ### vault.rollback.attempt.sys-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a rollback operation for the system backend
+**[S]** Summary (Milliseconds): Time taken to perform a rollback operation for the system backend
 
 ### vault.route.rollback.auth-ldap-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a route rollback operation for the [LDAP authentication backend][ldap-auth-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [LDAP auth method][ldap-auth-backend]
 
 ### vault.route.rollback.auth-token-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a route rollback operation for the [token authentication backend][token-auth-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [token auth method][token-auth-backend]
 
 ### vault.route.rollback.cubbyhole-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a route rollback operation for the [Cubbyhole secret backend][cubbyhole-secret-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [Cubbyhole secret backend][cubbyhole-secrets-engine]
 
 ### vault.route.rollback.secret-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a route rollback operation for the [K/V secret backend][kv-secret-backend]
+**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the [K/V secret backend][kv-secrets-engine]
 
 ### vault.route.rollback.sys-
 
-**[S]** Summary (Nanoseconds): Time taken to perform a route rollback operation for the system backend
+**[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the system backend
+
+## Secrets Engines Metrics
+
+These metrics relate to the supported [secrets engines][secrets-engines].
+
+### database.Initialize
+
+**[S]** Summary (Milliseconds): Time taken to initialize a database secret engine across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of database secrets engine initialization operations across database secrets engines
+
+### database.<name>.Initialize
+
+**[S]** Summary (Milliseconds): Time taken to initialize a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize`
+
+**[C]** Counter (Number of operations): Number of database secrets engine initialization operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize`
+
+### database.Initialize.error
+
+**[C]** Counter (Number of errors): Number of database secrets engine initialization operation errors across all database secrets engines
+
+### database.<name>.Initialize.error
+
+**[C]** Counter (Number of errors): Number of database secrets engine initialization operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize.error`
+
+### database.Close
+
+**[S]** Summary (Milliseconds): Time taken to close a database secret engine across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of database secrets engine close operations across database secrets engines
+
+### database.<name>.Close
+
+**[S]** Summary (Milliseconds): Time taken to close a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close`
+
+**[C]** Counter (Number of operations): Number of database secrets engine close operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close`
+
+### database.Close.error
+
+**[C]** Counter (Number of errors): Number of database secrets engine close operation errors across all database secrets engines
+
+### database.<name>.Close.error
+
+**[C]** Counter (Number of errors): Number of database secrets engine close operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close.error`
+
+### database.CreateUser
+
+**[S]** Summary (Milliseconds): Time taken to create a user across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of user creation operations across database secrets engines
+
+### database.<name>.CreateUser
+
+**[S]** Summary (Milliseconds): Time taken to create a user for the named database secrets engine `<name>`
+
+**[C]** Counter (Number of operations): Number of user creation operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.CreateUser`
+
+### database.CreateUser.error
+
+**[C]** Counter (Number of errors): Number of user creation operation errors across all database secrets engines
+
+### database.<name>.CreateUser.error
+
+**[C]** Counter (Number of operations): Number of user creation operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.CreateUser.error`
+
+### database.RenewUser
+
+**[S]** Summary (Milliseconds): Time taken to renew a user across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of user renewal operations across database secrets engines
+
+### database.<name>.RenewUser
+
+**[S]** Summary (Milliseconds): Time taken to renew a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser`
+
+**[C]** Counter (Number of operations): Number of user renewal operations for the named database secrets engine `<name>`
+
+### database.RenewUser.error
+
+**[C]** Counter (Number of errors): Number of user renewal operation errors across all database secrets engines
+
+### database.<name>.RenewUser.error
+
+**[C]** Counter (Number of errors): Number of user renewal operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser.error`
+
+### database.RevokeUser
+
+**[S]** Summary (Milliseconds): Time taken to revoke a user across all database secrets engines
+
+**[C]** Counter (Number of operations): Number of user revocation operations across database secrets engines
+
+### database.<name>.RevokeUser
+
+**[S]** Summary (Milliseconds): Time taken to revoke a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser`
+
+**[C]** Counter (Number of operations): Number of user revocation operations for the named database secrets engine `<name>`
+
+### database.RevokeUser.error
+
+**[C]** Counter (Number of errors): Number of user revocation operation errors across all database secrets engines
+
+### database.<name>.RevokeUser.error
+
+**[C]** Counter (Number of errors): Number of user revocation operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser.error`
 
 ## Storage Backend Metrics
 
-These metrics relate to the supported storage backends.
+These metrics relate to the supported [storage backends][storage-backends].
 
 ### vault.azure.put
 
-**[S]** Summary (Number of operations): Number of put operations against the [Azure storage backend][azure-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [Azure storage backend][azure-storage-backend]
 
 ### vault.azure.get
 
-**[S]** Summary (Number of operations):Number of get operations against the [
-Azure storage backend][azure-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [Azure storage backend][azure-storage-backend]
 
 ### vault.azure.delete
 
-**[S]** Summary (Number of operations):Number of delete operations against the [Azure storage backend][azure-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a DELETE operation against the [Azure storage backend][azure-storage-backend]
 
 ### vault.azure.list
 
-**[S]** Summary (Number of operations):Number of list operations against the [Azure storage backend][azure-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a LIST operation against the [Azure storage backend][azure-storage-backend]
 
 ### vault.cassandra.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [Cassandra storage backend][cassandra-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [Cassandra storage backend][cassandra-storage-backend]
 
 ### vault.cassandra.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [Cassandra storage backend][cassandra-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [Cassandra storage backend][cassandra-storage-backend]
 
 ### vault.cassandra.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [Cassandra storage backend][cassandra-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [Cassandra storage backend][cassandra-storage-backend]
 
 ### vault.cassandra.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [Cassandra storage backend][cassandra-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [Cassandra storage backend][cassandra-storage-backend]
 
 ### vault.cockroachdb.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [CockroachDB storage backend][cockroachdb-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [CockroachDB storage backend][cockroachdb-storage-backend]
 
 ### vault.cockroachdb.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [CockroachDB storage backend][cockroachdb-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [CockroachDB storage backend][cockroachdb-storage-backend]
 
 ### vault.cockroachdb.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [CockroachDB storage backend][cockroachdb-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [CockroachDB storage backend][cockroachdb-storage-backend]
 
 ### vault.cockroachdb.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [CockroachDB storage backend][cockroachdb-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [CockroachDB storage backend][cockroachdb-storage-backend]
 
 ### vault.consul.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [Consul storage backend][consul-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [Consul storage backend][consul-storage-backend]
 
 ### vault.consul.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [Consul storage backend][consul-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [Consul storage backend][consul-storage-backend]
 
 ### vault.consul.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [Consul storage backend][consul-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [Consul storage backend][consul-storage-backend]
 
 ### vault.consul.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [Consul storage backend][consul-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [Consul storage backend][consul-storage-backend]
 
 ### vault.couchdb.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [CouchDB storage backend][couchdb-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [CouchDB storage backend][couchdb-storage-backend]
 
 ### vault.couchdb.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [CouchDB storage backend][couchdb-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [CouchDB storage backend][couchdb-storage-backend]
 
 ### vault.couchdb.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [CouchDB storage backend][couchdb-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [CouchDB storage backend][couchdb-storage-backend]
 
 ### vault.couchdb.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [CouchDB storage backend][couchdb-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [CouchDB storage backend][couchdb-storage-backend]
 
 ### vault.dynamodb.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [DynamoDB storage backend][dynamodb-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [DynamoDB storage backend][dynamodb-storage-backend]
 
 ### vault.dynamodb.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [DynamoDB storage backend][dynamodb-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [DynamoDB storage backend][dynamodb-storage-backend]
 
 ### vault.dynamodb.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [DynamoDB storage backend][dynamodb-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [DynamoDB storage backend][dynamodb-storage-backend]
 
 ### vault.dynamodb.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [DynamoDB storage backend][dynamodb-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [DynamoDB storage backend][dynamodb-storage-backend]
 
 ### vault.etcd.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [etcd storage backend][etcd-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [etcd storage backend][etcd-storage-backend]
 
 ### vault.etcd.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [etcd storage backend][etcd-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [etcd storage backend][etcd-storage-backend]
 
 ### vault.etcd.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [etcd storage backend][etcd-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [etcd storage backend][etcd-storage-backend]
 
 ### vault.etcd.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [etcd storage backend][etcd-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [etcd storage backend][etcd-storage-backend]
 
 ### vault.gcs.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [Google Cloud Storage storage backend][gcs-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [Google Cloud Storage storage backend][gcs-storage-backend]
 
 ### vault.gcs.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [Google Cloud Storage storage backend][gcs-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [Google Cloud Storage storage backend][gcs-storage-backend]
 
 ### vault.gcs.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [Google Cloud Storage storage backend][gcs-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [Google Cloud Storage storage backend][gcs-storage-backend]
 
 ### vault.gcs.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [Google Cloud Storage storage backend][gcs-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [Google Cloud Storage storage backend][gcs-storage-backend]
 
 ### vault.mssql.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [MS-SQL storage backend][mssql-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [MS-SQL storage backend][mssql-storage-backend]
 
 ### vault.mssql.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [MS-SQL storage backend][mssql-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [MS-SQL storage backend][mssql-storage-backend]
 
 ### vault.mssql.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [MS-SQL storage backend][mssql-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [MS-SQL storage backend][mssql-storage-backend]
 
 ### vault.mssql.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [MS-SQL storage backend][mssql-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [MS-SQL storage backend][mssql-storage-backend]
 
 ### vault.mysql.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [MySQL storage backend][mysql-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [MySQL storage backend][mysql-storage-backend]
 
 ### vault.mysql.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [MySQL storage backend][mysql-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [MySQL storage backend][mysql-storage-backend]
 
 ### vault.mysql.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [MySQL storage backend][mysql-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [MySQL storage backend][mysql-storage-backend]
 
 ### vault.mysql.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [MySQL storage backend][mysql-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [MySQL storage backend][mysql-storage-backend]
 
 ### vault.postgres.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [PostgreSQL storage backend][postgresql-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [PostgreSQL storage backend][postgresql-storage-backend]
 
 ### vault.postgres.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [PostgreSQL storage backend][postgresql-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [PostgreSQL storage backend][postgresql-storage-backend]
 
 ### vault.postgres.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [PostgreSQL storage backend][postgresql-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [PostgreSQL storage backend][postgresql-storage-backend]
 
 ### vault.postgres.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [PostgreSQL storage backend][postgresql-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [PostgreSQL storage backend][postgresql-storage-backend]
 
 ### vault.s3.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [Amazon S3 storage backend][s3-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [Amazon S3 storage backend][s3-storage-backend]
 
 ### vault.s3.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [Amazon S3 storage backend][s3-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [Amazon S3 storage backend][s3-storage-backend]
 
 ### vault.s3.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [Amazon S3 storage backend][s3-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [Amazon S3 storage backend][s3-storage-backend]
 
 ### vault.s3.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [Amazon S3 storage backend][s3-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [Amazon S3 storage backend][s3-storage-backend]
 
 ### vault.swift.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [Swift storage backend][swift-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [Swift storage backend][swift-storage-backend]
 
 ### vault.swift.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [Swift storage backend][swift-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [Swift storage backend][swift-storage-backend]
 
 ### vault.swift.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [Swift storage backend][swift-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [Swift storage backend][swift-storage-backend]
 
 ### vault.swift.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [Swift storage backend][swift-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [Swift storage backend][swift-storage-backend]
 
 ### vault.zookeeper.put
 
-**[S]** Summary (Number of operations): Number of PUT operations against the [ZooKeeper storage backend][zookeeper-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a PUT operation against the [ZooKeeper storage backend][zookeeper-storage-backend]
 
 ### vault.zookeeper.get
 
-**[S]** Summary (Number of operations): Number of GET operations against the [ZooKeeper storage backend][zookeeper-storage-backend]
+**[S]** Summary (Milliseconds): Duration of a GET operation against the [ZooKeeper storage backend][zookeeper-storage-backend]
 
 ### vault.zookeeper.delete
 
-**[S]** Summary (Number of operations): Number of DELETE operations against the [ZooKeeper storage backend][zookeeper-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a DELETE operation against the [ZooKeeper storage backend][zookeeper-storage-backend]
 
 ### vault.zookeeper.list
 
-**[S]** Summary (Number of operations): Number of LIST operations against the [ZooKeeper storage backend][zookeeper-storage-backend]
+**[S]** Summary (Milliseconds):  Duration of a LIST operation against the [ZooKeeper storage backend][zookeeper-storage-backend]
 
+[secrets-engines]: /docs/secrets/index.html
+[storage-backends]: /docs/configuration/storage/index.html
 [telemetry-stanza]: /docs/configuration/telemetry.html
-[cubbyhole-secret-backend]: /docs/secrets/cubbyhole/index.html
-[kv-secret-backend]: /docs/secrets/kv/index.html
+[cubbyhole-secrets-engine]: /docs/secrets/cubbyhole/index.html
+[kv-secrets-engine]: /docs/secrets/kv/index.html
 [ldap-auth-backend]: /docs/auth/ldap.html
 [token-auth-backend]: /docs/auth/token.html
 [azure-storage-backend]: /docs/configuration/storage/azure.html

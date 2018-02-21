@@ -1,6 +1,8 @@
 package http
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"io"
 	"net"
 	"net/http"
@@ -200,8 +202,21 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 		retErr(w, "no status code given")
 		return
 	}
-	status, ok := statusRaw.(int)
-	if !ok {
+
+	var status int
+	switch statusRaw.(type) {
+	case int:
+		status = statusRaw.(int)
+	case float64:
+		status = int(statusRaw.(float64))
+	case json.Number:
+		s64, err := statusRaw.(json.Number).Float64()
+		if err != nil {
+			retErr(w, "cannot decode status code")
+			return
+		}
+		status = int(s64)
+	default:
 		retErr(w, "cannot decode status code")
 		return
 	}
@@ -232,8 +247,18 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 			retErr(w, "no body given")
 			return
 		}
-		body, ok = bodyRaw.([]byte)
-		if !ok {
+
+		switch bodyRaw.(type) {
+		case string:
+			var err error
+			body, err = base64.StdEncoding.DecodeString(bodyRaw.(string))
+			if err != nil {
+				retErr(w, "cannot decode body")
+				return
+			}
+		case []byte:
+			body = bodyRaw.([]byte)
+		default:
 			retErr(w, "cannot decode body")
 			return
 		}

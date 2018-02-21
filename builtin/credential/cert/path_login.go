@@ -446,5 +446,6 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 		}
 		return nil, errors.New("failed to verify client's certificate: " + err.Error())
 	}
+
 	return chains, nil
 }

@@ -349,7 +349,7 @@ func TestGlobbedStringsMatch(t *testing.T) {
 		actual := GlobbedStringsMatch(tc.item, tc.val)
 
 		if actual != tc.expect {
-			t.Fatalf("Bad testcase %#v, expected %b, got %b", tc, tc.expect, actual)
+			t.Fatalf("Bad testcase %#v, expected %t, got %t", tc, tc.expect, actual)
 		}
 	}
 }

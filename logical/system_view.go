@@ -39,6 +39,10 @@ type SystemView interface {
 	// despite known slowdowns.
 	CachingDisabled() bool
 
+	// When run from a system view attached to a request, indicates whether the
+	// request is affecting a local mount or not
+	LocalMount() bool
+
 	// ReplicationState indicates the state of cluster replication
 	ReplicationState() consts.ReplicationState
 
@@ -63,6 +67,7 @@ type StaticSystemView struct {
 	CachingDisabledVal  bool
 	Primary             bool
 	EnableMlock         bool
+	LocalMountVal       bool
 	ReplicationStateVal consts.ReplicationState
 }
 
@@ -84,6 +89,10 @@ func (d StaticSystemView) Tainted() bool {
 
 func (d StaticSystemView) CachingDisabled() bool {
 	return d.CachingDisabledVal
+}
+
+func (d StaticSystemView) LocalMount() bool {
+	return d.LocalMountVal
 }
 
 func (d StaticSystemView) ReplicationState() consts.ReplicationState {

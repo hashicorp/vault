@@ -6,13 +6,24 @@ import "google/protobuf/timestamp.proto";
 message Empty {}
 
 message Header {
-    repeated string header = 1;
+	repeated string header = 1;
 }
 
 message ProtoError {
-    uint32 err_type = 1;
-    string err_msg = 2;
-    int64 err_code = 3;
+	// Error type can be one of:
+	// ErrTypeUnknown uint32 = iota
+	// ErrTypeUserError
+	// ErrTypeInternalError
+	// ErrTypeCodedError
+	// ErrTypeStatusBadRequest
+	// ErrTypeUnsupportedOperation
+	// ErrTypeUnsupportedPath
+	// ErrTypeInvalidRequest
+	// ErrTypePermissionDenied
+	// ErrTypeMultiAuthzPending
+	uint32 err_type = 1;
+	string err_msg = 2;
+	int64 err_code = 3;
 }
 
 // Paths is the structure of special paths that is used for SpecialPaths.
@@ -51,7 +62,7 @@ message Request {
 	string path = 4;
 
 	// Request data is a JSON object that must have keys with string type.
-    string data = 5;
+	string data = 5;
 
 	// Secret will be non-nil only for Revoke and Renew operations
 	// to represent the secret that was returned prior.
@@ -114,6 +125,11 @@ message Request {
 	// attached. Useful in some situations where the client token is not made
 	// accessible.
 	bool unauthenticated = 19;
+
+   	// Connection will be non-nil only for credential providers to
+	// inspect the connection information and potentially use it for
+	// authentication/protection.
+	Connection connection = 20;
 }
 
 message Alias {
@@ -129,9 +145,9 @@ message Alias {
 }
 
 message Auth {
-    LeaseOptions lease_options = 1;
+	LeaseOptions lease_options = 1;
 
-    // InternalData is a JSON object that is stored with the auth struct.
+	// InternalData is a JSON object that is stored with the auth struct.
 	// This will be sent back during a Renew/Revoke for storing internal data
 	// used for those operations.
 	string internal_data = 2;
@@ -189,17 +205,17 @@ message Auth {
 }
 
 message LeaseOptions {
-    int64 TTL = 1;
-    
-    bool renewable = 2;
+	int64 TTL = 1;
+	
+	bool renewable = 2;
 
-    int64 increment = 3;
+	int64 increment = 3;
 
-    google.protobuf.Timestamp issue_time = 4;
+	google.protobuf.Timestamp issue_time = 4;
 }
 
 message Secret {
-    LeaseOptions lease_options = 1;
+	LeaseOptions lease_options = 1;
 
 	// InternalData is a JSON object that is stored with the secret.
 	// This will be sent back during a Renew/Revoke for storing internal data
@@ -241,7 +257,7 @@ message Response {
 }
 
 message ResponseWrapInfo {
-    // Setting to non-zero specifies that the response should be wrapped.
+	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
 	int64 TTL = 1;
 
@@ -275,7 +291,7 @@ message ResponseWrapInfo {
 }
 
 message RequestWrapInfo {
-    // Setting to non-zero specifies that the response should be wrapped.
+	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
 	int64 TTL = 1;
 
@@ -285,7 +301,7 @@ message RequestWrapInfo {
 
 	// A flag to conforming backends that data for a given request should be
 	// seal wrapped
-    bool seal_wrap = 3;
+	bool seal_wrap = 3;
 }
 
 // HandleRequestArgs is the args for HandleRequest method.
@@ -335,17 +351,51 @@ message TypeReply {
 }
 
 message InvalidateKeyArgs {
-    string key = 1;
+	string key = 1;
 }
 
+// Backend is the interface that plugins must satisfy. The plugin should
+// implement the server for this service. Requests will first run the
+// HandleExistanceCheck rpc then run the HandleRequests rpc.
 service Backend {
-    rpc HandleRequest(HandleRequestArgs) returns (HandleRequestReply);
-    rpc SpecialPaths(Empty) returns (SpecialPathsReply);
-    rpc HandleExistenceCheck(HandleExistenceCheckArgs) returns (HandleExistenceCheckReply);
-    rpc Cleanup(Empty) returns (Empty);
-    rpc InvalidateKey(InvalidateKeyArgs) returns (Empty);
-    rpc Setup(SetupArgs) returns (SetupReply);
-    rpc Type(Empty) returns (TypeReply);
+	// HandleRequest is used to handle a request and generate a response.
+	// The plugins must check the operation type and handle appropriately.
+	rpc HandleRequest(HandleRequestArgs) returns (HandleRequestReply);
+
+	// SpecialPaths is a list of paths that are special in some way.
+	// See PathType for the types of special paths. The key is the type
+	// of the special path, and the value is a list of paths for this type.
+	// This is not a regular expression but is an exact match. If the path
+	// ends in '*' then it is a prefix-based match. The '*' can only appear
+	// at the end.
+	rpc SpecialPaths(Empty) returns (SpecialPathsReply);
+
+	// HandleExistenceCheck is used to handle a request and generate a response
+	// indicating whether the given path exists or not; this is used to
+	// understand whether the request must have a Create or Update capability
+	// ACL applied. The first bool indicates whether an existence check
+	// function was found for the backend; the second indicates whether, if an
+	// existence check function was found, the item exists or not.
+	rpc HandleExistenceCheck(HandleExistenceCheckArgs) returns (HandleExistenceCheckReply);
+
+	// Cleanup is invoked during an unmount of a backend to allow it to
+	// handle any cleanup like connection closing or releasing of file handles.
+	// Cleanup is called right before Vault closes the plugin process.
+	rpc Cleanup(Empty) returns (Empty);
+
+	// InvalidateKey may be invoked when an object is modified that belongs
+	// to the backend. The backend can use this to clear any caches or reset
+	// internal state as needed.
+	rpc InvalidateKey(InvalidateKeyArgs) returns (Empty);
+
+	// Setup is used to set up the backend based on the provided backend
+	// configuration. The plugin's setup implementation should use the provided
+	// broker_id to create a connection back to Vault for use with the Storage
+	// and SystemView clients.
+	rpc Setup(SetupArgs) returns (SetupReply);
+
+   	// Type returns the BackendType for the particular backend
+	rpc Type(Empty) returns (TypeReply);
 }
 
 message StorageEntry {
@@ -355,95 +405,138 @@ message StorageEntry {
 }
 
 message StorageListArgs {
-    string prefix = 1;
+	string prefix = 1;
 }
 
 message StorageListReply {
-    repeated string keys = 1;
-    string err = 2;
+	repeated string keys = 1;
+	string err = 2;
 }
 
 message StorageGetArgs {
-    string key = 1;
+	string key = 1;
 }
 
 message StorageGetReply {
-    StorageEntry entry = 1;
-    string err = 2;
+	StorageEntry entry = 1;
+	string err = 2;
 }
 
 message StoragePutArgs {
-    StorageEntry entry = 1;
+	StorageEntry entry = 1;
 }
 
 message StoragePutReply {
-    string err = 1;
+	string err = 1;
 }
 
 message StorageDeleteArgs {
-    string key = 1;
+	string key = 1;
 }
 
 message StorageDeleteReply {
-    string err = 1;
+	string err = 1;
 }
 
+// Storage is the way that plugins are able read/write data. Plugins should
+// implement the client for this service.
 service Storage {
-    rpc List(StorageListArgs) returns (StorageListReply);
-    rpc Get(StorageGetArgs) returns (StorageGetReply);
-    rpc Put(StoragePutArgs) returns (StoragePutReply);
-    rpc Delete(StorageDeleteArgs) returns (StorageDeleteReply);
+	rpc List(StorageListArgs) returns (StorageListReply);
+	rpc Get(StorageGetArgs) returns (StorageGetReply);
+	rpc Put(StoragePutArgs) returns (StoragePutReply);
+	rpc Delete(StorageDeleteArgs) returns (StorageDeleteReply);
 }
 
 message TTLReply {
-    int64 TTL = 1;
+	int64 TTL = 1;
 }
 
 message SudoPrivilegeArgs {
-    string path = 1;
-    string token = 2;
+	string path = 1;
+	string token = 2;
 }
 
 message SudoPrivilegeReply {
-    bool sudo = 1;
+	bool sudo = 1;
 }
 
 message TaintedReply {
-    bool tainted = 1;
+	bool tainted = 1;
 }
 
 message CachingDisabledReply {
-    bool disabled = 1;
+	bool disabled = 1;
 }
 
 message ReplicationStateReply {
-    int32 state = 1;
+	int32 state = 1;
 }
 
 message ResponseWrapDataArgs {
-    string data = 1;
-    int64 TTL = 2;
-    bool JWT = 3;
+	string data = 1;
+	int64 TTL = 2;
+	bool JWT = 3;
 }
 
 message ResponseWrapDataReply {
-    ResponseWrapInfo wrap_info = 1;
-    string err = 2;
+	ResponseWrapInfo wrap_info = 1;
+	string err = 2;
 }
 
 message MlockEnabledReply {
-    bool enabled = 1;
+	bool enabled = 1;
 }
 
+message LocalMountReply {
+	bool local = 1;
+}
+
+// SystemView exposes system configuration information in a safe way for plugins
+// to consume. Plugins should implement the client for this service.
 service SystemView {
-    rpc DefaultLeaseTTL(Empty) returns (TTLReply);
-    rpc MaxLeaseTTL(Empty) returns (TTLReply);
-    rpc SudoPrivilege(SudoPrivilegeArgs) returns (SudoPrivilegeReply);
-    rpc Tainted(Empty) returns (TaintedReply);
-    rpc CachingDisabled(Empty) returns (CachingDisabledReply);
-    rpc ReplicationState(Empty) returns (ReplicationStateReply);
-    rpc ResponseWrapData(ResponseWrapDataArgs) returns (ResponseWrapDataReply);
-    rpc MlockEnabled(Empty) returns (MlockEnabledReply);
+  	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
+	rpc DefaultLeaseTTL(Empty) returns (TTLReply);
+	
+   	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
+	// authors should take care not to issue credentials that last longer than
+	// this value, as Vault will revoke them
+	rpc MaxLeaseTTL(Empty) returns (TTLReply);
+
+	// SudoPrivilege returns true if given path has sudo privileges
+	// for the given client token
+	rpc SudoPrivilege(SudoPrivilegeArgs) returns (SudoPrivilegeReply);
+
+	// Tainted, returns true if the mount is tainted. A mount is tainted if it is in the
+	// process of being unmounted. This should only be used in special
+	// circumstances; a primary use-case is as a guard in revocation functions.
+	// If revocation of a backend's leases fails it can keep the unmounting
+	// process from being successful. If the reason for this failure is not
+	// relevant when the mount is tainted (for instance, saving a CRL to disk
+	// when the stored CRL will be removed during the unmounting process
+	// anyways), we can ignore the errors to allow unmounting to complete.
+	rpc Tainted(Empty) returns (TaintedReply);
+
+	// CachingDisabled returns true if caching is disabled. If true, no caches
+	// should be used, despite known slowdowns.
+	rpc CachingDisabled(Empty) returns (CachingDisabledReply);
+
+   	// ReplicationState indicates the state of cluster replication
+	rpc ReplicationState(Empty) returns (ReplicationStateReply);
+
+	// ResponseWrapData wraps the given data in a cubbyhole and returns the
+	// token used to unwrap.
+	rpc ResponseWrapData(ResponseWrapDataArgs) returns (ResponseWrapDataReply);
+
+	// MlockEnabled returns the configuration setting for enabling mlock on
+	// plugins.
+	rpc MlockEnabled(Empty) returns (MlockEnabledReply);
+
+	// LocalMount, when run from a system view attached to a request, indicates
+	// whether the request is affecting a local mount or not
+	rpc LocalMount(Empty) returns (LocalMountReply);
 }
 
-
+message Connection {
+	// RemoteAddr is the network address that sent the request.
+	string remote_addr = 1;
+}

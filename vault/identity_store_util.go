@@ -666,12 +666,29 @@ func (i *IdentityStore) MemDBAliasByFactors(mountAccessor, aliasName string, clo
 		return nil, fmt.Errorf("missing mount accessor")
 	}
 
+	txn := i.db.Txn(false)
+
+	return i.MemDBAliasByFactorsInTxn(txn, mountAccessor, aliasName, clone, groupAlias)
+}
+
+func (i *IdentityStore) MemDBAliasByFactorsInTxn(txn *memdb.Txn, mountAccessor, aliasName string, clone bool, groupAlias bool) (*identity.Alias, error) {
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+
+	if aliasName == "" {
+		return nil, fmt.Errorf("missing alias name")
+	}
+
+	if mountAccessor == "" {
+		return nil, fmt.Errorf("missing mount accessor")
+	}
+
 	tableName := entityAliasesTable
 	if groupAlias {
 		tableName = groupAliasesTable
 	}
 
-	txn := i.db.Txn(false)
 	aliasRaw, err := txn.First(tableName, "factors", mountAccessor, aliasName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch alias from memdb using factors: %v", err)
@@ -1322,6 +1339,11 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 }
 
 func (i *IdentityStore) validateMemberGroupID(groupID string, memberGroupID string) error {
+	// Detect self loop
+	if groupID == memberGroupID {
+		return fmt.Errorf("member group ID %q is same as the ID of the group", groupID)
+	}
+
 	group, err := i.MemDBGroupByID(groupID, true)
 	if err != nil {
 		return err
@@ -1331,11 +1353,6 @@ func (i *IdentityStore) validateMemberGroupID(groupID string, memberGroupID stri
 	// okay to add any group as its member group.
 	if group == nil {
 		return nil
-	}
-
-	// Detect self loop
-	if groupID == memberGroupID {
-		fmt.Errorf("member group ID %q is same as the ID of the group")
 	}
 
 	// If adding the memberGroupID to groupID creates a cycle, then groupID must

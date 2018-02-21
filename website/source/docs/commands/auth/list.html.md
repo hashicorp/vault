@@ -39,5 +39,13 @@ userpass/    userpass    auth_userpass_eea6507e    n/a       system         syst
 The following flags are available in addition to the [standard set of
 flags](/docs/commands/index.html) included on all commands.
 
+### Output Options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command Options
+
 - `-detailed` `(bool: false)` - Print detailed information such as configuration
   and replication status about each auth method.

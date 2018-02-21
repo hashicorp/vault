@@ -168,13 +168,15 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		}
 
 		caChain := caInfo.GetCAChain()
+		var certStr string
 		for _, ca := range caChain {
 			block := pem.Block{
 				Type:  "CERTIFICATE",
 				Bytes: ca.Bytes,
 			}
-			certificate = append(certificate, pem.EncodeToMemory(&block)...)
+			certStr = certStr + string(pem.EncodeToMemory(&block))
 		}
+		certificate = []byte(certStr)
 		goto reply
 	}
 

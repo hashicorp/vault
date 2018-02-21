@@ -9,15 +9,8 @@ import (
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
+	"github.com/mitchellh/copystructure"
 )
-
-var (
-	keysArchive []KeyEntry
-)
-
-func resetKeysArchive() {
-	keysArchive = []KeyEntry{KeyEntry{}}
-}
 
 func TestPolicy_KeyEntryMapUpgrade(t *testing.T) {
 	now := time.Now()
@@ -107,8 +100,6 @@ func Test_ArchivingUpgrade(t *testing.T) {
 }
 
 func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
-	resetKeysArchive()
-
 	ctx := context.Background()
 
 	// First, we generate a policy and rotate it a number of times. Each time
@@ -131,8 +122,8 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	lock.RUnlock()
 
 	// Store the initial key in the archive
-	keysArchive = append(keysArchive, p.Keys["1"])
-	checkKeys(t, ctx, p, storage, "initial", 1, 1, 1)
+	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
+	checkKeys(t, ctx, p, storage, keysArchive, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
 		err = p.Rotate(ctx, storage)
@@ -140,7 +131,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 			t.Fatal(err)
 		}
 		keysArchive = append(keysArchive, p.Keys[strconv.Itoa(i)])
-		checkKeys(t, ctx, p, storage, "rotate", i, i, i)
+		checkKeys(t, ctx, p, storage, keysArchive, "rotate", i, i, i)
 	}
 
 	// Now, wipe the archive and set the archive version to zero
@@ -182,7 +173,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 	lock.RUnlock()
 
-	checkKeys(t, ctx, p, storage, "upgrade", 10, 10, 10)
+	checkKeys(t, ctx, p, storage, keysArchive, "upgrade", 10, 10, 10)
 
 	// Let's check some deletion logic while we're at it
 
@@ -242,8 +233,6 @@ func Test_Archiving(t *testing.T) {
 }
 
 func testArchivingCommon(t *testing.T, lm *LockManager) {
-	resetKeysArchive()
-
 	ctx := context.Background()
 
 	// First, we generate a policy and rotate it a number of times. Each time
@@ -257,19 +246,17 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
-	if lock != nil {
-		defer lock.RUnlock()
-	}
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == nil {
-		t.Fatal("nil policy")
+	if p == nil || lock == nil {
+		t.Fatal("nil policy or lock")
 	}
+	lock.RUnlock()
 
 	// Store the initial key in the archive
-	keysArchive = append(keysArchive, p.Keys["1"])
-	checkKeys(t, ctx, p, storage, "initial", 1, 1, 1)
+	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
+	checkKeys(t, ctx, p, storage, keysArchive, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
 		err = p.Rotate(ctx, storage)
@@ -277,7 +264,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 			t.Fatal(err)
 		}
 		keysArchive = append(keysArchive, p.Keys[strconv.Itoa(i)])
-		checkKeys(t, ctx, p, storage, "rotate", i, i, i)
+		checkKeys(t, ctx, p, storage, keysArchive, "rotate", i, i, i)
 	}
 
 	// Move the min decryption version up
@@ -296,7 +283,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 		// 10, you'd need 7, 8, 9, and 10 -- IOW, latest version - min
 		// decryption version plus 1 (the min decryption version key
 		// itself)
-		checkKeys(t, ctx, p, storage, "minadd", 10, 10, p.LatestVersion-p.MinDecryptionVersion+1)
+		checkKeys(t, ctx, p, storage, keysArchive, "minadd", 10, 10, p.LatestVersion-p.MinDecryptionVersion+1)
 	}
 
 	// Move the min decryption version down
@@ -315,7 +302,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 		// 10, you'd need 7, 8, 9, and 10 -- IOW, latest version - min
 		// decryption version plus 1 (the min decryption version key
 		// itself)
-		checkKeys(t, ctx, p, storage, "minsub", 10, 10, p.LatestVersion-p.MinDecryptionVersion+1)
+		checkKeys(t, ctx, p, storage, keysArchive, "minsub", 10, 10, p.LatestVersion-p.MinDecryptionVersion+1)
 	}
 }
 
@@ -323,6 +310,7 @@ func checkKeys(t *testing.T,
 	ctx context.Context,
 	p *Policy,
 	storage logical.Storage,
+	keysArchive []KeyEntry,
 	action string,
 	archiveVer, latestVer, keysSize int) {
 
@@ -397,5 +385,193 @@ func checkKeys(t *testing.T,
 		if !reflect.DeepEqual(archive.Keys[i].Key, keysArchive[i].Key) {
 			t.Fatalf("key %d not equivalent between policy archive and test keys archive; policy archive:\n%#v\ntest keys archive:\n%#v\n", i, archive.Keys[i].Key, keysArchive[i].Key)
 		}
+	}
+}
+
+func Test_StorageErrorSafety(t *testing.T) {
+	ctx := context.Background()
+	lm := NewLockManager(false)
+
+	storage := &logical.InmemStorage{}
+	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+		Storage: storage,
+		KeyType: KeyType_AES256_GCM96,
+		Name:    "test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil || lock == nil {
+		t.Fatal("nil policy or lock")
+	}
+	lock.RUnlock()
+
+	// Store the initial key in the archive
+	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
+	checkKeys(t, ctx, p, storage, keysArchive, "initial", 1, 1, 1)
+
+	// We use checkKeys here just for sanity; it doesn't really handle cases of
+	// errors below so we do more targeted testing later
+	for i := 2; i <= 5; i++ {
+		err = p.Rotate(ctx, storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keysArchive = append(keysArchive, p.Keys[strconv.Itoa(i)])
+		checkKeys(t, ctx, p, storage, keysArchive, "rotate", i, i, i)
+	}
+
+	underlying := storage.Underlying()
+	underlying.FailPut(true)
+
+	priorLen := len(p.Keys)
+
+	err = p.Rotate(ctx, storage)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if len(p.Keys) != priorLen {
+		t.Fatal("length of keys should not have changed")
+	}
+}
+
+func Test_BadUpgrade(t *testing.T) {
+	ctx := context.Background()
+	lm := NewLockManager(false)
+	storage := &logical.InmemStorage{}
+	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+		Storage: storage,
+		KeyType: KeyType_AES256_GCM96,
+		Name:    "test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil || lock == nil {
+		t.Fatal("nil policy or lock")
+	}
+	lock.RUnlock()
+
+	orig, err := copystructure.Copy(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p.Key = p.Keys["1"].Key
+	p.Keys = nil
+	p.MinDecryptionVersion = 0
+
+	if err := p.Upgrade(ctx, storage); err != nil {
+		t.Fatal(err)
+	}
+
+	k := p.Keys["1"]
+	o := orig.(*Policy).Keys["1"]
+	k.CreationTime = o.CreationTime
+	k.HMACKey = o.HMACKey
+	p.Keys["1"] = k
+
+	if !reflect.DeepEqual(orig, p) {
+		t.Fatalf("not equal:\n%#v\n%#v", orig, p)
+	}
+
+	// Do it again with a failing storage call
+	underlying := storage.Underlying()
+	underlying.FailPut(true)
+
+	p.Key = p.Keys["1"].Key
+	p.Keys = nil
+	p.MinDecryptionVersion = 0
+
+	if err := p.Upgrade(ctx, storage); err == nil {
+		t.Fatal("expected error")
+	}
+
+	if p.MinDecryptionVersion == 1 {
+		t.Fatal("min decryption version was changed")
+	}
+	if p.Keys != nil {
+		t.Fatal("found upgraded keys")
+	}
+	if p.Key == nil {
+		t.Fatal("non-upgraded key not found")
+	}
+}
+
+func Test_BadArchive(t *testing.T) {
+	ctx := context.Background()
+	lm := NewLockManager(false)
+	storage := &logical.InmemStorage{}
+	p, lock, _, err := lm.GetPolicyUpsert(ctx, PolicyRequest{
+		Storage: storage,
+		KeyType: KeyType_AES256_GCM96,
+		Name:    "test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil || lock == nil {
+		t.Fatal("nil policy or lock")
+	}
+	lock.RUnlock()
+
+	for i := 2; i <= 10; i++ {
+		err = p.Rotate(ctx, storage)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	p.MinDecryptionVersion = 5
+	if err := p.Persist(ctx, storage); err != nil {
+		t.Fatal(err)
+	}
+	if p.ArchiveVersion != 10 {
+		t.Fatalf("unexpected archive version %d", p.ArchiveVersion)
+	}
+	if len(p.Keys) != 6 {
+		t.Fatalf("unexpected key length %d", len(p.Keys))
+	}
+
+	// Set back
+	p.MinDecryptionVersion = 1
+	if err := p.Persist(ctx, storage); err != nil {
+		t.Fatal(err)
+	}
+	if p.ArchiveVersion != 10 {
+		t.Fatalf("unexpected archive version %d", p.ArchiveVersion)
+	}
+	if len(p.Keys) != 10 {
+		t.Fatalf("unexpected key length %d", len(p.Keys))
+	}
+
+	// Run it again but we'll turn off storage along the way
+	p.MinDecryptionVersion = 5
+	if err := p.Persist(ctx, storage); err != nil {
+		t.Fatal(err)
+	}
+	if p.ArchiveVersion != 10 {
+		t.Fatalf("unexpected archive version %d", p.ArchiveVersion)
+	}
+	if len(p.Keys) != 6 {
+		t.Fatalf("unexpected key length %d", len(p.Keys))
+	}
+
+	underlying := storage.Underlying()
+	underlying.FailPut(true)
+
+	// Set back, which should cause p.Keys to be changed if the persist works,
+	// but it doesn't
+	p.MinDecryptionVersion = 1
+	if err := p.Persist(ctx, storage); err == nil {
+		t.Fatal("expected error during put")
+	}
+	if p.ArchiveVersion != 10 {
+		t.Fatalf("unexpected archive version %d", p.ArchiveVersion)
+	}
+	// Here's the expected change
+	if len(p.Keys) != 6 {
+		t.Fatalf("unexpected key length %d", len(p.Keys))
 	}
 }

@@ -31,10 +31,25 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			if !ok || keysRaw == nil {
 				return http.StatusNotFound, nil
 			}
-			keys, ok := keysRaw.([]string)
-			if !ok {
+
+			var keys []string
+			switch keysRaw.(type) {
+			case []interface{}:
+				keys = make([]string, len(keysRaw.([]interface{})))
+				for i, el := range keysRaw.([]interface{}) {
+					s, ok := el.(string)
+					if !ok {
+						return http.StatusInternalServerError, nil
+					}
+					keys[i] = s
+				}
+
+			case []string:
+				keys = keysRaw.([]string)
+			default:
 				return http.StatusInternalServerError, nil
 			}
+
 			if len(keys) == 0 {
 				return http.StatusNotFound, nil
 			}

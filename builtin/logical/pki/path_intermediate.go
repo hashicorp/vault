@@ -63,7 +63,12 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	}
 
 	var resp *logical.Response
-	parsedBundle, err := generateIntermediateCSR(b, role, nil, req, data)
+	input := &dataBundle{
+		role:    role,
+		req:     req,
+		apiData: data,
+	}
+	parsedBundle, err := generateIntermediateCSR(b, input)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

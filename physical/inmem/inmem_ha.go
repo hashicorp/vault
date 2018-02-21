@@ -11,7 +11,7 @@ import (
 type InmemHABackend struct {
 	physical.Backend
 	locks  map[string]string
-	l      sync.Mutex
+	l      *sync.Mutex
 	cond   *sync.Cond
 	logger log.Logger
 }
@@ -32,8 +32,9 @@ func NewInmemHA(_ map[string]string, logger log.Logger) (physical.Backend, error
 		Backend: be,
 		locks:   make(map[string]string),
 		logger:  logger,
+		l:       new(sync.Mutex),
 	}
-	in.cond = sync.NewCond(&in.l)
+	in.cond = sync.NewCond(in.l)
 	return in, nil
 }
 
@@ -46,13 +47,14 @@ func NewTransactionalInmemHA(_ map[string]string, logger log.Logger) (physical.B
 		Backend: transInmem,
 		locks:   make(map[string]string),
 		logger:  logger,
+		l:       new(sync.Mutex),
 	}
 
 	in := &TransactionalInmemHABackend{
 		InmemHABackend: inmemHA,
 		Transactional:  transInmem.(physical.Transactional),
 	}
-	in.cond = sync.NewCond(&in.l)
+	in.cond = sync.NewCond(in.l)
 	return in, nil
 }
 

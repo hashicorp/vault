@@ -61,7 +61,7 @@ certificate.`,
 
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: "Comma-seperated list of policies.",
+				Description: "Comma-separated list of policies.",
 			},
 
 			"lease": &framework.FieldSchema{
@@ -78,7 +78,7 @@ Defaults to system/backend default TTL time.`,
 			"max_ttl": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
 				Description: `Duration in either an integer number of seconds (3600) or
-an integer time unit (60m) after which the 
+an integer time unit (60m) after which the
 issued token can no longer be renewed.`,
 			},
 			"period": &framework.FieldSchema{

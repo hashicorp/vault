@@ -287,7 +287,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 		t.Fatalf("failed to read config/tidy/identity-whitelist endpoint")
 	}
 	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
-		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%s disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
+		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%d disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
 	}
 
 	// test delete operation
@@ -342,7 +342,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 		t.Fatalf("failed to read config/tidy/roletag-blacklist endpoint")
 	}
 	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
-		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%s disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
+		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%d disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
 	}
 
 	// test delete operation
@@ -1587,7 +1587,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// and ensure a renew no longer works
 	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
 	if err == nil || (resp != nil && !resp.IsError()) {
-		t.Errorf("bad: expected failed renew due to changed AWS role ID: resp: %#v", resp, err)
+		t.Errorf("bad: expected failed renew due to changed AWS role ID: resp: %#v", resp)
 	}
 	// Undo the fake resolver...
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId

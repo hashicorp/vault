@@ -48,6 +48,9 @@ func sendHTTPRequest(ctx context.Context, req *http.Request, conn net.Conn) erro
 
 // toRPCErr converts an error into an error from the status package.
 func toRPCErr(err error) error {
+	if err == nil || err == io.EOF {
+		return err
+	}
 	if _, ok := status.FromError(err); ok {
 		return err
 	}
@@ -62,8 +65,6 @@ func toRPCErr(err error) error {
 			return status.Error(codes.DeadlineExceeded, err.Error())
 		case context.Canceled:
 			return status.Error(codes.Canceled, err.Error())
-		case ErrClientConnClosing:
-			return status.Error(codes.FailedPrecondition, err.Error())
 		}
 	}
 	return status.Error(codes.Unknown, err.Error())

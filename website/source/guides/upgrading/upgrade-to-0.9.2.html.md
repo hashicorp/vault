@@ -12,6 +12,21 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 0.9.2 compared to 0.9.1. Please read it carefully.
 
+### Backwards Compatible CLI Changes
+
+This upgrade guide is typically reserved for breaking changes, however it
+is worth calling out that the CLI interface to Vault has been completely
+revamped while maintaining backwards compatbitility. This could lead to
+potential confusion  while browsing the latest version of the Vault
+documentation on vaultproject.io.
+
+All previous CLI commands should continue to work and are backwards
+compatible in almost all cases.
+
+Documentation for previous versions of Vault can be accessed using
+the GitHub interface by browsing tags (eg [0.9.1 website tree](https://github.com/hashicorp/vault/tree/v0.9.1/website)) or by
+[building the Vault website locally](https://github.com/hashicorp/vault/tree/v0.9.1/website#running-the-site-locally).
+
 ### `sys/health` DR Secondary Reporting
 
 The `replication_dr_secondary` bool returned by `sys/health` could be

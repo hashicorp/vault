@@ -21,8 +21,10 @@ type Packet struct {
 }
 
 // New creates a new packet with the Code, Secret fields set to the given
-// values. The returned packet's Identifier, Authenticator are filled with
-// random values.
+// values. The returned packet's Identifier and Authenticator fields are filled
+// with random values.
+//
+// The function panics if not enough random data could be generated.
 func New(code Code, secret []byte) *Packet {
 	var buff [17]byte
 	if _, err := rand.Read(buff[:]); err != nil {
