@@ -126,13 +126,18 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	backend := &databaseBackend{}
 
-	roleEnt := &roleEntry{
+	roleExpected := &roleEntry{
 		Statements: dbplugin.Statements{
-			CreationStatements: []string{"test"},
+			CreationStatements: "test",
+			Creation:           []string{"test"},
 		},
 	}
 
-	entry, err := logical.StorageEntryJSON("role/test", roleEnt)
+	entry, err := logical.StorageEntryJSON("role/test", &roleEntry{
+		Statements: dbplugin.Statements{
+			CreationStatements: "test",
+		},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,8 +150,8 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(role, roleEnt) {
-		t.Fatalf("bad role %#v", role)
+	if !reflect.DeepEqual(role, roleExpected) {
+		t.Fatalf("bad role %#v, %#v", role, roleExpected)
 	}
 
 	// Upgrade case
@@ -164,8 +169,8 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(role, roleEnt) {
-		t.Fatalf("bad role %#v", role)
+	if !reflect.DeepEqual(role, roleExpected) {
+		t.Fatalf("bad role %#v, %#v", role, roleExpected)
 	}
 
 }
@@ -658,15 +663,15 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 
 	expected := dbplugin.Statements{
-		CreationStatements:   []string{strings.TrimSpace(testRole)},
-		RevocationStatements: []string{strings.TrimSpace(defaultRevocationSQL)},
+		Creation:   []string{strings.TrimSpace(testRole)},
+		Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
 	}
 
 	actual := dbplugin.Statements{
-		CreationStatements:   resp.Data["creation_statements"].([]string),
-		RevocationStatements: resp.Data["revocation_statements"].([]string),
-		RollbackStatements:   resp.Data["rollback_statements"].([]string),
-		RenewStatements:      resp.Data["renew_statements"].([]string),
+		Creation:   resp.Data["creation_statements"].([]string),
+		Revocation: resp.Data["revocation_statements"].([]string),
+		Rollback:   resp.Data["rollback_statements"].([]string),
+		Renewal:    resp.Data["renew_statements"].([]string),
 	}
 
 	if !reflect.DeepEqual(expected, actual) {

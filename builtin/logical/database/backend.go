@@ -139,10 +139,6 @@ func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName 
 	}
 
 	switch {
-	case len(result.Statements.Creation) > 0:
-	case len(result.Statements.Revocation) > 0:
-	case len(result.Statements.Renewal) > 0:
-	case len(result.Statements.Rollback) > 0:
 	case upgradeCh.Statements != nil:
 		var stmts dbplugin.Statements
 		if upgradeCh.Statements.CreationStatements != "" {
@@ -162,17 +158,29 @@ func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName 
 
 	// For backwards compatibility, copy the values back into the string form
 	// of the fields
-	if len(result.Statements.Creation) > 0 {
+	switch {
+	case len(result.Statements.Creation) > 0:
 		result.Statements.CreationStatements = strings.Join(result.Statements.Creation, ";")
+	case len(result.Statements.CreationStatements) > 0:
+		result.Statements.Creation = []string{result.Statements.CreationStatements}
 	}
-	if len(result.Statements.Revocation) > 0 {
+	switch {
+	case len(result.Statements.Revocation) > 0:
 		result.Statements.RevocationStatements = strings.Join(result.Statements.Revocation, ";")
+	case len(result.Statements.RevocationStatements) > 0:
+		result.Statements.Revocation = []string{result.Statements.RevocationStatements}
 	}
-	if len(result.Statements.Renewal) > 0 {
+	switch {
+	case len(result.Statements.Renewal) > 0:
 		result.Statements.RenewStatements = strings.Join(result.Statements.Renewal, ";")
+	case len(result.Statements.RenewStatements) > 0:
+		result.Statements.Renewal = []string{result.Statements.RenewStatements}
 	}
-	if len(result.Statements.Creation) > 0 {
+	switch {
+	case len(result.Statements.Rollback) > 0:
 		result.Statements.RollbackStatements = strings.Join(result.Statements.Rollback, ";")
+	case len(result.Statements.RollbackStatements) > 0:
+		result.Statements.Rollback = []string{result.Statements.RollbackStatements}
 	}
 
 	return &result, nil
