@@ -108,7 +108,7 @@ func TestMySQL_Initialize(t *testing.T) {
 	db := dbRaw.(*MySQL)
 	connProducer := db.SQLConnectionProducer
 
-	_, err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -128,7 +128,7 @@ func TestMySQL_Initialize(t *testing.T) {
 		"max_open_connections": "5",
 	}
 
-	_, err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -146,7 +146,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
 
-	_, err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -163,7 +163,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: []string{testMySQLRoleWildCard},
+		Creation: []string{testMySQLRoleWildCard},
 	}
 
 	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
@@ -186,7 +186,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 	}
 
 	// Test with a manualy prepare statement
-	statements.CreationStatements = []string{testMySQLRolePreparedStmt}
+	statements.Creation = []string{testMySQLRolePreparedStmt}
 
 	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
@@ -211,7 +211,7 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
 
-	_, err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -228,7 +228,7 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: []string{testMySQLRoleWildCard},
+		Creation: []string{testMySQLRoleWildCard},
 	}
 
 	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
@@ -263,13 +263,13 @@ func TestMySQL_RevokeUser(t *testing.T) {
 	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
 
-	_, err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: []string{testMySQLRoleWildCard},
+		Creation: []string{testMySQLRoleWildCard},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -296,7 +296,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		t.Fatal("Credentials were not revoked")
 	}
 
-	statements.CreationStatements = []string{testMySQLRoleWildCard}
+	statements.Creation = []string{testMySQLRoleWildCard}
 	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -307,7 +307,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 	}
 
 	// Test custom revoke statements
-	statements.RevocationStatements = []string{testMySQLRevocationSQL}
+	statements.Revocation = []string{testMySQLRevocationSQL}
 	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)

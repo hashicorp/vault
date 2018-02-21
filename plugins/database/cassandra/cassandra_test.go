@@ -91,7 +91,7 @@ func TestCassandra_Initialize(t *testing.T) {
 	db := dbRaw.(*Cassandra)
 	connProducer := db.ConnectionProducer.(*cassandraConnectionProducer)
 
-	_, err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -114,7 +114,7 @@ func TestCassandra_Initialize(t *testing.T) {
 		"protocol_version": "4",
 	}
 
-	_, err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -137,13 +137,13 @@ func TestCassandra_CreateUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	_, err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: []string{testCassandraRole},
+		Creation: []string{testCassandraRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -178,13 +178,13 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	_, err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: []string{testCassandraRole},
+		Creation: []string{testCassandraRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -224,13 +224,13 @@ func TestCassandra_RevokeUser(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	_, err := db.Initialize(context.Background(), connectionDetails, true)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: []string{testCassandraRole},
+		Creation: []string{testCassandraRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
