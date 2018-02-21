@@ -109,10 +109,10 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"db_name":               role.DBName,
-				"creation_statements":   role.Statements.CreationStatements,
-				"revocation_statements": role.Statements.RevocationStatements,
-				"rollback_statements":   role.Statements.RollbackStatements,
-				"renew_statements":      role.Statements.RenewStatements,
+				"creation_statements":   role.Statements.Creation,
+				"revocation_statements": role.Statements.Revocation,
+				"rollback_statements":   role.Statements.Rollback,
+				"renew_statements":      role.Statements.Renewal,
 				"default_ttl":           role.DefaultTTL.Seconds(),
 				"max_ttl":               role.MaxTTL.Seconds(),
 			},
@@ -182,7 +182,7 @@ func (b *databaseBackend) pathRoleCreate() framework.OperationFunc {
 
 type roleEntry struct {
 	DBName     string              `json:"db_name"`
-	Statements dbplugin.Statements `json:"statements_list"`
+	Statements dbplugin.Statements `json:"statements"`
 	DefaultTTL time.Duration       `json:"default_ttl"`
 	MaxTTL     time.Duration       `json:"max_ttl"`
 }

@@ -149,7 +149,7 @@ func (dr *databasePluginRPCClient) Init(_ context.Context, conf map[string]inter
 
 			err = dr.client.Call("Plugin.Initialize", req, &struct{}{})
 			if err == nil {
-				return nil, nil
+				return conf, nil
 			}
 		}
 		return nil, err

@@ -263,7 +263,7 @@ func (c *gRPCClient) Init(ctx context.Context, conf map[string]interface{}, veri
 				VerifyConnection: verifyConnection,
 			})
 			if err == nil {
-				return nil, nil
+				return conf, nil
 			}
 		}
 

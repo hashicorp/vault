@@ -113,18 +113,10 @@ type upgradeStatements struct {
 	RenewStatements      string `json:"renew_statements"`
 }
 
-type oldStatements struct {
-	CreationStatements   string `json:"creation_statements"`
-	RevocationStatements string `json:"revocation_statements"`
-	RollbackStatements   string `json:"rollback_statements"`
-	RenewStatements      string `json:"renew_statements"`
-}
-
 type upgradeCheck struct {
 	// This json tag has a typo in it, the new version does not. This
 	// necessitates this upgrade logic.
-	Statements    *upgradeStatements `json:"statments,omitempty"`
-	OldStatements *oldStatements     `json:"statements,omitempty"`
+	Statements *upgradeStatements `json:"statments,omitempty"`
 }
 
 func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
@@ -147,6 +139,10 @@ func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName 
 	}
 
 	switch {
+	case len(result.Statements.Creation) > 0:
+	case len(result.Statements.Revocation) > 0:
+	case len(result.Statements.Renewal) > 0:
+	case len(result.Statements.Rollback) > 0:
 	case upgradeCh.Statements != nil:
 		var stmts dbplugin.Statements
 		if upgradeCh.Statements.CreationStatements != "" {
@@ -162,21 +158,21 @@ func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName 
 			stmts.Renewal = []string{upgradeCh.Statements.RenewStatements}
 		}
 		result.Statements = stmts
-	case upgradeCh.OldStatements != nil:
-		var stmts dbplugin.Statements
-		if upgradeCh.OldStatements.CreationStatements != "" {
-			stmts.Creation = []string{upgradeCh.OldStatements.CreationStatements}
-		}
-		if upgradeCh.OldStatements.RevocationStatements != "" {
-			stmts.Revocation = []string{upgradeCh.OldStatements.RevocationStatements}
-		}
-		if upgradeCh.OldStatements.RollbackStatements != "" {
-			stmts.Rollback = []string{upgradeCh.OldStatements.RollbackStatements}
-		}
-		if upgradeCh.OldStatements.RenewStatements != "" {
-			stmts.Renewal = []string{upgradeCh.OldStatements.RenewStatements}
-		}
-		result.Statements = stmts
+	}
+
+	// For backwards compatibility, copy the values back into the string form
+	// of the fields
+	if len(result.Statements.Creation) > 0 {
+		result.Statements.CreationStatements = strings.Join(result.Statements.Creation, ";")
+	}
+	if len(result.Statements.Revocation) > 0 {
+		result.Statements.RevocationStatements = strings.Join(result.Statements.Revocation, ";")
+	}
+	if len(result.Statements.Renewal) > 0 {
+		result.Statements.RenewStatements = strings.Join(result.Statements.Renewal, ";")
+	}
+	if len(result.Statements.Creation) > 0 {
+		result.Statements.RollbackStatements = strings.Join(result.Statements.Rollback, ";")
 	}
 
 	return &result, nil

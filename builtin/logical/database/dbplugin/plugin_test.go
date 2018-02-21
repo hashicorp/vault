@@ -72,6 +72,14 @@ func (m *mockPlugin) Init(_ context.Context, conf map[string]interface{}, _ bool
 
 	return conf, nil
 }
+func (m *mockPlugin) Initialize(_ context.Context, conf map[string]interface{}, _ bool) error {
+	err := errors.New("err")
+	if len(conf) != 1 {
+		return err
+	}
+
+	return nil
+}
 func (m *mockPlugin) Close() error {
 	m.users = nil
 	return nil
