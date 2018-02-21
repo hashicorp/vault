@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/rpc"
+	"strings"
 	"time"
 )
 
@@ -132,7 +133,7 @@ func (dr *databasePluginRPCClient) Initialize(_ context.Context, conf map[string
 }
 
 func (dr *databasePluginRPCClient) Init(_ context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
-	req := InitializeRequestRPC{
+	req := InitRequestRPC{
 		Config:           conf,
 		VerifyConnection: verifyConnection,
 	}
@@ -140,6 +141,17 @@ func (dr *databasePluginRPCClient) Init(_ context.Context, conf map[string]inter
 	var resp InitResponse
 	err = dr.client.Call("Plugin.Init", req, &resp)
 	if err != nil {
+		if strings.Contains(err.Error(), "can't find method Plugin.Init") {
+			req := InitializeRequestRPC{
+				Config:           conf,
+				VerifyConnection: verifyConnection,
+			}
+
+			err = dr.client.Call("Plugin.Initialize", req, &struct{}{})
+			if err == nil {
+				return nil, nil
+			}
+		}
 		return nil, err
 	}
 

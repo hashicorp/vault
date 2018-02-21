@@ -234,6 +234,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
 
+		// Fallback logic for old Initialize endpoint
+		if connDetails == nil {
+			connDetails = data.Raw
+		}
+
 		b.Lock()
 		defer b.Unlock()
 

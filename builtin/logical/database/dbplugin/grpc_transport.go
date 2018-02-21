@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -122,7 +124,7 @@ type gRPCClient struct {
 	doneCtx context.Context
 }
 
-func (c gRPCClient) Type() (string, error) {
+func (c *gRPCClient) Type() (string, error) {
 	resp, err := c.client.Type(c.doneCtx, &Empty{})
 	if err != nil {
 		return "", err
@@ -131,7 +133,7 @@ func (c gRPCClient) Type() (string, error) {
 	return resp.Type, err
 }
 
-func (c gRPCClient) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (c *gRPCClient) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	t, err := ptypes.TimestampProto(expiration)
 	if err != nil {
 		return "", "", err
@@ -253,10 +255,21 @@ func (c *gRPCClient) Init(ctx context.Context, conf map[string]interface{}, veri
 		VerifyConnection: verifyConnection,
 	})
 	if err != nil {
+		// Fall back to old call if not implemented
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Code() == codes.Unimplemented {
+			_, err = c.client.Initialize(ctx, &InitializeRequest{
+				Config:           configRaw,
+				VerifyConnection: verifyConnection,
+			})
+			if err == nil {
+				return nil, nil
+			}
+		}
+
 		if c.doneCtx.Err() != nil {
 			return nil, ErrPluginShutdown
 		}
-
 		return nil, err
 	}
 
