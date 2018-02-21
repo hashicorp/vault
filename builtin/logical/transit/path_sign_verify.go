@@ -63,6 +63,11 @@ to the min_encryption_version configured on the key.`,
 				Type:        framework.TypeBool,
 				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
+			"rsa_sig_type": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "pss",
+				Description: `The RSA signature type to use for signing. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -126,6 +131,11 @@ Defaults to "sha2-256". Not valid for all key types.`,
 				Type:        framework.TypeBool,
 				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
+			"rsa_sig_type": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "pss",
+				Description: `The RSA signature type to use for signature verification. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -146,6 +156,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		algorithm = d.Get("algorithm").(string)
 	}
 	prehashed := d.Get("prehashed").(bool)
+	rsasigtype := d.Get("rsa_sig_type").(string)
 
 	input, err := base64.StdEncoding.DecodeString(inputB64)
 	if err != nil {
@@ -195,7 +206,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		input = hf.Sum(nil)
 	}
 
-	sig, err := p.Sign(ver, context, input, algorithm)
+	sig, err := p.Sign(ver, context, input, algorithm, rsasigtype)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +250,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		algorithm = d.Get("algorithm").(string)
 	}
 	prehashed := d.Get("prehashed").(bool)
+	rsasigtype := d.Get("rsa_sig_type").(string)
 
 	input, err := base64.StdEncoding.DecodeString(inputB64)
 	if err != nil {
@@ -288,7 +300,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		input = hf.Sum(nil)
 	}
 
-	valid, err := p.VerifySignature(context, input, sig, algorithm)
+	valid, err := p.VerifySignature(context, input, sig, algorithm, rsasigtype)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

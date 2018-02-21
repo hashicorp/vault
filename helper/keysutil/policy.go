@@ -836,7 +836,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[strconv.Itoa(version)].HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, algorithm string, rsasigtype string) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -918,9 +918,19 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
 		}
 
-		sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
-		if err != nil {
-			return nil, err
+		switch rsasigtype {
+		case "pss":
+			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
+			if err != nil {
+				return nil, err
+			}
+		case "pkcs1v15":
+			sig, err = rsa.SignPKCS1v15(rand.Reader, key, algo, input)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature type %s", rsasigtype)}
 		}
 
 	default:
@@ -938,7 +948,7 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 	return res, nil
 }
 
-func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (bool, error) {
+func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string, rsasigtype string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -1024,7 +1034,14 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
 		}
 
-		err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, nil)
+		switch rsasigtype {
+		case "pss":
+			err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, nil)
+		case "pkcs1v15":
+			err = rsa.VerifyPKCS1v15(&key.PublicKey, algo, input, sigBytes)
+		default:
+			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature type %s", rsasigtype)}
+		}
 
 		return err == nil, nil
 
