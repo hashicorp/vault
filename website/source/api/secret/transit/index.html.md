@@ -805,6 +805,12 @@ supports signing.
    hashed. If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used
    to hash the input should be indicated by the `algorithm` parameter.
 
+- `rsa_sig_type` `(string: "pss")` – When using a RSA key, specifies the RSA
+  signature type to use for signing. Supported signature types are:
+
+    - `pss`
+    - `pkcs1v15`
+
 
 ### Sample Payload
 
@@ -873,6 +879,13 @@ data.
 - `prehashed` `(bool: false)` - Set to `true` when the input is already
    hashed. If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used
    to hash the input should be indicated by the `algorithm` parameter.
+
+- `rsa_sig_type` `(string: "pss")` – When using a RSA key, specifies the RSA
+  signature type to use for signature verification. Supported signature types
+  are:
+
+    - `pss`
+    - `pkcs1v15`
 
 ### Sample Payload
 
