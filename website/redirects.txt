@@ -98,6 +98,13 @@
 /intro/getting-started/acl.html        /intro/getting-started/policies.html
 /intro/getting-started/secret-backends.html   /intro/getting-started/secrets-engines.html
 
+/guides/configuration/policies.html                /guides/identity/policies.html
+/guides/configuration/authentication.html          /guides/identity/authentication.html
+/guides/configuration/lease.html                   /guides/identity/lease.html
+/guides/configuration/generate-root.html           /guides/operations/generate-root.html
+/guides/configuration/rekeying-and-rotating.html   /guides/operations/rekeying-and-rotating.html
+/guides/configuration/plugin-backends.html         /guides/operations/plugin-backends.html 
+
 /docs/vault-enterprise/index.html               /docs/enterprise/index.html
 /docs/vault-enterprise/replication/index.html   /docs/enterprise/replication/index.html
 /docs/vault-enterprise/hsm/index.html           /docs/enterprise/hsm/index.html
