@@ -92,6 +92,7 @@ type ConsulBackend struct {
 	redirectPort        int64
 	serviceName         string
 	serviceTags         []string
+	serviceAddress      *string
 	disableRegistration bool
 	checkTimeout        time.Duration
 	consistencyMode     string
@@ -150,9 +151,20 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 
 	// Get the additional tags to attach to the registered service name
 	tags := conf["service_tags"]
-
 	if logger.IsDebug() {
 		logger.Debug("physical/consul: config service_tags set", "service_tags", tags)
+	}
+
+	// Get the service-specific address to override the use of the HA redirect address
+	var serviceAddr *string
+	serviceAddrStr, ok := conf["service_address"]
+	if ok {
+		serviceAddr = &serviceAddrStr
+	} else {
+		serviceAddr = nil
+	}
+	if logger.IsDebug() {
+		logger.Debug("physical/consul: config service_address set", "service_address", serviceAddr)
 	}
 
 	checkTimeout := defaultCheckTimeout
@@ -247,6 +259,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		permitPool:          physical.NewPermitPool(maxParInt),
 		serviceName:         service,
 		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
+		serviceAddress:      serviceAddr,
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
 		consistencyMode:     consistencyMode,
@@ -726,12 +739,21 @@ func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc p
 		return serviceID, nil
 	}
 
+	// If service address was set explicitly in configuration, use that
+	// as the service-specific address instead of the HA redirect address.
+	var serviceAddress string
+	if c.serviceAddress == nil {
+		serviceAddress = c.redirectHost
+	} else {
+		serviceAddress = *c.serviceAddress
+	}
+
 	service := &api.AgentServiceRegistration{
 		ID:                serviceID,
 		Name:              c.serviceName,
 		Tags:              tags,
 		Port:              int(c.redirectPort),
-		Address:           "",
+		Address:           serviceAddress,
 		EnableTagOverride: false,
 	}
 
