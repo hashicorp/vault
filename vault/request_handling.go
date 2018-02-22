@@ -47,18 +47,20 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
-	// Get and set ignored HMAC'd value. Reset those back to empty afterwards. We
-	// ignore applying the values if the entry is nil. Nil entry check itself will
-	// be performed by the router's Route call. This is called here so that the
-	// request object in the response audit entry can also honors this.
 	entry := c.router.MatchingMountEntry(req.Path)
-	if entry != nil {
-		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-			req.NonHMACKeys = rawVals.([]string)
-			defer func() {
-				req.NonHMACKeys = []string{}
-			}()
-		}
+	if entry == nil {
+		c.logger.Error("core: unable to retrieve mount entry from router")
+		return nil, ErrInternalError
+	}
+
+	// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
+	// This is called here so that the request object in the response audit entry
+	// can also honors this.
+	if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+		req.NonHMACKeys = rawVals.([]string)
+		defer func() {
+			req.NonHMACKeys = []string{}
+		}()
 	}
 
 	var auth *logical.Auth
@@ -127,17 +129,13 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
 	}
 
-	// Get and set ignored HMAC'd value. Reset those back to empty afterwards. We
-	// ignore applying the values if the entry is nil. Nil entry check itself will
-	// be performed by the router's Route call.
+	// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
 	if auditResp != nil {
-		if entry != nil {
-			if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
-				auditResp.NonHMACKeys = rawVals.([]string)
-				defer func() {
-					auditResp.NonHMACKeys = []string{}
-				}()
-			}
+		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+			auditResp.NonHMACKeys = rawVals.([]string)
+			defer func() {
+				auditResp.NonHMACKeys = []string{}
+			}()
 		}
 	}
 
