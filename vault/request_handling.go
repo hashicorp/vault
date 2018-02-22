@@ -47,6 +47,20 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
+	// Get and set ignored HMAC'd value. Reset those back to empty afterwards. We
+	// ignore applying the values if the entry is nil. Nil entry check itself will
+	// be performed by the router's Route call. This is called here so that the
+	// request object in the response audit entry can also honors this.
+	entry := c.router.MatchingMountEntry(req.Path)
+	if entry != nil {
+		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			req.NonHMACKeys = rawVals.([]string)
+			defer func() {
+				req.NonHMACKeys = []string{}
+			}()
+		}
+	}
+
 	var auth *logical.Auth
 	if c.router.LoginPath(req.Path) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
@@ -117,7 +131,6 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	// ignore applying the values if the entry is nil. Nil entry check itself will
 	// be performed by the router's Route call.
 	if auditResp != nil {
-		entry := c.router.MatchingMountEntry(req.Path)
 		if entry != nil {
 			if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 				auditResp.NonHMACKeys = rawVals.([]string)
@@ -139,19 +152,6 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
-
-	// Get and set ignored HMAC'd value. Reset those back to empty afterwards. We
-	// ignore applying the values if the entry is nil. Nil entry check itself will
-	// be performed by the router's Route call.
-	entry := c.router.MatchingMountEntry(req.Path)
-	if entry != nil {
-		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-			req.NonHMACKeys = rawVals.([]string)
-			defer func() {
-				req.NonHMACKeys = []string{}
-			}()
-		}
-	}
 
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
