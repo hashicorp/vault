@@ -56,7 +56,7 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 			s.ClientTokenAccessor = fn(s.ClientTokenAccessor)
 		}
 
-		data, err := HashStructure(s.Data, fn)
+		data, err := HashStructure(s.Data, fn, s.NonHMACKeys)
 		if err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 			}
 		}
 
-		data, err := HashStructure(s.Data, fn)
+		data, err := HashStructure(s.Data, fn, s.NonHMACKeys)
 		if err != nil {
 			return err
 		}
@@ -107,13 +107,13 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 // the structure. Only _values_ are hashed: keys of objects are not.
 //
 // For the HashCallback, see the built-in HashCallbacks below.
-func HashStructure(s interface{}, cb HashCallback) (interface{}, error) {
+func HashStructure(s interface{}, cb HashCallback, ignoredKeys []string) (interface{}, error) {
 	s, err := copystructure.Copy(s)
 	if err != nil {
 		return nil, err
 	}
 
-	walker := &hashWalker{Callback: cb}
+	walker := &hashWalker{Callback: cb, IgnoredKeys: ignoredKeys}
 	if err := reflectwalk.Walk(s, walker); err != nil {
 		return nil, err
 	}
@@ -133,6 +133,9 @@ type hashWalker struct {
 	// to be hashed. If there is an error, walking will be halted
 	// immediately and the error returned.
 	Callback HashCallback
+
+	// IgnoreKeys are the keys that wont have the HashCallback applied
+	IgnoredKeys []string
 
 	key         []string
 	lastValue   reflect.Value
@@ -245,6 +248,14 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 	}
 	if v.Kind() != reflect.String {
 		return nil
+	}
+
+	// See if the current key is part of the ignored keys
+	currentKey := w.key[len(w.key)-1]
+	for _, k := range w.IgnoredKeys {
+		if currentKey == k {
+			return nil
+		}
 	}
 
 	replaceVal := w.Callback(v.String())

@@ -190,6 +190,22 @@ func TestHash(t *testing.T) {
 				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
 			},
 		},
+		{
+			&logical.Request{
+				Data: map[string]interface{}{
+					"foo":              "bar",
+					"private_key_type": certutil.PrivateKeyType("rsa"),
+				},
+				NonHMACKeys: []string{"foo"},
+			},
+			&logical.Request{
+				Data: map[string]interface{}{
+					"foo":              "bar",
+					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
+				},
+				NonHMACKeys: []string{"foo"},
+			},
+		},
 	}
 
 	inmemStorage := &logical.InmemStorage{}
@@ -211,11 +227,11 @@ func TestHash(t *testing.T) {
 		}
 		if _, ok := tc.Input.(*logical.Response); ok {
 			if !reflect.DeepEqual(tc.Input.(*logical.Response).WrapInfo, tc.Output.(*logical.Response).WrapInfo) {
-				t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output\n%#v", input, tc.Input.(*logical.Response).WrapInfo, tc.Output.(*logical.Response).WrapInfo)
+				t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output:\n%#v", input, tc.Input.(*logical.Response).WrapInfo, tc.Output.(*logical.Response).WrapInfo)
 			}
 		}
 		if !reflect.DeepEqual(tc.Input, tc.Output) {
-			t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output\n%#v", input, tc.Input, tc.Output)
+			t.Fatalf("bad:\nInput:\n%s\nTest case input:\n%#v\nTest case output:\n%#v", input, tc.Input, tc.Output)
 		}
 	}
 }
@@ -249,7 +265,7 @@ func TestHashWalker(t *testing.T) {
 	for _, tc := range cases {
 		output, err := HashStructure(tc.Input, func(string) string {
 			return replaceText
-		})
+		}, []string{})
 		if err != nil {
 			t.Fatalf("err: %s\n\n%#v", err, tc.Input)
 		}

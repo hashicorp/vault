@@ -54,6 +54,9 @@ type Response struct {
 
 	// Information for wrapping the response in a cubbyhole
 	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
+
+	// Keys in the response object that will not be HMAC'd by audit backends
+	NonHMACKeys []string `json:"-" sentinel:""`
 }
 
 // AddWarning adds a warning into the response's warning list
