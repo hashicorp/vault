@@ -99,11 +99,11 @@ func (c *Sys) generateRootUpdateCommon(path, shard, nonce string) (*GenerateRoot
 }
 
 type GenerateRootStatusResponse struct {
-	Nonce            string
-	Started          bool
-	Progress         int
-	Required         int
-	Complete         bool
+	Nonce            string `json:"nonce"`
+	Started          bool   `json:"started"`
+	Progress         int    `json:"progress"`
+	Required         int    `json:"required"`
+	Complete         bool   `json:"complete"`
 	EncodedToken     string `json:"encoded_token"`
 	EncodedRootToken string `json:"encoded_root_token"`
 	PGPFingerprint   string `json:"pgp_fingerprint"`

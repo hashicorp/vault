@@ -35,6 +35,9 @@ capabilities, the credentials are fetched automatically.
 
 ### Parameters
 
+- `max_retries` `(int: -1)` - Number of max retries the client should use for
+  recoverable errors. The default (`-1`) falls back to the AWS SDK's default
+  behavior.
 - `access_key` `(string: "")` - AWS Access key with permissions to query AWS
   APIs. The permissions required depend on the specific configurations. If using
   the `iam` auth method without inferencing, then no credentials are necessary.
@@ -821,7 +824,7 @@ given instance can be allowed to gain in a worst-case scenario.
 
 ```json
 {
-  "policies": ["default", "prod"]
+  "policies": ["default", "dev-api"]
 }
 ```
 
@@ -832,7 +835,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/aws/role/dev-role/tag
+    https://vault.rocks/v1/auth/aws/role/dev-api-and-web-role/tag
 ```
 
 ### Sample Response
@@ -840,7 +843,7 @@ $ curl \
 ```json
 {
   "data": {
-    "tag_value": "v1:09Vp0qGuyB8=:r=dev-role:p=default,prod:d=false:t=300h0m0s:uPLKCQxqsefRhrp1qmVa1wsQVUXXJG8UZP/pJIdVyOI=",
+    "tag_value": "v1:09Vp0qGuyB8=:r=dev-role:p=default,dev-api:d=false:t=300h0m0s:uPLKCQxqsefRhrp1qmVa1wsQVUXXJG8UZP/pJIdVyOI=",
     "tag_key": "VaultRole"
   }
 }

@@ -72,7 +72,13 @@ $ vault operator rekey -backup-delete
 The following flags are available in addition to the [standard set of
 flags](/docs/commands/index.html) included on all commands.
 
-## Common Options
+### Output Options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command Options
 
 - `-cancel` `(bool: false)` - Reset the rekeying progress. This will discard any submitted unseal keys
       or configuration. The default is false.

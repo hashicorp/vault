@@ -1992,6 +1992,44 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
+	switch apiConfig.DefaultLeaseTTL {
+	case "":
+	case "system":
+	default:
+		tmpDef, err := parseutil.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
+				logical.ErrInvalidRequest
+		}
+		config.DefaultLeaseTTL = tmpDef
+	}
+
+	switch apiConfig.MaxLeaseTTL {
+	case "":
+	case "system":
+	default:
+		tmpMax, err := parseutil.ParseDurationSecond(apiConfig.MaxLeaseTTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
+				logical.ErrInvalidRequest
+		}
+		config.MaxLeaseTTL = tmpMax
+	}
+
+	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
+		return logical.ErrorResponse(
+				"given default lease TTL greater than given max lease TTL"),
+			logical.ErrInvalidRequest
+	}
+
+	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
+		return logical.ErrorResponse(fmt.Sprintf(
+				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
+			logical.ErrInvalidRequest
+	}
+
 	// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
 	// option taking precedence.
 	if logicalType == "plugin" {

@@ -199,6 +199,9 @@ This endpoint tunes configuration parameters for a given mount point.
   overrides the global default. A value of `0` are equivalent and set to the
   system max TTL.
 
+- `description` `(string: "")` – Specifies the description of the mount. This
+  overrides the current stored value, if any.
+
 ### Sample Payload
 
 ```json

@@ -240,10 +240,10 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 		MountAccessor:            r.MountAccessor,
 		WrapInfo:                 LogicalRequestWrapInfoToProtoRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int64(r.ClientTokenRemainingUses),
-		//MFACreds: MFACreds,
-		EntityID:        r.EntityID,
-		PolicyOverride:  r.PolicyOverride,
-		Unauthenticated: r.Unauthenticated,
+		Connection:               LogicalConnectionToProtoConnection(r.Connection),
+		EntityID:                 r.EntityID,
+		PolicyOverride:           r.PolicyOverride,
+		Unauthenticated:          r.Unauthenticated,
 	}, nil
 }
 
@@ -293,11 +293,31 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		MountAccessor:            r.MountAccessor,
 		WrapInfo:                 ProtoRequestWrapInfoToLogicalRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int(r.ClientTokenRemainingUses),
-		//MFACreds: MFACreds,
-		EntityID:        r.EntityID,
-		PolicyOverride:  r.PolicyOverride,
-		Unauthenticated: r.Unauthenticated,
+		Connection:               ProtoConnectionToLogicalConnection(r.Connection),
+		EntityID:                 r.EntityID,
+		PolicyOverride:           r.PolicyOverride,
+		Unauthenticated:          r.Unauthenticated,
 	}, nil
+}
+
+func LogicalConnectionToProtoConnection(c *logical.Connection) *Connection {
+	if c == nil {
+		return nil
+	}
+
+	return &Connection{
+		RemoteAddr: c.RemoteAddr,
+	}
+}
+
+func ProtoConnectionToLogicalConnection(c *Connection) *logical.Connection {
+	if c == nil {
+		return nil
+	}
+
+	return &logical.Connection{
+		RemoteAddr: c.RemoteAddr,
+	}
 }
 
 func LogicalRequestWrapInfoToProtoRequestWrapInfo(i *logical.RequestWrapInfo) *RequestWrapInfo {

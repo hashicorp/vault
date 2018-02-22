@@ -33,6 +33,10 @@ secret key and certificate.`,
 func (b *backend) pathCAWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	pemBundle := data.Get("pem_bundle").(string)
 
+	if pemBundle == "" {
+		return logical.ErrorResponse("'pem_bundle' was empty"), nil
+	}
+
 	parsedBundle, err := certutil.ParsePEMBundle(pemBundle)
 	if err != nil {
 		switch err.(type) {
