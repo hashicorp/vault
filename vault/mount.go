@@ -179,20 +179,22 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
-	DefaultLeaseTTL         time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
-	MaxLeaseTTL             time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
-	ForceNoCache            bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
-	PluginName              string        `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys []string      `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	DefaultLeaseTTL          time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL              time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
+	ForceNoCache             bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
+	PluginName               string        `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys  []string      `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys []string      `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
 type APIMountConfig struct {
-	DefaultLeaseTTL         string   `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL             string   `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache            bool     `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName              string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	DefaultLeaseTTL          string   `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL              string   `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache             bool     `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
+	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 }
 
 // Clone returns a deep copy of the mount entry
@@ -202,6 +204,17 @@ func (e *MountEntry) Clone() (*MountEntry, error) {
 		return nil, err
 	}
 	return cp.(*MountEntry), nil
+}
+
+// SyncCache syncs tunable configuration values to the cache
+func (e *MountEntry) SyncCache() {
+	if len(e.Config.AuditNonHMACRequestKeys) > 0 {
+		e.synthesizedConfigCache.Store("audit_non_hmac_request_keys", e.Config.AuditNonHMACRequestKeys)
+	}
+
+	if len(e.Config.AuditNonHMACResponseKeys) > 0 {
+		e.synthesizedConfigCache.Store("audit_non_hmac_response_keys", e.Config.AuditNonHMACResponseKeys)
+	}
 }
 
 // Mount is used to mount a new backend to the mount table.
@@ -643,10 +656,8 @@ func (c *Core) loadMounts(ctx context.Context) error {
 			needPersist = true
 		}
 
-		// Sync stored values to the cache
-		if len(entry.Config.AuditNonHMACRequestKeys) > 0 {
-			entry.synthesizedConfigCache.Store("audit_non_hmac_request_keys", entry.Config.AuditNonHMACRequestKeys)
-		}
+		// Sync values to the cache
+		entry.SyncCache()
 	}
 
 	// Done if we have restored the mount table and we don't need

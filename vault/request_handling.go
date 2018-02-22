@@ -113,6 +113,21 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
 	}
 
+	// Get and set ignored HMAC'd value. Reset those back to empty afterwards. We
+	// ignore applying the values if the entry is nil. Nil entry check itself will
+	// be performed by the router's Route call.
+	if auditResp != nil {
+		entry := c.router.MatchingMountEntry(req.Path)
+		if entry != nil {
+			if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+				auditResp.NonHMACKeys = rawVals.([]string)
+				defer func() {
+					auditResp.NonHMACKeys = []string{}
+				}()
+			}
+		}
+	}
+
 	// Create an audit trail of the response
 	if auditErr := c.auditBroker.LogResponse(ctx, auth, req, auditResp, c.auditedHeaders, err); auditErr != nil {
 		c.logger.Error("core: failed to audit response", "request_path", req.Path, "error", auditErr)
