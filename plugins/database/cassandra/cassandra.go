@@ -164,7 +164,7 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 	}
 
 	var revocationCQL string
-	switch len(statements.RevocationStatements) {
+	switch len(statements.Revocation) {
 	case 0:
 		revocationCQL = defaultUserDeletionCQL
 	case 1:

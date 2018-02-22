@@ -117,7 +117,7 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 		return "", "", err
 	}
 
-	if len(statements.CreationStatements) == 0 {
+	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 

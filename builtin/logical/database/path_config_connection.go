@@ -26,7 +26,7 @@ type DatabaseConfig struct {
 	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
 	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
 
-	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"credential_rotate_statements" mapstructure:"credential_rotate_statements"`
+	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"root_credentials_rotate_statements" mapstructure:"root_credentials_rotate_statements"`
 }
 
 // pathResetConnection configures a path to reset a plugin.

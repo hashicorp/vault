@@ -200,7 +200,7 @@ func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, us
 // Revoking hana user will deactivate user and try to perform a soft drop
 func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	// default revoke will be a soft drop on user
-	if len(statements.RevocationStatements) == 0 {
+	if len(statements.Revocation) == 0 {
 		return h.revokeUserDefault(ctx, username)
 	}
 

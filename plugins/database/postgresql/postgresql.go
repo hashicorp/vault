@@ -82,7 +82,7 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 }
 
 func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	if len(statements.CreationStatements) == 0 {
+	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -109,7 +109,6 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	db, err := p.getConnection(ctx)
 	if err != nil {
 		return "", "", err
-
 	}
 
 	// Start a transaction
@@ -138,12 +137,10 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 			}))
 			if err != nil {
 				return "", "", err
-
 			}
 			defer stmt.Close()
 			if _, err := stmt.ExecContext(ctx); err != nil {
 				return "", "", err
-
 			}
 		}
 	}
@@ -217,7 +214,7 @@ func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Stateme
 	p.Lock()
 	defer p.Unlock()
 
-	if len(statements.RevocationStatements) == 0 {
+	if len(statements.Revocation) == 0 {
 		return p.defaultRevokeUser(ctx, username)
 	}
 

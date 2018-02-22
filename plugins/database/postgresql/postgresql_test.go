@@ -326,6 +326,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 }
 
 func testCredsExist(t testing.TB, connURL, username, password string) error {
+	t.Helper()
 	// Log in with the new creds
 	connURL = strings.Replace(connURL, "postgres:secret", fmt.Sprintf("%s:%s", username, password), 1)
 	db, err := sql.Open("postgres", connURL)
