@@ -307,6 +307,7 @@ func (c *ServerCommand) Run(args []string) int {
 			c.logger = logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
+				Level:  hclog.Trace,
 			})).LogxiLogger()
 		} else {
 			c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
