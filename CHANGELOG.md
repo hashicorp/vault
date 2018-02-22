@@ -1,3 +1,10 @@
+## 0.9.5 (Unreleased)
+
+BUG FIXES:
+
+ * auth/aws: Switch libraries to fix regression verifying PKCS#7 identity
+   documents [GH-4014]
+
 ## 0.9.4 (February 20th, 2018)
 
 SECURITY:
