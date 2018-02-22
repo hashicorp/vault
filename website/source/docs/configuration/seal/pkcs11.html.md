@@ -103,10 +103,11 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   circumstances, such as if proprietary vendor extensions are required to
   create keys of a suitable type.
 
-- `regenerate_key` `(string: "false")`: At Vault initialization time, force
-  generation of a new key even if one with the given `key_label` already exists.
-  This is a boolean expressed as a string (e.g. `"true"`). May also be specified
-  by the `VAULT_HSM_REGENERATE_KEY` environment variable.
+- `regenerate_key` `(string: "false")`: Force generation of a new key even if
+  one with the given `key_label` and `hmac_key_label` already exists. _**This
+  will render previous data unrecoverable**_ and is meant for testing scenarios.
+  This is a boolean expressed as a string (e.g. `"true"`). May also be
+  specified by the `VAULT_HSM_REGENERATE_KEY` environment variable.
 
 ~> **Note:** Although the configuration file allows you to pass in
 `VAULT_HSM_PIN` as part of the seal's parameters, it is *strongly* reccommended
