@@ -24,18 +24,17 @@ This endpoint returns the list of capabilities for a provided token.
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path against which to check the
-  token's capabilities.
+- `paths` `(list: <required>)` – Paths on which capabilities are being queried.
 
-- `token` `(string: <required>)` – Specifies the token for which to check
-  capabilities.
+- `token` `(string: <required>)` – Token for which capabilities are being
+  queried.
 
 ### Sample Payload
 
 ```json
 {
-  "path": "secret/foo",
-  "token": "abcd1234"
+  "token": "abcd1234",
+  "paths": ["secret/foo", "secret/bar"]
 }
 ```
 
@@ -53,6 +52,15 @@ $ curl \
 
 ```json
 {
-  "capabilities": ["read", "list"]
+  "secret/bar": [
+    "sudo",
+    "update"
+  ],
+  "secret/foo": [
+    "delete",
+    "list",
+    "read",
+    "update"
+  ]
 }
 ```

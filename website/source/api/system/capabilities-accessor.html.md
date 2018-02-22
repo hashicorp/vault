@@ -26,18 +26,18 @@ for the given path.
 
 ### Parameters
 
-- `accessor` `(string: <required>)` – Specifies the accessor of the token to
-  check.
+- `accessor` `(string: <required>)` – Accessor of the token for which
+  capabilities are being queried.
 
-- `path` `(string: <required>)` – Specifies the path on which the token's
-  capabilities will be checked.
+- `paths` `(list: <required>)` – Paths on which capabilities are being
+  queried.
 
 ### Sample Payload
 
 ```json
 {
   "accessor": "abcd1234",
-  "path": "secret/foo"
+  "paths": ["secret/foo", "secret/bar"]
 }
 ```
 
@@ -55,6 +55,15 @@ $ curl \
 
 ```json
 {
-  "capabilities": ["read", "list"]
+  "secret/bar": [
+    "sudo",
+    "update"
+  ],
+  "secret/foo": [
+    "delete",
+    "list",
+    "read",
+    "update"
+  ]
 }
 ```

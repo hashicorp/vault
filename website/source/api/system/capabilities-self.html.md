@@ -26,14 +26,13 @@ client token is the Vault token with which this API call is made.
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path on which the client token's
-  capabilities will be checked.
+- `paths` `(list: <required>)` – Paths on which capabilities are being queried.
 
 ### Sample Payload
 
 ```json
 {
-  "path": "secret/foo"
+  "paths": ["secret/foo", "secret/bar"]
 }
 ```
 
@@ -51,6 +50,14 @@ $ curl \
 
 ```json
 {
-  "capabilities": ["read", "list"]
+  "secret/bar": [
+    "sudo",
+    "update"
+  ],
+  "secret/foo": [
+    "delete",
+    "list",
+    "read",
+    "update"
+  ]
 }
-```
