@@ -643,7 +643,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 			needPersist = true
 		}
 
-		// Sync cache values
+		// Sync stored values to the cache
 		if len(entry.Config.AuditNonHMACRequestKeys) > 0 {
 			entry.synthesizedConfigCache.Store("audit_non_hmac_request_keys", entry.Config.AuditNonHMACRequestKeys)
 		}
