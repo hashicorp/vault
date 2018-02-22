@@ -274,6 +274,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
+					"audit_non_hmac_request_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1644,6 +1648,10 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 		},
 	}
 
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+		resp.Data["audit_non_hmac_request_keys"] = rawVal.([]string)
+	}
+
 	return resp, nil
 }
 
@@ -1774,6 +1782,33 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("core: mount tuning of description successful", "path", path)
+		}
+	}
+
+	auditNonHMACRequestKeys := data.Get("audit_non_hmac_request_keys").([]string)
+
+	if len(auditNonHMACRequestKeys) > 0 {
+		oldVal := mountEntry.Config.AuditNonHMACRequestKeys
+		mountEntry.Config.AuditNonHMACRequestKeys = auditNonHMACRequestKeys
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AuditNonHMACRequestKeys = oldVal
+			return handleError(err)
+		}
+
+		// Update the cache
+		mountEntry.synthesizedConfigCache.Store("audit_non_hmac_request_keys", auditNonHMACRequestKeys)
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of audit_non_hmac_request_keys successful", "path", path)
 		}
 	}
 
@@ -3028,6 +3063,10 @@ in the plugin catalog.`,
 
 	"tune_max_lease_ttl": {
 		`The max lease TTL for this mount.`,
+	},
+
+	"tune_audit_non_hmac_request_keys": {
+		`The list of keys in the request object that will not be HMAC'ed by audit devices.`,
 	},
 
 	"remount": {
