@@ -1,3 +1,10 @@
+## 0.9.5 (Unreleased)
+
+BUG FIXES:
+
+ * auth/aws: Switch libraries to fix regression verifying PKCS#7 identity
+   documents [GH-4014]
+
 ## 0.9.4 (February 20th, 2018)
 
 SECURITY:
@@ -63,6 +70,10 @@ BUG FIXES:
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens. [GH-3880]
+ * command: Fix interpreted formatting directives when printing raw fields
+   [GH-4005]
+ * command: Correctly format output when using -field and -format flags at the
+   same time [GH-3987]
  * command/rekey: Re-add lost `stored-shares` parameter [GH-3974]
  * command/ssh: Create and reuse the api client [GH-3909]
  * command/status: Fix panic when status returns 500 from leadership lookup
