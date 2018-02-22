@@ -63,6 +63,7 @@ Note: `replication_perf_mode` and `replication_dr_mode` reflect the state of
 the active node in the cluster; if you are querying it for a standby that has
 just come up, it can take a small time for the active node to inform the
 standby of its status.
+
 ```json
 {
   "initialized": true,
