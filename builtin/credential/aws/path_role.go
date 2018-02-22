@@ -552,20 +552,8 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		principalARNs := boundIamPrincipalARNRaw.([]string)
 		roleEntry.BoundIamPrincipalARNs = principalARNs
 		roleEntry.BoundIamPrincipalIDs = []string{}
-		for _, principalARN := range principalARNs {
-			// Explicitly not checking to see if the user has changed the ARN under us
-			// This allows the user to sumbit an update with the same ARN to force Vault
-			// to re-resolve the ARN to the unique ID, in case an entity was deleted and
-			// recreated
-			if roleEntry.ResolveAWSUniqueIDs && !strings.HasSuffix(principalARN, "*") {
-				principalID, err := b.resolveArnToUniqueIDFunc(ctx, req.Storage, principalARN)
-				if err != nil {
-					return logical.ErrorResponse(fmt.Sprintf("failed updating the unique ID of ARN %#v: %#v", principalARN, err)), nil
-				}
-				roleEntry.BoundIamPrincipalIDs = append(roleEntry.BoundIamPrincipalIDs, principalID)
-			}
-		}
-	} else if roleEntry.ResolveAWSUniqueIDs && len(roleEntry.BoundIamPrincipalIDs) == 0 {
+	}
+	if roleEntry.ResolveAWSUniqueIDs && len(roleEntry.BoundIamPrincipalIDs) == 0 {
 		// we might be turning on resolution on this role, so ensure we update the IDs
 		for _, principalARN := range roleEntry.BoundIamPrincipalARNs {
 			if !strings.HasSuffix(principalARN, "*") {
@@ -803,41 +791,42 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 // Struct to hold the information associated with a Vault role
 type awsRoleEntry struct {
-	AuthType                    string        `json:"auth_type" mapstructure:"auth_type"`
-	BoundAmiID                  string        `json:"bound_ami_id,omitempty" mapstructure:"bound_ami_id"`
-	BoundAmiIDs                 []string      `json:"bound_ami_id_list" mapstructure:"bound_ami_id_list"`
-	BoundAccountID              string        `json:"bound_account_id,omitempty" mapstructure:"bound_account_id"`
-	BoundAccountIDs             []string      `json:"bound_account_id_list" mapstructure:"bound_account_id_list"`
-	BoundIamPrincipalARN        string        `json:"bound_iam_principal_arn,omitempty" mapstructure:"bound_iam_principal_arn"`
-	BoundIamPrincipalARNs       []string      `json:"bound_iam_principal_arn_list" mapstructure:"bound_iam_principal_arn_list"`
-	BoundIamPrincipalID         string        `json:"bound_iam_principal_id,omitempty" mapstructure:"bound_iam_principal_id"`
-	BoundIamPrincipalIDs        []string      `json:"bound_iam_principal_id_list" mapstructure:"bound_iam_principal_id_list"`
-	BoundIamRoleARN             string        `json:"bound_iam_role_arn,omitempty" mapstructure:"bound_iam_role_arn"`
-	BoundIamRoleARNs            []string      `json:"bound_iam_role_arn_list" mapstructure:"bound_iam_role_arn_list"`
-	BoundIamInstanceProfileARN  string        `json:"bound_iam_instance_profile_arn,omitempty" mapstructure:"bound_iam_instance_profile_arn"`
-	BoundIamInstanceProfileARNs []string      `json:"bound_iam_instance_profile_arn_list" mapstructure:"bound_iam_instance_profile_arn_list"`
-	BoundRegion                 string        `json:"bound_region,omitempty" mapstructure:"bound_region"`
-	BoundRegions                []string      `json:"bound_region_list" mapstructure:"bound_region_list"`
-	BoundSubnetID               string        `json:"bound_subnet_id,omitempty" mapstructure:"bound_subnet_id"`
-	BoundSubnetIDs              []string      `json:"bound_subnet_id_list" mapstructure:"bound_subnet_id_list"`
-	BoundVpcID                  string        `json:"bound_vpc_id,omitempty" mapstructure:"bound_vpc_id"`
-	BoundVpcIDs                 []string      `json:"bound_vpc_id_list" mapstructure:"bound_vpc_id_list"`
-	InferredEntityType          string        `json:"inferred_entity_type" mapstructure:"inferred_entity_type"`
-	InferredAWSRegion           string        `json:"inferred_aws_region" mapstructure:"inferred_aws_region"`
-	ResolveAWSUniqueIDs         bool          `json:"resolve_aws_unique_ids" mapstructure:"resolve_aws_unique_ids"`
-	RoleTag                     string        `json:"role_tag" mapstructure:"role_tag"`
-	AllowInstanceMigration      bool          `json:"allow_instance_migration" mapstructure:"allow_instance_migration"`
-	TTL                         time.Duration `json:"ttl" mapstructure:"ttl"`
-	MaxTTL                      time.Duration `json:"max_ttl" mapstructure:"max_ttl"`
-	Policies                    []string      `json:"policies" mapstructure:"policies"`
-	DisallowReauthentication    bool          `json:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	HMACKey                     string        `json:"hmac_key" mapstructure:"hmac_key"`
-	Period                      time.Duration `json:"period" mapstructure:"period"`
-	Version                     int           `json:"version" mapstructure:"version"`
+	AuthType                    string        `json:"auth_type" `
+	BoundAmiIDs                 []string      `json:"bound_ami_id_list"`
+	BoundAccountIDs             []string      `json:"bound_account_id_list"`
+	BoundIamPrincipalARNs       []string      `json:"bound_iam_principal_arn_list"`
+	BoundIamPrincipalIDs        []string      `json:"bound_iam_principal_id_list"`
+	BoundIamRoleARNs            []string      `json:"bound_iam_role_arn_list"`
+	BoundIamInstanceProfileARNs []string      `json:"bound_iam_instance_profile_arn_list"`
+	BoundRegions                []string      `json:"bound_region_list"`
+	BoundSubnetIDs              []string      `json:"bound_subnet_id_list"`
+	BoundVpcIDs                 []string      `json:"bound_vpc_id_list"`
+	InferredEntityType          string        `json:"inferred_entity_type"`
+	InferredAWSRegion           string        `json:"inferred_aws_region"`
+	ResolveAWSUniqueIDs         bool          `json:"resolve_aws_unique_ids"`
+	RoleTag                     string        `json:"role_tag"`
+	AllowInstanceMigration      bool          `json:"allow_instance_migration"`
+	TTL                         time.Duration `json:"ttl"`
+	MaxTTL                      time.Duration `json:"max_ttl"`
+	Policies                    []string      `json:"policies"`
+	DisallowReauthentication    bool          `json:"disallow_reauthentication"`
+	HMACKey                     string        `json:"hmac_key"`
+	Period                      time.Duration `json:"period"`
+	Version                     int           `json:"version"`
+	// DEPRECATED -- these are the old fields before we supported lists and exist for backwards compatibility
+	BoundAmiID                 string `json:"bound_ami_id,omitempty" `
+	BoundAccountID             string `json:"bound_account_id,omitempty"`
+	BoundIamPrincipalARN       string `json:"bound_iam_principal_arn,omitempty"`
+	BoundIamPrincipalID        string `json:"bound_iam_principal_id,omitempty"`
+	BoundIamRoleARN            string `json:"bound_iam_role_arn,omitempty"`
+	BoundIamInstanceProfileARN string `json:"bound_iam_instance_profile_arn,omitempty"`
+	BoundRegion                string `json:"bound_region,omitempty"`
+	BoundSubnetID              string `json:"bound_subnet_id,omitempty"`
+	BoundVpcID                 string `json:"bound_vpc_id,omitempty"`
 }
 
 func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
-	responseData := map[string]interface{}{
+	return map[string]interface{}{
 		"auth_type":                      r.AuthType,
 		"bound_ami_id":                   r.BoundAmiIDs,
 		"bound_account_id":               r.BoundAccountIDs,
@@ -859,23 +848,6 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"disallow_reauthentication": r.DisallowReauthentication,
 		"period":                    r.Period / time.Second,
 	}
-
-	convertNilToEmptySlice := func(data map[string]interface{}, field string) {
-		if data[field] == nil || len(data[field].([]string)) == 0 {
-			data[field] = []string{}
-		}
-	}
-	convertNilToEmptySlice(responseData, "bound_ami_id")
-	convertNilToEmptySlice(responseData, "bound_account_id")
-	convertNilToEmptySlice(responseData, "bound_iam_principal_arn")
-	convertNilToEmptySlice(responseData, "bound_iam_principal_id")
-	convertNilToEmptySlice(responseData, "bound_iam_role_arn")
-	convertNilToEmptySlice(responseData, "bound_iam_instance_profile_arn")
-	convertNilToEmptySlice(responseData, "bound_region")
-	convertNilToEmptySlice(responseData, "bound_subnet_id")
-	convertNilToEmptySlice(responseData, "bound_vpc_id")
-
-	return responseData
 }
 
 const pathRoleSyn = `
