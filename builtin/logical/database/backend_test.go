@@ -214,8 +214,8 @@ func TestBackend_config_connection(t *testing.T) {
 		"connection_details": map[string]interface{}{
 			"connection_url": "sample_connection_url",
 		},
-		"allowed_roles":                []string{"*"},
-		"credential_rotate_statements": []string{},
+		"allowed_roles":                      []string{"*"},
+		"root_credentials_rotate_statements": []string{},
 	}
 	configReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), configReq)
@@ -527,8 +527,8 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"connection_details": map[string]interface{}{
 			"connection_url": connURL,
 		},
-		"allowed_roles":                []string{"plugin-role-test"},
-		"credential_rotate_statements": []string{},
+		"allowed_roles":                      []string{"plugin-role-test"},
+		"root_credentials_rotate_statements": []string{},
 	}
 	req.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), req)
