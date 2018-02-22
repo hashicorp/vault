@@ -44,6 +44,10 @@ valid AWS credentials with proper permissions.
 
 ### Parameters
 
+- `max_retries` `(int: -1)` - Number of max retries the client should use for
+  recoverable errors. The default (`-1`) falls back to the AWS SDK's default
+  behavior.
+
 - `access_key` `(string: <required>)` – Specifies the AWS access key ID.
 
 - `secret_key` `(string: <required>)` – Specifies the AWS secret access key.

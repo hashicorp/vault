@@ -166,7 +166,7 @@ func (a *API) DeleteRuleSetGroup(cfg *RuleSetGroup) (bool, error) {
 	return a.DeleteRuleSetGroupByCID(CIDType(&cfg.CID))
 }
 
-// DeleteRuleSetGroupByCID deletes rule set group wiht passed cid.
+// DeleteRuleSetGroupByCID deletes rule set group with passed cid.
 func (a *API) DeleteRuleSetGroupByCID(cid CIDType) (bool, error) {
 	if cid == nil || *cid == "" {
 		return false, fmt.Errorf("Invalid rule set group CID [none]")

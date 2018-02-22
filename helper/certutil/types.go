@@ -188,7 +188,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 		result.CertificateBytes = pemBlock.Bytes
 		result.Certificate, err = x509.ParseCertificate(result.CertificateBytes)
 		if err != nil {
-			return nil, errutil.UserError{Err: "Error encountered parsing certificate bytes from raw bundle"}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle: %v", err)}
 		}
 	}
 	switch {
@@ -201,7 +201,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 
 			parsedCert, err := x509.ParseCertificate(pemBlock.Bytes)
 			if err != nil {
-				return nil, errutil.UserError{Err: "Error encountered parsing certificate bytes from raw bundle"}
+				return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via CA chain: %v", err)}
 			}
 
 			certBlock := &CertBlock{
@@ -220,7 +220,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 
 		parsedCert, err := x509.ParseCertificate(pemBlock.Bytes)
 		if err != nil {
-			return nil, errutil.UserError{Err: "Error encountered parsing certificate bytes from raw bundle3"}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via issuing CA: %v", err)}
 		}
 
 		result.SerialNumber = result.Certificate.SerialNumber
@@ -254,12 +254,12 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 
 	if p.CertificateBytes != nil && len(p.CertificateBytes) > 0 {
 		block.Bytes = p.CertificateBytes
-		result.Certificate = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.Certificate = string(pem.EncodeToMemory(&block))
 	}
 
 	for _, caCert := range p.CAChain {
 		block.Bytes = caCert.Bytes
-		certificate := strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		certificate := string(pem.EncodeToMemory(&block))
 
 		result.CAChain = append(result.CAChain, certificate)
 	}
@@ -279,7 +279,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 			}
 		}
 
-		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.PrivateKey = string(pem.EncodeToMemory(&block))
 	}
 
 	return result, nil
@@ -444,7 +444,7 @@ func (c *CSRBundle) ToParsedCSRBundle() (*ParsedCSRBundle, error) {
 		result.CSRBytes = pemBlock.Bytes
 		result.CSR, err = x509.ParseCertificateRequest(result.CSRBytes)
 		if err != nil {
-			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle: %v", err)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via CSR: %v", err)}
 		}
 	}
 
@@ -461,7 +461,7 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 
 	if p.CSRBytes != nil && len(p.CSRBytes) > 0 {
 		block.Bytes = p.CSRBytes
-		result.CSR = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.CSR = string(pem.EncodeToMemory(&block))
 	}
 
 	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
@@ -476,7 +476,7 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 		default:
 			return nil, errutil.InternalError{Err: "Could not determine private key type when creating block"}
 		}
-		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.PrivateKey = string(pem.EncodeToMemory(&block))
 	}
 
 	return result, nil

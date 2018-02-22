@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/chacha20poly1305"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/hkdf"
 
@@ -48,6 +49,7 @@ const (
 	KeyType_ED25519
 	KeyType_RSA2048
 	KeyType_RSA4096
+	KeyType_ChaCha20_Poly1305
 )
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
@@ -75,7 +77,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -83,7 +85,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96, KeyType_RSA2048, KeyType_RSA4096:
+	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA4096:
 		return true
 	}
 	return false
@@ -107,7 +109,7 @@ func (kt KeyType) HashSignatureInput() bool {
 
 func (kt KeyType) DerivationSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96, KeyType_ED25519:
+	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_ED25519:
 		return true
 	}
 	return false
@@ -117,6 +119,8 @@ func (kt KeyType) String() string {
 	switch kt {
 	case KeyType_AES256_GCM96:
 		return "aes256-gcm96"
+	case KeyType_ChaCha20_Poly1305:
+		return "chacha20-poly1305"
 	case KeyType_ECDSA_P256:
 		return "ecdsa-p256"
 	case KeyType_ED25519:
@@ -325,7 +329,6 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 
 	if !keysContainsMinimum {
 		// Need to move keys *from* archive
-
 		for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
 			p.Keys[strconv.Itoa(i)] = archive.Keys[i]
 		}
@@ -366,7 +369,29 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 	return nil
 }
 
-func (p *Policy) Persist(ctx context.Context, storage logical.Storage) error {
+func (p *Policy) Persist(ctx context.Context, storage logical.Storage) (retErr error) {
+	// Other functions will take care of restoring other values; this is just
+	// responsible for archiving and keys since the archive function can modify
+	// keys. At the moment one of the other functions calling persist will also
+	// roll back keys, but better safe than sorry and this doesn't happen
+	// enough to worry about the speed tradeoff.
+	priorArchiveVersion := p.ArchiveVersion
+	var priorKeys keyEntryMap
+
+	if p.Keys != nil {
+		priorKeys = keyEntryMap{}
+		for k, v := range p.Keys {
+			priorKeys[k] = v
+		}
+	}
+
+	defer func() {
+		if retErr != nil {
+			p.ArchiveVersion = priorArchiveVersion
+			p.Keys = priorKeys
+		}
+	}()
+
 	err := p.handleArchiving(ctx, storage)
 	if err != nil {
 		return err
@@ -429,7 +454,30 @@ func (p *Policy) NeedsUpgrade() bool {
 	return false
 }
 
-func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) error {
+func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage) (retErr error) {
+	priorKey := p.Key
+	priorLatestVersion := p.LatestVersion
+	priorMinDecryptionVersion := p.MinDecryptionVersion
+	priorConvergentVersion := p.ConvergentVersion
+	var priorKeys keyEntryMap
+
+	if p.Keys != nil {
+		priorKeys = keyEntryMap{}
+		for k, v := range p.Keys {
+			priorKeys[k] = v
+		}
+	}
+
+	defer func() {
+		if retErr != nil {
+			p.Key = priorKey
+			p.LatestVersion = priorLatestVersion
+			p.MinDecryptionVersion = priorMinDecryptionVersion
+			p.ConvergentVersion = priorConvergentVersion
+			p.Keys = priorKeys
+		}
+	}()
+
 	persistNeeded := false
 	// Ensure we've moved from Key -> Keys
 	if p.Key != nil && len(p.Key) > 0 {
@@ -525,7 +573,7 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 		}
 
 		switch p.Type {
-		case KeyType_AES256_GCM96:
+		case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 			n, err := derBytes.ReadFrom(limReader)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("error reading returned derived bytes: %v", err)}
@@ -578,47 +626,62 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 	var ciphertext []byte
 
 	switch p.Type {
-	case KeyType_AES256_GCM96:
+	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 		// Derive the key that should be used
 		key, err := p.DeriveKey(context, ver)
 		if err != nil {
 			return "", err
 		}
 
-		// Setup the cipher
-		aesCipher, err := aes.NewCipher(key)
-		if err != nil {
-			return "", errutil.InternalError{Err: err.Error()}
-		}
+		var aead cipher.AEAD
 
-		// Setup the GCM AEAD
-		gcm, err := cipher.NewGCM(aesCipher)
-		if err != nil {
-			return "", errutil.InternalError{Err: err.Error()}
+		switch p.Type {
+		case KeyType_AES256_GCM96:
+			// Setup the cipher
+			aesCipher, err := aes.NewCipher(key)
+			if err != nil {
+				return "", errutil.InternalError{Err: err.Error()}
+			}
+
+			// Setup the GCM AEAD
+			gcm, err := cipher.NewGCM(aesCipher)
+			if err != nil {
+				return "", errutil.InternalError{Err: err.Error()}
+			}
+
+			aead = gcm
+
+		case KeyType_ChaCha20_Poly1305:
+			cha, err := chacha20poly1305.New(key)
+			if err != nil {
+				return "", errutil.InternalError{Err: err.Error()}
+			}
+
+			aead = cha
 		}
 
 		if p.ConvergentEncryption {
 			switch p.ConvergentVersion {
 			case 1:
-				if len(nonce) != gcm.NonceSize() {
-					return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
+				if len(nonce) != aead.NonceSize() {
+					return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", aead.NonceSize())}
 				}
 			default:
 				nonceHmac := hmac.New(sha256.New, context)
 				nonceHmac.Write(plaintext)
 				nonceSum := nonceHmac.Sum(nil)
-				nonce = nonceSum[:gcm.NonceSize()]
+				nonce = nonceSum[:aead.NonceSize()]
 			}
 		} else {
 			// Compute random nonce
-			nonce, err = uuid.GenerateRandomBytes(gcm.NonceSize())
+			nonce, err = uuid.GenerateRandomBytes(aead.NonceSize())
 			if err != nil {
 				return "", errutil.InternalError{Err: err.Error()}
 			}
 		}
 
-		// Encrypt and tag with GCM
-		ciphertext = gcm.Seal(nil, nonce, plaintext, nil)
+		// Encrypt and tag with AEAD
+		ciphertext = aead.Seal(nil, nonce, plaintext, nil)
 
 		// Place the encrypted data after the nonce
 		if !p.ConvergentEncryption || p.ConvergentVersion > 1 {
@@ -692,25 +755,40 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 	var plain []byte
 
 	switch p.Type {
-	case KeyType_AES256_GCM96:
+	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 		key, err := p.DeriveKey(context, ver)
 		if err != nil {
 			return "", err
 		}
 
-		// Setup the cipher
-		aesCipher, err := aes.NewCipher(key)
-		if err != nil {
-			return "", errutil.InternalError{Err: err.Error()}
+		var aead cipher.AEAD
+
+		switch p.Type {
+		case KeyType_AES256_GCM96:
+			// Setup the cipher
+			aesCipher, err := aes.NewCipher(key)
+			if err != nil {
+				return "", errutil.InternalError{Err: err.Error()}
+			}
+
+			// Setup the GCM AEAD
+			gcm, err := cipher.NewGCM(aesCipher)
+			if err != nil {
+				return "", errutil.InternalError{Err: err.Error()}
+			}
+
+			aead = gcm
+
+		case KeyType_ChaCha20_Poly1305:
+			cha, err := chacha20poly1305.New(key)
+			if err != nil {
+				return "", errutil.InternalError{Err: err.Error()}
+			}
+
+			aead = cha
 		}
 
-		// Setup the GCM AEAD
-		gcm, err := cipher.NewGCM(aesCipher)
-		if err != nil {
-			return "", errutil.InternalError{Err: err.Error()}
-		}
-
-		if len(decoded) < gcm.NonceSize() {
+		if len(decoded) < aead.NonceSize() {
 			return "", errutil.UserError{Err: "invalid ciphertext length"}
 		}
 
@@ -719,12 +797,12 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		if p.ConvergentEncryption && p.ConvergentVersion < 2 {
 			ciphertext = decoded
 		} else {
-			nonce = decoded[:gcm.NonceSize()]
-			ciphertext = decoded[gcm.NonceSize():]
+			nonce = decoded[:aead.NonceSize()]
+			ciphertext = decoded[aead.NonceSize():]
 		}
 
 		// Verify and Decrypt
-		plain, err = gcm.Open(nil, nonce, ciphertext, nil)
+		plain, err = aead.Open(nil, nonce, ciphertext, nil)
 		if err != nil {
 			return "", errutil.UserError{Err: "invalid ciphertext: unable to decrypt"}
 		}
@@ -955,7 +1033,26 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 	}
 }
 
-func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) error {
+func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) (retErr error) {
+	priorLatestVersion := p.LatestVersion
+	priorMinDecryptionVersion := p.MinDecryptionVersion
+	var priorKeys keyEntryMap
+
+	if p.Keys != nil {
+		priorKeys = keyEntryMap{}
+		for k, v := range p.Keys {
+			priorKeys[k] = v
+		}
+	}
+
+	defer func() {
+		if retErr != nil {
+			p.LatestVersion = priorLatestVersion
+			p.MinDecryptionVersion = priorMinDecryptionVersion
+			p.Keys = priorKeys
+		}
+	}()
+
 	if p.Keys == nil {
 		// This is an initial key rotation when generating a new policy. We
 		// don't need to call migrate here because if we've called getPolicy to
@@ -977,7 +1074,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage) error {
 	entry.HMACKey = hmacKey
 
 	switch p.Type {
-	case KeyType_AES256_GCM96:
+	case KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 		// Generate a 256bit key
 		newKey, err := uuid.GenerateRandomBytes(32)
 		if err != nil {
@@ -1052,7 +1149,7 @@ func (p *Policy) MigrateKeyToKeysMap() {
 }
 
 // Backup should be called with an exclusive lock held on the policy
-func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (string, error) {
+func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (out string, retErr error) {
 	if !p.Exportable {
 		return "", fmt.Errorf("exporting is disallowed on the policy")
 	}
@@ -1060,6 +1157,14 @@ func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (string, e
 	if !p.AllowPlaintextBackup {
 		return "", fmt.Errorf("plaintext backup is disallowed on the policy")
 	}
+
+	priorBackupInfo := p.BackupInfo
+
+	defer func() {
+		if retErr != nil {
+			p.BackupInfo = priorBackupInfo
+		}
+	}()
 
 	// Create a record of this backup operation in the policy
 	p.BackupInfo = &BackupInfo{

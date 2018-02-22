@@ -25,13 +25,16 @@ HSM key backup strategy requires the key to be exportable, you should generate
 the key yourself. The list of creation attributes that Vault uses to generate
 the key are listed at the end of this document.
 
-
 ## Requirements
 
 The following software packages are required for Vault Enterprise HSM:
 
-- PKCS#11 compatible HSM integration library
-- The [GNU libltdl library](https://www.gnu.org/software/libtool/manual/html_node/Using-libltdl.html) — ensure that it is installed for the correct architecture of your servers
+- PKCS#11 compatible HSM integration library. Vault targets version 2.2 or
+  higher of PKCS#11. Depending on any given HSM, some functions (such as key
+  generation) may have to be performed manually.
+- The [GNU libltdl
+  library](https://www.gnu.org/software/libtool/manual/html_node/Using-libltdl.html)
+  — ensure that it is installed for the correct architecture of your servers
 
 ## `pkcs11` Example
 
@@ -74,10 +77,11 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   environment variable.
 
 - `hmac_key_label` `(string: <required>)`: The label of the key to use for
-  HMACing. This needs to be a suitable type; a good choice is an AES key marked
-  as valid for signing and verifying. If the key does not exist and generation
-  is enabled, this is the label that will be given to the generated key. May
-  also be specified by the `VAULT_HSM_HMAC_KEY_LABEL` environment variable.
+  HMACing. This needs to be a suitable type. If Vault tries to create this it
+  will attempt to use CKK_GENERIC_SECRET_KEY. If the key does not exist and
+  generation is enabled, this is the label that will be given to the generated
+  key. May also be specified by the `VAULT_HSM_HMAC_KEY_LABEL` environment
+  variable.
 
 - `mechanism` `(string: "0x1082")`: The encryption/decryption mechanism to use,
   specified as a decimal or hexadecimal (prefixed by `0x`) string. Currently
@@ -95,7 +99,9 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   specified by `key_label` can be found at Vault initialization time, instructs
   Vault to generate a key. This is a boolean expressed as a string (e.g.
   `"true"`). May also be specified by the `VAULT_HSM_GENERATE_KEY` environment
-  variable.
+  variable. Vault may not be able to successfully generate keys in all
+  circumstances, such as if proprietary vendor extensions are required to
+  create keys of a suitable type.
 
 - `regenerate_key` `(string: "false")`: At Vault initialization time, force
   generation of a new key even if one with the given `key_label` already exists.
@@ -143,4 +149,21 @@ it uses. These identifiers correspond to official PKCS#11 identifiers.
 * `CKA_DECRYPT`: `true` (Key can be used for decryption)
 * `CKA_WRAP`: `true` (Key can be used for wrapping)
 * `CKA_UNWRAP`: `true` (Key can be used for unwrapping)
+* `CKA_EXTRACTABLE`: `false` (Key cannot be exported)
+
+If Vault generates the HMAC key for you, the following is the list of
+attributes it uses. These identifiers correspond to official PKCS#11
+identifiers.
+
+* `CKA_CLASS`: `CKO_SECRET_KEY` (It's a secret key)
+* `CKA_KEY_TYPE`: `CKK_GENERIC_SECRET_KEY` (Key type is a generic secret key)
+* `CKA_VALUE_LEN`: `32` (Key size is 256 bits)
+* `CKA_LABEL`: Set to the HMAC key label set in Vault's configuration
+* `CKA_ID`: Set to a random 32-bit unsigned integer
+* `CKA_PRIVATE`: `true` (Key is private to this slot/token)
+* `CKA_TOKEN`: `true` (Key persists to the slot/token rather than being for one
+  session only)
+* `CKA_SENSITIVE`: `true` (Key is a sensitive value)
+* `CKA_SIGN`: `true` (Key can be used for signing)
+* `CKA_VERIFY`: `true` (Key can be used for verifying)
 * `CKA_EXTRACTABLE`: `false` (Key cannot be exported)

@@ -177,27 +177,27 @@ type RekeyInitRequest struct {
 }
 
 type RekeyStatusResponse struct {
-	Nonce           string
-	Started         bool
-	T               int
-	N               int
-	Progress        int
-	Required        int
+	Nonce           string   `json:"nonce"`
+	Started         bool     `json:"started"`
+	T               int      `json:"t"`
+	N               int      `json:"n"`
+	Progress        int      `json:"progress"`
+	Required        int      `json:"required"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
-	Backup          bool
+	Backup          bool     `json:"backup"`
 }
 
 type RekeyUpdateResponse struct {
-	Nonce           string
-	Complete        bool
-	Keys            []string
+	Nonce           string   `json:"nonce"`
+	Complete        bool     `json:"complete"`
+	Keys            []string `json:"keys"`
 	KeysB64         []string `json:"keys_base64"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
-	Backup          bool
+	Backup          bool     `json:"backup"`
 }
 
 type RekeyRetrieveResponse struct {
-	Nonce   string
-	Keys    map[string][]string
+	Nonce   string              `json:"nonce"`
+	Keys    map[string][]string `json:"keys"`
 	KeysB64 map[string][]string `json:"keys_base64"`
 }

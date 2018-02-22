@@ -16,6 +16,8 @@
  *
  */
 
+// Package proto defines the protobuf codec. Importing this package will
+// register the codec.
 package proto
 
 import (

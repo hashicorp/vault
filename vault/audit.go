@@ -90,6 +90,12 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry) error {
 	viewPath := auditBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
 
+	// Mark the view as read-only until the mounting is complete and
+	// ensure that it is reset after. This ensures that there will be no
+	// writes during the construction of the backend.
+	view.setReadOnlyErr(logical.ErrSetupReadOnly)
+	defer view.setReadOnlyErr(nil)
+
 	// Lookup the new backend
 	backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)
 	if err != nil {
@@ -319,6 +325,12 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		// Create a barrier view using the UUID
 		viewPath := auditBarrierPrefix + entry.UUID + "/"
 		view := NewBarrierView(c.barrier, viewPath)
+
+		// Mark the view as read-only until the mounting is complete and
+		// ensure that it is reset after. This ensures that there will be no
+		// writes during the construction of the backend.
+		view.setReadOnlyErr(logical.ErrSetupReadOnly)
+		defer view.setReadOnlyErr(nil)
 
 		// Initialize the backend
 		backend, err := c.newAuditBackend(ctx, entry, view, entry.Options)

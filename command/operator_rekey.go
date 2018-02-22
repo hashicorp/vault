@@ -37,9 +37,10 @@ type OperatorRekeyCommand struct {
 
 	// Deprecations
 	// TODO: remove in 0.9.0
-	flagDelete      bool
-	flagRecoveryKey bool
-	flagRetrieve    bool
+	flagDelete       bool
+	flagRecoveryKey  bool
+	flagRetrieve     bool
+	flagStoredShares int
 
 	testStdin io.Reader // for tests
 }
@@ -96,7 +97,7 @@ Usage: vault rekey [options] [KEY]
 }
 
 func (c *OperatorRekeyCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Common Options")
 
@@ -231,6 +232,15 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Usage:   "",
 	})
 
+	// Kept to keep scripts passing the flag working, but not used
+	f.IntVar(&IntVar{
+		Name:    "stored-shares",
+		Target:  &c.flagStoredShares,
+		Default: 0,
+		Hidden:  true,
+		Usage:   "",
+	})
+
 	return set
 }
 
@@ -323,6 +333,7 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 	status, err := fn(&api.RekeyInitRequest{
 		SecretShares:    c.flagKeyShares,
 		SecretThreshold: c.flagKeyThreshold,
+		StoredShares:    c.flagStoredShares,
 		PGPKeys:         c.flagPGPKeys,
 		Backup:          c.flagBackup,
 	})
@@ -534,7 +545,7 @@ func (c *OperatorRekeyCommand) backupRetrieve(client *api.Client) int {
 		Data: structs.New(storedKeys).Map(),
 	}
 
-	return OutputSecret(c.UI, "table", secret)
+	return OutputSecret(c.UI, secret)
 }
 
 // backupDelete deletes the stored backup keys.
@@ -579,11 +590,22 @@ func (c *OperatorRekeyCommand) printStatus(status *api.RekeyStatusResponse) int 
 		out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
 	}
 
-	c.UI.Output(tableOutput(out, nil))
-	return 0
+	switch Format(c.UI) {
+	case "table":
+		c.UI.Output(tableOutput(out, nil))
+		return 0
+	default:
+		return OutputData(c.UI, status)
+	}
 }
 
 func (c *OperatorRekeyCommand) printUnsealKeys(status *api.RekeyStatusResponse, resp *api.RekeyUpdateResponse) int {
+	switch Format(c.UI) {
+	case "table":
+	default:
+		return OutputData(c.UI, resp)
+	}
+
 	// Space between the key prompt, if any, and the output
 	c.UI.Output("")
 

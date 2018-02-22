@@ -17,6 +17,7 @@ import (
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -2327,9 +2328,24 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 	if entry == nil {
 		return nil, nil
 	}
+
+	// Run this through the decompression helper to see if it's been compressed.
+	// If the input contained the compression canary, `outputBytes` will hold
+	// the decompressed data. If the input was not compressed, then `outputBytes`
+	// will be nil.
+	outputBytes, _, err := compressutil.Decompress(entry.Value)
+	if err != nil {
+		return handleError(err)
+	}
+
+	// `outputBytes` is nil if the input is uncompressed. In that case set it to the original input.
+	if outputBytes == nil {
+		outputBytes = entry.Value
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"value": string(entry.Value),
+			"value": string(outputBytes),
 		},
 	}
 	return resp, nil

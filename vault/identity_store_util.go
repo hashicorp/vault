@@ -666,12 +666,29 @@ func (i *IdentityStore) MemDBAliasByFactors(mountAccessor, aliasName string, clo
 		return nil, fmt.Errorf("missing mount accessor")
 	}
 
+	txn := i.db.Txn(false)
+
+	return i.MemDBAliasByFactorsInTxn(txn, mountAccessor, aliasName, clone, groupAlias)
+}
+
+func (i *IdentityStore) MemDBAliasByFactorsInTxn(txn *memdb.Txn, mountAccessor, aliasName string, clone bool, groupAlias bool) (*identity.Alias, error) {
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+
+	if aliasName == "" {
+		return nil, fmt.Errorf("missing alias name")
+	}
+
+	if mountAccessor == "" {
+		return nil, fmt.Errorf("missing mount accessor")
+	}
+
 	tableName := entityAliasesTable
 	if groupAlias {
 		tableName = groupAliasesTable
 	}
 
-	txn := i.db.Txn(false)
 	aliasRaw, err := txn.First(tableName, "factors", mountAccessor, aliasName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch alias from memdb using factors: %v", err)

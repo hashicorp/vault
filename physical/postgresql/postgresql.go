@@ -71,7 +71,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 
 	// Determine if we should use an upsert function (versions < 9.5)
 	var upsert_required bool
-	upsert_required_query := "SELECT string_to_array(setting, '.')::int[] < '{9,5}' FROM pg_settings WHERE name = 'server_version'"
+	upsert_required_query := "SELECT current_setting('server_version_num')::int < 90500"
 	if err := db.QueryRow(upsert_required_query).Scan(&upsert_required); err != nil {
 		return nil, fmt.Errorf("failed to check for native upsert: %v", err)
 	}

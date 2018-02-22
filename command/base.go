@@ -152,6 +152,11 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 	c.flagsOnce.Do(func() {
 		set := NewFlagSets(c.UI)
 
+		// These flag sets will apply to all leaf subcommands.
+		// TODO: Optional, but FlagSetHTTP can be safely removed from the individual
+		// Flags() subcommands.
+		bit = bit | FlagSetHTTP
+
 		if bit&FlagSetHTTP != 0 {
 			f := set.NewFlagSet("HTTP Options")
 
@@ -260,7 +265,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Name:       "format",
 					Target:     &c.flagFormat,
 					Default:    "table",
-					EnvVar:     "VAULT_FORMAT",
+					EnvVar:     EnvVaultFormat,
 					Completion: complete.PredictSet("table", "json", "yaml"),
 					Usage: "Print the output in the given format. Valid formats " +
 						"are \"table\", \"json\", or \"yaml\".",
@@ -315,6 +320,11 @@ func (f *FlagSets) Completions() complete.Flags {
 // Parse parses the given flags, returning any errors.
 func (f *FlagSets) Parse(args []string) error {
 	return f.mainSet.Parse(args)
+}
+
+// Parsed reports whether the command-line flags have been parsed.
+func (f *FlagSets) Parsed() bool {
+	return f.mainSet.Parsed()
 }
 
 // Args returns the remaining args after parsing.

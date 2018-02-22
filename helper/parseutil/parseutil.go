@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -99,4 +100,21 @@ func ParseBool(in interface{}) (bool, error) {
 		return false, err
 	}
 	return result, nil
+}
+
+func ParseCommaStringSlice(in interface{}) ([]string, error) {
+	var result []string
+	config := &mapstructure.DecoderConfig{
+		Result:           &result,
+		WeaklyTypedInput: true,
+		DecodeHook:       mapstructure.StringToSliceHookFunc(","),
+	}
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return nil, err
+	}
+	if err := decoder.Decode(in); err != nil {
+		return nil, err
+	}
+	return strutil.TrimStrings(result), nil
 }

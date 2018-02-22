@@ -633,9 +633,9 @@ func (r *request) toHTTP() (*http.Request, error) {
 	}
 	if r.ctx != nil {
 		return req.WithContext(r.ctx), nil
-	} else {
-		return req, nil
 	}
+
+	return req, nil
 }
 
 // newRequest is used to create a new request

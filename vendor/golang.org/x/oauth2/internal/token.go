@@ -124,6 +124,8 @@ var brokenAuthHeaderProviders = []string{
 	"https://api.patreon.com/",
 	"https://sandbox.codeswholesale.com/oauth/token",
 	"https://api.sipgate.com/v1/authorization/oauth",
+	"https://api.medium.com/v1/tokens",
+	"https://log.finalsurge.com/oauth/token",
 }
 
 // brokenAuthHeaderDomains lists broken providers that issue dynamic endpoints.

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
@@ -114,6 +115,11 @@ CN and SANs. Defaults to true.`,
 Any valid IP is accepted.`,
 			},
 
+			"allowed_other_sans": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Description: `If set, an array of allowed other names to put in SANs. These values support globbing.`,
+			},
+
 			"server_flag": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
@@ -187,13 +193,43 @@ include the Common Name (cn). Defaults to true.`,
 
 			"ou": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
-				Description: `If set, the OU (OrganizationalUnit) will be set to
+				Description: `If set, OU (OrganizationalUnit) will be set to
 this value in certificates issued by this role.`,
 			},
 
 			"organization": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
-				Description: `If set, the O (Organization) will be set to
+				Description: `If set, O (Organization) will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"country": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, Country will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"locality": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, Locality will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"province": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, Province will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"street_address": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, Street Address will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"postal_code": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, Postal Code will be set to
 this value in certificates issued by this role.`,
 			},
 
@@ -220,6 +256,11 @@ certificates. However, certificates issued in this way cannot be enumerated
 or revoked, so this option is recommended only for certificates that are
 non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,
+			},
+			"require_cn": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
 			},
 		},
 
@@ -409,8 +450,23 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		KeyUsage:            data.Get("key_usage").([]string),
 		OU:                  data.Get("ou").([]string),
 		Organization:        data.Get("organization").([]string),
+		Country:             data.Get("country").([]string),
+		Locality:            data.Get("locality").([]string),
+		Province:            data.Get("province").([]string),
+		StreetAddress:       data.Get("street_address").([]string),
+		PostalCode:          data.Get("postal_code").([]string),
 		GenerateLease:       new(bool),
 		NoStore:             data.Get("no_store").(bool),
+		RequireCN:           data.Get("require_cn").(bool),
+	}
+
+	otherSANs := data.Get("allowed_other_sans").([]string)
+	if len(otherSANs) > 0 {
+		_, err := parseOtherSANs(otherSANs)
+		if err != nil {
+			return logical.ErrorResponse(errwrap.Wrapf("error parsing allowed_other_sans: {{err}}", err).Error()), nil
+		}
+		entry.AllowedOtherSANs = otherSANs
 	}
 
 	// no_store implies generate_lease := false
@@ -539,8 +595,15 @@ type roleEntry struct {
 	OU                    []string `json:"ou_list" mapstructure:"ou"`
 	OrganizationOld       string   `json:"organization,omitempty"`
 	Organization          []string `json:"organization_list" mapstructure:"organization"`
+	Country               []string `json:"country" mapstructure:"country"`
+	Locality              []string `json:"locality" mapstructure:"locality"`
+	Province              []string `json:"province" mapstructure:"province"`
+	StreetAddress         []string `json:"street_address" mapstructure:"street_address"`
+	PostalCode            []string `json:"postal_code" mapstructure:"postal_code"`
 	GenerateLease         *bool    `json:"generate_lease,omitempty"`
 	NoStore               bool     `json:"no_store" mapstructure:"no_store"`
+	RequireCN             bool     `json:"require_cn" mapstructure:"require_cn"`
+	AllowedOtherSANs      []string `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -570,7 +633,13 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"key_usage":               r.KeyUsage,
 		"ou":                      r.OU,
 		"organization":            r.Organization,
+		"country":                 r.Country,
+		"locality":                r.Locality,
+		"province":                r.Province,
+		"street_address":          r.StreetAddress,
+		"postal_code":             r.PostalCode,
 		"no_store":                r.NoStore,
+		"allowed_other_sans":      r.AllowedOtherSANs,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength

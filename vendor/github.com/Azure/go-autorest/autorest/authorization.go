@@ -233,3 +233,22 @@ func newBearerChallenge(resp *http.Response) (bc bearerChallenge, err error) {
 
 	return bc, err
 }
+
+// EventGridKeyAuthorizer implements authorization for event grid using key authentication.
+type EventGridKeyAuthorizer struct {
+	topicKey string
+}
+
+// NewEventGridKeyAuthorizer creates a new EventGridKeyAuthorizer
+// with the specified topic key.
+func NewEventGridKeyAuthorizer(topicKey string) EventGridKeyAuthorizer {
+	return EventGridKeyAuthorizer{topicKey: topicKey}
+}
+
+// WithAuthorization returns a PrepareDecorator that adds the aeg-sas-key authentication header.
+func (egta EventGridKeyAuthorizer) WithAuthorization() PrepareDecorator {
+	headers := map[string]interface{}{
+		"aeg-sas-key": egta.topicKey,
+	}
+	return NewAPIKeyAuthorizerWithHeaders(headers).WithAuthorization()
+}
