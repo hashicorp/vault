@@ -124,7 +124,7 @@ path "auth/token/create" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/configuration/policies.html) guide.
+[policies](/guides/identity/policies.html) guide.
 
 ## Steps
 
@@ -338,7 +338,7 @@ token_policies 	[apps default]
 
 Use the returned token to perform the remaining.
 
-**NOTE:** [AppRole Pull Authentication](/guides/configuration/authentication.html) guide
+**NOTE:** [AppRole Pull Authentication](/guides/identity/authentication.html) guide
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
@@ -412,7 +412,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 
 Be sure to use the returned token to perform the remaining.
 
-**NOTE:** [AppRole Pull Authentication](/guides/configuration/authentication.html) guide
+**NOTE:** [AppRole Pull Authentication](/guides/identity/authentication.html) guide
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
@@ -498,5 +498,5 @@ user name exists.
 
 This guide discussed how to generate credentials on--dataemand so that the access
 credentials no longer need to be written to disk. Next, learn about the
-[Tokens and Leases](/guides/configuration/lease.html) so that you can control the lifecycle of
+[Tokens and Leases](/guides/identity/lease.html) so that you can control the lifecycle of
 those credentials.

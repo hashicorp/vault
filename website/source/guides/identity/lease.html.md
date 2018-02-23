@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Tokens and Leases - Guides"
-sidebar_current: "guides-configuration-lease"
+sidebar_current: "guides-identity-lease"
 description: |-
   Tokens are the core method for authentication within Vault. For every
   authentication token and dynamic secret, Vault creates a lease
@@ -131,7 +131,7 @@ path "sys/mounts/database/tune" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/configuration/policies.html) guide.
+[policies](/guides/identity/policies.html) guide.
 
 
 ## Steps
@@ -625,7 +625,7 @@ are talking about long-running apps need to be able to renew its token
 indefinitely.
 
 -> For more details about AppRole, read the [AppRole Pull
--Authentication](/guides/configuration/authentication.html) guide.
+-Authentication](/guides/identity/authentication.html) guide.
 
 To create AppRole periodic tokens, create your AppRole role with
 `period` specified.
@@ -803,5 +803,5 @@ renewable          	true
 ## Next steps
 
 Now you have learned the lifecycle of tokens and leases, read [AppRole Pull
-Authentication](/guides/configuration/authentication.html) guide to learn how to generate
+Authentication](/guides/identity/authentication.html) guide to learn how to generate
 tokens for apps or machines.
