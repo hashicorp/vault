@@ -38,6 +38,10 @@ var (
 	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
 )
 
+// This is used for enterprise replication information
+type ReplicatedClusters struct {
+}
+
 // This can be one of a few key types so the different params may or may not be filled
 type clusterKeyParams struct {
 	Type string   `json:"type" structs:"type" mapstructure:"type"`
@@ -338,7 +342,7 @@ func (c *Core) stopClusterListener() {
 
 // ClusterTLSConfig generates a TLS configuration based on the local/replicated
 // cluster key and cert.
-func (c *Core) ClusterTLSConfig(ctx context.Context) (*tls.Config, error) {
+func (c *Core) ClusterTLSConfig(ctx context.Context, repClusters *ReplicatedClusters) (*tls.Config, error) {
 	// Using lookup functions allows just-in-time lookup of the current state
 	// of clustering as connections come and go
 
