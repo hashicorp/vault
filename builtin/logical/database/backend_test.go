@@ -288,9 +288,6 @@ func TestBackend_BadConnectionString(t *testing.T) {
 	}
 	respCheck(req)
 
-	req.Data["connection_url"] = "postgres//user:pw@localhost"
-	respCheck(req)
-
 	time.Sleep(1 * time.Second)
 }
 
