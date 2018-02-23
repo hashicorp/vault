@@ -1,15 +1,24 @@
-## 0.9.5 (Unreleased)
+## 0.9.5 (Soon)
 
 IMPROVEMENTS:
 
  * auth: Allow sending default_lease_ttl and max_lease_ttl values when enabling
    auth methods. [GH-4019]
+ * secret/database: Add list functionality to `database/config` endpoint
+   [GH-4026]
 
 BUG FIXES:
 
- * auth/aws: Switch libraries to fix regression verifying PKCS#7 identity
+ * auth/aws: Update libraries to fix regression verifying PKCS#7 identity
    documents [GH-4014]
-
+ * listener: Revert to Go 1.9 for now to allow certificates with non-DNS names
+   in their DNS SANs to be used for Vault's TLS connections [GH-4028]
+ * replication: Fix issue with a performance secondary/DR primary node losing
+   its DR primary status when performing an update-primary operation
+ * replication: Fix issue where performance secondaries could be unable to
+   automatically connect to a performance primary after that performance
+   primary has been promoted to a DR primary from a DR secondary
+ 
 ## 0.9.4 (February 20th, 2018)
 
 SECURITY:

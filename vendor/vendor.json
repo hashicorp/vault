@@ -835,6 +835,12 @@
 			"revisionTime": "2018-02-02T13:34:58Z"
 		},
 		{
+			"checksumSHA1": "nCoffb4ZRRyCPy2FgR8gMAkQiFo=",
+			"path": "github.com/fullsailor/pkcs7",
+			"revision": "1d5002593acb237433a98512c6343587b03ebe5d",
+			"revisionTime": "2018-02-23T00:23:17Z"
+		},
+		{
 			"checksumSHA1": "ImX1uv6O09ggFeBPUJJ2nu7MPSA=",
 			"path": "github.com/ghodss/yaml",
 			"revision": "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",
@@ -1253,12 +1259,6 @@
 			"path": "github.com/jefferai/jsonx",
 			"revision": "9cc31c3135eef39b8e72585f37efa92b6ca314d0",
 			"revisionTime": "2016-07-21T23:51:17Z"
-		},
-		{
-			"checksumSHA1": "U2xx6g0Cu/vKhHRK8rcQWAOzg34=",
-			"path": "github.com/jefferai/pkcs7",
-			"revision": "6c523e5a7967df6e893c2803ba65225c7f394da6",
-			"revisionTime": "2018-02-22T13:45:58Z"
 		},
 		{
 			"checksumSHA1": "blwbl9vPvRLtL5QlZgfpLvsFiZ4=",
