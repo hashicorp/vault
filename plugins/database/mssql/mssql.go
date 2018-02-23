@@ -30,6 +30,14 @@ type MSSQL struct {
 }
 
 func New() (interface{}, error) {
+	db := new()
+	// Wrap the plugin with middleware to sanitize errors
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+
+	return dbType, nil
+}
+
+func new() *MSSQL {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = msSQLTypeName
 
@@ -40,15 +48,10 @@ func New() (interface{}, error) {
 		Separator:      "-",
 	}
 
-	db := &MSSQL{
+	return &MSSQL{
 		SQLConnectionProducer: connProducer,
 		CredentialsProducer:   credsProducer,
 	}
-
-	// Wrap the plugin with middleware to sanitize errors
-	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
-
-	return dbType, nil
 }
 
 // Run instantiates a MSSQL object, and runs the RPC server for the plugin
@@ -321,7 +324,7 @@ func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 	rotateStatents := statements
 	if len(rotateStatents) == 0 {
-		rotateStatents = []string{defaultMSSQLRotateRootCredentialsSQL}
+		rotateStatents = []string{rotateRootCredentialsSQL}
 	}
 
 	db, err := m.getConnection(ctx)

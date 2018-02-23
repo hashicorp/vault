@@ -31,6 +31,12 @@ var _ dbplugin.Database = &MongoDB{}
 
 // New returns a new MongoDB instance
 func New() (interface{}, error) {
+	db := new()
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	return dbType, nil
+}
+
+func new() *MongoDB {
 	connProducer := &mongoDBConnectionProducer{}
 	connProducer.Type = mongoDBTypeName
 
@@ -41,13 +47,10 @@ func New() (interface{}, error) {
 		Separator:      "-",
 	}
 
-	db := &MongoDB{
+	return &MongoDB{
 		mongoDBConnectionProducer: connProducer,
 		CredentialsProducer:       credsProducer,
 	}
-
-	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
-	return dbType, nil
 }
 
 // Run instantiates a MongoDB object, and runs the RPC server for the plugin

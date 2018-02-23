@@ -87,16 +87,13 @@ func TestCassandra_Initialize(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*Cassandra)
-	connProducer := db.ConnectionProducer.(*cassandraConnectionProducer)
-
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initalized")
 	}
 
@@ -135,8 +132,7 @@ func TestCassandra_CreateUser(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*Cassandra)
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -176,8 +172,7 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*Cassandra)
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -222,8 +217,7 @@ func TestCassandra_RevokeUser(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*Cassandra)
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)

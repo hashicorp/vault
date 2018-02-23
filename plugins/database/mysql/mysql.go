@@ -47,25 +47,28 @@ type MySQL struct {
 // New implements builtinplugins.BuiltinFactory
 func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, error) {
 	return func() (interface{}, error) {
-		connProducer := &connutil.SQLConnectionProducer{}
-		connProducer.Type = mySQLTypeName
-
-		credsProducer := &credsutil.SQLCredentialsProducer{
-			DisplayNameLen: displayNameLen,
-			RoleNameLen:    roleNameLen,
-			UsernameLen:    usernameLen,
-			Separator:      "-",
-		}
-
-		db := &MySQL{
-			SQLConnectionProducer: connProducer,
-			CredentialsProducer:   credsProducer,
-		}
-
+		db := new(displayNameLen, roleNameLen, usernameLen)
 		// Wrap the plugin with middleware to sanitize errors
 		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
 		return dbType, nil
+	}
+}
+
+func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
+	connProducer := &connutil.SQLConnectionProducer{}
+	connProducer.Type = mySQLTypeName
+
+	credsProducer := &credsutil.SQLCredentialsProducer{
+		DisplayNameLen: displayNameLen,
+		RoleNameLen:    roleNameLen,
+		UsernameLen:    usernameLen,
+		Separator:      "-",
+	}
+
+	return &MySQL{
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
 }
 

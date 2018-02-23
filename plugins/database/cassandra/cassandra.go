@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 )
@@ -27,12 +26,19 @@ var _ dbplugin.Database = &Cassandra{}
 
 // Cassandra is an implementation of Database interface
 type Cassandra struct {
-	connutil.ConnectionProducer
+	*cassandraConnectionProducer
 	credsutil.CredentialsProducer
 }
 
 // New returns a new Cassandra instance
 func New() (interface{}, error) {
+	db := new()
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+
+	return dbType, nil
+}
+
+func new() *Cassandra {
 	connProducer := &cassandraConnectionProducer{}
 	connProducer.Type = cassandraTypeName
 
@@ -43,14 +49,10 @@ func New() (interface{}, error) {
 		Separator:      "_",
 	}
 
-	db := &Cassandra{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+	return &Cassandra{
+		cassandraConnectionProducer: connProducer,
+		CredentialsProducer:         credsProducer,
 	}
-
-	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, connProducer.secretValues)
-
-	return dbType, nil
 }
 
 // Run instantiates a Cassandra object, and runs the RPC server for the plugin

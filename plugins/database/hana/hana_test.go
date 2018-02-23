@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 )
 
 func TestHANA_Initialize(t *testing.T) {
@@ -23,16 +22,13 @@ func TestHANA_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*HANA)
-
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
 
@@ -53,9 +49,7 @@ func TestHANA_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*HANA)
-
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -96,9 +90,7 @@ func TestHANA_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*HANA)
-
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)

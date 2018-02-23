@@ -33,6 +33,13 @@ var _ dbplugin.Database = &PostgreSQL{}
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
+	db := new()
+	// Wrap the plugin with middleware to sanitize errors
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+	return dbType, nil
+}
+
+func new() *PostgreSQL {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = postgreSQLTypeName
 
@@ -48,10 +55,7 @@ func New() (interface{}, error) {
 		CredentialsProducer:   credsProducer,
 	}
 
-	// Wrap the plugin with middleware to sanitize errors
-	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
-
-	return dbType, nil
+	return db
 }
 
 // Run instantiates a PostgreSQL object, and runs the RPC server for the plugin

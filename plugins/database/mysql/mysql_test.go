@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
+
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
@@ -103,17 +104,13 @@ func TestMySQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(MetadataLen, MetadataLen, UsernameLen)
-	dbRaw, _ := f()
-	db := dbRaw.(*MySQL)
-	connProducer := db.SQLConnectionProducer
-
+	db := new(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initalized")
 	}
 
@@ -142,10 +139,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(MetadataLen, MetadataLen, UsernameLen)
-	dbRaw, _ := f()
-	db := dbRaw.(*MySQL)
-
+	db := new(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -207,10 +201,7 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
-	dbRaw, _ := f()
-	db := dbRaw.(*MySQL)
-
+	db := new(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -263,18 +254,13 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 		"password":       "secret",
 	}
 
-	f := New(MetadataLen, MetadataLen, UsernameLen)
-	dbRaw, _ := f()
-	db := dbRaw.(*MySQL)
-
-	connProducer := db.SQLConnectionProducer
-
+	db := new(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initalized")
 	}
 
@@ -300,10 +286,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(MetadataLen, MetadataLen, UsernameLen)
-	dbRaw, _ := f()
-	db := dbRaw.(*MySQL)
-
+	db := new(MetadataLen, MetadataLen, UsernameLen)
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)

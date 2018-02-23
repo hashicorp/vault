@@ -73,19 +73,13 @@ func TestMongoDB_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, err := New()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	db := dbRaw.(*MongoDB)
-	connProducer := db.ConnectionProducer.(*mongoDBConnectionProducer)
-
-	_, err = db.Init(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
 
@@ -103,12 +97,8 @@ func TestMongoDB_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, err := New()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	db := dbRaw.(*MongoDB)
-	_, err = db.Init(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -141,12 +131,8 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 		"write_concern":  testMongoDBWriteConcern,
 	}
 
-	dbRaw, err := New()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	db := dbRaw.(*MongoDB)
-	_, err = db.Init(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -178,12 +164,8 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, err := New()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	db := dbRaw.(*MongoDB)
-	_, err = db.Init(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

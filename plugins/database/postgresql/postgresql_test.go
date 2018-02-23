@@ -67,17 +67,13 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 		"max_open_connections": 5,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*PostgreSQL)
-
-	connProducer := db.SQLConnectionProducer
-
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initalized")
 	}
 
@@ -107,8 +103,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*PostgreSQL)
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -160,8 +155,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*PostgreSQL)
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -233,8 +227,7 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 		"password":             "secret",
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*PostgreSQL)
+	db := new()
 
 	connProducer := db.SQLConnectionProducer
 
@@ -269,8 +262,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*PostgreSQL)
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)

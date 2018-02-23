@@ -23,7 +23,7 @@ const (
 
 // HANA is an implementation of Database interface
 type HANA struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -31,6 +31,14 @@ var _ dbplugin.Database = &HANA{}
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
+	db := new()
+	// Wrap the plugin with middleware to sanitize errors
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+
+	return dbType, nil
+}
+
+func new() *HANA {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = hanaTypeName
 
@@ -41,15 +49,10 @@ func New() (interface{}, error) {
 		Separator:      "_",
 	}
 
-	db := &HANA{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+	return &HANA{
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
-
-	// Wrap the plugin with middleware to sanitize errors
-	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
-
-	return dbType, nil
 }
 
 // Run instantiates a HANA object, and runs the RPC server for the plugin
@@ -241,12 +244,7 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 		}
 	}
 
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {

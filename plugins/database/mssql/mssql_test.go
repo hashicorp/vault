@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 )
 
 var (
@@ -28,16 +27,13 @@ func TestMSSQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*MSSQL)
-
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initalized")
 	}
 
@@ -68,8 +64,7 @@ func TestMSSQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*MSSQL)
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -110,8 +105,7 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*MSSQL)
+	db := new()
 	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
