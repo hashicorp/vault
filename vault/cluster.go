@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -87,11 +86,9 @@ func (c *Core) Cluster(ctx context.Context) (*Cluster, error) {
 func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) (retErr error) {
 	defer func() {
 		if retErr != nil {
-			c.clusterParamsLock.Lock()
-			c.localClusterCert = nil
-			c.localClusterPrivateKey = nil
-			c.localClusterParsedCert = nil
-			c.clusterParamsLock.Unlock()
+			c.localClusterCert.Store(([]byte)(nil))
+			c.localClusterParsedCert.Store((*x509.Certificate)(nil))
+			c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
 
 			c.requestForwardingConnectionLock.Lock()
 			c.clearForwardingClients()
@@ -122,28 +119,26 @@ func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) (retErr error) {
 
 	}
 
-	// Prevent data races with the TLS parameters
-	c.clusterParamsLock.Lock()
-	defer c.clusterParamsLock.Unlock()
-
-	c.localClusterPrivateKey = &ecdsa.PrivateKey{
+	c.localClusterPrivateKey.Store(&ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
 			Curve: elliptic.P521(),
 			X:     adv.ClusterKeyParams.X,
 			Y:     adv.ClusterKeyParams.Y,
 		},
 		D: adv.ClusterKeyParams.D,
-	}
+	})
 
-	c.localClusterCert = adv.ClusterCert
+	locCert := make([]byte, len(adv.ClusterCert))
+	copy(locCert, adv.ClusterCert)
+	c.localClusterCert.Store(locCert)
 
-	cert, err := x509.ParseCertificate(c.localClusterCert)
+	cert, err := x509.ParseCertificate(adv.ClusterCert)
 	if err != nil {
 		c.logger.Error("core: failed parsing local cluster certificate", "error", err)
 		return fmt.Errorf("error parsing local cluster certificate: %v", err)
 	}
 
-	c.localClusterParsedCert = cert
+	c.localClusterParsedCert.Store(cert)
 
 	return nil
 }
@@ -206,7 +201,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 	// If we're using HA, generate server-to-server parameters
 	if c.ha != nil {
 		// Create a private key
-		if c.localClusterPrivateKey == nil {
+		if c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey) == nil {
 			c.logger.Trace("core: generating cluster private key")
 			key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 			if err != nil {
@@ -214,11 +209,11 @@ func (c *Core) setupCluster(ctx context.Context) error {
 				return err
 			}
 
-			c.localClusterPrivateKey = key
+			c.localClusterPrivateKey.Store(key)
 		}
 
 		// Create a certificate
-		if c.localClusterCert == nil {
+		if c.localClusterCert.Load().([]byte) == nil {
 			c.logger.Trace("core: generating local cluster certificate")
 
 			host, err := uuid.GenerateUUID()
@@ -244,7 +239,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 				IsCA: true,
 			}
 
-			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Public(), c.localClusterPrivateKey)
+			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey).Public(), c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey))
 			if err != nil {
 				c.logger.Error("core: error generating self-signed cert", "error", err)
 				return errwrap.Wrapf("unable to generate local cluster certificate: {{err}}", err)
@@ -256,8 +251,8 @@ func (c *Core) setupCluster(ctx context.Context) error {
 				return errwrap.Wrapf("error parsing generated certificate: {{err}}", err)
 			}
 
-			c.localClusterCert = certBytes
-			c.localClusterParsedCert = parsedCert
+			c.localClusterCert.Store(certBytes)
+			c.localClusterParsedCert.Store(parsedCert)
 		}
 	}
 
@@ -345,24 +340,20 @@ func (c *Core) ClusterTLSConfig(ctx context.Context) (*tls.Config, error) {
 	serverLookup := func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 		switch {
 		default:
-			var localCert bytes.Buffer
-
-			c.clusterParamsLock.RLock()
-			localCert.Write(c.localClusterCert)
-			localSigner := c.localClusterPrivateKey
-			parsedCert := c.localClusterParsedCert
-			c.clusterParamsLock.RUnlock()
-
-			if localCert.Len() == 0 {
+			currCert := c.localClusterCert.Load().([]byte)
+			if len(currCert) == 0 {
 				return nil, fmt.Errorf("got forwarding connection but no local cert")
 			}
+
+			localCert := make([]byte, len(currCert))
+			copy(localCert, currCert)
 
 			//c.logger.Trace("core: performing cert name lookup", "hello_server_name", clientHello.ServerName, "local_cluster_cert_name", parsedCert.Subject.CommonName)
 
 			return &tls.Certificate{
-				Certificate: [][]byte{localCert.Bytes()},
-				PrivateKey:  localSigner,
-				Leaf:        parsedCert,
+				Certificate: [][]byte{localCert},
+				PrivateKey:  c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey),
+				Leaf:        c.localClusterParsedCert.Load().(*x509.Certificate),
 			}, nil
 		}
 	}
@@ -373,22 +364,19 @@ func (c *Core) ClusterTLSConfig(ctx context.Context) (*tls.Config, error) {
 		if len(requestInfo.AcceptableCAs) != 1 {
 			return nil, fmt.Errorf("expected only a single acceptable CA")
 		}
-		var localCert bytes.Buffer
 
-		c.clusterParamsLock.RLock()
-		localCert.Write(c.localClusterCert)
-		localSigner := c.localClusterPrivateKey
-		parsedCert := c.localClusterParsedCert
-		c.clusterParamsLock.RUnlock()
-
-		if localCert.Len() == 0 {
+		currCert := c.localClusterCert.Load().([]byte)
+		if len(currCert) == 0 {
 			return nil, fmt.Errorf("forwarding connection client but no local cert")
 		}
 
+		localCert := make([]byte, len(currCert))
+		copy(localCert, currCert)
+
 		return &tls.Certificate{
-			Certificate: [][]byte{localCert.Bytes()},
-			PrivateKey:  localSigner,
-			Leaf:        parsedCert,
+			Certificate: [][]byte{localCert},
+			PrivateKey:  c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey),
+			Leaf:        c.localClusterParsedCert.Load().(*x509.Certificate),
 		}, nil
 	}
 
@@ -417,9 +405,7 @@ func (c *Core) ClusterTLSConfig(ctx context.Context) (*tls.Config, error) {
 
 		switch {
 		default:
-			c.clusterParamsLock.RLock()
-			parsedCert := c.localClusterParsedCert
-			c.clusterParamsLock.RUnlock()
+			parsedCert := c.localClusterParsedCert.Load().(*x509.Certificate)
 
 			if parsedCert == nil {
 				return nil, fmt.Errorf("forwarding connection client but no local cert")
@@ -440,11 +426,10 @@ func (c *Core) ClusterTLSConfig(ctx context.Context) (*tls.Config, error) {
 		CipherSuites:         c.clusterCipherSuites,
 	}
 
-	var localCert bytes.Buffer
-	c.clusterParamsLock.RLock()
-	localCert.Write(c.localClusterCert)
-	parsedCert := c.localClusterParsedCert
-	c.clusterParamsLock.RUnlock()
+	parsedCert := c.localClusterParsedCert.Load().(*x509.Certificate)
+	currCert := c.localClusterCert.Load().([]byte)
+	localCert := make([]byte, len(currCert))
+	copy(localCert, currCert)
 
 	if parsedCert != nil {
 		tlsConfig.ServerName = parsedCert.Subject.CommonName
