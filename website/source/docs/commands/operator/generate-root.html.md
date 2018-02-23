@@ -26,7 +26,7 @@ An unseal key may be provided directly on the command line as an argument to the
 command. If key is specified as "-", the command will read from stdin. If a TTY
 is available, the command will prompt for text.
 
-Please see the [generate root guide](/guides/configuration/generate-root.html) for
+Please see the [generate root guide](/guides/operations/generate-root.html) for
 step-by-step instructions.
 
 ## Examples

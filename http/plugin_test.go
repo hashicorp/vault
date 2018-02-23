@@ -1,8 +1,10 @@
 package http
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -96,7 +98,7 @@ func TestPlugin_MockList(t *testing.T) {
 	defer cluster.Cleanup()
 
 	_, err := core.Client.Logical().Write("mock/kv/foo", map[string]interface{}{
-		"bar": "baz",
+		"value": "baz",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -111,7 +113,7 @@ func TestPlugin_MockList(t *testing.T) {
 	}
 
 	_, err = core.Client.Logical().Write("mock/kv/zoo", map[string]interface{}{
-		"bar": "baz",
+		"value": "baz",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -150,4 +152,41 @@ func TestPlugin_MockRawResponse(t *testing.T) {
 		t.Fatal("bad status")
 	}
 
+}
+
+func TestPlugin_GetParams(t *testing.T) {
+	logger := logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+		Mutex: &sync.Mutex{},
+	}))
+	cluster, core := getPluginClusterAndCore(t, logger)
+	defer cluster.Cleanup()
+
+	_, err := core.Client.Logical().Write("mock/kv/foo", map[string]interface{}{
+		"value": "baz",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := core.Client.NewRequest("GET", "/v1/mock/kv/foo")
+	r.Params.Add("version", "12")
+	resp, err := core.Client.RawRequest(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	secret, err := api.ParseSecret(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := map[string]interface{}{
+		"value":   "baz",
+		"version": json.Number("12"),
+	}
+
+	if !reflect.DeepEqual(secret.Data, expected) {
+		t.Fatal(secret.Data)
+	}
 }

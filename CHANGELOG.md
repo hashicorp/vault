@@ -1,3 +1,25 @@
+## 0.9.5 (Soon)
+
+IMPROVEMENTS:
+
+ * auth: Allow sending default_lease_ttl and max_lease_ttl values when enabling
+   auth methods. [GH-4019]
+ * secret/database: Add list functionality to `database/config` endpoint
+   [GH-4026]
+ * physical/consul: Allow setting a specific service address [GH-3971]
+
+BUG FIXES:
+
+ * auth/aws: Update libraries to fix regression verifying PKCS#7 identity
+   documents [GH-4014]
+ * listener: Revert to Go 1.9 for now to allow certificates with non-DNS names
+   in their DNS SANs to be used for Vault's TLS connections [GH-4028]
+ * replication: Fix issue with a performance secondary/DR primary node losing
+   its DR primary status when performing an update-primary operation
+ * replication: Fix issue where performance secondaries could be unable to
+   automatically connect to a performance primary after that performance
+   primary has been promoted to a DR primary from a DR secondary
+ 
 ## 0.9.4 (February 20th, 2018)
 
 SECURITY:
@@ -63,6 +85,10 @@ BUG FIXES:
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens. [GH-3880]
+ * command: Fix interpreted formatting directives when printing raw fields
+   [GH-4005]
+ * command: Correctly format output when using -field and -format flags at the
+   same time [GH-3987]
  * command/rekey: Re-add lost `stored-shares` parameter [GH-3974]
  * command/ssh: Create and reuse the api client [GH-3909]
  * command/status: Fix panic when status returns 500 from leadership lookup
