@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/policyutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -187,10 +188,11 @@ func Test_enableIamIDResolution(t *testing.T) {
 
 	b.resolveArnToUniqueIDFunc = resolveArnToFakeUniqueId
 
+	boundIamRoleARNs := []string{"arn:aws:iam::123456789012:role/MyRole", "arn:aws:iam::123456789012:role/path/*"}
 	data := map[string]interface{}{
 		"auth_type":               iamAuthType,
 		"policies":                "p,q",
-		"bound_iam_principal_arn": "arn:aws:iam::123456789012:role/MyRole",
+		"bound_iam_principal_arn": boundIamRoleARNs,
 		"resolve_aws_unique_ids":  false,
 	}
 
@@ -240,9 +242,13 @@ func Test_enableIamIDResolution(t *testing.T) {
 	if resp == nil || resp.IsError() {
 		t.Fatalf("failed to read role: resp:%#v,\nerr:%#v", resp, err)
 	}
-	principal_ids := resp.Data["bound_iam_principal_id"].([]string)
-	if len(principal_ids) != 1 || principal_ids[0] != "FakeUniqueId1" {
+	principalIDs := resp.Data["bound_iam_principal_id"].([]string)
+	if len(principalIDs) != 1 || principalIDs[0] != "FakeUniqueId1" {
 		t.Fatalf("bad: expected upgrade of role resolve principal ID to %q, but got %q instead", "FakeUniqueId1", resp.Data["bound_iam_principal_id"])
+	}
+	returnedARNs := resp.Data["bound_iam_principal_arn"].([]string)
+	if !strutil.EquivalentSlices(returnedARNs, boundIamRoleARNs) {
+		t.Fatalf("bad: expected to return bound_iam_principal_arn of %q, but got %q instead", boundIamRoleARNs, returnedARNs)
 	}
 }
 
@@ -467,7 +473,8 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 
 	data["auth_type"] = iamAuthType
 	delete(data, "bound_ami_id")
-	data["bound_iam_principal_arn"] = "arn:aws:iam::123456789012:role/MyRole"
+	boundIamPrincipalARNs := []string{"arn:aws:iam::123456789012:role/MyRole", "arn:aws:iam::123456789012:role/path/*"}
+	data["bound_iam_principal_arn"] = boundIamPrincipalARNs
 	resp, err = submitRequest("ec2_to_iam", logical.UpdateOperation)
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("changed auth type on the role")
@@ -500,9 +507,13 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	principal_ids := resp.Data["bound_iam_principal_id"].([]string)
-	if len(principal_ids) != 1 || principal_ids[0] != "FakeUniqueId1" {
+	principalIDs := resp.Data["bound_iam_principal_id"].([]string)
+	if len(principalIDs) != 1 || principalIDs[0] != "FakeUniqueId1" {
 		t.Fatalf("expected fake unique ID of FakeUniqueId1, got %q", resp.Data["bound_iam_principal_id"])
+	}
+	returnedARNs := resp.Data["bound_iam_principal_arn"].([]string)
+	if !strutil.EquivalentSlices(returnedARNs, boundIamPrincipalARNs) {
+		t.Fatalf("bad: expected to return bound_iam_principal_arn of %q, but got %q instead", boundIamPrincipalARNs, returnedARNs)
 	}
 	data["resolve_aws_unique_ids"] = false
 	resp, err = submitRequest("withInternalIdResolution", logical.UpdateOperation)
