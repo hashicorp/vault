@@ -1162,7 +1162,7 @@ verbatim.
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
   certificate will be expired). This cannot be larger than the engine's max (or,
-  if not set, the system max). However, this can be after the expiration of the
+  if not set, the system max) and cannot be after the expiration of the
   signing CA.
 
 - `format` `(string: "pem")` – Specifies the format for returned data. Can be
