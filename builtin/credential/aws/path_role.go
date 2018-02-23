@@ -101,7 +101,7 @@ inferred_entity_type is set, the region to assume the inferred entity exists in.
 			"bound_vpc_id": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `
-If set, defines a constraint on the EC2 instance to be associated with the VPC
+If set, defines a constraint on the EC2 instance to be associated with a VPC
 ID that matches one of the value specified by this parameter. This is only
 applicable when auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
