@@ -43,10 +43,13 @@ func New() (interface{}, error) {
 		Separator:      "-",
 	}
 
-	dbType := &PostgreSQL{
+	db := &PostgreSQL{
 		SQLConnectionProducer: connProducer,
 		CredentialsProducer:   credsProducer,
 	}
+
+	// Wrap the plugin with middleware to sanitize errors
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
 	return dbType, nil
 }
@@ -58,7 +61,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*PostgreSQL), apiTLSConfig)
+	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
 
 	return nil
 }
@@ -202,11 +205,7 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
@@ -256,11 +255,7 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revo
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) error {

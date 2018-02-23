@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -205,59 +206,73 @@ func (mw *databaseMetricsMiddleware) Close() (err error) {
 
 // ---- Error Sanitizer Middleware Domain ----
 
-// databaseErrorSanitizerMiddleware wraps an implementation of Databases and
+// DatabaseErrorSanitizerMiddleware wraps an implementation of Databases and
 // sanitizes returned error messages
-type databaseErrorSanitizerMiddleware struct {
-	next Database
+type DatabaseErrorSanitizerMiddleware struct {
+	l         sync.RWMutex
+	next      Database
+	secretsFn func() []string
 }
 
-func (mw *databaseErrorSanitizerMiddleware) Type() (string, error) {
+func NewDatabaseErrorSanitizerMiddleware(next Database, secretsFn func() []string) *DatabaseErrorSanitizerMiddleware {
+	return &DatabaseErrorSanitizerMiddleware{
+		next:      next,
+		secretsFn: secretsFn,
+	}
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) Type() (string, error) {
 	dbType, err := mw.next.Type()
 	return dbType, mw.sanitize(err)
 }
 
-func (mw *databaseErrorSanitizerMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (mw *DatabaseErrorSanitizerMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	username, password, err = mw.next.CreateUser(ctx, statements, usernameConfig, expiration)
 	return username, password, mw.sanitize(err)
 }
 
-func (mw *databaseErrorSanitizerMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
+func (mw *DatabaseErrorSanitizerMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
 	return mw.sanitize(mw.next.RenewUser(ctx, statements, username, expiration))
 }
 
-func (mw *databaseErrorSanitizerMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
+func (mw *DatabaseErrorSanitizerMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
 	return mw.sanitize(mw.next.RevokeUser(ctx, statements, username))
 }
 
-func (mw *databaseErrorSanitizerMiddleware) RotateRootCredentials(ctx context.Context, statements []string) (conf map[string]interface{}, err error) {
+func (mw *DatabaseErrorSanitizerMiddleware) RotateRootCredentials(ctx context.Context, statements []string) (conf map[string]interface{}, err error) {
 	conf, err = mw.next.RotateRootCredentials(ctx, statements)
 	return conf, mw.sanitize(err)
 }
 
-func (mw *databaseErrorSanitizerMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+func (mw *DatabaseErrorSanitizerMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	_, err := mw.Init(ctx, conf, verifyConnection)
 	return err
 }
 
-func (mw *databaseErrorSanitizerMiddleware) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
+func (mw *DatabaseErrorSanitizerMiddleware) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
 	saveConf, err = mw.next.Init(ctx, conf, verifyConnection)
 	return saveConf, mw.sanitize(err)
 }
 
-func (mw *databaseErrorSanitizerMiddleware) Close() (err error) {
+func (mw *DatabaseErrorSanitizerMiddleware) Close() (err error) {
 	return mw.sanitize(mw.next.Close())
 }
 
 // sanitize
-func (mw *databaseErrorSanitizerMiddleware) sanitize(err error) error {
+func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 	if err == nil {
 		return nil
 	}
-	errStr := err.Error()
-	if errwrap.ContainsType(err, new(url.Error)) ||
-		strings.Contains(errStr, "//") ||
-		strings.Contains(errStr, "@") {
+	if errwrap.ContainsType(err, new(url.Error)) {
 		return errors.New("unable to parse connection url")
+	}
+	if mw.secretsFn != nil {
+		for _, secret := range mw.secretsFn() {
+			if secret == "" {
+				continue
+			}
+			err = errors.New(strings.Replace(err.Error(), secret, "*****", -1))
+		}
 	}
 	return err
 }

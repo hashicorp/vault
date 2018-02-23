@@ -242,3 +242,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 
 	return session, nil
 }
+
+func (c *cassandraConnectionProducer) secretValues() []string {
+	return []string{c.Password, c.PemBundle, c.PemJSON}
+}

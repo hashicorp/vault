@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"gopkg.in/mgo.v2"
@@ -24,7 +23,7 @@ const mongoDBTypeName = "mongodb"
 
 // MongoDB is an implementation of Database interface
 type MongoDB struct {
-	connutil.ConnectionProducer
+	*mongoDBConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -42,10 +41,12 @@ func New() (interface{}, error) {
 		Separator:      "-",
 	}
 
-	dbType := &MongoDB{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+	db := &MongoDB{
+		mongoDBConnectionProducer: connProducer,
+		CredentialsProducer:       credsProducer,
 	}
+
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 	return dbType, nil
 }
 
@@ -191,7 +192,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	switch {
 	case err == nil, err == mgo.ErrNotFound:
 	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		if err := m.ConnectionProducer.Close(); err != nil {
+		if err := m.Close(); err != nil {
 			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
 		session, err := m.getConnection(ctx)

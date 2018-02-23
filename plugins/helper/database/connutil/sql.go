@@ -142,6 +142,10 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	return c.db, nil
 }
 
+func (c *SQLConnectionProducer) SecretValues() []string {
+	return []string{c.Password}
+}
+
 // Close attempts to close the connection
 func (c *SQLConnectionProducer) Close() error {
 	// Grab the write lock

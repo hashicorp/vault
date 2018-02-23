@@ -40,10 +40,13 @@ func New() (interface{}, error) {
 		Separator:      "-",
 	}
 
-	dbType := &MSSQL{
+	db := &MSSQL{
 		SQLConnectionProducer: connProducer,
 		CredentialsProducer:   credsProducer,
 	}
+
+	// Wrap the plugin with middleware to sanitize errors
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
 	return dbType, nil
 }
@@ -55,7 +58,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*MSSQL), apiTLSConfig)
+	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
 
 	return nil
 }

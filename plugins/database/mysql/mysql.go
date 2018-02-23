@@ -57,10 +57,13 @@ func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, erro
 			Separator:      "-",
 		}
 
-		dbType := &MySQL{
+		db := &MySQL{
 			SQLConnectionProducer: connProducer,
 			CredentialsProducer:   credsProducer,
 		}
+
+		// Wrap the plugin with middleware to sanitize errors
+		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
 		return dbType, nil
 	}
@@ -88,7 +91,7 @@ func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*MySQL), apiTLSConfig)
+	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
 
 	return nil
 }

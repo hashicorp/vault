@@ -16,6 +16,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
 
 	"gopkg.in/mgo.v2"
@@ -26,8 +27,11 @@ import (
 type mongoDBConnectionProducer struct {
 	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
 	WriteConcern  string `json:"write_concern" structs:"write_concern" mapstructure:"write_concern"`
+	Username      string `json:"username" structs:"username" mapstructure:"username"`
+	Password      string `json:"password" structs:"password" mapstructure:"password"`
 
 	Initialized bool
+	RawConfig   map[string]interface{}
 	Type        string
 	session     *mgo.Session
 	safe        *mgo.Safe
@@ -44,6 +48,8 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 	c.Lock()
 	defer c.Unlock()
 
+	c.RawConfig = conf
+
 	err := mapstructure.WeakDecode(conf, c)
 	if err != nil {
 		return nil, err
@@ -52,6 +58,11 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 	if len(c.ConnectionURL) == 0 {
 		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
+
+	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
+		"username": c.Username,
+		"password": c.Password,
+	})
 
 	if c.WriteConcern != "" {
 		input := c.WriteConcern
@@ -208,4 +219,8 @@ func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {
 	}
 
 	return &info, nil
+}
+
+func (c *mongoDBConnectionProducer) secretValues() []string {
+	return []string{c.Password}
 }

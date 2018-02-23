@@ -43,10 +43,12 @@ func New() (interface{}, error) {
 		Separator:      "_",
 	}
 
-	dbType := &Cassandra{
+	db := &Cassandra{
 		ConnectionProducer:  connProducer,
 		CredentialsProducer: credsProducer,
 	}
+
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, connProducer.secretValues)
 
 	return dbType, nil
 }

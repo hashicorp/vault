@@ -119,7 +119,7 @@ type DatabasePlugin struct {
 }
 
 func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	impl := &databaseErrorSanitizerMiddleware{
+	impl := &DatabaseErrorSanitizerMiddleware{
 		next: d.impl,
 	}
 
@@ -131,7 +131,7 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 }
 
 func (d DatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
-	impl := &databaseErrorSanitizerMiddleware{
+	impl := &DatabaseErrorSanitizerMiddleware{
 		next: d.impl,
 	}
 
