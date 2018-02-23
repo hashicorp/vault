@@ -347,6 +347,9 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 			entry.Accessor = accessor
 			needPersist = true
 		}
+
+		// Sync values to the cache
+		entry.SyncCache()
 	}
 
 	if !needPersist {

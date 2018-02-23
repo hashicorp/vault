@@ -55,7 +55,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 	// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
 	// This is called here so that the request object in the response audit entry
-	// can also honors this.
+	// can also honor this.
 	if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		req.NonHMACKeys = rawVals.([]string)
 		defer func() {
