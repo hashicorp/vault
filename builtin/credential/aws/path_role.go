@@ -826,7 +826,7 @@ type awsRoleEntry struct {
 }
 
 func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
-	return map[string]interface{}{
+	responseData := map[string]interface{}{
 		"auth_type":                      r.AuthType,
 		"bound_ami_id":                   r.BoundAmiIDs,
 		"bound_account_id":               r.BoundAccountIDs,
@@ -848,6 +848,24 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"disallow_reauthentication": r.DisallowReauthentication,
 		"period":                    r.Period / time.Second,
 	}
+
+	convertNilToEmptySlice := func(data map[string]interface{}, field string) {
+		if data[field] == nil || len(data[field].([]string)) == 0 {
+			data[field] = []string{}
+		}
+	}
+	convertNilToEmptySlice(responseData, "bound_ami_id")
+	convertNilToEmptySlice(responseData, "bound_account_id")
+	convertNilToEmptySlice(responseData, "bound_iam_principal_arn")
+	convertNilToEmptySlice(responseData, "bound_iam_principal_id")
+	convertNilToEmptySlice(responseData, "bound_iam_role_arn")
+	convertNilToEmptySlice(responseData, "bound_iam_instance_profile_arn")
+	convertNilToEmptySlice(responseData, "bound_region")
+	convertNilToEmptySlice(responseData, "bound_subnet_id")
+	convertNilToEmptySlice(responseData, "bound_vpc_id")
+
+	return responseData
+
 }
 
 const pathRoleSyn = `
