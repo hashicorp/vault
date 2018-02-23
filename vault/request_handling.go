@@ -114,26 +114,23 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	}
 
 	entry := c.router.MatchingMountEntry(req.Path)
-	if entry == nil {
-		c.logger.Error("core: unable to retrieve mount entry from router")
-		return nil, ErrInternalError
-	}
-
-	// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
-	if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-		req.NonHMACKeys = rawVals.([]string)
-		defer func() {
-			req.NonHMACKeys = []string{}
-		}()
-	}
-
-	// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
-	if auditResp != nil {
-		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
-			auditResp.NonHMACKeys = rawVals.([]string)
+	if entry != nil {
+		// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
+		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			req.NonHMACKeys = rawVals.([]string)
 			defer func() {
-				auditResp.NonHMACKeys = []string{}
+				req.NonHMACKeys = []string{}
 			}()
+		}
+
+		// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
+		if auditResp != nil {
+			if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+				auditResp.NonHMACKeys = rawVals.([]string)
+				defer func() {
+					auditResp.NonHMACKeys = []string{}
+				}()
+			}
 		}
 	}
 
@@ -150,17 +147,14 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	entry := c.router.MatchingMountEntry(req.Path)
-	if entry == nil {
-		c.logger.Error("core: unable to retrieve mount entry from router")
-		return nil, nil, ErrInternalError
-	}
-
-	// Get and set ignored HMAC'd value.
-	if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-		req.NonHMACKeys = rawVals.([]string)
-		defer func() {
-			req.NonHMACKeys = []string{}
-		}()
+	if entry != nil {
+		// Get and set ignored HMAC'd value.
+		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			req.NonHMACKeys = rawVals.([]string)
+			defer func() {
+				req.NonHMACKeys = []string{}
+			}()
+		}
 	}
 
 	// Validate the token
