@@ -7,6 +7,10 @@ const (
 	OldReplicationPrimary
 	OldReplicationSecondary
 	OldReplicationBootstrapping
+	// Don't add anything here. This was meant to be in two separate const
+	// blocks, to reset iota, but it didn't happen that way, so iota carries
+	// over. Adding anything to this Old block would cause the rest of the
+	// values to change below.
 
 	ReplicationUnknown            ReplicationState = 0
 	ReplicationPerformancePrimary ReplicationState = 1 << iota
