@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/subtle"
 	"crypto/x509"
@@ -307,11 +306,11 @@ type Core struct {
 	clusterParamsLock sync.RWMutex
 	// The private key stored in the barrier used for establishing
 	// mutually-authenticated connections between Vault cluster members
-	localClusterPrivateKey crypto.Signer
+	localClusterPrivateKey *atomic.Value
 	// The local cluster cert
-	localClusterCert []byte
+	localClusterCert *atomic.Value
 	// The parsed form of the local cluster cert
-	localClusterParsedCert *x509.Certificate
+	localClusterParsedCert *atomic.Value
 	// The TCP addresses we should use for clustering
 	clusterListenerAddrs []*net.TCPAddr
 	// The handler to use for request forwarding
@@ -497,10 +496,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		rpcServerActive:                  new(uint32),
 		atomicPrimaryClusterAddrs:        new(atomic.Value),
 		atomicPrimaryFailoverAddrs:       new(atomic.Value),
+		localClusterPrivateKey:           new(atomic.Value),
+		localClusterCert:                 new(atomic.Value),
+		localClusterParsedCert:           new(atomic.Value),
 		activeNodeReplicationState:       new(uint32),
 	}
 
 	atomic.StoreUint32(c.replicationState, uint32(consts.ReplicationDRDisabled|consts.ReplicationPerformanceDisabled))
+	c.localClusterCert.Store(([]byte)(nil))
+	c.localClusterParsedCert.Store((*x509.Certificate)(nil))
+	c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
 
 	if conf.ClusterCipherSuites != "" {
 		suites, err := tlsutil.ParseCiphers(conf.ClusterCipherSuites)
@@ -1816,11 +1821,9 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 
 		// Clear previous local cluster cert info so we generate new. Since the
 		// UUID will have changed, standbys will know to look for new info
-		c.clusterParamsLock.Lock()
-		c.localClusterCert = nil
-		c.localClusterParsedCert = nil
-		c.localClusterPrivateKey = nil
-		c.clusterParamsLock.Unlock()
+		c.localClusterParsedCert.Store((*x509.Certificate)(nil))
+		c.localClusterCert.Store(([]byte)(nil))
+		c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
 
 		if err := c.setupCluster(ctx); err != nil {
 			c.stateLock.Unlock()
@@ -2049,12 +2052,12 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	go c.cleanLeaderPrefix(ctx, uuid, leaderLostCh)
 
 	var key *ecdsa.PrivateKey
-	switch c.localClusterPrivateKey.(type) {
+	switch c.localClusterPrivateKey.Load().(type) {
 	case *ecdsa.PrivateKey:
-		key = c.localClusterPrivateKey.(*ecdsa.PrivateKey)
+		key = c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey)
 	default:
-		c.logger.Error("core: unknown cluster private key type", "key_type", fmt.Sprintf("%T", c.localClusterPrivateKey))
-		return fmt.Errorf("unknown cluster private key type %T", c.localClusterPrivateKey)
+		c.logger.Error("core: unknown cluster private key type", "key_type", fmt.Sprintf("%T", c.localClusterPrivateKey.Load()))
+		return fmt.Errorf("unknown cluster private key type %T", c.localClusterPrivateKey.Load())
 	}
 
 	keyParams := &clusterKeyParams{
@@ -2064,10 +2067,13 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 		D:    key.D,
 	}
 
+	locCert := c.localClusterCert.Load().([]byte)
+	localCert := make([]byte, len(locCert))
+	copy(localCert, locCert)
 	adv := &activeAdvertisement{
 		RedirectAddr:     c.redirectAddr,
 		ClusterAddr:      c.clusterAddr,
-		ClusterCert:      c.localClusterCert,
+		ClusterCert:      localCert,
 		ClusterKeyParams: keyParams,
 	}
 	val, err := jsonutil.EncodeJSON(adv)
