@@ -123,7 +123,7 @@ path "secret/mysql/*" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/operations/policies.html) guide.
+[policies](/guides/identity/policies.html) guide.
 
 
 ## Steps
