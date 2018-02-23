@@ -47,22 +47,6 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
-	entry := c.router.MatchingMountEntry(req.Path)
-	if entry == nil {
-		c.logger.Error("core: unable to retrieve mount entry from router")
-		return nil, ErrInternalError
-	}
-
-	// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
-	// This is called here so that the request object in the response audit entry
-	// can also honor this.
-	if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-		req.NonHMACKeys = rawVals.([]string)
-		defer func() {
-			req.NonHMACKeys = []string{}
-		}()
-	}
-
 	var auth *logical.Auth
 	if c.router.LoginPath(req.Path) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
@@ -129,6 +113,20 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
 	}
 
+	entry := c.router.MatchingMountEntry(req.Path)
+	if entry == nil {
+		c.logger.Error("core: unable to retrieve mount entry from router")
+		return nil, ErrInternalError
+	}
+
+	// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
+	if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+		req.NonHMACKeys = rawVals.([]string)
+		defer func() {
+			req.NonHMACKeys = []string{}
+		}()
+	}
+
 	// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
 	if auditResp != nil {
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
@@ -150,6 +148,20 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
+
+	entry := c.router.MatchingMountEntry(req.Path)
+	if entry == nil {
+		c.logger.Error("core: unable to retrieve mount entry from router")
+		return nil, nil, ErrInternalError
+	}
+
+	// Get and set ignored HMAC'd value.
+	if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+		req.NonHMACKeys = rawVals.([]string)
+		defer func() {
+			req.NonHMACKeys = []string{}
+		}()
+	}
 
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
@@ -220,6 +232,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		retErr = multierror.Append(retErr, ErrInternalError)
 		return nil, auth, retErr
 	}
+
+	// Explicitly unset non-HMAC'd keys before the request is routed further
+	req.NonHMACKeys = []string{}
 
 	// Route the request
 	resp, routeErr := c.router.Route(ctx, req)
