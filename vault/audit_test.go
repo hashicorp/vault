@@ -23,18 +23,21 @@ import (
 )
 
 type NoopAudit struct {
-	Config     *audit.BackendConfig
-	ReqErr     error
-	ReqAuth    []*logical.Auth
-	Req        []*logical.Request
-	ReqHeaders []map[string][]string
-	ReqErrs    []error
+	Config         *audit.BackendConfig
+	ReqErr         error
+	ReqAuth        []*logical.Auth
+	Req            []*logical.Request
+	ReqHeaders     []map[string][]string
+	ReqNonHMACKeys []string
+	ReqErrs        []error
 
-	RespErr  error
-	RespAuth []*logical.Auth
-	RespReq  []*logical.Request
-	Resp     []*logical.Response
-	RespErrs []error
+	RespErr            error
+	RespAuth           []*logical.Auth
+	RespReq            []*logical.Request
+	Resp               []*logical.Response
+	RespNonHMACKeys    []string
+	RespReqNonHMACKeys []string
+	RespErrs           []error
 
 	salt      *salt.Salt
 	saltMutex sync.RWMutex
@@ -44,6 +47,7 @@ func (n *NoopAudit) LogRequest(ctx context.Context, a *logical.Auth, r *logical.
 	n.ReqAuth = append(n.ReqAuth, a)
 	n.Req = append(n.Req, r)
 	n.ReqHeaders = append(n.ReqHeaders, r.Headers)
+	n.ReqNonHMACKeys = r.NonHMACKeys
 	n.ReqErrs = append(n.ReqErrs, err)
 	return n.ReqErr
 }
@@ -53,6 +57,12 @@ func (n *NoopAudit) LogResponse(ctx context.Context, a *logical.Auth, r *logical
 	n.RespReq = append(n.RespReq, r)
 	n.Resp = append(n.Resp, re)
 	n.RespErrs = append(n.RespErrs, err)
+
+	if re != nil {
+		n.RespNonHMACKeys = re.NonHMACKeys
+		n.RespReqNonHMACKeys = r.NonHMACKeys
+	}
+
 	return n.RespErr
 }
 
@@ -442,7 +452,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Path:      "sys/mounts",
 	}
 
-	// Copy so we can verify nothing canged
+	// Copy so we can verify nothing changed
 	authCopyRaw, err := copystructure.Copy(auth)
 	if err != nil {
 		t.Fatal(err)
