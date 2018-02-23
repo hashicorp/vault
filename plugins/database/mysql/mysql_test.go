@@ -251,6 +251,47 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 	}
 }
 
+func TestMySQL_RotateRootCredentials(t *testing.T) {
+	cleanup, connURL := prepareMySQLTestContainer(t)
+	defer cleanup()
+
+	connURL = strings.Replace(connURL, "root:secret", `{{username}}:{{password}}`, -1)
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+		"username":       "root",
+		"password":       "secret",
+	}
+
+	f := New(MetadataLen, MetadataLen, UsernameLen)
+	dbRaw, _ := f()
+	db := dbRaw.(*MySQL)
+
+	connProducer := db.SQLConnectionProducer
+
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !connProducer.Initialized {
+		t.Fatal("Database should be initalized")
+	}
+
+	newConf, err := db.RotateRootCredentials(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if newConf["password"] == "secret" {
+		t.Fatal("password was not updated")
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
 func TestMySQL_RevokeUser(t *testing.T) {
 	cleanup, connURL := prepareMySQLTestContainer(t)
 	defer cleanup()

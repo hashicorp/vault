@@ -3,6 +3,7 @@ package mssql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -24,7 +25,7 @@ var _ dbplugin.Database = &MSSQL{}
 
 // MSSQL is an implementation of Database interface
 type MSSQL struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -40,8 +41,8 @@ func New() (interface{}, error) {
 	}
 
 	dbType := &MSSQL{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
 
 	return dbType, nil
@@ -307,10 +308,68 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	return nil
 }
 
-// RotateRootCredentials is not supported on MSSQL, so this is a no-op.
 func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	// NOOP
-	return nil, nil
+	m.Lock()
+	defer m.Unlock()
+
+	if len(m.Username) == 0 || len(m.Password) == 0 {
+		return nil, errors.New("username and password are required to rotate")
+	}
+
+	rotateStatents := statements
+	if len(rotateStatents) == 0 {
+		rotateStatents = []string{defaultMSSQLRotateRootCredentialsSQL}
+	}
+
+	db, err := m.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		tx.Rollback()
+	}()
+
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, stmt := range rotateStatents {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"username": m.Username,
+				"password": password,
+			}))
+			if err != nil {
+				return nil, err
+			}
+
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	if err := db.Close(); err != nil {
+		return nil, err
+	}
+
+	m.RawConfig["password"] = password
+	return m.RawConfig, nil
 }
 
 const dropUserSQL = `
@@ -332,4 +391,8 @@ IF EXISTS
 BEGIN
   DROP LOGIN [%s]
 END
+`
+
+const rotateRootCredentialsSQL = `
+ALTER LOGIN [%s] WITH PASSWORD = '%s' 
 `
