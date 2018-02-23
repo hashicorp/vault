@@ -1,11 +1,14 @@
 ## 0.9.5 (Unreleased)
 
+IMPROVEMENTS:
+
+ * auth: Allow sending default_lease_ttl and max_lease_ttl values when enabling
+   auth methods. [GH-4019]
+
 BUG FIXES:
 
  * auth/aws: Switch libraries to fix regression verifying PKCS#7 identity
    documents [GH-4014]
- * auth: The default_lease_ttl and max_lease_ttl values were not being honored
-   when enabling auth methods. [GH-4019]
 
 ## 0.9.4 (February 20th, 2018)
 
