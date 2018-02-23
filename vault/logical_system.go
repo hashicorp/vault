@@ -245,6 +245,14 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
+					"audit_non_hmac_request_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
+					},
+					"audit_non_hmac_response_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
