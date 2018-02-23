@@ -6,6 +6,7 @@ IMPROVEMENTS:
    auth methods. [GH-4019]
  * secret/database: Add list functionality to `database/config` endpoint
    [GH-4026]
+ * physical/consul: Allow setting a specific service address [GH-3971]
 
 BUG FIXES:
 
