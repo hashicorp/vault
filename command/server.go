@@ -412,7 +412,7 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = c.flagLogLevel
 	infoKeys = append(infoKeys, "log level")
 
-	var seal vault.Seal = &vault.DefaultSeal{}
+	var seal vault.Seal = vault.NewDefaultSeal()
 
 	// Ensure that the seal finalizer is called, even if using verify-only
 	defer func() {
