@@ -73,7 +73,7 @@ IMPROVEMENTS:
  * ui (Enterprise): Support for ChaCha20-Poly1305 keys in the transit engine.
 
 BUG FIXES:
-
+ * auth/okta:  Get all okta groups for a user vs. default 200 limit.  [GH-4034]
  * api/renewer: Honor increment value in renew auth calls [GH-3904]
  * auth/approle: Fix inability to use limited-use-count secret IDs on
    replication performance secondaries
