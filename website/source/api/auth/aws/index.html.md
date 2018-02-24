@@ -549,32 +549,32 @@ list in order to satisfy that constraint.
   "iam" (except for legacy `aws-ec2` auth types, for which it will default to
   "ec2"). Only those bindings applicable to the auth type chosen will be allowed
   to be configured on the role.
-- `bound_ami_id` `(string: "")` - If set, defines a constraint on the EC2
+- `bound_ami_id` `(list: [])` - If set, defines a constraint on the EC2
   instances that they should be using one of the AMI ID specified by this parameter.
   This constraint is checked during ec2 auth as well as the iam auth method only
   when inferring an EC2 instance. This is a comma-separated string or JSON
   array.
-- `bound_account_id` `(string: "")` - If set, defines a constraint on the EC2
+- `bound_account_id` `(list: [])` - If set, defines a constraint on the EC2
   instances that the account ID in its identity document to match one of the ones
   specified by this parameter. This constraint is checked during ec2 auth as
   well as the iam auth method only when inferring an EC2 instance. This is a
   comma-separated string or JSON array.
-- `bound_region` `(string: "")` - If set, defines a constraint on the EC2
+- `bound_region` `(list: [])` - If set, defines a constraint on the EC2
   instances that the region in its identity document must match one of the
   regions specified by this parameter. This constraint is only checked by the ec2 auth
   method as well as the iam auth method only when inferring an ec2 instance.
   This is a comma-separated string or JSON array.
-- `bound_vpc_id` `(string: "")` - If set, defines a constraint on the EC2
+- `bound_vpc_id` `(list: [])` - If set, defines a constraint on the EC2
   instance to be associated with a VPC ID that matches one of the values specified by
   this parameter. This constraint is only checked by the ec2 auth method as well
   as the iam auth method only when inferring an ec2 instance. This is a
   comma-separated string or JSON array.
-- `bound_subnet_id` `(string: "")` - If set, defines a constraint on the EC2
+- `bound_subnet_id` `(list: [])` - If set, defines a constraint on the EC2
   instance to be associated with a subnet ID that matches one of the values specified
   by this parameter. This constraint is only checked by the ec2 auth method as
   well as the iam auth method only when inferring an ec2 instance. This is a
   comma-separated string or a JSON array.
-- `bound_iam_role_arn` `(string: "")` - If set, defines a constraint on the
+- `bound_iam_role_arn` `(list: [])` - If set, defines a constraint on the
   authenticating EC2 instance that it must match one of the IAM role ARNs specified by
   this parameter.  The value is refix-matched (as though it were a glob ending
   in `*`).  The configured IAM user or EC2 instance role must be allowed to
@@ -582,7 +582,7 @@ list in order to satisfy that constraint.
   constraint is checked by the ec2 auth method as well as the iam auth method
   only when inferring an EC2 instance. This is a comma-separated string or a
   JSON array.
-- `bound_iam_instance_profile_arn` `(string: "")` - If set, defines a constraint
+- `bound_iam_instance_profile_arn` `(list: [])` - If set, defines a constraint
   on the EC2 instances to be associated with an IAM instance profile ARN which
   has a prefix that matches one of the values specified by this parameter. The value is
   prefix-matched (as though it were a glob ending in `*`). This constraint is
@@ -594,7 +594,7 @@ list in order to satisfy that constraint.
   Defaults to an empty string, meaning that role tags are disabled. This
   constraint is valid only with the ec2 auth method and is not allowed when
   `auth_type` is iam.
-- `bound_iam_principal_arn` `(string: "")` - Defines the list of IAM principals
+- `bound_iam_principal_arn` `(list: [])` - Defines the list of IAM principals
   that are permitted to login to the role using the iam auth method. Individual
   values should look like "arn:aws:iam::123456789012:user/MyUserName" or
   "arn:aws:iam::123456789012:role/MyRoleName". Wildcards are supported at the
