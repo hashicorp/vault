@@ -39,6 +39,12 @@ pkcs8 instead. Defaults to "der".`,
 comma-delimited list`,
 	}
 
+	fields["other_sans"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Requested other SANs, in an array with the format
+<oid>;UTF8:<utf8 string value> for each entry.`,
+	}
+
 	return fields
 }
 
@@ -112,6 +118,48 @@ be larger than the mount max TTL. Note:
 this only has an effect when generating
 a CA cert or signing a CA cert, not when
 generating a CSR for an intermediate CA.`,
+	}
+
+	fields["ou"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, OU (OrganizationalUnit) will be set to
+this value.`,
+	}
+
+	fields["organization"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, O (Organization) will be set to
+this value.`,
+	}
+
+	fields["country"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Country will be set to
+this value.`,
+	}
+
+	fields["locality"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Locality will be set to
+this value.`,
+	}
+
+	fields["province"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Province will be set to
+this value.`,
+	}
+
+	fields["street_address"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Street Address will be set to
+this value.`,
+	}
+
+	fields["postal_code"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `If set, Postal Code will be set to
+this value.`,
 	}
 
 	return fields

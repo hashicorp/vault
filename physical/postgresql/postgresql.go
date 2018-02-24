@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strconv"
@@ -14,6 +15,9 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/lib/pq"
 )
+
+// Verify PostgreSQLBackend satisfies the correct interfaces
+var _ physical.Backend = (*PostgreSQLBackend)(nil)
 
 // PostgreSQL Backend is a physical backend that stores data
 // within a PostgreSQL database.
@@ -67,7 +71,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 
 	// Determine if we should use an upsert function (versions < 9.5)
 	var upsert_required bool
-	upsert_required_query := "SELECT string_to_array(setting, '.')::int[] < '{9,5}' FROM pg_settings WHERE name = 'server_version'"
+	upsert_required_query := "SELECT current_setting('server_version_num')::int < 90500"
 	if err := db.QueryRow(upsert_required_query).Scan(&upsert_required); err != nil {
 		return nil, fmt.Errorf("failed to check for native upsert: %v", err)
 	}
@@ -125,7 +129,7 @@ func (m *PostgreSQLBackend) splitKey(fullPath string) (string, string, string) {
 }
 
 // Put is used to insert or update an entry.
-func (m *PostgreSQLBackend) Put(entry *physical.Entry) error {
+func (m *PostgreSQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"postgres", "put"}, time.Now())
 
 	m.permitPool.Acquire()
@@ -141,7 +145,7 @@ func (m *PostgreSQLBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch and entry.
-func (m *PostgreSQLBackend) Get(fullPath string) (*physical.Entry, error) {
+func (m *PostgreSQLBackend) Get(ctx context.Context, fullPath string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"postgres", "get"}, time.Now())
 
 	m.permitPool.Acquire()
@@ -166,7 +170,7 @@ func (m *PostgreSQLBackend) Get(fullPath string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (m *PostgreSQLBackend) Delete(fullPath string) error {
+func (m *PostgreSQLBackend) Delete(ctx context.Context, fullPath string) error {
 	defer metrics.MeasureSince([]string{"postgres", "delete"}, time.Now())
 
 	m.permitPool.Acquire()
@@ -183,7 +187,7 @@ func (m *PostgreSQLBackend) Delete(fullPath string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (m *PostgreSQLBackend) List(prefix string) ([]string, error) {
+func (m *PostgreSQLBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"postgres", "list"}, time.Now())
 
 	m.permitPool.Acquire()

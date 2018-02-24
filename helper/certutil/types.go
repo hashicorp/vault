@@ -147,7 +147,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 	if len(c.PrivateKey) > 0 {
 		pemBlock, _ = pem.Decode([]byte(c.PrivateKey))
 		if pemBlock == nil {
-			return nil, errutil.UserError{"Error decoding private key from cert bundle"}
+			return nil, errutil.UserError{Err: "Error decoding private key from cert bundle"}
 		}
 
 		result.PrivateKeyBytes = pemBlock.Bytes
@@ -161,7 +161,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 		case PKCS8Block:
 			t, err := getPKCS8Type(pemBlock.Bytes)
 			if err != nil {
-				return nil, errutil.UserError{fmt.Sprintf("Error getting key type from pkcs#8: %v", err)}
+				return nil, errutil.UserError{Err: fmt.Sprintf("Error getting key type from pkcs#8: %v", err)}
 			}
 			result.PrivateKeyType = t
 			switch t {
@@ -171,24 +171,24 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 				c.PrivateKeyType = RSAPrivateKey
 			}
 		default:
-			return nil, errutil.UserError{fmt.Sprintf("Unsupported key block type: %s", pemBlock.Type)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unsupported key block type: %s", pemBlock.Type)}
 		}
 
 		result.PrivateKey, err = result.getSigner()
 		if err != nil {
-			return nil, errutil.UserError{fmt.Sprintf("Error getting signer: %s", err)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error getting signer: %s", err)}
 		}
 	}
 
 	if len(c.Certificate) > 0 {
 		pemBlock, _ = pem.Decode([]byte(c.Certificate))
 		if pemBlock == nil {
-			return nil, errutil.UserError{"Error decoding certificate from cert bundle"}
+			return nil, errutil.UserError{Err: "Error decoding certificate from cert bundle"}
 		}
 		result.CertificateBytes = pemBlock.Bytes
 		result.Certificate, err = x509.ParseCertificate(result.CertificateBytes)
 		if err != nil {
-			return nil, errutil.UserError{"Error encountered parsing certificate bytes from raw bundle"}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle: %v", err)}
 		}
 	}
 	switch {
@@ -196,12 +196,12 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 		for _, cert := range c.CAChain {
 			pemBlock, _ := pem.Decode([]byte(cert))
 			if pemBlock == nil {
-				return nil, errutil.UserError{"Error decoding certificate from cert bundle"}
+				return nil, errutil.UserError{Err: "Error decoding certificate from cert bundle"}
 			}
 
 			parsedCert, err := x509.ParseCertificate(pemBlock.Bytes)
 			if err != nil {
-				return nil, errutil.UserError{"Error encountered parsing certificate bytes from raw bundle"}
+				return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via CA chain: %v", err)}
 			}
 
 			certBlock := &CertBlock{
@@ -215,12 +215,12 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 	case len(c.IssuingCA) > 0:
 		pemBlock, _ = pem.Decode([]byte(c.IssuingCA))
 		if pemBlock == nil {
-			return nil, errutil.UserError{"Error decoding ca certificate from cert bundle"}
+			return nil, errutil.UserError{Err: "Error decoding ca certificate from cert bundle"}
 		}
 
 		parsedCert, err := x509.ParseCertificate(pemBlock.Bytes)
 		if err != nil {
-			return nil, errutil.UserError{"Error encountered parsing certificate bytes from raw bundle3"}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via issuing CA: %v", err)}
 		}
 
 		result.SerialNumber = result.Certificate.SerialNumber
@@ -254,12 +254,12 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 
 	if p.CertificateBytes != nil && len(p.CertificateBytes) > 0 {
 		block.Bytes = p.CertificateBytes
-		result.Certificate = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.Certificate = string(pem.EncodeToMemory(&block))
 	}
 
 	for _, caCert := range p.CAChain {
 		block.Bytes = caCert.Bytes
-		certificate := strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		certificate := string(pem.EncodeToMemory(&block))
 
 		result.CAChain = append(result.CAChain, certificate)
 	}
@@ -279,7 +279,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 			}
 		}
 
-		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.PrivateKey = string(pem.EncodeToMemory(&block))
 	}
 
 	return result, nil
@@ -343,20 +343,20 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 	var err error
 
 	if p.PrivateKeyBytes == nil || len(p.PrivateKeyBytes) == 0 {
-		return nil, errutil.UserError{"Given parsed cert bundle does not have private key information"}
+		return nil, errutil.UserError{Err: "Given parsed cert bundle does not have private key information"}
 	}
 
 	switch p.PrivateKeyFormat {
 	case ECBlock:
 		signer, err = x509.ParseECPrivateKey(p.PrivateKeyBytes)
 		if err != nil {
-			return nil, errutil.UserError{fmt.Sprintf("Unable to parse CA's private EC key: %s", err)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private EC key: %s", err)}
 		}
 
 	case PKCS1Block:
 		signer, err = x509.ParsePKCS1PrivateKey(p.PrivateKeyBytes)
 		if err != nil {
-			return nil, errutil.UserError{fmt.Sprintf("Unable to parse CA's private RSA key: %s", err)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private RSA key: %s", err)}
 		}
 
 	case PKCS8Block:
@@ -365,12 +365,12 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 			case *rsa.PrivateKey, *ecdsa.PrivateKey:
 				return k.(crypto.Signer), nil
 			default:
-				return nil, errutil.UserError{"Found unknown private key type in pkcs#8 wrapping"}
+				return nil, errutil.UserError{Err: "Found unknown private key type in pkcs#8 wrapping"}
 			}
 		}
-		return nil, errutil.UserError{fmt.Sprintf("Failed to parse pkcs#8 key: %v", err)}
+		return nil, errutil.UserError{Err: fmt.Sprintf("Failed to parse pkcs#8 key: %v", err)}
 	default:
-		return nil, errutil.UserError{"Unable to determine type of private key; only RSA and EC are supported"}
+		return nil, errutil.UserError{Err: "Unable to determine type of private key; only RSA and EC are supported"}
 	}
 	return signer, nil
 }
@@ -385,7 +385,7 @@ func (p *ParsedCertBundle) SetParsedPrivateKey(privateKey crypto.Signer, private
 func getPKCS8Type(bs []byte) (PrivateKeyType, error) {
 	k, err := x509.ParsePKCS8PrivateKey(bs)
 	if err != nil {
-		return UnknownPrivateKey, errutil.UserError{fmt.Sprintf("Failed to parse pkcs#8 key: %v", err)}
+		return UnknownPrivateKey, errutil.UserError{Err: fmt.Sprintf("Failed to parse pkcs#8 key: %v", err)}
 	}
 
 	switch k.(type) {
@@ -394,7 +394,7 @@ func getPKCS8Type(bs []byte) (PrivateKeyType, error) {
 	case *rsa.PrivateKey:
 		return RSAPrivateKey, nil
 	default:
-		return UnknownPrivateKey, errutil.UserError{"Found unknown private key type in pkcs#8 wrapping"}
+		return UnknownPrivateKey, errutil.UserError{Err: "Found unknown private key type in pkcs#8 wrapping"}
 	}
 }
 
@@ -408,7 +408,7 @@ func (c *CSRBundle) ToParsedCSRBundle() (*ParsedCSRBundle, error) {
 	if len(c.PrivateKey) > 0 {
 		pemBlock, _ = pem.Decode([]byte(c.PrivateKey))
 		if pemBlock == nil {
-			return nil, errutil.UserError{"Error decoding private key from cert bundle"}
+			return nil, errutil.UserError{Err: "Error decoding private key from cert bundle"}
 		}
 		result.PrivateKeyBytes = pemBlock.Bytes
 
@@ -426,25 +426,25 @@ func (c *CSRBundle) ToParsedCSRBundle() (*ParsedCSRBundle, error) {
 				result.PrivateKeyType = RSAPrivateKey
 				c.PrivateKeyType = "rsa"
 			} else {
-				return nil, errutil.UserError{fmt.Sprintf("Unknown private key type in bundle: %s", c.PrivateKeyType)}
+				return nil, errutil.UserError{Err: fmt.Sprintf("Unknown private key type in bundle: %s", c.PrivateKeyType)}
 			}
 		}
 
 		result.PrivateKey, err = result.getSigner()
 		if err != nil {
-			return nil, errutil.UserError{fmt.Sprintf("Error getting signer: %s", err)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error getting signer: %s", err)}
 		}
 	}
 
 	if len(c.CSR) > 0 {
 		pemBlock, _ = pem.Decode([]byte(c.CSR))
 		if pemBlock == nil {
-			return nil, errutil.UserError{"Error decoding certificate from cert bundle"}
+			return nil, errutil.UserError{Err: "Error decoding certificate from cert bundle"}
 		}
 		result.CSRBytes = pemBlock.Bytes
 		result.CSR, err = x509.ParseCertificateRequest(result.CSRBytes)
 		if err != nil {
-			return nil, errutil.UserError{fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle: %v", err)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle via CSR: %v", err)}
 		}
 	}
 
@@ -461,7 +461,7 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 
 	if p.CSRBytes != nil && len(p.CSRBytes) > 0 {
 		block.Bytes = p.CSRBytes
-		result.CSR = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.CSR = string(pem.EncodeToMemory(&block))
 	}
 
 	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
@@ -474,9 +474,9 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 			result.PrivateKeyType = "ec"
 			block.Type = "EC PRIVATE KEY"
 		default:
-			return nil, errutil.InternalError{"Could not determine private key type when creating block"}
+			return nil, errutil.InternalError{Err: "Could not determine private key type when creating block"}
 		}
-		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.PrivateKey = string(pem.EncodeToMemory(&block))
 	}
 
 	return result, nil
@@ -491,24 +491,24 @@ func (p *ParsedCSRBundle) getSigner() (crypto.Signer, error) {
 	var err error
 
 	if p.PrivateKeyBytes == nil || len(p.PrivateKeyBytes) == 0 {
-		return nil, errutil.UserError{"Given parsed cert bundle does not have private key information"}
+		return nil, errutil.UserError{Err: "Given parsed cert bundle does not have private key information"}
 	}
 
 	switch p.PrivateKeyType {
 	case ECPrivateKey:
 		signer, err = x509.ParseECPrivateKey(p.PrivateKeyBytes)
 		if err != nil {
-			return nil, errutil.UserError{fmt.Sprintf("Unable to parse CA's private EC key: %s", err)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private EC key: %s", err)}
 		}
 
 	case RSAPrivateKey:
 		signer, err = x509.ParsePKCS1PrivateKey(p.PrivateKeyBytes)
 		if err != nil {
-			return nil, errutil.UserError{fmt.Sprintf("Unable to parse CA's private RSA key: %s", err)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private RSA key: %s", err)}
 		}
 
 	default:
-		return nil, errutil.UserError{"Unable to determine type of private key; only RSA and EC are supported"}
+		return nil, errutil.UserError{Err: "Unable to determine type of private key; only RSA and EC are supported"}
 	}
 	return signer, nil
 }

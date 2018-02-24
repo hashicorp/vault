@@ -1,287 +1,261 @@
 package physical
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"testing"
 	"time"
 )
 
-func ExerciseBackend(t *testing.T, b Backend) {
+func ExerciseBackend(t testing.TB, b Backend) {
 	t.Helper()
+
 	// Should be empty
-	keys, err := b.List("")
+	keys, err := b.List(context.Background(), "")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("initial list failed: %v", err)
 	}
 	if len(keys) != 0 {
-		t.Fatalf("bad: %v", keys)
+		t.Errorf("initial not empty: %v", keys)
 	}
 
 	// Delete should work if it does not exist
-	err = b.Delete("foo")
+	err = b.Delete(context.Background(), "foo")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("idempotent delete: %v", err)
 	}
 
-	// Get should fail
-	out, err := b.Get("foo")
+	// Get should not fail, but be nil
+	out, err := b.Get(context.Background(), "foo")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("initial get failed: %v", err)
 	}
 	if out != nil {
-		t.Fatalf("bad: %v", out)
+		t.Errorf("initial get was not nil: %v", out)
 	}
 
 	// Make an entry
 	e := &Entry{Key: "foo", Value: []byte("test")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("put failed: %v", err)
 	}
 
 	// Get should work
-	out, err = b.Get("foo")
+	out, err = b.Get(context.Background(), "foo")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("get failed: %v", err)
 	}
 	if !reflect.DeepEqual(out, e) {
-		t.Fatalf("bad: %v expected: %v", out, e)
+		t.Errorf("bad: %v expected: %v", out, e)
 	}
 
 	// List should not be empty
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("list failed: %v", err)
 	}
-	if len(keys) != 1 {
-		t.Fatalf("bad: %v", keys)
-	}
-	if keys[0] != "foo" {
-		t.Fatalf("bad: %v", keys)
+	if len(keys) != 1 || keys[0] != "foo" {
+		t.Errorf("keys[0] did not equal foo: %v", keys)
 	}
 
 	// Delete should work
-	err = b.Delete("foo")
+	err = b.Delete(context.Background(), "foo")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("delete: %v", err)
 	}
 
 	// Should be empty
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("list after delete: %v", err)
 	}
 	if len(keys) != 0 {
-		t.Fatalf("bad: %v", keys)
+		t.Errorf("list after delete not empty: %v", keys)
 	}
 
 	// Get should fail
-	out, err = b.Get("foo")
+	out, err = b.Get(context.Background(), "foo")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("get after delete: %v", err)
 	}
 	if out != nil {
-		t.Fatalf("bad: %v", out)
+		t.Errorf("get after delete not nil: %v", out)
 	}
 
 	// Multiple Puts should work; GH-189
 	e = &Entry{Key: "foo", Value: []byte("test")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("multi put 1 failed: %v", err)
 	}
 	e = &Entry{Key: "foo", Value: []byte("test")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("multi put 2 failed: %v", err)
 	}
 
 	// Make a nested entry
 	e = &Entry{Key: "foo/bar", Value: []byte("baz")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("nested put failed: %v", err)
 	}
 
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if len(keys) != 2 {
-		t.Fatalf("bad: %v", keys)
+		t.Fatalf("list multi failed: %v", err)
 	}
 	sort.Strings(keys)
-	if keys[0] != "foo" || keys[1] != "foo/" {
-		t.Fatalf("bad: %v", keys)
+	if len(keys) != 2 || keys[0] != "foo" || keys[1] != "foo/" {
+		t.Errorf("expected 2 keys [foo, foo/]: %v", keys)
 	}
 
 	// Delete with children should work
-	err = b.Delete("foo")
+	err = b.Delete(context.Background(), "foo")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("delete after multi: %v", err)
 	}
 
 	// Get should return the child
-	out, err = b.Get("foo/bar")
+	out, err = b.Get(context.Background(), "foo/bar")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("get after multi delete: %v", err)
 	}
 	if out == nil {
-		t.Fatalf("missing child")
+		t.Errorf("get after multi delete not nil: %v", out)
 	}
 
 	// Removal of nested secret should not leave artifacts
 	e = &Entry{Key: "foo/nested1/nested2/nested3", Value: []byte("baz")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
+	if err != nil {
+		t.Fatalf("deep nest: %v", err)
+	}
+
+	err = b.Delete(context.Background(), "foo/nested1/nested2/nested3")
+	if err != nil {
+		t.Fatalf("failed to remove deep nest: %v", err)
+	}
+
+	keys, err = b.List(context.Background(), "foo/")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-
-	err = b.Delete("foo/nested1/nested2/nested3")
-	if err != nil {
-		t.Fatalf("failed to remove nested secret: %v", err)
-	}
-
-	keys, err = b.List("foo/")
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if len(keys) != 1 {
-		t.Fatalf("there should be only one key left after deleting nested "+
-			"secret: %v", keys)
-	}
-
-	if keys[0] != "bar" {
-		t.Fatalf("bad keys after deleting nested: %v", keys)
+	if len(keys) != 1 || keys[0] != "bar" {
+		t.Errorf("should be exactly 1 key == bar: %v", keys)
 	}
 
 	// Make a second nested entry to test prefix removal
 	e = &Entry{Key: "foo/zip", Value: []byte("zap")}
-	err = b.Put(e)
+	err = b.Put(context.Background(), e)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("failed to create second nested: %v", err)
 	}
 
 	// Delete should not remove the prefix
-	err = b.Delete("foo/bar")
+	err = b.Delete(context.Background(), "foo/bar")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("failed to delete nested prefix: %v", err)
 	}
 
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("list nested prefix: %v", err)
 	}
-	if len(keys) != 1 {
-		t.Fatalf("bad: %v", keys)
-	}
-	if keys[0] != "foo/" {
-		t.Fatalf("bad: %v", keys)
+	if len(keys) != 1 || keys[0] != "foo/" {
+		t.Errorf("should be exactly 1 key == foo/: %v", keys)
 	}
 
 	// Delete should remove the prefix
-	err = b.Delete("foo/zip")
+	err = b.Delete(context.Background(), "foo/zip")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("failed to delete second prefix: %v", err)
 	}
 
-	keys, err = b.List("")
+	keys, err = b.List(context.Background(), "")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("listing after second delete failed: %v", err)
 	}
 	if len(keys) != 0 {
-		t.Fatalf("bad: %v", keys)
+		t.Errorf("should be empty at end: %v", keys)
 	}
 }
 
-func ExerciseBackend_ListPrefix(t *testing.T, b Backend) {
+func ExerciseBackend_ListPrefix(t testing.TB, b Backend) {
 	t.Helper()
+
 	e1 := &Entry{Key: "foo", Value: []byte("test")}
 	e2 := &Entry{Key: "foo/bar", Value: []byte("test")}
 	e3 := &Entry{Key: "foo/bar/baz", Value: []byte("test")}
 
 	defer func() {
-		b.Delete("foo")
-		b.Delete("foo/bar")
-		b.Delete("foo/bar/baz")
+		b.Delete(context.Background(), "foo")
+		b.Delete(context.Background(), "foo/bar")
+		b.Delete(context.Background(), "foo/bar/baz")
 	}()
 
-	err := b.Put(e1)
+	err := b.Put(context.Background(), e1)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("failed to put entry 1: %v", err)
 	}
-	err = b.Put(e2)
+	err = b.Put(context.Background(), e2)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("failed to put entry 2: %v", err)
 	}
-	err = b.Put(e3)
+	err = b.Put(context.Background(), e3)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("failed to put entry 3: %v", err)
 	}
 
 	// Scan the root
-	keys, err := b.List("")
+	keys, err := b.List(context.Background(), "")
 	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if len(keys) != 2 {
-		t.Fatalf("bad: %v", keys)
+		t.Fatalf("list root: %v", err)
 	}
 	sort.Strings(keys)
-	if keys[0] != "foo" {
-		t.Fatalf("bad: %v", keys)
-	}
-	if keys[1] != "foo/" {
-		t.Fatalf("bad: %v", keys)
+	if len(keys) != 2 || keys[0] != "foo" || keys[1] != "foo/" {
+		t.Errorf("root expected [foo foo/]: %v", keys)
 	}
 
 	// Scan foo/
-	keys, err = b.List("foo/")
+	keys, err = b.List(context.Background(), "foo/")
 	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if len(keys) != 2 {
-		t.Fatalf("bad: %v", keys)
+		t.Fatalf("list level 1: %v", err)
 	}
 	sort.Strings(keys)
-	if keys[0] != "bar" {
-		t.Fatalf("bad: %v", keys)
-	}
-	if keys[1] != "bar/" {
-		t.Fatalf("bad: %v", keys)
+	if len(keys) != 2 || keys[0] != "bar" || keys[1] != "bar/" {
+		t.Errorf("level 1 expected [bar bar/]: %v", keys)
 	}
 
 	// Scan foo/bar/
-	keys, err = b.List("foo/bar/")
+	keys, err = b.List(context.Background(), "foo/bar/")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("list level 2: %v", err)
 	}
 	sort.Strings(keys)
-	if len(keys) != 1 {
-		t.Fatalf("bad: %v", keys)
-	}
-	if keys[0] != "baz" {
-		t.Fatalf("bad: %v", keys)
+	if len(keys) != 1 || keys[0] != "baz" {
+		t.Errorf("level 1 expected [baz]: %v", keys)
 	}
 }
 
-func ExerciseHABackend(t *testing.T, b HABackend, b2 HABackend) {
+func ExerciseHABackend(t testing.TB, b HABackend, b2 HABackend) {
 	t.Helper()
+
 	// Get the lock
 	lock, err := b.LockWith("foo", "bar")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("initial lock: %v", err)
 	}
 
 	// Attempt to lock
 	leaderCh, err := lock.Lock(nil)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("lock attempt 1: %v", err)
 	}
 	if leaderCh == nil {
-		t.Fatalf("failed to get leader ch")
+		t.Fatalf("missing leaderCh")
 	}
 
 	// Check the value
@@ -290,16 +264,16 @@ func ExerciseHABackend(t *testing.T, b HABackend, b2 HABackend) {
 		t.Fatalf("err: %v", err)
 	}
 	if !held {
-		t.Fatalf("should be held")
+		t.Errorf("should be held")
 	}
 	if val != "bar" {
-		t.Fatalf("bad value: %v", err)
+		t.Errorf("expected value bar: %v", err)
 	}
 
 	// Second acquisition should fail
 	lock2, err := b2.LockWith("foo", "baz")
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("lock 2: %v", err)
 	}
 
 	// Cancel attempt in 50 msec
@@ -311,10 +285,10 @@ func ExerciseHABackend(t *testing.T, b HABackend, b2 HABackend) {
 	// Attempt to lock
 	leaderCh2, err := lock2.Lock(stopCh)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("stop lock 2: %v", err)
 	}
 	if leaderCh2 != nil {
-		t.Fatalf("should not get leader ch")
+		t.Errorf("should not have gotten leaderCh: %v", leaderCh)
 	}
 
 	// Release the first lock
@@ -323,28 +297,29 @@ func ExerciseHABackend(t *testing.T, b HABackend, b2 HABackend) {
 	// Attempt to lock should work
 	leaderCh2, err = lock2.Lock(nil)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("lock 2 lock: %v", err)
 	}
 	if leaderCh2 == nil {
-		t.Fatalf("should get leader ch")
+		t.Errorf("should get leaderCh")
 	}
 
 	// Check the value
 	held, val, err = lock.Value()
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("value: %v", err)
 	}
 	if !held {
-		t.Fatalf("should be held")
+		t.Errorf("should still be held")
 	}
 	if val != "baz" {
-		t.Fatalf("bad value: %v", err)
+		t.Errorf("expected value baz: %v", err)
 	}
+
 	// Cleanup
 	lock2.Unlock()
 }
 
-func ExerciseTransactionalBackend(t *testing.T, b Backend) {
+func ExerciseTransactionalBackend(t testing.TB, b Backend) {
 	t.Helper()
 	tb, ok := b.(Transactional)
 	if !ok {
@@ -353,11 +328,11 @@ func ExerciseTransactionalBackend(t *testing.T, b Backend) {
 
 	txns := SetupTestingTransactions(t, b)
 
-	if err := tb.Transaction(txns); err != nil {
+	if err := tb.Transaction(context.Background(), txns); err != nil {
 		t.Fatal(err)
 	}
 
-	keys, err := b.List("")
+	keys, err := b.List(context.Background(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +345,7 @@ func ExerciseTransactionalBackend(t *testing.T, b Backend) {
 		t.Fatalf("mismatch: expected\n%#v\ngot\n%#v\n", expected, keys)
 	}
 
-	entry, err := b.Get("foo")
+	entry, err := b.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,7 +359,7 @@ func ExerciseTransactionalBackend(t *testing.T, b Backend) {
 		t.Fatal("updates did not apply correctly")
 	}
 
-	entry, err = b.Get("zip")
+	entry, err = b.Get(context.Background(), "zip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,27 +374,27 @@ func ExerciseTransactionalBackend(t *testing.T, b Backend) {
 	}
 }
 
-func SetupTestingTransactions(t *testing.T, b Backend) []*TxnEntry {
+func SetupTestingTransactions(t testing.TB, b Backend) []*TxnEntry {
 	t.Helper()
 	// Add a few keys so that we test rollback with deletion
-	if err := b.Put(&Entry{
+	if err := b.Put(context.Background(), &Entry{
 		Key:   "foo",
 		Value: []byte("bar"),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := b.Put(&Entry{
+	if err := b.Put(context.Background(), &Entry{
 		Key:   "zip",
 		Value: []byte("zap"),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := b.Put(&Entry{
+	if err := b.Put(context.Background(), &Entry{
 		Key: "deleteme",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := b.Put(&Entry{
+	if err := b.Put(context.Background(), &Entry{
 		Key: "deleteme2",
 	}); err != nil {
 		t.Fatal(err)

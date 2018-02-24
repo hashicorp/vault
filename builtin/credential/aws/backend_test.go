@@ -30,7 +30,8 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +56,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// read the created role entry
-	roleEntry, err := b.lockedAWSRole(storage, "abcd-123")
+	roleEntry, err := b.lockedAWSRole(context.Background(), storage, "abcd-123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +84,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// parse the created role tag
-	rTag2, err := b.parseAndVerifyRoleTagValue(storage, val)
+	rTag2, err := b.parseAndVerifyRoleTagValue(context.Background(), storage, val)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +123,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	}
 
 	// get the entry of the newly created role entry
-	roleEntry2, err := b.lockedAWSRole(storage, "ami-6789")
+	roleEntry2, err := b.lockedAWSRole(context.Background(), storage, "ami-6789")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +255,8 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +287,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 		t.Fatalf("failed to read config/tidy/identity-whitelist endpoint")
 	}
 	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
-		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%s disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
+		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%d disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
 	}
 
 	// test delete operation
@@ -308,7 +310,8 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +342,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 		t.Fatalf("failed to read config/tidy/roletag-blacklist endpoint")
 	}
 	if resp.Data["safety_buffer"].(int) != 60 || !resp.Data["disable_periodic_tidy"].(bool) {
-		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%s disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
+		t.Fatalf("bad: expected: safety_buffer:60 disable_periodic_tidy:true actual: safety_buffer:%d disable_periodic_tidy:%t\n", resp.Data["safety_buffer"].(int), resp.Data["disable_periodic_tidy"].(bool))
 	}
 
 	// test delete operation
@@ -362,7 +365,8 @@ func TestBackend_TidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -387,7 +391,8 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,7 +417,8 @@ func TestBackend_ConfigClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,7 +555,8 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -704,7 +711,8 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -763,7 +771,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	tagValue := resp.Data["tag_value"].(string)
 
 	// parse the value and check if the verifiable values match
-	rTag, err := b.parseAndVerifyRoleTagValue(storage, tagValue)
+	rTag, err := b.parseAndVerifyRoleTagValue(context.Background(), storage, tagValue)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -785,7 +793,8 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -850,7 +859,8 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -939,7 +949,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 
 	// try to read the deleted entry
-	tagEntry, err := b.lockedBlacklistRoleTagEntry(storage, tag)
+	tagEntry, err := b.lockedBlacklistRoleTagEntry(context.Background(), storage, tag)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -948,18 +958,30 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 }
 
-// This is an acceptance test.
-// Requires the following env vars:
-// TEST_AWS_EC2_PKCS7
-// TEST_AWS_EC2_AMI_ID
-// TEST_AWS_EC2_ACCOUNT_ID
-// TEST_AWS_EC2_IAM_ROLE_ARN
-//
-// If the test is not being run on an EC2 instance that has access to
-// credentials using EC2RoleProvider, on top of the above vars, following
-// needs to be set:
-// TEST_AWS_SECRET_KEY
-// TEST_AWS_ACCESS_KEY
+/* This is an acceptance test.
+   Requires the following env vars:
+   TEST_AWS_EC2_PKCS7
+   TEST_AWS_EC2_IDENTITY_DOCUMENT
+   TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG
+   TEST_AWS_EC2_AMI_ID
+   TEST_AWS_EC2_ACCOUNT_ID
+   TEST_AWS_EC2_IAM_ROLE_ARN
+
+   If this is being run on an EC2 instance, you can set the environment vars using this bash snippet:
+
+   export TEST_AWS_EC2_PKCS7=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7)
+   export TEST_AWS_EC2_IDENTITY_DOCUMENT=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | base64 -w 0)
+   export TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/signature | tr -d '\n')
+   export TEST_AWS_EC2_AMI_ID=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
+   export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
+   export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+   If the test is not being run on an EC2 instance that has access to
+   credentials using EC2RoleProvider, on top of the above vars, following
+   needs to be set:
+   TEST_AWS_SECRET_KEY
+   TEST_AWS_ACCESS_KEY
+*/
 func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.T) {
 	// This test case should be run only when certain env vars are set and
 	// executed as an acceptance test.
@@ -971,6 +993,16 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	pkcs7 := os.Getenv("TEST_AWS_EC2_PKCS7")
 	if pkcs7 == "" {
 		t.Fatalf("env var TEST_AWS_EC2_PKCS7 not set")
+	}
+
+	identityDoc := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT")
+	if identityDoc == "" {
+		t.Fatalf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT not set")
+	}
+
+	identityDocSig := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG")
+	if identityDocSig == "" {
+		t.Fatalf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG not set")
 	}
 
 	amiID := os.Getenv("TEST_AWS_EC2_AMI_ID")
@@ -998,7 +1030,8 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1037,7 +1070,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		"nonce": "vault-client-nonce",
 	}
 
-	identityDoc, err := b.parseIdentityDocument(storage, pkcs7)
+	parsedIdentityDoc, err := b.parseIdentityDocument(context.Background(), storage, pkcs7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1056,10 +1089,10 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		"auth_type":             "ec2",
 		"policies":              "root",
 		"max_ttl":               "120s",
-		"bound_ami_id":          "wrong_ami_id",
+		"bound_ami_id":          []string{"wrong_ami_id", "wrong_ami_id2"},
 		"bound_account_id":      accountID,
 		"bound_iam_role_arn":    iamARN,
-		"bound_ec2_instance_id": []string{identityDoc.InstanceID, "i-1234567"},
+		"bound_ec2_instance_id": []string{parsedIdentityDoc.InstanceID, "i-1234567"},
 	}
 
 	roleReq := &logical.Request{
@@ -1081,10 +1114,10 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Place the correct AMI ID, but make the AccountID wrong
+	// Place the correct AMI ID in one of the values, but make the AccountID wrong
 	roleReq.Operation = logical.UpdateOperation
-	data["bound_ami_id"] = amiID
-	data["bound_account_id"] = "wrong-account-id"
+	data["bound_ami_id"] = []string{"wrong_ami_id_1", amiID, "wrong_ami_id_2"}
+	data["bound_account_id"] = []string{"wrong-account-id", "wrong-account-id-2"}
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1096,9 +1129,9 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Place the correct AccountID, but make the wrong IAMRoleARN
-	data["bound_account_id"] = accountID
-	data["bound_iam_role_arn"] = "wrong_iam_role_arn"
+	// Place the correct AccountID in one of the values, but make the wrong IAMRoleARN
+	data["bound_account_id"] = []string{"wrong-account-id-1", accountID, "wrong-account-id-2"}
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", "wrong_iam_role_arn_2"}
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1110,8 +1143,8 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// place the correct IAM role ARN, but make the instance ID wrong
-	data["bound_iam_role_arn"] = iamARN
+	// place a correct IAM role ARN
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", iamARN, "wrong_iam_role_arn_2"}
 	data["bound_ec2_instance_id"] = "i-1234567"
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1123,8 +1156,8 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// place the correct EC2 Instance ID
-	data["bound_ec2_instance_id"] = []string{identityDoc.InstanceID, "i-1234567"}
+	// place a correct EC2 Instance ID
+	data["bound_ec2_instance_id"] = []string{parsedIdentityDoc.InstanceID, "i-1234567"}
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1139,13 +1172,25 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
 	}
 
+	// Attempt to re-login with the identity signture
+	delete(loginInput, "pkcs7")
+	loginInput["identity"] = identityDoc
+	loginInput["signature"] = identityDocSig
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
+	}
+
 	// verify the presence of instance_id in the response object.
 	instanceID := resp.Auth.Metadata["instance_id"]
 	if instanceID == "" {
 		t.Fatalf("instance ID not present in the response object")
 	}
-	if instanceID != identityDoc.InstanceID {
-		t.Fatalf("instance ID in response (%q) did not match instance ID from identity document (%q)", instanceID, identityDoc.InstanceID)
+	if instanceID != parsedIdentityDoc.InstanceID {
+		t.Fatalf("instance ID in response (%q) did not match instance ID from identity document (%q)", instanceID, parsedIdentityDoc.InstanceID)
 	}
 
 	_, ok := resp.Auth.Metadata["nonce"]
@@ -1212,7 +1257,8 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1360,7 +1406,8 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
+
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1431,7 +1478,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 
 	// configuring the valid role we'll be able to login to
 	roleData := map[string]interface{}{
-		"bound_iam_principal_arn": entity.canonicalArn(),
+		"bound_iam_principal_arn": []string{entity.canonicalArn(), "arn:aws:iam::123456789012:role/FakeRoleArn1*"}, // Fake ARN MUST be wildcard terminated because we're resolving unique IDs, and the wildcard termination prevents unique ID resolution
 		"policies":                "root",
 		"auth_type":               iamAuthType,
 	}
@@ -1464,16 +1511,19 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	fakeArn := "arn:aws:iam::123456789012:role/somePath/FakeRole"
-	fakeArnResolver := func(s logical.Storage, arn string) (string, error) {
-		if arn == fakeArn {
-			return fmt.Sprintf("FakeUniqueIdFor%s", fakeArn), nil
+	fakeArn2 := "arn:aws:iam::123456789012:role/somePath/FakeRole2"
+	fakeArnResolverCount := 0
+	fakeArnResolver := func(ctx context.Context, s logical.Storage, arn string) (string, error) {
+		if strings.HasPrefix(arn, fakeArn) {
+			fakeArnResolverCount++
+			return fmt.Sprintf("FakeUniqueIdFor%s%d", arn, fakeArnResolverCount), nil
 		}
-		return b.resolveArnToRealUniqueId(s, arn)
+		return b.resolveArnToRealUniqueId(context.Background(), s, arn)
 	}
 	b.resolveArnToUniqueIDFunc = fakeArnResolver
 
 	// now we're creating the invalid role we won't be able to login to
-	roleData["bound_iam_principal_arn"] = fakeArn
+	roleData["bound_iam_principal_arn"] = []string{fakeArn, fakeArn2}
 	roleRequest.Path = "role/" + testInvalidRoleName
 	resp, err = b.HandleRequest(context.Background(), roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1596,7 +1646,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// and ensure a renew no longer works
 	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
 	if err == nil || (resp != nil && !resp.IsError()) {
-		t.Errorf("bad: expected failed renew due to changed AWS role ID: resp: %#v", resp, err)
+		t.Errorf("bad: expected failed renew due to changed AWS role ID: resp: %#v", resp)
 	}
 	// Undo the fake resolver...
 	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
@@ -1605,11 +1655,11 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	wildcardRoleName := "valid_wildcard"
 	wildcardEntity := *entity
 	wildcardEntity.FriendlyName = "*"
-	roleData["bound_iam_principal_arn"] = wildcardEntity.canonicalArn()
+	roleData["bound_iam_principal_arn"] = []string{wildcardEntity.canonicalArn(), "arn:aws:iam::123456789012:role/DoesNotExist/Vault_Fake_Role*"}
 	roleRequest.Path = "role/" + wildcardRoleName
 	resp, err = b.HandleRequest(context.Background(), roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create wildcard role: resp:%#v\nerr:%v", resp, err)
+		t.Fatalf("bad: failed to create wildcard roles: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = wildcardRoleName

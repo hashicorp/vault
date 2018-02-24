@@ -159,7 +159,7 @@ func ProtoSecretToLogicalSecret(s *Secret) (*logical.Secret, error) {
 	}
 
 	data := map[string]interface{}{}
-	err := json.Unmarshal(s.InternalData, &data)
+	err := json.Unmarshal([]byte(s.InternalData), &data)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func LogicalSecretToProtoSecret(s *logical.Secret) (*Secret, error) {
 
 	return &Secret{
 		LeaseOptions: lease,
-		InternalData: buf,
+		InternalData: string(buf[:]),
 		LeaseID:      s.LeaseID,
 	}, err
 }
@@ -228,7 +228,7 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 		ReplicationCluster:       r.ReplicationCluster,
 		Operation:                string(r.Operation),
 		Path:                     r.Path,
-		Data:                     buf,
+		Data:                     string(buf[:]),
 		Secret:                   secret,
 		Auth:                     auth,
 		Headers:                  headers,
@@ -240,10 +240,10 @@ func LogicalRequestToProtoRequest(r *logical.Request) (*Request, error) {
 		MountAccessor:            r.MountAccessor,
 		WrapInfo:                 LogicalRequestWrapInfoToProtoRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int64(r.ClientTokenRemainingUses),
-		//MFACreds: MFACreds,
-		EntityID:        r.EntityID,
-		PolicyOverride:  r.PolicyOverride,
-		Unauthenticated: r.Unauthenticated,
+		Connection:               LogicalConnectionToProtoConnection(r.Connection),
+		EntityID:                 r.EntityID,
+		PolicyOverride:           r.PolicyOverride,
+		Unauthenticated:          r.Unauthenticated,
 	}, nil
 }
 
@@ -253,7 +253,7 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 	}
 
 	data := map[string]interface{}{}
-	err := json.Unmarshal(r.Data, &data)
+	err := json.Unmarshal([]byte(r.Data), &data)
 	if err != nil {
 		return nil, err
 	}
@@ -293,11 +293,31 @@ func ProtoRequestToLogicalRequest(r *Request) (*logical.Request, error) {
 		MountAccessor:            r.MountAccessor,
 		WrapInfo:                 ProtoRequestWrapInfoToLogicalRequestWrapInfo(r.WrapInfo),
 		ClientTokenRemainingUses: int(r.ClientTokenRemainingUses),
-		//MFACreds: MFACreds,
-		EntityID:        r.EntityID,
-		PolicyOverride:  r.PolicyOverride,
-		Unauthenticated: r.Unauthenticated,
+		Connection:               ProtoConnectionToLogicalConnection(r.Connection),
+		EntityID:                 r.EntityID,
+		PolicyOverride:           r.PolicyOverride,
+		Unauthenticated:          r.Unauthenticated,
 	}, nil
+}
+
+func LogicalConnectionToProtoConnection(c *logical.Connection) *Connection {
+	if c == nil {
+		return nil
+	}
+
+	return &Connection{
+		RemoteAddr: c.RemoteAddr,
+	}
+}
+
+func ProtoConnectionToLogicalConnection(c *Connection) *logical.Connection {
+	if c == nil {
+		return nil
+	}
+
+	return &logical.Connection{
+		RemoteAddr: c.RemoteAddr,
+	}
 }
 
 func LogicalRequestWrapInfoToProtoRequestWrapInfo(i *logical.RequestWrapInfo) *RequestWrapInfo {
@@ -340,7 +360,7 @@ func ProtoResponseToLogicalResponse(r *Response) (*logical.Response, error) {
 	}
 
 	data := map[string]interface{}{}
-	err = json.Unmarshal(r.Data, &data)
+	err = json.Unmarshal([]byte(r.Data), &data)
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +454,7 @@ func LogicalResponseToProtoResponse(r *logical.Response) (*Response, error) {
 	return &Response{
 		Secret:   secret,
 		Auth:     auth,
-		Data:     buf,
+		Data:     string(buf[:]),
 		Redirect: r.Redirect,
 		Warnings: r.Warnings,
 		WrapInfo: wrapInfo,
@@ -487,7 +507,7 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 
 	return &Auth{
 		LeaseOptions: lo,
-		InternalData: buf,
+		InternalData: string(buf[:]),
 		DisplayName:  a.DisplayName,
 		Policies:     a.Policies,
 		Metadata:     a.Metadata,
@@ -507,7 +527,7 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 	}
 
 	data := map[string]interface{}{}
-	err := json.Unmarshal(a.InternalData, &data)
+	err := json.Unmarshal([]byte(a.InternalData), &data)
 	if err != nil {
 		return nil, err
 	}

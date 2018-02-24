@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -24,6 +25,9 @@ type CassandraBackend struct {
 
 	logger log.Logger
 }
+
+// Verify CassandraBackend satisfies the correct interfaces
+var _ physical.Backend = (*CassandraBackend)(nil)
 
 // NewCassandraBackend constructs a Cassandra backend using a pre-existing
 // keyspace and table.
@@ -245,7 +249,7 @@ func (c *CassandraBackend) bucket(key string) string {
 }
 
 // Put is used to insert or update an entry
-func (c *CassandraBackend) Put(entry *physical.Entry) error {
+func (c *CassandraBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"cassandra", "put"}, time.Now())
 
 	// Execute inserts to each key prefix simultaneously
@@ -266,7 +270,7 @@ func (c *CassandraBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch an entry
-func (c *CassandraBackend) Get(key string) (*physical.Entry, error) {
+func (c *CassandraBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"cassandra", "get"}, time.Now())
 
 	v := []byte(nil)
@@ -286,7 +290,7 @@ func (c *CassandraBackend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (c *CassandraBackend) Delete(key string) error {
+func (c *CassandraBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"cassandra", "delete"}, time.Now())
 
 	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE bucket = ? AND key = ?`, c.table)
@@ -301,7 +305,7 @@ func (c *CassandraBackend) Delete(key string) error {
 
 // List is used ot list all the keys under a given
 // prefix, up to the next prefix.
-func (c *CassandraBackend) List(prefix string) ([]string, error) {
+func (c *CassandraBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"cassandra", "list"}, time.Now())
 
 	stmt := fmt.Sprintf(`SELECT key FROM "%s" WHERE bucket = ?`, c.table)

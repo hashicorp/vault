@@ -14,13 +14,13 @@ func TestBackend_basic(t *testing.T) {
 	var b *backend
 	var err error
 	var storage logical.Storage
-	factory := func(conf *logical.BackendConfig) (logical.Backend, error) {
+	factory := func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 		b, err = Backend(conf)
 		if err != nil {
 			t.Fatal(err)
 		}
 		storage = conf.StorageView
-		if err := b.Setup(conf); err != nil {
+		if err := b.Setup(ctx, conf); err != nil {
 			return nil, err
 		}
 		return b, nil

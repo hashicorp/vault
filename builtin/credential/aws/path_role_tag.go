@@ -77,7 +77,7 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 	}
 
 	// Fetch the role entry
-	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
+	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 
 // Parses the tag from string form into a struct form. This method
 // also verifies the correctness of the parsed role tag.
-func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*roleTag, error) {
+func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Storage, tag string) (*roleTag, error) {
 	tagItems := strings.Split(tag, ":")
 
 	// Tag must contain version, nonce, policies and HMAC
@@ -319,23 +319,23 @@ func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*ro
 	for _, tagItem := range tagItems {
 		var err error
 		switch {
-		case strings.Contains(tagItem, "i="):
+		case strings.HasPrefix(tagItem, "i="):
 			rTag.InstanceID = strings.TrimPrefix(tagItem, "i=")
-		case strings.Contains(tagItem, "r="):
+		case strings.HasPrefix(tagItem, "r="):
 			rTag.Role = strings.TrimPrefix(tagItem, "r=")
-		case strings.Contains(tagItem, "p="):
+		case strings.HasPrefix(tagItem, "p="):
 			rTag.Policies = strings.Split(strings.TrimPrefix(tagItem, "p="), ",")
-		case strings.Contains(tagItem, "d="):
+		case strings.HasPrefix(tagItem, "d="):
 			rTag.DisallowReauthentication, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "d="))
 			if err != nil {
 				return nil, err
 			}
-		case strings.Contains(tagItem, "m="):
+		case strings.HasPrefix(tagItem, "m="):
 			rTag.AllowInstanceMigration, err = strconv.ParseBool(strings.TrimPrefix(tagItem, "m="))
 			if err != nil {
 				return nil, err
 			}
-		case strings.Contains(tagItem, "t="):
+		case strings.HasPrefix(tagItem, "t="):
 			rTag.MaxTTL, err = time.ParseDuration(fmt.Sprintf("%ss", strings.TrimPrefix(tagItem, "t=")))
 			if err != nil {
 				return nil, err
@@ -349,7 +349,7 @@ func (b *backend) parseAndVerifyRoleTagValue(s logical.Storage, tag string) (*ro
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	roleEntry, err := b.lockedAWSRole(s, rTag.Role)
+	roleEntry, err := b.lockedAWSRole(ctx, s, rTag.Role)
 	if err != nil {
 		return nil, err
 	}

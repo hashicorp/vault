@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -22,7 +23,7 @@ func (c *Core) IdentityStore() *IdentityStore {
 }
 
 // NewIdentityStore creates a new identity store
-func NewIdentityStore(core *Core, config *logical.BackendConfig) (*IdentityStore, error) {
+func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig) (*IdentityStore, error) {
 	var err error
 
 	// Create a new in-memory database for the identity store
@@ -62,7 +63,7 @@ func NewIdentityStore(core *Core, config *logical.BackendConfig) (*IdentityStore
 		Invalidate: iStore.Invalidate,
 	}
 
-	err = iStore.Setup(config)
+	err = iStore.Setup(ctx, config)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func NewIdentityStore(core *Core, config *logical.BackendConfig) (*IdentityStore
 // the given key is updated. In identity store's case, it would be the entity
 // storage entries that get updated. The value needs to be read and MemDB needs
 // to be updated accordingly.
-func (i *IdentityStore) Invalidate(key string) {
+func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	i.logger.Debug("identity: invalidate notification received", "key", key)
 
 	switch {
@@ -248,7 +249,27 @@ func (i *IdentityStore) entityByAliasFactors(mountAccessor, aliasName string, cl
 		return nil, fmt.Errorf("missing alias name")
 	}
 
-	alias, err := i.MemDBAliasByFactors(mountAccessor, aliasName, false, false)
+	txn := i.db.Txn(false)
+
+	return i.entityByAliasFactorsInTxn(txn, mountAccessor, aliasName, clone)
+}
+
+// entityByAlaisFactorsInTxn fetches the entity based on factors of alias, i.e
+// mount accessor and the alias name.
+func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor, aliasName string, clone bool) (*identity.Entity, error) {
+	if txn == nil {
+		return nil, fmt.Errorf("nil txn")
+	}
+
+	if mountAccessor == "" {
+		return nil, fmt.Errorf("missing mount accessor")
+	}
+
+	if aliasName == "" {
+		return nil, fmt.Errorf("missing alias name")
+	}
+
+	alias, err := i.MemDBAliasByFactorsInTxn(txn, mountAccessor, aliasName, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -257,12 +278,12 @@ func (i *IdentityStore) entityByAliasFactors(mountAccessor, aliasName string, cl
 		return nil, nil
 	}
 
-	return i.MemDBEntityByAliasID(alias.ID, clone)
+	return i.MemDBEntityByAliasIDInTxn(txn, alias.ID, clone)
 }
 
-// CreateEntity creates a new entity. This is used by core to
+// CreateOrFetchEntity creates a new entity. This is used by core to
 // associate each login attempt by an alias to a unified entity in Vault.
-func (i *IdentityStore) CreateEntity(alias *logical.Alias) (*identity.Entity, error) {
+func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Entity, error) {
 	var entity *identity.Entity
 	var err error
 
@@ -289,8 +310,23 @@ func (i *IdentityStore) CreateEntity(alias *logical.Alias) (*identity.Entity, er
 		return nil, err
 	}
 	if entity != nil {
-		return nil, fmt.Errorf("alias already belongs to a different entity")
+		return entity, nil
 	}
+
+	// Create a MemDB transaction to update both alias and entity
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+
+	// Check if an entity was created before acquiring the lock
+	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, false)
+	if err != nil {
+		return nil, err
+	}
+	if entity != nil {
+		return entity, nil
+	}
+
+	i.logger.Debug("identity: creating a new entity", "alias", alias)
 
 	entity = &identity.Entity{}
 
@@ -319,10 +355,12 @@ func (i *IdentityStore) CreateEntity(alias *logical.Alias) (*identity.Entity, er
 	}
 
 	// Update MemDB and persist entity object
-	err = i.upsertEntity(entity, nil, true)
+	err = i.upsertEntityInTxn(txn, entity, nil, true, false)
 	if err != nil {
 		return nil, err
 	}
+
+	txn.Commit()
 
 	return entity, nil
 }

@@ -36,6 +36,13 @@ func (b *backend) getGenerationParams(
 		AllowAnyName:     true,
 		AllowIPSANs:      true,
 		EnforceHostnames: false,
+		OU:               data.Get("ou").([]string),
+		Organization:     data.Get("organization").([]string),
+		Country:          data.Get("country").([]string),
+		Locality:         data.Get("locality").([]string),
+		Province:         data.Get("province").([]string),
+		StreetAddress:    data.Get("street_address").([]string),
+		PostalCode:       data.Get("postal_code").([]string),
 	}
 
 	if role.KeyType == "rsa" && role.KeyBits < 2048 {

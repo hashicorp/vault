@@ -72,7 +72,7 @@ Otherwise, Vault is installed and ready to go!
 
 Vault also includes command-line completion for subcommands, flags, and path
 arguments where supported. To install command-line completion, you must be using
-Bash or ZSH. Unfortunately other shells are not supported at this time.
+Bash, ZSH or Fish. Unfortunately other shells are not supported at this time.
 
 To install completions, run:
 
@@ -80,9 +80,9 @@ To install completions, run:
 $ vault -autocomplete-install
 ```
 
-This will install the helpers in your `~/.bashrc` or `~/.zshrc` automatically.
-Then restart your terminal or reload your shell:
-
+This will automatically install the helpers in your `~/.bashrc` or `~/.zshrc`, or to
+`~/.config/fish/completions/vault.fish` for Fish users. Then restart your terminal
+or reload your shell:
 ```sh
 $ exec $SHELL
 ```

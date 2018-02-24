@@ -124,5 +124,5 @@ func (c *TokenLookupCommand) Run(args []string) int {
 		return 2
 	}
 
-	return OutputSecret(c.UI, c.flagFormat, secret)
+	return OutputSecret(c.UI, secret)
 }

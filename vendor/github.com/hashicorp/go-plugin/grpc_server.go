@@ -79,7 +79,7 @@ func (s *GRPCServer) Init() error {
 	for k, raw := range s.Plugins {
 		p, ok := raw.(GRPCPlugin)
 		if !ok {
-			return fmt.Errorf("%q is not a GRPC-compatibile plugin", k)
+			return fmt.Errorf("%q is not a GRPC-compatible plugin", k)
 		}
 
 		if err := p.GRPCServer(s.broker, s.server); err != nil {
@@ -88,6 +88,16 @@ func (s *GRPCServer) Init() error {
 	}
 
 	return nil
+}
+
+// Stop calls Stop on the underlying grpc.Server
+func (s *GRPCServer) Stop() {
+	s.server.Stop()
+}
+
+// GracefulStop calls GracefulStop on the underlying grpc.Server
+func (s *GRPCServer) GracefulStop() {
+	s.server.GracefulStop()
 }
 
 // Config is the GRPCServerConfig encoded as JSON then base64.

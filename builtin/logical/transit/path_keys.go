@@ -108,7 +108,7 @@ return the public key for the given context.`,
 }
 
 func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("policy/")
+	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +139,8 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	switch keyType {
 	case "aes256-gcm96":
 		polReq.KeyType = keysutil.KeyType_AES256_GCM96
+	case "chacha20-poly1305":
+		polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
 	case "ecdsa-p256":
 		polReq.KeyType = keysutil.KeyType_ECDSA_P256
 	case "ed25519":
@@ -151,7 +153,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	p, lock, upserted, err := b.lm.GetPolicyUpsert(polReq)
+	p, lock, upserted, err := b.lm.GetPolicyUpsert(ctx, polReq)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -180,7 +182,7 @@ type asymKey struct {
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -207,9 +209,20 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			"supports_decryption":    p.Type.DecryptionSupported(),
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
-			"backup_info":            p.BackupInfo,
-			"restore_info":           p.RestoreInfo,
 		},
+	}
+
+	if p.BackupInfo != nil {
+		resp.Data["backup_info"] = map[string]interface{}{
+			"time":    p.BackupInfo.Time,
+			"version": p.BackupInfo.Version,
+		}
+	}
+	if p.RestoreInfo != nil {
+		resp.Data["restore_info"] = map[string]interface{}{
+			"time":    p.RestoreInfo.Time,
+			"version": p.RestoreInfo.Version,
+		}
 	}
 
 	if p.Derived {
@@ -236,7 +249,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 
 	switch p.Type {
-	case keysutil.KeyType_AES256_GCM96:
+	case keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 		retKeys := map[string]int64{}
 		for k, v := range p.Keys {
 			retKeys[k] = v.DeprecatedCreationTime
@@ -310,7 +323,7 @@ func (b *backend) pathPolicyDelete(ctx context.Context, req *logical.Request, d 
 	name := d.Get("name").(string)
 
 	// Delete does its own locking
-	err := b.lm.DeletePolicy(req.Storage, name)
+	err := b.lm.DeletePolicy(ctx, req.Storage, name)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error deleting policy %s: %s", name, err)), err
 	}

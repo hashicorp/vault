@@ -26,7 +26,7 @@ An unseal key may be provided directly on the command line as an argument to the
 command. If key is specified as "-", the command will read from stdin. If a TTY
 is available, the command will prompt for text.
 
-Please see the [generate root guide](/guides/generate-root.html) for
+Please see the [generate root guide](/guides/operations/generate-root.html) for
 step-by-step instructions.
 
 ## Examples
@@ -54,6 +54,14 @@ $ vault operator generate-root -otp="..."
 
 The following flags are available in addition to the [standard set of
 flags](/docs/commands/index.html) included on all commands.
+
+### Output Options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command Options
 
 - `-cancel` `(bool: false)` - Reset the root token generation progress. This
   will discard any submitted unseal keys or configuration.

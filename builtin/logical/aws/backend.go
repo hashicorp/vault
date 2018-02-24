@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -8,9 +9,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -43,7 +44,7 @@ func Backend() *backend {
 			secretAccessKeys(&b),
 		},
 
-		WALRollback:       walRollback,
+		WALRollback:       b.walRollback,
 		WALRollbackMinAge: 5 * time.Minute,
 		BackendType:       logical.TypeLogical,
 	}

@@ -256,7 +256,7 @@ func TestCubbyholeIsolation(t *testing.T) {
 }
 
 func testCubbyholeBackend() logical.Backend {
-	b, _ := CubbyholeBackendFactory(&logical.BackendConfig{
+	b, _ := CubbyholeBackendFactory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
 		System: logical.StaticSystemView{
 			DefaultLeaseTTLVal: time.Hour * 24,

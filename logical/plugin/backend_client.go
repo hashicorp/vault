@@ -173,11 +173,11 @@ func (b *backendPluginClient) HandleExistenceCheck(ctx context.Context, req *log
 	return reply.CheckFound, reply.Exists, nil
 }
 
-func (b *backendPluginClient) Cleanup() {
+func (b *backendPluginClient) Cleanup(ctx context.Context) {
 	b.client.Call("Plugin.Cleanup", new(interface{}), &struct{}{})
 }
 
-func (b *backendPluginClient) Initialize() error {
+func (b *backendPluginClient) Initialize(ctx context.Context) error {
 	if b.metadataMode {
 		return ErrClientInMetadataMode
 	}
@@ -185,14 +185,14 @@ func (b *backendPluginClient) Initialize() error {
 	return err
 }
 
-func (b *backendPluginClient) InvalidateKey(key string) {
+func (b *backendPluginClient) InvalidateKey(ctx context.Context, key string) {
 	if b.metadataMode {
 		return
 	}
 	b.client.Call("Plugin.InvalidateKey", key, &struct{}{})
 }
 
-func (b *backendPluginClient) Setup(config *logical.BackendConfig) error {
+func (b *backendPluginClient) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	// Shim logical.Storage
 	storageImpl := config.StorageView
 	if b.metadataMode {

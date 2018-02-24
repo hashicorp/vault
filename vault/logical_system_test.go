@@ -180,6 +180,10 @@ func TestSystemBackend_mount(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
 	req.Data["type"] = "kv"
+	req.Data["config"] = map[string]interface{}{
+		"default_lease_ttl": "35m",
+		"max_lease_ttl":     "45m",
+	}
 	req.Data["local"] = true
 	req.Data["seal_wrap"] = true
 
@@ -257,8 +261,8 @@ func TestSystemBackend_mount(t *testing.T) {
 			"type":        "kv",
 			"accessor":    resp.Data["prod/secret/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"default_lease_ttl": int64(2100),
+				"max_lease_ttl":     int64(2700),
 				"plugin_name":       "",
 				"force_no_cache":    false,
 			},
@@ -361,7 +365,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 	}
 
 	policy, _ := ParseACLPolicy(capabilitiesPolicy)
-	err = core.policyStore.SetPolicy(policy)
+	err = core.policyStore.SetPolicy(context.Background(), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -388,7 +392,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 
 func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
 	core, b, rootToken := testCoreSystemBackend(t)
-	te, err := core.tokenStore.Lookup(rootToken)
+	te, err := core.tokenStore.Lookup(context.Background(), rootToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -413,14 +417,14 @@ func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
 	}
 
 	policy, _ := ParseACLPolicy(capabilitiesPolicy)
-	err = core.policyStore.SetPolicy(policy)
+	err = core.policyStore.SetPolicy(context.Background(), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
 
-	te, err = core.tokenStore.Lookup("tokenid")
+	te, err = core.tokenStore.Lookup(context.Background(), "tokenid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1092,7 +1096,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 		},
 	}
 	b := NewSystemBackend(core)
-	err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1103,12 +1107,12 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 		ID:   "foo",
 		Path: "auth/github/login/bar",
 	}
-	err = ts.create(te)
+	err = ts.create(context.Background(), te)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	te, err = ts.Lookup("foo")
+	te, err = ts.Lookup(context.Background(), "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1137,7 +1141,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	te, err = ts.Lookup(te.ID)
+	te, err = ts.Lookup(context.Background(), te.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1156,7 +1160,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 		},
 	}
 	b := NewSystemBackend(core)
-	err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1167,12 +1171,12 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 		ID:   "foo",
 		Path: "auth/github/login/bar",
 	}
-	err = ts.create(te)
+	err = ts.create(context.Background(), te)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	te, err = ts.Lookup("foo")
+	te, err = ts.Lookup(context.Background(), "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1201,7 +1205,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	te, err = ts.Lookup(te.ID)
+	te, err = ts.Lookup(context.Background(), te.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1238,12 +1242,16 @@ func TestSystemBackend_authTable(t *testing.T) {
 
 func TestSystemBackend_enableAuth(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")
 	req.Data["type"] = "noop"
+	req.Data["config"] = map[string]interface{}{
+		"default_lease_ttl": "35m",
+		"max_lease_ttl":     "45m",
+	}
 	req.Data["local"] = true
 	req.Data["seal_wrap"] = true
 
@@ -1270,8 +1278,8 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"description": "",
 			"accessor":    resp.Data["foo/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": int64(0),
-				"max_lease_ttl":     int64(0),
+				"default_lease_ttl": int64(2100),
+				"max_lease_ttl":     int64(2700),
 			},
 			"local":     true,
 			"seal_wrap": true,
@@ -1308,7 +1316,7 @@ func TestSystemBackend_enableAuth_invalid(t *testing.T) {
 
 func TestSystemBackend_disableAuth(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
 
@@ -1443,7 +1451,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 
 func TestSystemBackend_enableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
 		}, nil
@@ -1463,9 +1471,9 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		view := &logical.InmemStorage{}
-		view.Put(&logical.StorageEntry{
+		view.Put(context.Background(), &logical.StorageEntry{
 			Key:   "salt",
 			Value: []byte("foo"),
 		})
@@ -1525,7 +1533,7 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 
 func TestSystemBackend_auditTable(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
 		}, nil
@@ -1564,7 +1572,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 
 func TestSystemBackend_disableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
 		}, nil
@@ -1585,6 +1593,19 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_rawRead_Compressed(t *testing.T) {
+	b := testSystemBackendRaw(t)
+
+	req := logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.HasPrefix(resp.Data["value"].(string), "{\"type\":\"mounts\"") {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -1654,7 +1675,7 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 		Name: "test",
 		Type: PolicyTypeACL,
 	}
-	err := c.policyStore.SetPolicy(p)
+	err := c.policyStore.SetPolicy(context.Background(), p)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1671,7 +1692,7 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 
 	// Policy should be gone
 	c.policyStore.tokenPoliciesLRU.Purge()
-	out, err := c.policyStore.GetPolicy("test", PolicyTypeToken)
+	out, err := c.policyStore.GetPolicy(context.Background(), "test", PolicyTypeToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1754,7 +1775,7 @@ func testSystemBackendInternal(t *testing.T, c *Core) logical.Backend {
 	}
 
 	b := NewSystemBackend(c)
-	err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(context.Background(), bc)
 	if err != nil {
 		t.Fatal(err)
 	}

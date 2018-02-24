@@ -113,8 +113,8 @@ path "secret/super-secret" {
   capabilities = ["deny"]
 }
 
-# Policies can also specify allowed, disallowed, and required parameters. Here 
-# the key "secret/restricted" can only contain "foo" (any value) and "bar" (one 
+# Policies can also specify allowed, disallowed, and required parameters. Here
+# the key "secret/restricted" can only contain "foo" (any value) and "bar" (one
 # of "zip" or "zap").
 path "secret/restricted" {
   capabilities = ["create"]
@@ -228,13 +228,13 @@ options are:
 
       ```ruby
       # This requires the user to create "secret/foo" with a parameter named
-      # "bar" and "baz". 
+      # "bar" and "baz".
       path "secret/foo" {
         capabilities = ["create"]
         required_parameters = ["bar", "baz"]
       }
       ```
-  
+
   * `allowed_parameters` - Whitelists a list of keys and values that are
     permitted on the given path.
 
@@ -437,8 +437,8 @@ $ curl \
 
 For more information, please read:
 
-- [Production Hardening](/guides/production.html)
-- [Generating a Root Token](/guides/generate-root.html)
+- [Production Hardening](/guides/operations/production.html)
+- [Generating a Root Token](/guides/operations/generate-root.html)
 
 ## Managing Policies
 
@@ -472,7 +472,7 @@ Policies may be created (uploaded) via the CLI or via the API. To create a new
 policy in Vault:
 
 ```sh
-$ vault write sys/policy/my-policy rules=@my-policy.hcl
+$ vault write sys/policy/my-policy policy=@my-policy.hcl
 ```
 
 -> The `@` tells Vault to read from a file on disk. In the example above, Vault
@@ -485,7 +485,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data '{"rules":"path \"...\" {...} "}' \
+  --data '{"policy":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-policy
 ```
 
@@ -500,7 +500,7 @@ API. To update an existing policy in Vault, follow the same steps as creating a
 policy, but use an existing policy name:
 
 ```sh
-$ vault write sys/policy/my-existing-policy rules=@updated-policy.json
+$ vault write sys/policy/my-existing-policy policy=@updated-policy.json
 ```
 
 or via the API:
@@ -509,7 +509,7 @@ or via the API:
 $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
-  --data '{"rules":"path \"...\" {...} "}' \
+  --data '{"policy":"path \"...\" {...} "}' \
   https://vault.hashicorp.rocks/v1/sys/policy/my-existing-policy
 ```
 

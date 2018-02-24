@@ -191,6 +191,9 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 - `max_lease_ttl` `(int: 0)` – Specifies the maximum time-to-live. If set on a
   specific auth path, this overrides the global default.
 
+- `description` `(string: "")` – Specifies the description of the mount. This
+  overrides the current stored value, if any.
+
 ### Sample Payload
 
 ```json

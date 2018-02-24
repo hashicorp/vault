@@ -127,7 +127,7 @@ to the min_encryption_version configured on the key.`,
 
 func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -225,16 +225,18 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		switch keyType {
 		case "aes256-gcm96":
 			polReq.KeyType = keysutil.KeyType_AES256_GCM96
+		case "chacha20-poly1305":
+			polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
 		case "ecdsa-p256":
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 		}
 
-		p, lock, upserted, err = b.lm.GetPolicyUpsert(polReq)
+		p, lock, upserted, err = b.lm.GetPolicyUpsert(ctx, polReq)
 
 	} else {
-		p, lock, err = b.lm.GetPolicyShared(req.Storage, name)
+		p, lock, err = b.lm.GetPolicyShared(ctx, req.Storage, name)
 	}
 	if lock != nil {
 		defer lock.RUnlock()

@@ -59,7 +59,7 @@ func Uninstall(cmd string) error {
 }
 
 func installers() (i []installer) {
-	for _, rc := range [...]string{".bashrc", ".bash_profile"} {
+	for _, rc := range [...]string{".bashrc", ".bash_profile", ".bash_login", ".profile"} {
 		if f := rcFile(rc); f != "" {
 			i = append(i, bash{f})
 			break
@@ -68,7 +68,34 @@ func installers() (i []installer) {
 	if f := rcFile(".zshrc"); f != "" {
 		i = append(i, zsh{f})
 	}
+	if d := fishConfigDir(); d != "" {
+		i = append(i, fish{d})
+	}
 	return
+}
+
+func fishConfigDir() string {
+	configDir := filepath.Join(getConfigHomePath(), "fish")
+	if configDir == "" {
+		return ""
+	}
+	if info, err := os.Stat(configDir); err != nil || !info.IsDir() {
+		return ""
+	}
+	return configDir
+}
+
+func getConfigHomePath() string {
+	u, err := user.Current()
+	if err != nil {
+		return ""
+	}
+
+	configHome := os.Getenv("XDG_CONFIG_HOME")
+	if configHome == "" {
+		return filepath.Join(u.HomeDir, ".config")
+	}
+	return configHome
 }
 
 func getBinaryPath() (string, error) {

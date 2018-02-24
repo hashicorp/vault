@@ -54,7 +54,7 @@ of version 0.6.1, there are only three ways to create root tokens:
    expiration
 2. By using another root token; a root token with an expiration cannot create a
    root token that never expires
-3. By using `vault generate-root` ([example](/guides/generate-root.html))
+3. By using `vault generate-root` ([example](/guides/operations/generate-root.html))
    with the permission of a quorum of unseal key holders
 
 Root tokens are useful in development but should be extremely carefully guarded

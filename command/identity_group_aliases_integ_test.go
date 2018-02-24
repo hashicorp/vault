@@ -192,7 +192,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected entity ID %q to be part of Italians group")
+		t.Fatalf("expected entity ID %q to be part of Italians group", entityID)
 	}
 
 	secret, err = client.Logical().Read("identity/group/id/" + scientistsGroupID)
@@ -207,7 +207,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected entity ID %q to be part of Scientists group")
+		t.Fatalf("expected entity ID %q to be part of Scientists group", entityID)
 	}
 
 	secret, err = client.Logical().Read("identity/group/id/" + devopsGroupID)
@@ -222,7 +222,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected entity ID %q to be part of devops group")
+		t.Fatalf("expected entity ID %q to be part of devops group", entityID)
 	}
 
 	identityStore := cores[0].IdentityStore()
@@ -308,7 +308,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected entity ID %q to be part of Italians group")
+		t.Fatalf("expected entity ID %q to be part of Italians group", entityID)
 	}
 
 	secret, err = client.Logical().Read("identity/group/id/" + scientistsGroupID)
@@ -323,7 +323,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected entity ID %q to be part of Italians group")
+		t.Fatalf("expected entity ID %q to be part of scientists group", entityID)
 	}
 
 	secret, err = client.Logical().Read("identity/group/id/" + devopsGroupID)
@@ -339,7 +339,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("expected entity ID %q to be part of devops group")
+		t.Fatalf("expected entity ID %q to be part of devops group", entityID)
 	}
 
 	// Remove user tesla from the devops group in LDAP backend

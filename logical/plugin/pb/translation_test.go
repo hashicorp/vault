@@ -31,7 +31,7 @@ func TestTranslation_Errors(t *testing.T) {
 		e := ProtoErrToErr(pe)
 
 		if !reflect.DeepEqual(e, err) {
-			t.Fatal("Errs did not match: %#v, %#v", e, err)
+			t.Fatalf("Errs did not match: %#v, %#v", e, err)
 		}
 	}
 }
@@ -49,7 +49,7 @@ func TestTranslation_StorageEntry(t *testing.T) {
 		e := ProtoStorageEntryToLogicalStorageEntry(p)
 
 		if !reflect.DeepEqual(c, e) {
-			t.Fatal("Entries did not match: %#v, %#v", e, c)
+			t.Fatalf("Entries did not match: %#v, %#v", e, c)
 		}
 	}
 }
@@ -72,6 +72,9 @@ func TestTranslation_Request(t *testing.T) {
 			EntityID:                 "tester",
 			PolicyOverride:           true,
 			Unauthenticated:          true,
+			Connection: &logical.Connection{
+				RemoteAddr: "localhost",
+			},
 		},
 		&logical.Request{
 			ID:                 "ID",

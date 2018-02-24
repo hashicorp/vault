@@ -1,6 +1,7 @@
 package storagepacker
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -67,7 +68,7 @@ func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
 	defer lock.RUnlock()
 
 	// Read from the underlying view
-	storageEntry, err := s.view.Get(key)
+	storageEntry, err := s.view.Get(context.Background(), key)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
 	}
@@ -154,7 +155,7 @@ func (s *StoragePacker) DeleteItem(itemID string) error {
 	bucketPath := s.BucketPath(bucketKey)
 
 	// Read from underlying view
-	storageEntry, err := s.view.Get(bucketPath)
+	storageEntry, err := s.view.Get(context.Background(), bucketPath)
 	if err != nil {
 		return errwrap.Wrapf("failed to read packed storage value: {{err}}", err)
 	}
@@ -227,7 +228,7 @@ func (s *StoragePacker) PutBucket(bucket *Bucket) error {
 	}
 
 	// Store the compressed value
-	err = s.view.Put(&logical.StorageEntry{
+	err = s.view.Put(context.Background(), &logical.StorageEntry{
 		Key:   bucket.Key,
 		Value: compressedBucket,
 	})
@@ -252,6 +253,9 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 	bucket, err := s.GetBucket(bucketPath)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
+	}
+	if bucket == nil {
+		return nil, nil
 	}
 
 	// Look for a matching storage entry in the bucket items
@@ -290,7 +294,7 @@ func (s *StoragePacker) PutItem(item *Item) error {
 	defer lock.Unlock()
 
 	// Check if there is an existing bucket for a given key
-	storageEntry, err := s.view.Get(bucketPath)
+	storageEntry, err := s.view.Get(context.Background(), bucketPath)
 	if err != nil {
 		return errwrap.Wrapf("failed to read packed storage bucket entry: {{err}}", err)
 	}

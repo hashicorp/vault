@@ -111,13 +111,13 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 }
 
 func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, req.Storage.Delete("config/ca_bundle")
+	return nil, req.Storage.Delete(ctx, "config/ca_bundle")
 }
 
 func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	entry, err := req.Storage.Get("config/ca_bundle")
+	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,12 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		role.MaxPathLength = &maxPathLength
 	}
 
-	parsedBundle, err := generateCert(b, role, nil, true, req, data)
+	input := &dataBundle{
+		req:     req,
+		apiData: data,
+		role:    role,
+	}
+	parsedBundle, err := generateCert(ctx, b, input, true)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -199,14 +204,14 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
-	err = req.Storage.Put(&logical.StorageEntry{
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 		Value: parsedBundle.CertificateBytes,
 	})
@@ -218,13 +223,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// location
 	entry.Key = "ca"
 	entry.Value = parsedBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	// Build a fresh CRL
-	err = buildCRL(b, req)
+	err = buildCRL(ctx, b, req)
 	if err != nil {
 		return nil, err
 	}
@@ -247,6 +252,13 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	role := &roleEntry{
+		OU:                    data.Get("ou").([]string),
+		Organization:          data.Get("organization").([]string),
+		Country:               data.Get("country").([]string),
+		Locality:              data.Get("locality").([]string),
+		Province:              data.Get("province").([]string),
+		StreetAddress:         data.Get("street_address").([]string),
+		PostalCode:            data.Get("postal_code").([]string),
 		TTL:                   (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		AllowLocalhost:        true,
 		AllowAnyName:          true,
@@ -261,7 +273,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(req)
+	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(
@@ -279,7 +291,13 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		role.MaxPathLength = &maxPathLength
 	}
 
-	parsedBundle, err := signCert(b, role, signingBundle, true, useCSRValues, req, data)
+	input := &dataBundle{
+		req:           req,
+		apiData:       data,
+		signingBundle: signingBundle,
+		role:          role,
+	}
+	parsedBundle, err := signCert(b, input, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -342,7 +360,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	err = req.Storage.Put(&logical.StorageEntry{
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 		Value: parsedBundle.CertificateBytes,
 	})
@@ -382,7 +400,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(req)
+	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(

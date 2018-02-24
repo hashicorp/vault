@@ -60,7 +60,7 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var matched *ParsedCert
-	if verifyResp, resp, err := b.verifyCredentials(req, data); err != nil {
+	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -128,14 +128,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 }
 
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	config, err := b.Config(req.Storage)
+	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	if !config.DisableBinding {
 		var matched *ParsedCert
-		if verifyResp, resp, err := b.verifyCredentials(req, d); err != nil {
+		if verifyResp, resp, err := b.verifyCredentials(ctx, req, d); err != nil {
 			return nil, err
 		} else if resp != nil {
 			return resp, nil
@@ -162,7 +162,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 
 	}
 	// Get the cert and use its TTL
-	cert, err := b.Cert(req.Storage, req.Auth.Metadata["cert_name"])
+	cert, err := b.Cert(ctx, req.Storage, req.Auth.Metadata["cert_name"])
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	return framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(ctx, req, d)
 }
 
-func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
+func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
 	// Get the connection state
 	if req.Connection == nil || req.Connection.ConnState == nil {
 		return nil, logical.ErrorResponse("tls connection required"), nil
@@ -209,7 +209,14 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 	}
 
 	// Load the trusted certificates
-	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage, certName)
+	roots, trusted, trustedNonCAs := b.loadTrustedCerts(ctx, req.Storage, certName)
+
+	// Get the list of full chains matching the connection and validates the
+	// certificate itself
+	trustedChains, err := validateConnState(roots, connState)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
@@ -225,12 +232,8 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 		}
 	}
 
-	// Get the list of full chains matching the connection
-	trustedChains, err := validateConnState(roots, connState)
-	if err != nil {
-		return nil, nil, err
-	}
 	// If no trusted chain was found, client is not authenticated
+	// This check happens after checking for a matching configured non-CA certs
 	if len(trustedChains) == 0 {
 		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
@@ -328,11 +331,11 @@ func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, conf
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(store logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
+func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
 	pool = x509.NewCertPool()
 	trusted = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
-	names, err := store.List("cert/")
+	names, err := storage.List(ctx, "cert/")
 	if err != nil {
 		b.Logger().Error("cert: failed to list trusted certs", "error", err)
 		return
@@ -342,7 +345,7 @@ func (b *backend) loadTrustedCerts(store logical.Storage, certName string) (pool
 		if certName != "" && name != certName {
 			continue
 		}
-		entry, err := b.Cert(store, strings.TrimPrefix(name, "cert/"))
+		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
 			b.Logger().Error("cert: failed to load trusted cert", "name", name, "error", err)
 			continue
@@ -423,9 +426,6 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 	if len(certs) == 0 {
 		return nil, nil
 	}
-	if certs[0].IsCA {
-		return nil, nil
-	}
 
 	opts := x509.VerifyOptions{
 		Roots:         roots,
@@ -439,12 +439,29 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 		}
 	}
 
-	chains, err := certs[0].Verify(opts)
-	if err != nil {
-		if _, ok := err.(x509.UnknownAuthorityError); ok {
-			return nil, nil
+	var chains [][]*x509.Certificate
+	var err error
+	switch {
+	case len(certs[0].DNSNames) > 0:
+		for _, dnsName := range certs[0].DNSNames {
+			opts.DNSName = dnsName
+			chains, err = certs[0].Verify(opts)
+			if err != nil {
+				if _, ok := err.(x509.UnknownAuthorityError); ok {
+					return nil, nil
+				}
+				return nil, errors.New("failed to verify client's certificate: " + err.Error())
+			}
 		}
-		return nil, errors.New("failed to verify client's certificate: " + err.Error())
+	default:
+		chains, err = certs[0].Verify(opts)
+		if err != nil {
+			if _, ok := err.(x509.UnknownAuthorityError); ok {
+				return nil, nil
+			}
+			return nil, errors.New("failed to verify client's certificate: " + err.Error())
+		}
 	}
+
 	return chains, nil
 }

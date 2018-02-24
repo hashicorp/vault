@@ -1,12 +1,14 @@
 package consul
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,6 +68,16 @@ const (
 
 type notifyEvent struct{}
 
+// Verify ConsulBackend satisfies the correct interfaces
+var _ physical.Backend = (*ConsulBackend)(nil)
+var _ physical.HABackend = (*ConsulBackend)(nil)
+var _ physical.Lock = (*ConsulLock)(nil)
+var _ physical.Transactional = (*ConsulBackend)(nil)
+
+var (
+	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+)
+
 // ConsulBackend is a physical backend that stores data at specific
 // prefix within Consul. It is used for most production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.
@@ -80,6 +92,7 @@ type ConsulBackend struct {
 	redirectPort        int64
 	serviceName         string
 	serviceTags         []string
+	serviceAddress      *string
 	disableRegistration bool
 	checkTimeout        time.Duration
 	consistencyMode     string
@@ -129,15 +142,27 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	if !ok {
 		service = DefaultServiceName
 	}
+	if !hostnameRegex.MatchString(service) {
+		return nil, errors.New("service name must be valid per RFC 1123 and can contain only alphanumeric characters or dashes")
+	}
 	if logger.IsDebug() {
 		logger.Debug("physical/consul: config service set", "service", service)
 	}
 
 	// Get the additional tags to attach to the registered service name
 	tags := conf["service_tags"]
-
 	if logger.IsDebug() {
 		logger.Debug("physical/consul: config service_tags set", "service_tags", tags)
+	}
+
+	// Get the service-specific address to override the use of the HA redirect address
+	var serviceAddr *string
+	serviceAddrStr, ok := conf["service_address"]
+	if ok {
+		serviceAddr = &serviceAddrStr
+	}
+	if logger.IsDebug() {
+		logger.Debug("physical/consul: config service_address set", "service_address", serviceAddr)
 	}
 
 	checkTimeout := defaultCheckTimeout
@@ -232,6 +257,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		permitPool:          physical.NewPermitPool(maxParInt),
 		serviceName:         service,
 		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
+		serviceAddress:      serviceAddr,
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
 		consistencyMode:     consistencyMode,
@@ -310,7 +336,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 }
 
 // Used to run multiple entries via a transaction
-func (c *ConsulBackend) Transaction(txns []*physical.TxnEntry) error {
+func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	if len(txns) == 0 {
 		return nil
 	}
@@ -354,7 +380,7 @@ func (c *ConsulBackend) Transaction(txns []*physical.TxnEntry) error {
 }
 
 // Put is used to insert or update an entry
-func (c *ConsulBackend) Put(entry *physical.Entry) error {
+func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"consul", "put"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -370,7 +396,7 @@ func (c *ConsulBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch an entry
-func (c *ConsulBackend) Get(key string) (*physical.Entry, error) {
+func (c *ConsulBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"consul", "get"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -398,7 +424,7 @@ func (c *ConsulBackend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (c *ConsulBackend) Delete(key string) error {
+func (c *ConsulBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"consul", "delete"}, time.Now())
 
 	c.permitPool.Acquire()
@@ -410,7 +436,7 @@ func (c *ConsulBackend) Delete(key string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (c *ConsulBackend) List(prefix string) ([]string, error) {
+func (c *ConsulBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"consul", "list"}, time.Now())
 	scan := c.path + prefix
 
@@ -711,12 +737,21 @@ func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc p
 		return serviceID, nil
 	}
 
+	// If service address was set explicitly in configuration, use that
+	// as the service-specific address instead of the HA redirect address.
+	var serviceAddress string
+	if c.serviceAddress == nil {
+		serviceAddress = c.redirectHost
+	} else {
+		serviceAddress = *c.serviceAddress
+	}
+
 	service := &api.AgentServiceRegistration{
 		ID:                serviceID,
 		Name:              c.serviceName,
 		Tags:              tags,
 		Port:              int(c.redirectPort),
-		Address:           c.redirectHost,
+		Address:           serviceAddress,
 		EnableTagOverride: false,
 	}
 

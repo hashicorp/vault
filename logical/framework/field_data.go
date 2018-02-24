@@ -224,20 +224,11 @@ func (d *FieldData) getPrimitive(
 		return strutil.TrimStrings(result), true, nil
 
 	case TypeCommaStringSlice:
-		var result []string
-		config := &mapstructure.DecoderConfig{
-			Result:           &result,
-			WeaklyTypedInput: true,
-			DecodeHook:       mapstructure.StringToSliceHookFunc(","),
-		}
-		decoder, err := mapstructure.NewDecoder(config)
+		res, err := parseutil.ParseCommaStringSlice(raw)
 		if err != nil {
 			return nil, false, err
 		}
-		if err := decoder.Decode(raw); err != nil {
-			return nil, false, err
-		}
-		return strutil.TrimStrings(result), true, nil
+		return res, true, nil
 
 	case TypeKVPairs:
 		// First try to parse this as a map

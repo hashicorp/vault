@@ -3,6 +3,7 @@ package awsauth
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -47,6 +48,11 @@ func pathConfigClient(b *backend) *framework.Path {
 				Default:     "",
 				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
 			},
+			"max_retries": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Default:     aws.UseServiceDefaultRetries,
+				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
+			},
 		},
 
 		ExistenceCheck: b.pathConfigClientExistenceCheck,
@@ -66,7 +72,7 @@ func pathConfigClient(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathConfigClientExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.lockedClientConfigEntry(req.Storage)
+	entry, err := b.lockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return false, err
 	}
@@ -74,16 +80,16 @@ func (b *backend) pathConfigClientExistenceCheck(ctx context.Context, req *logic
 }
 
 // Fetch the client configuration required to access the AWS API, after acquiring an exclusive lock.
-func (b *backend) lockedClientConfigEntry(s logical.Storage) (*clientConfig, error) {
+func (b *backend) lockedClientConfigEntry(ctx context.Context, s logical.Storage) (*clientConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.nonLockedClientConfigEntry(s)
+	return b.nonLockedClientConfigEntry(ctx, s)
 }
 
 // Fetch the client configuration required to access the AWS API.
-func (b *backend) nonLockedClientConfigEntry(s logical.Storage) (*clientConfig, error) {
-	entry, err := s.Get("config/client")
+func (b *backend) nonLockedClientConfigEntry(ctx context.Context, s logical.Storage) (*clientConfig, error) {
+	entry, err := s.Get(ctx, "config/client")
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +105,7 @@ func (b *backend) nonLockedClientConfigEntry(s logical.Storage) (*clientConfig, 
 }
 
 func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := b.lockedClientConfigEntry(req.Storage)
+	clientConfig, err := b.lockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +123,7 @@ func (b *backend) pathConfigClientDelete(ctx context.Context, req *logical.Reque
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	if err := req.Storage.Delete("config/client"); err != nil {
+	if err := req.Storage.Delete(ctx, "config/client"); err != nil {
 		return nil, err
 	}
 
@@ -139,7 +145,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.nonLockedClientConfigEntry(req.Storage)
+	configEntry, err := b.nonLockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -220,6 +226,13 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		configEntry.IAMServerIdHeaderValue = data.Get("iam_server_id_header_value").(string)
 	}
 
+	maxRetriesInt, ok := data.GetOk("max_retries")
+	if ok {
+		configEntry.MaxRetries = maxRetriesInt.(int)
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.MaxRetries = data.Get("max_retries").(int)
+	}
+
 	// Since this endpoint supports both create operation and update operation,
 	// the error checks for access_key and secret_key not being set are not present.
 	// This allows calling this endpoint multiple times to provide the values.
@@ -231,7 +244,7 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 	}
 
 	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
-		if err := req.Storage.Put(entry); err != nil {
+		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 	}
@@ -254,6 +267,7 @@ type clientConfig struct {
 	IAMEndpoint            string `json:"iam_endpoint" structs:"iam_endpoint" mapstructure:"iam_endpoint"`
 	STSEndpoint            string `json:"sts_endpoint" structs:"sts_endpoint" mapstructure:"sts_endpoint"`
 	IAMServerIdHeaderValue string `json:"iam_server_id_header_value" structs:"iam_server_id_header_value" mapstructure:"iam_server_id_header_value"`
+	MaxRetries             int    `json:"max_retries"`
 }
 
 const pathConfigClientHelpSyn = `

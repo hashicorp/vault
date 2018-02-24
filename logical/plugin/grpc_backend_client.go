@@ -15,6 +15,9 @@ import (
 
 var ErrPluginShutdown = errors.New("plugin is shut down")
 
+// Validate backendGRPCPluginClient satisfies the logical.Backend interface
+var _ logical.Backend = &backendGRPCPluginClient{}
+
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendGRPCPluginClient struct {
@@ -50,7 +53,7 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 
 	reply, err := b.client.HandleRequest(ctx, &pb.HandleRequestArgs{
 		Request: protoReq,
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		if b.doneCtx.Err() != nil {
 			return nil, ErrPluginShutdown
@@ -70,9 +73,12 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 }
 
 func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
-	// Timeout the connection
 	reply, err := b.client.SpecialPaths(b.doneCtx, &pb.Empty{})
 	if err != nil {
+		return nil
+	}
+
+	if reply.Paths == nil {
 		return nil
 	}
 
@@ -112,7 +118,7 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	defer cancel()
 	reply, err := b.client.HandleExistenceCheck(ctx, &pb.HandleExistenceCheckArgs{
 		Request: protoReq,
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		if b.doneCtx.Err() != nil {
 			return false, false, ErrPluginShutdown
@@ -126,33 +132,35 @@ func (b *backendGRPCPluginClient) HandleExistenceCheck(ctx context.Context, req 
 	return reply.CheckFound, reply.Exists, nil
 }
 
-func (b *backendGRPCPluginClient) Cleanup() {
-	b.client.Cleanup(b.doneCtx, &pb.Empty{})
+func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
+	defer close(quitCh)
+	defer cancel()
+
+	b.client.Cleanup(ctx, &pb.Empty{})
 	if b.server != nil {
 		b.server.GracefulStop()
 	}
 	b.clientConn.Close()
 }
 
-func (b *backendGRPCPluginClient) Initialize() error {
-	if b.metadataMode {
-		return ErrClientInMetadataMode
-	}
-
-	_, err := b.client.Initialize(b.doneCtx, &pb.Empty{})
-	return err
-}
-
-func (b *backendGRPCPluginClient) InvalidateKey(key string) {
+func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string) {
 	if b.metadataMode {
 		return
 	}
-	b.client.InvalidateKey(b.doneCtx, &pb.InvalidateKeyArgs{
+
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
+	defer close(quitCh)
+	defer cancel()
+
+	b.client.InvalidateKey(ctx, &pb.InvalidateKeyArgs{
 		Key: key,
 	})
 }
 
-func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
+func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	// Shim logical.Storage
 	storageImpl := config.StorageView
 	if b.metadataMode {
@@ -187,7 +195,12 @@ func (b *backendGRPCPluginClient) Setup(config *logical.BackendConfig) error {
 		Config:   config.Config,
 	}
 
-	reply, err := b.client.Setup(b.doneCtx, args)
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, b.doneCtx)
+	defer close(quitCh)
+	defer cancel()
+
+	reply, err := b.client.Setup(ctx, args)
 	if err != nil {
 		return err
 	}

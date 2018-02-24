@@ -12,13 +12,14 @@ import (
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/wrapping"
+	"github.com/hashicorp/vault/version"
 	log "github.com/mgutz/logxi/v1"
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
 // for availible plugins and returns a PluginRunner
 type Looker interface {
-	LookupPlugin(string) (*PluginRunner, error)
+	LookupPlugin(context.Context, string) (*PluginRunner, error)
 }
 
 // Wrapper interface defines the functions needed by the runner to wrap the
@@ -26,7 +27,7 @@ type Looker interface {
 // configuration and wrapping data in a respose wrapped token.
 // logical.SystemView implementataions satisfy this interface.
 type RunnerUtil interface {
-	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
+	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 }
 
@@ -50,19 +51,19 @@ type PluginRunner struct {
 // Run takes a wrapper RunnerUtil instance along with the go-plugin paramaters and
 // returns a configured plugin.Client with TLS Configured and a wrapping token set
 // on PluginUnwrapTokenEnv for plugin process consumption.
-func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
-	return r.runCommon(wrapper, pluginMap, hs, env, logger, false)
+func (r *PluginRunner) Run(ctx context.Context, wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	return r.runCommon(ctx, wrapper, pluginMap, hs, env, logger, false)
 }
 
 // RunMetadataMode returns a configured plugin.Client that will dispense a plugin
 // in metadata mode. The PluginMetadaModeEnv is passed in as part of the Cmd to
 // plugin.Client, and consumed by the plugin process on pluginutil.VaultPluginTLSProvider.
-func (r *PluginRunner) RunMetadataMode(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
-	return r.runCommon(wrapper, pluginMap, hs, env, logger, true)
+func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	return r.runCommon(ctx, wrapper, pluginMap, hs, env, logger, true)
 
 }
 
-func (r *PluginRunner) runCommon(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger, isMetadataMode bool) (*plugin.Client, error) {
+func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger, isMetadataMode bool) (*plugin.Client, error) {
 	cmd := exec.Command(r.Command, r.Args...)
 	cmd.Env = append(cmd.Env, env...)
 
@@ -70,6 +71,7 @@ func (r *PluginRunner) runCommon(wrapper RunnerUtil, pluginMap map[string]plugin
 	if wrapper.MlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))
 
 	// Create logger for the plugin client
 	clogger := &hclogFaker{
@@ -96,7 +98,7 @@ func (r *PluginRunner) runCommon(wrapper RunnerUtil, pluginMap map[string]plugin
 
 		// Use CA to sign a server cert and wrap the values in a response wrapped
 		// token.
-		wrapToken, err := wrapServerConfig(wrapper, certBytes, key)
+		wrapToken, err := wrapServerConfig(ctx, wrapper, certBytes, key)
 		if err != nil {
 			return nil, err
 		}

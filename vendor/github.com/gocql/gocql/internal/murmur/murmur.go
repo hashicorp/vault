@@ -1,44 +1,57 @@
-// +build !appengine
-
 package murmur
 
-import (
-	"unsafe"
+const (
+	c1    int64 = -8663945395140668459 // 0x87c37b91114253d5
+	c2    int64 = 5545529020109919103  // 0x4cf5ad432745937f
+	fmix1 int64 = -49064778989728563   // 0xff51afd7ed558ccd
+	fmix2 int64 = -4265267296055464877 // 0xc4ceb9fe1a85ec53
 )
 
-func Murmur3H1(data []byte) uint64 {
+func fmix(n int64) int64 {
+	// cast to unsigned for logical right bitshift (to match C* MM3 implementation)
+	n ^= int64(uint64(n) >> 33)
+	n *= fmix1
+	n ^= int64(uint64(n) >> 33)
+	n *= fmix2
+	n ^= int64(uint64(n) >> 33)
+
+	return n
+}
+
+func block(p byte) int64 {
+	return int64(int8(p))
+}
+
+func rotl(x int64, r uint8) int64 {
+	// cast to unsigned for logical right bitshift (to match C* MM3 implementation)
+	return (x << r) | (int64)((uint64(x) >> (64 - r)))
+}
+
+func Murmur3H1(data []byte) int64 {
 	length := len(data)
 
-	var h1, h2, k1, k2 uint64
-
-	const (
-		c1 = 0x87c37b91114253d5
-		c2 = 0x4cf5ad432745937f
-	)
+	var h1, h2, k1, k2 int64
 
 	// body
 	nBlocks := length / 16
 	for i := 0; i < nBlocks; i++ {
-		block := (*[2]uint64)(unsafe.Pointer(&data[i*16]))
-
-		k1 = block[0]
-		k2 = block[1]
+		k1, k2 = getBlock(data, i)
 
 		k1 *= c1
-		k1 = (k1 << 31) | (k1 >> 33) // ROTL64(k1, 31)
+		k1 = rotl(k1, 31)
 		k1 *= c2
 		h1 ^= k1
 
-		h1 = (h1 << 27) | (h1 >> 37) // ROTL64(h1, 27)
+		h1 = rotl(h1, 27)
 		h1 += h2
 		h1 = h1*5 + 0x52dce729
 
 		k2 *= c2
-		k2 = (k2 << 33) | (k2 >> 31) // ROTL64(k2, 33)
+		k2 = rotl(k2, 33)
 		k2 *= c1
 		h2 ^= k2
 
-		h2 = (h2 << 31) | (h2 >> 33) // ROTL64(h2, 31)
+		h2 = rotl(h2, 31)
 		h2 += h1
 		h2 = h2*5 + 0x38495ab5
 	}
@@ -49,87 +62,70 @@ func Murmur3H1(data []byte) uint64 {
 	k2 = 0
 	switch length & 15 {
 	case 15:
-		k2 ^= uint64(tail[14]) << 48
+		k2 ^= block(tail[14]) << 48
 		fallthrough
 	case 14:
-		k2 ^= uint64(tail[13]) << 40
+		k2 ^= block(tail[13]) << 40
 		fallthrough
 	case 13:
-		k2 ^= uint64(tail[12]) << 32
+		k2 ^= block(tail[12]) << 32
 		fallthrough
 	case 12:
-		k2 ^= uint64(tail[11]) << 24
+		k2 ^= block(tail[11]) << 24
 		fallthrough
 	case 11:
-		k2 ^= uint64(tail[10]) << 16
+		k2 ^= block(tail[10]) << 16
 		fallthrough
 	case 10:
-		k2 ^= uint64(tail[9]) << 8
+		k2 ^= block(tail[9]) << 8
 		fallthrough
 	case 9:
-		k2 ^= uint64(tail[8])
+		k2 ^= block(tail[8])
 
 		k2 *= c2
-		k2 = (k2 << 33) | (k2 >> 31) // ROTL64(k2, 33)
+		k2 = rotl(k2, 33)
 		k2 *= c1
 		h2 ^= k2
 
 		fallthrough
 	case 8:
-		k1 ^= uint64(tail[7]) << 56
+		k1 ^= block(tail[7]) << 56
 		fallthrough
 	case 7:
-		k1 ^= uint64(tail[6]) << 48
+		k1 ^= block(tail[6]) << 48
 		fallthrough
 	case 6:
-		k1 ^= uint64(tail[5]) << 40
+		k1 ^= block(tail[5]) << 40
 		fallthrough
 	case 5:
-		k1 ^= uint64(tail[4]) << 32
+		k1 ^= block(tail[4]) << 32
 		fallthrough
 	case 4:
-		k1 ^= uint64(tail[3]) << 24
+		k1 ^= block(tail[3]) << 24
 		fallthrough
 	case 3:
-		k1 ^= uint64(tail[2]) << 16
+		k1 ^= block(tail[2]) << 16
 		fallthrough
 	case 2:
-		k1 ^= uint64(tail[1]) << 8
+		k1 ^= block(tail[1]) << 8
 		fallthrough
 	case 1:
-		k1 ^= uint64(tail[0])
+		k1 ^= block(tail[0])
 
 		k1 *= c1
-		k1 = (k1 << 31) | (k1 >> 33) // ROTL64(k1, 31)
+		k1 = rotl(k1, 31)
 		k1 *= c2
 		h1 ^= k1
 	}
 
-	h1 ^= uint64(length)
-	h2 ^= uint64(length)
+	h1 ^= int64(length)
+	h2 ^= int64(length)
 
 	h1 += h2
 	h2 += h1
 
-	// finalizer
-	const (
-		fmix1 = 0xff51afd7ed558ccd
-		fmix2 = 0xc4ceb9fe1a85ec53
-	)
-
-	// fmix64(h1)
-	h1 ^= h1 >> 33
-	h1 *= fmix1
-	h1 ^= h1 >> 33
-	h1 *= fmix2
-	h1 ^= h1 >> 33
-
-	// fmix64(h2)
-	h2 ^= h2 >> 33
-	h2 *= fmix1
-	h2 ^= h2 >> 33
-	h2 *= fmix2
-	h2 ^= h2 >> 33
+	h1 = fmix(h1)
+	h2 = fmix(h2)
 
 	h1 += h2
 	// the following is extraneous since h2 is discarded

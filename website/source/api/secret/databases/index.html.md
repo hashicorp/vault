@@ -101,6 +101,34 @@ $ curl \
 }
 ```
 
+## List Connections
+
+This endpoint returns a list of available connections. Only the connection names
+are returned, not any values.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `LIST`   | `/database/config`           | `200 application/json` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    https://vault.rocks/v1/database/config
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "keys": ["db-one", "db-two"]
+  }
+}
+```
+
 ## Delete Connection
 
 This endpoint deletes a connection.

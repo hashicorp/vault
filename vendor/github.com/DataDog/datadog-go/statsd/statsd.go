@@ -64,19 +64,20 @@ const UnixAddressPrefix = "unix://"
 Stat suffixes
 */
 var (
-	gaugeSuffix     = []byte("|g")
-	countSuffix     = []byte("|c")
-	histogramSuffix = []byte("|h")
-	decrSuffix      = []byte("-1|c")
-	incrSuffix      = []byte("1|c")
-	setSuffix       = []byte("|s")
-	timingSuffix    = []byte("|ms")
+	gaugeSuffix        = []byte("|g")
+	countSuffix        = []byte("|c")
+	histogramSuffix    = []byte("|h")
+	distributionSuffix = []byte("|d")
+	decrSuffix         = []byte("-1|c")
+	incrSuffix         = []byte("1|c")
+	setSuffix          = []byte("|s")
+	timingSuffix       = []byte("|ms")
 )
 
 // A statsdWriter offers a standard interface regardless of the underlying
 // protocol. For now UDS and UPD writers are available.
 type statsdWriter interface {
-	Write(data []byte) error
+	Write(data []byte) (n int, err error)
 	SetWriteTimeout(time.Duration) error
 	Close() error
 }
@@ -109,13 +110,18 @@ func New(addr string) (*Client, error) {
 		if err != nil {
 			return nil, err
 		}
-		client := &Client{writer: w}
-		return client, nil
+		return NewWithWriter(w)
 	}
-	w, err := newUdpWriter(addr)
+	w, err := newUDPWriter(addr)
 	if err != nil {
 		return nil, err
 	}
+	return NewWithWriter(w)
+}
+
+// NewWithWriter creates a new Client with given writer. Writer is a
+// io.WriteCloser + SetWriteTimeout(time.Duration) error
+func NewWithWriter(w statsdWriter) (*Client, error) {
 	client := &Client{writer: w, SkipErrors: false}
 	return client, nil
 }
@@ -184,7 +190,7 @@ func (c *Client) watch() {
 			c.Lock()
 			if len(c.commands) > 0 {
 				// FIXME: eating error here
-				c.flush()
+				c.flushLocked()
 			}
 			c.Unlock()
 		case <-c.stop:
@@ -200,7 +206,7 @@ func (c *Client) append(cmd string) error {
 	c.commands = append(c.commands, cmd)
 	// if we should flush, lets do it
 	if len(c.commands) == c.bufferLength {
-		if err := c.flush(); err != nil {
+		if err := c.flushLocked(); err != nil {
 			return err
 		}
 	}
@@ -254,13 +260,20 @@ func copyAndResetBuffer(buf *bytes.Buffer) []byte {
 	return tmpBuf
 }
 
+// Flush forces a flush of the pending commands in the buffer
+func (c *Client) Flush() error {
+	c.Lock()
+	defer c.Unlock()
+	return c.flushLocked()
+}
+
 // flush the commands in the buffer.  Lock must be held by caller.
-func (c *Client) flush() error {
+func (c *Client) flushLocked() error {
 	frames, flushable := c.joinMaxSize(c.commands, "\n", OptimalPayloadSize)
 	var err error
 	cmdsFlushed := 0
 	for i, data := range frames {
-		e := c.writer.Write(data)
+		_, e := c.writer.Write(data)
 		if e != nil {
 			err = e
 			break
@@ -290,7 +303,7 @@ func (c *Client) sendMsg(msg string) error {
 		return c.append(msg)
 	}
 
-	err := c.writer.Write([]byte(msg))
+	_, err := c.writer.Write([]byte(msg))
 
 	if c.SkipErrors {
 		return nil
@@ -320,9 +333,14 @@ func (c *Client) Count(name string, value int64, tags []string, rate float64) er
 	return c.send(name, value, countSuffix, tags, rate)
 }
 
-// Histogram tracks the statistical distribution of a set of values.
+// Histogram tracks the statistical distribution of a set of values on each host.
 func (c *Client) Histogram(name string, value float64, tags []string, rate float64) error {
 	return c.send(name, value, histogramSuffix, tags, rate)
+}
+
+// Distribution tracks the statistical distribution of a set of values across your infrastructure.
+func (c *Client) Distribution(name string, value float64, tags []string, rate float64) error {
+	return c.send(name, value, distributionSuffix, tags, rate)
 }
 
 // Decr is just Count of -1
@@ -393,31 +411,43 @@ func (c *Client) Close() error {
 	case c.stop <- struct{}{}:
 	default:
 	}
+
+	// if this client is buffered, flush before closing the writer
+	if c.bufferLength > 0 {
+		if err := c.Flush(); err != nil {
+			return err
+		}
+	}
+
 	return c.writer.Close()
 }
 
 // Events support
+// EventAlertType and EventAlertPriority became exported types after this issue was submitted: https://github.com/DataDog/datadog-go/issues/41
+// The reason why they got exported is so that client code can directly use the types.
 
-type eventAlertType string
+// EventAlertType is the alert type for events
+type EventAlertType string
 
 const (
 	// Info is the "info" AlertType for events
-	Info eventAlertType = "info"
+	Info EventAlertType = "info"
 	// Error is the "error" AlertType for events
-	Error eventAlertType = "error"
+	Error EventAlertType = "error"
 	// Warning is the "warning" AlertType for events
-	Warning eventAlertType = "warning"
+	Warning EventAlertType = "warning"
 	// Success is the "success" AlertType for events
-	Success eventAlertType = "success"
+	Success EventAlertType = "success"
 )
 
-type eventPriority string
+// EventPriority is the event priority for events
+type EventPriority string
 
 const (
 	// Normal is the "normal" Priority for events
-	Normal eventPriority = "normal"
+	Normal EventPriority = "normal"
 	// Low is the "low" Priority for events
-	Low eventPriority = "low"
+	Low EventPriority = "low"
 )
 
 // An Event is an object that can be posted to your DataDog event stream.
@@ -434,12 +464,12 @@ type Event struct {
 	// AggregationKey groups this event with others of the same key.
 	AggregationKey string
 	// Priority of the event.  Can be statsd.Low or statsd.Normal.
-	Priority eventPriority
+	Priority EventPriority
 	// SourceTypeName is a source type for the event.
 	SourceTypeName string
 	// AlertType can be statsd.Info, statsd.Error, statsd.Warning, or statsd.Success.
 	// If absent, the default value applied by the dogstatsd server is Info.
-	AlertType eventAlertType
+	AlertType EventAlertType
 	// Tags for the event.
 	Tags []string
 }
@@ -520,7 +550,7 @@ func (e Event) Encode(tags ...string) (string, error) {
 	return buffer.String(), nil
 }
 
-// ServiceCheck support
+// ServiceCheckStatus support
 type ServiceCheckStatus byte
 
 const (

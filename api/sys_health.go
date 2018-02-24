@@ -21,13 +21,13 @@ func (c *Sys) Health() (*HealthResponse, error) {
 }
 
 type HealthResponse struct {
-	Initialized         bool   `json:"initialized"`
-	Sealed              bool   `json:"sealed"`
-	Standby             bool   `json:"standby"`
-	ReplicationPerfMode string `json:"replication_perf_mode"`
-	ReplicationDRMode   string `json:"replication_dr_mode"`
-	ServerTimeUTC       int64  `json:"server_time_utc"`
-	Version             string `json:"version"`
-	ClusterName         string `json:"cluster_name,omitempty"`
-	ClusterID           string `json:"cluster_id,omitempty"`
+	Initialized                bool   `json:"initialized"`
+	Sealed                     bool   `json:"sealed"`
+	Standby                    bool   `json:"standby"`
+	ReplicationPerformanceMode string `json:"replication_performance_mode"`
+	ReplicationDRMode          string `json:"replication_dr_mode"`
+	ServerTimeUTC              int64  `json:"server_time_utc"`
+	Version                    string `json:"version"`
+	ClusterName                string `json:"cluster_name,omitempty"`
+	ClusterID                  string `json:"cluster_id,omitempty"`
 }

@@ -21,8 +21,9 @@ func kvPaths(b *backend) []*framework.Path {
 		&framework.Path{
 			Pattern: "kv/" + framework.GenericNameRegex("key"),
 			Fields: map[string]*framework.FieldSchema{
-				"key":   &framework.FieldSchema{Type: framework.TypeString},
-				"value": &framework.FieldSchema{Type: framework.TypeString},
+				"key":     &framework.FieldSchema{Type: framework.TypeString},
+				"value":   &framework.FieldSchema{Type: framework.TypeString},
+				"version": &framework.FieldSchema{Type: framework.TypeInt},
 			},
 			ExistenceCheck: b.pathExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -36,7 +37,7 @@ func kvPaths(b *backend) []*framework.Path {
 }
 
 func (b *backend) pathExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	out, err := req.Storage.Get(req.Path)
+	out, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return false, fmt.Errorf("existence check failed: %v", err)
 	}
@@ -45,7 +46,9 @@ func (b *backend) pathExistenceCheck(ctx context.Context, req *logical.Request, 
 }
 
 func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := req.Storage.Get(req.Path)
+	version := data.Get("version").(int)
+
+	entry, err := req.Storage.Get(ctx, req.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -58,11 +61,16 @@ func (b *backend) pathKVRead(ctx context.Context, req *logical.Request, data *fr
 
 	b.Logger().Info("reading value", "key", req.Path, "value", value)
 	// Return the secret
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"value": value,
+			"value":   value,
+			"version": version,
 		},
-	}, nil
+	}
+	if version != 0 {
+		resp.Data["version"] = version
+	}
+	return resp, nil
 }
 
 func (b *backend) pathKVCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -75,7 +83,7 @@ func (b *backend) pathKVCreateUpdate(ctx context.Context, req *logical.Request, 
 	}
 
 	s := req.Storage
-	err := s.Put(entry)
+	err := s.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +96,7 @@ func (b *backend) pathKVCreateUpdate(ctx context.Context, req *logical.Request, 
 }
 
 func (b *backend) pathKVDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if err := req.Storage.Delete(req.Path); err != nil {
+	if err := req.Storage.Delete(ctx, req.Path); err != nil {
 		return nil, err
 	}
 
@@ -96,7 +104,7 @@ func (b *backend) pathKVDelete(ctx context.Context, req *logical.Request, data *
 }
 
 func (b *backend) pathKVList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	vals, err := req.Storage.List("kv/")
+	vals, err := req.Storage.List(ctx, "kv/")
 	if err != nil {
 		return nil, err
 	}

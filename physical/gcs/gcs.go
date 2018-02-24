@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
 	log "github.com/mgutz/logxi/v1"
 
@@ -19,6 +20,9 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
+
+// Verify GCSBackend satisfies the correct interfaces
+var _ physical.Backend = (*GCSBackend)(nil)
 
 // GCSBackend is a physical backend that stores data
 // within an Google Cloud Storage bucket.
@@ -81,8 +85,8 @@ func newGCSClient(ctx context.Context, conf map[string]string, logger log.Logger
 	// else use application default credentials
 	credentialsFile, ok := conf["credentials_file"]
 	if ok {
-		client, err := storage.NewClient(
-			ctx,
+		client, err := storage.NewClient(ctx,
+			option.WithUserAgent(useragent.String()),
 			option.WithServiceAccountFile(credentialsFile),
 		)
 
@@ -92,7 +96,9 @@ func newGCSClient(ctx context.Context, conf map[string]string, logger log.Logger
 		return client, nil
 	}
 
-	client, err := storage.NewClient(ctx)
+	client, err := storage.NewClient(ctx,
+		option.WithUserAgent(useragent.String()),
+	)
 	if err != nil {
 		return nil, errwrap.Wrapf("error with application default credentials: {{err}}", err)
 	}
@@ -100,7 +106,7 @@ func newGCSClient(ctx context.Context, conf map[string]string, logger log.Logger
 }
 
 // Put is used to insert or update an entry
-func (g *GCSBackend) Put(entry *physical.Entry) error {
+func (g *GCSBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"gcs", "put"}, time.Now())
 
 	bucket := g.client.Bucket(g.bucketName)
@@ -116,7 +122,7 @@ func (g *GCSBackend) Put(entry *physical.Entry) error {
 }
 
 // Get is used to fetch an entry
-func (g *GCSBackend) Get(key string) (*physical.Entry, error) {
+func (g *GCSBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"gcs", "get"}, time.Now())
 
 	bucket := g.client.Bucket(g.bucketName)
@@ -147,7 +153,7 @@ func (g *GCSBackend) Get(key string) (*physical.Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (g *GCSBackend) Delete(key string) error {
+func (g *GCSBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"gcs", "delete"}, time.Now())
 
 	bucket := g.client.Bucket(g.bucketName)
@@ -169,7 +175,7 @@ func (g *GCSBackend) Delete(key string) error {
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (g *GCSBackend) List(prefix string) ([]string, error) {
+func (g *GCSBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"gcs", "list"}, time.Now())
 
 	bucket := g.client.Bucket(g.bucketName)

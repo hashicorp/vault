@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"context"
+
 	"github.com/mitchellh/go-testing-interface"
 )
 
@@ -15,20 +17,20 @@ type TestSealOpts struct {
 }
 
 func NewTestSeal(t testing.T, opts *TestSealOpts) Seal {
-	return &DefaultSeal{}
+	return NewDefaultSeal()
 }
 
 func testCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
 	seal := NewTestSeal(t, nil)
 	core := TestCoreWithSeal(t, seal, false)
-	result, err := core.Initialize(&InitParams{
+	result, err := core.Initialize(context.Background(), &InitParams{
 		BarrierConfig:  barrierConf,
 		RecoveryConfig: recoveryConf,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	err = core.UnsealWithStoredKeys()
+	err = core.UnsealWithStoredKeys(context.Background())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -61,7 +63,7 @@ func testSealDefConfigs() (*SealConfig, *SealConfig) {
 func TestCoreUnsealedWithConfigSealOpts(t testing.T, barrierConf, recoveryConf *SealConfig, sealOpts *TestSealOpts) (*Core, [][]byte, [][]byte, string) {
 	seal := NewTestSeal(t, sealOpts)
 	core := TestCoreWithSeal(t, seal, false)
-	result, err := core.Initialize(&InitParams{
+	result, err := core.Initialize(context.Background(), &InitParams{
 		BarrierConfig:  barrierConf,
 		RecoveryConfig: recoveryConf,
 	})

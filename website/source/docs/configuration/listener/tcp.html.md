@@ -50,13 +50,17 @@ listener "tcp" {
   Specifies the path to the certificate for TLS. To configure the listener to
   use a CA certificate, concatenate the primary certificate and the CA
   certificate together. The primary certificate should appear first in the
-  combined file.
+  combined file. On `SIGHUP`, the path set here _at Vault startup_ will be used
+  for reloading the certificate; modifying this value while Vault is running
+  will have no effect for `SIGHUP`s.
 
 - `tls_key_file` `(string: <required-if-enabled>, reloads-on-SIGHUP)` –
   Specifies the path to the private key for the certificate. If the key file
   is encrypted, you will be prompted to enter the passphrase on server startup.
   The passphrase must stay the same between key files when reloading your
-  configuration using SIGHUP.
+  configuration using `SIGHUP`. On `SIGHUP`, the path set here _at Vault
+  startup_ will be used for reloading the certificate; modifying this value
+  while Vault is running will have no effect for `SIGHUP`s.
 
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum supported
   version of TLS. Accepted values are "tls10", "tls11" or "tls12".

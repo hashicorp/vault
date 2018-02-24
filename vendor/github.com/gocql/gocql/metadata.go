@@ -226,25 +226,26 @@ func compileMetadata(
 
 	// add columns from the schema data
 	for i := range columns {
+		col := &columns[i]
 		// decode the validator for TypeInfo and order
-		if columns[i].ClusteringOrder != "" { // Cassandra 3.x+
-			columns[i].Type = NativeType{typ: getCassandraType(columns[i].Validator)}
-			columns[i].Order = ASC
-			if columns[i].ClusteringOrder == "desc" {
-				columns[i].Order = DESC
+		if col.ClusteringOrder != "" { // Cassandra 3.x+
+			col.Type = getCassandraType(col.Validator)
+			col.Order = ASC
+			if col.ClusteringOrder == "desc" {
+				col.Order = DESC
 			}
 		} else {
-			validatorParsed := parseType(columns[i].Validator)
-			columns[i].Type = validatorParsed.types[0]
-			columns[i].Order = ASC
+			validatorParsed := parseType(col.Validator)
+			col.Type = validatorParsed.types[0]
+			col.Order = ASC
 			if validatorParsed.reversed[0] {
-				columns[i].Order = DESC
+				col.Order = DESC
 			}
 		}
 
-		table := keyspace.Tables[columns[i].Table]
-		table.Columns[columns[i].Name] = &columns[i]
-		table.OrderedColumns = append(table.OrderedColumns, columns[i].Name)
+		table := keyspace.Tables[col.Table]
+		table.Columns[col.Name] = col
+		table.OrderedColumns = append(table.OrderedColumns, col.Name)
 	}
 
 	if protoVersion == protoVersion1 {
@@ -426,8 +427,9 @@ func getKeyspaceMetadata(session *Session, keyspaceName string) (*KeyspaceMetada
 		}
 
 		keyspace.StrategyClass = replication["class"]
+		delete(replication, "class")
 
-		keyspace.StrategyOptions = make(map[string]interface{})
+		keyspace.StrategyOptions = make(map[string]interface{}, len(replication))
 		for k, v := range replication {
 			keyspace.StrategyOptions[k] = v
 		}

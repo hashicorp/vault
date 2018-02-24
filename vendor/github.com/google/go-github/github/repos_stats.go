@@ -182,7 +182,7 @@ func (s *RepositoriesService) ListParticipation(ctx context.Context, owner, repo
 }
 
 // PunchCard represents the number of commits made during a given hour of a
-// day of thew eek.
+// day of the week.
 type PunchCard struct {
 	Day     *int // Day of the week (0-6: =Sunday - Saturday).
 	Hour    *int // Hour of day (0-23).

@@ -141,10 +141,10 @@ func (g *GroupsService) ListWithFilter(opt *GroupFilterOptions) ([]Group, *Respo
 				groupPage, resp, err = g.ListWithFilter(pageOption)
 				if err != nil {
 					return groups, resp, err
-				} else {
-					groups = append(groups, groupPage...)
-					pagesRetreived++
 				}
+				groups = append(groups, groupPage...)
+				pagesRetreived++
+
 			} else {
 				break
 			}
@@ -222,10 +222,9 @@ func (g *GroupsService) GetUsers(groupID string, opt *GroupUserFilterOptions) (u
 				userPage, resp, err = g.GetUsers(groupID, pageOpts)
 				if err != nil {
 					return users, resp, err
-				} else {
-					users = append(users, userPage...)
-					pagesRetreived++
 				}
+				users = append(users, userPage...)
+				pagesRetreived++
 			} else {
 				break
 			}

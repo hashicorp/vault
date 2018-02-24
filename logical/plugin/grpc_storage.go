@@ -22,10 +22,10 @@ type GRPCStorageClient struct {
 	client pb.StorageClient
 }
 
-func (s *GRPCStorageClient) List(prefix string) ([]string, error) {
-	reply, err := s.client.List(context.Background(), &pb.StorageListArgs{
+func (s *GRPCStorageClient) List(ctx context.Context, prefix string) ([]string, error) {
+	reply, err := s.client.List(ctx, &pb.StorageListArgs{
 		Prefix: prefix,
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		return reply.Keys, err
 	}
@@ -35,10 +35,10 @@ func (s *GRPCStorageClient) List(prefix string) ([]string, error) {
 	return reply.Keys, nil
 }
 
-func (s *GRPCStorageClient) Get(key string) (*logical.StorageEntry, error) {
-	reply, err := s.client.Get(context.Background(), &pb.StorageGetArgs{
+func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
+	reply, err := s.client.Get(ctx, &pb.StorageGetArgs{
 		Key: key,
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -48,10 +48,10 @@ func (s *GRPCStorageClient) Get(key string) (*logical.StorageEntry, error) {
 	return pb.ProtoStorageEntryToLogicalStorageEntry(reply.Entry), nil
 }
 
-func (s *GRPCStorageClient) Put(entry *logical.StorageEntry) error {
-	reply, err := s.client.Put(context.Background(), &pb.StoragePutArgs{
+func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry) error {
+	reply, err := s.client.Put(ctx, &pb.StoragePutArgs{
 		Entry: pb.LogicalStorageEntryToProtoStorageEntry(entry),
-	})
+	}, largeMsgGRPCCallOpts...)
 	if err != nil {
 		return err
 	}
@@ -61,8 +61,8 @@ func (s *GRPCStorageClient) Put(entry *logical.StorageEntry) error {
 	return nil
 }
 
-func (s *GRPCStorageClient) Delete(key string) error {
-	reply, err := s.client.Delete(context.Background(), &pb.StorageDeleteArgs{
+func (s *GRPCStorageClient) Delete(ctx context.Context, key string) error {
+	reply, err := s.client.Delete(ctx, &pb.StorageDeleteArgs{
 		Key: key,
 	})
 	if err != nil {
@@ -80,7 +80,7 @@ type GRPCStorageServer struct {
 }
 
 func (s *GRPCStorageServer) List(ctx context.Context, args *pb.StorageListArgs) (*pb.StorageListReply, error) {
-	keys, err := s.impl.List(args.Prefix)
+	keys, err := s.impl.List(ctx, args.Prefix)
 	return &pb.StorageListReply{
 		Keys: keys,
 		Err:  pb.ErrToString(err),
@@ -88,7 +88,7 @@ func (s *GRPCStorageServer) List(ctx context.Context, args *pb.StorageListArgs) 
 }
 
 func (s *GRPCStorageServer) Get(ctx context.Context, args *pb.StorageGetArgs) (*pb.StorageGetReply, error) {
-	storageEntry, err := s.impl.Get(args.Key)
+	storageEntry, err := s.impl.Get(ctx, args.Key)
 	return &pb.StorageGetReply{
 		Entry: pb.LogicalStorageEntryToProtoStorageEntry(storageEntry),
 		Err:   pb.ErrToString(err),
@@ -96,14 +96,14 @@ func (s *GRPCStorageServer) Get(ctx context.Context, args *pb.StorageGetArgs) (*
 }
 
 func (s *GRPCStorageServer) Put(ctx context.Context, args *pb.StoragePutArgs) (*pb.StoragePutReply, error) {
-	err := s.impl.Put(pb.ProtoStorageEntryToLogicalStorageEntry(args.Entry))
+	err := s.impl.Put(ctx, pb.ProtoStorageEntryToLogicalStorageEntry(args.Entry))
 	return &pb.StoragePutReply{
 		Err: pb.ErrToString(err),
 	}, nil
 }
 
 func (s *GRPCStorageServer) Delete(ctx context.Context, args *pb.StorageDeleteArgs) (*pb.StorageDeleteReply, error) {
-	err := s.impl.Delete(args.Key)
+	err := s.impl.Delete(ctx, args.Key)
 	return &pb.StorageDeleteReply{
 		Err: pb.ErrToString(err),
 	}, nil

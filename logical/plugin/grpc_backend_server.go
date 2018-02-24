@@ -14,7 +14,7 @@ type backendGRPCPluginServer struct {
 	broker  *plugin.GRPCBroker
 	backend logical.Backend
 
-	factory func(*logical.BackendConfig) (logical.Backend, error)
+	factory logical.Factory
 
 	brokeredClient *grpc.ClientConn
 
@@ -43,7 +43,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 
 	// Call the underlying backend factory after shims have been created
 	// to set b.backend
-	backend, err := b.factory(config)
+	backend, err := b.factory(ctx, config)
 	if err != nil {
 		return &pb.SetupReply{
 			Err: pb.ErrToString(err),
@@ -81,6 +81,11 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Empty) (*pb.SpecialPathsReply, error) {
 	paths := b.backend.SpecialPaths()
+	if paths == nil {
+		return &pb.SpecialPathsReply{
+			Paths: nil,
+		}, nil
+	}
 
 	return &pb.SpecialPathsReply{
 		Paths: &pb.Paths{
@@ -112,20 +117,11 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 }
 
 func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb.Empty, error) {
-	b.backend.Cleanup()
+	b.backend.Cleanup(ctx)
 
 	// Close rpc clients
 	b.brokeredClient.Close()
 	return &pb.Empty{}, nil
-}
-
-func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Empty) (*pb.Empty, error) {
-	if inMetadataMode() {
-		return &pb.Empty{}, ErrServerInMetadataMode
-	}
-
-	err := b.backend.Initialize()
-	return &pb.Empty{}, err
 }
 
 func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.InvalidateKeyArgs) (*pb.Empty, error) {
@@ -133,7 +129,7 @@ func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.In
 		return &pb.Empty{}, ErrServerInMetadataMode
 	}
 
-	b.backend.InvalidateKey(args.Key)
+	b.backend.InvalidateKey(ctx, args.Key)
 	return &pb.Empty{}, nil
 }
 

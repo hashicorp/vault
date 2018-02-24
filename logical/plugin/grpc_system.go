@@ -45,8 +45,8 @@ func (s *gRPCSystemViewClient) MaxLeaseTTL() time.Duration {
 	return time.Duration(reply.TTL)
 }
 
-func (s *gRPCSystemViewClient) SudoPrivilege(path string, token string) bool {
-	reply, err := s.client.SudoPrivilege(context.Background(), &pb.SudoPrivilegeArgs{
+func (s *gRPCSystemViewClient) SudoPrivilege(ctx context.Context, path string, token string) bool {
+	reply, err := s.client.SudoPrivilege(ctx, &pb.SudoPrivilegeArgs{
 		Path:  path,
 		Token: token,
 	})
@@ -78,20 +78,20 @@ func (s *gRPCSystemViewClient) CachingDisabled() bool {
 func (s *gRPCSystemViewClient) ReplicationState() consts.ReplicationState {
 	reply, err := s.client.ReplicationState(context.Background(), &pb.Empty{})
 	if err != nil {
-		return consts.ReplicationDisabled
+		return consts.ReplicationUnknown
 	}
 
 	return consts.ReplicationState(reply.State)
 }
 
-func (s *gRPCSystemViewClient) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	buf, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
 
-	reply, err := s.client.ResponseWrapData(context.Background(), &pb.ResponseWrapDataArgs{
-		Data: buf,
+	reply, err := s.client.ResponseWrapData(ctx, &pb.ResponseWrapDataArgs{
+		Data: string(buf[:]),
 		TTL:  int64(ttl),
 		JWT:  false,
 	})
@@ -110,7 +110,7 @@ func (s *gRPCSystemViewClient) ResponseWrapData(data map[string]interface{}, ttl
 	return info, nil
 }
 
-func (s *gRPCSystemViewClient) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+func (s *gRPCSystemViewClient) LookupPlugin(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
 	return nil, fmt.Errorf("cannot call LookupPlugin from a plugin backend")
 }
 
@@ -121,6 +121,15 @@ func (s *gRPCSystemViewClient) MlockEnabled() bool {
 	}
 
 	return reply.Enabled
+}
+
+func (s *gRPCSystemViewClient) LocalMount() bool {
+	reply, err := s.client.LocalMount(context.Background(), &pb.Empty{})
+	if err != nil {
+		return false
+	}
+
+	return reply.Local
 }
 
 type gRPCSystemViewServer struct {
@@ -142,7 +151,7 @@ func (s *gRPCSystemViewServer) MaxLeaseTTL(ctx context.Context, _ *pb.Empty) (*p
 }
 
 func (s *gRPCSystemViewServer) SudoPrivilege(ctx context.Context, args *pb.SudoPrivilegeArgs) (*pb.SudoPrivilegeReply, error) {
-	sudo := s.impl.SudoPrivilege(args.Path, args.Token)
+	sudo := s.impl.SudoPrivilege(ctx, args.Path, args.Token)
 	return &pb.SudoPrivilegeReply{
 		Sudo: sudo,
 	}, nil
@@ -171,13 +180,13 @@ func (s *gRPCSystemViewServer) ReplicationState(ctx context.Context, _ *pb.Empty
 
 func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.ResponseWrapDataArgs) (*pb.ResponseWrapDataReply, error) {
 	data := map[string]interface{}{}
-	err := json.Unmarshal(args.Data, &data)
+	err := json.Unmarshal([]byte(args.Data), &data)
 	if err != nil {
 		return &pb.ResponseWrapDataReply{}, err
 	}
 
 	// Do not allow JWTs to be returned
-	info, err := s.impl.ResponseWrapData(data, time.Duration(args.TTL), false)
+	info, err := s.impl.ResponseWrapData(ctx, data, time.Duration(args.TTL), false)
 	if err != nil {
 		return &pb.ResponseWrapDataReply{
 			Err: pb.ErrToString(err),
@@ -198,5 +207,12 @@ func (s *gRPCSystemViewServer) MlockEnabled(ctx context.Context, _ *pb.Empty) (*
 	enabled := s.impl.MlockEnabled()
 	return &pb.MlockEnabledReply{
 		Enabled: enabled,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) LocalMount(ctx context.Context, _ *pb.Empty) (*pb.LocalMountReply, error) {
+	local := s.impl.LocalMount()
+	return &pb.LocalMountReply{
+		Local: local,
 	}, nil
 }
