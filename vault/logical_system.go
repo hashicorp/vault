@@ -1319,7 +1319,7 @@ func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Req
 	}
 
 	if len(paths) == 0 {
-		return nil, nil
+		return logical.ErrorResponse("paths must be supplied"), nil
 	}
 
 	for _, path := range paths {
