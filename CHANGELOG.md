@@ -73,7 +73,6 @@ IMPROVEMENTS:
  * ui (Enterprise): Support for ChaCha20-Poly1305 keys in the transit engine.
 
 BUG FIXES:
- * auth/okta:  Get all okta groups for a user vs. default 200 limit.  [GH-4034]
  * api/renewer: Honor increment value in renew auth calls [GH-3904]
  * auth/approle: Fix inability to use limited-use-count secret IDs on
    replication performance secondaries
@@ -82,6 +81,7 @@ BUG FIXES:
  * auth/aws-ec2: Avoid masking of role tag response [GH-3941]
  * auth/cert: Verify DNS SANs in the authenticating certificate [GH-3982]
  * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
+ * auth/okta: Get all okta groups for a user vs. default 200 limit [GH-4034]
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens. [GH-3880]
