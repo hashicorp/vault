@@ -13,7 +13,7 @@ import (
 func mockPolicyStore(t *testing.T) *PolicyStore {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(context.Background(), view, logical.TestSystemView(), logformat.NewVaultLogger(log.LevelTrace))
+	p := NewPolicyStore(context.Background(), nil, view, logical.TestSystemView(), logformat.NewVaultLogger(log.LevelTrace))
 	return p
 }
 
@@ -22,7 +22,7 @@ func mockPolicyStoreNoCache(t *testing.T) *PolicyStore {
 	sysView.CachingDisabledVal = true
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(context.Background(), view, sysView, logformat.NewVaultLogger(log.LevelTrace))
+	p := NewPolicyStore(context.Background(), nil, view, sysView, logformat.NewVaultLogger(log.LevelTrace))
 	return p
 }
 
