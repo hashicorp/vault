@@ -181,15 +181,15 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	name := d.Get("name").(string)
 	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
-	hashalgorithm := d.Get("urlalgorithm").(string)
-	if hashalgorithm == "" {
-		hashalgorithm = d.Get("algorithm").(string)
-		if hashalgorithm == "" {
-			hashalgorithm = d.Get("hash_algorithm").(string)
+	hashAlgorithm := d.Get("urlalgorithm").(string)
+	if hashAlgorithm == "" {
+		hashAlgorithm = d.Get("algorithm").(string)
+		if hashAlgorithm == "" {
+			hashAlgorithm = d.Get("hash_algorithm").(string)
 		}
 	}
 	prehashed := d.Get("prehashed").(bool)
-	sigalgorithm := d.Get("signature_algorithm").(string)
+	sigAlgorithm := d.Get("signature_algorithm").(string)
 
 	input, err := base64.StdEncoding.DecodeString(inputB64)
 	if err != nil {
@@ -223,7 +223,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	if p.Type.HashSignatureInput() && !prehashed {
 		var hf hash.Hash
-		switch hashalgorithm {
+		switch hashAlgorithm {
 		case "sha2-224":
 			hf = sha256.New224()
 		case "sha2-256":
@@ -233,13 +233,13 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		case "sha2-512":
 			hf = sha512.New()
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", hashalgorithm)), nil
+			return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)), nil
 		}
 		hf.Write(input)
 		input = hf.Sum(nil)
 	}
 
-	sig, err := p.Sign(ver, context, input, hashalgorithm, sigalgorithm)
+	sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm)
 	if err != nil {
 		return nil, err
 	}
@@ -278,15 +278,15 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	name := d.Get("name").(string)
 	inputB64 := d.Get("input").(string)
-	hashalgorithm := d.Get("urlalgorithm").(string)
-	if hashalgorithm == "" {
-		hashalgorithm = d.Get("algorithm").(string)
-		if hashalgorithm == "" {
-			hashalgorithm = d.Get("hash_algorithm").(string)
+	hashAlgorithm := d.Get("urlalgorithm").(string)
+	if hashAlgorithm == "" {
+		hashAlgorithm = d.Get("algorithm").(string)
+		if hashAlgorithm == "" {
+			hashAlgorithm = d.Get("hash_algorithm").(string)
 		}
 	}
 	prehashed := d.Get("prehashed").(bool)
-	sigalgorithm := d.Get("signature_algorithm").(string)
+	sigAlgorithm := d.Get("signature_algorithm").(string)
 
 	input, err := base64.StdEncoding.DecodeString(inputB64)
 	if err != nil {
@@ -320,7 +320,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	if p.Type.HashSignatureInput() && !prehashed {
 		var hf hash.Hash
-		switch hashalgorithm {
+		switch hashAlgorithm {
 		case "sha2-224":
 			hf = sha256.New224()
 		case "sha2-256":
@@ -330,13 +330,13 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		case "sha2-512":
 			hf = sha512.New()
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", hashalgorithm)), nil
+			return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)), nil
 		}
 		hf.Write(input)
 		input = hf.Sum(nil)
 	}
 
-	valid, err := p.VerifySignature(context, input, sig, hashalgorithm, sigalgorithm)
+	valid, err := p.VerifySignature(context, input, sig, hashAlgorithm, sigAlgorithm)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
