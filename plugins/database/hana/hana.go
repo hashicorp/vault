@@ -3,6 +3,7 @@ package hana
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -290,8 +291,7 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 	return nil
 }
 
-// RotateRootCredentials is not supported on HANA, so this is a no-op.
+// RotateRootCredentials is not currently supported on HANA
 func (h *HANA) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	// NOOP
-	return nil, nil
+	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
 }

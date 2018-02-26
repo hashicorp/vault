@@ -38,6 +38,7 @@ type cassandraConnectionProducer struct {
 	certificate    string
 	privateKey     string
 	issuingCA      string
+	rawConfig      map[string]interface{}
 
 	Initialized bool
 	Type        string
@@ -53,6 +54,8 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[s
 func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
 	c.Lock()
 	defer c.Unlock()
+
+	c.rawConfig = conf
 
 	err := mapstructure.WeakDecode(conf, c)
 	if err != nil {

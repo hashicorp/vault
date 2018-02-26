@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"time"
@@ -213,8 +214,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	return nil
 }
 
-// RotateRootCredentials is not supported on MongoDB, so this is a no-op.
+// RotateRootCredentials is not currently supported on MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	// NOOP
-	return nil, nil
+	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
 }

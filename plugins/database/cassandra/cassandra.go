@@ -2,7 +2,6 @@ package cassandra
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -17,9 +16,10 @@ import (
 )
 
 const (
-	defaultUserCreationCQL = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;`
-	defaultUserDeletionCQL = `DROP USER '{{username}}';`
-	cassandraTypeName      = "cassandra"
+	defaultUserCreationCQL           = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;`
+	defaultUserDeletionCQL           = `DROP USER '{{username}}';`
+	defaultRootCredentialRotationCQL = `ALTER USER {{username}} WITH PASSWORD '{{password}}';`
+	cassandraTypeName                = "cassandra"
 )
 
 var _ dbplugin.Database = &Cassandra{}
@@ -62,7 +62,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*Cassandra), apiTLSConfig)
+	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
 
 	return nil
 }
@@ -167,35 +167,73 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 		return err
 	}
 
-	var revocationCQL string
-	switch len(statements.Revocation) {
-	case 0:
-		revocationCQL = defaultUserDeletionCQL
-	case 1:
-		revocationCQL = statements.Revocation[0]
-	default:
-		return fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(statements.Revocation))
+	revocationCQL := statements.Revocation
+	if len(revocationCQL) == 0 {
+		revocationCQL = []string{defaultUserDeletionCQL}
 	}
 
 	var result *multierror.Error
-	for _, query := range strutil.ParseArbitraryStringSlice(revocationCQL, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
+	for _, stmt := range revocationCQL {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			err := session.Query(dbutil.QueryHelper(query, map[string]string{
+				"username": username,
+			})).Exec()
+
+			result = multierror.Append(result, err)
 		}
-
-		err := session.Query(dbutil.QueryHelper(query, map[string]string{
-			"username": username,
-		})).Exec()
-
-		result = multierror.Append(result, err)
 	}
 
 	return result.ErrorOrNil()
 }
 
-// RotateRootCredentials is not supported on Cassandra, so this is a no-op.
+// RotateRootCredentials is not currently supported on Cassandra
 func (c *Cassandra) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	// NOOP
-	return nil, nil
+	// Grab the lock
+	c.Lock()
+	defer c.Unlock()
+
+	session, err := c.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rotateCQL := statements
+	if len(rotateCQL) == 0 {
+		rotateCQL = []string{defaultRootCredentialRotationCQL}
+	}
+
+	password, err := c.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	var result *multierror.Error
+	for _, stmt := range rotateCQL {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			err := session.Query(dbutil.QueryHelper(query, map[string]string{
+				"username": c.Username,
+				"password": password,
+			})).Exec()
+
+			result = multierror.Append(result, err)
+		}
+	}
+
+	err = result.ErrorOrNil()
+	if err != nil {
+		return nil, err
+	}
+
+	c.rawConfig["password"] = password
+	return c.rawConfig, nil
 }
