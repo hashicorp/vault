@@ -1,4 +1,4 @@
-## 0.9.5 (Soon)
+## 0.9.5 (February 26th, 2018)
 
 IMPROVEMENTS:
 
