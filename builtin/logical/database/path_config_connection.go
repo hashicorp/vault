@@ -242,6 +242,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		b.connections[name] = &dbPluginInstance{
 			Database: db,
+			name:     name,
 			id:       id,
 		}
 
