@@ -521,7 +521,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	phys := conf.Physical
 	_, txnOK := conf.Physical.(physical.Transactional)
 	if c.seal == nil {
-		c.seal = &DefaultSeal{}
+		c.seal = NewDefaultSeal()
 	}
 	c.seal.SetCore(c)
 

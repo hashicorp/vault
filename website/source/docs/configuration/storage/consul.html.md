@@ -92,7 +92,7 @@ at Consul's service discovery layer.
   this parameter to `""` will tell Consul to leverage the configuration of the
   node the service is registered on dynamically. This could be beneficial if
   you intend to leverage Consul's
-  [`translate_wan_addrs`](consul-translate-wan-addrs) parameter.
+  [`translate_wan_addrs`][consul-translate-wan-addrs] parameter.
 
 - `token` `(string: "")` – Specifies the [Consul ACL token][consul-acl] with
   permission to read and write from the `path` in Consul's key-value store.

@@ -316,6 +316,8 @@ func (p *ParsedCertBundle) Verify() error {
 	return nil
 }
 
+// GetCertificatePath returns a slice of certificates making up a path, pulled
+// from the parsed cert bundle
 func (p *ParsedCertBundle) GetCertificatePath() []*CertBlock {
 	var certPath []*CertBlock
 
