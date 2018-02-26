@@ -7,6 +7,11 @@ IMPROVEMENTS:
  * secret/database: Add list functionality to `database/config` endpoint
    [GH-4026]
  * physical/consul: Allow setting a specific service address [GH-3971]
+ * replication: When bootstrapping a new secondary, if the initial cluster
+   connection fails, Vault will attempt to roll back state so that
+   bootstrapping can be tried again, rather than having to recreate the
+   downstream cluster. This will still require fetching a new secondary
+   activation token.
 
 BUG FIXES:
 
