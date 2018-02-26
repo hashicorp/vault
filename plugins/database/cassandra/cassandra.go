@@ -88,6 +88,8 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 	c.Lock()
 	defer c.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// Get the connection
 	session, err := c.getConnection(ctx)
 	if err != nil {
@@ -161,6 +163,8 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 	// Grab the lock
 	c.Lock()
 	defer c.Unlock()
+
+	statements = dbutil.StatementCompatibilityHelper(statements)
 
 	session, err := c.getConnection(ctx)
 	if err != nil {

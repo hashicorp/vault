@@ -117,6 +117,8 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	m.Lock()
 	defer m.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// Get the connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
@@ -204,6 +206,8 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	// Grab the read lock
 	m.Lock()
 	defer m.Unlock()
+
+	statements = dbutil.StatementCompatibilityHelper(statements)
 
 	// Get the connection
 	db, err := m.getConnection(ctx)

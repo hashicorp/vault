@@ -93,6 +93,8 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	m.Lock()
 	defer m.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
@@ -163,6 +165,8 @@ func (m *MongoDB) RenewUser(ctx context.Context, statements dbplugin.Statements,
 // RevokeUser drops the specified user from the authentication databse. If none is provided
 // in the revocation statement, the default "admin" authentication database will be assumed.
 func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	session, err := m.getConnection(ctx)
 	if err != nil {
 		return err

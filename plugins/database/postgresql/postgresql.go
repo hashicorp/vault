@@ -89,6 +89,8 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 }
 
 func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
@@ -165,6 +167,8 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 	p.Lock()
 	defer p.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	renewStmts := statements.Renewal
 	if len(renewStmts) == 0 {
 		renewStmts = []string{defaultPostgresRenewSQL}
@@ -216,6 +220,8 @@ func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Stateme
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
+
+	statements = dbutil.StatementCompatibilityHelper(statements)
 
 	if len(statements.Revocation) == 0 {
 		return p.defaultRevokeUser(ctx, username)

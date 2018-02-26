@@ -87,6 +87,8 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	m.Lock()
 	defer m.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// Get the connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
@@ -160,6 +162,8 @@ func (m *MSSQL) RenewUser(ctx context.Context, statements dbplugin.Statements, u
 // then kill pending connections from that user, and finally drop the user and login from the
 // database instance.
 func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	if len(statements.Revocation) == 0 {
 		return m.revokeUserDefault(ctx, username)
 	}
