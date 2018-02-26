@@ -78,7 +78,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// Create the user
 		username, password, err := db.CreateUser(ctx, role.Statements, usernameConfig, expiration)
 		if err != nil {
-			b.CloseIfShutdown(role.DBName, db, err)
+			b.CloseIfShutdown(db, err)
 			return nil, err
 		}
 

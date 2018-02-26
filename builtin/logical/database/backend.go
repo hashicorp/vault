@@ -23,6 +23,7 @@ type dbPluginInstance struct {
 	dbplugin.Database
 
 	id     string
+	name   string
 	closed bool
 }
 
@@ -237,6 +238,7 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 
 	db = &dbPluginInstance{
 		Database: dbp,
+		name:     name,
 		id:       id,
 	}
 
@@ -263,7 +265,7 @@ func (b *databaseBackend) clearConnection(name string) error {
 	return nil
 }
 
-func (b *databaseBackend) CloseIfShutdown(name string, db *dbPluginInstance, err error) {
+func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
 	case rpc.ErrShutdown, dbplugin.ErrPluginShutdown:
@@ -275,9 +277,9 @@ func (b *databaseBackend) CloseIfShutdown(name string, db *dbPluginInstance, err
 			db.Close()
 
 			// Ensure we are deleting the correct connection
-			mapDB, ok := b.connections[name]
+			mapDB, ok := b.connections[db.name]
 			if ok && db.id == mapDB.id {
-				delete(b.connections, name)
+				delete(b.connections, db.name)
 			}
 		}()
 	}

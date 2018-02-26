@@ -61,7 +61,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
 			err := db.RenewUser(ctx, role.Statements, username, expireTime)
 			if err != nil {
-				b.CloseIfShutdown(role.DBName, db, err)
+				b.CloseIfShutdown(db, err)
 				return nil, err
 			}
 		}
@@ -103,7 +103,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		defer db.RUnlock()
 
 		if err := db.RevokeUser(ctx, role.Statements, username); err != nil {
-			b.CloseIfShutdown(role.DBName, db, err)
+			b.CloseIfShutdown(db, err)
 			return nil, err
 		}
 		return resp, nil
