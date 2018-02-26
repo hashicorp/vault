@@ -774,7 +774,7 @@ supports signing.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/sign/:name(/:algorithm)` | `200 application/json` |
+| `POST`   | `/transit/sign/:name(/:hash_algorithm)` | `200 application/json` |
 
 ### Parameters
 
@@ -785,7 +785,7 @@ supports signing.
   signing. If not set, uses the latest version. Must be greater than or equal
   to the key's `min_encryption_version`, if set.
 
-- `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use for
+- `hash_algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use for
   supporting key types (notably, not including `ed25519` which specifies its
   own hash algorithm). This can also be specified as part of the URL.
   Currently-supported algorithms are:
@@ -803,10 +803,10 @@ supports signing.
 
 - `prehashed` `(bool: false)` - Set to `true` when the input is already
    hashed. If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used
-   to hash the input should be indicated by the `algorithm` parameter.
+   to hash the input should be indicated by the `hash_algorithm` parameter.
 
-- `rsa_sig_type` `(string: "pss")` – When using a RSA key, specifies the RSA
-  signature type to use for signing. Supported signature types are:
+- `signature_algorithm` `(string: "pss")` – When using a RSA key, specifies the RSA
+  signature algorithm to use for signing. Supported signature types are:
 
     - `pss`
     - `pkcs1v15`
@@ -847,14 +847,14 @@ data.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/verify/:name(/:algorithm)` | `200 application/json` |
+| `POST`   | `/transit/verify/:name(/:hash_algorithm)` | `200 application/json` |
 
 ### Parameters
 
 - `name` `(string: <required>)` – Specifies the name of the encryption key that
   was used to generate the signature or HMAC.
 
-- `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
+- `hash_algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
   can also be specified as part of the URL. Currently-supported algorithms are:
 
     - `sha2-224`
@@ -878,10 +878,10 @@ data.
 
 - `prehashed` `(bool: false)` - Set to `true` when the input is already
    hashed. If the key type is `rsa-2048` or `rsa-4096`, then the algorithm used
-   to hash the input should be indicated by the `algorithm` parameter.
+   to hash the input should be indicated by the `hash_algorithm` parameter.
 
-- `rsa_sig_type` `(string: "pss")` – When using a RSA key, specifies the RSA
-  signature type to use for signature verification. Supported signature types
+- `signature_algorithm` `(string: "pss")` – When using a RSA key, specifies the RSA
+  signature algorithm to use for signature verification. Supported signature types
   are:
 
     - `pss`
