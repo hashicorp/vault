@@ -116,12 +116,14 @@ func TestHash(t *testing.T) {
 	now := time.Now()
 
 	cases := []struct {
-		Input  interface{}
-		Output interface{}
+		Input       interface{}
+		Output      interface{}
+		NonHMACKeys []string
 	}{
 		{
 			&logical.Auth{ClientToken: "foo"},
 			&logical.Auth{ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a"},
+			nil,
 		},
 		{
 			&logical.Request{
@@ -136,6 +138,7 @@ func TestHash(t *testing.T) {
 					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
 				},
 			},
+			nil,
 		},
 		{
 			&logical.Response{
@@ -167,10 +170,12 @@ func TestHash(t *testing.T) {
 					WrappedAccessor: "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 				},
 			},
+			nil,
 		},
 		{
 			"foo",
 			"foo",
+			nil,
 		},
 		{
 			&logical.Auth{
@@ -189,6 +194,7 @@ func TestHash(t *testing.T) {
 
 				ClientToken: "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a",
 			},
+			nil,
 		},
 		{
 			&logical.Request{
@@ -196,15 +202,14 @@ func TestHash(t *testing.T) {
 					"foo":              "bar",
 					"private_key_type": certutil.PrivateKeyType("rsa"),
 				},
-				NonHMACKeys: []string{"foo"},
 			},
 			&logical.Request{
 				Data: map[string]interface{}{
 					"foo":              "bar",
 					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
 				},
-				NonHMACKeys: []string{"foo"},
 			},
+			[]string{"foo"},
 		},
 	}
 
@@ -222,7 +227,7 @@ func TestHash(t *testing.T) {
 	}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		if err := Hash(localSalt, tc.Input); err != nil {
+		if err := Hash(localSalt, tc.Input, tc.NonHMACKeys); err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
 		if _, ok := tc.Input.(*logical.Response); ok {

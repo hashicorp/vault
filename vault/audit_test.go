@@ -43,24 +43,24 @@ type NoopAudit struct {
 	saltMutex sync.RWMutex
 }
 
-func (n *NoopAudit) LogRequest(ctx context.Context, a *logical.Auth, r *logical.Request, err error) error {
-	n.ReqAuth = append(n.ReqAuth, a)
-	n.Req = append(n.Req, r)
-	n.ReqHeaders = append(n.ReqHeaders, r.Headers)
-	n.ReqNonHMACKeys = r.NonHMACKeys
-	n.ReqErrs = append(n.ReqErrs, err)
+func (n *NoopAudit) LogRequest(ctx context.Context, in *audit.LogInput) error {
+	n.ReqAuth = append(n.ReqAuth, in.Auth)
+	n.Req = append(n.Req, in.Request)
+	n.ReqHeaders = append(n.ReqHeaders, in.Request.Headers)
+	n.ReqNonHMACKeys = in.Request.NonHMACKeys
+	n.ReqErrs = append(n.ReqErrs, in.OuterErr)
 	return n.ReqErr
 }
 
-func (n *NoopAudit) LogResponse(ctx context.Context, a *logical.Auth, r *logical.Request, re *logical.Response, err error) error {
-	n.RespAuth = append(n.RespAuth, a)
-	n.RespReq = append(n.RespReq, r)
-	n.Resp = append(n.Resp, re)
-	n.RespErrs = append(n.RespErrs, err)
+func (n *NoopAudit) LogResponse(ctx context.Context, in *audit.LogInput) error {
+	n.RespAuth = append(n.RespAuth, in.Auth)
+	n.RespReq = append(n.RespReq, in.Request)
+	n.Resp = append(n.Resp, in.Response)
+	n.RespErrs = append(n.RespErrs, in.OuterErr)
 
-	if re != nil {
-		n.RespNonHMACKeys = re.NonHMACKeys
-		n.RespReqNonHMACKeys = r.NonHMACKeys
+	if in.Response != nil {
+		n.RespNonHMACKeys = in.Response.NonHMACKeys
+		n.RespReqNonHMACKeys = in.Request.NonHMACKeys
 	}
 
 	return n.RespErr
@@ -478,7 +478,12 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Headers: make(map[string]*auditedHeaderSettings),
 	}
 
-	err = b.LogRequest(context.Background(), authCopy, reqCopy, headersConf, reqErrs)
+	logInput := &audit.LogInput{
+		Auth:     authCopy,
+		Request:  reqCopy,
+		OuterErr: reqErrs,
+	}
+	err = b.LogRequest(context.Background(), logInput, headersConf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -497,13 +502,17 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(context.Background(), auth, req, headersConf, nil); err != nil {
+	logInput = &audit.LogInput{
+		Auth:    auth,
+		Request: req,
+	}
+	if err := b.LogRequest(context.Background(), logInput, headersConf); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(context.Background(), auth, req, headersConf, nil); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
+	if err := b.LogRequest(context.Background(), logInput, headersConf); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -565,7 +574,13 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		Headers: make(map[string]*auditedHeaderSettings),
 	}
 
-	err = b.LogResponse(context.Background(), authCopy, reqCopy, respCopy, headersConf, respErr)
+	logInput := &audit.LogInput{
+		Auth:     authCopy,
+		Request:  reqCopy,
+		Response: respCopy,
+		OuterErr: respErr,
+	}
+	err = b.LogResponse(context.Background(), logInput, headersConf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -587,14 +602,20 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(context.Background(), auth, req, resp, headersConf, respErr)
+	logInput = &audit.LogInput{
+		Auth:     auth,
+		Request:  req,
+		Response: resp,
+		OuterErr: respErr,
+	}
+	err = b.LogResponse(context.Background(), logInput, headersConf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(context.Background(), auth, req, resp, headersConf, respErr)
+	err = b.LogResponse(context.Background(), logInput, headersConf)
 	if !strings.Contains(err.Error(), "no audit backend succeeded in logging the response") {
 		t.Fatalf("err: %v", err)
 	}
@@ -642,7 +663,12 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	headersConf.add(context.Background(), "X-Test-Header", false)
 	headersConf.add(context.Background(), "X-Vault-Header", false)
 
-	err = b.LogRequest(context.Background(), auth, reqCopy, headersConf, respErr)
+	logInput := &audit.LogInput{
+		Auth:     auth,
+		Request:  reqCopy,
+		OuterErr: respErr,
+	}
+	err = b.LogRequest(context.Background(), logInput, headersConf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -660,14 +686,19 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.ReqErr = fmt.Errorf("failed")
-	err = b.LogRequest(context.Background(), auth, req, headersConf, respErr)
+	logInput = &audit.LogInput{
+		Auth:     auth,
+		Request:  req,
+		OuterErr: respErr,
+	}
+	err = b.LogRequest(context.Background(), logInput, headersConf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	err = b.LogRequest(context.Background(), auth, req, headersConf, respErr)
+	err = b.LogRequest(context.Background(), logInput, headersConf)
 	if !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
 		t.Fatalf("err: %v", err)
 	}

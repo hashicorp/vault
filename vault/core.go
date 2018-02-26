@@ -1338,7 +1338,11 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		EntityID:    te.EntityID,
 	}
 
-	if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, nil); err != nil {
+	logInput := &audit.LogInput{
+		Auth:    auth,
+		Request: req,
+	}
+	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("core: failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
 		c.stateLock.RUnlock()
@@ -1447,7 +1451,11 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		EntityID:    te.EntityID,
 	}
 
-	if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, nil); err != nil {
+	logInput := &audit.LogInput{
+		Auth:    auth,
+		Request: req,
+	}
+	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("core: failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
 		return retErr

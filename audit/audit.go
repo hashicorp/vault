@@ -16,13 +16,13 @@ type Backend interface {
 	// request is authorized but before the request is executed. The arguments
 	// MUST not be modified in anyway. They should be deep copied if this is
 	// a possibility.
-	LogRequest(context.Context, *logical.Auth, *logical.Request, error) error
+	LogRequest(context.Context, *LogInput) error
 
 	// LogResponse is used to synchronously log a response. This is done after
 	// the request is processed but before the response is sent. The arguments
 	// MUST not be modified in anyway. They should be deep copied if this is
 	// a possibility.
-	LogResponse(context.Context, *logical.Auth, *logical.Request, *logical.Response, error) error
+	LogResponse(context.Context, *LogInput) error
 
 	// GetHash is used to return the given data with the backend's hash,
 	// so that a caller can determine if a value in the audit log matches
@@ -36,6 +36,17 @@ type Backend interface {
 	Invalidate(context.Context)
 }
 
+// LogInput contains the input parameters passed into LogRequest and LogResponse
+type LogInput struct {
+	Auth            *logical.Auth
+	Request         *logical.Request
+	Response        *logical.Response
+	OuterErr        error
+	NonHMACDataKeys []string
+}
+
+// BackendConfig contains configuration parameters used in the factory func to
+// instantiate audit backends
 type BackendConfig struct {
 	// The view to store the salt
 	SaltView logical.Storage

@@ -141,6 +141,8 @@ type Backend struct {
 	saltView   logical.Storage
 }
 
+var _ audit.Backend = (*Backend)(nil)
+
 func (b *Backend) Salt() (*salt.Salt, error) {
 	b.saltMutex.RLock()
 	if b.salt != nil {
@@ -169,27 +171,22 @@ func (b *Backend) GetHash(data string) (string, error) {
 	return audit.HashString(salt, data), nil
 }
 
-func (b *Backend) LogRequest(
-	_ context.Context,
-	auth *logical.Auth,
-	req *logical.Request,
-	outerErr error) error {
-
+func (b *Backend) LogRequest(_ context.Context, in *audit.LogInput) error {
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
 	switch b.path {
 	case "stdout":
-		return b.formatter.FormatRequest(os.Stdout, b.formatConfig, auth, req, outerErr)
+		return b.formatter.FormatRequest(os.Stdout, b.formatConfig, in.Auth, in.Request, in.OuterErr)
 	case "discard":
-		return b.formatter.FormatRequest(ioutil.Discard, b.formatConfig, auth, req, outerErr)
+		return b.formatter.FormatRequest(ioutil.Discard, b.formatConfig, in.Auth, in.Request, in.OuterErr)
 	}
 
 	if err := b.open(); err != nil {
 		return err
 	}
 
-	if err := b.formatter.FormatRequest(b.f, b.formatConfig, auth, req, outerErr); err == nil {
+	if err := b.formatter.FormatRequest(b.f, b.formatConfig, in.Auth, in.Request, in.OuterErr); err == nil {
 		return nil
 	}
 
@@ -201,31 +198,26 @@ func (b *Backend) LogRequest(
 		return err
 	}
 
-	return b.formatter.FormatRequest(b.f, b.formatConfig, auth, req, outerErr)
+	return b.formatter.FormatRequest(b.f, b.formatConfig, in.Auth, in.Request, in.OuterErr)
 }
 
-func (b *Backend) LogResponse(
-	_ context.Context,
-	auth *logical.Auth,
-	req *logical.Request,
-	resp *logical.Response,
-	err error) error {
+func (b *Backend) LogResponse(_ context.Context, in *audit.LogInput) error {
 
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
 	switch b.path {
 	case "stdout":
-		return b.formatter.FormatResponse(os.Stdout, b.formatConfig, auth, req, resp, err)
+		return b.formatter.FormatResponse(os.Stdout, b.formatConfig, in.Auth, in.Request, in.Response, in.OuterErr)
 	case "discard":
-		return b.formatter.FormatResponse(ioutil.Discard, b.formatConfig, auth, req, resp, err)
+		return b.formatter.FormatResponse(ioutil.Discard, b.formatConfig, in.Auth, in.Request, in.Response, in.OuterErr)
 	}
 
 	if err := b.open(); err != nil {
 		return err
 	}
 
-	if err := b.formatter.FormatResponse(b.f, b.formatConfig, auth, req, resp, err); err == nil {
+	if err := b.formatter.FormatResponse(b.f, b.formatConfig, in.Auth, in.Request, in.Response, in.OuterErr); err == nil {
 		return nil
 	}
 
@@ -237,7 +229,7 @@ func (b *Backend) LogResponse(
 		return err
 	}
 
-	return b.formatter.FormatResponse(b.f, b.formatConfig, auth, req, resp, err)
+	return b.formatter.FormatResponse(b.f, b.formatConfig, in.Auth, in.Request, in.Response, in.OuterErr)
 }
 
 // The file lock must be held before calling this

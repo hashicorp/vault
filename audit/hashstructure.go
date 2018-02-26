@@ -23,7 +23,7 @@ func HashString(salter *salt.Salt, data string) string {
 // it will be passed through.
 //
 // The structure is modified in-place.
-func Hash(salter *salt.Salt, raw interface{}) error {
+func Hash(salter *salt.Salt, raw interface{}, nonHMACDataKeys []string) error {
 	fn := salter.GetIdentifiedHMAC
 
 	switch s := raw.(type) {
@@ -43,7 +43,7 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 			return nil
 		}
 		if s.Auth != nil {
-			if err := Hash(salter, s.Auth); err != nil {
+			if err := Hash(salter, s.Auth, nil); err != nil {
 				return err
 			}
 		}
@@ -56,7 +56,7 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 			s.ClientTokenAccessor = fn(s.ClientTokenAccessor)
 		}
 
-		data, err := HashStructure(s.Data, fn, s.NonHMACKeys)
+		data, err := HashStructure(s.Data, fn, nonHMACDataKeys)
 		if err != nil {
 			return err
 		}
@@ -69,18 +69,18 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 		}
 
 		if s.Auth != nil {
-			if err := Hash(salter, s.Auth); err != nil {
+			if err := Hash(salter, s.Auth, nil); err != nil {
 				return err
 			}
 		}
 
 		if s.WrapInfo != nil {
-			if err := Hash(salter, s.WrapInfo); err != nil {
+			if err := Hash(salter, s.WrapInfo, nil); err != nil {
 				return err
 			}
 		}
 
-		data, err := HashStructure(s.Data, fn, s.NonHMACKeys)
+		data, err := HashStructure(s.Data, fn, nonHMACDataKeys)
 		if err != nil {
 			return err
 		}

@@ -25,14 +25,14 @@ type AuditFormatter struct {
 	AuditFormatWriter
 }
 
-func (f *AuditFormatter) FormatRequest(
-	w io.Writer,
-	config FormatterConfig,
-	auth *logical.Auth,
-	req *logical.Request,
-	inErr error) error {
+var _ Formatter = (*AuditFormatter)(nil)
 
-	if req == nil {
+func (f *AuditFormatter) FormatRequest(w io.Writer, config FormatterConfig, in *LogInput) error {
+	if in == nil {
+		in = &LogInput{}
+	}
+
+	if in.Request == nil {
 		return fmt.Errorf("request to request-audit a nil request")
 	}
 
@@ -49,28 +49,29 @@ func (f *AuditFormatter) FormatRequest(
 		return errwrap.Wrapf("error fetching salt: {{err}}", err)
 	}
 
+	var auth *logical.Auth
+	var req *logical.Request
 	if !config.Raw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
-		if req.Connection != nil && req.Connection.ConnState != nil {
-			origReq := req
-			origState := req.Connection.ConnState
-			req.Connection.ConnState = nil
+		if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
+			origState := in.Request.Connection.ConnState
+			in.Request.Connection.ConnState = nil
 			defer func() {
-				origReq.Connection.ConnState = origState
+				in.Request.Connection.ConnState = origState
 			}()
 		}
 
 		// Copy the auth structure
-		if auth != nil {
-			cp, err := copystructure.Copy(auth)
+		if in.Auth != nil {
+			cp, err := copystructure.Copy(in.Auth)
 			if err != nil {
 				return err
 			}
 			auth = cp.(*logical.Auth)
 		}
 
-		cp, err := copystructure.Copy(req)
+		cp, err := copystructure.Copy(in.Request)
 		if err != nil {
 			return err
 		}
@@ -83,7 +84,7 @@ func (f *AuditFormatter) FormatRequest(
 			if !config.HMACAccessor && auth.Accessor != "" {
 				authAccessor = auth.Accessor
 			}
-			if err := Hash(salt, auth); err != nil {
+			if err := Hash(salt, auth, nil); err != nil {
 				return err
 			}
 			if authAccessor != "" {
@@ -96,7 +97,7 @@ func (f *AuditFormatter) FormatRequest(
 		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
 			clientTokenAccessor = req.ClientTokenAccessor
 		}
-		if err := Hash(salt, req); err != nil {
+		if err := Hash(salt, req, in.NonHMACDataKeys); err != nil {
 			return err
 		}
 		if clientTokenAccessor != "" {
@@ -109,8 +110,8 @@ func (f *AuditFormatter) FormatRequest(
 		auth = new(logical.Auth)
 	}
 	var errString string
-	if inErr != nil {
-		errString = inErr.Error()
+	if in.OuterErr != nil {
+		errString = in.OuterErr.Error()
 	}
 
 	reqEntry := &AuditRequestEntry{
@@ -152,15 +153,12 @@ func (f *AuditFormatter) FormatRequest(
 	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
 }
 
-func (f *AuditFormatter) FormatResponse(
-	w io.Writer,
-	config FormatterConfig,
-	auth *logical.Auth,
-	req *logical.Request,
-	resp *logical.Response,
-	inErr error) error {
+func (f *AuditFormatter) FormatResponse(w io.Writer, config FormatterConfig, in *LogInput) error {
+	if in == nil {
+		in = &LogInput{}
+	}
 
-	if req == nil {
+	if in.Request == nil {
 		return fmt.Errorf("request to response-audit a nil request")
 	}
 
@@ -177,35 +175,37 @@ func (f *AuditFormatter) FormatResponse(
 		return errwrap.Wrapf("error fetching salt: {{err}}", err)
 	}
 
+	var auth *logical.Auth
+	var req *logical.Request
+	var resp *logical.Response
 	if !config.Raw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
-		if req.Connection != nil && req.Connection.ConnState != nil {
-			origReq := req
-			origState := req.Connection.ConnState
-			req.Connection.ConnState = nil
+		if in.Request.Connection != nil && in.Request.Connection.ConnState != nil {
+			origState := in.Request.Connection.ConnState
+			in.Request.Connection.ConnState = nil
 			defer func() {
-				origReq.Connection.ConnState = origState
+				in.Request.Connection.ConnState = origState
 			}()
 		}
 
 		// Copy the auth structure
-		if auth != nil {
-			cp, err := copystructure.Copy(auth)
+		if in.Auth != nil {
+			cp, err := copystructure.Copy(in.Auth)
 			if err != nil {
 				return err
 			}
 			auth = cp.(*logical.Auth)
 		}
 
-		cp, err := copystructure.Copy(req)
+		cp, err := copystructure.Copy(in.Request)
 		if err != nil {
 			return err
 		}
 		req = cp.(*logical.Request)
 
-		if resp != nil {
-			cp, err := copystructure.Copy(resp)
+		if in.Response != nil {
+			cp, err := copystructure.Copy(in.Response)
 			if err != nil {
 				return err
 			}
@@ -220,7 +220,7 @@ func (f *AuditFormatter) FormatResponse(
 			if !config.HMACAccessor && auth.Accessor != "" {
 				accessor = auth.Accessor
 			}
-			if err := Hash(salt, auth); err != nil {
+			if err := Hash(salt, auth, nil); err != nil {
 				return err
 			}
 			if accessor != "" {
@@ -233,7 +233,7 @@ func (f *AuditFormatter) FormatResponse(
 		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
 			clientTokenAccessor = req.ClientTokenAccessor
 		}
-		if err := Hash(salt, req); err != nil {
+		if err := Hash(salt, req, in.NonHMACDataKeys); err != nil {
 			return err
 		}
 		if clientTokenAccessor != "" {
@@ -250,7 +250,7 @@ func (f *AuditFormatter) FormatResponse(
 				wrappedAccessor = resp.WrapInfo.WrappedAccessor
 				wrappingAccessor = resp.WrapInfo.Accessor
 			}
-			if err := Hash(salt, resp); err != nil {
+			if err := Hash(salt, resp, in.NonHMACDataKeys); err != nil {
 				return err
 			}
 			if accessor != "" {
@@ -273,8 +273,8 @@ func (f *AuditFormatter) FormatResponse(
 		resp = new(logical.Response)
 	}
 	var errString string
-	if inErr != nil {
-		errString = inErr.Error()
+	if in.OuterErr != nil {
+		errString = in.OuterErr.Error()
 	}
 
 	var respAuth *AuditAuth

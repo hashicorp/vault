@@ -40,10 +40,14 @@ func TestFormatRequestErrors(t *testing.T) {
 		AuditFormatWriter: &noopFormatWriter{},
 	}
 
-	if err := formatter.FormatRequest(ioutil.Discard, config, nil, nil, nil); err == nil {
+	if err := formatter.FormatRequest(ioutil.Discard, config, &LogInput{}); err == nil {
 		t.Fatal("expected error due to nil request")
 	}
-	if err := formatter.FormatRequest(nil, config, nil, &logical.Request{}, nil); err == nil {
+
+	in := &LogInput{
+		Request: &logical.Request{},
+	}
+	if err := formatter.FormatRequest(nil, config, in); err == nil {
 		t.Fatal("expected error due to nil writer")
 	}
 }
@@ -54,10 +58,14 @@ func TestFormatResponseErrors(t *testing.T) {
 		AuditFormatWriter: &noopFormatWriter{},
 	}
 
-	if err := formatter.FormatResponse(ioutil.Discard, config, nil, nil, nil, nil); err == nil {
+	if err := formatter.FormatResponse(ioutil.Discard, config, &LogInput{}); err == nil {
 		t.Fatal("expected error due to nil request")
 	}
-	if err := formatter.FormatResponse(nil, config, nil, &logical.Request{}, nil, nil); err == nil {
+
+	in := &LogInput{
+		Request: &logical.Request{},
+	}
+	if err := formatter.FormatResponse(nil, config, in); err == nil {
 		t.Fatal("expected error due to nil writer")
 	}
 }
