@@ -208,11 +208,6 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		allowedRoles := data.Get("allowed_roles").([]string)
 		rootRotationStatements := data.Get("root_rotation_statements").([]string)
 
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			return nil, err
-		}
-
 		// Remove these entries from the data before we store it keyed under
 		// ConnectionDetails.
 		delete(data.Raw, "name")
@@ -239,6 +234,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		// Close and remove the old connection
 		b.clearConnection(name)
+
+		id, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
+		}
 
 		b.connections[name] = &dbPluginInstance{
 			Database: db,
