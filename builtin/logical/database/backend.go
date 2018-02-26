@@ -198,11 +198,6 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 		return nil, err
 	}
 
-	id, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, err
-	}
-
 	dbp, err := dbplugin.PluginFactory(ctx, config.PluginName, b.System(), b.logger)
 	if err != nil {
 		return nil, err
@@ -211,6 +206,11 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 	_, err = dbp.Init(ctx, config.ConnectionDetails, true)
 	if err != nil {
 		dbp.Close()
+		return nil, err
+	}
+
+	id, err := uuid.GenerateUUID()
+	if err != nil {
 		return nil, err
 	}
 
