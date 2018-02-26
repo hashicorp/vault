@@ -180,6 +180,10 @@ func TestSystemBackend_mount(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
 	req.Data["type"] = "kv"
+	req.Data["config"] = map[string]interface{}{
+		"default_lease_ttl": "35m",
+		"max_lease_ttl":     "45m",
+	}
 	req.Data["local"] = true
 	req.Data["seal_wrap"] = true
 
@@ -257,8 +261,8 @@ func TestSystemBackend_mount(t *testing.T) {
 			"type":        "kv",
 			"accessor":    resp.Data["prod/secret/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"default_lease_ttl": int64(2100),
+				"max_lease_ttl":     int64(2700),
 				"plugin_name":       "",
 				"force_no_cache":    false,
 			},
@@ -1244,6 +1248,10 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")
 	req.Data["type"] = "noop"
+	req.Data["config"] = map[string]interface{}{
+		"default_lease_ttl": "35m",
+		"max_lease_ttl":     "45m",
+	}
 	req.Data["local"] = true
 	req.Data["seal_wrap"] = true
 
@@ -1270,8 +1278,8 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"description": "",
 			"accessor":    resp.Data["foo/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": int64(0),
-				"max_lease_ttl":     int64(0),
+				"default_lease_ttl": int64(2100),
+				"max_lease_ttl":     int64(2700),
 			},
 			"local":     true,
 			"seal_wrap": true,

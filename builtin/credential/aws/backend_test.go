@@ -958,18 +958,30 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 }
 
-// This is an acceptance test.
-// Requires the following env vars:
-// TEST_AWS_EC2_PKCS7
-// TEST_AWS_EC2_AMI_ID
-// TEST_AWS_EC2_ACCOUNT_ID
-// TEST_AWS_EC2_IAM_ROLE_ARN
-//
-// If the test is not being run on an EC2 instance that has access to
-// credentials using EC2RoleProvider, on top of the above vars, following
-// needs to be set:
-// TEST_AWS_SECRET_KEY
-// TEST_AWS_ACCESS_KEY
+/* This is an acceptance test.
+   Requires the following env vars:
+   TEST_AWS_EC2_PKCS7
+   TEST_AWS_EC2_IDENTITY_DOCUMENT
+   TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG
+   TEST_AWS_EC2_AMI_ID
+   TEST_AWS_EC2_ACCOUNT_ID
+   TEST_AWS_EC2_IAM_ROLE_ARN
+
+   If this is being run on an EC2 instance, you can set the environment vars using this bash snippet:
+
+   export TEST_AWS_EC2_PKCS7=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7)
+   export TEST_AWS_EC2_IDENTITY_DOCUMENT=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | base64 -w 0)
+   export TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/signature | tr -d '\n')
+   export TEST_AWS_EC2_AMI_ID=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
+   export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
+   export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+   If the test is not being run on an EC2 instance that has access to
+   credentials using EC2RoleProvider, on top of the above vars, following
+   needs to be set:
+   TEST_AWS_SECRET_KEY
+   TEST_AWS_ACCESS_KEY
+*/
 func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.T) {
 	// This test case should be run only when certain env vars are set and
 	// executed as an acceptance test.
@@ -981,6 +993,16 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	pkcs7 := os.Getenv("TEST_AWS_EC2_PKCS7")
 	if pkcs7 == "" {
 		t.Fatalf("env var TEST_AWS_EC2_PKCS7 not set")
+	}
+
+	identityDoc := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT")
+	if identityDoc == "" {
+		t.Fatalf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT not set")
+	}
+
+	identityDocSig := os.Getenv("TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG")
+	if identityDocSig == "" {
+		t.Fatalf("env var TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG not set")
 	}
 
 	amiID := os.Getenv("TEST_AWS_EC2_AMI_ID")
@@ -1123,6 +1145,18 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	}
 
 	// Now, the login attempt should succeed
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
+	}
+
+	// Attempt to re-login with the identity signture
+	delete(loginInput, "pkcs7")
+	loginInput["identity"] = identityDoc
+	loginInput["signature"] = identityDocSig
 	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
