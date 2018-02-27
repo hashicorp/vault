@@ -123,13 +123,13 @@ func (b *backend) pathIdentityWhitelistRead(ctx context.Context, req *logical.Re
 
 // Struct to represent each item in the identity whitelist.
 type whitelistIdentity struct {
-	Role                     string    `json:"role" mapstructure:"role"`
-	ClientNonce              string    `json:"client_nonce" mapstructure:"client_nonce"`
-	CreationTime             time.Time `json:"creation_time" mapstructure:"creation_time"`
-	DisallowReauthentication bool      `json:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	PendingTime              string    `json:"pending_time" mapstructure:"pending_time"`
-	ExpirationTime           time.Time `json:"expiration_time" mapstructure:"expiration_time"`
-	LastUpdatedTime          time.Time `json:"last_updated_time" mapstructure:"last_updated_time"`
+	Role                     string    `json:"role"`
+	ClientNonce              string    `json:"client_nonce"`
+	CreationTime             time.Time `json:"creation_time"`
+	DisallowReauthentication bool      `json:"disallow_reauthentication"`
+	PendingTime              string    `json:"pending_time"`
+	ExpirationTime           time.Time `json:"expiration_time"`
+	LastUpdatedTime          time.Time `json:"last_updated_time"`
 }
 
 const pathIdentityWhitelistSyn = `

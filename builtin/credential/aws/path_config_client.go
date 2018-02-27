@@ -268,12 +268,12 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 // Struct to hold 'aws_access_key' and 'aws_secret_key' that are required to
 // interact with the AWS EC2 API.
 type clientConfig struct {
-	AccessKey              string `json:"access_key" mapstructure:"access_key"`
-	SecretKey              string `json:"secret_key" mapstructure:"secret_key"`
-	Endpoint               string `json:"endpoint" mapstructure:"endpoint"`
-	IAMEndpoint            string `json:"iam_endpoint" mapstructure:"iam_endpoint"`
-	STSEndpoint            string `json:"sts_endpoint" mapstructure:"sts_endpoint"`
-	IAMServerIdHeaderValue string `json:"iam_server_id_header_value" mapstructure:"iam_server_id_header_value"`
+	AccessKey              string `json:"access_key"`
+	SecretKey              string `json:"secret_key"`
+	Endpoint               string `json:"endpoint"`
+	IAMEndpoint            string `json:"iam_endpoint"`
+	STSEndpoint            string `json:"sts_endpoint"`
+	IAMServerIdHeaderValue string `json:"iam_server_id_header_value"`
 	MaxRetries             int    `json:"max_retries"`
 }
 

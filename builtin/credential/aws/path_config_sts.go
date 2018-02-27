@@ -10,7 +10,7 @@ import (
 
 // awsStsEntry is used to store details of an STS role for assumption
 type awsStsEntry struct {
-	StsRole string `json:"sts_role" mapstructure:"sts_role"`
+	StsRole string `json:"sts_role"`
 }
 
 func pathListSts(b *backend) *framework.Path {

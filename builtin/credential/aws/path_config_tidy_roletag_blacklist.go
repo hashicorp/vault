@@ -138,8 +138,8 @@ func (b *backend) pathConfigTidyRoletagBlacklistDelete(ctx context.Context, req 
 }
 
 type tidyBlacklistRoleTagConfig struct {
-	SafetyBuffer        int  `json:"safety_buffer" mapstructure:"safety_buffer"`
-	DisablePeriodicTidy bool `json:"disable_periodic_tidy" mapstructure:"disable_periodic_tidy"`
+	SafetyBuffer        int  `json:"safety_buffer"`
+	DisablePeriodicTidy bool `json:"disable_periodic_tidy"`
 }
 
 const pathConfigTidyRoletagBlacklistHelpSyn = `

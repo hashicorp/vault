@@ -137,8 +137,8 @@ func (b *backend) pathConfigTidyIdentityWhitelistDelete(ctx context.Context, req
 }
 
 type tidyWhitelistIdentityConfig struct {
-	SafetyBuffer        int  `json:"safety_buffer" mapstructure:"safety_buffer"`
-	DisablePeriodicTidy bool `json:"disable_periodic_tidy" mapstructure:"disable_periodic_tidy"`
+	SafetyBuffer        int  `json:"safety_buffer"`
+	DisablePeriodicTidy bool `json:"disable_periodic_tidy"`
 }
 
 const pathConfigTidyIdentityWhitelistHelpSyn = `
