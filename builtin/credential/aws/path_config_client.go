@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -115,7 +114,15 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 	}
 
 	return &logical.Response{
-		Data: structs.New(clientConfig).Map(),
+		Data: map[string]interface{}{
+			"access_key":                 clientConfig.AccessKey,
+			"secret_key":                 clientConfig.SecretKey,
+			"endpoint":                   clientConfig.Endpoint,
+			"iam_endpoint":               clientConfig.IAMEndpoint,
+			"sts_endpoint":               clientConfig.STSEndpoint,
+			"iam_server_id_header_value": clientConfig.IAMServerIdHeaderValue,
+			"max_retries":                clientConfig.MaxRetries,
+		},
 	}, nil
 }
 
@@ -261,12 +268,12 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 // Struct to hold 'aws_access_key' and 'aws_secret_key' that are required to
 // interact with the AWS EC2 API.
 type clientConfig struct {
-	AccessKey              string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
-	SecretKey              string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
-	Endpoint               string `json:"endpoint" structs:"endpoint" mapstructure:"endpoint"`
-	IAMEndpoint            string `json:"iam_endpoint" structs:"iam_endpoint" mapstructure:"iam_endpoint"`
-	STSEndpoint            string `json:"sts_endpoint" structs:"sts_endpoint" mapstructure:"sts_endpoint"`
-	IAMServerIdHeaderValue string `json:"iam_server_id_header_value" structs:"iam_server_id_header_value" mapstructure:"iam_server_id_header_value"`
+	AccessKey              string `json:"access_key" mapstructure:"access_key"`
+	SecretKey              string `json:"secret_key" mapstructure:"secret_key"`
+	Endpoint               string `json:"endpoint" mapstructure:"endpoint"`
+	IAMEndpoint            string `json:"iam_endpoint" mapstructure:"iam_endpoint"`
+	STSEndpoint            string `json:"sts_endpoint" mapstructure:"sts_endpoint"`
+	IAMServerIdHeaderValue string `json:"iam_server_id_header_value" mapstructure:"iam_server_id_header_value"`
 	MaxRetries             int    `json:"max_retries"`
 }
 

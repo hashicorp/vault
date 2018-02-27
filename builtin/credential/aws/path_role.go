@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -405,19 +404,29 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		return nil, nil
 	}
 
-	// Prepare the map of all the entries in the roleEntry.
-	respData := structs.New(roleEntry).Map()
-
-	// HMAC key belonging to the role should NOT be exported.
-	delete(respData, "hmac_key")
-
-	// Display all the durations in seconds
-	respData["ttl"] = roleEntry.TTL / time.Second
-	respData["max_ttl"] = roleEntry.MaxTTL / time.Second
-	respData["period"] = roleEntry.Period / time.Second
-
 	return &logical.Response{
-		Data: respData,
+		Data: map[string]interface{}{
+			"auth_type":                      roleEntry.AuthType,
+			"bound_ami_id":                   roleEntry.BoundAmiID,
+			"bound_account_id":               roleEntry.BoundAccountID,
+			"bound_iam_principal_arn":        roleEntry.BoundIamPrincipalARN,
+			"bound_iam_principal_id":         roleEntry.BoundIamPrincipalID,
+			"bound_iam_role_arn":             roleEntry.BoundIamRoleARN,
+			"bound_iam_instance_profile_arn": roleEntry.BoundIamInstanceProfileARN,
+			"bound_region":                   roleEntry.BoundRegion,
+			"bound_subnet_id":                roleEntry.BoundSubnetID,
+			"bound_vpc_id":                   roleEntry.BoundVpcID,
+			"inferred_entity_type":           roleEntry.InferredEntityType,
+			"inferred_aws_region":            roleEntry.InferredAWSRegion,
+			"resolve_aws_unique_ids":         roleEntry.ResolveAWSUniqueIDs,
+			"role_tag":                       roleEntry.RoleTag,
+			"allow_instance_migration":       roleEntry.AllowInstanceMigration,
+			"ttl":                       roleEntry.TTL / time.Second,
+			"max_ttl":                   roleEntry.MaxTTL / time.Second,
+			"policies":                  roleEntry.Policies,
+			"disallow_reauthentication": roleEntry.DisallowReauthentication,
+			"period":                    roleEntry.Period / time.Second,
+		},
 	}, nil
 }
 
@@ -744,27 +753,27 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 // Struct to hold the information associated with an AMI ID in Vault.
 type awsRoleEntry struct {
-	AuthType                   string        `json:"auth_type" structs:"auth_type" mapstructure:"auth_type"`
-	BoundAmiID                 string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
-	BoundAccountID             string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
-	BoundIamPrincipalARN       string        `json:"bound_iam_principal_arn" structs:"bound_iam_principal_arn" mapstructure:"bound_iam_principal_arn"`
-	BoundIamPrincipalID        string        `json:"bound_iam_principal_id" structs:"bound_iam_principal_id" mapstructure:"bound_iam_principal_id"`
-	BoundIamRoleARN            string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
-	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
-	BoundRegion                string        `json:"bound_region" structs:"bound_region" mapstructure:"bound_region"`
-	BoundSubnetID              string        `json:"bound_subnet_id" structs:"bound_subnet_id" mapstructure:"bound_subnet_id"`
-	BoundVpcID                 string        `json:"bound_vpc_id" structs:"bound_vpc_id" mapstructure:"bound_vpc_id"`
-	InferredEntityType         string        `json:"inferred_entity_type" structs:"inferred_entity_type" mapstructure:"inferred_entity_type"`
-	InferredAWSRegion          string        `json:"inferred_aws_region" structs:"inferred_aws_region" mapstructure:"inferred_aws_region"`
-	ResolveAWSUniqueIDs        bool          `json:"resolve_aws_unique_ids" structs:"resolve_aws_unique_ids" mapstructure:"resolve_aws_unique_ids"`
-	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
-	AllowInstanceMigration     bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
-	TTL                        time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
-	MaxTTL                     time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	Policies                   []string      `json:"policies" structs:"policies" mapstructure:"policies"`
-	DisallowReauthentication   bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	HMACKey                    string        `json:"hmac_key" structs:"hmac_key" mapstructure:"hmac_key"`
-	Period                     time.Duration `json:"period" mapstructure:"period" structs:"period"`
+	AuthType                   string        `json:"auth_type" mapstructure:"auth_type"`
+	BoundAmiID                 string        `json:"bound_ami_id" mapstructure:"bound_ami_id"`
+	BoundAccountID             string        `json:"bound_account_id" mapstructure:"bound_account_id"`
+	BoundIamPrincipalARN       string        `json:"bound_iam_principal_arn" mapstructure:"bound_iam_principal_arn"`
+	BoundIamPrincipalID        string        `json:"bound_iam_principal_id" mapstructure:"bound_iam_principal_id"`
+	BoundIamRoleARN            string        `json:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
+	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
+	BoundRegion                string        `json:"bound_region" mapstructure:"bound_region"`
+	BoundSubnetID              string        `json:"bound_subnet_id" mapstructure:"bound_subnet_id"`
+	BoundVpcID                 string        `json:"bound_vpc_id" mapstructure:"bound_vpc_id"`
+	InferredEntityType         string        `json:"inferred_entity_type" mapstructure:"inferred_entity_type"`
+	InferredAWSRegion          string        `json:"inferred_aws_region" mapstructure:"inferred_aws_region"`
+	ResolveAWSUniqueIDs        bool          `json:"resolve_aws_unique_ids" mapstructure:"resolve_aws_unique_ids"`
+	RoleTag                    string        `json:"role_tag" mapstructure:"role_tag"`
+	AllowInstanceMigration     bool          `json:"allow_instance_migration" mapstructure:"allow_instance_migration"`
+	TTL                        time.Duration `json:"ttl" mapstructure:"ttl"`
+	MaxTTL                     time.Duration `json:"max_ttl" mapstructure:"max_ttl"`
+	Policies                   []string      `json:"policies" mapstructure:"policies"`
+	DisallowReauthentication   bool          `json:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
+	HMACKey                    string        `json:"hmac_key" mapstructure:"hmac_key"`
+	Period                     time.Duration `json:"period" mapstructure:"period"`
 }
 
 const pathRoleSyn = `
