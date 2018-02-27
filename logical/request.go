@@ -144,9 +144,6 @@ type Request struct {
 	// For replication, contains the last WAL on the remote side after handling
 	// the request, used for best-effort avoidance of stale read-after-write
 	lastRemoteWAL uint64 `sentinel:""`
-
-	// Keys in the request object that will not be HMAC'd by audit backends
-	NonHMACKeys []string `json:"-" sentinel:""`
 }
 
 // Get returns a data field and guards for nil Data

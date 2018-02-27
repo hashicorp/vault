@@ -114,33 +114,31 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
 	}
 
+	var nonHMACReqDataKeys []string
+	var nonHMACRespDataKeys []string
 	entry := c.router.MatchingMountEntry(req.Path)
 	if entry != nil {
 		// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-			req.NonHMACKeys = rawVals.([]string)
-			defer func() {
-				req.NonHMACKeys = []string{}
-			}()
+			nonHMACReqDataKeys = rawVals.([]string)
 		}
 
 		// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
 		if auditResp != nil {
 			if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
-				auditResp.NonHMACKeys = rawVals.([]string)
-				defer func() {
-					auditResp.NonHMACKeys = []string{}
-				}()
+				nonHMACRespDataKeys = rawVals.([]string)
 			}
 		}
 	}
 
 	// Create an audit trail of the response
 	logInput := &audit.LogInput{
-		Auth:     auth,
-		Request:  req,
-		Response: auditResp,
-		OuterErr: err,
+		Auth:                auth,
+		Request:             req,
+		Response:            auditResp,
+		OuterErr:            err,
+		NonHMACReqDataKeys:  nonHMACReqDataKeys,
+		NonHMACRespDataKeys: nonHMACRespDataKeys,
 	}
 	if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
 		c.logger.Error("core: failed to audit response", "request_path", req.Path, "error", auditErr)
@@ -153,14 +151,12 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
+	var nonHMACReqDataKeys []string
 	entry := c.router.MatchingMountEntry(req.Path)
 	if entry != nil {
 		// Get and set ignored HMAC'd value.
 		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-			req.NonHMACKeys = rawVals.([]string)
-			defer func() {
-				req.NonHMACKeys = []string{}
-			}()
+			nonHMACReqDataKeys = rawVals.([]string)
 		}
 	}
 
@@ -212,9 +208,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		logInput := &audit.LogInput{
-			Auth:     auth,
-			Request:  req,
-			OuterErr: ctErr,
+			Auth:               auth,
+			Request:            req,
+			OuterErr:           ctErr,
+			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
 		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 			c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
@@ -234,17 +231,15 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Create an audit trail of the request
 	logInput := &audit.LogInput{
-		Auth:    auth,
-		Request: req,
+		Auth:               auth,
+		Request:            req,
+		NonHMACReqDataKeys: nonHMACReqDataKeys,
 	}
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, ErrInternalError)
 		return nil, auth, retErr
 	}
-
-	// Explicitly unset non-HMAC'd keys before the request is routed further
-	req.NonHMACKeys = []string{}
 
 	// Route the request
 	resp, routeErr := c.router.Route(ctx, req)

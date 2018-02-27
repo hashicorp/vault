@@ -116,9 +116,9 @@ func TestHash(t *testing.T) {
 	now := time.Now()
 
 	cases := []struct {
-		Input       interface{}
-		Output      interface{}
-		NonHMACKeys []string
+		Input           interface{}
+		Output          interface{}
+		NonHMACDataKeys []string
 	}{
 		{
 			&logical.Auth{ClientToken: "foo"},
@@ -129,22 +129,24 @@ func TestHash(t *testing.T) {
 			&logical.Request{
 				Data: map[string]interface{}{
 					"foo":              "bar",
+					"baz":              "foobar",
 					"private_key_type": certutil.PrivateKeyType("rsa"),
 				},
 			},
 			&logical.Request{
 				Data: map[string]interface{}{
 					"foo":              "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"baz":              "foobar",
 					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
 				},
 			},
-			nil,
+			[]string{"baz"},
 		},
 		{
 			&logical.Response{
 				Data: map[string]interface{}{
 					"foo": "bar",
-
+					"baz": "foobar",
 					// Responses can contain time values, so test that with
 					// a known fixed value.
 					"bar": now,
@@ -160,6 +162,7 @@ func TestHash(t *testing.T) {
 			&logical.Response{
 				Data: map[string]interface{}{
 					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"baz": "foobar",
 					"bar": now.Format(time.RFC3339Nano),
 				},
 				WrapInfo: &wrapping.ResponseWrapInfo{
@@ -170,7 +173,7 @@ func TestHash(t *testing.T) {
 					WrappedAccessor: "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 				},
 			},
-			nil,
+			[]string{"baz"},
 		},
 		{
 			"foo",
@@ -196,21 +199,6 @@ func TestHash(t *testing.T) {
 			},
 			nil,
 		},
-		{
-			&logical.Request{
-				Data: map[string]interface{}{
-					"foo":              "bar",
-					"private_key_type": certutil.PrivateKeyType("rsa"),
-				},
-			},
-			&logical.Request{
-				Data: map[string]interface{}{
-					"foo":              "bar",
-					"private_key_type": "hmac-sha256:995230dca56fffd310ff591aa404aab52b2abb41703c787cfa829eceb4595bf1",
-				},
-			},
-			[]string{"foo"},
-		},
 	}
 
 	inmemStorage := &logical.InmemStorage{}
@@ -227,7 +215,7 @@ func TestHash(t *testing.T) {
 	}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		if err := Hash(localSalt, tc.Input, tc.NonHMACKeys); err != nil {
+		if err := Hash(localSalt, tc.Input, tc.NonHMACDataKeys); err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
 		if _, ok := tc.Input.(*logical.Response); ok {

@@ -97,7 +97,7 @@ func (f *AuditFormatter) FormatRequest(w io.Writer, config FormatterConfig, in *
 		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
 			clientTokenAccessor = req.ClientTokenAccessor
 		}
-		if err := Hash(salt, req, in.NonHMACDataKeys); err != nil {
+		if err := Hash(salt, req, in.NonHMACReqDataKeys); err != nil {
 			return err
 		}
 		if clientTokenAccessor != "" {
@@ -233,7 +233,7 @@ func (f *AuditFormatter) FormatResponse(w io.Writer, config FormatterConfig, in 
 		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
 			clientTokenAccessor = req.ClientTokenAccessor
 		}
-		if err := Hash(salt, req, in.NonHMACDataKeys); err != nil {
+		if err := Hash(salt, req, in.NonHMACReqDataKeys); err != nil {
 			return err
 		}
 		if clientTokenAccessor != "" {
@@ -250,7 +250,7 @@ func (f *AuditFormatter) FormatResponse(w io.Writer, config FormatterConfig, in 
 				wrappedAccessor = resp.WrapInfo.WrappedAccessor
 				wrappingAccessor = resp.WrapInfo.Accessor
 			}
-			if err := Hash(salt, resp, in.NonHMACDataKeys); err != nil {
+			if err := Hash(salt, resp, in.NonHMACRespDataKeys); err != nil {
 				return err
 			}
 			if accessor != "" {

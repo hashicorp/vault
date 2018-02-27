@@ -47,7 +47,7 @@ func (n *NoopAudit) LogRequest(ctx context.Context, in *audit.LogInput) error {
 	n.ReqAuth = append(n.ReqAuth, in.Auth)
 	n.Req = append(n.Req, in.Request)
 	n.ReqHeaders = append(n.ReqHeaders, in.Request.Headers)
-	n.ReqNonHMACKeys = in.Request.NonHMACKeys
+	n.ReqNonHMACKeys = in.NonHMACReqDataKeys
 	n.ReqErrs = append(n.ReqErrs, in.OuterErr)
 	return n.ReqErr
 }
@@ -59,8 +59,8 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *audit.LogInput) error {
 	n.RespErrs = append(n.RespErrs, in.OuterErr)
 
 	if in.Response != nil {
-		n.RespNonHMACKeys = in.Response.NonHMACKeys
-		n.RespReqNonHMACKeys = in.Request.NonHMACKeys
+		n.RespNonHMACKeys = in.NonHMACRespDataKeys
+		n.RespReqNonHMACKeys = in.NonHMACReqDataKeys
 	}
 
 	return n.RespErr

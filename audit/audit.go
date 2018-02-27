@@ -38,11 +38,12 @@ type Backend interface {
 
 // LogInput contains the input parameters passed into LogRequest and LogResponse
 type LogInput struct {
-	Auth            *logical.Auth
-	Request         *logical.Request
-	Response        *logical.Response
-	OuterErr        error
-	NonHMACDataKeys []string
+	Auth                *logical.Auth
+	Request             *logical.Request
+	Response            *logical.Response
+	OuterErr            error
+	NonHMACReqDataKeys  []string
+	NonHMACRespDataKeys []string
 }
 
 // BackendConfig contains configuration parameters used in the factory func to
