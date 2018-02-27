@@ -177,16 +177,16 @@ func (b *Backend) LogRequest(_ context.Context, in *audit.LogInput) error {
 
 	switch b.path {
 	case "stdout":
-		return b.formatter.FormatRequest(os.Stdout, b.formatConfig, in.Auth, in.Request, in.OuterErr)
+		return b.formatter.FormatRequest(os.Stdout, b.formatConfig, in)
 	case "discard":
-		return b.formatter.FormatRequest(ioutil.Discard, b.formatConfig, in.Auth, in.Request, in.OuterErr)
+		return b.formatter.FormatRequest(ioutil.Discard, b.formatConfig, in)
 	}
 
 	if err := b.open(); err != nil {
 		return err
 	}
 
-	if err := b.formatter.FormatRequest(b.f, b.formatConfig, in.Auth, in.Request, in.OuterErr); err == nil {
+	if err := b.formatter.FormatRequest(b.f, b.formatConfig, in); err == nil {
 		return nil
 	}
 
@@ -198,7 +198,7 @@ func (b *Backend) LogRequest(_ context.Context, in *audit.LogInput) error {
 		return err
 	}
 
-	return b.formatter.FormatRequest(b.f, b.formatConfig, in.Auth, in.Request, in.OuterErr)
+	return b.formatter.FormatRequest(b.f, b.formatConfig, in)
 }
 
 func (b *Backend) LogResponse(_ context.Context, in *audit.LogInput) error {
@@ -208,16 +208,16 @@ func (b *Backend) LogResponse(_ context.Context, in *audit.LogInput) error {
 
 	switch b.path {
 	case "stdout":
-		return b.formatter.FormatResponse(os.Stdout, b.formatConfig, in.Auth, in.Request, in.Response, in.OuterErr)
+		return b.formatter.FormatResponse(os.Stdout, b.formatConfig, in)
 	case "discard":
-		return b.formatter.FormatResponse(ioutil.Discard, b.formatConfig, in.Auth, in.Request, in.Response, in.OuterErr)
+		return b.formatter.FormatResponse(ioutil.Discard, b.formatConfig, in)
 	}
 
 	if err := b.open(); err != nil {
 		return err
 	}
 
-	if err := b.formatter.FormatResponse(b.f, b.formatConfig, in.Auth, in.Request, in.Response, in.OuterErr); err == nil {
+	if err := b.formatter.FormatResponse(b.f, b.formatConfig, in); err == nil {
 		return nil
 	}
 
@@ -229,7 +229,7 @@ func (b *Backend) LogResponse(_ context.Context, in *audit.LogInput) error {
 		return err
 	}
 
-	return b.formatter.FormatResponse(b.f, b.formatConfig, in.Auth, in.Request, in.Response, in.OuterErr)
+	return b.formatter.FormatResponse(b.f, b.formatConfig, in)
 }
 
 // The file lock must be held before calling this

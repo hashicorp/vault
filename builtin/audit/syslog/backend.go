@@ -120,7 +120,7 @@ func (b *Backend) GetHash(data string) (string, error) {
 
 func (b *Backend) LogRequest(_ context.Context, in *audit.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatRequest(&buf, b.formatConfig, in.Auth, in.Request, in.OuterErr); err != nil {
+	if err := b.formatter.FormatRequest(&buf, b.formatConfig, in); err != nil {
 		return err
 	}
 
@@ -131,7 +131,7 @@ func (b *Backend) LogRequest(_ context.Context, in *audit.LogInput) error {
 
 func (b *Backend) LogResponse(_ context.Context, in *audit.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatResponse(&buf, b.formatConfig, in.Auth, in.Request, in.Response, in.OuterErr); err != nil {
+	if err := b.formatter.FormatResponse(&buf, b.formatConfig, in); err != nil {
 		return err
 	}
 
