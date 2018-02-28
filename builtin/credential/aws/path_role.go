@@ -1,11 +1,11 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -28,12 +28,14 @@ iam or ec2 and cannot be changed after role creation.`,
 			"bound_ami_id": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances that they should be
-using the AMI ID specified by this parameter.`,
+using the AMI ID specified by this parameter. This is only applicable when auth_type is ec2
+or inferred_entity_type is ec2_instance.`,
 			},
 			"bound_account_id": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances that the account ID
-in its identity document to match the one specified by this parameter.`,
+in its identity document to match the one specified by this parameter. This is only
+applicable when auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
 			"bound_iam_principal_arn": {
 				Type: framework.TypeString,
@@ -43,8 +45,8 @@ auth_type is iam.`,
 			"bound_region": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances that the region in
-its identity document to match the one specified by this parameter. Only applicable when
-auth_type is ec2.`,
+its identity document to match the one specified by this parameter. This is only
+applicable when auth_type is ec2.`,
 			},
 			"bound_iam_role_arn": {
 				Type: framework.TypeString,
@@ -52,17 +54,17 @@ auth_type is ec2.`,
 that it must match the IAM role ARN specified by this parameter.
 The value is prefix-matched (as though it were a glob ending in
 '*').  The configured IAM user or EC2 instance role must be allowed
-to execute the 'iam:GetInstanceProfile' action if this is
-specified. This is only checked when auth_type is
-ec2.`,
+to execute the 'iam:GetInstanceProfile' action if this is specified. This is
+only applicable when auth_type is ec2 or inferred_entity_type is
+ec2_instance.`,
 			},
 			"bound_iam_instance_profile_arn": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances to be associated
 with an IAM instance profile ARN which has a prefix that matches
 the value specified by this parameter. The value is prefix-matched
-(as though it were a glob ending in '*'). This is only checked when
-auth_type is ec2.`,
+(as though it were a glob ending in '*'). This is only applicable when
+auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
 			"resolve_aws_unique_ids": {
 				Type:    framework.TypeBool,
@@ -94,13 +96,15 @@ inferred_entity_type is set, the region to assume the inferred entity exists in.
 				Type: framework.TypeString,
 				Description: `
 If set, defines a constraint on the EC2 instance to be associated with the VPC
-ID that matches the value specified by this parameter.`,
+ID that matches the value specified by this parameter. This is only applicable
+when auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
 			"bound_subnet_id": {
 				Type: framework.TypeString,
 				Description: `
 If set, defines a constraint on the EC2 instance to be associated with the
-subnet ID that matches the value specified by this parameter.`,
+subnet ID that matches the value specified by this parameter. This is only
+applicable when auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 			},
 			"role_tag": {
 				Type:    framework.TypeString,
@@ -115,7 +119,9 @@ is only allowed if auth_type is ec2.`,
 				Type:    framework.TypeDurationSecond,
 				Default: 0,
 				Description: `
-If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this parameter.`,
+If set, indicates that the token generated using this role should never expire.
+The token should be renewed within the duration specified by this value. At
+each renewal, the token's TTL will be set to the value of this parameter.`,
 			},
 			"ttl": {
 				Type:    framework.TypeDurationSecond,
@@ -144,9 +150,13 @@ previously-remembered time. Use with caution. This is only checked when
 auth_type is ec2.`,
 			},
 			"disallow_reauthentication": {
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: "If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint.",
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, only allows a single token to be granted per
+        instance ID. In order to perform a fresh login, the entry in whitelist
+        for the instance ID needs to be cleared using
+        'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint. This is only
+        applicable when auth_type is ec2.`,
 			},
 		},
 
@@ -192,8 +202,8 @@ func pathListRoles(b *backend) *framework.Path {
 
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
-func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.lockedAWSRole(req.Storage, strings.ToLower(data.Get("role").(string)))
+func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	entry, err := b.lockedAWSRole(ctx, req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return false, err
 	}
@@ -202,13 +212,13 @@ func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.F
 
 // lockedAWSRole returns the properties set on the given role. This method
 // acquires the read lock before reading the role from the storage.
-func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEntry, error) {
+func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("missing role name")
 	}
 
 	b.roleMutex.RLock()
-	roleEntry, err := b.nonLockedAWSRole(s, roleName)
+	roleEntry, err := b.nonLockedAWSRole(ctx, s, roleName)
 	// we manually unlock rather than defer the unlock because we might need to grab
 	// a read/write lock in the upgrade path
 	b.roleMutex.RUnlock()
@@ -218,7 +228,7 @@ func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEnt
 	if roleEntry == nil {
 		return nil, nil
 	}
-	needUpgrade, err := b.upgradeRoleEntry(s, roleEntry)
+	needUpgrade, err := b.upgradeRoleEntry(ctx, s, roleEntry)
 	if err != nil {
 		return nil, fmt.Errorf("error upgrading roleEntry: %v", err)
 	}
@@ -227,7 +237,7 @@ func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEnt
 		defer b.roleMutex.Unlock()
 		// Now that we have a R/W lock, we need to re-read the role entry in case it was
 		// written to between releasing the read lock and acquiring the write lock
-		roleEntry, err = b.nonLockedAWSRole(s, roleName)
+		roleEntry, err = b.nonLockedAWSRole(ctx, s, roleName)
 		if err != nil {
 			return nil, err
 		}
@@ -236,11 +246,11 @@ func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEnt
 			return nil, nil
 		}
 		// now re-check to see if we need to upgrade
-		if needUpgrade, err = b.upgradeRoleEntry(s, roleEntry); err != nil {
+		if needUpgrade, err = b.upgradeRoleEntry(ctx, s, roleEntry); err != nil {
 			return nil, fmt.Errorf("error upgrading roleEntry: %v", err)
 		}
 		if needUpgrade {
-			if err = b.nonLockedSetAWSRole(s, roleName, roleEntry); err != nil {
+			if err = b.nonLockedSetAWSRole(ctx, s, roleName, roleEntry); err != nil {
 				return nil, fmt.Errorf("error saving upgraded roleEntry: %v", err)
 			}
 		}
@@ -250,7 +260,7 @@ func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEnt
 
 // lockedSetAWSRole creates or updates a role in the storage. This method
 // acquires the write lock before creating or updating the role at the storage.
-func (b *backend) lockedSetAWSRole(s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
+func (b *backend) lockedSetAWSRole(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
 	if roleName == "" {
 		return fmt.Errorf("missing role name")
 	}
@@ -262,13 +272,13 @@ func (b *backend) lockedSetAWSRole(s logical.Storage, roleName string, roleEntry
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	return b.nonLockedSetAWSRole(s, roleName, roleEntry)
+	return b.nonLockedSetAWSRole(ctx, s, roleName, roleEntry)
 }
 
 // nonLockedSetAWSRole creates or updates a role in the storage. This method
 // does not acquire the write lock before reading the role from the storage. If
 // locking is desired, use lockedSetAWSRole instead.
-func (b *backend) nonLockedSetAWSRole(s logical.Storage, roleName string,
+func (b *backend) nonLockedSetAWSRole(ctx context.Context, s logical.Storage, roleName string,
 	roleEntry *awsRoleEntry) error {
 	if roleName == "" {
 		return fmt.Errorf("missing role name")
@@ -283,7 +293,7 @@ func (b *backend) nonLockedSetAWSRole(s logical.Storage, roleName string,
 		return err
 	}
 
-	if err := s.Put(entry); err != nil {
+	if err := s.Put(ctx, entry); err != nil {
 		return err
 	}
 
@@ -292,7 +302,7 @@ func (b *backend) nonLockedSetAWSRole(s logical.Storage, roleName string,
 
 // If needed, updates the role entry and returns a bool indicating if it was updated
 // (and thus needs to be persisted)
-func (b *backend) upgradeRoleEntry(s logical.Storage, roleEntry *awsRoleEntry) (bool, error) {
+func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleEntry *awsRoleEntry) (bool, error) {
 	if roleEntry == nil {
 		return false, fmt.Errorf("received nil roleEntry")
 	}
@@ -320,7 +330,7 @@ func (b *backend) upgradeRoleEntry(s logical.Storage, roleEntry *awsRoleEntry) (
 		roleEntry.BoundIamPrincipalARN != "" &&
 		roleEntry.BoundIamPrincipalID == "" &&
 		!strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
-		principalId, err := b.resolveArnToUniqueIDFunc(s, roleEntry.BoundIamPrincipalARN)
+		principalId, err := b.resolveArnToUniqueIDFunc(ctx, s, roleEntry.BoundIamPrincipalARN)
 		if err != nil {
 			return false, err
 		}
@@ -338,12 +348,12 @@ func (b *backend) upgradeRoleEntry(s logical.Storage, roleEntry *awsRoleEntry) (
 // This method also does NOT check to see if a role upgrade is required. It is
 // the responsibility of the caller to check if a role upgrade is required and,
 // if so, to upgrade the role
-func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRoleEntry, error) {
+func (b *backend) nonLockedAWSRole(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	entry, err := s.Get("role/" + strings.ToLower(roleName))
+	entry, err := s.Get(ctx, "role/"+strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -360,8 +370,7 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 }
 
 // pathRoleDelete is used to delete the information registered for a given AMI ID.
-func (b *backend) pathRoleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role"), nil
@@ -370,16 +379,15 @@ func (b *backend) pathRoleDelete(
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	return nil, req.Storage.Delete("role/" + strings.ToLower(roleName))
+	return nil, req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
 }
 
 // pathRoleList is used to list all the AMI IDs registered with Vault.
-func (b *backend) pathRoleList(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.roleMutex.RLock()
 	defer b.roleMutex.RUnlock()
 
-	roles, err := req.Storage.List("role/")
+	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
 		return nil, err
 	}
@@ -387,9 +395,8 @@ func (b *backend) pathRoleList(
 }
 
 // pathRoleRead is used to view the information registered for a given AMI ID.
-func (b *backend) pathRoleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleEntry, err := b.lockedAWSRole(req.Storage, strings.ToLower(data.Get("role").(string)))
+func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleEntry, err := b.lockedAWSRole(ctx, req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -397,26 +404,34 @@ func (b *backend) pathRoleRead(
 		return nil, nil
 	}
 
-	// Prepare the map of all the entries in the roleEntry.
-	respData := structs.New(roleEntry).Map()
-
-	// HMAC key belonging to the role should NOT be exported.
-	delete(respData, "hmac_key")
-
-	// Display all the durations in seconds
-	respData["ttl"] = roleEntry.TTL / time.Second
-	respData["max_ttl"] = roleEntry.MaxTTL / time.Second
-	respData["period"] = roleEntry.Period / time.Second
-
 	return &logical.Response{
-		Data: respData,
+		Data: map[string]interface{}{
+			"auth_type":                      roleEntry.AuthType,
+			"bound_ami_id":                   roleEntry.BoundAmiID,
+			"bound_account_id":               roleEntry.BoundAccountID,
+			"bound_iam_principal_arn":        roleEntry.BoundIamPrincipalARN,
+			"bound_iam_principal_id":         roleEntry.BoundIamPrincipalID,
+			"bound_iam_role_arn":             roleEntry.BoundIamRoleARN,
+			"bound_iam_instance_profile_arn": roleEntry.BoundIamInstanceProfileARN,
+			"bound_region":                   roleEntry.BoundRegion,
+			"bound_subnet_id":                roleEntry.BoundSubnetID,
+			"bound_vpc_id":                   roleEntry.BoundVpcID,
+			"inferred_entity_type":           roleEntry.InferredEntityType,
+			"inferred_aws_region":            roleEntry.InferredAWSRegion,
+			"resolve_aws_unique_ids":         roleEntry.ResolveAWSUniqueIDs,
+			"role_tag":                       roleEntry.RoleTag,
+			"allow_instance_migration":       roleEntry.AllowInstanceMigration,
+			"ttl":                       roleEntry.TTL / time.Second,
+			"max_ttl":                   roleEntry.MaxTTL / time.Second,
+			"policies":                  roleEntry.Policies,
+			"disallow_reauthentication": roleEntry.DisallowReauthentication,
+			"period":                    roleEntry.Period / time.Second,
+		},
 	}, nil
 }
 
 // pathRoleCreateUpdate is used to associate Vault policies to a given AMI ID.
-func (b *backend) pathRoleCreateUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := strings.ToLower(data.Get("role").(string))
 	if roleName == "" {
 		return logical.ErrorResponse("missing role"), nil
@@ -425,19 +440,19 @@ func (b *backend) pathRoleCreateUpdate(
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	roleEntry, err := b.nonLockedAWSRole(req.Storage, roleName)
+	roleEntry, err := b.nonLockedAWSRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
 	if roleEntry == nil {
 		roleEntry = &awsRoleEntry{}
 	} else {
-		needUpdate, err := b.upgradeRoleEntry(req.Storage, roleEntry)
+		needUpdate, err := b.upgradeRoleEntry(ctx, req.Storage, roleEntry)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to update roleEntry: %v", err)), nil
 		}
 		if needUpdate {
-			err = b.nonLockedSetAWSRole(req.Storage, roleName, roleEntry)
+			err = b.nonLockedSetAWSRole(ctx, req.Storage, roleName, roleEntry)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("failed to save upgraded roleEntry: %v", err)), nil
 			}
@@ -494,8 +509,8 @@ func (b *backend) pathRoleCreateUpdate(
 		// This allows the user to sumbit an update with the same ARN to force Vault
 		// to re-resolve the ARN to the unique ID, in case an entity was deleted and
 		// recreated
-		if roleEntry.ResolveAWSUniqueIDs && !strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
-			principalID, err := b.resolveArnToUniqueIDFunc(req.Storage, principalARN)
+		if roleEntry.ResolveAWSUniqueIDs && roleEntry.BoundIamPrincipalARN != "" && !strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
+			principalID, err := b.resolveArnToUniqueIDFunc(ctx, req.Storage, principalARN)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("failed updating the unique ID of ARN %#v: %#v", principalARN, err)), nil
 			}
@@ -506,7 +521,7 @@ func (b *backend) pathRoleCreateUpdate(
 		}
 	} else if roleEntry.ResolveAWSUniqueIDs && roleEntry.BoundIamPrincipalARN != "" && !strings.HasSuffix(roleEntry.BoundIamPrincipalARN, "*") {
 		// we're turning on resolution on this role, so ensure we update it
-		principalID, err := b.resolveArnToUniqueIDFunc(req.Storage, roleEntry.BoundIamPrincipalARN)
+		principalID, err := b.resolveArnToUniqueIDFunc(ctx, req.Storage, roleEntry.BoundIamPrincipalARN)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("unable to resolve ARN %#v to internal ID: %#v", roleEntry.BoundIamPrincipalARN, err)), nil
 		}
@@ -653,6 +668,10 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.AllowInstanceMigration = data.Get("allow_instance_migration").(bool)
 	}
 
+	if roleEntry.AllowInstanceMigration && roleEntry.DisallowReauthentication {
+		return logical.ErrorResponse("cannot specify both disallow_reauthentication=true and allow_instance_migration=true"), nil
+	}
+
 	var resp logical.Response
 
 	ttlRaw, ok := data.GetOk("ttl")
@@ -721,7 +740,7 @@ func (b *backend) pathRoleCreateUpdate(
 		}
 	}
 
-	if err := b.nonLockedSetAWSRole(req.Storage, roleName, roleEntry); err != nil {
+	if err := b.nonLockedSetAWSRole(ctx, req.Storage, roleName, roleEntry); err != nil {
 		return nil, err
 	}
 
@@ -734,27 +753,27 @@ func (b *backend) pathRoleCreateUpdate(
 
 // Struct to hold the information associated with an AMI ID in Vault.
 type awsRoleEntry struct {
-	AuthType                   string        `json:"auth_type" structs:"auth_type" mapstructure:"auth_type"`
-	BoundAmiID                 string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
-	BoundAccountID             string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
-	BoundIamPrincipalARN       string        `json:"bound_iam_principal_arn" structs:"bound_iam_principal_arn" mapstructure:"bound_iam_principal_arn"`
-	BoundIamPrincipalID        string        `json:"bound_iam_principal_id" structs:"bound_iam_principal_id" mapstructure:"bound_iam_principal_id"`
-	BoundIamRoleARN            string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
-	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
-	BoundRegion                string        `json:"bound_region" structs:"bound_region" mapstructure:"bound_region"`
-	BoundSubnetID              string        `json:"bound_subnet_id" structs:"bound_subnet_id" mapstructure:"bound_subnet_id"`
-	BoundVpcID                 string        `json:"bound_vpc_id" structs:"bound_vpc_id" mapstructure:"bound_vpc_id"`
-	InferredEntityType         string        `json:"inferred_entity_type" structs:"inferred_entity_type" mapstructure:"inferred_entity_type"`
-	InferredAWSRegion          string        `json:"inferred_aws_region" structs:"inferred_aws_region" mapstructure:"inferred_aws_region"`
-	ResolveAWSUniqueIDs        bool          `json:"resolve_aws_unique_ids" structs:"resolve_aws_unique_ids" mapstructure:"resolve_aws_unique_ids"`
-	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
-	AllowInstanceMigration     bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
-	TTL                        time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
-	MaxTTL                     time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	Policies                   []string      `json:"policies" structs:"policies" mapstructure:"policies"`
-	DisallowReauthentication   bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	HMACKey                    string        `json:"hmac_key" structs:"hmac_key" mapstructure:"hmac_key"`
-	Period                     time.Duration `json:"period" mapstructure:"period" structs:"period"`
+	AuthType                   string        `json:"auth_type"`
+	BoundAmiID                 string        `json:"bound_ami_id"`
+	BoundAccountID             string        `json:"bound_account_id"`
+	BoundIamPrincipalARN       string        `json:"bound_iam_principal_arn"`
+	BoundIamPrincipalID        string        `json:"bound_iam_principal_id"`
+	BoundIamRoleARN            string        `json:"bound_iam_role_arn"`
+	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn"`
+	BoundRegion                string        `json:"bound_region"`
+	BoundSubnetID              string        `json:"bound_subnet_id"`
+	BoundVpcID                 string        `json:"bound_vpc_id"`
+	InferredEntityType         string        `json:"inferred_entity_type"`
+	InferredAWSRegion          string        `json:"inferred_aws_region"`
+	ResolveAWSUniqueIDs        bool          `json:"resolve_aws_unique_ids"`
+	RoleTag                    string        `json:"role_tag"`
+	AllowInstanceMigration     bool          `json:"allow_instance_migration"`
+	TTL                        time.Duration `json:"ttl"`
+	MaxTTL                     time.Duration `json:"max_ttl"`
+	Policies                   []string      `json:"policies"`
+	DisallowReauthentication   bool          `json:"disallow_reauthentication"`
+	HMACKey                    string        `json:"hmac_key"`
+	Period                     time.Duration `json:"period"`
 }
 
 const pathRoleSyn = `

@@ -1,19 +1,19 @@
 ---
 layout: "api"
-page_title: "SSH Secret Backend - HTTP API"
+page_title: "SSH - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-ssh"
 description: |-
-  This is the API documentation for the Vault SSH secret backend.
+  This is the API documentation for the Vault SSH secrets engine.
 ---
 
-# SSH Secret Backend HTTP API
+# SSH Secrets Engine (API)
 
-This is the API documentation for the Vault SSH secret backend. For general
-information about the usage and operation of the SSH backend, please see the
-[Vault SSH backend documentation](/docs/secrets/ssh/index.html).
+This is the API documentation for the Vault SSH secrets engine. For general
+information about the usage and operation of the SSH secrets engine, please see
+the [SSH documentation](/docs/secrets/ssh/index.html).
 
-This documentation assumes the SSH backend is mounted at the `/ssh` path in
-Vault. Since it is possible to mount secret backends at any location, please
+This documentation assumes the SSH secrets engine is enabled at the `/ssh` path
+in Vault. Since it is possible to enable secrets engines at any location, please
 update your API calls accordingly.
 
 ## Create/Update Key
@@ -106,8 +106,9 @@ This endpoint creates or updates a named role.
     in `allowed_users`.
 
 - `cidr_list` `(string: "")` – Specifies a comma separated list of CIDR blocks
-  for which the role is applicable for.CIDR blocks can belong to more than one
-  role.
+  for which the role is applicable for. It is possible that a same set of CIDR
+  blocks are part of multiple roles. This is a required parameter, unless the
+  role is registered under the `/config/zeroaddress` endpoint.
 
 - `exclude_cidr_list` `(string: "")` – Specifies a comma-separated list of CIDR
   blocks. IP addresses belonging to these blocks are not accepted by the role.
@@ -115,7 +116,7 @@ This endpoint creates or updates a named role.
   and certain parts need to be kept out.
 
 - `port` `(int: 22)` – Specifies the port number for SSH connection. Port number
-  does not play any role in OTP generation. For the `otp` backend type, this is
+  does not play any role in OTP generation. For the `otp` secrets engine type, this is
   just a way to inform the client about the port number to use. The port number
   will be	returned to the client by Vault along with the OTP.
 
@@ -143,7 +144,7 @@ This endpoint creates or updates a named role.
   credentials can be created for any domain. See also `allow_bare_domains` and
   `allow_subdomains`.
 
-- `key_option_specs` `(string: "")` – Specifies a aomma separated option
+- `key_option_specs` `(string: "")` – Specifies a comma separated option
   specification which will be prefixed to RSA keys in the remote host's
   authorized_keys file. N.B.: Vault does not check this string for validity.
 
@@ -293,7 +294,6 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/ssh/roles`                 | `200 application/json` |
-| `GET`   | `/ssh/roles?list=true`        | `200 application/json` |
 
 ### Sample Request
 
@@ -310,7 +310,15 @@ $ curl \
 {
   "auth": null,
   "data": {
-    "keys": ["dev", "prod"]
+    "keys": ["dev", "prod"],
+    "key_info": {
+      "dev": {
+        "key_type": "ca"
+      },
+      "prod": {
+        "key_type": "dynamic"
+      }
+    }
   },
   "lease_duration": 2764800,
   "lease_id": "",
@@ -604,12 +612,12 @@ $ curl \
 
 ## Submit CA Information
 
-This endpoint allows submitting the CA information for the backend via an SSH
+This endpoint allows submitting the CA information for the secrets engine via an SSH
 key pair. _If you have already set a certificate and key, they will be
 overridden._
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         | Produces                   |
+| :------- | :--------------------------- | :------------------------- |
 | `POST`   | `/ssh/config/ca`             | `200/204 application/json` |
 
 ### Parameters
@@ -658,6 +666,23 @@ This will return a `200` response if `generate_signing_key` was true:
   },
   "warnings": null
 }
+```
+
+## Delete CA Information
+
+This endpoint deletes the CA information for the backend via an SSH key pair.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `DELETE` | `/ssh/config/ca`             | `204 (empty body)`     |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://vault.rocks/v1/ssh/config/ca
 ```
 
 ## Read Public Key (Unauthenticated)

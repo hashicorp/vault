@@ -66,7 +66,7 @@ at Consul's service discovery layer.
   [consistency mode][consul-consistency]. Possible values are `"default"` or
   `"strong"`.
 
-- `disable_registration` `(bool: false)` – Specifies whether Vault should
+- `disable_registration` `(string: "false")` – Specifies whether Vault should
   register itself with Consul.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
@@ -85,6 +85,14 @@ at Consul's service discovery layer.
 
 - `service_tags` `(string: "")` – Specifies a comma-separated list of tags to
   attach to the service registration in Consul.
+
+- `service_address` `(string: nil)` – Specifies a service-specific address to
+  set on the service registration in Consul. If unset, Vault will use what it
+  knows to be the HA redirect address - which is usually desirable. Setting
+  this parameter to `""` will tell Consul to leverage the configuration of the
+  node the service is registered on dynamically. This could be beneficial if
+  you intend to leverage Consul's
+  [`translate_wan_addrs`][consul-translate-wan-addrs] parameter.
 
 - `token` `(string: "")` – Specifies the [Consul ACL token][consul-acl] with
   permission to read and write from the `path` in Consul's key-value store.
@@ -115,23 +123,6 @@ connection. You can read more about encrypting Consul connections on the
 
 - `tls_skip_verify` `(bool: false)` – Specifies if the TLS host verification
   should be disabled. It is highly discouraged that you disable this option.
-
-This backend also supports the following high availability parameters. These are
-discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
-
-- `cluster_addr` `(string: "")` – Specifies the address to advertise to other
-  Vault servers in the cluster for request forwarding. This can also be provided
-  via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
-  `redirect_addr`, but Vault will ignore the scheme (all cluster members always
-  use TLS with a private key/certificate).
-
-- `disable_clustering` `(bool: false)` – Specifies whether clustering features
-  such as request forwarding are enabled. Setting this to true on one Vault node
-  will disable these features _only when that node is the active node_.
-
-- `redirect_addr` `(string: <required>)` – Specifies the address (full URL) to
-  advertise to other Vault servers in the cluster for client redirection. This
-  can also be provided via the environment variable `VAULT_REDIRECT_ADDR`.
 
 ## ACLs
 
@@ -233,3 +224,4 @@ storage "consul" {
 [consul-acl]: https://www.consul.io/docs/guides/acl.html "Consul ACLs"
 [consul-consistency]: https://www.consul.io/api/index.html#consistency-modes "Consul Consistency Modes"
 [consul-encryption]: https://www.consul.io/docs/agent/encryption.html "Consul Encryption"
+[consul-translate-wan-addrs]: https://www.consul.io/docs/agent/options.html#translate_wan_addrs "Consul Configuration"

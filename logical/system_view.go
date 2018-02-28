@@ -1,6 +1,7 @@
 package logical
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -22,7 +23,7 @@ type SystemView interface {
 
 	// SudoPrivilege returns true if given path has sudo privileges
 	// for the given client token
-	SudoPrivilege(path string, token string) bool
+	SudoPrivilege(ctx context.Context, path string, token string) bool
 
 	// Returns true if the mount is tainted. A mount is tainted if it is in the
 	// process of being unmounted. This should only be used in special
@@ -38,16 +39,20 @@ type SystemView interface {
 	// despite known slowdowns.
 	CachingDisabled() bool
 
+	// When run from a system view attached to a request, indicates whether the
+	// request is affecting a local mount or not
+	LocalMount() bool
+
 	// ReplicationState indicates the state of cluster replication
 	ReplicationState() consts.ReplicationState
 
 	// ResponseWrapData wraps the given data in a cubbyhole and returns the
 	// token used to unwrap.
-	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
+	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 
 	// LookupPlugin looks into the plugin catalog for a plugin with the given
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
-	LookupPlugin(string) (*pluginutil.PluginRunner, error)
+	LookupPlugin(context.Context, string) (*pluginutil.PluginRunner, error)
 
 	// MlockEnabled returns the configuration setting for enabling mlock on
 	// plugins.
@@ -62,6 +67,7 @@ type StaticSystemView struct {
 	CachingDisabledVal  bool
 	Primary             bool
 	EnableMlock         bool
+	LocalMountVal       bool
 	ReplicationStateVal consts.ReplicationState
 }
 
@@ -73,7 +79,7 @@ func (d StaticSystemView) MaxLeaseTTL() time.Duration {
 	return d.MaxLeaseTTLVal
 }
 
-func (d StaticSystemView) SudoPrivilege(path string, token string) bool {
+func (d StaticSystemView) SudoPrivilege(_ context.Context, path string, token string) bool {
 	return d.SudoPrivilegeVal
 }
 
@@ -85,15 +91,19 @@ func (d StaticSystemView) CachingDisabled() bool {
 	return d.CachingDisabledVal
 }
 
+func (d StaticSystemView) LocalMount() bool {
+	return d.LocalMountVal
+}
+
 func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
 }
 
-func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (d StaticSystemView) ResponseWrapData(_ context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	return nil, errors.New("ResponseWrapData is not implemented in StaticSystemView")
 }
 
-func (d StaticSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+func (d StaticSystemView) LookupPlugin(_ context.Context, name string) (*pluginutil.PluginRunner, error) {
 	return nil, errors.New("LookupPlugin is not implemented in StaticSystemView")
 }
 

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -16,6 +17,10 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+const (
+	replTimeout = 10 * time.Second
+)
+
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
@@ -26,6 +31,9 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	if c.standby {
 		return nil, consts.ErrStandby
 	}
+
+	ctx, cancel := context.WithCancel(c.activeContext)
+	defer cancel()
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
@@ -41,9 +49,9 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 	var auth *logical.Auth
 	if c.router.LoginPath(req.Path) {
-		resp, auth, err = c.handleLoginRequest(req)
+		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
-		resp, auth, err = c.handleRequest(req)
+		resp, auth, err = c.handleRequest(ctx, req)
 	}
 
 	// Ensure we don't leak internal data
@@ -64,10 +72,11 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		err == nil &&
 		!resp.IsError() &&
 		resp.WrapInfo != nil &&
-		resp.WrapInfo.TTL != 0
+		resp.WrapInfo.TTL != 0 &&
+		resp.WrapInfo.Token == ""
 
 	if wrapping {
-		cubbyResp, cubbyErr := c.wrapInCubbyhole(req, resp, auth)
+		cubbyResp, cubbyErr := c.wrapInCubbyhole(ctx, req, resp, auth)
 		// If not successful, returns either an error response from the
 		// cubbyhole backend or an error; if either is set, set resp and err to
 		// those and continue so that that's what we audit log. Otherwise
@@ -105,7 +114,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	}
 
 	// Create an audit trail of the response
-	if auditErr := c.auditBroker.LogResponse(auth, req, auditResp, c.auditedHeaders, err); auditErr != nil {
+	if auditErr := c.auditBroker.LogResponse(ctx, auth, req, auditResp, c.auditedHeaders, err); auditErr != nil {
 		c.logger.Error("core: failed to audit response", "request_path", req.Path, "error", auditErr)
 		return nil, ErrInternalError
 	}
@@ -113,16 +122,16 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	return
 }
 
-func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
+func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
 	// Validate the token
-	auth, te, ctErr := c.checkToken(req)
+	auth, te, ctErr := c.checkToken(ctx, req, false)
 	// We run this logic first because we want to decrement the use count even in the case of an error
 	if te != nil {
 		// Attempt to use the token (decrement NumUses)
 		var err error
-		te, err = c.tokenStore.UseToken(te)
+		te, err = c.tokenStore.UseToken(ctx, te)
 		if err != nil {
 			c.logger.Error("core: failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -138,7 +147,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			// valid request (this is the token's final use). We pass the ID in
 			// directly just to be safe in case something else modifies te later.
 			defer func(id string) {
-				err = c.tokenStore.Revoke(id)
+				err = c.tokenStore.Revoke(ctx, id)
 				if err != nil {
 					c.logger.Error("core: failed to revoke token", "error", err)
 					retResp = nil
@@ -157,15 +166,13 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
-		var errType error
+		errType := logical.ErrInvalidRequest
 		switch ctErr {
 		case ErrInternalError, logical.ErrPermissionDenied:
 			errType = ctErr
-		default:
-			errType = logical.ErrInvalidRequest
 		}
 
-		if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, ctErr); err != nil {
+		if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, ctErr); err != nil {
 			c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		}
 
@@ -182,18 +189,19 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	req.DisplayName = auth.DisplayName
 
 	// Create an audit trail of the request
-	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, ErrInternalError)
 		return nil, auth, retErr
 	}
 
 	// Route the request
-	resp, routeErr := c.router.Route(req)
+	resp, routeErr := c.router.Route(ctx, req)
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
 		var wrapFormat, creationPath string
+		var sealWrap bool
 
 		// Ensure no wrap info information is set other than, possibly, the TTL
 		if resp.WrapInfo != nil {
@@ -202,6 +210,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			}
 			wrapFormat = resp.WrapInfo.Format
 			creationPath = resp.WrapInfo.CreationPath
+			sealWrap = resp.WrapInfo.SealWrap
 			resp.WrapInfo = nil
 		}
 
@@ -226,6 +235,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 				TTL:          wrapTTL,
 				Format:       wrapFormat,
 				CreationPath: creationPath,
+				SealWrap:     sealWrap,
 			}
 		}
 	}
@@ -280,6 +290,21 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 	}
 
+	// If the request was to renew a token, and if there are group aliases set
+	// in the auth object, then the group memberships should be refreshed
+	if strings.HasPrefix(req.Path, "auth/token/renew") &&
+		resp != nil &&
+		resp.Auth != nil &&
+		resp.Auth.EntityID != "" &&
+		resp.Auth.GroupAliases != nil {
+		err := c.identityStore.refreshExternalGroupMembershipsByEntityID(resp.Auth.EntityID, resp.Auth.GroupAliases)
+		if err != nil {
+			c.logger.Error("core: failed to refresh external group memberships", "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+	}
+
 	// Only the token store is allowed to return an auth block, for any
 	// other request this is an internal error. We exclude renewal of a token,
 	// since it does not need to be re-registered
@@ -292,7 +317,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 		// Register with the expiration manager. We use the token's actual path
 		// here because roles allow suffixes.
-		te, err := c.tokenStore.Lookup(resp.Auth.ClientToken)
+		te, err := c.tokenStore.Lookup(ctx, resp.Auth.ClientToken)
 		if err != nil {
 			c.logger.Error("core: failed to look up token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
@@ -300,7 +325,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 
 		if err := c.expiration.RegisterAuth(te.Path, resp.Auth); err != nil {
-			c.tokenStore.Revoke(te.ID)
+			c.tokenStore.Revoke(ctx, te.ID)
 			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
@@ -318,16 +343,22 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	if routeErr != nil {
 		retErr = multierror.Append(retErr, routeErr)
 	}
+
 	return resp, auth, retErr
 }
 
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
-func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
+func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
+	req.Unauthenticated = true
+
+	var auth *logical.Auth
 	// Create an audit trail of the request, auth is not available on login requests
-	if err := c.auditBroker.LogRequest(nil, req, c.auditedHeaders, nil); err != nil {
+	// Create an audit trail of the request. Attach auth if it was returned,
+	// e.g. if a token was provided.
+	if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		return nil, nil, ErrInternalError
 	}
@@ -340,11 +371,12 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	}
 
 	// Route the request
-	resp, routeErr := c.router.Route(req)
+	resp, routeErr := c.router.Route(ctx, req)
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
 		var wrapFormat, creationPath string
+		var sealWrap bool
 
 		// Ensure no wrap info information is set other than, possibly, the TTL
 		if resp.WrapInfo != nil {
@@ -353,6 +385,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			}
 			wrapFormat = resp.WrapInfo.Format
 			creationPath = resp.WrapInfo.CreationPath
+			sealWrap = resp.WrapInfo.SealWrap
 			resp.WrapInfo = nil
 		}
 
@@ -375,6 +408,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 				TTL:          wrapTTL,
 				Format:       wrapFormat,
 				CreationPath: creationPath,
+				SealWrap:     sealWrap,
 			}
 		}
 	}
@@ -386,7 +420,6 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	}
 
 	// If the response generated an authentication, then generate the token
-	var auth *logical.Auth
 	if resp != nil && resp.Auth != nil {
 		var entity *identity.Entity
 		auth = resp.Auth
@@ -403,29 +436,28 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 			var err error
 
-			// Check if an entity already exists for the given alias
-			entity, err = c.identityStore.EntityByAliasFactors(auth.Alias.MountAccessor, auth.Alias.Name, false)
+			// Fetch the entity for the alias, or create an entity if one
+			// doesn't exist.
+			entity, err = c.identityStore.CreateOrFetchEntity(auth.Alias)
 			if err != nil {
 				return nil, nil, err
 			}
 
-			// If not, create one.
 			if entity == nil {
-				c.logger.Debug("core: creating a new entity", "alias", auth.Alias)
-				entity, err = c.identityStore.CreateEntity(auth.Alias)
-				if err != nil {
-					return nil, nil, err
-				}
-				if entity == nil {
-					return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
-				}
+				return nil, nil, fmt.Errorf("failed to create an entity for the authenticated alias")
 			}
 
 			auth.EntityID = entity.ID
+			if auth.GroupAliases != nil {
+				err = c.identityStore.refreshExternalGroupMembershipsByEntityID(auth.EntityID, auth.GroupAliases)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
 		}
 
 		if strutil.StrListSubset(auth.Policies, []string{"root"}) {
-			return logical.ErrorResponse("authentication backends cannot create root tokens"), nil, logical.ErrInvalidRequest
+			return logical.ErrorResponse("auth methods cannot create root tokens"), nil, logical.ErrInvalidRequest
 		}
 
 		// Determine the source of the login
@@ -442,14 +474,27 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			return nil, nil, ErrInternalError
 		}
 
-		// Set the default lease if not provided
-		if auth.TTL == 0 {
-			auth.TTL = sysView.DefaultLeaseTTL()
-		}
+		// Start off with the sys default value, and update according to period/TTL
+		// from resp.Auth
+		tokenTTL := sysView.DefaultLeaseTTL()
 
-		// Limit the lease duration
-		if auth.TTL > sysView.MaxLeaseTTL() {
-			auth.TTL = sysView.MaxLeaseTTL()
+		switch {
+		case auth.Period > time.Duration(0):
+			// Cap the period value to the sys max_ttl value. The auth backend should
+			// have checked for it on its login path, but we check here again for
+			// sanity.
+			if auth.Period > sysView.MaxLeaseTTL() {
+				auth.Period = sysView.MaxLeaseTTL()
+			}
+			tokenTTL = auth.Period
+		case auth.TTL > time.Duration(0):
+			// Cap the TTL value. The auth backend should have checked for it on its
+			// login path (e.g. a call to b.SanitizeTTL), but we check here again for
+			// sanity.
+			if auth.TTL > sysView.MaxLeaseTTL() {
+				auth.TTL = sysView.MaxLeaseTTL()
+			}
+			tokenTTL = auth.TTL
 		}
 
 		// Generate a token
@@ -459,7 +504,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			Meta:         auth.Metadata,
 			DisplayName:  auth.DisplayName,
 			CreationTime: time.Now().Unix(),
-			TTL:          auth.TTL,
+			TTL:          tokenTTL,
 			NumUses:      auth.NumUses,
 			EntityID:     auth.EntityID,
 		}
@@ -473,19 +518,20 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			}
 		}
 
-		if err := c.tokenStore.create(&te); err != nil {
+		if err := c.tokenStore.create(ctx, &te); err != nil {
 			c.logger.Error("core: failed to create token", "error", err)
 			return nil, auth, ErrInternalError
 		}
 
-		// Populate the client token and accessor
+		// Populate the client token, accessor, and TTL
 		auth.ClientToken = te.ID
 		auth.Accessor = te.Accessor
 		auth.Policies = te.Policies
+		auth.TTL = te.TTL
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
-			c.tokenStore.Revoke(te.ID)
+			c.tokenStore.Revoke(ctx, te.ID)
 			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError
 		}

@@ -1,4 +1,4 @@
-package archive
+package archive // import "github.com/docker/docker/pkg/archive"
 
 import (
 	"archive/tar"
@@ -223,7 +223,7 @@ func CopyInfoDestinationPath(path string) (info CopyInfo, err error) {
 		// Ensure destination parent dir exists.
 		dstParent, _ := SplitPathDirEntry(path)
 
-		parentDirStat, err := os.Lstat(dstParent)
+		parentDirStat, err := os.Stat(dstParent)
 		if err != nil {
 			return CopyInfo{}, err
 		}

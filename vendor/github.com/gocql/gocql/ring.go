@@ -64,6 +64,8 @@ func (r *ring) currentHosts() map[string]*HostInfo {
 }
 
 func (r *ring) addHost(host *HostInfo) bool {
+	// TODO(zariel): key all host info by HostID instead of
+	// ip addresses
 	if host.invalidConnectAddr() {
 		panic(fmt.Sprintf("invalid host: %v", host))
 	}
@@ -140,8 +142,8 @@ type clusterMetadata struct {
 }
 
 func (c *clusterMetadata) setPartitioner(partitioner string) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	if c.partitioner != partitioner {
 		// TODO: update other things now

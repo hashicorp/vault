@@ -30,21 +30,34 @@
 package circonusgometrics
 
 import (
-	"errors"
+	"bufio"
+	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/circonus-labs/circonus-gometrics/api"
 	"github.com/circonus-labs/circonus-gometrics/checkmgr"
+	"github.com/pkg/errors"
 )
 
 const (
 	defaultFlushInterval = "10s" // 10 * time.Second
 )
+
+// Metric defines an individual metric
+type Metric struct {
+	Type  string      `json:"_type"`
+	Value interface{} `json:"_value"`
+}
+
+// Metrics holds host metrics
+type Metrics map[string]Metric
 
 // Config options for circonus-gometrics
 type Config struct {
@@ -63,6 +76,12 @@ type Config struct {
 	Interval string
 }
 
+type prevMetrics struct {
+	metrics   *Metrics
+	metricsmu sync.Mutex
+	ts        time.Time
+}
+
 // CirconusMetrics state
 type CirconusMetrics struct {
 	Log   *log.Logger
@@ -75,7 +94,9 @@ type CirconusMetrics struct {
 	flushInterval   time.Duration
 	flushing        bool
 	flushmu         sync.Mutex
+	packagingmu     sync.Mutex
 	check           *checkmgr.CheckManager
+	lastMetrics     *prevMetrics
 
 	counters map[string]uint64
 	cm       sync.Mutex
@@ -83,7 +104,7 @@ type CirconusMetrics struct {
 	counterFuncs map[string]func() uint64
 	cfm          sync.Mutex
 
-	gauges map[string]string
+	gauges map[string]interface{}
 	gm     sync.Mutex
 
 	gaugeFuncs map[string]func() int64
@@ -114,11 +135,12 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 	cm := &CirconusMetrics{
 		counters:     make(map[string]uint64),
 		counterFuncs: make(map[string]func() uint64),
-		gauges:       make(map[string]string),
+		gauges:       make(map[string]interface{}),
 		gaugeFuncs:   make(map[string]func() int64),
 		histograms:   make(map[string]*Histogram),
 		text:         make(map[string]string),
 		textFuncs:    make(map[string]func() string),
+		lastMetrics:  &prevMetrics{},
 	}
 
 	// Logging
@@ -143,7 +165,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 
 		dur, err := time.ParseDuration(fi)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "parsing flush interval")
 		}
 		cm.flushInterval = dur
 	}
@@ -154,7 +176,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 	if cfg.ResetCounters != "" {
 		setting, err := strconv.ParseBool(cfg.ResetCounters)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "parsing reset counters")
 		}
 		cm.resetCounters = setting
 	}
@@ -163,7 +185,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 	if cfg.ResetGauges != "" {
 		setting, err := strconv.ParseBool(cfg.ResetGauges)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "parsing reset gauges")
 		}
 		cm.resetGauges = setting
 	}
@@ -172,7 +194,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 	if cfg.ResetHistograms != "" {
 		setting, err := strconv.ParseBool(cfg.ResetHistograms)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "parsing reset histograms")
 		}
 		cm.resetHistograms = setting
 	}
@@ -181,7 +203,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 	if cfg.ResetText != "" {
 		setting, err := strconv.ParseBool(cfg.ResetText)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "parsing reset text")
 		}
 		cm.resetText = setting
 	}
@@ -193,7 +215,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 
 		check, err := checkmgr.New(&cfg.CheckManager)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "creating new check manager")
 		}
 		cm.check = check
 	}
@@ -202,7 +224,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 	cm.check.Initialize()
 
 	// if automatic flush is enabled, start it.
-	// note: submit will jettison metrics until initialization has completed.
+	// NOTE: submit will jettison metrics until initialization has completed.
 	if cm.flushInterval > time.Duration(0) {
 		go func() {
 			for range time.NewTicker(cm.flushInterval).C {
@@ -216,7 +238,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 
 // Start deprecated NOP, automatic flush is started in New if flush interval > 0.
 func (m *CirconusMetrics) Start() {
-	return
+	// nop
 }
 
 // Ready returns true or false indicating if the check is ready to accept metrics
@@ -224,24 +246,18 @@ func (m *CirconusMetrics) Ready() bool {
 	return m.check.IsReady()
 }
 
-// Flush metrics kicks off the process of sending metrics to Circonus
-func (m *CirconusMetrics) Flush() {
-	if m.flushing {
-		return
-	}
-	m.flushmu.Lock()
-	m.flushing = true
-	m.flushmu.Unlock()
+func (m *CirconusMetrics) packageMetrics() (map[string]*api.CheckBundleMetric, Metrics) {
+
+	m.packagingmu.Lock()
+	defer m.packagingmu.Unlock()
 
 	if m.Debug {
-		m.Log.Println("[DEBUG] Flushing metrics")
+		m.Log.Println("[DEBUG] Packaging metrics")
 	}
 
-	// check for new metrics and enable them automatically
-	newMetrics := make(map[string]*api.CheckBundleMetric)
-
 	counters, gauges, histograms, text := m.snapshot()
-	output := make(map[string]interface{})
+	newMetrics := make(map[string]*api.CheckBundleMetric)
+	output := make(Metrics, len(counters)+len(gauges)+len(histograms)+len(text))
 	for name, value := range counters {
 		send := m.check.IsMetricActive(name)
 		if !send && m.check.ActivateMetric(name) {
@@ -253,10 +269,7 @@ func (m *CirconusMetrics) Flush() {
 			}
 		}
 		if send {
-			output[name] = map[string]interface{}{
-				"_type":  "L",
-				"_value": value,
-			}
+			output[name] = Metric{Type: "L", Value: value}
 		}
 	}
 
@@ -271,10 +284,7 @@ func (m *CirconusMetrics) Flush() {
 			}
 		}
 		if send {
-			output[name] = map[string]interface{}{
-				"_type":  "n",
-				"_value": value,
-			}
+			output[name] = Metric{Type: m.getGaugeType(value), Value: value}
 		}
 	}
 
@@ -289,10 +299,7 @@ func (m *CirconusMetrics) Flush() {
 			}
 		}
 		if send {
-			output[name] = map[string]interface{}{
-				"_type":  "n",
-				"_value": value.DecStrings(),
-			}
+			output[name] = Metric{Type: "n", Value: value.DecStrings()}
 		}
 	}
 
@@ -307,12 +314,84 @@ func (m *CirconusMetrics) Flush() {
 			}
 		}
 		if send {
-			output[name] = map[string]interface{}{
-				"_type":  "s",
-				"_value": value,
-			}
+			output[name] = Metric{Type: "s", Value: value}
 		}
 	}
+
+	m.lastMetrics.metricsmu.Lock()
+	defer m.lastMetrics.metricsmu.Unlock()
+	m.lastMetrics.metrics = &output
+	m.lastMetrics.ts = time.Now()
+
+	return newMetrics, output
+}
+
+// PromOutput returns lines of metrics in prom format
+func (m *CirconusMetrics) PromOutput() (*bytes.Buffer, error) {
+	m.lastMetrics.metricsmu.Lock()
+	defer m.lastMetrics.metricsmu.Unlock()
+
+	if m.lastMetrics.metrics == nil {
+		return nil, errors.New("no metrics available")
+	}
+
+	var b bytes.Buffer
+	w := bufio.NewWriter(&b)
+
+	ts := m.lastMetrics.ts.UnixNano() / int64(time.Millisecond)
+
+	for name, metric := range *m.lastMetrics.metrics {
+		switch metric.Type {
+		case "n":
+			if strings.HasPrefix(fmt.Sprintf("%v", metric.Value), "[H[") {
+				continue // circonus histogram != prom "histogram" (aka percentile)
+			}
+		case "s":
+			continue // text metrics unsupported
+		}
+		fmt.Fprintf(w, "%s %v %d\n", name, metric.Value, ts)
+	}
+
+	err := w.Flush()
+	if err != nil {
+		return nil, errors.Wrap(err, "flushing metric buffer")
+	}
+
+	return &b, err
+}
+
+// FlushMetrics flushes current metrics to a structure and returns it (does NOT send to Circonus)
+func (m *CirconusMetrics) FlushMetrics() *Metrics {
+	m.flushmu.Lock()
+	if m.flushing {
+		m.flushmu.Unlock()
+		return &Metrics{}
+	}
+
+	m.flushing = true
+	m.flushmu.Unlock()
+
+	_, output := m.packageMetrics()
+
+	m.flushmu.Lock()
+	m.flushing = false
+	m.flushmu.Unlock()
+
+	return &output
+}
+
+// Flush metrics kicks off the process of sending metrics to Circonus
+func (m *CirconusMetrics) Flush() {
+	m.flushmu.Lock()
+	if m.flushing {
+		m.flushmu.Unlock()
+		return
+	}
+
+	m.flushing = true
+	m.flushmu.Unlock()
+
+	newMetrics, output := m.packageMetrics()
 
 	if len(output) > 0 {
 		m.submit(output, newMetrics)

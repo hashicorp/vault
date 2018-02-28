@@ -1,124 +1,177 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
-func TestTokenLookupAccessor(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testTokenLookupCommand(tb testing.TB) (*cli.MockUi, *TokenLookupCommand) {
+	tb.Helper()
 
-	ui := new(cli.MockUi)
-	c := &TokenLookupCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	ui := cli.NewMockUi()
+	return ui, &TokenLookupCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
 		},
-	}
-	args := []string{
-		"-address", addr,
-	}
-	c.Run(args)
-
-	// Create a new token for us to use
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Lease: "1h",
-	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// Enable the accessor flag
-	args = append(args, "-accessor")
-
-	// Expect failure if no argument is passed when accessor flag is set
-	code := c.Run(args)
-	if code == 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-
-	// Add token accessor as arg
-	args = append(args, resp.Auth.Accessor)
-	code = c.Run(args)
-	if code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 }
 
-func TestTokenLookupSelf(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func TestTokenLookupCommand_Run(t *testing.T) {
+	t.Parallel()
 
-	ui := new(cli.MockUi)
-	c := &TokenLookupCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"accessor_no_args",
+			[]string{"-accessor"},
+			"Not enough arguments",
+			1,
+		},
+		{
+			"accessor_too_many_args",
+			[]string{"-accessor", "abcd1234", "efgh5678"},
+			"Too many arguments",
+			1,
+		},
+		{
+			"too_many_args",
+			[]string{"abcd1234", "efgh5678"},
+			"Too many arguments",
+			1,
 		},
 	}
 
-	args := []string{
-		"-address", addr,
-	}
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
 
-	// Run it against itself
-	code := c.Run(args)
+		for _, tc := range cases {
+			tc := tc
 
-	// Verify it worked
-	if code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-}
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 
-func TestTokenLookup(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+				client, closer := testVaultServer(t)
+				defer closer()
 
-	ui := new(cli.MockUi)
-	c := &TokenLookupCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
-		},
-	}
+				ui, cmd := testTokenLookupCommand(t)
+				cmd.client = client
 
-	args := []string{
-		"-address", addr,
-	}
-	// Run it once for client
-	c.Run(args)
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
 
-	// Create a new token for us to use
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Lease: "1h",
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			})
+		}
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 
-	// Add token as arg for real test and run it
-	args = append(args, resp.Auth.ClientToken)
-	code := c.Run(args)
+	t.Run("token", func(t *testing.T) {
+		t.Parallel()
 
-	// Verify it worked
-	if code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		token, _ := testTokenAndAccessor(t, client)
+
+		ui, cmd := testTokenLookupCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			token,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := token
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("self", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testTokenLookupCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "display_name"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("accessor", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		_, accessor := testTokenAndAccessor(t, client)
+
+		ui, cmd := testTokenLookupCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-accessor",
+			accessor,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := accessor
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testTokenLookupCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error looking up token: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testTokenLookupCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }

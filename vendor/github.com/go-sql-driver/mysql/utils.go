@@ -566,8 +566,8 @@ func readLengthEncodedInteger(b []byte) (uint64, bool, int) {
 	if len(b) == 0 {
 		return 0, true, 1
 	}
-	switch b[0] {
 
+	switch b[0] {
 	// 251: NULL
 	case 0xfb:
 		return 0, true, 1

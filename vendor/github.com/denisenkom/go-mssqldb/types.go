@@ -345,6 +345,10 @@ func readByteLenType(ti *typeInfo, r *tdsBuffer) interface{} {
 		default:
 			badStreamPanicf("Invalid size for MONEYNTYPE")
 		}
+	case typeDateTim4:
+		return decodeDateTim4(buf)
+	case typeDateTime:
+		return decodeDateTime(buf)
 	case typeDateTimeN:
 		switch len(buf) {
 		case 4:
@@ -874,6 +878,10 @@ func decodeUdt(ti typeInfo, buf []byte) []byte {
 // column type "bigint" this should return "reflect.TypeOf(int64(0))".
 func makeGoLangScanType(ti typeInfo) reflect.Type {
 	switch ti.TypeId {
+	case typeInt1:
+		return reflect.TypeOf(int64(0))
+	case typeInt2:
+		return reflect.TypeOf(int64(0))
 	case typeInt4:
 		return reflect.TypeOf(int64(0))
 	case typeInt8:
@@ -959,6 +967,8 @@ func makeGoLangScanType(ti typeInfo) reflect.Type {
 	case typeNText:
 		return reflect.TypeOf("")
 	case typeImage:
+		return reflect.TypeOf([]byte{})
+	case typeBigBinary:
 		return reflect.TypeOf([]byte{})
 	case typeVariant:
 		return reflect.TypeOf(nil)
@@ -1048,10 +1058,10 @@ func makeDecl(ti typeInfo) string {
 		}
 	case typeBit, typeBitN:
 		return "bit"
-	case typeDateTim4:
-		return "smalldatetime"
 	case typeDateN:
 		return "date"
+	case typeDateTim4:
+		return "smalldatetime"
 	case typeDateTime:
 		return "datetime"
 	case typeDateTimeN:
@@ -1086,6 +1096,10 @@ func makeDecl(ti typeInfo) string {
 // "TIMESTAMP".
 func makeGoLangTypeName(ti typeInfo) string {
 	switch ti.TypeId {
+	case typeInt1:
+		return "TINYINT"
+	case typeInt2:
+		return "SMALLINT"
 	case typeInt4:
 		return "INT"
 	case typeInt8:
@@ -1135,6 +1149,10 @@ func makeGoLangTypeName(ti typeInfo) string {
 		default:
 			panic("invalid size of MONEYN")
 		}
+	case typeDateTim4:
+		return "SMALLDATETIME"
+	case typeDateTime:
+		return "DATETIME"
 	case typeDateTimeN:
 		switch ti.Size {
 		case 4:
@@ -1170,6 +1188,8 @@ func makeGoLangTypeName(ti typeInfo) string {
 		return "IMAGE"
 	case typeVariant:
 		return "SQL_VARIANT"
+	case typeBigBinary:
+		return "BINARY"
 	default:
 		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
 	}
@@ -1189,6 +1209,10 @@ func makeGoLangTypeName(ti typeInfo) string {
 //   bytea(30)     (30, true)
 func makeGoLangTypeLength(ti typeInfo) (int64, bool) {
 	switch ti.TypeId {
+	case typeInt1:
+		return 0, false
+	case typeInt2:
+		return 0, false
 	case typeInt4:
 		return 0, false
 	case typeInt8:
@@ -1232,6 +1256,8 @@ func makeGoLangTypeLength(ti typeInfo) (int64, bool) {
 		default:
 			panic("invalid size of MONEYN")
 		}
+	case typeDateTim4, typeDateTime:
+		return 0, false
 	case typeDateTimeN:
 		switch ti.Size {
 		case 4:
@@ -1285,6 +1311,8 @@ func makeGoLangTypeLength(ti typeInfo) (int64, bool) {
 		return 2147483647, true
 	case typeVariant:
 		return 0, false
+	case typeBigBinary:
+		return 0, false
 	default:
 		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
 	}
@@ -1304,6 +1332,10 @@ func makeGoLangTypeLength(ti typeInfo) (int64, bool) {
 //   bytea(30)     (30, true)
 func makeGoLangTypePrecisionScale(ti typeInfo) (int64, int64, bool) {
 	switch ti.TypeId {
+	case typeInt1:
+		return 0, 0, false
+	case typeInt2:
+		return 0, 0, false
 	case typeInt4:
 		return 0, 0, false
 	case typeInt8:
@@ -1347,6 +1379,8 @@ func makeGoLangTypePrecisionScale(ti typeInfo) (int64, int64, bool) {
 		default:
 			panic("invalid size of MONEYN")
 		}
+	case typeDateTim4, typeDateTime:
+		return 0, 0, false
 	case typeDateTimeN:
 		switch ti.Size {
 		case 4:
@@ -1387,6 +1421,8 @@ func makeGoLangTypePrecisionScale(ti typeInfo) (int64, int64, bool) {
 	case typeImage:
 		return 0, 0, false
 	case typeVariant:
+		return 0, 0, false
+	case typeBigBinary:
 		return 0, 0, false
 	default:
 		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))

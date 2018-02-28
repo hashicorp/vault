@@ -22,7 +22,48 @@ func (m *CirconusMetrics) Gauge(metric string, val interface{}) {
 func (m *CirconusMetrics) SetGauge(metric string, val interface{}) {
 	m.gm.Lock()
 	defer m.gm.Unlock()
-	m.gauges[metric] = m.gaugeValString(val)
+	m.gauges[metric] = val
+}
+
+// AddGauge adds value to existing gauge
+func (m *CirconusMetrics) AddGauge(metric string, val interface{}) {
+	m.gm.Lock()
+	defer m.gm.Unlock()
+
+	v, ok := m.gauges[metric]
+	if !ok {
+		m.gauges[metric] = val
+		return
+	}
+
+	switch val.(type) {
+	default:
+		// ignore it, unsupported type
+	case int:
+		m.gauges[metric] = v.(int) + val.(int)
+	case int8:
+		m.gauges[metric] = v.(int8) + val.(int8)
+	case int16:
+		m.gauges[metric] = v.(int16) + val.(int16)
+	case int32:
+		m.gauges[metric] = v.(int32) + val.(int32)
+	case int64:
+		m.gauges[metric] = v.(int64) + val.(int64)
+	case uint:
+		m.gauges[metric] = v.(uint) + val.(uint)
+	case uint8:
+		m.gauges[metric] = v.(uint8) + val.(uint8)
+	case uint16:
+		m.gauges[metric] = v.(uint16) + val.(uint16)
+	case uint32:
+		m.gauges[metric] = v.(uint32) + val.(uint32)
+	case uint64:
+		m.gauges[metric] = v.(uint64) + val.(uint64)
+	case float32:
+		m.gauges[metric] = v.(float32) + val.(float32)
+	case float64:
+		m.gauges[metric] = v.(float64) + val.(float64)
+	}
 }
 
 // RemoveGauge removes a gauge
@@ -33,7 +74,7 @@ func (m *CirconusMetrics) RemoveGauge(metric string) {
 }
 
 // GetGaugeTest returns the current value for a gauge. (note: it is a function specifically for "testing", disable automatic submission during testing.)
-func (m *CirconusMetrics) GetGaugeTest(metric string) (string, error) {
+func (m *CirconusMetrics) GetGaugeTest(metric string) (interface{}, error) {
 	m.gm.Lock()
 	defer m.gm.Unlock()
 
@@ -41,7 +82,7 @@ func (m *CirconusMetrics) GetGaugeTest(metric string) (string, error) {
 		return val, nil
 	}
 
-	return "", fmt.Errorf("Gauge metric '%s' not found", metric)
+	return nil, fmt.Errorf("Gauge metric '%s' not found", metric)
 }
 
 // SetGaugeFunc sets a gauge to a function [called at flush interval]
@@ -58,36 +99,31 @@ func (m *CirconusMetrics) RemoveGaugeFunc(metric string) {
 	delete(m.gaugeFuncs, metric)
 }
 
-// gaugeValString converts an interface value (of a supported type) to a string
-func (m *CirconusMetrics) gaugeValString(val interface{}) string {
-	vs := ""
-	switch v := val.(type) {
-	default:
-		// ignore it, unsupported type
+// getGaugeType returns accurate resmon type for underlying type of gauge value
+func (m *CirconusMetrics) getGaugeType(v interface{}) string {
+	mt := "n"
+	switch v.(type) {
 	case int:
-		vs = fmt.Sprintf("%d", v)
+		mt = "i"
 	case int8:
-		vs = fmt.Sprintf("%d", v)
+		mt = "i"
 	case int16:
-		vs = fmt.Sprintf("%d", v)
+		mt = "i"
 	case int32:
-		vs = fmt.Sprintf("%d", v)
-	case int64:
-		vs = fmt.Sprintf("%d", v)
+		mt = "i"
 	case uint:
-		vs = fmt.Sprintf("%d", v)
+		mt = "I"
 	case uint8:
-		vs = fmt.Sprintf("%d", v)
+		mt = "I"
 	case uint16:
-		vs = fmt.Sprintf("%d", v)
+		mt = "I"
 	case uint32:
-		vs = fmt.Sprintf("%d", v)
+		mt = "I"
+	case int64:
+		mt = "l"
 	case uint64:
-		vs = fmt.Sprintf("%d", v)
-	case float32:
-		vs = fmt.Sprintf("%f", v)
-	case float64:
-		vs = fmt.Sprintf("%f", v)
+		mt = "L"
 	}
-	return vs
+
+	return mt
 }

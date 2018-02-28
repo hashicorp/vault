@@ -1,6 +1,8 @@
 package ldap
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -45,8 +47,8 @@ func pathGroups(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, error) {
-	entry, err := s.Get("group/" + n)
+func (b *backend) Group(ctx context.Context, s logical.Storage, n string) (*GroupEntry, error) {
+	entry, err := s.Get(ctx, "group/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -62,9 +64,8 @@ func (b *backend) Group(s logical.Storage, n string) (*GroupEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathGroupDelete(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("group/" + d.Get("name").(string))
+func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete(ctx, "group/"+d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -72,9 +73,8 @@ func (b *backend) pathGroupDelete(
 	return nil, nil
 }
 
-func (b *backend) pathGroupRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	group, err := b.Group(req.Storage, d.Get("name").(string))
+func (b *backend) pathGroupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	group, err := b.Group(ctx, req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +89,7 @@ func (b *backend) pathGroupRead(
 	}, nil
 }
 
-func (b *backend) pathGroupWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Store it
 	entry, err := logical.StorageEntryJSON("group/"+d.Get("name").(string), &GroupEntry{
 		Policies: policyutil.ParsePolicies(d.Get("policies")),
@@ -98,16 +97,15 @@ func (b *backend) pathGroupWrite(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathGroupList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groups, err := req.Storage.List("group/")
+func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	groups, err := req.Storage.List(ctx, "group/")
 	if err != nil {
 		return nil, err
 	}

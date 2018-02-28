@@ -1,41 +1,57 @@
 package command
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
-	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
-	"github.com/posener/complete"
 	"github.com/ryanuber/columnize"
 )
 
-var predictFormat complete.Predictor = complete.PredictSet("json", "yaml")
+const (
+	// hopeDelim is the delimiter to use when splitting columns. We call it a
+	// hopeDelim because we hope that it's never contained in a secret.
+	hopeDelim = "♨"
+)
 
-func OutputSecret(ui cli.Ui, format string, secret *api.Secret) int {
-	return outputWithFormat(ui, format, secret, secret)
+type FormatOptions struct {
+	Format string
 }
 
-func OutputList(ui cli.Ui, format string, secret *api.Secret) int {
-	return outputWithFormat(ui, format, secret, secret.Data["keys"])
+func OutputSecret(ui cli.Ui, secret *api.Secret) int {
+	return outputWithFormat(ui, secret, secret)
 }
 
-func outputWithFormat(ui cli.Ui, format string, secret *api.Secret, data interface{}) int {
-	formatter, ok := Formatters[strings.ToLower(format)]
+func OutputList(ui cli.Ui, data interface{}) int {
+	switch data.(type) {
+	case *api.Secret:
+		secret := data.(*api.Secret)
+		return outputWithFormat(ui, secret, secret.Data["keys"])
+	default:
+		return outputWithFormat(ui, nil, data)
+	}
+}
+
+func OutputData(ui cli.Ui, data interface{}) int {
+	return outputWithFormat(ui, nil, data)
+}
+
+func outputWithFormat(ui cli.Ui, secret *api.Secret, data interface{}) int {
+	format := Format(ui)
+	formatter, ok := Formatters[format]
 	if !ok {
 		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
 		return 1
 	}
+
 	if err := formatter.Output(ui, secret, data); err != nil {
-		ui.Error(fmt.Sprintf("Could not output secret: %s", err.Error()))
+		ui.Error(fmt.Sprintf("Could not parse output: %s", err.Error()))
 		return 1
 	}
 	return 0
@@ -43,6 +59,7 @@ func outputWithFormat(ui cli.Ui, format string, secret *api.Secret, data interfa
 
 type Formatter interface {
 	Output(ui cli.Ui, secret *api.Secret, data interface{}) error
+	Format(data interface{}) ([]byte, error)
 }
 
 var Formatters = map[string]Formatter{
@@ -52,26 +69,48 @@ var Formatters = map[string]Formatter{
 	"yml":   YamlFormatter{},
 }
 
+func format() string {
+	format := os.Getenv(EnvVaultFormat)
+	if format == "" {
+		format = "table"
+	}
+	return format
+}
+
+func Format(ui cli.Ui) string {
+	switch ui.(type) {
+	case *VaultUI:
+		return ui.(*VaultUI).format
+	}
+	return format()
+}
+
 // An output formatter for json output of an object
-type JsonFormatter struct {
+type JsonFormatter struct{}
+
+func (j JsonFormatter) Format(data interface{}) ([]byte, error) {
+	return json.MarshalIndent(data, "", "  ")
 }
 
 func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	b, err := json.Marshal(data)
-	if err == nil {
-		var out bytes.Buffer
-		json.Indent(&out, b, "", "\t")
-		ui.Output(out.String())
+	b, err := j.Format(data)
+	if err != nil {
+		return err
 	}
-	return err
+	ui.Output(string(b))
+	return nil
 }
 
 // An output formatter for yaml output format of an object
 type YamlFormatter struct {
 }
 
+func (y YamlFormatter) Format(data interface{}) ([]byte, error) {
+	return yaml.Marshal(data)
+}
+
 func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	b, err := yaml.Marshal(data)
+	b, err := y.Format(data)
 	if err == nil {
 		ui.Output(strings.TrimSpace(string(b)))
 	}
@@ -82,144 +121,215 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 type TableFormatter struct {
 }
 
-func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	// TODO: this should really use reflection like the other formatters do
-	if s, ok := data.(*api.Secret); ok {
-		return t.OutputSecret(ui, secret, s)
-	}
-	if s, ok := data.([]interface{}); ok {
-		return t.OutputList(ui, secret, s)
-	}
-	return errors.New("Cannot use the table formatter for this type")
+// We don't use this
+func (t TableFormatter) Format(data interface{}) ([]byte, error) {
+	return nil, nil
 }
 
-func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, list []interface{}) error {
-	config := columnize.DefaultConfig()
-	config.Delim = "♨"
-	config.Glue = "\t"
-	config.Prefix = ""
+func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	switch data.(type) {
+	case *api.Secret:
+		return t.OutputSecret(ui, secret)
+	case []interface{}:
+		return t.OutputList(ui, secret, data)
+	case []string:
+		return t.OutputList(ui, nil, data)
+	default:
+		return errors.New("Cannot use the table formatter for this type")
+	}
+}
 
-	input := make([]string, 0, 5)
+func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	t.printWarnings(ui, secret)
+
+	switch data.(type) {
+	case []interface{}:
+	case []string:
+		ui.Output(tableOutput(data.([]string), nil))
+		return nil
+	default:
+		return errors.New("Error: table formatter cannot output list for this data type")
+	}
+
+	list := data.([]interface{})
 
 	if len(list) > 0 {
-		input = append(input, "Keys")
-		input = append(input, "----")
-
-		keys := make([]string, 0, len(list))
-		for _, k := range list {
-			keys = append(keys, k.(string))
+		keys := make([]string, len(list))
+		for i, v := range list {
+			typed, ok := v.(string)
+			if !ok {
+				return fmt.Errorf("Error: %v is not a string", v)
+			}
+			keys[i] = typed
 		}
 		sort.Strings(keys)
 
-		for _, k := range keys {
-			input = append(input, fmt.Sprintf("%s", k))
-		}
+		// Prepend the header
+		keys = append([]string{"Keys"}, keys...)
+
+		ui.Output(tableOutput(keys, &columnize.Config{
+			Delim: hopeDelim,
+		}))
 	}
-
-	tableOutputStr := columnize.Format(input, config)
-
-	// Print the warning separately because the length of first
-	// column in the output will be increased by the length of
-	// the longest warning string making the output look bad.
-	warningsInput := make([]string, 0, 5)
-	if len(secret.Warnings) != 0 {
-		warningsInput = append(warningsInput, "")
-		warningsInput = append(warningsInput, "The following warnings were returned from the Vault server:")
-		for _, warning := range secret.Warnings {
-			warningsInput = append(warningsInput, fmt.Sprintf("* %s", warning))
-		}
-	}
-
-	warningsOutputStr := columnize.Format(warningsInput, config)
-
-	ui.Output(fmt.Sprintf("%s\n%s", tableOutputStr, warningsOutputStr))
 
 	return nil
 }
 
-func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
-	config := columnize.DefaultConfig()
-	config.Delim = "♨"
-	config.Glue = "\t"
-	config.Prefix = ""
+// printWarnings prints any warnings in the secret.
+func (t TableFormatter) printWarnings(ui cli.Ui, secret *api.Secret) {
+	if secret != nil && len(secret.Warnings) > 0 {
+		ui.Warn("WARNING! The following warnings were returned from Vault:\n")
+		for _, warning := range secret.Warnings {
+			ui.Warn(wrapAtLengthWithPadding(fmt.Sprintf("* %s", warning), 2))
+		}
+		ui.Warn("")
+	}
+}
 
-	input := make([]string, 0, 5)
-
-	onceHeader := &sync.Once{}
-	headerFunc := func() {
-		input = append(input, fmt.Sprintf("Key %s Value", config.Delim))
-		input = append(input, fmt.Sprintf("--- %s -----", config.Delim))
+func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
+	if secret == nil {
+		return nil
 	}
 
-	if s.LeaseDuration > 0 {
-		onceHeader.Do(headerFunc)
-		if s.LeaseID != "" {
-			input = append(input, fmt.Sprintf("lease_id %s %s", config.Delim, s.LeaseID))
-			input = append(input, fmt.Sprintf(
-				"lease_duration %s %s", config.Delim, (time.Second*time.Duration(s.LeaseDuration)).String()))
+	t.printWarnings(ui, secret)
+
+	out := make([]string, 0, 8)
+	if secret.LeaseDuration > 0 {
+		if secret.LeaseID != "" {
+			out = append(out, fmt.Sprintf("lease_id %s %s", hopeDelim, secret.LeaseID))
+			out = append(out, fmt.Sprintf("lease_duration %s %s", hopeDelim, humanDurationInt(secret.LeaseDuration)))
+			out = append(out, fmt.Sprintf("lease_renewable %s %t", hopeDelim, secret.Renewable))
 		} else {
-			input = append(input, fmt.Sprintf(
-				"refresh_interval %s %s", config.Delim, (time.Second*time.Duration(s.LeaseDuration)).String()))
-		}
-		if s.LeaseID != "" {
-			input = append(input, fmt.Sprintf(
-				"lease_renewable %s %s", config.Delim, strconv.FormatBool(s.Renewable)))
+			// This is probably the generic secret backend which has leases, but we
+			// print them as refresh_interval to reduce confusion.
+			out = append(out, fmt.Sprintf("refresh_interval %s %s", hopeDelim, humanDurationInt(secret.LeaseDuration)))
 		}
 	}
 
-	if s.Auth != nil {
-		onceHeader.Do(headerFunc)
-		input = append(input, fmt.Sprintf("token %s %s", config.Delim, s.Auth.ClientToken))
-		input = append(input, fmt.Sprintf("token_accessor %s %s", config.Delim, s.Auth.Accessor))
-		input = append(input, fmt.Sprintf("token_duration %s %s", config.Delim, (time.Second*time.Duration(s.Auth.LeaseDuration)).String()))
-		input = append(input, fmt.Sprintf("token_renewable %s %v", config.Delim, s.Auth.Renewable))
-		input = append(input, fmt.Sprintf("token_policies %s %v", config.Delim, s.Auth.Policies))
-		for k, v := range s.Auth.Metadata {
-			input = append(input, fmt.Sprintf("token_meta_%s %s %#v", k, config.Delim, v))
+	if secret.Auth != nil {
+		out = append(out, fmt.Sprintf("token %s %s", hopeDelim, secret.Auth.ClientToken))
+		out = append(out, fmt.Sprintf("token_accessor %s %s", hopeDelim, secret.Auth.Accessor))
+		// If the lease duration is 0, it's likely a root token, so output the
+		// duration as "infinity" to clear things up.
+		if secret.Auth.LeaseDuration == 0 {
+			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, "∞"))
+		} else {
+			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
+		}
+		out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
+		out = append(out, fmt.Sprintf("token_policies %s %v", hopeDelim, secret.Auth.Policies))
+		for k, v := range secret.Auth.Metadata {
+			out = append(out, fmt.Sprintf("token_meta_%s %s %v", k, hopeDelim, v))
 		}
 	}
 
-	if s.WrapInfo != nil {
-		onceHeader.Do(headerFunc)
-		input = append(input, fmt.Sprintf("wrapping_token: %s %s", config.Delim, s.WrapInfo.Token))
-		input = append(input, fmt.Sprintf("wrapping_token_ttl: %s %s", config.Delim, (time.Second*time.Duration(s.WrapInfo.TTL)).String()))
-		input = append(input, fmt.Sprintf("wrapping_token_creation_time: %s %s", config.Delim, s.WrapInfo.CreationTime.String()))
-		input = append(input, fmt.Sprintf("wrapping_token_creation_path: %s %s", config.Delim, s.WrapInfo.CreationPath))
-		if s.WrapInfo.WrappedAccessor != "" {
-			input = append(input, fmt.Sprintf("wrapped_accessor: %s %s", config.Delim, s.WrapInfo.WrappedAccessor))
+	if secret.WrapInfo != nil {
+		out = append(out, fmt.Sprintf("wrapping_token: %s %s", hopeDelim, secret.WrapInfo.Token))
+		out = append(out, fmt.Sprintf("wrapping_accessor: %s %s", hopeDelim, secret.WrapInfo.Accessor))
+		out = append(out, fmt.Sprintf("wrapping_token_ttl: %s %s", hopeDelim, humanDurationInt(secret.WrapInfo.TTL)))
+		out = append(out, fmt.Sprintf("wrapping_token_creation_time: %s %s", hopeDelim, secret.WrapInfo.CreationTime.String()))
+		out = append(out, fmt.Sprintf("wrapping_token_creation_path: %s %s", hopeDelim, secret.WrapInfo.CreationPath))
+		if secret.WrapInfo.WrappedAccessor != "" {
+			out = append(out, fmt.Sprintf("wrapped_accessor: %s %s", hopeDelim, secret.WrapInfo.WrappedAccessor))
 		}
 	}
 
-	if s.Data != nil && len(s.Data) > 0 {
-		onceHeader.Do(headerFunc)
-		keys := make([]string, 0, len(s.Data))
-		for k := range s.Data {
+	if len(secret.Data) > 0 {
+		keys := make([]string, 0, len(secret.Data))
+		for k := range secret.Data {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, s.Data[k]))
+			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, secret.Data[k]))
 		}
 	}
 
-	tableOutputStr := columnize.Format(input, config)
-
-	// Print the warning separately because the length of first
-	// column in the output will be increased by the length of
-	// the longest warning string making the output look bad.
-	warningsInput := make([]string, 0, 5)
-	if len(s.Warnings) != 0 {
-		warningsInput = append(warningsInput, "")
-		warningsInput = append(warningsInput, "The following warnings were returned from the Vault server:")
-		for _, warning := range s.Warnings {
-			warningsInput = append(warningsInput, fmt.Sprintf("* %s", warning))
-		}
+	// If we got this far and still don't have any data, there's nothing to print,
+	// sorry.
+	if len(out) == 0 {
+		return nil
 	}
 
-	warningsOutputStr := columnize.Format(warningsInput, config)
+	// Prepend the header
+	out = append([]string{"Key" + hopeDelim + "Value"}, out...)
 
-	ui.Output(fmt.Sprintf("%s\n%s", tableOutputStr, warningsOutputStr))
-
+	ui.Output(tableOutput(out, &columnize.Config{
+		Delim: hopeDelim,
+	}))
 	return nil
+}
+
+// OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
+func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
+	switch Format(ui) {
+	case "table":
+	default:
+		return OutputData(ui, status)
+	}
+
+	var sealPrefix string
+	if status.RecoverySeal {
+		sealPrefix = "Recovery "
+	}
+
+	out := []string{}
+	out = append(out, "Key | Value")
+	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
+	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
+	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
+	out = append(out, fmt.Sprintf("Threshold | %d", status.T))
+
+	if status.Sealed {
+		out = append(out, fmt.Sprintf("Unseal Progress | %d/%d", status.Progress, status.T))
+		out = append(out, fmt.Sprintf("Unseal Nonce | %s", status.Nonce))
+	}
+
+	out = append(out, fmt.Sprintf("Version | %s", status.Version))
+
+	if status.ClusterName != "" && status.ClusterID != "" {
+		out = append(out, fmt.Sprintf("Cluster Name | %s", status.ClusterName))
+		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
+	}
+
+	// Mask the 'Vault is sealed' error, since this means HA is enabled, but that
+	// we cannot query for the leader since we are sealed.
+	leaderStatus, err := client.Sys().Leader()
+	if err != nil && strings.Contains(err.Error(), "Vault is sealed") {
+		leaderStatus = &api.LeaderResponse{HAEnabled: true}
+		err = nil
+	}
+	if err != nil {
+		ui.Error(fmt.Sprintf("Error checking leader status: %s", err))
+		return 1
+	}
+
+	// Output if HA is enabled
+	out = append(out, fmt.Sprintf("HA Enabled | %t", leaderStatus.HAEnabled))
+	if leaderStatus.HAEnabled {
+		mode := "sealed"
+		if !status.Sealed {
+			out = append(out, fmt.Sprintf("HA Cluster | %s", leaderStatus.LeaderClusterAddress))
+			mode = "standby"
+			showLeaderAddr := false
+			if leaderStatus.IsSelf {
+				mode = "active"
+			} else {
+				if leaderStatus.LeaderAddress == "" {
+					leaderStatus.LeaderAddress = "<none>"
+				}
+				showLeaderAddr = true
+			}
+			out = append(out, fmt.Sprintf("HA Mode | %s", mode))
+
+			// This is down here just to keep ordering consistent
+			if showLeaderAddr {
+				out = append(out, fmt.Sprintf("Active Node Address: | %s", leaderStatus.LeaderAddress))
+			}
+		}
+	}
+
+	ui.Output(tableOutput(out, nil))
+	return 0
 }

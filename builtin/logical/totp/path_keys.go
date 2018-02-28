@@ -2,6 +2,7 @@ package totp
 
 import (
 	"bytes"
+	"context"
 	"encoding/base32"
 	"encoding/base64"
 	"fmt"
@@ -118,8 +119,8 @@ func pathKeys(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Key(s logical.Storage, n string) (*keyEntry, error) {
-	entry, err := s.Get("key/" + n)
+func (b *backend) Key(ctx context.Context, s logical.Storage, n string) (*keyEntry, error) {
+	entry, err := s.Get(ctx, "key/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -135,9 +136,8 @@ func (b *backend) Key(s logical.Storage, n string) (*keyEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathKeyDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("key/" + data.Get("name").(string))
+func (b *backend) pathKeyDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete(ctx, "key/"+data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -145,9 +145,8 @@ func (b *backend) pathKeyDelete(
 	return nil, nil
 }
 
-func (b *backend) pathKeyRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	key, err := b.Key(req.Storage, data.Get("name").(string))
+func (b *backend) pathKeyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	key, err := b.Key(ctx, req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -170,9 +169,8 @@ func (b *backend) pathKeyRead(
 	}, nil
 }
 
-func (b *backend) pathKeyList(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("key/")
+func (b *backend) pathKeyList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List(ctx, "key/")
 	if err != nil {
 		return nil, err
 	}
@@ -180,8 +178,7 @@ func (b *backend) pathKeyList(
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathKeyCreate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	generate := data.Get("generate").(bool)
 	exported := data.Get("exported").(bool)
@@ -348,7 +345,7 @@ func (b *backend) pathKeyCreate(
 			// Prepare the url and barcode
 			urlString := keyObject.String()
 
-			// Don't include QR code is size is set to zero
+			// Don't include QR code if size is set to zero
 			if qrSize == 0 {
 				response = &logical.Response{
 					Data: map[string]interface{}{
@@ -358,7 +355,7 @@ func (b *backend) pathKeyCreate(
 			} else {
 				barcode, err := keyObject.Image(qrSize, qrSize)
 				if err != nil {
-					return logical.ErrorResponse("an error occured while generating a QR code image"), err
+					return nil, fmt.Errorf("failed to generate QR code image: %v", err)
 				}
 
 				var buff bytes.Buffer
@@ -397,7 +394,7 @@ func (b *backend) pathKeyCreate(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 

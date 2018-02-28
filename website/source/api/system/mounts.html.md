@@ -3,16 +3,16 @@ layout: "api"
 page_title: "/sys/mounts - HTTP API"
 sidebar_current: "docs-http-system-mounts"
 description: |-
-  The `/sys/mounts` endpoint is used manage secret backends in Vault.
+  The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 ---
 
 # `/sys/mounts`
 
-The `/sys/mounts` endpoint is used manage secret backends in Vault.
+The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 
-## List Mounted Secret Backends
+## List Mounted Secrets Engines
 
-This endpoints lists all the mounted secret backends.
+This endpoints lists all the mounted secrets engines.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -36,7 +36,9 @@ $ curl \
     "config": {
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
-      "force_no_cache": false
+      "force_no_cache": false,
+      "plugin_name": "",
+      "seal_wrap": false
     }
   },
   "sys": {
@@ -45,7 +47,9 @@ $ curl \
     "config": {
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
-      "force_no_cache": false
+      "force_no_cache": false,
+      "plugin_name": "",
+      "seal_wrap": false
     }
   }
 }
@@ -54,9 +58,9 @@ $ curl \
 `default_lease_ttl` or `max_lease_ttl` values of 0 mean that the system defaults
 are used by this backend.
 
-## Mount Secret Backend
+## Enable Secrets Engine
 
-This endpoint mounts a new secret backend at the given path.
+This endpoint enables a new secrets engine at the given path.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -64,7 +68,7 @@ This endpoint mounts a new secret backend at the given path.
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path where the secret backend
+- `path` `(string: <required>)` – Specifies the path where the secrets engine
   will be mounted. This is specified as part of the URL.
 
 - `type` `(string: <required>)` – Specifies the type of the backend, such as
@@ -76,27 +80,40 @@ This endpoint mounts a new secret backend at the given path.
 - `config` `(map<string|string>: nil)` – Specifies configuration options for
   this mount. This is an object with four possible values:
 
-    - `default_lease_ttl`
-    - `max_lease_ttl`
-    - `force_no_cache`
-    - `plugin_name`
+    - `default_lease_ttl` `(string: "")` - the default lease duration, specified
+      as a go string duration like "5s" or "30m".
+
+    - `max_lease_ttl` `(string: "")` - the maximum lease duration, specified as
+      a go string duration like "5s" or "30m".
+
+    - `force_no_cache` `(bool: false)` - disable caching.
+
+    - `plugin_name` `(string: "")` - the name of the plugin in the plugin
+      catalog to use.
 
     These control the default and maximum lease time-to-live, force
-    disabling backend caching, and option plugin name for plugin backends 
+    disabling backend caching, and option plugin name for plugin backends
     respectively. The first three options override the global defaults if
     set on a specific mount. The plugin_name can be provided in the config
     map or as a top-level option, with the former taking precedence.
+    
+    When used with supported seals (`pkcs11`, `awskms`, etc.), `seal_wrap`
+    causes key material for supporting mounts to be wrapped by the seal's
+    encryption capability. This is currently only supported for `transit` and
+    `pki` backends. This is only available in Vault Enterprise.
 
 - `plugin_name` `(string: "")` – Specifies the name of the plugin to
   use based from the name in the plugin catalog. Applies only to plugin
   backends.
 
-Additionally, the following options are allowed in Vault open-source, but 
+Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
-- `local` `(bool: false)` – Specifies if the secret backend is a local mount  
+- `local` `(bool: false)` – Specifies if the secrets engine is a local mount
   only. Local mounts are not replicated nor (if a secondary) removed by
   replication.
+
+- `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount.
 
 ### Sample Payload
 
@@ -119,9 +136,9 @@ $ curl \
     https://vault.rocks/v1/sys/mounts/my-mount
 ```
 
-## Unmount Secret Backend
+## Disable Secrets Engine
 
-This endpoint un-mounts the mount point specified in the URL.
+This endpoint disables the mount point specified in the URL.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -181,6 +198,9 @@ This endpoint tunes configuration parameters for a given mount point.
 - `max_lease_ttl` `(int: 0)` – Specifies the maximum time-to-live. This
   overrides the global default. A value of `0` are equivalent and set to the
   system max TTL.
+
+- `description` `(string: "")` – Specifies the description of the mount. This
+  overrides the current stored value, if any.
 
 ### Sample Payload
 

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/hashicorp/errwrap"
 	// We must import sha512 so that it registers with the runtime so that
 	// certificates that use it can be parsed.
 	_ "crypto/sha512"
@@ -15,10 +16,11 @@ import (
 	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"
+	"github.com/mitchellh/cli"
 )
 
 // ListenerFactory is the factory function to create a listener.
-type ListenerFactory func(map[string]interface{}, io.Writer) (net.Listener, map[string]string, reload.ReloadFunc, error)
+type ListenerFactory func(map[string]interface{}, io.Writer, cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, error)
 
 // BuiltinListeners is the list of built-in listener types.
 var BuiltinListeners = map[string]ListenerFactory{
@@ -27,13 +29,13 @@ var BuiltinListeners = map[string]ListenerFactory{
 
 // NewListener creates a new listener of the given type with the given
 // configuration. The type is looked up in the BuiltinListeners map.
-func NewListener(t string, config map[string]interface{}, logger io.Writer) (net.Listener, map[string]string, reload.ReloadFunc, error) {
+func NewListener(t string, config map[string]interface{}, logger io.Writer, ui cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, error) {
 	f, ok := BuiltinListeners[t]
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("unknown listener type: %s", t)
 	}
 
-	return f(config, logger)
+	return f(config, logger, ui)
 }
 
 func listenerWrapProxy(ln net.Listener, config map[string]interface{}) (net.Listener, error) {
@@ -70,7 +72,8 @@ func listenerWrapProxy(ln net.Listener, config map[string]interface{}) (net.List
 func listenerWrapTLS(
 	ln net.Listener,
 	props map[string]string,
-	config map[string]interface{}) (net.Listener, map[string]string, reload.ReloadFunc, error) {
+	config map[string]interface{},
+	ui cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, error) {
 	props["tls"] = "disabled"
 
 	if v, ok := config["tls_disable"]; ok {
@@ -83,22 +86,35 @@ func listenerWrapTLS(
 		}
 	}
 
-	_, ok := config["tls_cert_file"]
+	certFileRaw, ok := config["tls_cert_file"]
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("'tls_cert_file' must be set")
 	}
-
-	_, ok = config["tls_key_file"]
+	certFile := certFileRaw.(string)
+	keyFileRaw, ok := config["tls_key_file"]
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("'tls_key_file' must be set")
 	}
+	keyFile := keyFileRaw.(string)
 
-	cg := reload.NewCertificateGetter(config["tls_cert_file"].(string), config["tls_key_file"].(string))
-
+	cg := reload.NewCertificateGetter(certFile, keyFile, "")
 	if err := cg.Reload(config); err != nil {
-		return nil, nil, nil, fmt.Errorf("error loading TLS cert: %s", err)
+		// We try the key without a passphrase first and if we get an incorrect
+		// passphrase response, try again after prompting for a passphrase
+		if errwrap.Contains(err, x509.IncorrectPasswordError.Error()) {
+			var passphrase string
+			passphrase, err = ui.AskSecret(fmt.Sprintf("Enter passphrase for %s:", keyFile))
+			if err == nil {
+				cg = reload.NewCertificateGetter(certFile, keyFile, passphrase)
+				if err = cg.Reload(config); err == nil {
+					goto PASSPHRASECORRECT
+				}
+			}
+		}
+		return nil, nil, nil, errwrap.Wrapf("error loading TLS cert: {{err}}", err)
 	}
 
+PASSPHRASECORRECT:
 	var tlsvers string
 	tlsversRaw, ok := config["tls_min_version"]
 	if !ok {

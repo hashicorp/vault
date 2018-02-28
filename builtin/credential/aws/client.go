@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -21,18 +22,19 @@ import (
 // * Static credentials from 'config/client'
 // * Environment variables
 // * Instance metadata role
-func (b *backend) getRawClientConfig(s logical.Storage, region, clientType string) (*aws.Config, error) {
+func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, region, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{
 		Region: region,
 	}
 
 	// Read the configured secret key and access key
-	config, err := b.nonLockedClientConfigEntry(s)
+	config, err := b.nonLockedClientConfigEntry(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
 	endpoint := aws.String("")
+	var maxRetries int = aws.UseServiceDefaultRetries
 	if config != nil {
 		// Override the default endpoint with the configured endpoint.
 		switch {
@@ -46,6 +48,7 @@ func (b *backend) getRawClientConfig(s logical.Storage, region, clientType strin
 
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
+		maxRetries = config.MaxRetries
 	}
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
@@ -64,16 +67,17 @@ func (b *backend) getRawClientConfig(s logical.Storage, region, clientType strin
 		Region:      aws.String(region),
 		HTTPClient:  cleanhttp.DefaultClient(),
 		Endpoint:    endpoint,
+		MaxRetries:  aws.Int(maxRetries),
 	}, nil
 }
 
 // getClientConfig returns an aws-sdk-go config, with optionally assumed credentials
-// It uses getRawClientConfig to obtain config for the runtime environemnt, and if
+// It uses getRawClientConfig to obtain config for the runtime environment, and if
 // stsRole is a non-empty string, it will use AssumeRole to obtain a set of assumed
 // credentials. The credentials will expire after 15 minutes but will auto-refresh.
-func (b *backend) getClientConfig(s logical.Storage, region, stsRole, accountID, clientType string) (*aws.Config, error) {
+func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region, stsRole, accountID, clientType string) (*aws.Config, error) {
 
-	config, err := b.getRawClientConfig(s, region, clientType)
+	config, err := b.getRawClientConfig(ctx, s, region, clientType)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +85,7 @@ func (b *backend) getClientConfig(s logical.Storage, region, stsRole, accountID,
 		return nil, fmt.Errorf("could not compile valid credentials through the default provider chain")
 	}
 
-	stsConfig, err := b.getRawClientConfig(s, region, "sts")
+	stsConfig, err := b.getRawClientConfig(ctx, s, region, "sts")
 	if stsConfig == nil {
 		return nil, fmt.Errorf("could not configure STS client")
 	}
@@ -160,9 +164,9 @@ func (b *backend) setCachedUserId(userId, arn string) {
 	}
 }
 
-func (b *backend) stsRoleForAccount(s logical.Storage, accountID string) (string, error) {
+func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, accountID string) (string, error) {
 	// Check if an STS configuration exists for the AWS account
-	sts, err := b.lockedAwsStsEntry(s, accountID)
+	sts, err := b.lockedAwsStsEntry(ctx, s, accountID)
 	if err != nil {
 		return "", fmt.Errorf("error fetching STS config for account ID %q: %q\n", accountID, err)
 	}
@@ -174,8 +178,8 @@ func (b *backend) stsRoleForAccount(s logical.Storage, accountID string) (string
 }
 
 // clientEC2 creates a client to interact with AWS EC2 API
-func (b *backend) clientEC2(s logical.Storage, region, accountID string) (*ec2.EC2, error) {
-	stsRole, err := b.stsRoleForAccount(s, accountID)
+func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, accountID string) (*ec2.EC2, error) {
+	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +202,7 @@ func (b *backend) clientEC2(s logical.Storage, region, accountID string) (*ec2.E
 
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
-	awsConfig, err = b.getClientConfig(s, region, stsRole, accountID, "ec2")
+	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "ec2")
 
 	if err != nil {
 		return nil, err
@@ -223,8 +227,8 @@ func (b *backend) clientEC2(s logical.Storage, region, accountID string) (*ec2.E
 }
 
 // clientIAM creates a client to interact with AWS IAM API
-func (b *backend) clientIAM(s logical.Storage, region, accountID string) (*iam.IAM, error) {
-	stsRole, err := b.stsRoleForAccount(s, accountID)
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, accountID string) (*iam.IAM, error) {
+	stsRole, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +251,7 @@ func (b *backend) clientIAM(s logical.Storage, region, accountID string) (*iam.I
 
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
-	awsConfig, err = b.getClientConfig(s, region, stsRole, accountID, "iam")
+	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, accountID, "iam")
 
 	if err != nil {
 		return nil, err

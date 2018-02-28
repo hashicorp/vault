@@ -297,6 +297,7 @@ var (
 	TimeoutError        = newError(408, "Timeout when reading or writing data")
 	Forbidden           = newError(403, "Operation forbidden")
 	TooLargeObject      = newError(413, "Too Large Object")
+	RateLimit           = newError(498, "Rate Limit")
 
 	// Mappings for authentication errors
 	authErrorMap = errorMap{
@@ -311,6 +312,7 @@ var (
 		403: Forbidden,
 		404: ContainerNotFound,
 		409: ContainerNotEmpty,
+		498: RateLimit,
 	}
 
 	// Mappings for object errors
@@ -321,6 +323,7 @@ var (
 		404: ObjectNotFound,
 		413: TooLargeObject,
 		422: ObjectCorrupted,
+		498: RateLimit,
 	}
 )
 
@@ -471,6 +474,7 @@ again:
 	}
 	if req != nil {
 		timer := time.NewTimer(c.ConnectTimeout)
+		defer timer.Stop()
 		var resp *http.Response
 		resp, err = c.doTimeoutRequest(timer, req)
 		if err != nil {
@@ -691,6 +695,7 @@ func (c *Connection) Call(targetUrl string, p RequestOpts) (resp *http.Response,
 			URL.RawQuery = p.Parameters.Encode()
 		}
 		timer := time.NewTimer(c.ConnectTimeout)
+		defer timer.Stop()
 		reader := p.Body
 		if reader != nil {
 			reader = newWatchdogReader(reader, c.Timeout, timer)

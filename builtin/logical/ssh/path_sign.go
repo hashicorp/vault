@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
@@ -43,7 +44,7 @@ func pathSign(b *backend) *framework.Path {
 				Description: `The desired role with configuration for this request.`,
 			},
 			"ttl": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeDurationSecond,
 				Description: `The requested Time To Live for the SSH certificate;
 sets the expiration date. If not specified
 the role default, backend default, or system
@@ -82,11 +83,11 @@ be later than the role max TTL.`,
 	}
 }
 
-func (b *backend) pathSign(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
 
 	// Get the role
-	role, err := b.getRole(req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -94,10 +95,10 @@ func (b *backend) pathSign(req *logical.Request, data *framework.FieldData) (*lo
 		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
 	}
 
-	return b.pathSignCertificate(req, data, role)
+	return b.pathSignCertificate(ctx, req, data, role)
 }
 
-func (b *backend) pathSignCertificate(req *logical.Request, data *framework.FieldData, role *sshRole) (*logical.Response, error) {
+func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole) (*logical.Response, error) {
 	publicKey := data.Get("public_key").(string)
 	if publicKey == "" {
 		return logical.ErrorResponse("missing public_key"), nil
@@ -148,7 +149,7 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	privateKeyEntry, err := caKey(req.Storage, caPrivateKey)
+	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA private key: %v", err)
 	}
@@ -345,40 +346,34 @@ func (b *backend) calculateExtensions(data *framework.FieldData, role *sshRole) 
 }
 
 func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.Duration, error) {
-
 	var ttl, maxTTL time.Duration
-	var ttlField string
-	ttlFieldInt, ok := data.GetOk("ttl")
-	if !ok {
-		ttlField = role.TTL
-	} else {
-		ttlField = ttlFieldInt.(string)
-	}
+	var err error
 
-	if len(ttlField) == 0 {
+	ttlRaw, specifiedTTL := data.GetOk("ttl")
+	if specifiedTTL {
+		ttl = time.Duration(ttlRaw.(int)) * time.Second
+	} else {
+		ttl, err = parseutil.ParseDurationSecond(role.TTL)
+		if err != nil {
+			return 0, err
+		}
+	}
+	if ttl == 0 {
 		ttl = b.System().DefaultLeaseTTL()
-	} else {
-		var err error
-		ttl, err = parseutil.ParseDurationSecond(ttlField)
-		if err != nil {
-			return 0, fmt.Errorf("invalid requested ttl: %s", err)
-		}
 	}
 
-	if len(role.MaxTTL) == 0 {
+	maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
+	if err != nil {
+		return 0, err
+	}
+	if maxTTL == 0 {
 		maxTTL = b.System().MaxLeaseTTL()
-	} else {
-		var err error
-		maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
-		if err != nil {
-			return 0, fmt.Errorf("invalid requested max ttl: %s", err)
-		}
 	}
 
 	if ttl > maxTTL {
 		// Don't error if they were using system defaults, only error if
 		// they specifically chose a bad TTL
-		if len(ttlField) == 0 {
+		if !specifiedTTL {
 			ttl = maxTTL
 		} else {
 			return 0, fmt.Errorf("ttl is larger than maximum allowed (%d)", maxTTL/time.Second)

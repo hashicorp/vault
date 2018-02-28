@@ -1,25 +1,24 @@
 ---
 layout: "api"
-page_title: "Kubernetes Auth Plugin Backend - HTTP API"
+page_title: "Kubernetes - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-kubernetes"
 description: |-
-  This is the API documentation for the Vault Kubernetes authentication
-  backend plugin.
+  This is the API documentation for the Vault Kubernetes auth method plugin.
 ---
 
-# Kubernetes Auth Plugin HTTP API
+# Kubernetes Auth Method (API)
 
-This is the API documentation for the Vault Kubernetes authentication backend
-plugin. To learn more about the usage and operation, see the
-[Vault Kubernetes backend documentation](/docs/auth/kubernetes.html).
+This is the API documentation for the Vault Kubernetes auth method plugin. To
+learn more about the usage and operation, see the
+[Vault Kubernetes auth method](/docs/auth/kubernetes.html).
 
-This documentation assumes the backend is mounted at the
-`/auth/kubernetes` path in Vault. Since it is possible to mount auth backends
-at any location, please update your API calls accordingly.
+This documentation assumes the Kubernetes method is mounted at the
+`/auth/kubernetes` path in Vault. Since it is possible to enable auth methods at
+any location, please update your API calls accordingly.
 
-## Configure
+## Configure Method
 
-The Kubernetes Auth backend validates service account JWTs and verifies their
+The Kubernetes auth method validates service account JWTs and verifies their
 existence with the Kubernetes TokenReview API. This endpoint configures the
 public key used to validate the JWT signature and the necessary information to
 access the Kubernetes API.
@@ -31,11 +30,14 @@ access the Kubernetes API.
 ### Parameters
  - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
  - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.
+ - `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
+    API to validate other JWTs during login. If not set
+    the JWT used for login will be used to access the API.
  - `pem_keys` `(array: [])` - Optional list of PEM-formated public keys or certificates
     used to verify the signatures of Kubernetes service account
     JWTs. If a certificate is given, its public key will be
     extracted. Not every installation of Kubernetes exposes these
-    keys. 
+    keys.
 
 ### Sample Payload
 
@@ -43,13 +45,13 @@ access the Kubernetes API.
 {
   "kubernetes_host": "https://192.168.99.100:8443",
   "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
-  "pem_keys": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----"
+  "pem_keys": "-----BEGIN CERTIFICATE-----\n.....\n-----END CERTIFICATE-----"
 }
 ```
 
 ### Sample Request
 
-```
+```text
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -78,18 +80,16 @@ $ curl \
 ```json
 {
   "data":{
-      "kubernetes_host": "https://192.168.99.100:8443",
-      "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
-      "pem_keys": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----"
-  },
-  ...
+    "kubernetes_host": "https://192.168.99.100:8443",
+    "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
+    "pem_keys": ["-----BEGIN CERTIFICATE-----.....", .....]
+  }
 }
-
 ```
 
 ## Create Role
 
-Registers a role in the backend. Role types have specific entities
+Registers a role in the auth method. Role types have specific entities
 that can perform login operations against this endpoint. Constraints specific
 to the role type must be set on the role. These are applied to the authenticated
 entities attempting to login.
@@ -133,7 +133,7 @@ entities attempting to login.
 
 ### Sample Request
 
-```
+```text
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
@@ -154,7 +154,7 @@ Returns the previously registered role configuration.
 
 ### Sample Request
 
-```
+```text
 $ curl \
     --header "X-Vault-Token: ..." \
     https://vault.rocks/v1/auth/kubernetes/role/dev-role
@@ -164,51 +164,48 @@ $ curl \
 
 ```json
 {
-    "data":{
-        "bound_service_account_names": "vault-auth",
-        "bound_service_account_namespaces": "default",
-        "max_ttl": 1800000,,
-        "ttl":0,
-        "period": 0,
-        "policies":[
-            "dev",
-            "prod"
-        ],
-    },
-    ...
+  "data":{
+    "bound_service_account_names": "vault-auth",
+    "bound_service_account_namespaces": "default",
+    "max_ttl": 1800000,
+    "ttl":0,
+    "period": 0,
+    "policies":[
+      "dev",
+      "prod"
+    ]
+  }
 }
-
 ```
 
 ## List Roles
 
-Lists all the roles that are registered with the backend.
+Lists all the roles that are registered with the auth method.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/kubernetes/roles`            | `200 application/json` |
-| `GET`   | `/auth/kubernetes/roles?list=true`   | `200 application/json` |
+| `LIST`   | `/auth/kubernetes/role`            | `200 application/json` |
+| `GET`   | `/auth/kubernetes/role?list=true`   | `200 application/json` |
 
 ### Sample Request
 
-```
+```text
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/kubernetes/roles
+    https://vault.rocks/v1/auth/kubernetes/role
 ```
 
 ### Sample Response
 
 ```json  
 {
-    "data": {
-        "keys": [
-            "dev-role",
-            "prod-role"
-        ]
-    },
-    ...
+  "data": {
+    "keys": [
+      "dev-role",
+      "prod-role"
+    ]
+  }
 }
 ```
 
@@ -226,7 +223,7 @@ Deletes the previously registered role.
 
 ### Sample Request
 
-```
+```text
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
@@ -249,20 +246,20 @@ entity and then authorizes the entity for the given role.
   attempted.
 - `jwt` `(string: <required>)` - Signed [JSON Web
   Token](https://tools.ietf.org/html/rfc7519) (JWT) for authenticating a service
-  account. 
+  account.
 
 ### Sample Payload
 
 ```json
 {
-    "role": "dev-role",
-    "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "role": "dev-role",
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
 ### Sample Request
 
-```
+```text
 $ curl \
     --request POST \
     --data @payload.json \
@@ -273,22 +270,21 @@ $ curl \
 
 ```json
 {
-	"auth": {
-		"client_token": "62b858f9-529c-6b26-e0b8-0457b6aacdb4",
-		"accessor": "afa306d0-be3d-c8d2-b0d7-2676e1c0d9b4",
-		"policies": [
-			"default"
-		],
-		"metadata": {
-			"role": "test",
-			"service_account_name": "vault-auth",
-			"service_account_namespace": "default",
-			"service_account_secret_name": "vault-auth-token-pd21c",
-			"service_account_uid": "aa9aa8ff-98d0-11e7-9bb7-0800276d99bf"
-		},
-		"lease_duration": 2764800,
-		"renewable": true
-	}
-    ...
+  "auth": {
+    "client_token": "62b858f9-529c-6b26-e0b8-0457b6aacdb4",
+    "accessor": "afa306d0-be3d-c8d2-b0d7-2676e1c0d9b4",
+    "policies": [
+      "default"
+    ],
+    "metadata": {
+      "role": "test",
+      "service_account_name": "vault-auth",
+      "service_account_namespace": "default",
+      "service_account_secret_name": "vault-auth-token-pd21c",
+      "service_account_uid": "aa9aa8ff-98d0-11e7-9bb7-0800276d99bf"
+    },
+    "lease_duration": 2764800,
+    "renewable": true
+  }
 }
 ```

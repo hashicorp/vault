@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -30,7 +31,8 @@ const (
 
 	// keyringPath is the location of the keyring data. This is encrypted
 	// by the master key.
-	keyringPath = "core/keyring"
+	keyringPath   = "core/keyring"
+	keyringPrefix = "core/"
 
 	// keyringUpgradePrefix is the path used to store keyring update entries.
 	// When running in HA mode, the active instance will install the new key
@@ -63,11 +65,11 @@ const (
 type SecurityBarrier interface {
 	// Initialized checks if the barrier has been initialized
 	// and has a master key set.
-	Initialized() (bool, error)
+	Initialized(ctx context.Context) (bool, error)
 
 	// Initialize works only if the barrier has not been initialized
 	// and makes use of the given master key.
-	Initialize([]byte) error
+	Initialize(context.Context, []byte) error
 
 	// GenerateKey is used to generate a new key
 	GenerateKey() ([]byte, error)
@@ -81,7 +83,7 @@ type SecurityBarrier interface {
 
 	// Unseal is used to provide the master key which permits the barrier
 	// to be unsealed. If the key is not correct, the barrier remains sealed.
-	Unseal(key []byte) error
+	Unseal(ctx context.Context, key []byte) error
 
 	// VerifyMaster is used to check if the given key matches the master key
 	VerifyMaster(key []byte) error
@@ -94,12 +96,12 @@ type SecurityBarrier interface {
 	// ReloadKeyring is used to re-read the underlying keyring.
 	// This is used for HA deployments to ensure the latest keyring
 	// is present in the leader.
-	ReloadKeyring() error
+	ReloadKeyring(ctx context.Context) error
 
 	// ReloadMasterKey is used to re-read the underlying masterkey.
 	// This is used for HA deployments to ensure the latest master key
 	// is available for keyring reloading.
-	ReloadMasterKey() error
+	ReloadMasterKey(ctx context.Context) error
 
 	// Seal is used to re-seal the barrier. This requires the barrier to
 	// be unsealed again to perform any further operations.
@@ -107,22 +109,22 @@ type SecurityBarrier interface {
 
 	// Rotate is used to create a new encryption key. All future writes
 	// should use the new key, while old values should still be decryptable.
-	Rotate() (uint32, error)
+	Rotate(ctx context.Context) (uint32, error)
 
 	// CreateUpgrade creates an upgrade path key to the given term from the previous term
-	CreateUpgrade(term uint32) error
+	CreateUpgrade(ctx context.Context, term uint32) error
 
 	// DestroyUpgrade destroys the upgrade path key to the given term
-	DestroyUpgrade(term uint32) error
+	DestroyUpgrade(ctx context.Context, term uint32) error
 
 	// CheckUpgrade looks for an upgrade to the current term and installs it
-	CheckUpgrade() (bool, uint32, error)
+	CheckUpgrade(ctx context.Context) (bool, uint32, error)
 
 	// ActiveKeyInfo is used to inform details about the active key
 	ActiveKeyInfo() (*KeyInfo, error)
 
 	// Rekey is used to change the master key used to protect the keyring
-	Rekey([]byte) error
+	Rekey(context.Context, []byte) error
 
 	// For replication we must send over the keyring, so this must be available
 	Keyring() (*Keyring, error)
@@ -137,38 +139,40 @@ type SecurityBarrier interface {
 // BarrierStorage is the storage only interface required for a Barrier.
 type BarrierStorage interface {
 	// Put is used to insert or update an entry
-	Put(entry *Entry) error
+	Put(ctx context.Context, entry *Entry) error
 
 	// Get is used to fetch an entry
-	Get(key string) (*Entry, error)
+	Get(ctx context.Context, key string) (*Entry, error)
 
 	// Delete is used to permanently delete an entry
-	Delete(key string) error
+	Delete(ctx context.Context, key string) error
 
 	// List is used ot list all the keys under a given
 	// prefix, up to the next prefix.
-	List(prefix string) ([]string, error)
+	List(ctx context.Context, prefix string) ([]string, error)
 }
 
 // BarrierEncryptor is the in memory only interface that does not actually
 // use the underlying barrier. It is used for lower level modules like the
 // Write-Ahead-Log and Merkle index to allow them to use the barrier.
 type BarrierEncryptor interface {
-	Encrypt(key string, plaintext []byte) ([]byte, error)
-	Decrypt(key string, ciphertext []byte) ([]byte, error)
+	Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error)
+	Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error)
 }
 
 // Entry is used to represent data stored by the security barrier
 type Entry struct {
-	Key   string
-	Value []byte
+	Key      string
+	Value    []byte
+	SealWrap bool
 }
 
 // Logical turns the Entry into a logical storage entry.
 func (e *Entry) Logical() *logical.StorageEntry {
 	return &logical.StorageEntry{
-		Key:   e.Key,
-		Value: e.Value,
+		Key:      e.Key,
+		Value:    e.Value,
+		SealWrap: e.SealWrap,
 	}
 }
 

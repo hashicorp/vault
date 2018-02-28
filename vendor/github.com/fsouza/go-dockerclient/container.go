@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/go-units"
+	units "github.com/docker/go-units"
 	"golang.org/x/net/context"
 )
 
@@ -300,6 +300,7 @@ type Config struct {
 	ExposedPorts      map[Port]struct{}   `json:"ExposedPorts,omitempty" yaml:"ExposedPorts,omitempty" toml:"ExposedPorts,omitempty"`
 	PublishService    string              `json:"PublishService,omitempty" yaml:"PublishService,omitempty" toml:"PublishService,omitempty"`
 	StopSignal        string              `json:"StopSignal,omitempty" yaml:"StopSignal,omitempty" toml:"StopSignal,omitempty"`
+	StopTimeout       int                 `json:"StopTimeout,omitempty" yaml:"StopTimeout,omitempty" toml:"StopTimeout,omitempty"`
 	Env               []string            `json:"Env,omitempty" yaml:"Env,omitempty" toml:"Env,omitempty"`
 	Cmd               []string            `json:"Cmd" yaml:"Cmd" toml:"Cmd"`
 	Healthcheck       *HealthConfig       `json:"Healthcheck,omitempty" yaml:"Healthcheck,omitempty" toml:"Healthcheck,omitempty"`
@@ -426,8 +427,9 @@ type HealthConfig struct {
 	Test []string `json:"Test,omitempty" yaml:"Test,omitempty" toml:"Test,omitempty"`
 
 	// Zero means to inherit. Durations are expressed as integer nanoseconds.
-	Interval time.Duration `json:"Interval,omitempty" yaml:"Interval,omitempty" toml:"Interval,omitempty"` // Interval is the time to wait between checks.
-	Timeout  time.Duration `json:"Timeout,omitempty" yaml:"Timeout,omitempty" toml:"Timeout,omitempty"`    // Timeout is the time to wait before considering the check to have hung.
+	Interval    time.Duration `json:"Interval,omitempty" yaml:"Interval,omitempty" toml:"Interval,omitempty"`          // Interval is the time to wait between checks.
+	Timeout     time.Duration `json:"Timeout,omitempty" yaml:"Timeout,omitempty" toml:"Timeout,omitempty"`             // Timeout is the time to wait before considering the check to have hung.
+	StartPeriod time.Duration `json:"StartPeriod,omitempty" yaml:"StartPeriod,omitempty" toml:"StartPeriod,omitempty"` // The start period for the container to initialize before the retries starts to count down.
 
 	// Retries is the number of consecutive failures needed to consider a container as unhealthy.
 	// Zero means inherit.
@@ -630,6 +632,11 @@ func (c *Client) CreateContainer(opts CreateContainerOptions) (*Container, error
 		if e.Status == http.StatusConflict {
 			return nil, ErrContainerAlreadyExists
 		}
+		// Workaround for 17.09 bug returning 400 instead of 409.
+		// See https://github.com/moby/moby/issues/35021
+		if e.Status == http.StatusBadRequest && strings.Contains(e.Message, "Conflict.") {
+			return nil, ErrContainerAlreadyExists
+		}
 	}
 
 	if err != nil {
@@ -737,6 +744,7 @@ type HostConfig struct {
 	UTSMode              string                 `json:"UTSMode,omitempty" yaml:"UTSMode,omitempty" toml:"UTSMode,omitempty"`
 	RestartPolicy        RestartPolicy          `json:"RestartPolicy,omitempty" yaml:"RestartPolicy,omitempty" toml:"RestartPolicy,omitempty"`
 	Devices              []Device               `json:"Devices,omitempty" yaml:"Devices,omitempty" toml:"Devices,omitempty"`
+	DeviceCgroupRules    []string               `json:"DeviceCgroupRules,omitempty" yaml:"DeviceCgroupRules,omitempty" toml:"DeviceCgroupRules,omitempty"`
 	LogConfig            LogConfig              `json:"LogConfig,omitempty" yaml:"LogConfig,omitempty" toml:"LogConfig,omitempty"`
 	SecurityOpt          []string               `json:"SecurityOpt,omitempty" yaml:"SecurityOpt,omitempty" toml:"SecurityOpt,omitempty"`
 	Cgroup               string                 `json:"Cgroup,omitempty" yaml:"Cgroup,omitempty" toml:"Cgroup,omitempty"`
@@ -745,7 +753,7 @@ type HostConfig struct {
 	MemoryReservation    int64                  `json:"MemoryReservation,omitempty" yaml:"MemoryReservation,omitempty" toml:"MemoryReservation,omitempty"`
 	KernelMemory         int64                  `json:"KernelMemory,omitempty" yaml:"KernelMemory,omitempty" toml:"KernelMemory,omitempty"`
 	MemorySwap           int64                  `json:"MemorySwap,omitempty" yaml:"MemorySwap,omitempty" toml:"MemorySwap,omitempty"`
-	MemorySwappiness     int64                  `json:"MemorySwappiness" yaml:"MemorySwappiness" toml:"MemorySwappiness"`
+	MemorySwappiness     int64                  `json:"MemorySwappiness,omitempty" yaml:"MemorySwappiness,omitempty" toml:"MemorySwappiness,omitempty"`
 	CPUShares            int64                  `json:"CpuShares,omitempty" yaml:"CpuShares,omitempty" toml:"CpuShares,omitempty"`
 	CPUSet               string                 `json:"Cpuset,omitempty" yaml:"Cpuset,omitempty" toml:"Cpuset,omitempty"`
 	CPUSetCPUs           string                 `json:"CpusetCpus,omitempty" yaml:"CpusetCpus,omitempty" toml:"CpusetCpus,omitempty"`
@@ -1044,6 +1052,7 @@ type CPUStats struct {
 		UsageInKernelmode uint64   `json:"usage_in_kernelmode,omitempty" yaml:"usage_in_kernelmode,omitempty" toml:"usage_in_kernelmode,omitempty"`
 	} `json:"cpu_usage,omitempty" yaml:"cpu_usage,omitempty" toml:"cpu_usage,omitempty"`
 	SystemCPUUsage uint64 `json:"system_cpu_usage,omitempty" yaml:"system_cpu_usage,omitempty" toml:"system_cpu_usage,omitempty"`
+	OnlineCPUs     uint64 `json:"online_cpus,omitempty" yaml:"online_cpus,omitempty" toml:"online_cpus,omitempty"`
 	ThrottlingData struct {
 		Periods          uint64 `json:"periods,omitempty"`
 		ThrottledPeriods uint64 `json:"throttled_periods,omitempty"`
@@ -1179,10 +1188,18 @@ func (c *Client) KillContainer(opts KillContainerOptions) error {
 	path := "/containers/" + opts.ID + "/kill" + "?" + queryString(opts)
 	resp, err := c.do("POST", path, doOptions{context: opts.Context})
 	if err != nil {
-		if e, ok := err.(*Error); ok && e.Status == http.StatusNotFound {
-			return &NoSuchContainer{ID: opts.ID}
+		e, ok := err.(*Error)
+		if !ok {
+			return err
 		}
-		return err
+		switch e.Status {
+		case http.StatusNotFound:
+			return &NoSuchContainer{ID: opts.ID}
+		case http.StatusConflict:
+			return &ContainerNotRunning{ID: opts.ID}
+		default:
+			return err
+		}
 	}
 	resp.Body.Close()
 	return nil
@@ -1473,7 +1490,7 @@ type LogsOptions struct {
 // stderr to LogsOptions.ErrorStream.
 //
 // When LogsOptions.RawTerminal is true, callers will get the raw stream on
-// LogOptions.OutputStream. The caller can use libraries such as dlog
+// LogsOptions.OutputStream. The caller can use libraries such as dlog
 // (github.com/ahmetalpbalkan/dlog).
 //
 // See https://goo.gl/krK0ZH for more details.

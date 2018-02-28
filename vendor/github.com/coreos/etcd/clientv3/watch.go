@@ -22,11 +22,12 @@ import (
 
 	v3rpc "github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	pb "github.com/coreos/etcd/etcdserver/etcdserverpb"
-	mvccpb "github.com/coreos/etcd/mvcc/mvccpb"
+	mvccpb "github.com/coreos/etcd/internal/mvcc/mvccpb"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -45,6 +46,22 @@ type Watcher interface {
 	// through the returned channel. If revisions waiting to be sent over the
 	// watch are compacted, then the watch will be canceled by the server, the
 	// client will post a compacted error watch response, and the channel will close.
+	// If the context "ctx" is canceled or timed out, returned "WatchChan" is closed,
+	// and "WatchResponse" from this closed channel has zero events and nil "Err()".
+	// The context "ctx" MUST be canceled, as soon as watcher is no longer being used,
+	// to release the associated resources.
+	// If the context is "context.Background/TODO", returned "WatchChan" will not be closed
+	// and wait until events happen, except when server returns a non-recoverable error.
+	// For example, when context passed with "WithRequireLeader" and the connected server
+	// has no leader, error "etcdserver: no leader" is returned, and then "WatchChan" is
+	// closed with non-nil "Err()".
+	// Otherwise, as long as the context has not been canceled or timed out, watch will
+	// retry on other recoverable errors forever until reconnected.
+	//
+	// TODO: explicitly set context error in the last "WatchResponse" message and close channel?
+	// Currently, client contexts are overwritten with "valCtx" that never closes.
+	// TODO(v3.4): configure watch retry policy, limit maximum retry number
+	// (see https://github.com/coreos/etcd/issues/8980)
 	Watch(ctx context.Context, key string, opts ...OpOption) WatchChan
 
 	// Close closes the watcher and cancels all watch requests.
@@ -91,7 +108,7 @@ func (wr *WatchResponse) Err() error {
 		return v3rpc.ErrCompacted
 	case wr.Canceled:
 		if len(wr.cancelReason) != 0 {
-			return v3rpc.Error(grpc.Errorf(codes.FailedPrecondition, "%s", wr.cancelReason))
+			return v3rpc.Error(status.Error(codes.FailedPrecondition, wr.cancelReason))
 		}
 		return v3rpc.ErrFutureRev
 	}
@@ -105,7 +122,8 @@ func (wr *WatchResponse) IsProgressNotify() bool {
 
 // watcher implements the Watcher interface
 type watcher struct {
-	remote pb.WatchClient
+	remote   pb.WatchClient
+	callOpts []grpc.CallOption
 
 	// mu protects the grpc streams map
 	mu sync.RWMutex
@@ -116,8 +134,9 @@ type watcher struct {
 
 // watchGrpcStream tracks all watch resources attached to a single grpc stream.
 type watchGrpcStream struct {
-	owner  *watcher
-	remote pb.WatchClient
+	owner    *watcher
+	remote   pb.WatchClient
+	callOpts []grpc.CallOption
 
 	// ctx controls internal remote.Watch requests
 	ctx context.Context
@@ -188,14 +207,18 @@ type watcherStream struct {
 }
 
 func NewWatcher(c *Client) Watcher {
-	return NewWatchFromWatchClient(pb.NewWatchClient(c.conn))
+	return NewWatchFromWatchClient(pb.NewWatchClient(c.conn), c)
 }
 
-func NewWatchFromWatchClient(wc pb.WatchClient) Watcher {
-	return &watcher{
+func NewWatchFromWatchClient(wc pb.WatchClient, c *Client) Watcher {
+	w := &watcher{
 		remote:  wc,
 		streams: make(map[string]*watchGrpcStream),
 	}
+	if c != nil {
+		w.callOpts = c.callOpts
+	}
+	return w
 }
 
 // never closes
@@ -214,6 +237,7 @@ func (w *watcher) newWatcherGrpcStream(inctx context.Context) *watchGrpcStream {
 	wgs := &watchGrpcStream{
 		owner:      w,
 		remote:     w.remote,
+		callOpts:   w.callOpts,
 		ctx:        ctx,
 		ctxKey:     streamKeyFromCtx(inctx),
 		cancel:     cancel,
@@ -345,7 +369,8 @@ func (w *watcher) closeStream(wgs *watchGrpcStream) {
 }
 
 func (w *watchGrpcStream) addSubstream(resp *pb.WatchResponse, ws *watcherStream) {
-	if resp.WatchId == -1 {
+	// check watch ID for backward compatibility (<= v3.3)
+	if resp.WatchId == -1 || (resp.Canceled && resp.CancelReason != "") {
 		// failed; no channel
 		close(ws.recvc)
 		return
@@ -431,6 +456,7 @@ func (w *watchGrpcStream) run() {
 		// Watch() requested
 		case wreq := <-w.reqc:
 			outc := make(chan WatchResponse, 1)
+			// TODO: pass custom watch ID?
 			ws := &watcherStream{
 				initReq: *wreq,
 				id:      -1,
@@ -531,6 +557,7 @@ func (w *watchGrpcStream) dispatchEvent(pbresp *pb.WatchResponse) bool {
 	for i, ev := range pbresp.Events {
 		events[i] = (*Event)(ev)
 	}
+	// TODO: return watch ID?
 	wr := &WatchResponse{
 		Header:          *pbresp.Header,
 		Events:          events,
@@ -762,6 +789,8 @@ func (w *watchGrpcStream) joinSubstreams() {
 }
 
 // openWatchClient retries opening a watch client until success or halt.
+// manually retry in case "ws==nil && err==nil"
+// TODO: remove FailFast=false
 func (w *watchGrpcStream) openWatchClient() (ws pb.Watch_WatchClient, err error) {
 	for {
 		select {
@@ -772,7 +801,7 @@ func (w *watchGrpcStream) openWatchClient() (ws pb.Watch_WatchClient, err error)
 			return nil, err
 		default:
 		}
-		if ws, err = w.remote.Watch(w.ctx, grpc.FailFast(false)); ws != nil && err == nil {
+		if ws, err = w.remote.Watch(w.ctx, w.callOpts...); ws != nil && err == nil {
 			break
 		}
 		if isHaltErr(w.ctx, err) {

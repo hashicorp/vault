@@ -339,14 +339,32 @@ func (pool *hostConnPool) Size() int {
 //Close the connection pool
 func (pool *hostConnPool) Close() {
 	pool.mu.Lock()
-	defer pool.mu.Unlock()
 
 	if pool.closed {
+		pool.mu.Unlock()
 		return
 	}
 	pool.closed = true
 
-	pool.drainLocked()
+	// ensure we dont try to reacquire the lock in handleError
+	// TODO: improve this as the following can happen
+	// 1) we have locked pool.mu write lock
+	// 2) conn.Close calls conn.closeWithError(nil)
+	// 3) conn.closeWithError calls conn.Close() which returns an error
+	// 4) conn.closeWithError calls pool.HandleError with the error from conn.Close
+	// 5) pool.HandleError tries to lock pool.mu
+	// deadlock
+
+	// empty the pool
+	conns := pool.conns
+	pool.conns = nil
+
+	pool.mu.Unlock()
+
+	// close the connections
+	for _, conn := range conns {
+		conn.Close()
+	}
 }
 
 // Fill the connection pool
@@ -550,22 +568,4 @@ func (pool *hostConnPool) HandleError(conn *Conn, err error, closed bool) {
 			break
 		}
 	}
-}
-
-func (pool *hostConnPool) drainLocked() {
-	// empty the pool
-	conns := pool.conns
-	pool.conns = nil
-
-	// close the connections
-	for _, conn := range conns {
-		conn.Close()
-	}
-}
-
-// removes and closes all connections from the pool
-func (pool *hostConnPool) drain() {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-	pool.drainLocked()
 }

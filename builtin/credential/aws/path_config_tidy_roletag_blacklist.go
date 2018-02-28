@@ -1,9 +1,9 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -45,23 +45,23 @@ Defaults to 4320h (180 days).`,
 	}
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	entry, err := b.lockedConfigTidyRoleTags(req.Storage)
+func (b *backend) pathConfigTidyRoletagBlacklistExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	entry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 	if err != nil {
 		return false, err
 	}
 	return entry != nil, nil
 }
 
-func (b *backend) lockedConfigTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
+func (b *backend) lockedConfigTidyRoleTags(ctx context.Context, s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
 
-	return b.nonLockedConfigTidyRoleTags(s)
+	return b.nonLockedConfigTidyRoleTags(ctx, s)
 }
 
-func (b *backend) nonLockedConfigTidyRoleTags(s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
-	entry, err := s.Get(roletagBlacklistConfigPath)
+func (b *backend) nonLockedConfigTidyRoleTags(ctx context.Context, s logical.Storage) (*tidyBlacklistRoleTagConfig, error) {
+	entry, err := s.Get(ctx, roletagBlacklistConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -77,11 +77,11 @@ func (b *backend) nonLockedConfigTidyRoleTags(s logical.Storage) (*tidyBlacklist
 	return &result, nil
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	configEntry, err := b.nonLockedConfigTidyRoleTags(req.Storage)
+	configEntry, err := b.nonLockedConfigTidyRoleTags(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -106,15 +106,15 @@ func (b *backend) pathConfigTidyRoletagBlacklistCreateUpdate(req *logical.Reques
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	clientConfig, err := b.lockedConfigTidyRoleTags(req.Storage)
+func (b *backend) pathConfigTidyRoletagBlacklistRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	clientConfig, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -123,20 +123,23 @@ func (b *backend) pathConfigTidyRoletagBlacklistRead(req *logical.Request, data 
 	}
 
 	return &logical.Response{
-		Data: structs.New(clientConfig).Map(),
+		Data: map[string]interface{}{
+			"safety_buffer":         clientConfig.SafetyBuffer,
+			"disable_periodic_tidy": clientConfig.DisablePeriodicTidy,
+		},
 	}, nil
 }
 
-func (b *backend) pathConfigTidyRoletagBlacklistDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigTidyRoletagBlacklistDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	return nil, req.Storage.Delete(roletagBlacklistConfigPath)
+	return nil, req.Storage.Delete(ctx, roletagBlacklistConfigPath)
 }
 
 type tidyBlacklistRoleTagConfig struct {
-	SafetyBuffer        int  `json:"safety_buffer" structs:"safety_buffer" mapstructure:"safety_buffer"`
-	DisablePeriodicTidy bool `json:"disable_periodic_tidy" structs:"disable_periodic_tidy" mapstructure:"disable_periodic_tidy"`
+	SafetyBuffer        int  `json:"safety_buffer"`
+	DisablePeriodicTidy bool `json:"disable_periodic_tidy"`
 }
 
 const pathConfigTidyRoletagBlacklistHelpSyn = `

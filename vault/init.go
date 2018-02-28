@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -26,9 +27,9 @@ type InitResult struct {
 }
 
 // Initialized checks if the Vault is already initialized
-func (c *Core) Initialized() (bool, error) {
+func (c *Core) Initialized(ctx context.Context) (bool, error) {
 	// Check the barrier first
-	init, err := c.barrier.Initialized()
+	init, err := c.barrier.Initialized(ctx)
 	if err != nil {
 		c.logger.Error("core: barrier init check failed", "error", err)
 		return false, err
@@ -39,7 +40,7 @@ func (c *Core) Initialized() (bool, error) {
 	}
 
 	// Verify the seal configuration
-	sealConf, err := c.seal.BarrierConfig()
+	sealConf, err := c.seal.BarrierConfig(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -88,7 +89,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 
 // Initialize is used to initialize the Vault with the given
 // configurations.
-func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
+func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
 	barrierConfig := initParams.BarrierConfig
 	recoveryConfig := initParams.RecoveryConfig
 
@@ -119,7 +120,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	defer c.stateLock.Unlock()
 
 	// Check if we are initialized
-	init, err := c.Initialized()
+	init, err := c.Initialized(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +128,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		return nil, ErrAlreadyInit
 	}
 
-	err = c.seal.Init()
+	err = c.seal.Init(ctx)
 	if err != nil {
 		c.logger.Error("core: failed to initialize seal", "error", err)
 		return nil, fmt.Errorf("error initializing seal: %v", err)
@@ -140,7 +141,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Initialize the barrier
-	if err := c.barrier.Initialize(barrierKey); err != nil {
+	if err := c.barrier.Initialize(ctx, barrierKey); err != nil {
 		c.logger.Error("core: failed to initialize barrier", "error", err)
 		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
 	}
@@ -149,7 +150,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Unseal the barrier
-	if err := c.barrier.Unseal(barrierKey); err != nil {
+	if err := c.barrier.Unseal(ctx, barrierKey); err != nil {
 		c.logger.Error("core: failed to unseal barrier", "error", err)
 		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
 	}
@@ -164,7 +165,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		}
 	}()
 
-	err = c.seal.SetBarrierConfig(barrierConfig)
+	err = c.seal.SetBarrierConfig(ctx, barrierConfig)
 	if err != nil {
 		c.logger.Error("core: failed to save barrier configuration", "error", err)
 		return nil, fmt.Errorf("barrier configuration saving failed: %v", err)
@@ -178,7 +179,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 			keysToStore = append(keysToStore, barrierUnsealKeys[0])
 			barrierUnsealKeys = barrierUnsealKeys[1:]
 		}
-		if err := c.seal.SetStoredKeys(keysToStore); err != nil {
+		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
 			c.logger.Error("core: failed to store keys", "error", err)
 			return nil, fmt.Errorf("failed to store keys: %v", err)
 		}
@@ -189,7 +190,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Perform initial setup
-	if err := c.setupCluster(); err != nil {
+	if err := c.setupCluster(ctx); err != nil {
 		c.logger.Error("core: cluster setup failed during init", "error", err)
 		return nil, err
 	}
@@ -202,7 +203,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	// disabled. When using recovery keys they are stored in the barrier, so
 	// this must happen post-unseal.
 	if c.seal.RecoveryKeySupported() {
-		err = c.seal.SetRecoveryConfig(recoveryConfig)
+		err = c.seal.SetRecoveryConfig(ctx, recoveryConfig)
 		if err != nil {
 			c.logger.Error("core: failed to save recovery configuration", "error", err)
 			return nil, fmt.Errorf("recovery configuration saving failed: %v", err)
@@ -215,7 +216,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 				return nil, err
 			}
 
-			err = c.seal.SetRecoveryKey(recoveryKey)
+			err = c.seal.SetRecoveryKey(ctx, recoveryKey)
 			if err != nil {
 				return nil, err
 			}
@@ -225,7 +226,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	// Generate a new root token
-	rootToken, err := c.tokenStore.rootToken()
+	rootToken, err := c.tokenStore.rootToken(ctx)
 	if err != nil {
 		c.logger.Error("core: root token generation failed", "error", err)
 		return nil, err
@@ -251,7 +252,8 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	return results, nil
 }
 
-func (c *Core) UnsealWithStoredKeys() error {
+// UnsealWithStoredKeys performs auto-unseal using stored keys.
+func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	if !c.seal.StoredKeysSupported() {
 		return nil
 	}
@@ -266,7 +268,7 @@ func (c *Core) UnsealWithStoredKeys() error {
 	}
 
 	c.logger.Info("core: stored unseal keys supported, attempting fetch")
-	keys, err := c.seal.GetStoredKeys()
+	keys, err := c.seal.GetStoredKeys(ctx)
 	if err != nil {
 		c.logger.Error("core: fetching stored unseal keys failed", "error", err)
 		return &NonFatalError{Err: fmt.Errorf("fetching stored unseal keys failed: %v", err)}

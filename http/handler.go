@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -32,10 +34,26 @@ const (
 	// not to use request forwarding
 	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
 
+	// MFAHeaderName represents the HTTP header which carries the credentials
+	// required to perform MFA on any path.
+	MFAHeaderName = "X-Vault-MFA"
+
+	// canonicalMFAHeaderName is the MFA header value's format in the request
+	// headers. Do not alter the casing of this string.
+	canonicalMFAHeaderName = "X-Vault-Mfa"
+
+	// PolicyOverrideHeaderName is the header set to request overriding
+	// soft-mandatory Sentinel policies.
+	PolicyOverrideHeaderName = "X-Vault-Policy-Override"
+
 	// MaxRequestSize is the maximum accepted request size. This is to prevent
 	// a denial of service attack where no Content-Length is provided and the server
 	// is fed ever more data until it exhausts memory.
 	MaxRequestSize = 32 * 1024 * 1024
+)
+
+var (
+	ReplicationStaleReadTimeout = 2 * time.Second
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -50,8 +68,8 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
-	mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core)))
-	mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core)))
+	mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy)))
+	mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy)))
 	mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
 	mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
 	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
@@ -73,7 +91,11 @@ func Handler(core *vault.Core) http.Handler {
 	// handler
 	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler)
 
-	return genericWrappedHandler
+	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
+	// characters in the request path.
+	printablePathCheckHandler := cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
+
+	return printablePathCheckHandler
 }
 
 // wrapGenericHandler wraps the handler with an extra layer of handler where
@@ -192,9 +214,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 
 		if header != nil {
 			for k, v := range header {
-				for _, j := range v {
-					w.Header().Add(k, j)
-				}
+				w.Header()[k] = v
 			}
 		}
 
@@ -315,7 +335,7 @@ func requestWrapInfo(r *http.Request, req *logical.Request) (*logical.Request, e
 func respondError(w http.ResponseWriter, status int, err error) {
 	logical.AdjustErrorStatusCode(&status, err)
 
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
 	resp := &ErrorResponse{Errors: make([]string, 0, 1)}
@@ -338,7 +358,7 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 }
 
 func respondOk(w http.ResponseWriter, body interface{}) {
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 
 	if body == nil {
 		w.WriteHeader(http.StatusNoContent)

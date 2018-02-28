@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -63,7 +64,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		SecretShares:    5,
 		SecretThreshold: 3,
 	}
-	res, err := c.Initialize(&InitParams{
+	res, err := c.Initialize(context.Background(), &InitParams{
 		BarrierConfig:  sealConf,
 		RecoveryConfig: nil,
 	})
@@ -151,7 +152,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 		SecretShares:    1,
 		SecretThreshold: 1,
 	}
-	res, err := c.Initialize(&InitParams{
+	res, err := c.Initialize(context.Background(), &InitParams{
 		BarrierConfig:  sealConf,
 		RecoveryConfig: nil,
 	})
@@ -209,7 +210,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	res, err := c.Initialize(&InitParams{
+	res, err := c.Initialize(context.Background(), &InitParams{
 		BarrierConfig:  sealConf,
 		RecoveryConfig: nil,
 	})
@@ -269,6 +270,41 @@ func TestCore_Seal_BadToken(t *testing.T) {
 	}
 	if sealed, err := c.Sealed(); err != nil || sealed {
 		t.Fatalf("err: %v", err)
+	}
+}
+
+// GH-3497
+func TestCore_Seal_SingleUse(t *testing.T) {
+	c, keys, _ := TestCoreUnsealed(t)
+	c.tokenStore.create(context.Background(), &TokenEntry{
+		ID:       "foo",
+		NumUses:  1,
+		Policies: []string{"root"},
+	})
+	if err := c.Seal("foo"); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed, err := c.Sealed(); err != nil || !sealed {
+		t.Fatalf("err: %v, sealed: %t", err, sealed)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
+	}
+	if err := c.Seal("foo"); err == nil {
+		t.Fatal("expected error from revoked token")
+	}
+	te, err := c.tokenStore.Lookup(context.Background(), "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te != nil {
+		t.Fatalf("expected nil token entry, got %#v", *te)
 	}
 }
 
@@ -488,7 +524,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -546,7 +582,7 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -574,7 +610,7 @@ func TestCore_HandleRequest_NoClientToken(t *testing.T) {
 		Response: &logical.Response{},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -609,7 +645,7 @@ func TestCore_HandleRequest_ConnOnLogin(t *testing.T) {
 		Response: &logical.Response{},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -650,7 +686,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(conf *logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -679,7 +715,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	}
 
 	// Check the policy and metadata
-	te, err := c.tokenStore.Lookup(clientToken)
+	te, err := c.tokenStore.Lookup(context.Background(), clientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -711,7 +747,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
 	noop := &NoopAudit{}
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		noop = &NoopAudit{
 			Config: config,
 		}
@@ -790,10 +826,10 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 		},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
-	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 		noop = &NoopAudit{
 			Config: config,
 		}
@@ -873,13 +909,16 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	}
 
 	// Ensure we got a new client token back
+	if resp.IsError() {
+		t.Fatalf("err: %v %v", err, *resp)
+	}
 	clientToken := resp.Auth.ClientToken
 	if clientToken == "" {
 		t.Fatalf("bad: %#v", resp)
 	}
 
 	// Check the policy and metadata
-	te, err := c.tokenStore.Lookup(clientToken)
+	te, err := c.tokenStore.Lookup(context.Background(), clientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -924,7 +963,7 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// Check the policy and metadata
-	te, err := c.tokenStore.Lookup(clientToken)
+	te, err := c.tokenStore.Lookup(context.Background(), clientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1347,13 +1386,13 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		core.barrier.Put(&Entry{
+		core.barrier.Put(context.Background(), &Entry{
 			Key:   coreLeaderPrefix + keyUUID,
 			Value: []byte(valueUUID),
 		})
 	}
 
-	entries, err := core.barrier.List(coreLeaderPrefix)
+	entries, err := core.barrier.List(context.Background(), coreLeaderPrefix)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1453,7 +1492,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	// Give time for the entries to clear out; it is conservative at 1/second
 	time.Sleep(10 * leaderPrefixCleanDelay)
 
-	entries, err = core2.barrier.List(coreLeaderPrefix)
+	entries, err = core2.barrier.List(context.Background(), coreLeaderPrefix)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1677,7 +1716,7 @@ func TestCore_HandleRequest_Login_InternalData(t *testing.T) {
 	}
 
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -1721,7 +1760,7 @@ func TestCore_HandleRequest_InternalData(t *testing.T) {
 	}
 
 	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 
@@ -1764,7 +1803,7 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 		},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
 
@@ -1915,7 +1954,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 	}
 
 	c, _, root := TestCoreUnsealed(t)
-	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
 
@@ -1927,8 +1966,8 @@ path "secret/*" {
 `
 
 	ps := c.policyStore
-	policy, _ := Parse(secretWritingPolicy)
-	if err := ps.SetPolicy(policy); err != nil {
+	policy, _ := ParseACLPolicy(secretWritingPolicy)
+	if err := ps.SetPolicy(context.Background(), policy); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2014,7 +2053,7 @@ func TestCore_HandleRequest_MountPointType(t *testing.T) {
 		Response: &logical.Response{},
 	}
 	c, _, root := TestCoreUnsealed(t)
-	c.logicalBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noop, nil
 	}
 

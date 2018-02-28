@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise MFA Support"
+page_title: "MFA Support - Vault Enterprise"
 sidebar_current: "docs-vault-enterprise-mfa"
 description: |-
   Vault Enterprise has support for Multi-factor Authentication (MFA), using different authentication types.
@@ -25,17 +25,17 @@ MFA in Vault can be of the following types.
 - `Okta` - If Okta push is configured and enabled on a path, then the enrolled
   device of the user will get a push notification to approve or deny the access
   to the API. The Okta username will be derived from the caller identity's
-  persona.
+  alias.
 
 - `Duo` - If Duo push is configured and enabled on a path, then the enrolled
   device of the user will get a push notification to approve or deny the access
   to the API. The Duo username will be derived from the caller identity's
-  persona.
+  alias.
 
 - `PingID` - If PingID push is configured and enabled on a path, then the
   enrolled device of the user will get a push notification to approve or deny
   the access to the API. The PingID username will be derived from the caller
-  identity's persona.
+  identity's alias.
 
 ## Configuring MFA Methods
 
@@ -50,10 +50,10 @@ parameters.
 
 ### Sample Policy
 
-```
+```hcl
 path "secret/foo" {
-    capabilities = ["read"]
-    mfa_methods = ["dev_team_duo", "sales_team_totp"]
+  capabilities = ["read"]
+  mfa_methods  = ["dev_team_duo", "sales_team_totp"]
 }
 ```
 

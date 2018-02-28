@@ -57,6 +57,38 @@ func TestStrutil_EquivalentSlices(t *testing.T) {
 	}
 }
 
+func TestStrutil_ListContainsGlob(t *testing.T) {
+	haystack := []string{
+		"dev",
+		"ops*",
+		"root/*",
+		"*-dev",
+		"_*_",
+	}
+	if StrListContainsGlob(haystack, "tubez") {
+		t.Fatalf("Value shouldn't exist")
+	}
+	if !StrListContainsGlob(haystack, "root/test") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "ops_test") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "ops") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "dev") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "test-dev") {
+		t.Fatalf("Value should exist")
+	}
+	if !StrListContainsGlob(haystack, "_test_") {
+		t.Fatalf("Value should exist")
+	}
+
+}
+
 func TestStrutil_ListContains(t *testing.T) {
 	haystack := []string{
 		"dev",
@@ -317,7 +349,7 @@ func TestGlobbedStringsMatch(t *testing.T) {
 		actual := GlobbedStringsMatch(tc.item, tc.val)
 
 		if actual != tc.expect {
-			t.Fatalf("Bad testcase %#v, expected %b, got %b", tc, tc.expect, actual)
+			t.Fatalf("Bad testcase %#v, expected %t, got %t", tc, tc.expect, actual)
 		}
 	}
 }
@@ -365,5 +397,29 @@ func TestStrutil_AppendIfMissing(t *testing.T) {
 	}
 	if keys[1] != "bar" {
 		t.Fatalf("expected slice to still contain key 'bar': %v", keys)
+	}
+}
+
+func TestStrUtil_RemoveDuplicates(t *testing.T) {
+	type tCase struct {
+		input     []string
+		expect    []string
+		lowercase bool
+	}
+
+	tCases := []tCase{
+		tCase{[]string{}, []string{}, false},
+		tCase{[]string{}, []string{}, true},
+		tCase{[]string{"a", "b", "a"}, []string{"a", "b"}, false},
+		tCase{[]string{"A", "b", "a"}, []string{"A", "a", "b"}, false},
+		tCase{[]string{"A", "b", "a"}, []string{"a", "b"}, true},
+	}
+
+	for _, tc := range tCases {
+		actual := RemoveDuplicates(tc.input, tc.lowercase)
+
+		if !reflect.DeepEqual(actual, tc.expect) {
+			t.Fatalf("Bad testcase %#v, expected %v, got %v", tc, tc.expect, actual)
+		}
 	}
 }

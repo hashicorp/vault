@@ -34,7 +34,7 @@ encrypted storage, it couldn't be read without multiple keys which are generally
 distributed to multiple individuals. This is known as _unsealing_, and happens
 once whenever Vault starts.
 
-For an unsealed Vault, every interaction is logged in via the audit backends.
+For an unsealed Vault, every interaction is logged in via the audit devices.
 Even erroneous requests (invalid access tokens, for example) are logged.
 To access any data, an access token is required. This token is usually
 associated with an identity coming from a system such as GitHub, LDAP, etc.

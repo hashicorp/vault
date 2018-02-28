@@ -1,8 +1,10 @@
 package transit
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -49,8 +51,7 @@ func (b *backend) pathExportKeys() *framework.Path {
 	}
 }
 
-func (b *backend) pathPolicyExportRead(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	exportType := d.Get("type").(string)
 	name := d.Get("name").(string)
 	version := d.Get("version").(string)
@@ -63,7 +64,7 @@ func (b *backend) pathPolicyExportRead(
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}
 
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	p, lock, err := b.lm.GetPolicyShared(ctx, req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -97,7 +98,7 @@ func (b *backend) pathPolicyExportRead(
 			if err != nil {
 				return nil, err
 			}
-			retKeys[strconv.Itoa(k)] = exportKey
+			retKeys[k] = exportKey
 		}
 
 	default:
@@ -115,7 +116,7 @@ func (b *backend) pathPolicyExportRead(
 		if versionValue < p.MinDecryptionVersion {
 			return logical.ErrorResponse("version for export is below minimun decryption version"), logical.ErrInvalidRequest
 		}
-		key, ok := p.Keys[versionValue]
+		key, ok := p.Keys[strconv.Itoa(versionValue)]
 		if !ok {
 			return logical.ErrorResponse("version does not exist or cannot be found"), logical.ErrInvalidRequest
 		}
@@ -150,8 +151,11 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 	case exportTypeEncryptionKey:
 		switch policy.Type {
-		case keysutil.KeyType_AES256_GCM96:
+		case keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
+
+		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+			return encodeRSAPrivateKey(key.RSAKey), nil
 		}
 
 	case exportTypeSigningKey:
@@ -165,10 +169,25 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 		case keysutil.KeyType_ED25519:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
+
+		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+			return encodeRSAPrivateKey(key.RSAKey), nil
 		}
 	}
 
 	return "", fmt.Errorf("unknown key type %v", policy.Type)
+}
+
+func encodeRSAPrivateKey(key *rsa.PrivateKey) string {
+	// When encoding PKCS1, the PEM header should be `RSA PRIVATE KEY`. When Go
+	// has PKCS8 encoding support, we may want to change this.
+	derBytes := x509.MarshalPKCS1PrivateKey(key)
+	pemBlock := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: derBytes,
+	}
+	pemBytes := pem.EncodeToMemory(pemBlock)
+	return string(pemBytes)
 }
 
 func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string, error) {

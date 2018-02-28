@@ -52,7 +52,7 @@ func ServiceAccountKey(iamClient *iam.Service, keyId, accountId, projectName str
 	keyResource := fmt.Sprintf(serviceAccountKeyTemplate, projectName, accountId, keyId)
 	key, err := iamClient.Projects.ServiceAccounts.Keys.Get(keyResource).PublicKeyType(serviceAccountKeyFileType).Do()
 	if err != nil {
-		return nil, fmt.Errorf("service account key '%s' does not exist", keyResource)
+		return nil, fmt.Errorf("service account key '%s' does not exist: %v", keyResource, err)
 	}
 	return key, nil
 }

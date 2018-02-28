@@ -4,135 +4,171 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
-// TokenRevokeCommand is a Command that mounts a new mount.
+var _ cli.Command = (*TokenRevokeCommand)(nil)
+var _ cli.CommandAutocomplete = (*TokenRevokeCommand)(nil)
+
 type TokenRevokeCommand struct {
-	meta.Meta
+	*BaseCommand
+
+	flagAccessor bool
+	flagSelf     bool
+	flagMode     string
+}
+
+func (c *TokenRevokeCommand) Synopsis() string {
+	return "Revoke a token and its children"
+}
+
+func (c *TokenRevokeCommand) Help() string {
+	helpText := `
+Usage: vault token revoke [options] [TOKEN | ACCESSOR]
+
+  Revokes authentication tokens and their children. If a TOKEN is not provided,
+  the locally authenticated token is used. The "-mode" flag can be used to
+  control the behavior of the revocation. See the "-mode" flag documentation
+  for more information.
+
+  Revoke a token and all the token's children:
+
+      $ vault token revoke 96ddf4bc-d217-f3ba-f9bd-017055595017
+
+  Revoke a token leaving the token's children:
+
+      $ vault token revoke -mode=orphan 96ddf4bc-d217-f3ba-f9bd-017055595017
+
+  Revoke a token by accessor:
+
+      $ vault token revoke -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da
+
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+
+	return strings.TrimSpace(helpText)
+}
+
+func (c *TokenRevokeCommand) Flags() *FlagSets {
+	set := c.flagSet(FlagSetHTTP)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:       "accessor",
+		Target:     &c.flagAccessor,
+		Default:    false,
+		EnvVar:     "",
+		Completion: complete.PredictNothing,
+		Usage:      "Treat the argument as an accessor instead of a token.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:       "self",
+		Target:     &c.flagSelf,
+		Default:    false,
+		EnvVar:     "",
+		Completion: complete.PredictNothing,
+		Usage:      "Perform the revocation on the currently authenticated token.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "mode",
+		Target:     &c.flagMode,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictSet("orphan", "path"),
+		Usage: "Type of revocation to perform. If unspecified, Vault will revoke " +
+			"the token and all of the token's children. If \"orphan\", Vault will " +
+			"revoke only the token, leaving the children as orphans. If \"path\", " +
+			"tokens created from the given authentication path prefix are deleted " +
+			"along with their children.",
+	})
+
+	return set
+}
+
+func (c *TokenRevokeCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (c *TokenRevokeCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
 }
 
 func (c *TokenRevokeCommand) Run(args []string) int {
-	var mode string
-	var accessor bool
-	var self bool
-	var token string
-	flags := c.Meta.FlagSet("token-revoke", meta.FlagSetDefault)
-	flags.BoolVar(&accessor, "accessor", false, "")
-	flags.BoolVar(&self, "self", false, "")
-	flags.StringVar(&mode, "mode", "", "")
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
 		return 1
 	}
 
-	args = flags.Args()
-	switch {
-	case len(args) == 1 && !self:
-		token = args[0]
-	case len(args) != 0 && self:
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\ntoken-revoke expects no arguments when revoking self"))
+	args = f.Args()
+	token := ""
+	if len(args) > 0 {
+		token = strings.TrimSpace(args[0])
+	}
+
+	switch c.flagMode {
+	case "", "orphan", "path":
+	default:
+		c.UI.Error(fmt.Sprintf("Invalid mode: %s", c.flagMode))
 		return 1
-	case len(args) != 1 && !self:
-		flags.Usage()
-		c.Ui.Error(fmt.Sprintf(
-			"\ntoken-revoke expects one argument or the 'self' flag"))
+	}
+
+	switch {
+	case c.flagSelf && len(args) > 0:
+		c.UI.Error(fmt.Sprintf("Too many arguments with -self (expected 0, got %d)", len(args)))
+		return 1
+	case !c.flagSelf && len(args) > 1:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1 or -self, got %d)", len(args)))
+		return 1
+	case !c.flagSelf && len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1 or -self, got %d)", len(args)))
+		return 1
+	case c.flagSelf && c.flagAccessor:
+		c.UI.Error("Cannot use -self with -accessor!")
+		return 1
+	case c.flagSelf && c.flagMode != "":
+		c.UI.Error("Cannot use -self with -mode!")
+		return 1
+	case c.flagAccessor && c.flagMode == "orphan":
+		c.UI.Error("Cannot use -accessor with -mode=orphan!")
+		return 1
+	case c.flagAccessor && c.flagMode == "path":
+		c.UI.Error("Cannot use -accessor with -mode=path!")
 		return 1
 	}
 
 	client, err := c.Client()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
+		c.UI.Error(err.Error())
 		return 2
 	}
 
-	var fn func(string) error
+	var revokeFn func(string) error
 	// Handle all 6 possible combinations
 	switch {
-	case !accessor && self && mode == "":
-		fn = client.Auth().Token().RevokeSelf
-	case !accessor && !self && mode == "":
-		fn = client.Auth().Token().RevokeTree
-	case !accessor && !self && mode == "orphan":
-		fn = client.Auth().Token().RevokeOrphan
-	case !accessor && !self && mode == "path":
-		fn = client.Sys().RevokePrefix
-	case accessor && !self && mode == "":
-		fn = client.Auth().Token().RevokeAccessor
-	case accessor && self:
-		c.Ui.Error("token-revoke cannot be run on self when 'accessor' flag is set")
-		return 1
-	case self && mode != "":
-		c.Ui.Error("token-revoke cannot be run on self when 'mode' flag is set")
-		return 1
-	case accessor && mode == "orphan":
-		c.Ui.Error("token-revoke cannot be run for 'orphan' mode when 'accessor' flag is set")
-		return 1
-	case accessor && mode == "path":
-		c.Ui.Error("token-revoke cannot be run for 'path' mode when 'accessor' flag is set")
-		return 1
+	case !c.flagAccessor && c.flagSelf && c.flagMode == "":
+		revokeFn = client.Auth().Token().RevokeSelf
+	case !c.flagAccessor && !c.flagSelf && c.flagMode == "":
+		revokeFn = client.Auth().Token().RevokeTree
+	case !c.flagAccessor && !c.flagSelf && c.flagMode == "orphan":
+		revokeFn = client.Auth().Token().RevokeOrphan
+	case !c.flagAccessor && !c.flagSelf && c.flagMode == "path":
+		revokeFn = client.Sys().RevokePrefix
+	case c.flagAccessor && !c.flagSelf && c.flagMode == "":
+		revokeFn = client.Auth().Token().RevokeAccessor
 	}
 
-	if err := fn(token); err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error revoking token: %s", err))
+	if err := revokeFn(token); err != nil {
+		c.UI.Error(fmt.Sprintf("Error revoking token: %s", err))
 		return 2
 	}
 
-	c.Ui.Output("Success! Token revoked if it existed.")
+	c.UI.Output("Success! Revoked token (if it existed)")
 	return 0
-}
-
-func (c *TokenRevokeCommand) Synopsis() string {
-	return "Revoke one or more auth tokens"
-}
-
-func (c *TokenRevokeCommand) Help() string {
-	helpText := `
-Usage: vault token-revoke [options] [token|accessor]
-
-  Revoke one or more auth tokens.
-
-  This command revokes auth tokens. Use the "revoke" command for
-  revoking secrets.
-
-  Depending on the flags used, auth tokens can be revoked in multiple ways
-  depending on the "-mode" flag:
-
-    * Without any value, the token specified and all of its children
-      will be revoked.
-
-    * With the "orphan" value, only the specific token will be revoked.
-      All of its children will be orphaned.
-
-    * With the "path" value, tokens created from the given auth path
-      prefix will be deleted, along with all their children. In this case
-      the "token" arg above is actually a "path". This mode does *not*
-      work with token values or parts of token values.
-
-  Token can be revoked using the token accessor. This can be done by
-  setting the '-accessor' flag. Note that when '-accessor' flag is set,
-  '-mode' should not be set for 'orphan' or 'path'. This is because,
-  a token accessor always revokes the token along with its child tokens.
-
-General Options:
-` + meta.GeneralOptionsUsage() + `
-Token Options:
-
-  -accessor               A boolean flag, if set, treats the argument as an accessor of the token.
-                          Note that accessor can also be used for looking up the token properties
-                          via '/auth/token/lookup-accessor/<accessor>' endpoint.
-                          Accessor is used when there is no access to token ID.
-
-  -self                   A boolean flag, if set, the operation is performed on the currently
-                          authenticated token i.e. lookup-self.
-
-  -mode=value             The type of revocation to do. See the documentation
-                          above for more information.
-
-`
-	return strings.TrimSpace(helpText)
 }

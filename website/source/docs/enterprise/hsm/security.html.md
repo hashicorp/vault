@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise HSM Security Details"
+page_title: "Security Details - HSM Integration - Vault Enterprise"
 sidebar_current: "docs-vault-enterprise-hsm-security"
 description: |-
   Recommendations to ensure the security of a Vault Enterprise HSM deployment.
@@ -23,7 +23,7 @@ stored in Vault's configuration file, read access to the file should be tightly
 controlled to appropriate users. (Vault's configuration file should always have
 tight write controls.) Rather than storing these values into Vault's
 configuration file, they can also be supplied via the environment; see the
-[Configuration](/docs/vault-enterprise/hsm/configuration.html) page for more details.
+[Configuration](/docs/configuration/seal/pkcs11.html) page for more details.
 
 The attack surface of stolen PKCS#11 credentials depends highly on the
 individual HSM, but generally speaking, it should be assumed that if an

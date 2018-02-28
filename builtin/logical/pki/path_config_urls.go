@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/asaskevich/govalidator"
@@ -52,8 +53,8 @@ func validateURLs(urls []string) string {
 	return ""
 }
 
-func getURLs(req *logical.Request) (*urlEntries, error) {
-	entry, err := req.Storage.Get("urls")
+func getURLs(ctx context.Context, req *logical.Request) (*urlEntries, error) {
+	entry, err := req.Storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +70,7 @@ func getURLs(req *logical.Request) (*urlEntries, error) {
 	return &entries, nil
 }
 
-func writeURLs(req *logical.Request, entries *urlEntries) error {
+func writeURLs(ctx context.Context, req *logical.Request, entries *urlEntries) error {
 	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
@@ -78,7 +79,7 @@ func writeURLs(req *logical.Request, entries *urlEntries) error {
 		return fmt.Errorf("Unable to marshal entry into JSON")
 	}
 
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return err
 	}
@@ -86,9 +87,8 @@ func writeURLs(req *logical.Request, entries *urlEntries) error {
 	return nil
 }
 
-func (b *backend) pathReadURL(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(req)
+func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -103,9 +103,8 @@ func (b *backend) pathReadURL(
 	return resp, nil
 }
 
-func (b *backend) pathWriteURL(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(req)
+func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +138,7 @@ func (b *backend) pathWriteURL(
 		}
 	}
 
-	return nil, writeURLs(req, entries)
+	return nil, writeURLs(ctx, req, entries)
 }
 
 type urlEntries struct {

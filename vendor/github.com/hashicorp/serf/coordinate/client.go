@@ -6,6 +6,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/armon/go-metrics"
 )
 
 // Client manages the estimated network coordinate for a given node, and adjusts
@@ -203,6 +205,20 @@ func (c *Client) Update(node string, other *Coordinate, rtt time.Duration) (*Coo
 
 	if err := c.checkCoordinate(other); err != nil {
 		return nil, err
+	}
+
+	// The code down below can handle zero RTTs, which we have seen in
+	// https://github.com/hashicorp/consul/issues/3789, presumably in
+	// environments with coarse-grained monotonic clocks (we are still
+	// trying to pin this down). In any event, this is ok from a code PoV
+	// so we don't need to alert operators with spammy messages. We did
+	// add a counter so this is still observable, though.
+	const maxRTT = 10 * time.Second
+	if rtt < 0 || rtt > maxRTT {
+		return nil, fmt.Errorf("round trip time not in valid range, duration %v is not a positive value less than %v ", rtt, maxRTT)
+	}
+	if rtt == 0 {
+		metrics.IncrCounter([]string{"serf", "coordinate", "zero-rtt"}, 1)
 	}
 
 	rttSeconds := c.latencyFilter(node, rtt.Seconds())

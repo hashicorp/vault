@@ -1,6 +1,8 @@
 package ssh
 
 import (
+	"context"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -23,8 +25,8 @@ func pathVerify(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) getOTP(s logical.Storage, n string) (*sshOTP, error) {
-	entry, err := s.Get("otp/" + n)
+func (b *backend) getOTP(ctx context.Context, s logical.Storage, n string) (*sshOTP, error) {
+	entry, err := s.Get(ctx, "otp/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +42,7 @@ func (b *backend) getOTP(s logical.Storage, n string) (*sshOTP, error) {
 	return &result, nil
 }
 
-func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	otp := d.Get("otp").(string)
 
 	// If OTP is not a UUID and a string matching VerifyEchoRequest, then the
@@ -64,7 +66,7 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 	otpSalted := salt.SaltID(otp)
 
 	// Return nil if there is no entry found for the OTP
-	otpEntry, err := b.getOTP(req.Storage, otpSalted)
+	otpEntry, err := b.getOTP(ctx, req.Storage, otpSalted)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +75,7 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 	}
 
 	// Delete the OTP if found. This is what makes the key an OTP.
-	err = req.Storage.Delete("otp/" + otpSalted)
+	err = req.Storage.Delete(ctx, "otp/"+otpSalted)
 	if err != nil {
 		return nil, err
 	}

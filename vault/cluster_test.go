@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -24,12 +25,12 @@ var (
 func TestClusterFetching(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	err := c.setupCluster()
+	err := c.setupCluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cluster, err := c.Cluster()
+	cluster, err := c.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +81,7 @@ func TestClusterHAFetching(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, c)
 
-	cluster, err := c.Cluster()
+	cluster, err := c.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
 	var lastTLSConfig *tls.Config
 	checkListenersFunc := func(expectFail bool) {
-		tlsConfig, err := cores[0].ClusterTLSConfig()
+		tlsConfig, err := cores[0].ClusterTLSConfig(context.Background(), nil)
 		if err != nil {
 			if err.Error() != consts.ErrSealed.Error() {
 				t.Fatal(err)
@@ -337,7 +338,6 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 	// We need to call Leader as that refreshes the connection info
 	isLeader, _, _, err := c.Leader()
 	if err != nil {
-		panic(err.Error())
 		t.Fatal(err)
 	}
 	if isLeader {
@@ -395,7 +395,7 @@ func TestCluster_CustomCipherSuites(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, core.Core)
 
-	tlsConf, err := core.Core.ClusterTLSConfig()
+	tlsConf, err := core.Core.ClusterTLSConfig(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

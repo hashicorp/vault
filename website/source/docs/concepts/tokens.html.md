@@ -3,19 +3,19 @@ layout: "docs"
 page_title: "Tokens"
 sidebar_current: "docs-concepts-tokens"
 description: |-
-  Tokens are a core authentication method in Vault. Concepts and important features.
+  Tokens are a core auth method in Vault. Concepts and important features.
 ---
 
 # Tokens
 
 Tokens are the core method for _authentication_ within Vault. Tokens
-can be used directly or [authentication backends](/docs/concepts/auth.html)
+can be used directly or [auth methods](/docs/concepts/auth.html)
 can be used to dynamically generate tokens based on external identities.
 
 If you've gone through the getting started guide, you probably noticed that
 `vault server -dev` (or `vault init` for a non-dev server) outputs an
 initial "root token." This is the first method of authentication for Vault.
-It is also the only authentication backend that cannot be disabled.
+It is also the only auth method that cannot be disabled.
 
 As stated in the [authentication concepts](/docs/concepts/auth.html),
 all external authentication mechanisms, such as GitHub, map down to dynamically
@@ -39,7 +39,7 @@ Often in documentation or in help channels, the "token store" is referenced.
 This is the same as the [`token` authentication
 backend](/docs/auth/token.html). This is a special
 backend in that it is responsible for creating and storing tokens, and cannot
-be disabled. It is also the only authentication backend that has no login
+be disabled. It is also the only auth method that has no login
 capability -- all actions require existing authenticated tokens.
 
 ### Root Tokens
@@ -54,12 +54,12 @@ of version 0.6.1, there are only three ways to create root tokens:
    expiration
 2. By using another root token; a root token with an expiration cannot create a
    root token that never expires
-3. By using `vault generate-root` ([example](/guides/generate-root.html))
+3. By using `vault generate-root` ([example](/guides/operations/generate-root.html))
    with the permission of a quorum of unseal key holders
 
 Root tokens are useful in development but should be extremely carefully guarded
 in production. In fact, the Vault team recommends that root tokens are only
-used for just enough initial setup (usually, setting up authentication backends
+used for just enough initial setup (usually, setting up auth methods
 and policies necessary to allow administrators to acquire more limited tokens)
 or in emergencies, and are revoked immediately after they are no longer needed.
 If a new root token is needed, the `generate-root` command and associated [API
@@ -87,7 +87,7 @@ token tree. These orphan tokens can be created:
 2. By having `sudo` capability or `root` policy when accessing
    `auth/token/create` and setting the `orphan` parameter to `true`
 3. Via token store roles
-4. By logging in with any other (non-`token`) authentication backend
+4. By logging in with any other (non-`token`) auth method
 
 Users with appropriate permissions can also use the `auth/token/revoke-orphan`
 endpoint, which revokes the given token but rather than revoke the rest of the
@@ -111,10 +111,10 @@ correlated with a particular job ID. When the job is complete, the accessor can
 be used to instantly revoke the token given to the job and all of its leased
 credentials, limiting the chance that a bad actor will discover and use them.
 
-Audit backends can optionally be set to not obfuscate token accessors in audit
+Audit devices can optionally be set to not obfuscate token accessors in audit
 logs. This provides a way to quickly revoke tokens in case of an emergency.
-However, it also means that the audit logs can be used to perform a
-larger-scale denial of service attack.
+However, it also means that the audit logs can be used to perform a larger-scale
+denial of service attack.
 
 Finally, the only way to "list tokens" is via the `auth/token/accessors`
 command, which actually gives a list of token accessors. While this is still a
@@ -132,10 +132,10 @@ current TTL is up, the token will no longer function -- it, and its associated
 leases, are revoked.
 
 If the token is renewable, Vault can be asked to extend the token validity
-period using `vault token-renew` or the appropriate renewal endpoint. At this
+period using `vault token renew` or the appropriate renewal endpoint. At this
 time, various factors come into play. What happens depends upon whether the
 token is a periodic token (available for creation by `root`/`sudo` users, token
-store roles, or some authentication backends), has an explicit maximum TTL
+store roles, or some auth methods), has an explicit maximum TTL
 attached, or neither.
 
 #### The General Case
@@ -152,7 +152,7 @@ token's information is looked up. It is based on a combination of factors:
    tuning](/api/system/mounts.html). This value
    is allowed to override the system max TTL -- it can be longer or shorter,
    and if set this value will be respected.
-3. A value suggested by the authentication backend that issued the token. This
+3. A value suggested by the auth method that issued the token. This
    might be configured on a per-role, per-group, or per-user basis. This value
    is allowed to be less than the mount max TTL (or, if not set, the system max
    TTL), but it is not allowed to be longer.
@@ -184,7 +184,7 @@ can be created in a few ways:
 1. By having `sudo` capability or a `root` token with the `auth/token/create`
    endpoint
 2. By using token store roles
-3. By using an authentication backend that supports issuing these, such as
+3. By using an auth method that supports issuing these, such as
    AppRole
 
 At issue time, the TTL of a periodic token will be equal to the configured

@@ -8,9 +8,9 @@ import (
 )
 
 // This logic was pulled from the http package so that it can be used for
-// encoding wrapped responses as well. It simply translates the logical request
-// to an http response, with the values we want and omitting the values we
-// don't.
+// encoding wrapped responses as well. It simply translates the logical
+// response to an http response, with the values we want and omitting the
+// values we don't.
 func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 	httpResp := &HTTPResponse{
 		Data:     input.Data,
@@ -92,6 +92,7 @@ type HTTPAuth struct {
 
 type HTTPWrapInfo struct {
 	Token           string `json:"token"`
+	Accessor        string `json:"accessor"`
 	TTL             int    `json:"ttl"`
 	CreationTime    string `json:"creation_time"`
 	CreationPath    string `json:"creation_path"`

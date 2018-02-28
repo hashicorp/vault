@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -72,6 +72,14 @@ message APIResource {
   // namespaced indicates if a resource is namespaced or not.
   optional bool namespaced = 2;
 
+  // group is the preferred group of the resource.  Empty implies the group of the containing resource list.
+  // For subresources, this may have a different value, for example: Scale".
+  optional string group = 8;
+
+  // version is the preferred version of the resource.  Empty implies the version of the containing resource list
+  // For subresources, this may have a different value, for example: v1 (while inside a v1beta1 version of the core resource's group)".
+  optional string version = 9;
+
   // kind is the kind for the resource (e.g. 'Foo' is the kind for a resource 'foo')
   optional string kind = 3;
 
@@ -101,6 +109,7 @@ message APIResourceList {
 // discover the API at /api, which is the root path of the legacy v1 API.
 // 
 // +protobuf.options.(gogoproto.goproto_stringer)=false
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 message APIVersions {
   // versions are the api versions that are available.
   repeated string versions = 1;
@@ -140,6 +149,10 @@ message DeleteOptions {
   // Either this field or OrphanDependents may be set, but not both.
   // The default policy is decided by the existing finalizer set in the
   // metadata.finalizers and the resource-specific default policy.
+  // Acceptable values are: 'Orphan' - orphan the dependents; 'Background' -
+  // allow the garbage collector to delete the dependents in the background;
+  // 'Foreground' - a cascading policy that deletes all dependents in the
+  // foreground.
   // +optional
   optional string propagationPolicy = 4;
 }
@@ -249,6 +262,8 @@ message Initializers {
   // When the last pending initializer is removed, and no failing result is set, the initializers
   // struct will be set to nil and the object is considered as initialized and visible to all
   // clients.
+  // +patchMergeKey=name
+  // +patchStrategy=merge
   repeated Initializer pending = 1;
 
   // If result is set with the Failure field, the object will be persisted to storage and then deleted,
@@ -280,7 +295,7 @@ message LabelSelectorRequirement {
   optional string key = 1;
 
   // operator represents a key's relationship to a set of values.
-  // Valid operators ard In, NotIn, Exists and DoesNotExist.
+  // Valid operators are In, NotIn, Exists and DoesNotExist.
   optional string operator = 2;
 
   // values is an array of string values. If the operator is In or NotIn,
@@ -291,10 +306,21 @@ message LabelSelectorRequirement {
   repeated string values = 3;
 }
 
+// List holds a list of objects, which may not be known by the server.
+message List {
+  // Standard list metadata.
+  // More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
+  // +optional
+  optional ListMeta metadata = 1;
+
+  // List of objects
+  repeated k8s.io.apimachinery.pkg.runtime.RawExtension items = 2;
+}
+
 // ListMeta describes metadata that synthetic resources must have, including lists and
 // various status objects. A resource may have only one of {ObjectMeta, ListMeta}.
 message ListMeta {
-  // SelfLink is a URL representing this object.
+  // selfLink is a URL representing this object.
   // Populated by the system.
   // Read-only.
   // +optional
@@ -308,6 +334,14 @@ message ListMeta {
   // More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#concurrency-control-and-consistency
   // +optional
   optional string resourceVersion = 2;
+
+  // continue may be set if the user set a limit on the number of items returned, and indicates that
+  // the server has more data available. The value is opaque and may be used to issue another request
+  // to the endpoint that served this list to retrieve the next set of available objects. Continuing a
+  // list may not be possible if the server configuration has changed or more than a few minutes have
+  // passed. The resourceVersion field returned when using this continue value will be identical to
+  // the value in the first response.
+  optional string continue = 3;
 }
 
 // ListOptions is the query options to a standard REST list call.
@@ -341,8 +375,37 @@ message ListOptions {
   optional string resourceVersion = 4;
 
   // Timeout for the list/watch call.
+  // This limits the duration of the call, regardless of any activity or inactivity.
   // +optional
   optional int64 timeoutSeconds = 5;
+
+  // limit is a maximum number of responses to return for a list call. If more items exist, the
+  // server will set the `continue` field on the list metadata to a value that can be used with the
+  // same initial query to retrieve the next set of results. Setting a limit may return fewer than
+  // the requested amount of items (up to zero items) in the event all requested objects are
+  // filtered out and clients should only use the presence of the continue field to determine whether
+  // more results are available. Servers may choose not to support the limit argument and will return
+  // all of the available results. If limit is specified and the continue field is empty, clients may
+  // assume that no more results are available. This field is not supported if watch is true.
+  // 
+  // The server guarantees that the objects returned when using continue will be identical to issuing
+  // a single list call without a limit - that is, no objects created, modified, or deleted after the
+  // first request is issued will be included in any subsequent continued requests. This is sometimes
+  // referred to as a consistent snapshot, and ensures that a client that is using limit to receive
+  // smaller chunks of a very large result can ensure they see all possible objects. If objects are
+  // updated during a chunked list the version of the object that was present at the time the first list
+  // result was calculated is returned.
+  optional int64 limit = 7;
+
+  // The continue option should be set when retrieving more results from the server. Since this value
+  // is server defined, clients may only use the continue value from a previous query result with
+  // identical query parameters (except for the value of continue) and the server may reject a continue
+  // value it does not recognize. If the specified continue value is no longer valid whether due to
+  // expiration (generally five to fifteen minutes) or a configuration change on the server the server
+  // will respond with a 410 ResourceExpired error indicating the client must restart their list without
+  // the continue field. This field is not supported when watch is true. Clients may start a watch from
+  // the last resourceVersion value returned by the server and not miss any modifications.
+  optional string continue = 8;
 }
 
 // MicroTime is version of Time with microsecond level precision.
@@ -452,15 +515,16 @@ message ObjectMeta {
   // DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This
   // field is set by the server when a graceful deletion is requested by the user, and is not
   // directly settable by a client. The resource is expected to be deleted (no longer visible
-  // from resource lists, and not reachable by name) after the time in this field. Once set,
-  // this value may not be unset or be set further into the future, although it may be shortened
-  // or the resource may be deleted prior to this time. For example, a user may request that
-  // a pod is deleted in 30 seconds. The Kubelet will react by sending a graceful termination
-  // signal to the containers in the pod. After that 30 seconds, the Kubelet will send a hard
-  // termination signal (SIGKILL) to the container and after cleanup, remove the pod from the
-  // API. In the presence of network partitions, this object may still exist after this
-  // timestamp, until an administrator or automated process can determine the resource is
-  // fully terminated.
+  // from resource lists, and not reachable by name) after the time in this field, once the
+  // finalizers list is empty. As long as the finalizers list contains items, deletion is blocked.
+  // Once the deletionTimestamp is set, this value may not be unset or be set further into the
+  // future, although it may be shortened or the resource may be deleted prior to this time.
+  // For example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react
+  // by sending a graceful termination signal to the containers in the pod. After that 30 seconds,
+  // the Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup,
+  // remove the pod from the API. In the presence of network partitions, this object may still
+  // exist after this timestamp, until an administrator or automated process can determine the
+  // resource is fully terminated.
   // If not set, graceful deletion of the object has not been requested.
   // 
   // Populated by the system when a graceful deletion is requested.
@@ -556,6 +620,10 @@ message OwnerReference {
   // otherwise 422 (Unprocessable Entity) will be returned.
   // +optional
   optional bool blockOwnerDeletion = 7;
+}
+
+// Patch is provided to give a concrete name and type to the Kubernetes PATCH request body.
+message Patch {
 }
 
 // Preconditions must be fulfilled before an operation (update, delete, etc.) is carried out.
@@ -677,7 +745,9 @@ message StatusDetails {
   // +optional
   repeated StatusCause causes = 4;
 
-  // If specified, the time in seconds before the operation should be retried.
+  // If specified, the time in seconds before the operation should be retried. Some errors may indicate
+  // the client must take an alternate action - for those errors this field may indicate how long to wait
+  // before taking the alternate action.
   // +optional
   optional int32 retryAfterSeconds = 5;
 }
@@ -721,6 +791,8 @@ message Timestamp {
 // TypeMeta describes an individual object in an API response or request
 // with strings representing the type of the object and its API schema version.
 // Structures that are versioned or persisted should inline TypeMeta.
+// 
+// +k8s:deepcopy-gen=false
 message TypeMeta {
   // Kind is a string value representing the REST resource this object represents.
   // Servers may infer this from the endpoint the client submits requests to.
@@ -751,6 +823,8 @@ message Verbs {
 // Event represents a single event to a watched resource.
 // 
 // +protobuf=true
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 message WatchEvent {
   optional string type = 1;
 

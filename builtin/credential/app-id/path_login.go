@@ -1,6 +1,7 @@
 package appId
 
 import (
+	"context"
 	"crypto/sha1"
 	"crypto/subtle"
 	"encoding/hex"
@@ -53,7 +54,8 @@ func pathLogin(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathLogin,
+			logical.UpdateOperation:         b.pathLogin,
+			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
 		},
 
 		HelpSynopsis:    pathLoginSyn,
@@ -61,13 +63,28 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLogin(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	appId := data.Get("app_id").(string)
+
+	if appId == "" {
+		return nil, fmt.Errorf("missing app_id")
+	}
+
+	return &logical.Response{
+		Auth: &logical.Auth{
+			Alias: &logical.Alias{
+				Name: appId,
+			},
+		},
+	}, nil
+}
+
+func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	appId := data.Get("app_id").(string)
 	userId := data.Get("user_id").(string)
 
 	var displayName string
-	if dispName, resp, err := b.verifyCredentials(req, appId, userId); err != nil {
+	if dispName, resp, err := b.verifyCredentials(ctx, req, appId, userId); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -76,7 +93,7 @@ func (b *backend) pathLogin(
 	}
 
 	// Get the policies associated with the app
-	policies, err := b.MapAppId.Policies(req.Storage, appId)
+	policies, err := b.MapAppId.Policies(ctx, req.Storage, appId)
 	if err != nil {
 		return nil, err
 	}
@@ -108,21 +125,20 @@ func (b *backend) pathLogin(
 	}, nil
 }
 
-func (b *backend) pathLoginRenew(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	appId := req.Auth.InternalData["app-id"].(string)
 	userId := req.Auth.InternalData["user-id"].(string)
 
 	// Skipping CIDR verification to enable renewal from machines other than
 	// the ones encompassed by CIDR block.
-	if _, resp, err := b.verifyCredentials(req, appId, userId); err != nil {
+	if _, resp, err := b.verifyCredentials(ctx, req, appId, userId); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
 	}
 
 	// Get the policies associated with the app
-	mapPolicies, err := b.MapAppId.Policies(req.Storage, appId)
+	mapPolicies, err := b.MapAppId.Policies(ctx, req.Storage, appId)
 	if err != nil {
 		return nil, err
 	}
@@ -130,17 +146,17 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies do not match")
 	}
 
-	return framework.LeaseExtend(0, 0, b.System())(req, d)
+	return framework.LeaseExtend(0, 0, b.System())(ctx, req, d)
 }
 
-func (b *backend) verifyCredentials(req *logical.Request, appId, userId string) (string, *logical.Response, error) {
+func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, appId, userId string) (string, *logical.Response, error) {
 	// Ensure both appId and userId are provided
 	if appId == "" || userId == "" {
 		return "", logical.ErrorResponse("missing 'app_id' or 'user_id'"), nil
 	}
 
 	// Look up the apps that this user is allowed to access
-	appsMap, err := b.MapUserId.Get(req.Storage, userId)
+	appsMap, err := b.MapUserId.Get(ctx, req.Storage, userId)
 	if err != nil {
 		return "", nil, err
 	}
@@ -189,7 +205,7 @@ func (b *backend) verifyCredentials(req *logical.Request, appId, userId string) 
 	}
 
 	// Get the raw data associated with the app
-	appRaw, err := b.MapAppId.Get(req.Storage, appId)
+	appRaw, err := b.MapAppId.Get(ctx, req.Storage, appId)
 	if err != nil {
 		return "", nil, err
 	}

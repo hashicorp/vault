@@ -1,6 +1,7 @@
 package logical
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -109,4 +110,44 @@ func ListResponse(keys []string) *Response {
 		resp.Data["keys"] = keys
 	}
 	return resp
+}
+
+// ListResponseWithInfo is used to format a response to a list operation and
+// return the keys as well as a map with corresponding key info.
+func ListResponseWithInfo(keys []string, keyInfo map[string]interface{}) *Response {
+	resp := ListResponse(keys)
+
+	keyInfoData := make(map[string]interface{})
+	for _, key := range keys {
+		val, ok := keyInfo[key]
+		if ok {
+			keyInfoData[key] = val
+		}
+	}
+
+	if len(keyInfoData) > 0 {
+		resp.Data["key_info"] = keyInfoData
+	}
+
+	return resp
+}
+
+// RespondWithStatusCode takes a response and converts it to a raw response with
+// the provided Status Code.
+func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, error) {
+	httpResp := LogicalResponseToHTTPResponse(resp)
+	httpResp.RequestID = req.ID
+
+	body, err := json.Marshal(httpResp)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Response{
+		Data: map[string]interface{}{
+			HTTPContentType: "application/json",
+			HTTPRawBody:     body,
+			HTTPStatusCode:  code,
+		},
+	}, nil
 }

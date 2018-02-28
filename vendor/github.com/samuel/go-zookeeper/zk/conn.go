@@ -101,8 +101,12 @@ type Conn struct {
 	reconnectLatch   chan struct{}
 	setWatchLimit    int
 	setWatchCallback func([]*setWatchesRequest)
+	// Debug (for recurring re-auth hang)
+	debugCloseRecvLoop bool
+	debugReauthDone    chan struct{}
 
-	logger Logger
+	logger  Logger
+	logInfo bool // true if information messages are logged; false if only errors are logged
 
 	buf []byte
 }
@@ -200,6 +204,7 @@ func Connect(servers []string, sessionTimeout time.Duration, options ...connOpti
 		watchers:       make(map[watchPathType][]chan Event),
 		passwd:         emptyPassword,
 		logger:         DefaultLogger,
+		logInfo:        true, // default is true for backwards compatability
 		buf:            make([]byte, bufferSize),
 	}
 
@@ -234,6 +239,21 @@ func WithDialer(dialer Dialer) connOption {
 func WithHostProvider(hostProvider HostProvider) connOption {
 	return func(c *Conn) {
 		c.hostProvider = hostProvider
+	}
+}
+
+// WithLogger returns a connection option specifying a non-default Logger
+func WithLogger(logger Logger) connOption {
+	return func(c *Conn) {
+		c.logger = logger
+	}
+}
+
+// WithLogInfo returns a connection option specifying whether or not information messages
+// shoud be logged.
+func WithLogInfo(logInfo bool) connOption {
+	return func(c *Conn) {
+		c.logInfo = logInfo
 	}
 }
 
@@ -276,6 +296,16 @@ func WithEventCallback(cb EventCallback) connOption {
 func WithMaxBufferSize(maxBufferSize int) connOption {
 	return func(c *Conn) {
 		c.maxBufferSize = maxBufferSize
+	}
+}
+
+// WithMaxConnBufferSize sets maximum buffer size used to send and encode
+// packets to Zookeeper server. The standard Zookeepeer client for java defaults
+// to a limit of 1mb. This option should be used for non-standard server setup
+// where znode is bigger than default 1mb.
+func WithMaxConnBufferSize(maxBufferSize int) connOption {
+	return func(c *Conn) {
+		c.buf = make([]byte, maxBufferSize)
 	}
 }
 
@@ -351,7 +381,9 @@ func (c *Conn) connect() error {
 		if err == nil {
 			c.conn = zkConn
 			c.setState(StateConnected)
-			c.logger.Printf("Connected to %s", c.Server())
+			if c.logInfo {
+				c.logger.Printf("Connected to %s", c.Server())
+			}
 			return nil
 		}
 
@@ -360,15 +392,32 @@ func (c *Conn) connect() error {
 }
 
 func (c *Conn) resendZkAuth(reauthReadyChan chan struct{}) {
+	shouldCancel := func() bool {
+		select {
+		case <-c.shouldQuit:
+			return true
+		case <-c.closeChan:
+			return true
+		default:
+			return false
+		}
+	}
+
 	c.credsMu.Lock()
 	defer c.credsMu.Unlock()
 
 	defer close(reauthReadyChan)
 
-	c.logger.Printf("Re-submitting `%d` credentials after reconnect",
-		len(c.creds))
+	if c.logInfo {
+		c.logger.Printf("Re-submitting `%d` credentials after reconnect",
+			len(c.creds))
+	}
 
 	for _, cred := range c.creds {
+		if shouldCancel() {
+			c.logger.Printf("Cancel rer-submitting credentials")
+			return
+		}
 		resChan, err := c.sendRequest(
 			opSetAuth,
 			&setAuthRequest{Type: 0,
@@ -384,7 +433,16 @@ func (c *Conn) resendZkAuth(reauthReadyChan chan struct{}) {
 			continue
 		}
 
-		res := <-resChan
+		var res response
+		select {
+		case res = <-resChan:
+		case <-c.closeChan:
+			c.logger.Printf("Recv closed, cancel re-submitting credentials")
+			return
+		case <-c.shouldQuit:
+			c.logger.Printf("Should quit, cancel re-submitting credentials")
+			return
+		}
 		if res.err != nil {
 			c.logger.Printf("Credential re-submit failed: %s", res.err)
 			// FIXME(prozlach): lets ignore errors for now
@@ -434,7 +492,9 @@ func (c *Conn) loop() {
 			c.logger.Printf("Authentication failed: %s", err)
 			c.conn.Close()
 		case err == nil:
-			c.logger.Printf("Authenticated: id=%d, timeout=%d", c.SessionID(), c.sessionTimeoutMs)
+			if c.logInfo {
+				c.logger.Printf("Authenticated: id=%d, timeout=%d", c.SessionID(), c.sessionTimeoutMs)
+			}
 			c.hostProvider.Connected()        // mark success
 			c.closeChan = make(chan struct{}) // channel to tell send loop stop
 			reauthChan := make(chan struct{}) // channel to tell send loop that authdata has been resubmitted
@@ -443,16 +503,28 @@ func (c *Conn) loop() {
 			wg.Add(1)
 			go func() {
 				<-reauthChan
+				if c.debugCloseRecvLoop {
+					close(c.debugReauthDone)
+				}
 				err := c.sendLoop()
-				c.logger.Printf("Send loop terminated: err=%v", err)
+				if err != nil || c.logInfo {
+					c.logger.Printf("Send loop terminated: err=%v", err)
+				}
 				c.conn.Close() // causes recv loop to EOF/exit
 				wg.Done()
 			}()
 
 			wg.Add(1)
 			go func() {
-				err := c.recvLoop(c.conn)
-				c.logger.Printf("Recv loop terminated: err=%v", err)
+				var err error
+				if c.debugCloseRecvLoop {
+					err = errors.New("DEBUG: close recv loop")
+				} else {
+					err = c.recvLoop(c.conn)
+				}
+				if err != io.EOF || c.logInfo {
+					c.logger.Printf("Recv loop terminated: err=%v", err)
+				}
 				if err == nil {
 					panic("zk: recvLoop should never return nil error")
 				}

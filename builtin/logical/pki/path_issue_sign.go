@@ -1,10 +1,12 @@
 package pki
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
@@ -77,12 +79,11 @@ basic constraints.`,
 
 // pathIssue issues a certificate and private key from given parameters,
 // subject to role restrictions
-func (b *backend) pathIssue(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
 
 	// Get the role
-	role, err := b.getRole(req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -90,17 +91,16 @@ func (b *backend) pathIssue(
 		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
 	}
 
-	return b.pathIssueSignCert(req, data, role, false, false)
+	return b.pathIssueSignCert(ctx, req, data, role, false, false)
 }
 
 // pathSign issues a certificate from a submitted CSR, subject to role
 // restrictions
-func (b *backend) pathSign(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role").(string)
 
 	// Get the role
-	role, err := b.getRole(req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -108,18 +108,17 @@ func (b *backend) pathSign(
 		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", roleName)), nil
 	}
 
-	return b.pathIssueSignCert(req, data, role, true, false)
+	return b.pathIssueSignCert(ctx, req, data, role, true, false)
 }
 
 // pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
 // role restrictions
-func (b *backend) pathSignVerbatim(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	roleName := data.Get("role").(string)
 
 	// Get the role if one was specified
-	role, err := b.getRole(req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -155,34 +154,39 @@ func (b *backend) pathSignVerbatim(
 		*entry.GenerateLease = *role.GenerateLease
 	}
 
-	return b.pathIssueSignCert(req, data, entry, true, true)
+	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
 }
 
-func (b *backend) pathIssueSignCert(
-	req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
+func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
-			`The "format" path parameter must be "pem", "der", or "pem_bundle"`), nil
+			`the "format" path parameter must be "pem", "der", or "pem_bundle"`), nil
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(req)
+	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(
-			"Could not fetch the CA certificate (was one set?): %s", caErr)}
+			"could not fetch the CA certificate (was one set?): %s", caErr)}
 	case errutil.InternalError:
 		return nil, errutil.InternalError{Err: fmt.Sprintf(
-			"Error fetching CA certificate: %s", caErr)}
+			"error fetching CA certificate: %s", caErr)}
 	}
 
+	input := &dataBundle{
+		req:           req,
+		apiData:       data,
+		role:          role,
+		signingBundle: signingBundle,
+	}
 	var parsedBundle *certutil.ParsedCertBundle
 	var err error
 	if useCSR {
-		parsedBundle, err = signCert(b, role, signingBundle, false, useCSRValues, req, data)
+		parsedBundle, err = signCert(b, input, false, useCSRValues)
 	} else {
-		parsedBundle, err = generateCert(b, role, signingBundle, false, req, data)
+		parsedBundle, err = generateCert(ctx, b, input, false)
 	}
 	if err != nil {
 		switch err.(type) {
@@ -195,12 +199,12 @@ func (b *backend) pathIssueSignCert(
 
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting raw signing bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw signing bundle to cert bundle: {{err}}", err)
 	}
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw cert bundle to cert bundle: {{err}}", err)
 	}
 
 	respData := map[string]interface{}{
@@ -267,8 +271,15 @@ func (b *backend) pathIssueSignCert(
 		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
 	}
 
+	if data.Get("private_key_format").(string) == "pkcs8" {
+		err = convertRespToPKCS8(resp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if !role.NoStore {
-		err = req.Storage.Put(&logical.StorageEntry{
+		err = req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 			Value: parsedBundle.CertificateBytes,
 		})

@@ -1,24 +1,61 @@
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
     <ul class="nav docs-sidenav">
-      <li<%= sidebar_current("guides-production-hardening") %>>
-        <a href="/guides/production.html">Production Hardening</a>
+
+
+      <li<%= sidebar_current("getting-started")%>>
+        <a href="/guides/getting-started/index.html">Getting Started</a>
       </li>
 
-      <li<%= sidebar_current("guides-generate-root") %>>
-        <a href="/guides/generate-root.html">Root Token Generation</a>
+      <li<%= sidebar_current("guides-operations")%>>
+        <a href="/guides/operations/index.html">Vault Operations</a>
+        <ul class="nav">
+          <li<%= sidebar_current("guides-operations-production-hardening") %>>
+            <a href="/guides/operations/production.html">Production Hardening</a>
+          </li>
+          <li<%= sidebar_current("guides-operations-replication") %>>
+            <a href="/guides/operations/replication.html">Replication Setup &amp; Guidance</a>
+          </li>
+          <li<%= sidebar_current("guides-operations-generate-root") %>>
+            <a href="/guides/operations/generate-root.html">Root Token Generation</a>
+          </li>
+          <li<%= sidebar_current("guides-operations-rekeying-and-rotating") %>>
+            <a href="/guides/operations/rekeying-and-rotating.html">Rekeying &amp; Rotating</a>
+          </li>
+          <li<%= sidebar_current("guides-operations-plugin-backends") %>>
+            <a href="/guides/operations/plugin-backends.html">Building Plugin Backends</a>
+          </li>
+        </ul>
       </li>
 
-      <li<%= sidebar_current("guides-rekeying-and-rotate") %>>
-        <a href="/guides/rekeying-and-rotating.html">Rekeying &amp; Rotating</a>
+      <li<%= sidebar_current("guides-identity")%>>
+        <a href="/guides/identity/index.html">Identity and Access Management</a>
+        <ul class="nav">
+          <li<%= sidebar_current("guides-identity-policies") %>>
+            <a href="/guides/identity/policies.html">Policies</a>
+          </li>
+          <li<%= sidebar_current("guides-identity-authentication") %>>
+            <a href="/guides/identity/authentication.html">AppRole Pull Authentication</a>
+          </li>
+          <li<%= sidebar_current("guides-identity-lease") %>>
+            <a href="/guides/identity/lease.html">Tokens and Leases</a>
+          </li>
+        </ul>
       </li>
 
-      <li<%= sidebar_current("guides-replication") %>>
-        <a href="/guides/replication.html">Replication Setup &amp; Guidance</a>
-      </li>
-
-      <li<%= sidebar_current("guides-plugin-backends") %>>
-        <a href="/guides/plugin-backends.html">Building Plugin Backends</a>
+      <li<%= sidebar_current("guides-secret-mgmt")%>>
+        <a href="/guides/secret-mgmt/index.html">Secrets Management</a>
+        <ul class="nav">
+          <li<%= sidebar_current("guides-secret-mgmt-static-secrets") %>>
+            <a href="/guides/secret-mgmt/static-secrets.html">Static Secrets</a>
+          </li>
+          <li<%= sidebar_current("guides-secret-mgmt-dataynamic-secrets") %>>
+            <a href="/guides/secret-mgmt/dynamic-secrets.html">Secret as a Service</a>
+          </li>
+          <li<%= sidebar_current("guides-secret-mgmt-cubbyhole") %>>
+            <a href="/guides/secret-mgmt/cubbyhole.html">Cubbyhole Response Wrapping</a>
+          </li>
+        </ul>
       </li>
 
       <hr>
@@ -52,6 +89,18 @@
           </li>
           <li<%= sidebar_current("guides-upgrading-to-0.8.0") %>>
             <a href="/guides/upgrading/upgrade-to-0.8.0.html">Upgrade to 0.8.0</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.9.0") %>>
+            <a href="/guides/upgrading/upgrade-to-0.9.0.html">Upgrade to 0.9.0</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.9.1") %>>
+            <a href="/guides/upgrading/upgrade-to-0.9.1.html">Upgrade to 0.9.1</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.9.2") %>>
+            <a href="/guides/upgrading/upgrade-to-0.9.2.html">Upgrade to 0.9.2</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.9.3") %>>
+            <a href="/guides/upgrading/upgrade-to-0.9.3.html">Upgrade to 0.9.3</a>
           </li>
         </ul>
       </li>

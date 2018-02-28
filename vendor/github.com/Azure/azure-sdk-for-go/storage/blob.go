@@ -1,5 +1,19 @@
 package storage
 
+// Copyright 2017 Microsoft Corporation
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 import (
 	"encoding/xml"
 	"errors"
@@ -90,7 +104,7 @@ type BlobProperties struct {
 	CacheControl          string      `xml:"Cache-Control" header:"x-ms-blob-cache-control"`
 	ContentLanguage       string      `xml:"Cache-Language" header:"x-ms-blob-content-language"`
 	ContentDisposition    string      `xml:"Content-Disposition" header:"x-ms-blob-content-disposition"`
-	BlobType              BlobType    `xml:"x-ms-blob-blob-type"`
+	BlobType              BlobType    `xml:"BlobType"`
 	SequenceNumber        int64       `xml:"x-ms-blob-sequence-number"`
 	CopyID                string      `xml:"CopyId"`
 	CopyStatus            string      `xml:"CopyStatus"`
@@ -135,8 +149,7 @@ func (b *Blob) Exists() (bool, error) {
 }
 
 // GetURL gets the canonical URL to the blob with the specified name in the
-// specified container. If name is not specified, the canonical URL for the entire
-// container is obtained.
+// specified container.
 // This method does not create a publicly accessible URL if the blob or container
 // is private and this method does not check if the blob exists.
 func (b *Blob) GetURL() string {
@@ -437,8 +450,8 @@ func (b *Blob) SetProperties(options *SetBlobPropertiesOptions) error {
 	uri := b.Container.bsc.client.getEndpoint(blobServiceName, b.buildPath(), params)
 
 	if b.Properties.BlobType == BlobTypePage {
-		headers = addToHeaders(headers, "x-ms-blob-content-length", fmt.Sprintf("byte %v", b.Properties.ContentLength))
-		if options != nil || options.SequenceNumberAction != nil {
+		headers = addToHeaders(headers, "x-ms-blob-content-length", fmt.Sprintf("%v", b.Properties.ContentLength))
+		if options != nil && options.SequenceNumberAction != nil {
 			headers = addToHeaders(headers, "x-ms-sequence-number-action", string(*options.SequenceNumberAction))
 			if *options.SequenceNumberAction != SequenceNumberActionIncrement {
 				headers = addToHeaders(headers, "x-ms-blob-sequence-number", fmt.Sprintf("%v", b.Properties.SequenceNumber))
@@ -536,27 +549,7 @@ func (b *Blob) GetMetadata(options *GetBlobMetadataOptions) error {
 }
 
 func (b *Blob) writeMetadata(h http.Header) {
-	metadata := make(map[string]string)
-	for k, v := range h {
-		// Can't trust CanonicalHeaderKey() to munge case
-		// reliably. "_" is allowed in identifiers:
-		// https://msdn.microsoft.com/en-us/library/azure/dd179414.aspx
-		// https://msdn.microsoft.com/library/aa664670(VS.71).aspx
-		// http://tools.ietf.org/html/rfc7230#section-3.2
-		// ...but "_" is considered invalid by
-		// CanonicalMIMEHeaderKey in
-		// https://golang.org/src/net/textproto/reader.go?s=14615:14659#L542
-		// so k can be "X-Ms-Meta-Lol" or "x-ms-meta-lol_rofl".
-		k = strings.ToLower(k)
-		if len(v) == 0 || !strings.HasPrefix(k, strings.ToLower(userDefinedMetadataHeaderPrefix)) {
-			continue
-		}
-		// metadata["lol"] = content of the last X-Ms-Meta-Lol header
-		k = k[len(userDefinedMetadataHeaderPrefix):]
-		metadata[k] = v[len(v)-1]
-	}
-
-	b.Metadata = BlobMetadata(metadata)
+	b.Metadata = BlobMetadata(writeMetadata(h))
 }
 
 // DeleteBlobOptions includes the options for a delete blob operation
@@ -626,4 +619,14 @@ func pathForResource(container, name string) string {
 		return fmt.Sprintf("/%s/%s", container, name)
 	}
 	return fmt.Sprintf("/%s", container)
+}
+
+func (b *Blob) respondCreation(resp *storageResponse, bt BlobType) error {
+	readAndCloseBody(resp.body)
+	err := checkRespCode(resp.statusCode, []int{http.StatusCreated})
+	if err != nil {
+		return err
+	}
+	b.Properties.BlobType = bt
+	return nil
 }

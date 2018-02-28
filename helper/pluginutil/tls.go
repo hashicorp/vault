@@ -1,6 +1,7 @@
 package pluginutil
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -97,6 +98,8 @@ func createClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      clientCertPool,
+		ClientCAs:    clientCertPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ServerName:   clientCert.Subject.CommonName,
 		MinVersion:   tls.VersionTLS12,
 	}
@@ -108,13 +111,13 @@ func createClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config
 
 // wrapServerConfig is used to create a server certificate and private key, then
 // wrap them in an unwrap token for later retrieval by the plugin.
-func wrapServerConfig(sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
+func wrapServerConfig(ctx context.Context, sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
 	rawKey, err := x509.MarshalECPrivateKey(key)
 	if err != nil {
 		return "", err
 	}
 
-	wrapInfo, err := sys.ResponseWrapData(map[string]interface{}{
+	wrapInfo, err := sys.ResponseWrapData(ctx, map[string]interface{}{
 		"ServerCert": certBytes,
 		"ServerKey":  rawKey,
 	}, time.Second*60, true)
@@ -146,19 +149,19 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 
 		addrRaw := wt.Claims().Get("addr")
 		if addrRaw == nil {
-			return nil, errors.New("decoded token does not contain primary cluster address")
+			return nil, errors.New("decoded token does not contain the active node's api_addr")
 		}
 		vaultAddr, ok := addrRaw.(string)
 		if !ok {
-			return nil, errors.New("decoded token's address not valid")
+			return nil, errors.New("decoded token's api_addr not valid")
 		}
 		if vaultAddr == "" {
-			return nil, errors.New(`no address for the vault found`)
+			return nil, errors.New(`no vault api_addr found`)
 		}
 
 		// Sanity check the value
 		if _, err := url.Parse(vaultAddr); err != nil {
-			return nil, fmt.Errorf("error parsing the vault address: %s", err)
+			return nil, fmt.Errorf("error parsing the vault api_addr: %s", err)
 		}
 
 		// Unwrap the token
@@ -234,6 +237,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 			// TLS 1.2 minimum
 			MinVersion:   tls.VersionTLS12,
 			Certificates: []tls.Certificate{cert},
+			ServerName:   serverCert.Subject.CommonName,
 		}
 		tlsConfig.BuildNameToCertificate()
 

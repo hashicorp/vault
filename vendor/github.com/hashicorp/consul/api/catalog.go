@@ -42,6 +42,7 @@ type CatalogRegistration struct {
 	Datacenter      string
 	Service         *AgentService
 	Check           *AgentCheck
+	SkipNodeUpdate  bool
 }
 
 type CatalogDeregistration struct {

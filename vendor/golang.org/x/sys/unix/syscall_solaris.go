@@ -23,6 +23,7 @@ type syscallFunc uintptr
 func rawSysvicall6(trap, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err syscall.Errno)
 func sysvicall6(trap, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err syscall.Errno)
 
+// SockaddrDatalink implements the Sockaddr interface for AF_LINK type sockets.
 type SockaddrDatalink struct {
 	Family uint16
 	Index  uint16
@@ -32,31 +33,6 @@ type SockaddrDatalink struct {
 	Slen   uint8
 	Data   [244]int8
 	raw    RawSockaddrDatalink
-}
-
-func clen(n []byte) int {
-	for i := 0; i < len(n); i++ {
-		if n[i] == 0 {
-			return i
-		}
-	}
-	return len(n)
-}
-
-func direntIno(buf []byte) (uint64, bool) {
-	return readInt(buf, unsafe.Offsetof(Dirent{}.Ino), unsafe.Sizeof(Dirent{}.Ino))
-}
-
-func direntReclen(buf []byte) (uint64, bool) {
-	return readInt(buf, unsafe.Offsetof(Dirent{}.Reclen), unsafe.Sizeof(Dirent{}.Reclen))
-}
-
-func direntNamlen(buf []byte) (uint64, bool) {
-	reclen, ok := direntReclen(buf)
-	if !ok {
-		return 0, false
-	}
-	return reclen - uint64(unsafe.Offsetof(Dirent{}.Name)), true
 }
 
 //sysnb	pipe(p *[2]_C_int) (n int, err error)
@@ -139,6 +115,18 @@ func Getsockname(fd int) (sa Sockaddr, err error) {
 	return anyToSockaddr(&rsa)
 }
 
+// GetsockoptString returns the string value of the socket option opt for the
+// socket associated with fd at the given socket level.
+func GetsockoptString(fd, level, opt int) (string, error) {
+	buf := make([]byte, 256)
+	vallen := _Socklen(len(buf))
+	err := getsockopt(fd, level, opt, unsafe.Pointer(&buf[0]), &vallen)
+	if err != nil {
+		return "", err
+	}
+	return string(buf[:vallen-1]), nil
+}
+
 const ImplementsGetwd = true
 
 //sys	Getcwd(buf []byte) (n int, err error)
@@ -166,7 +154,7 @@ func Getwd() (wd string, err error) {
 
 func Getgroups() (gids []int, err error) {
 	n, err := getgroups(0, nil)
-	// Check for error and sanity check group count.  Newer versions of
+	// Check for error and sanity check group count. Newer versions of
 	// Solaris allow up to 1024 (NGROUPS_MAX).
 	if n < 0 || n > 1024 {
 		if err != nil {
@@ -350,7 +338,7 @@ func Futimesat(dirfd int, path string, tv []Timeval) error {
 }
 
 // Solaris doesn't have an futimes function because it allows NULL to be
-// specified as the path for futimesat.  However, Go doesn't like
+// specified as the path for futimesat. However, Go doesn't like
 // NULL-style string interfaces, so this simple wrapper is provided.
 func Futimes(fd int, tv []Timeval) error {
 	if tv == nil {
@@ -514,6 +502,24 @@ func Acct(path string) (err error) {
 	return acct(pathp)
 }
 
+//sys	__makedev(version int, major uint, minor uint) (val uint64)
+
+func Mkdev(major, minor uint32) uint64 {
+	return __makedev(NEWDEV, uint(major), uint(minor))
+}
+
+//sys	__major(version int, dev uint64) (val uint)
+
+func Major(dev uint64) uint32 {
+	return uint32(__major(NEWDEV, dev))
+}
+
+//sys	__minor(version int, dev uint64) (val uint)
+
+func Minor(dev uint64) uint32 {
+	return uint32(__minor(NEWDEV, dev))
+}
+
 /*
  * Expose the ioctl function
  */
@@ -558,6 +564,15 @@ func IoctlGetTermio(fd int, req uint) (*Termio, error) {
 	var value Termio
 	err := ioctl(fd, req, uintptr(unsafe.Pointer(&value)))
 	return &value, err
+}
+
+//sys   poll(fds *PollFd, nfds int, timeout int) (n int, err error)
+
+func Poll(fds []PollFd, timeout int) (n int, err error) {
+	if len(fds) == 0 {
+		return poll(nil, 0, timeout)
+	}
+	return poll(&fds[0], len(fds), timeout)
 }
 
 /*
@@ -612,6 +627,7 @@ func IoctlGetTermio(fd int, req uint) (*Termio, error) {
 //sys	Mlock(b []byte) (err error)
 //sys	Mlockall(flags int) (err error)
 //sys	Mprotect(b []byte, prot int) (err error)
+//sys	Msync(b []byte, flags int) (err error)
 //sys	Munlock(b []byte) (err error)
 //sys	Munlockall() (err error)
 //sys	Nanosleep(time *Timespec, leftover *Timespec) (err error)
@@ -627,6 +643,7 @@ func IoctlGetTermio(fd int, req uint) (*Termio, error) {
 //sys	Renameat(olddirfd int, oldpath string, newdirfd int, newpath string) (err error)
 //sys	Rmdir(path string) (err error)
 //sys	Seek(fd int, offset int64, whence int) (newoffset int64, err error) = lseek
+//sys	Select(n int, r *FdSet, w *FdSet, e *FdSet, timeout *Timeval) (err error)
 //sysnb	Setegid(egid int) (err error)
 //sysnb	Seteuid(euid int) (err error)
 //sysnb	Setgid(gid int) (err error)

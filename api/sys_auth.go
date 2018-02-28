@@ -87,10 +87,13 @@ type EnableAuthOptions struct {
 	Config      AuthConfigInput `json:"config" structs:"config"`
 	Local       bool            `json:"local" structs:"local"`
 	PluginName  string          `json:"plugin_name,omitempty" structs:"plugin_name,omitempty"`
+	SealWrap    bool            `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 type AuthConfigInput struct {
-	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
 type AuthMount struct {
@@ -99,6 +102,7 @@ type AuthMount struct {
 	Accessor    string           `json:"accessor" structs:"accessor" mapstructure:"accessor"`
 	Config      AuthConfigOutput `json:"config" structs:"config" mapstructure:"config"`
 	Local       bool             `json:"local" structs:"local" mapstructure:"local"`
+	SealWrap    bool             `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
 type AuthConfigOutput struct {

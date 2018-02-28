@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"text/template"
 
@@ -12,9 +13,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -30,6 +31,10 @@ func Backend() *backend {
 
 			Unauthenticated: []string{
 				"login/*",
+			},
+
+			SealWrapStorage: []string{
+				"config",
 			},
 		},
 
@@ -88,22 +93,22 @@ func EscapeLDAPValue(input string) string {
 	return input
 }
 
-func (b *backend) Login(req *logical.Request, username string, password string) ([]string, *logical.Response, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
 
-	cfg, err := b.Config(req)
+	cfg, err := b.Config(ctx, req)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if cfg == nil {
-		return nil, logical.ErrorResponse("ldap backend not configured"), nil
+		return nil, logical.ErrorResponse("ldap backend not configured"), nil, nil
 	}
 
 	c, err := cfg.DialLDAP()
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil
+		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 	if c == nil {
-		return nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil
+		return nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil, nil
 	}
 
 	// Clean connection
@@ -111,7 +116,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	userBindDN, err := b.getUserBindDN(cfg, c, username)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil
+		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
 	if b.Logger().IsDebug() {
@@ -119,7 +124,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	if cfg.DenyNullBind && len(password) == 0 {
-		return nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil
+		return nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
 	}
 
 	// Try to bind as the login user. This is where the actual authentication takes place.
@@ -129,14 +134,14 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		err = c.UnauthenticatedBind(userBindDN)
 	}
 	if err != nil {
-		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
+		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil, nil
 	}
 
 	// We re-bind to the BindDN if it's defined because we assume
 	// the BindDN should be the one to search, not the user logging in.
 	if cfg.BindDN != "" && cfg.BindPassword != "" {
 		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
-			return nil, logical.ErrorResponse(fmt.Sprintf("Encountered an error while attempting to re-bind with the BindDN User: %s", err.Error())), nil
+			return nil, logical.ErrorResponse(fmt.Sprintf("Encountered an error while attempting to re-bind with the BindDN User: %s", err.Error())), nil, nil
 		}
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/ldap: Re-Bound to original BindDN")
@@ -145,12 +150,12 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	userDN, err := b.getUserDN(cfg, c, userBindDN)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil
+		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
 	ldapGroups, err := b.getLdapGroups(cfg, c, userDN, username)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil
+		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("auth/ldap: Groups fetched from server", "num_server_groups", len(ldapGroups), "server_groups", ldapGroups)
@@ -168,7 +173,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	var allGroups []string
 	// Import the custom added groups from ldap backend
-	user, err := b.User(req.Storage, username)
+	user, err := b.User(ctx, req.Storage, username)
 	if err == nil && user != nil && user.Groups != nil {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/ldap: adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
@@ -181,7 +186,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// Retrieve policies
 	var policies []string
 	for _, groupName := range allGroups {
-		group, err := b.Group(req.Storage, groupName)
+		group, err := b.Group(ctx, req.Storage, groupName)
 		if err == nil && group != nil {
 			policies = append(policies, group.Policies...)
 		}
@@ -199,10 +204,10 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		}
 
 		ldapResponse.Data["error"] = errStr
-		return nil, ldapResponse, nil
+		return nil, ldapResponse, nil, nil
 	}
 
-	return policies, ldapResponse, nil
+	return policies, ldapResponse, allGroups, nil
 }
 
 /*

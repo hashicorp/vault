@@ -1,13 +1,9 @@
-// Copyright 2011 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package ldap
 
 import (
 	"errors"
 
-	ber "gopkg.in/asn1-ber.v1"
+	"gopkg.in/asn1-ber.v1"
 )
 
 // SimpleBindRequest represents a username/password bind operation
@@ -44,7 +40,9 @@ func (bindRequest *SimpleBindRequest) encode() *ber.Packet {
 	request.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, bindRequest.Username, "User Name"))
 	request.AppendChild(ber.NewString(ber.ClassContext, ber.TypePrimitive, 0, bindRequest.Password, "Password"))
 
-	request.AppendChild(encodeControls(bindRequest.Controls))
+	if len(bindRequest.Controls) > 0 {
+		request.AppendChild(encodeControls(bindRequest.Controls))
+	}
 
 	return request
 }

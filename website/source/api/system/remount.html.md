@@ -10,9 +10,9 @@ description: |-
 
 The `/sys/remount` endpoint is used remount a mounted backend to a new endpoint.
 
-## Remount Backend
+## Move Backend
 
-This endpoint remounts an already-mounted backend to a new mount point.
+This endpoint moves an already-mounted backend to a new mount point.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

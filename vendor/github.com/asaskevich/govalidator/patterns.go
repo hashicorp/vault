@@ -33,7 +33,6 @@ const (
 	IP             string = `(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))`
 	URLSchema      string = `((ftp|tcp|udp|wss?|https?):\/\/)`
 	URLUsername    string = `(\S+(:\S*)?@)`
-	Hostname       string = ``
 	URLPath        string = `((\/|\?|#)[^\s]*)`
 	URLPort        string = `(:(\d{1,5}))`
 	URLIP          string = `([1-9]\d?|1\d\d|2[01]\d|22[0-3])(\.(1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.([0-9]\d?|1\d\d|2[0-4]\d|25[0-4]))`
@@ -44,6 +43,8 @@ const (
 	UnixPath       string = `^(/[^/\x00]*)+/?$`
 	Semver         string = "^v?(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(-(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$"
 	tagName        string = "valid"
+	hasLowerCase   string = ".*[[:lower:]]"
+	hasUpperCase   string = ".*[[:upper:]]"
 )
 
 // Used by IsFilePath func
@@ -88,4 +89,6 @@ var (
 	rxWinPath        = regexp.MustCompile(WinPath)
 	rxUnixPath       = regexp.MustCompile(UnixPath)
 	rxSemver         = regexp.MustCompile(Semver)
+	rxHasLowerCase   = regexp.MustCompile(hasLowerCase)
+	rxHasUpperCase   = regexp.MustCompile(hasUpperCase)
 )

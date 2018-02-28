@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -33,8 +34,7 @@ func pathConfigLease(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLeaseWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathLeaseWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	leaseRaw := d.Get("lease").(string)
 	leaseMaxRaw := d.Get("lease_max").(string)
 
@@ -57,16 +57,15 @@ func (b *backend) pathLeaseWrite(
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (b *backend) pathLeaseRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	lease, err := b.Lease(req.Storage)
+func (b *backend) pathLeaseRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	lease, err := b.Lease(ctx, req.Storage)
 
 	if err != nil {
 		return nil, err

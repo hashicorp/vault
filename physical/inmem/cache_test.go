@@ -1,6 +1,7 @@
 package inmem
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/logformat"
@@ -28,21 +29,25 @@ func TestCache_Purge(t *testing.T) {
 		t.Fatal(err)
 	}
 	cache := physical.NewCache(inm, 0, logger)
+	cache.SetEnabled(true)
 
 	ent := &physical.Entry{
 		Key:   "foo",
 		Value: []byte("bar"),
 	}
-	err = cache.Put(ent)
+	err = cache.Put(context.Background(), ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Delete from under
-	inm.Delete("foo")
+	inm.Delete(context.Background(), "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Read should work
-	out, err := cache.Get("foo")
+	out, err := cache.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -51,10 +56,10 @@ func TestCache_Purge(t *testing.T) {
 	}
 
 	// Clear the cache
-	cache.Purge()
+	cache.Purge(context.Background())
 
 	// Read should fail
-	out, err = cache.Get("foo")
+	out, err = cache.Get(context.Background(), "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -63,91 +68,202 @@ func TestCache_Purge(t *testing.T) {
 	}
 }
 
-func TestCache_IgnoreCore(t *testing.T) {
+func TestCache_Disable(t *testing.T) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
 	inm, err := NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	cache := physical.NewCache(inm, 0, logger)
 
-	var ent *physical.Entry
+	disabledTests := func() {
+		ent := &physical.Entry{
+			Key:   "foo",
+			Value: []byte("bar"),
+		}
+		err = inm.Put(context.Background(), ent)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	// First try normal handling
-	ent = &physical.Entry{
-		Key:   "foo",
-		Value: []byte("bar"),
-	}
-	if err := cache.Put(ent); err != nil {
-		t.Fatal(err)
-	}
-	ent = &physical.Entry{
-		Key:   "foo",
-		Value: []byte("foobar"),
-	}
-	if err := inm.Put(ent); err != nil {
-		t.Fatal(err)
-	}
-	ent, err = cache.Get("foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(ent.Value) != "bar" {
-		t.Fatal("expected cached value")
+		// Read should work
+		out, err := cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+
+		err = inm.Delete(context.Background(), ent.Key)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Should not work
+		out, err = cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out != nil {
+			t.Fatalf("should not have key")
+		}
+
+		// Put through the cache and try again
+		err = cache.Put(context.Background(), ent)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read should work in both
+		out, err = inm.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+		out, err = cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+
+		err = inm.Delete(context.Background(), ent.Key)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Should not work
+		out, err = cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out != nil {
+			t.Fatalf("should not have key")
+		}
 	}
 
-	// Now try core path
-	ent = &physical.Entry{
-		Key:   "core/foo",
-		Value: []byte("bar"),
-	}
-	if err := cache.Put(ent); err != nil {
-		t.Fatal(err)
-	}
-	ent = &physical.Entry{
-		Key:   "core/foo",
-		Value: []byte("foobar"),
-	}
-	if err := inm.Put(ent); err != nil {
-		t.Fatal(err)
-	}
-	ent, err = cache.Get("core/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(ent.Value) != "foobar" {
-		t.Fatal("expected cached value")
+	enabledTests := func() {
+		ent := &physical.Entry{
+			Key:   "foo",
+			Value: []byte("bar"),
+		}
+		err = inm.Put(context.Background(), ent)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read should work
+		out, err := cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+
+		err = inm.Delete(context.Background(), ent.Key)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Should work
+		out, err = cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+
+		// Put through the cache and try again
+		err = cache.Put(context.Background(), ent)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read should work for both
+		out, err = inm.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+		out, err = cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+
+		err = inm.Delete(context.Background(), ent.Key)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Should work
+		out, err = cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+
+		// Put through the cache
+		err = cache.Put(context.Background(), ent)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Read should work for both
+		out, err = inm.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+		out, err = cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out == nil {
+			t.Fatalf("should have key")
+		}
+
+		// Delete via cache
+		err = cache.Delete(context.Background(), ent.Key)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Read should not work for either
+		out, err = inm.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out != nil {
+			t.Fatalf("should not have key")
+		}
+		out, err = cache.Get(context.Background(), "foo")
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if out != nil {
+			t.Fatalf("should not have key")
+		}
 	}
 
-	// Now make sure looked-up values aren't added
-	ent = &physical.Entry{
-		Key:   "core/zip",
-		Value: []byte("zap"),
-	}
-	if err := inm.Put(ent); err != nil {
-		t.Fatal(err)
-	}
-	ent, err = cache.Get("core/zip")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(ent.Value) != "zap" {
-		t.Fatal("expected non-cached value")
-	}
-	ent = &physical.Entry{
-		Key:   "core/zip",
-		Value: []byte("zipzap"),
-	}
-	if err := inm.Put(ent); err != nil {
-		t.Fatal(err)
-	}
-	ent, err = cache.Get("core/zip")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(ent.Value) != "zipzap" {
-		t.Fatal("expected non-cached value")
-	}
+	disabledTests()
+	cache.SetEnabled(true)
+	enabledTests()
+	cache.SetEnabled(false)
+	disabledTests()
 }

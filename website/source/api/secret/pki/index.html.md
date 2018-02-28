@@ -1,19 +1,19 @@
 ---
 layout: "api"
-page_title: "PKI Secret Backend - HTTP API"
+page_title: "PKI - Secrets Engines - HTTP API"
 sidebar_current: "docs-http-secret-pki"
 description: |-
-  This is the API documentation for the Vault PKI secret backend.
+  This is the API documentation for the Vault PKI secrets engine.
 ---
 
-# PKI Secret Backend HTTP API
+# PKI Secrets Engine (API)
 
-This is the API documentation for the Vault PKI secret backend. For general
-information about the usage and operation of the PKI backend, please see the
-[Vault PKI backend documentation](/docs/secrets/pki/index.html).
+This is the API documentation for the Vault PKI secrets engine. For general
+information about the usage and operation of the PKI secrets engine, please see
+the [PKI documentation](/docs/secrets/pki/index.html).
 
-This documentation assumes the PKI backend is mounted at the `/pki` path in
-Vault. Since it is possible to mount secret backends at any location, please
+This documentation assumes the PKI secrets engine is enabled at the `/pki` path
+in Vault. Since it is possible to enable secrets engines at any location, please
 update your API calls accordingly.
 
 ## Table of Contents
@@ -31,7 +31,6 @@ update your API calls accordingly.
 * [Rotate CRLs](#rotate-crls)
 * [Generate Intermediate](#generate-intermediate)
 * [Set Signed Intermediate](#set-signed-intermediate)
-* [Read Certificate](#read-certificate)
 * [Generate Certificate](#generate-certificate)
 * [Revoke Certificate](#revoke-certificate)
 * [Create/Update Role](#create-update-role)
@@ -50,8 +49,8 @@ update your API calls accordingly.
 
 This endpoint retrieves the CA certificate *in raw DER-encoded form*. This is a
 bare endpoint that does not return a standard Vault data structure and cannot
-be read by the Vault CLI. If `/pem` is added to the endpoint, the CA
-certificate is returned in PEM format.
+be read by the Vault CLI; use `/pki/cert` for that. If `/pem` is added to the
+endpoint, the CA certificate is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
@@ -76,7 +75,7 @@ $ curl \
 
 This endpoint retrieves the CA certificate chain, including the CA _in PEM
 format_. This is a bare endpoint that does not return a standard Vault data
-structure and cannot be read by the Vault CLI.
+structure and cannot be read by the Vault CLI; use `/pki/cert` for that.
 
 This is an unauthenticated endpoint.
 
@@ -100,7 +99,7 @@ $ curl \
 ## Read Certificate
 
 This endpoint retrieves one of a selection of certificates. This endpoint returns the certificate in PEM formatting in the
-`certificate` key of the JSON object.
+`certificate` key of the JSON object, which is a standard Vault response that is readable by the Vault CLI.
 
 This is an unauthenticated endpoint.
 
@@ -111,8 +110,9 @@ This is an unauthenticated endpoint.
 ### Parameters
 
 - `serial` `(string: <required>)` – Specifies the serial of the key to read.
-  This is part of the request URL. Valid values: are:
+  This is part of the request URL. Valid values for `serial` are:
 
+    - `<serial>` for the certificate with the given serial number
     - `ca` for the CA certificate
     - `crl` for the current CRL
     - `ca_chain` for the CA trust chain or a serial number in either hyphen-separated or colon-separated octal format
@@ -141,8 +141,6 @@ This endpoint returns a list of the current certificates by serial number only.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/pki/certs`                 | `200 application/json` |
-| `GET`    | `/pki/certs?list=true`       | `200 application/json` |
-
 
 ### Sample Request
 
@@ -175,9 +173,14 @@ $ curl \
 ## Submit CA Information
 
 This endpoint allows submitting the CA information for the backend via a PEM
-file containing the CA certificate and its private key, concatenated. Not needed
-if you are generating a self-signed root certificate, and not used if you have a
-signed intermediate CA certificate with a generated key (use the
+file containing the CA certificate and its private key, concatenated.
+
+May optionally append additional CA certificates.  Useful when creating an
+intermediate CA to ensure a full chain is returned when signing or generating
+certificates.
+
+Not needed if you are generating a self-signed root certificate, and not used
+if you have a signed intermediate CA certificate with a generated key (use the
 `/pki/intermediate/set-signed` endpoint for that). _If you have already set a
 certificate and key, they will be overridden._
 
@@ -296,7 +299,7 @@ $ curl \
   "data": {
     "issuing_certificates": ["<url1>", "<url2>"],
     "crl_distribution_points": ["<url1>", "<url2>"],
-    "ocsp_servers": ["<url1>", "<url2>"],
+    "ocsp_servers": ["<url1>", "<url2>"]
   },
   "auth": null
 }
@@ -350,8 +353,8 @@ $ curl \
 This endpoint retrieves the current CRL **in raw DER-encoded form**. This
 endpoint is suitable for usage in the CRL Distribution Points extension in a CA
 certificate. This is a bare endpoint that does not return a standard Vault data
-structure. If `/pem` is added to the endpoint, the CRL is returned in PEM
-format.
+structure and cannot be parsed by the Vault CLI; use `/pki/cert/crl` in that case.
+If `/pem` is added to the endpoint, the CRL is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
@@ -432,10 +435,21 @@ can be set in a CSR are supported.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `format` `(string: "")` – Specifies the format for returned data. This can be
   `pem`, `der`, or `pem_bundle`; defaults to `pem`. If `der`, the output is
   base64 encoded. If `pem_bundle`, the `csr` field will contain the private key
   (if exported) and CSR, concatenated.
+
+- `private_key_format` `(string: "")` – Specifies the format for marshaling the
+  private key. Defaults to `der` which will return either base64-encoded DER or
+  PEM-encoded DER, depending on the value of `format`. The other option is
+  `pkcs8` which will return the key marshalled as PEM-encoded PKCS8.
 
 - `key_type` `(string: "rsa")` – Specifies the desired key type; must be `rsa`
   or `ec`.
@@ -447,6 +461,34 @@ can be set in a CSR are supported.
   not be included in DNS or Email Subject Alternate Names (as appropriate).
   Useful if the CN is not a hostname or email address, but is instead some
   human-readable identifier.
+
+- `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` – Specifies the O (Organization) values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
 
 ### Sample Payload
 
@@ -545,6 +587,12 @@ need to request a new certificate.**
   in a comma-delimited list. Only valid if the role allows IP SANs (which is the
   default).
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `ttl` `(string: "")` – Specifies requested Time To Live. Cannot be greater
   than the role's `max_ttl` value. If not provided, the role's `ttl` value will
   be used. Note that the role values default to system values if not explicitly
@@ -555,6 +603,11 @@ need to request a new certificate.**
   base64 encoded. If `pem_bundle`, the `certificate` field will contain the
   private key and certificate, concatenated; if the issuing CA is not a
   Vault-derived self-signed root, this will be included as well.
+
+- `private_key_format` `(string: "")` – Specifies the format for marshaling the
+  private key. Defaults to `der` which will return either base64-encoded DER or
+  PEM-encoded DER, depending on the value of `format`. The other option is
+  `pkcs8` which will return the key marshalled as PEM-encoded PKCS8.
 
 - `exclude_cn_from_sans` `(bool: false)` – If true, the given `common_name` will
   not be included in DNS or Email Subject Alternate Names (as appropriate).
@@ -674,9 +727,8 @@ request is denied.
   certificates for `localhost` as one of the requested common names. This is
   useful for testing and to allow clients on a single host to talk securely.
 
-- `allowed_domains` `(string: "")` – Specifies the domains of the role, provided
-  as a comma-separated list. This is used with the `allow_bare_domains` and
-  `allow_subdomains` options.
+- `allowed_domains` `(list: [])` – Specifies the domains of the role. This is 
+  used with the `allow_bare_domains` and `allow_subdomains` options.
 
 - `allow_bare_domains` `(bool: false)` – Specifies if clients can request
   certificates matching the value of the actual domains themselves; e.g. if a
@@ -708,6 +760,11 @@ request is denied.
   Alternative Names. No authorization checking is performed except to verify
   that the given values are valid IP addresses.
 
+- `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
+  SANs. This field supports globbing. The format is the same as OpenSSL:
+  `<oid>;<type>:<value>` where the only current valid type is `UTF8`. This can
+  be a comma-delimited list or a JSON string slice.
+
 - `server_flag` `(bool: true)` – Specifies if certificates are flagged for
   server use.
 
@@ -728,12 +785,11 @@ request is denied.
   https://golang.org/pkg/crypto/elliptic/#Curve for an overview of allowed bit
   lengths for `ec`.
 
-- `key_usage` `(string: "DigitalSignature,KeyAgreement,KeyEncipherment")` –
-  Specifies the allowed key usage constraint on issued certificates. This is a
-  comma-separated string; valid values can be found at
-  https://golang.org/pkg/crypto/x509/#KeyUsage - simply drop the `KeyUsage` part
-  of the value. Values are not case-sensitive. To specify no key usage
-  constraints, set this to an empty string.
+- `key_usage` `(list: ["DigitalSignature", "KeyAgreement", "KeyEncipherment"])` –
+  Specifies the allowed key usage constraint on issued certificates. Valid 
+  values can be found at https://golang.org/pkg/crypto/x509/#KeyUsage - simply 
+  drop the `KeyUsage` part of the value. Values are not case-sensitive. To 
+  specify no key usage constraints, set this to an empty list.
 
 - `use_csr_common_name` `(bool: true)` – When used with the CSR signing
   endpoint, the common name in the CSR will be used instead of taken from the
@@ -746,10 +802,32 @@ request is denied.
   `use_csr_common_name` for that.
 
 - `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
-  subject field of issued certificates. This is a comma-separated string.
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
 
 - `organization` `(string: "")` – Specifies the O (Organization) values in the
-  subject field of issued certificates. This is a comma-separated string.
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of issued certificates. This is a comma-separated string or
+  JSON array.
 
 - `generate_lease` `(bool: false)` – Specifies  if certificates issued/signed
   against this role will have Vault leases attached to them. Certificates can be
@@ -762,17 +840,20 @@ request is denied.
   Vault.
 
 - `no_store` `(bool: false)` – If set, certificates issued/signed against this
-role will not be stored in the in the storage backend. This can improve
-performance when issuing large numbers of certificates. However, certificates
-issued in this way cannot be enumerated or revoked, so this option is
-recommended only for certificates that are non-sensitive, or extremely
-short-lived. This option implies a value of `false` for `generate_lease`.
+  role will not be stored in the storage backend. This can improve performance
+  when issuing large numbers of certificates. However, certificates issued in
+  this way cannot be enumerated or revoked, so this option is recommended only
+  for certificates that are non-sensitive, or extremely short-lived.  This
+  option implies a value of `false` for `generate_lease`.
+
+- `require_cn` `(bool: true)` - If set to false, makes the `common_name` field
+  optional while generating a certificate.
 
 ### Sample Payload
 
 ```json
 {
-  "allowed_domains": "example.com",
+  "allowed_domains": ["example.com"],
   "allow_subdomains": true
 }
 ```
@@ -817,7 +898,7 @@ $ curl \
     "allow_ip_sans": true,
     "allow_localhost": true,
     "allow_subdomains": false,
-    "allowed_domains": "example.com,foobar.com",
+    "allowed_domains": ["example.com", "foobar.com"],
     "client_flag": true,
     "code_signing_flag": false,
     "key_bits": 2048,
@@ -837,7 +918,6 @@ returned, not any values.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/pki/roles`                 | `200 application/json` |
-| `GET`    | `/pki/roles?list=true`       | `200 application/json` |
 
 ### Sample Request
 
@@ -896,9 +976,9 @@ As with other issued certificates, Vault will automatically revoke the
 generated root at the end of its lease period; the CA certificate will sign its
 own CRL.
 
-As of Vault 0.8.1, if a CA cert/key already exists within the backend, this
-function will return a 204 and will not overwrite it. Previous versions of
-Vault would overwrite the existing cert/key with new values.
+As of Vault 0.8.1, if a CA cert/key already exists, this function will return a
+204 and will not overwrite it. Previous versions of Vault would overwrite the
+existing cert/key with new values.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -922,15 +1002,26 @@ Vault would overwrite the existing cert/key with new values.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
-  certificate will be expired). This cannot be larger than the mount max (or, if
-  not set, the system max).
+  certificate will be expired). This cannot be larger than the engine's max (or,
+  if not set, the system max).
 
 - `format` `(string: "pem")` – Specifies the format for returned data. Can be
   `pem`, `der`, or `pem_bundle`. If `der`, the output is base64 encoded. If
   `pem_bundle`, the `certificate` field will contain the private key (if
   exported) and certificate, concatenated; if the issuing CA is not a
   Vault-derived self-signed root, this will be included as well.
+
+- `private_key_format` `(string: "")` – Specifies the format for marshaling the
+  private key. Defaults to `der` which will return either base64-encoded DER or
+  PEM-encoded DER, depending on the value of `format`. The other option is
+  `pkcs8` which will return the key marshalled as PEM-encoded PKCS8.
 
 - `key_type` `(string: "rsa")` – Specifies the desired key type; must be `rsa`
   or `ec`.
@@ -954,6 +1045,34 @@ Vault would overwrite the existing cert/key with new values.
   or signed by this CA certificate. Supports subdomains via a `.` in front of
   the domain, as per
   [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+
+- `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` – Specifies the O (Organization) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
 
 ### Sample Payload
 
@@ -1035,9 +1154,15 @@ verbatim.
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list.
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `ttl` `(string: "")` – Specifies the requested Time To Live (after which the
-  certificate will be expired). This cannot be larger than the mount max (or, if
-  not set, the system max). However, this can be after the expiration of the
+  certificate will be expired). This cannot be larger than the engine's max (or,
+  if not set, the system max). However, this can be after the expiration of the
   signing CA.
 
 - `format` `(string: "pem")` – Specifies the format for returned data. Can be
@@ -1070,6 +1195,35 @@ verbatim.
   or signed by this CA certificate. Supports subdomains via a `.` in front of
   the domain, as per
   [RFC](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+
+- `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` – Specifies the O (Organization) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` – Specifies the C (Country) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` – Specifies the L (Locality) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` – Specifies the ST (Province) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` – Specifies the Street Address values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` – Specifies the Postal Code values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
 
 ### Sample Payload
 
@@ -1189,6 +1343,12 @@ root CA need be in a client's trust store.
   they will be parsed into their respective fields. If any requested names do
   not match role policy, the entire request will be denied.
 
+- `other_sans` `(string: "")` – Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (globbing
+  allowed). The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
 - `ip_sans` `(string: "")` – Specifies the requested IP Subject Alternative
   Names, in a comma-delimited list. Only valid if the role allows IP SANs (which
   is the default).
@@ -1258,7 +1418,7 @@ have access.**
 - `csr` `(string: <required>)` – Specifies the PEM-encoded CSR.
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
-  than the mount's `max_ttl` value. If not provided, the mount's `ttl` value
+  than the engine's `max_ttl` value. If not provided, the engine's `ttl` value
   will be used, which defaults to system values if not explicitly set.
 
 - `format` `(string: "pem")` – Specifies the format for returned data. Can be
@@ -1304,7 +1464,7 @@ $ curl \
 
 ## Tidy
 
-This endpoint allows tidying up the backend storage and/or CRL by removing
+This endpoint allows tidying up the storage backend and/or CRL by removing
 certificates that have expired and are past a certain buffer period beyond their
 expiration time.
 

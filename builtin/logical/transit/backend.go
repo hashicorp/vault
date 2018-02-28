@@ -1,6 +1,7 @@
 package transit
 
 import (
+	"context"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/keysutil"
@@ -8,9 +9,9 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend(conf)
-	if err := b.Setup(conf); err != nil {
+	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -19,6 +20,13 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 func Backend(conf *logical.BackendConfig) *backend {
 	var b backend
 	b.Backend = &framework.Backend{
+		PathsSpecial: &logical.Paths{
+			SealWrapStorage: []string{
+				"archive/",
+				"policy/",
+			},
+		},
+
 		Paths: []*framework.Path{
 			// Rotate/Config needs to come before Keys
 			// as the handler is greedy
@@ -36,6 +44,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			b.pathHMAC(),
 			b.pathSign(),
 			b.pathVerify(),
+			b.pathBackup(),
+			b.pathRestore(),
 		},
 
 		Secrets:     []*framework.Secret{},
@@ -53,7 +63,7 @@ type backend struct {
 	lm *keysutil.LockManager
 }
 
-func (b *backend) invalidate(key string) {
+func (b *backend) invalidate(_ context.Context, key string) {
 	if b.Logger().IsTrace() {
 		b.Logger().Trace("transit: invalidating key", "key", key)
 	}

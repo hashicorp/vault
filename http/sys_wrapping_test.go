@@ -122,7 +122,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 			t.Fatalf("mistmatched ttls: %d vs %d", creationTTL, wrapInfo.TTL)
 		}
 		if secret.Data["creation_time"].(string) != wrapInfo.CreationTime.Format(time.RFC3339Nano) {
-			t.Fatalf("mistmatched creation times: %d vs %d", secret.Data["creation_time"].(string), wrapInfo.CreationTime.Format(time.RFC3339Nano))
+			t.Fatalf("mistmatched creation times: %q vs %q", secret.Data["creation_time"].(string), wrapInfo.CreationTime.Format(time.RFC3339Nano))
 		}
 	}
 
@@ -310,7 +310,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Check for correct CreationPath before rewrap
 	if wrapInfo.CreationPath != "secret/foo" {
-		t.Fatal("error on wrapInfo.CreationPath: expected: secret/foo, got: %s", wrapInfo.CreationPath)
+		t.Fatalf("error on wrapInfo.CreationPath: expected: secret/foo, got: %s", wrapInfo.CreationPath)
 	}
 
 	// Test rewrapping
@@ -323,7 +323,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Check for correct Creation path after rewrap
 	if wrapInfo.CreationPath != "secret/foo" {
-		t.Fatal("error on wrapInfo.CreationPath: expected: secret/foo, got: %s", wrapInfo.CreationPath)
+		t.Fatalf("error on wrapInfo.CreationPath: expected: secret/foo, got: %s", wrapInfo.CreationPath)
 	}
 
 	// Should be expired and fail

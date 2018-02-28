@@ -16,7 +16,7 @@ type Milestone struct {
 	URL          *string    `json:"url,omitempty"`
 	HTMLURL      *string    `json:"html_url,omitempty"`
 	LabelsURL    *string    `json:"labels_url,omitempty"`
-	ID           *int       `json:"id,omitempty"`
+	ID           *int64     `json:"id,omitempty"`
 	Number       *int       `json:"number,omitempty"`
 	State        *string    `json:"state,omitempty"`
 	Title        *string    `json:"title,omitempty"`
@@ -28,6 +28,7 @@ type Milestone struct {
 	UpdatedAt    *time.Time `json:"updated_at,omitempty"`
 	ClosedAt     *time.Time `json:"closed_at,omitempty"`
 	DueOn        *time.Time `json:"due_on,omitempty"`
+	NodeID       *string    `json:"node_id,omitempty"`
 }
 
 func (m Milestone) String() string {
@@ -67,6 +68,9 @@ func (s *IssuesService) ListMilestones(ctx context.Context, owner string, repo s
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
+
 	var milestones []*Milestone
 	resp, err := s.client.Do(ctx, req, &milestones)
 	if err != nil {
@@ -85,6 +89,9 @@ func (s *IssuesService) GetMilestone(ctx context.Context, owner string, repo str
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	milestone := new(Milestone)
 	resp, err := s.client.Do(ctx, req, milestone)
@@ -105,6 +112,9 @@ func (s *IssuesService) CreateMilestone(ctx context.Context, owner string, repo 
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
+
 	m := new(Milestone)
 	resp, err := s.client.Do(ctx, req, m)
 	if err != nil {
@@ -123,6 +133,9 @@ func (s *IssuesService) EditMilestone(ctx context.Context, owner string, repo st
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	m := new(Milestone)
 	resp, err := s.client.Do(ctx, req, m)

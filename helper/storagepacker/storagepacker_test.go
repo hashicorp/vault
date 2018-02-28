@@ -116,16 +116,16 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 
 	alias1 := &identity.Alias{
 		ID:            "alias_id",
-		EntityID:      "entity_id",
+		CanonicalID:   "canonical_id",
 		MountType:     "mount_type",
 		MountAccessor: "mount_accessor",
 		Metadata: map[string]string{
 			"aliasmkey": "aliasmvalue",
 		},
-		Name:                "alias_name",
-		CreationTime:        timeNow,
-		LastUpdateTime:      timeNow,
-		MergedFromEntityIDs: []string{"merged_from_entity_id"},
+		Name:                   "alias_name",
+		CreationTime:           timeNow,
+		LastUpdateTime:         timeNow,
+		MergedFromCanonicalIDs: []string{"merged_from_canonical_id"},
 	}
 
 	entity := &identity.Entity{

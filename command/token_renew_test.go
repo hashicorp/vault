@@ -1,177 +1,192 @@
 package command
 
 import (
+	"encoding/json"
+	"strconv"
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
-func TestTokenRenew(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func testTokenRenewCommand(tb testing.TB) (*cli.MockUi, *TokenRenewCommand) {
+	tb.Helper()
 
-	ui := new(cli.MockUi)
-	c := &TokenRenewCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	ui := cli.NewMockUi()
+	return ui, &TokenRenewCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
 		},
-	}
-
-	args := []string{
-		"-address", addr,
-	}
-
-	// Run it once for client
-	c.Run(args)
-
-	// Create a token
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Lease: "1h",
-	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// Renew, passing in the token
-	args = append(args, resp.Auth.ClientToken)
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
 }
 
-func TestTokenRenewWithIncrement(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+func TestTokenRenewCommand_Run(t *testing.T) {
+	t.Parallel()
 
-	ui := new(cli.MockUi)
-	c := &TokenRenewCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"too_many_args",
+			[]string{"foo", "bar", "baz"},
+			"Too many arguments",
+			1,
+		},
+		{
+			"default",
+			nil,
+			"",
+			0,
+		},
+		{
+			"increment",
+			[]string{"-increment", "60s"},
+			"",
+			0,
+		},
+		{
+			"increment_no_suffix",
+			[]string{"-increment", "60"},
+			"",
+			0,
 		},
 	}
 
-	args := []string{
-		"-address", addr,
-	}
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
 
-	// Run it once for client
-	c.Run(args)
+		for _, tc := range cases {
+			tc := tc
 
-	// Create a token
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Lease: "1h",
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				// Login with the token so we can renew-self.
+				token, _ := testTokenAndAccessor(t, client)
+				client.SetToken(token)
+
+				ui, cmd := testTokenRenewCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			})
+		}
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 
-	// Renew, passing in the token
-	args = append(args, resp.Auth.ClientToken)
-	args = append(args, "72h")
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-}
+	t.Run("token", func(t *testing.T) {
+		t.Parallel()
 
-func TestTokenRenewSelf(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+		client, closer := testVaultServer(t)
+		defer closer()
 
-	ui := new(cli.MockUi)
-	c := &TokenRenewCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
-		},
-	}
+		token, _ := testTokenAndAccessor(t, client)
 
-	args := []string{
-		"-address", addr,
-	}
+		_, cmd := testTokenRenewCommand(t)
+		cmd.client = client
 
-	// Run it once for client
-	c.Run(args)
+		code := cmd.Run([]string{
+			"-increment", "30m",
+			token,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
 
-	// Create a token
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Lease: "1h",
+		secret, err := client.Auth().Token().Lookup(token)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		str := string(secret.Data["ttl"].(json.Number))
+		ttl, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			t.Fatalf("bad ttl: %#v", secret.Data["ttl"])
+		}
+		if exp := int64(1800); ttl > exp {
+			t.Errorf("expected %d to be <= to %d", ttl, exp)
+		}
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if resp.Auth.ClientToken == "" {
-		t.Fatal("returned client token is empty")
-	}
 
-	c.Meta.ClientToken = resp.Auth.ClientToken
+	t.Run("self", func(t *testing.T) {
+		t.Parallel()
 
-	// Renew using the self endpoint
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
-}
+		client, closer := testVaultServer(t)
+		defer closer()
 
-func TestTokenRenewSelfWithIncrement(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
+		token, _ := testTokenAndAccessor(t, client)
 
-	ui := new(cli.MockUi)
-	c := &TokenRenewCommand{
-		Meta: meta.Meta{
-			ClientToken: token,
-			Ui:          ui,
-		},
-	}
+		// Get the old token and login as the new token. We need the old token
+		// to query after the lookup, but we need the new token on the client.
+		oldToken := client.Token()
+		client.SetToken(token)
 
-	args := []string{
-		"-address", addr,
-	}
+		_, cmd := testTokenRenewCommand(t)
+		cmd.client = client
 
-	// Run it once for client
-	c.Run(args)
+		code := cmd.Run([]string{
+			"-increment", "30m",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
 
-	// Create a token
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Lease: "1h",
+		client.SetToken(oldToken)
+		secret, err := client.Auth().Token().Lookup(token)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		str := string(secret.Data["ttl"].(json.Number))
+		ttl, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			t.Fatalf("bad ttl: %#v", secret.Data["ttl"])
+		}
+		if exp := int64(1800); ttl > exp {
+			t.Errorf("expected %d to be <= to %d", ttl, exp)
+		}
 	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if resp.Auth.ClientToken == "" {
-		t.Fatal("returned client token is empty")
-	}
 
-	c.Meta.ClientToken = resp.Auth.ClientToken
+	t.Run("communication_failure", func(t *testing.T) {
+		t.Parallel()
 
-	args = append(args, "-increment=72h")
-	// Renew using the self endpoint
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
-	}
+		client, closer := testVaultServerBad(t)
+		defer closer()
+
+		ui, cmd := testTokenRenewCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"foo/bar",
+		})
+		if exp := 2; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Error renewing token: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	t.Run("no_tabs", func(t *testing.T) {
+		t.Parallel()
+
+		_, cmd := testTokenRenewCommand(t)
+		assertNoTabs(t, cmd)
+	})
 }

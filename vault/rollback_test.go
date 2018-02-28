@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -39,7 +40,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
-	rb := NewRollbackManager(logger, mountsFunc, router)
+	rb := NewRollbackManager(logger, mountsFunc, router, context.Background())
 	rb.period = 10 * time.Millisecond
 	return rb, backend
 }
@@ -81,11 +82,12 @@ func TestRollbackManager_Join(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(3)
 
+	errCh := make(chan error, 3)
 	go func() {
 		defer wg.Done()
 		err := m.Rollback("foo")
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			errCh <- err
 		}
 	}()
 
@@ -93,7 +95,7 @@ func TestRollbackManager_Join(t *testing.T) {
 		defer wg.Done()
 		err := m.Rollback("foo")
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			errCh <- err
 		}
 	}()
 
@@ -101,8 +103,13 @@ func TestRollbackManager_Join(t *testing.T) {
 		defer wg.Done()
 		err := m.Rollback("foo")
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			errCh <- err
 		}
 	}()
 	wg.Wait()
+	close(errCh)
+	err := <-errCh
+	if err != nil {
+		t.Fatalf("Error on rollback:%v", err)
+	}
 }

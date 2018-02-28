@@ -13,7 +13,7 @@ type parser struct {
 	paramMax   int
 
 	// using map as a set
-	namedParams map [string]bool
+	namedParams map[string]bool
 }
 
 func (p *parser) next() (rune, bool) {
@@ -42,8 +42,8 @@ type stateFunc func(*parser) stateFunc
 
 func parseParams(query string) (string, int) {
 	p := &parser{
-		r: bytes.NewReader([]byte(query)),
-		namedParams: map [string]bool{},
+		r:           bytes.NewReader([]byte(query)),
+		namedParams: map[string]bool{},
 	}
 	state := parseNormal
 	for state != nil {

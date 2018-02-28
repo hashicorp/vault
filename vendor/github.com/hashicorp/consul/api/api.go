@@ -377,12 +377,14 @@ func SetupTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
 	}
 
-	rootConfig := &rootcerts.Config{
-		CAFile: tlsConfig.CAFile,
-		CAPath: tlsConfig.CAPath,
-	}
-	if err := rootcerts.ConfigureTLS(tlsClientConfig, rootConfig); err != nil {
-		return nil, err
+	if tlsConfig.CAFile != "" || tlsConfig.CAPath != "" {
+		rootConfig := &rootcerts.Config{
+			CAFile: tlsConfig.CAFile,
+			CAPath: tlsConfig.CAPath,
+		}
+		if err := rootcerts.ConfigureTLS(tlsClientConfig, rootConfig); err != nil {
+			return nil, err
+		}
 	}
 
 	return tlsClientConfig, nil
@@ -446,6 +448,7 @@ func NewClient(config *Config) (*Client, error) {
 	if len(parts) == 2 {
 		switch parts[0] {
 		case "http":
+			config.Scheme = "http"
 		case "https":
 			config.Scheme = "https"
 		case "unix":
@@ -466,10 +469,7 @@ func NewClient(config *Config) (*Client, error) {
 		config.Token = defConfig.Token
 	}
 
-	client := &Client{
-		config: *config,
-	}
-	return client, nil
+	return &Client{config: *config}, nil
 }
 
 // NewHttpClient returns an http client configured with the given Transport and TLS
@@ -478,6 +478,14 @@ func NewHttpClient(transport *http.Transport, tlsConf TLSConfig) (*http.Client, 
 	client := &http.Client{
 		Transport: transport,
 	}
+
+	// TODO (slackpad) - Once we get some run time on the HTTP/2 support we
+	// should turn it on by default if TLS is enabled. We would basically
+	// just need to call http2.ConfigureTransport(transport) here. We also
+	// don't want to introduce another external dependency on
+	// golang.org/x/net/http2 at this time. For a complete recipe for how
+	// to enable HTTP/2 support on a transport suitable for the API client
+	// library see agent/http_test.go:TestHTTPServer_H2.
 
 	if transport.TLSClientConfig == nil {
 		tlsClientConfig, err := SetupTLSConfig(&tlsConf)
@@ -557,11 +565,18 @@ func durToMsec(dur time.Duration) string {
 // serverError is a string we look for to detect 500 errors.
 const serverError = "Unexpected response code: 500"
 
-// IsServerError returns true for 500 errors from the Consul servers, these are
-// usually retryable at a later time.
-func IsServerError(err error) bool {
+// IsRetryableError returns true for 500 errors from the Consul servers, and
+// network connection errors. These are usually retryable at a later time.
+// This applies to reads but NOT to writes. This may return true for errors
+// on writes that may have still gone through, so do not use this to retry
+// any write operations.
+func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
+	}
+
+	if _, ok := err.(net.Error); ok {
+		return true
 	}
 
 	// TODO (slackpad) - Make a real error type here instead of using
@@ -618,9 +633,9 @@ func (r *request) toHTTP() (*http.Request, error) {
 	}
 	if r.ctx != nil {
 		return req.WithContext(r.ctx), nil
-	} else {
-		return req, nil
 	}
+
+	return req, nil
 }
 
 // newRequest is used to create a new request
@@ -656,7 +671,7 @@ func (c *Client) doRequest(r *request) (time.Duration, *http.Response, error) {
 	}
 	start := time.Now()
 	resp, err := c.config.HttpClient.Do(req)
-	diff := time.Now().Sub(start)
+	diff := time.Since(start)
 	return diff, resp, err
 }
 

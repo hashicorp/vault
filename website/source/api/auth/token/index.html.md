@@ -1,27 +1,26 @@
 ---
 layout: "api"
-page_title: "Token Auth Backend - HTTP API"
+page_title: "Token - Auth Methods - HTTP API"
 sidebar_current: "docs-http-auth-token"
 description: |-
-  This is the API documentation for the Vault token authentication backend.
+  This is the API documentation for the Vault token auth method.
 ---
 
-# Token Auth Backend HTTP API
+# Token Auth Method (API)
 
-This is the API documentation for the Vault token authentication backend. For
-general information about the usage and operation of the token backend, please
-see the [Vault Token backend documentation](/docs/auth/token.html).
+This is the API documentation for the Vault token auth method. For
+general information about the usage and operation of the token method, please
+see the [Vault Token method documentation](/docs/auth/token.html).
 
 ## List Accessors
 
-This endpoint lists token accessor.  This requires `sudo` capability, and access
+This endpoint lists token accessor. This requires `sudo` capability, and access
 to it should be tightly controlled as the accessors can be used to revoke very
 large numbers of tokens and their associated leases at once.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/token/accessors`      | `200 application/json` |
-| `GET`    | `/auth/token/accessors?list=true` | `200 application/json` |
 
 ### Sample Request
 
@@ -68,37 +67,37 @@ during this call.
 
 ### Parameters
 
-- `id` `(string: "")` – The ID of the client token. Can only be specified by a 
+- `id` `(string: "")` – The ID of the client token. Can only be specified by a
   root token.  Otherwise, the token ID is a randomly generated UUID.
 - `role_name` `(string: "")` – The name of the token role.
-- `policies` `(array: "")` – A list of policies for the token. This must be a 
+- `policies` `(array: "")` – A list of policies for the token. This must be a
   subset of the policies belonging to the token making the request, unless root.
   If not specified, defaults to all the policies of the calling token.
-- `meta` `(map: {})` – A map of string to string valued metadata. This is 
-  passed through to the audit backends.
-- `no_parent` `(bool: false)` - If true and set by a root caller, the token will 
+- `meta` `(map: {})` – A map of string to string valued metadata. This is
+  passed through to the audit devices.
+- `no_parent` `(bool: false)` - If true and set by a root caller, the token will
   not have the parent token of the caller. This creates a token with no parent.
-- `no_default_policy` `(bool: false)` - If true the `default` policy will not be 
+- `no_default_policy` `(bool: false)` - If true the `default` policy will not be
   contained in this token's policy set.
 - `renewable` `(bool: true)` - Set to `false` to disable the ability of the token
   to be renewed past its initial TTL.  Setting the value to `true` will allow
   the token to be renewable up to the system/mount maximum TTL.
 - `lease` `(string: "")` - DEPRECATED; use `ttl` instead
-- `ttl` `(string: "")`  -The TTL period of the token, provided as "1h", where 
+- `ttl` `(string: "")`  -The TTL period of the token, provided as "1h", where
   hour is the largest suffix. If not provided, the token is valid for the
-  [default lease TTL](/docs/configuration/index.html), or indefinitely if the 
+  [default lease TTL](/docs/configuration/index.html), or indefinitely if the
   root policy is used.
-- `explicit_max_ttl` `(string: "")` - If set, the token will have an explicit 
-  max TTL set upon it. This maximum token TTL *cannot* be changed later, and 
-  unlike with normal tokens, updates to the system/mount max TTL value will 
-  have no effect at renewal time -- the token will never be able to be renewed 
-  or used past the value set at issue time. 
+- `explicit_max_ttl` `(string: "")` - If set, the token will have an explicit
+  max TTL set upon it. This maximum token TTL *cannot* be changed later, and
+  unlike with normal tokens, updates to the system/mount max TTL value will
+  have no effect at renewal time -- the token will never be able to be renewed
+  or used past the value set at issue time.
 - `display_name` `(string: "token")` - The display name of the token.
-- `num_uses` `(integer: 0)` - The maximum uses for the given token. This can be 
-  used to create a one-time-token or limited use token. The value of 0 has no 
+- `num_uses` `(integer: 0)` - The maximum uses for the given token. This can be
+  used to create a one-time-token or limited use token. The value of 0 has no
   limit to the number of uses.
-- `period` `(string: "")` - If specified, the token will be periodic; it will have 
-  no maximum TTL (unless an "explicit-max-ttl" is also set) but every renewal 
+- `period` `(string: "")` - If specified, the token will be periodic; it will have
+  no maximum TTL (unless an "explicit-max-ttl" is also set) but every renewal
   will use the given period. Requires a root/sudo token to use.
 
 ### Sample Payload
@@ -134,7 +133,7 @@ $ curl \
   "auth": {
     "client_token": "ABCD",
     "policies": [
-      "web", 
+      "web",
       "stage"
     ],
     "metadata": {
@@ -184,12 +183,12 @@ $ curl \
   "data": {
     "id": "ClientToken",
     "policies": [
-      "web", 
+      "web",
       "stage"
      ],
     "path": "auth/github/login",
     "meta": {
-      "user": "armon", 
+      "user": "armon",
       "organization": "hashicorp"
     },
     "display_name": "github-armon",
@@ -221,12 +220,12 @@ $ curl \
   "data": {
     "id": "ClientToken",
     "policies": [
-      "web", 
+      "web",
       "stage"
      ],
     "path": "auth/github/login",
     "meta": {
-      "user": "armon", 
+      "user": "armon",
       "organization": "hashicorp"
     },
     "display_name": "github-armon",
@@ -282,7 +281,7 @@ $ curl \
     "orphan": false,
     "path": "auth/token/create",
     "policies": [
-      "default", 
+      "default",
       "web"
     ],
     "ttl": 2591976
@@ -294,8 +293,8 @@ $ curl \
 
 ## Renew a Token
 
-Renews a lease associated with a token. This is used to prevent the expiration 
-of a token, and the automatic revocation of it. Token renewal is possible only 
+Renews a lease associated with a token. This is used to prevent the expiration
+of a token, and the automatic revocation of it. Token renewal is possible only
 if there is a lease associated with it.
 
 | Method   | Path                         | Produces               |
@@ -305,9 +304,9 @@ if there is a lease associated with it.
 
 ### Parameters
 
-- `token` `(string: <required>)` - Token to renew. This can be part of the URL 
+- `token` `(string: <required>)` - Token to renew. This can be part of the URL
   or the body.
-- `increment` `(string: "")` - An optional requested lease increment can be 
+- `increment` `(string: "")` - An optional requested lease increment can be
   provided. This increment may be ignored.
 
 ### Sample Payload
@@ -335,7 +334,7 @@ $ curl \
   "auth": {
     "client_token": "ABCD",
     "policies": [
-      "web", 
+      "web",
       "stage"
     ],
     "metadata": {
@@ -349,8 +348,8 @@ $ curl \
 
 ## Renew a Token (Self)
 
-Renews a lease associated with the calling token. This is used to prevent the 
-expiration of a token, and the automatic revocation of it. Token renewal is 
+Renews a lease associated with the calling token. This is used to prevent the
+expiration of a token, and the automatic revocation of it. Token renewal is
 possible only if there is a lease associated with it.
 
 | Method   | Path                         | Produces               |
@@ -359,7 +358,7 @@ possible only if there is a lease associated with it.
 
 ### Parameters
 
-- `increment` `(string: "")` - An optional requested lease increment can be 
+- `increment` `(string: "")` - An optional requested lease increment can be
   provided. This increment may be ignored.
 
 ### Sample Payload
@@ -387,7 +386,7 @@ $ curl \
   "auth": {
     "client_token": "ABCD",
     "policies": [
-      "web", 
+      "web",
       "stage"
     ],
     "metadata": {
@@ -401,7 +400,7 @@ $ curl \
 
 ## Revoke a Token
 
-Revokes a token and all child tokens. When the token is revoked, all secrets 
+Revokes a token and all child tokens. When the token is revoked, all secrets
 generated with it are also revoked.
 
 | Method   | Path                         | Produces               |
@@ -432,12 +431,12 @@ $ curl \
 
 ## Revoke a Token (Self)
 
-Revokes the token used to call it and all child tokens. When the token is 
+Revokes the token used to call it and all child tokens. When the token is
 revoked, all dynamic secrets generated with it are also revoked.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/token/revoke-self`     | `200 application/json` |
+| `POST`   | `/auth/token/revoke-self`     | `204 (empty body)` |
 
 ### Sample Request
 
@@ -451,7 +450,7 @@ $ curl \
 ## Revoke a Token Accessor
 
 Revoke the token associated with the accessor and all the child tokens.  This is
-meant for purposes where there is no access to token ID but there is need to 
+meant for purposes where there is no access to token ID but there is need to
 revoke a token and its children.
 
 | Method   | Path                         | Produces               |
@@ -494,7 +493,7 @@ endpoint.
 
 ### Parameters
 
-- `token` `(string: <required>)` - Token to revoke. This can be part of the URL 
+- `token` `(string: <required>)` - Token to revoke. This can be part of the URL
   or the body.
 
 ### Sample Payload
@@ -566,7 +565,6 @@ List available token roles.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/auth/token/roles`          | `200 application/json` |
-| `GET`    | `/auth/token/roles?list=true` | `200 application/json` |
 
 ### Sample Request
 
@@ -592,13 +590,13 @@ $ curl \
 
 ## Create/Update Token Role
 
-Creates (or replaces) the named role. Roles enforce specific behavior when 
+Creates (or replaces) the named role. Roles enforce specific behavior when
 creating tokens that allow token functionality that is otherwise not
 available or would require `sudo`/root privileges to access. Role
 parameters, when set, override any provided options to the `create`
 endpoints. The role name is also included in the token path, allowing all
-tokens created against a role to be revoked using the `sys/revoke-prefix`
-endpoint.
+tokens created against a role to be revoked using the
+`/sys/leases/revoke-prefix` endpoint.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -607,39 +605,39 @@ endpoint.
 ### Parameters
 
 - `role_name` `(string: <required>)` – The name of the token role.
-- `allowed_policies` `(list: [])` – If set, tokens can be created with any 
-  subset of the policies in this list, rather than the normal semantics of 
-  tokens being a subset of the calling token's policies. The parameter is a 
-  comma-delimited string of policy names. If at creation time 
-  `no_default_policy` is not set and `"default"` is not contained in 
-  `disallowed_policies`, the `"default"` policy will be added to the created 
+- `allowed_policies` `(list: [])` – If set, tokens can be created with any
+  subset of the policies in this list, rather than the normal semantics of
+  tokens being a subset of the calling token's policies. The parameter is a
+  comma-delimited string of policy names. If at creation time
+  `no_default_policy` is not set and `"default"` is not contained in
+  `disallowed_policies`, the `"default"` policy will be added to the created
   token automatically.
-- `disallowed_policies` `(list: [])` – If set, successful token creation via 
-  this role will require that no policies in the given list are requested. The 
-  parameter is a comma-delimited string of policy names. Adding `"default"` to 
+- `disallowed_policies` `(list: [])` – If set, successful token creation via
+  this role will require that no policies in the given list are requested. The
+  parameter is a comma-delimited string of policy names. Adding `"default"` to
   this list will prevent `"default"` from being added automatically to created
   tokens.
-- `orphan` `(bool: true)` - If `true`, tokens created against this policy will 
-  be orphan tokens (they will have no parent). As such, they will not be 
+- `orphan` `(bool: false)` - If `true`, tokens created against this policy will
+  be orphan tokens (they will have no parent). As such, they will not be
   automatically revoked by the revocation of any other token.
-- `period` `(string: "")` - If specified, the token will be periodic; it will have 
-  no maximum TTL (unless an "explicit-max-ttl" is also set) but every renewal 
+- `period` `(string: "")` - If specified, the token will be periodic; it will have
+  no maximum TTL (unless an "explicit-max-ttl" is also set) but every renewal
   will use the given period. Requires a root/sudo token to use.
 - `renewable` `(bool: true)` - Set to `false` to disable the ability of the token
   to be renewed past its initial TTL.  Setting the value to `true` will allow
   the token to be renewable up to the system/mount maximum TTL.
-- `explicit_max_ttl` `(string: "")` - If set, the token will have an explicit 
-  max TTL set upon it. This maximum token TTL *cannot* be changed later, and 
-  unlike with normal tokens, updates to the system/mount max TTL value will 
-  have no effect at renewal time -- the token will never be able to be renewed 
+- `explicit_max_ttl` `(string: "")` - If set, the token will have an explicit
+  max TTL set upon it. This maximum token TTL *cannot* be changed later, and
+  unlike with normal tokens, updates to the system/mount max TTL value will
+  have no effect at renewal time -- the token will never be able to be renewed
   or used past the value set at issue time.
-- `path_suffix` `(string: "")` - If set, tokens created against this role will 
+- `path_suffix` `(string: "")` - If set, tokens created against this role will
   have the given suffix as part of their path in addition to the role name. This
-  can be useful in certain scenarios, such as keeping the same role name in the 
-  future but revoking all tokens created against it before some point in time. 
+  can be useful in certain scenarios, such as keeping the same role name in the
+  future but revoking all tokens created against it before some point in time.
   The suffix can be changed, allowing new callers to have the new suffix as part
-  of their path, and then tokens with the old suffix can be revoked via 
-  `sys/revoke-prefix`.
+  of their path, and then tokens with the old suffix can be revoked via
+  `/sys/leases/revoke-prefix`.
 
 ### Sample Payload
 
@@ -688,7 +686,7 @@ $ curl \
 Performs some maintenance tasks to clean up invalid entries that may remain
 in the token store. Generally, running this is not needed unless upgrade
 notes or support personnel suggest it. This may perform a lot of I/O to the
-storage backend so should be used sparingly.
+storage method so should be used sparingly.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

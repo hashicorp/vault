@@ -30,8 +30,8 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Item struct {
-	ID      string               `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
-	Message *google_protobuf.Any `protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
+	ID      string               `sentinel:"" protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	Message *google_protobuf.Any `sentinel:"" protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
 }
 
 func (m *Item) Reset()                    { *m = Item{} }
@@ -54,8 +54,8 @@ func (m *Item) GetMessage() *google_protobuf.Any {
 }
 
 type Bucket struct {
-	Key   string  `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
-	Items []*Item `protobuf:"bytes,2,rep,name=items" json:"items,omitempty"`
+	Key   string  `sentinel:"" protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
+	Items []*Item `sentinel:"" protobuf:"bytes,2,rep,name=items" json:"items,omitempty"`
 }
 
 func (m *Bucket) Reset()                    { *m = Bucket{} }

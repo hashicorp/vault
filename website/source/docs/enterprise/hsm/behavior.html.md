@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Vault Enterprise HSM Behavioral Changes"
+page_title: "Behavioral Changes - HSM Integration - Vault Enterprise"
 sidebar_current: "docs-vault-enterprise-hsm-behavior"
 description: |-
   Vault Enterprise HSM support changes the way Vault works with regard to unseal and recovery keys as well as rekey and recovery operations.
@@ -73,7 +73,7 @@ and their API equivalents in the
 
 Additionally, Vault will refuse to initialize if the option has not been set to
 generate a key but no key is found. See
-[Configuration](/docs/vault-enterprise/hsm/configuration.html) for more details.
+[Configuration](/docs/configuration/seal/pkcs11.html) for more details.
 
 ### Rekeying
 

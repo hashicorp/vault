@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -30,6 +31,7 @@ func handleSysSeal(core *vault.Core) http.Handler {
 		}
 
 		// Seal with the token above
+		// We use context.Background since there won't be a request context if the node isn't active
 		if err := core.SealWithRequest(req); err != nil {
 			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 				respondError(w, http.StatusForbidden, err)
@@ -121,7 +123,13 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			}
 
 			// Attempt the unseal
-			if _, err := core.Unseal(key); err != nil {
+			ctx := context.Background()
+			if core.SealAccess().RecoveryKeySupported() {
+				_, err = core.UnsealWithRecoveryKeys(ctx, key)
+			} else {
+				_, err = core.Unseal(key)
+			}
+			if err != nil {
 				switch {
 				case errwrap.ContainsType(err, new(vault.ErrInvalidKey)):
 				case errwrap.Contains(err, vault.ErrBarrierInvalidKey.Error()):
@@ -154,17 +162,25 @@ func handleSysSealStatus(core *vault.Core) http.Handler {
 }
 
 func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+
 	sealed, err := core.Sealed()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	sealConfig, err := core.SealAccess().BarrierConfig()
+	var sealConfig *vault.SealConfig
+	if core.SealAccess().RecoveryKeySupported() {
+		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
+	} else {
+		sealConfig, err = core.SealAccess().BarrierConfig(ctx)
+	}
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
+
 	if sealConfig == nil {
 		respondError(w, http.StatusBadRequest, fmt.Errorf(
 			"server is not yet initialized"))
@@ -174,7 +190,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	// Fetch the local cluster name and identifier
 	var clusterName, clusterID string
 	if !sealed {
-		cluster, err := core.Cluster()
+		cluster, err := core.Cluster(ctx)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
@@ -190,6 +206,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	progress, nonce := core.SecretProgress()
 
 	respondOk(w, &SealStatusResponse{
+		Type:        sealConfig.Type,
 		Sealed:      sealed,
 		T:           sealConfig.SecretThreshold,
 		N:           sealConfig.SecretShares,
@@ -202,6 +219,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 }
 
 type SealStatusResponse struct {
+	Type        string `json:"type"`
 	Sealed      bool   `json:"sealed"`
 	T           int    `json:"t"`
 	N           int    `json:"n"`

@@ -4,64 +4,98 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/meta"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
-// RotateCommand is a Command that rotates the encryption key being used
-type RotateCommand struct {
-	meta.Meta
+var _ cli.Command = (*OperatorRotateCommand)(nil)
+var _ cli.CommandAutocomplete = (*OperatorRotateCommand)(nil)
+
+type OperatorRotateCommand struct {
+	*BaseCommand
 }
 
-func (c *RotateCommand) Run(args []string) int {
-	flags := c.Meta.FlagSet("rotate", meta.FlagSetDefault)
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
-	if err := flags.Parse(args); err != nil {
+func (c *OperatorRotateCommand) Synopsis() string {
+	return "Rotates the underlying encryption key"
+}
+
+func (c *OperatorRotateCommand) Help() string {
+	helpText := `
+Usage: vault rotate [options]
+
+  Rotates the underlying encryption key which is used to secure data written
+  to the storage backend. This installs a new key in the key ring. This new
+  key is used to encrypted new data, while older keys in the ring are used to
+  decrypt older data.
+
+  This is an online operation and does not cause downtime. This command is run
+  per-cluster (not per-server), since Vault servers in HA mode share the same
+  storage backend.
+
+  Rotate Vault's encryption key:
+
+      $ vault rotate
+
+  For a full list of examples, please see the documentation.
+
+` + c.Flags().Help()
+
+	return strings.TrimSpace(helpText)
+}
+
+func (c *OperatorRotateCommand) Flags() *FlagSets {
+	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+}
+
+func (c *OperatorRotateCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (c *OperatorRotateCommand) AutocompleteFlags() complete.Flags {
+	return c.Flags().Completions()
+}
+
+func (c *OperatorRotateCommand) Run(args []string) int {
+	f := c.Flags()
+
+	if err := f.Parse(args); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	args = f.Args()
+	if len(args) > 0 {
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
 		return 1
 	}
 
 	client, err := c.Client()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error initializing client: %s", err))
+		c.UI.Error(err.Error())
 		return 2
 	}
 
 	// Rotate the key
 	err = client.Sys().Rotate()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error with key rotation: %s", err))
+		c.UI.Error(fmt.Sprintf("Error rotating key: %s", err))
 		return 2
 	}
 
 	// Print the key status
 	status, err := client.Sys().KeyStatus()
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
-			"Error reading audits: %s", err))
+		c.UI.Error(fmt.Sprintf("Error reading key status: %s", err))
 		return 2
 	}
 
-	c.Ui.Output(fmt.Sprintf("Key Term: %d", status.Term))
-	c.Ui.Output(fmt.Sprintf("Installation Time: %v", status.InstallTime))
-	return 0
-}
-
-func (c *RotateCommand) Synopsis() string {
-	return "Rotates the backend encryption key used to persist data"
-}
-
-func (c *RotateCommand) Help() string {
-	helpText := `
-Usage: vault rotate [options]
-
-  Rotates the backend encryption key which is used to secure data
-  written to the storage backend. This is done by installing a new key
-  which encrypts new data, while old keys are still used to decrypt
-  secrets written previously. This is an online operation and is not
-  disruptive.
-
-General Options:
-` + meta.GeneralOptionsUsage()
-	return strings.TrimSpace(helpText)
+	switch Format(c.UI) {
+	case "table":
+		c.UI.Output("Success! Rotated key")
+		c.UI.Output("")
+		c.UI.Output(printKeyStatus(status))
+		return 0
+	default:
+		return OutputData(c.UI, status)
+	}
 }

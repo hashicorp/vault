@@ -6,15 +6,26 @@ import (
 
 type ExecutableQuery interface {
 	execute(conn *Conn) *Iter
-	attempt(time.Duration)
+	attempt(keyspace string, end, start time.Time, iter *Iter)
 	retryPolicy() RetryPolicy
 	GetRoutingKey() ([]byte, error)
+	Keyspace() string
 	RetryableQuery
 }
 
 type queryExecutor struct {
 	pool   *policyConnPool
 	policy HostSelectionPolicy
+}
+
+func (q *queryExecutor) attemptQuery(qry ExecutableQuery, conn *Conn) *Iter {
+	start := time.Now()
+	iter := qry.execute(conn)
+	end := time.Now()
+
+	qry.attempt(q.pool.keyspace, end, start, iter)
+
+	return iter
 }
 
 func (q *queryExecutor) executeQuery(qry ExecutableQuery) (*Iter, error) {
@@ -38,10 +49,7 @@ func (q *queryExecutor) executeQuery(qry ExecutableQuery) (*Iter, error) {
 			continue
 		}
 
-		start := time.Now()
-		iter = qry.execute(conn)
-
-		qry.attempt(time.Since(start))
+		iter = q.attemptQuery(qry, conn)
 
 		// Update host
 		hostResponse.Mark(iter.err)

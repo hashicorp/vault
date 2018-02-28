@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -24,8 +25,7 @@ func pathConfig(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	disableBinding := data.Get("disable_binding").(bool)
 
 	entry, err := logical.StorageEntryJSON("config", config{
@@ -35,15 +35,15 @@ func (b *backend) pathConfigWrite(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
+	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
 // Config returns the configuration for this backend.
-func (b *backend) Config(s logical.Storage) (*config, error) {
-	entry, err := s.Get("config")
+func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error) {
+	entry, err := s.Get(ctx, "config")
 	if err != nil {
 		return nil, err
 	}

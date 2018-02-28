@@ -1,6 +1,7 @@
 package userpass
 
 import (
+	"context"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
@@ -33,12 +34,10 @@ func pathUserPassword(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathUserPasswordUpdate(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+func (b *backend) pathUserPasswordUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 
-	userEntry, err := b.user(req.Storage, username)
+	userEntry, err := b.user(ctx, req.Storage, username)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +53,7 @@ func (b *backend) pathUserPasswordUpdate(
 		return logical.ErrorResponse(userErr.Error()), logical.ErrInvalidRequest
 	}
 
-	return nil, b.setUser(req.Storage, username, userEntry)
+	return nil, b.setUser(ctx, req.Storage, username, userEntry)
 }
 
 func (b *backend) updateUserPassword(req *logical.Request, d *framework.FieldData, userEntry *UserEntry) (error, error) {

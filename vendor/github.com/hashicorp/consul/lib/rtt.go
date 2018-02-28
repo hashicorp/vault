@@ -36,14 +36,14 @@ func (cs CoordinateSet) Intersect(other CoordinateSet) (*coordinate.Coordinate, 
 	// we are possibly a client. Any node with more than one segment can only
 	// be a server, which means it should be in all segments.
 	if len(cs) == 1 {
-		for s, _ := range cs {
+		for s := range cs {
 			segment = s
 		}
 	}
 
 	// Likewise for the other set.
 	if len(other) == 1 {
-		for s, _ := range other {
+		for s := range other {
 			segment = s
 		}
 	}

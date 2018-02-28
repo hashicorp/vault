@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"os"
 	"regexp"
 	"strconv"
 	"sync"
@@ -31,13 +32,15 @@ func init() {
 // Ensure that the atomic variable is aligned to a 64bit boundary
 // so that atomic operations can be applied on 32bit architectures.
 type controlConn struct {
+	started      int32
+	reconnecting int32
+
 	session *Session
 	conn    atomic.Value
 
 	retry RetryPolicy
 
-	started int32
-	quit    chan struct{}
+	quit chan struct{}
 }
 
 func createControlConn(session *Session) *controlConn {
@@ -47,7 +50,7 @@ func createControlConn(session *Session) *controlConn {
 		retry:   &SimpleRetryPolicy{NumRetries: 3},
 	}
 
-	control.conn.Store((*Conn)(nil))
+	control.conn.Store((*connHost)(nil))
 
 	return control
 }
@@ -58,12 +61,16 @@ func (c *controlConn) heartBeat() {
 	}
 
 	sleepTime := 1 * time.Second
+	timer := time.NewTimer(sleepTime)
+	defer timer.Stop()
 
 	for {
+		timer.Reset(sleepTime)
+
 		select {
 		case <-c.quit:
 			return
-		case <-time.After(sleepTime):
+		case <-timer.C:
 		}
 
 		resp, err := c.writeFrame(&writeOptionsFrame{})
@@ -86,14 +93,13 @@ func (c *controlConn) heartBeat() {
 		// try to connect a bit faster
 		sleepTime = 1 * time.Second
 		c.reconnect(true)
-		// time.Sleep(5 * time.Second)
 		continue
 	}
 }
 
-var hostLookupPreferV4 = false
+var hostLookupPreferV4 = os.Getenv("GOCQL_HOST_LOOKUP_PREFER_V4") == "true"
 
-func hostInfo(addr string, defaultPort int) (*HostInfo, error) {
+func hostInfo(addr string, defaultPort int) ([]*HostInfo, error) {
 	var port int
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -106,33 +112,40 @@ func hostInfo(addr string, defaultPort int) (*HostInfo, error) {
 		}
 	}
 
-	ip := net.ParseIP(host)
-	if ip == nil {
-		ips, err := net.LookupIP(host)
-		if err != nil {
-			return nil, err
-		} else if len(ips) == 0 {
-			return nil, fmt.Errorf("No IP's returned from DNS lookup for %q", addr)
-		}
+	var hosts []*HostInfo
 
-		if hostLookupPreferV4 {
-			for _, v := range ips {
-				if v4 := v.To4(); v4 != nil {
-					ip = v4
-					break
-				}
-			}
-			if ip == nil {
-				ip = ips[0]
-			}
-		} else {
-			// TODO(zariel): should we check that we can connect to any of the ips?
-			ip = ips[0]
-		}
-
+	// Check if host is a literal IP address
+	if ip := net.ParseIP(host); ip != nil {
+		hosts = append(hosts, &HostInfo{connectAddress: ip, port: port})
+		return hosts, nil
 	}
 
-	return &HostInfo{connectAddress: ip, port: port}, nil
+	// Look up host in DNS
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return nil, err
+	} else if len(ips) == 0 {
+		return nil, fmt.Errorf("No IP's returned from DNS lookup for %q", addr)
+	}
+
+	// Filter to v4 addresses if any present
+	if hostLookupPreferV4 {
+		var preferredIPs []net.IP
+		for _, v := range ips {
+			if v4 := v.To4(); v4 != nil {
+				preferredIPs = append(preferredIPs, v4)
+			}
+		}
+		if len(preferredIPs) != 0 {
+			ips = preferredIPs
+		}
+	}
+
+	for _, ip := range ips {
+		hosts = append(hosts, &HostInfo{connectAddress: ip, port: port})
+	}
+
+	return hosts, nil
 }
 
 func shuffleHosts(hosts []*HostInfo) []*HostInfo {
@@ -197,14 +210,20 @@ func (c *controlConn) discoverProtocol(hosts []*HostInfo) (int, error) {
 	handler := connErrorHandlerFn(func(c *Conn, err error, closed bool) {
 		// we should never get here, but if we do it means we connected to a
 		// host successfully which means our attempted protocol version worked
+		if !closed {
+			c.Close()
+		}
 	})
 
 	var err error
 	for _, host := range hosts {
 		var conn *Conn
-		conn, err = Connect(host, &connCfg, handler, c.session)
-		if err == nil {
+		conn, err = c.session.dial(host.ConnectAddress(), host.Port(), &connCfg, handler)
+		if conn != nil {
 			conn.Close()
+		}
+
+		if err == nil {
 			return connCfg.ProtoVersion, nil
 		}
 
@@ -239,35 +258,31 @@ func (c *controlConn) connect(hosts []*HostInfo) error {
 	return nil
 }
 
+type connHost struct {
+	conn *Conn
+	host *HostInfo
+}
+
 func (c *controlConn) setupConn(conn *Conn) error {
 	if err := c.registerEvents(conn); err != nil {
 		conn.Close()
 		return err
 	}
 
-	c.conn.Store(conn)
-
-	if v, ok := conn.conn.RemoteAddr().(*net.TCPAddr); ok {
-		c.session.handleNodeUp(copyBytes(v.IP), v.Port, false)
-		return nil
-	}
-
-	host, portstr, err := net.SplitHostPort(conn.conn.RemoteAddr().String())
+	// TODO(zariel): do we need to fetch host info everytime
+	// the control conn connects? Surely we have it cached?
+	host, err := conn.localHostInfo()
 	if err != nil {
 		return err
 	}
 
-	port, err := strconv.Atoi(portstr)
-	if err != nil {
-		return err
+	ch := &connHost{
+		conn: conn,
+		host: host,
 	}
 
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return fmt.Errorf("invalid remote addr: addr=%v host=%q", conn.conn.RemoteAddr(), host)
-	}
-
-	c.session.handleNodeUp(ip, port, false)
+	c.conn.Store(ch)
+	c.session.handleNodeUp(host.ConnectAddress(), host.Port(), false)
 
 	return nil
 }
@@ -308,14 +323,18 @@ func (c *controlConn) registerEvents(conn *Conn) error {
 }
 
 func (c *controlConn) reconnect(refreshring bool) {
+	if !atomic.CompareAndSwapInt32(&c.reconnecting, 0, 1) {
+		return
+	}
+	defer atomic.StoreInt32(&c.reconnecting, 0)
 	// TODO: simplify this function, use session.ring to get hosts instead of the
 	// connection pool
 
 	var host *HostInfo
-	oldConn := c.conn.Load().(*Conn)
-	if oldConn != nil {
-		host = oldConn.host
-		oldConn.Close()
+	ch := c.getConn()
+	if ch != nil {
+		host = ch.host
+		ch.conn.Close()
 	}
 
 	var newConn *Conn
@@ -364,21 +383,25 @@ func (c *controlConn) HandleError(conn *Conn, err error, closed bool) {
 		return
 	}
 
-	oldConn := c.conn.Load().(*Conn)
-	if oldConn != conn {
+	oldConn := c.getConn()
+	if oldConn.conn != conn {
 		return
 	}
 
-	c.reconnect(true)
+	c.reconnect(false)
+}
+
+func (c *controlConn) getConn() *connHost {
+	return c.conn.Load().(*connHost)
 }
 
 func (c *controlConn) writeFrame(w frameWriter) (frame, error) {
-	conn := c.conn.Load().(*Conn)
-	if conn == nil {
+	ch := c.getConn()
+	if ch == nil {
 		return nil, errNoControl
 	}
 
-	framer, err := conn.exec(context.Background(), w, nil)
+	framer, err := ch.conn.exec(context.Background(), w, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -386,13 +409,13 @@ func (c *controlConn) writeFrame(w frameWriter) (frame, error) {
 	return framer.parseFrame()
 }
 
-func (c *controlConn) withConn(fn func(*Conn) *Iter) *Iter {
+func (c *controlConn) withConnHost(fn func(*connHost) *Iter) *Iter {
 	const maxConnectAttempts = 5
 	connectAttempts := 0
 
 	for i := 0; i < maxConnectAttempts; i++ {
-		conn := c.conn.Load().(*Conn)
-		if conn == nil {
+		ch := c.getConn()
+		if ch == nil {
 			if connectAttempts > maxConnectAttempts {
 				break
 			}
@@ -403,10 +426,16 @@ func (c *controlConn) withConn(fn func(*Conn) *Iter) *Iter {
 			continue
 		}
 
-		return fn(conn)
+		return fn(ch)
 	}
 
 	return &Iter{err: errNoControl}
+}
+
+func (c *controlConn) withConn(fn func(*Conn) *Iter) *Iter {
+	return c.withConnHost(func(ch *connHost) *Iter {
+		return fn(ch.conn)
+	})
 }
 
 // query will return nil if the connection is closed or nil
@@ -437,21 +466,14 @@ func (c *controlConn) awaitSchemaAgreement() error {
 	}).err
 }
 
-func (c *controlConn) GetHostInfo() *HostInfo {
-	conn := c.conn.Load().(*Conn)
-	if conn == nil {
-		return nil
-	}
-	return conn.host
-}
-
 func (c *controlConn) close() {
 	if atomic.CompareAndSwapInt32(&c.started, 1, -1) {
 		c.quit <- struct{}{}
 	}
-	conn := c.conn.Load().(*Conn)
-	if conn != nil {
-		conn.Close()
+
+	ch := c.getConn()
+	if ch != nil {
+		ch.conn.Close()
 	}
 }
 

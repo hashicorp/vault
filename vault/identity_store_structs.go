@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
@@ -72,4 +73,10 @@ type IdentityStore struct {
 	// groupPacker is used to pack multiple group storage entries into 256
 	// buckets
 	groupPacker *storagepacker.StoragePacker
+}
+
+type groupDiff struct {
+	New        []*identity.Group
+	Deleted    []*identity.Group
+	Unmodified []*identity.Group
 }

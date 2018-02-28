@@ -151,7 +151,6 @@ type Client struct {
 	requestedAPIVersion APIVersion
 	serverAPIVersion    APIVersion
 	expectedAPIVersion  APIVersion
-	nativeHTTPClient    *http.Client
 }
 
 // Dialer is an interface that allows network connections to be dialed
@@ -219,8 +218,14 @@ func NewVersionedClient(endpoint string, apiVersionString string) (*Client, erro
 		eventMonitor:        new(eventMonitoringState),
 		requestedAPIVersion: requestedAPIVersion,
 	}
-	c.initializeNativeClient()
+	c.initializeNativeClient(defaultTransport)
 	return c, nil
+}
+
+// WithTransport replaces underlying HTTP client of Docker Client by accepting
+// a function that returns pointer to a transport object.
+func (c *Client) WithTransport(trFunc func () *http.Transport) {
+	c.initializeNativeClient(trFunc)
 }
 
 // NewVersionnedTLSClient has been DEPRECATED, please use NewVersionedTLSClient.
@@ -340,19 +345,15 @@ func NewVersionedTLSClientFromBytes(endpoint string, certPEMBlock, keyPEMBlock, 
 		eventMonitor:        new(eventMonitoringState),
 		requestedAPIVersion: requestedAPIVersion,
 	}
-	c.initializeNativeClient()
+	c.initializeNativeClient(defaultTransport)
 	return c, nil
 }
 
-// SetTimeout takes a timeout and applies it to both the HTTPClient and
-// nativeHTTPClient. It should not be called concurrently with any other Client
-// methods.
+// SetTimeout takes a timeout and applies it to the HTTPClient. It should not
+// be called concurrently with any other Client methods.
 func (c *Client) SetTimeout(t time.Duration) {
 	if c.HTTPClient != nil {
 		c.HTTPClient.Timeout = t
-	}
-	if c.nativeHTTPClient != nil {
-		c.nativeHTTPClient.Timeout = t
 	}
 }
 
@@ -445,12 +446,10 @@ func (c *Client) do(method, path string, doOptions doOptions) (*http.Response, e
 			return nil, err
 		}
 	}
-	httpClient := c.HTTPClient
 	protocol := c.endpointURL.Scheme
 	var u string
 	switch protocol {
 	case unixProtocol, namedPipeProtocol:
-		httpClient = c.nativeHTTPClient
 		u = c.getFakeNativeURL(path)
 	default:
 		u = c.getURL(path)
@@ -476,7 +475,7 @@ func (c *Client) do(method, path string, doOptions doOptions) (*http.Response, e
 		ctx = context.Background()
 	}
 
-	resp, err := ctxhttp.Do(ctx, httpClient, req)
+	resp, err := ctxhttp.Do(ctx, c.HTTPClient, req)
 	if err != nil {
 		if strings.Contains(err.Error(), "connection refused") {
 			return nil, ErrConnectionRefused
@@ -953,12 +952,20 @@ type Error struct {
 }
 
 func newError(resp *http.Response) *Error {
+	type ErrMsg struct {
+		Message string `json:"message"`
+	}
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return &Error{Status: resp.StatusCode, Message: fmt.Sprintf("cannot read body, err: %v", err)}
 	}
-	return &Error{Status: resp.StatusCode, Message: string(data)}
+	var emsg ErrMsg
+	err = json.Unmarshal(data, &emsg)
+	if err != nil {
+		return &Error{Status: resp.StatusCode, Message: string(data)}
+	}
+	return &Error{Status: resp.StatusCode, Message: emsg.Message}
 }
 
 func (e *Error) Error() string {

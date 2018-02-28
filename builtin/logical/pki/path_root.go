@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
@@ -109,16 +110,14 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 	return ret
 }
 
-func (b *backend) pathCADeleteRoot(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, req.Storage.Delete("config/ca_bundle")
+func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return nil, req.Storage.Delete(ctx, "config/ca_bundle")
 }
 
-func (b *backend) pathCAGenerateRoot(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	entry, err := req.Storage.Get("config/ca_bundle")
+	entry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +136,12 @@ func (b *backend) pathCAGenerateRoot(
 		role.MaxPathLength = &maxPathLength
 	}
 
-	parsedBundle, err := generateCert(b, role, nil, true, req, data)
+	input := &dataBundle{
+		req:     req,
+		apiData: data,
+		role:    role,
+	}
+	parsedBundle, err := generateCert(ctx, b, input, true)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -149,7 +153,7 @@ func (b *backend) pathCAGenerateRoot(
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %s", err)
+		return nil, errwrap.Wrapf("error converting raw cert bundle to cert bundle: {{err}}", err)
 	}
 
 	resp := &logical.Response{
@@ -188,37 +192,44 @@ func (b *backend) pathCAGenerateRoot(
 		}
 	}
 
+	if data.Get("private_key_format").(string) == "pkcs8" {
+		err = convertRespToPKCS8(resp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Store it as the CA bundle
 	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
 		return nil, err
 	}
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
-	err = req.Storage.Put(&logical.StorageEntry{
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
+		return nil, errwrap.Wrapf("unable to store certificate locally: {{err}}", err)
 	}
 
 	// For ease of later use, also store just the certificate at a known
 	// location
 	entry.Key = "ca"
 	entry.Value = parsedBundle.CertificateBytes
-	err = req.Storage.Put(entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
 
 	// Build a fresh CRL
-	err = buildCRL(b, req)
+	err = buildCRL(ctx, b, req)
 	if err != nil {
 		return nil, err
 	}
@@ -230,8 +241,7 @@ func (b *backend) pathCAGenerateRoot(
 	return resp, nil
 }
 
-func (b *backend) pathCASignIntermediate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
 	format := getFormat(data)
@@ -242,6 +252,13 @@ func (b *backend) pathCASignIntermediate(
 	}
 
 	role := &roleEntry{
+		OU:                    data.Get("ou").([]string),
+		Organization:          data.Get("organization").([]string),
+		Country:               data.Get("country").([]string),
+		Locality:              data.Get("locality").([]string),
+		Province:              data.Get("province").([]string),
+		StreetAddress:         data.Get("street_address").([]string),
+		PostalCode:            data.Get("postal_code").([]string),
 		TTL:                   (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		AllowLocalhost:        true,
 		AllowAnyName:          true,
@@ -256,7 +273,7 @@ func (b *backend) pathCASignIntermediate(
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(req)
+	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(
@@ -274,7 +291,13 @@ func (b *backend) pathCASignIntermediate(
 		role.MaxPathLength = &maxPathLength
 	}
 
-	parsedBundle, err := signCert(b, role, signingBundle, true, useCSRValues, req, data)
+	input := &dataBundle{
+		req:           req,
+		apiData:       data,
+		signingBundle: signingBundle,
+		role:          role,
+	}
+	parsedBundle, err := signCert(b, input, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -337,7 +360,7 @@ func (b *backend) pathCASignIntermediate(
 		}
 	}
 
-	err = req.Storage.Put(&logical.StorageEntry{
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 		Value: parsedBundle.CertificateBytes,
 	})
@@ -352,8 +375,7 @@ func (b *backend) pathCASignIntermediate(
 	return resp, nil
 }
 
-func (b *backend) pathCASignSelfIssued(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
 	certPem := data.Get("certificate").(string)
@@ -378,7 +400,7 @@ func (b *backend) pathCASignSelfIssued(
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(req)
+	signingBundle, caErr := fetchCAInfo(ctx, req)
 	switch caErr.(type) {
 	case errutil.UserError:
 		return nil, errutil.UserError{Err: fmt.Sprintf(

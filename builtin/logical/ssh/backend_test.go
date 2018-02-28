@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -106,11 +107,7 @@ func TestBackend_allowed_users(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Setup(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = b.Initialize()
+	err = b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +126,7 @@ func TestBackend_allowed_users(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err := b.HandleRequest(roleReq)
+	resp, err := b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
@@ -145,7 +142,7 @@ func TestBackend_allowed_users(t *testing.T) {
 		Data:      credsData,
 	}
 
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
@@ -157,7 +154,7 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 
 	credsData["username"] = "test"
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
@@ -169,19 +166,19 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 
 	credsData["username"] = "random"
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("expected failure: resp:%#v err:%s", resp, err)
 	}
 
 	delete(roleData, "allowed_users")
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
 
 	credsData["username"] = "ubuntu"
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
@@ -193,18 +190,18 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 
 	credsData["username"] = "test"
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("expected failure: resp:%#v err:%s", resp, err)
 	}
 
 	roleData["allowed_users"] = "*"
-	resp, err = b.HandleRequest(roleReq)
+	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp != nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
 
-	resp, err = b.HandleRequest(credsReq)
+	resp, err = b.HandleRequest(context.Background(), credsReq)
 	if err != nil || (resp != nil && resp.IsError()) || resp == nil {
 		t.Fatalf("failed to create role: resp:%#v err:%s", resp, err)
 	}
@@ -216,14 +213,14 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 }
 
-func testingFactory(conf *logical.BackendConfig) (logical.Backend, error) {
+func testingFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	_, err := vault.StartSSHHostTestServer()
 	if err != nil {
 		panic(fmt.Sprintf("error starting mock server:%s", err))
 	}
 	defaultLeaseTTLVal := 2 * time.Minute
 	maxLeaseTTLVal := 10 * time.Minute
-	return Factory(&logical.BackendConfig{
+	return Factory(context.Background(), &logical.BackendConfig{
 		Logger:      nil,
 		StorageView: &logical.InmemStorage{},
 		System: &logical.StaticSystemView{
@@ -267,6 +264,31 @@ func TestSSHBackend_Lookup(t *testing.T) {
 			testLookupRead(t, data, resp4),
 			testRoleDelete(t, testDynamicRoleName),
 			testLookupRead(t, data, resp1),
+		},
+	})
+}
+
+func TestSSHBackend_RoleList(t *testing.T) {
+	testOTPRoleData := map[string]interface{}{
+		"key_type":     testOTPKeyType,
+		"default_user": testUserName,
+		"cidr_list":    testCIDRList,
+	}
+	resp1 := map[string]interface{}{}
+	resp2 := map[string]interface{}{
+		"keys": []string{testOTPRoleName},
+		"key_info": map[string]interface{}{
+			testOTPRoleName: map[string]interface{}{
+				"key_type": testOTPKeyType,
+			},
+		},
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Factory: testingFactory,
+		Steps: []logicaltest.TestStep{
+			testRoleList(t, resp1),
+			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
+			testRoleList(t, resp2),
 		},
 	})
 }
@@ -490,7 +512,7 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -526,7 +548,7 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -564,7 +586,7 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -607,7 +629,7 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -655,7 +677,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 func TestBackend_CustomKeyIDFormat(t *testing.T) {
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -704,7 +726,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	config := logical.TestBackendConfig()
 
-	b, err := Factory(config)
+	b, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatalf("Cannot create backend: %s", err)
 	}
@@ -959,6 +981,25 @@ func testRoleWrite(t *testing.T, name string, data map[string]interface{}) logic
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + name,
 		Data:      data,
+	}
+}
+
+func testRoleList(t *testing.T, expected map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "roles",
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				return fmt.Errorf("nil response")
+			}
+			if resp.Data == nil {
+				return fmt.Errorf("nil data")
+			}
+			if !reflect.DeepEqual(resp.Data, expected) {
+				return fmt.Errorf("Invalid response:\nactual:%#v\nexpected is %#v", resp.Data, expected)
+			}
+			return nil
+		},
 	}
 }
 

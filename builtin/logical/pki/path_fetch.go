@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"context"
 	"encoding/pem"
 	"fmt"
 
@@ -101,8 +102,8 @@ func pathFetchListCerts(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathFetchCertList(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	entries, err := req.Storage.List("certs/")
+func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
+	entries, err := req.Storage.List(ctx, "certs/")
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func (b *backend) pathFetchCertList(req *logical.Request, data *framework.FieldD
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
+func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	var serial, pemType, contentType string
 	var certEntry, revokedEntry *logical.StorageEntry
 	var funcErr error
@@ -156,7 +157,7 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 	}
 
 	if serial == "ca_chain" {
-		caInfo, err := fetchCAInfo(req)
+		caInfo, err := fetchCAInfo(ctx, req)
 		switch err.(type) {
 		case errutil.UserError:
 			response = logical.ErrorResponse(err.Error())
@@ -167,17 +168,19 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		}
 
 		caChain := caInfo.GetCAChain()
+		var certStr string
 		for _, ca := range caChain {
 			block := pem.Block{
 				Type:  "CERTIFICATE",
 				Bytes: ca.Bytes,
 			}
-			certificate = append(certificate, pem.EncodeToMemory(&block)...)
+			certStr = certStr + string(pem.EncodeToMemory(&block))
 		}
+		certificate = []byte(certStr)
 		goto reply
 	}
 
-	certEntry, funcErr = fetchCertBySerial(req, req.Path, serial)
+	certEntry, funcErr = fetchCertBySerial(ctx, req, req.Path, serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -203,7 +206,7 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		certificate = pem.EncodeToMemory(&block)
 	}
 
-	revokedEntry, funcErr = fetchCertBySerial(req, "revoked/", serial)
+	revokedEntry, funcErr = fetchCertBySerial(ctx, req, "revoked/", serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:

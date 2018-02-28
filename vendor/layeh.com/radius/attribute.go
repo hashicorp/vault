@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"errors"
+	"math"
 	"net"
 	"strconv"
 	"time"
@@ -14,10 +15,10 @@ import (
 // expected.
 var ErrNoAttribute = errors.New("radius: attribute not found")
 
-// Attribute is a RADIUS attribute value, as encoded on the wire.
+// Attribute is a wire encoded RADIUS attribute.
 type Attribute []byte
 
-// Integer returns the given attribute as an integer. An error is returned  if
+// Integer returns the given attribute as an integer. An error is returned if
 // the attribute is not 4 bytes long.
 func Integer(a Attribute) (uint32, error) {
 	if len(a) != 4 {
@@ -187,10 +188,14 @@ func Date(a Attribute) (time.Time, error) {
 }
 
 // NewDate returns a new Attribute from the given time.Time.
-func NewDate(t time.Time) Attribute {
+func NewDate(t time.Time) (Attribute, error) {
+	unix := t.Unix()
+	if unix > math.MaxUint32 {
+		return nil, errors.New("time out of range")
+	}
 	a := make([]byte, 4)
 	binary.BigEndian.PutUint32(a, uint32(t.Unix()))
-	return a
+	return a, nil
 }
 
 // VendorSpecific returns the vendor ID and value from the given attribute. An
@@ -208,11 +213,14 @@ func VendorSpecific(a Attribute) (vendorID uint32, value Attribute, err error) {
 
 // NewVendorSpecific returns a new vendor specific attribute with the given
 // vendor ID and value.
-func NewVendorSpecific(vendorID uint32, value Attribute) Attribute {
+func NewVendorSpecific(vendorID uint32, value Attribute) (Attribute, error) {
+	if len(value) > 249 {
+		return nil, errors.New("value too long")
+	}
 	a := make([]byte, 4+len(value))
 	binary.BigEndian.PutUint32(a, vendorID)
 	copy(a[4:], value)
-	return a
+	return a, nil
 }
 
 // TODO: ipv6addr

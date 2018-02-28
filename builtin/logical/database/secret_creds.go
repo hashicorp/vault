@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -20,7 +21,7 @@ func secretCreds(b *databaseBackend) *framework.Secret {
 }
 
 func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		// Get the username from the internal data
 		usernameRaw, ok := req.Secret.InternalData["username"]
 		if !ok {
@@ -33,7 +34,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
 		}
 
-		role, err := b.Role(req.Storage, roleNameRaw.(string))
+		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -42,14 +43,14 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		}
 
 		f := framework.LeaseExtend(role.DefaultTTL, role.MaxTTL, b.System())
-		resp, err := f(req, data)
+		resp, err := f(ctx, req, data)
 		if err != nil {
 			return nil, err
 		}
 
 		// Grab the read lock
 		b.RLock()
-		var unlockFunc func() = b.RUnlock
+		unlockFunc := b.RUnlock
 
 		// Get the Database object
 		db, ok := b.getDBObj(role.DBName)
@@ -60,7 +61,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			unlockFunc = b.Unlock
 
 			// Create a new DB object
-			db, err = b.createDBObj(req.Storage, role.DBName)
+			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
 				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
@@ -69,21 +70,21 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
 		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
-			err := db.RenewUser(role.Statements, username, expireTime)
-			// Unlock
-			unlockFunc()
+			err := db.RenewUser(ctx, role.Statements, username, expireTime)
 			if err != nil {
+				unlockFunc()
 				b.closeIfShutdown(role.DBName, err)
 				return nil, err
 			}
 		}
 
+		unlockFunc()
 		return resp, nil
 	}
 }
 
 func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
-	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		// Get the username from the internal data
 		usernameRaw, ok := req.Secret.InternalData["username"]
 		if !ok {
@@ -98,7 +99,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			return nil, fmt.Errorf("no role name was provided")
 		}
 
-		role, err := b.Role(req.Storage, roleNameRaw.(string))
+		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +109,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 
 		// Grab the read lock
 		b.RLock()
-		var unlockFunc func() = b.RUnlock
+		unlockFunc := b.RUnlock
 
 		// Get our connection
 		db, ok := b.getDBObj(role.DBName)
@@ -119,21 +120,20 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			unlockFunc = b.Unlock
 
 			// Create a new DB object
-			db, err = b.createDBObj(req.Storage, role.DBName)
+			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
 				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
 			}
 		}
 
-		err = db.RevokeUser(role.Statements, username)
-		// Unlock
-		unlockFunc()
-		if err != nil {
+		if err := db.RevokeUser(ctx, role.Statements, username); err != nil {
+			unlockFunc()
 			b.closeIfShutdown(role.DBName, err)
 			return nil, err
 		}
 
+		unlockFunc()
 		return resp, nil
 	}
 }

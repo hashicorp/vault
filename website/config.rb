@@ -2,7 +2,7 @@ set :base_url, "https://www.vaultproject.io/"
 
 activate :hashicorp do |h|
   h.name         = "vault"
-  h.version      = "0.8.3"
+  h.version      = "0.9.5"
   h.github_slug  = "hashicorp/vault"
   h.website_root = "website"
 end
@@ -37,7 +37,6 @@ helpers do
   # @return [String]
   def description_for(page)
     description = (page.data.description || "")
-      .gsub('"', '')
       .gsub(/\n+/, ' ')
       .squeeze(' ')
 

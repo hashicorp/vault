@@ -1,16 +1,14 @@
 package mssql
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
 	"strings"
-
-	"database/sql/driver"
-
-	"golang.org/x/net/context"
 )
 
 //go:generate stringer -type token
@@ -24,6 +22,7 @@ const (
 	tokenOrder        token = 169 // 0xA9
 	tokenError        token = 170 // 0xAA
 	tokenInfo         token = 171 // 0xAB
+	tokenReturnValue  token = 0xAC
 	tokenLoginAck     token = 173 // 0xad
 	tokenRow          token = 209 // 0xd1
 	tokenNbcRow       token = 210 // 0xd2
@@ -519,7 +518,29 @@ func parseInfo(r *tdsBuffer) (res Error) {
 	return
 }
 
-func processSingleResponse(sess *tdsSession, ch chan tokenStruct) {
+// https://msdn.microsoft.com/en-us/library/dd303881.aspx
+func parseReturnValue(r *tdsBuffer) (nv namedValue) {
+	/*
+		ParamOrdinal
+		ParamName
+		Status
+		UserType
+		Flags
+		TypeInfo
+		CryptoMetadata
+		Value
+	*/
+	r.uint16()
+	nv.Name = r.BVarChar()
+	r.byte()
+	r.uint32() // UserType (uint16 prior to 7.2)
+	r.uint16()
+	ti := readTypeInfo(r)
+	nv.Value = ti.Reader(&ti, r)
+	return
+}
+
+func processSingleResponse(sess *tdsSession, ch chan tokenStruct, outs map[string]interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
 			if sess.logFlags&logErrors != 0 {
@@ -539,7 +560,7 @@ func processSingleResponse(sess *tdsSession, ch chan tokenStruct) {
 		return
 	}
 	if packet_type != packReply {
-		badStreamPanic(driver.ErrBadConn)
+		badStreamPanic(fmt.Errorf("unexpected packet type in reply: got %v, expected %v", packet_type, packReply))
 	}
 	var columns []columnStruct
 	errs := make([]Error, 0, 5)
@@ -614,10 +635,44 @@ func processSingleResponse(sess *tdsSession, ch chan tokenStruct) {
 			if sess.logFlags&logMessages != 0 {
 				sess.log.Println(info.Message)
 			}
+		case tokenReturnValue:
+			nv := parseReturnValue(sess.buf)
+			if len(nv.Name) > 0 {
+				name := nv.Name[1:] // Remove the leading "@".
+				if ov, has := outs[name]; has {
+					err = scanIntoOut(nv.Value, ov)
+					if err != nil {
+						fmt.Println("scan error", err)
+						ch <- err
+					}
+				}
+			}
 		default:
-			badStreamPanic(driver.ErrBadConn)
+			badStreamPanic(fmt.Errorf("unknown token type returned: %v", token))
 		}
 	}
+}
+
+func scanIntoOut(fromServer, scanInto interface{}) error {
+	switch fs := fromServer.(type) {
+	case int64:
+		switch si := scanInto.(type) {
+		case *int64:
+			*si = fs
+		default:
+			return fmt.Errorf("unsupported scan into type %[1]T for server type %[2]T", scanInto, fromServer)
+		}
+		return nil
+	case string:
+		switch si := scanInto.(type) {
+		case *string:
+			*si = fs
+		default:
+			return fmt.Errorf("unsupported scan into type %[1]T for server type %[2]T", scanInto, fromServer)
+		}
+		return nil
+	}
+	return fmt.Errorf("unsupported type from server %[1]T=%[1]v", fromServer)
 }
 
 type parseRespIter byte
@@ -735,7 +790,7 @@ func (ts *parseResp) iter(ctx context.Context, ch chan tokenStruct, tokChan chan
 	}
 }
 
-func processResponse(ctx context.Context, sess *tdsSession, ch chan tokenStruct) {
+func processResponse(ctx context.Context, sess *tdsSession, ch chan tokenStruct, outs map[string]interface{}) {
 	ts := &parseResp{
 		sess:    sess,
 		ctxDone: ctx.Done(),
@@ -755,7 +810,7 @@ func processResponse(ctx context.Context, sess *tdsSession, ch chan tokenStruct)
 		ts.dlog("initiating response reading")
 
 		tokChan := make(chan tokenStruct)
-		go processSingleResponse(sess, tokChan)
+		go processSingleResponse(sess, tokChan, outs)
 
 		// Loop over multiple tokens in response.
 	tokensLoop:

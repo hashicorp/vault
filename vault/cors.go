@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -24,6 +25,7 @@ var StdAllowedHeaders = []string{
 	"X-Vault-Token",
 	"X-Vault-Wrap-Format",
 	"X-Vault-Wrap-TTL",
+	"X-Vault-Policy-Override",
 }
 
 // CORSConfig stores the state of the CORS configuration.
@@ -35,7 +37,7 @@ type CORSConfig struct {
 	AllowedHeaders []string `json:"allowed_headers,omitempty"`
 }
 
-func (c *Core) saveCORSConfig() error {
+func (c *Core) saveCORSConfig(ctx context.Context) error {
 	view := c.systemBarrierView.SubView("config/")
 
 	localConfig := &CORSConfig{
@@ -51,7 +53,7 @@ func (c *Core) saveCORSConfig() error {
 		return fmt.Errorf("failed to create CORS config entry: %v", err)
 	}
 
-	if err := view.Put(entry); err != nil {
+	if err := view.Put(ctx, entry); err != nil {
 		return fmt.Errorf("failed to save CORS config: %v", err)
 	}
 
@@ -59,11 +61,11 @@ func (c *Core) saveCORSConfig() error {
 }
 
 // This should only be called with the core state lock held for writing
-func (c *Core) loadCORSConfig() error {
+func (c *Core) loadCORSConfig(ctx context.Context) error {
 	view := c.systemBarrierView.SubView("config/")
 
 	// Load the config in
-	out, err := view.Get("cors")
+	out, err := view.Get(ctx, "cors")
 	if err != nil {
 		return fmt.Errorf("failed to read CORS config: %v", err)
 	}
@@ -85,7 +87,7 @@ func (c *Core) loadCORSConfig() error {
 
 // Enable takes either a '*' or a comma-seprated list of URLs that can make
 // cross-origin requests to Vault.
-func (c *CORSConfig) Enable(urls []string, headers []string) error {
+func (c *CORSConfig) Enable(ctx context.Context, urls []string, headers []string) error {
 	if len(urls) == 0 {
 		return errors.New("at least one origin or the wildcard must be provided.")
 	}
@@ -109,7 +111,7 @@ func (c *CORSConfig) Enable(urls []string, headers []string) error {
 
 	atomic.StoreUint32(&c.Enabled, CORSEnabled)
 
-	return c.core.saveCORSConfig()
+	return c.core.saveCORSConfig(ctx)
 }
 
 // IsEnabled returns the value of CORSConfig.isEnabled
@@ -118,7 +120,7 @@ func (c *CORSConfig) IsEnabled() bool {
 }
 
 // Disable sets CORS to disabled and clears the allowed origins & headers.
-func (c *CORSConfig) Disable() error {
+func (c *CORSConfig) Disable(ctx context.Context) error {
 	atomic.StoreUint32(&c.Enabled, CORSDisabled)
 	c.Lock()
 
@@ -127,7 +129,7 @@ func (c *CORSConfig) Disable() error {
 
 	c.Unlock()
 
-	return c.core.saveCORSConfig()
+	return c.core.saveCORSConfig(ctx)
 }
 
 // IsValidOrigin determines if the origin of the request is allowed to make

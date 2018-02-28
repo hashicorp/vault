@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -11,6 +12,86 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestIdentityStore_EntityReadGroupIDs(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	i, _, _ := testIdentityStoreWithGithubAuth(t)
+
+	entityReq := &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+	}
+
+	resp, err = i.HandleRequest(context.Background(), entityReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	entityID := resp.Data["id"].(string)
+
+	groupReq := &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"member_entity_ids": []string{
+				entityID,
+			},
+		},
+	}
+
+	resp, err = i.HandleRequest(context.Background(), groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	groupID := resp.Data["id"].(string)
+
+	// Create another group with the above created group as its subgroup
+
+	groupReq.Data = map[string]interface{}{
+		"member_group_ids": []string{groupID},
+	}
+	resp, err = i.HandleRequest(context.Background(), groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	inheritedGroupID := resp.Data["id"].(string)
+
+	lookupReq := &logical.Request{
+		Path:      "lookup/entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": "id",
+			"id":   entityID,
+		},
+	}
+
+	resp, err = i.HandleRequest(context.Background(), lookupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	expected := []string{groupID, inheritedGroupID}
+	actual := resp.Data["group_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: group_ids; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+
+	expected = []string{groupID}
+	actual = resp.Data["direct_group_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: direct_group_ids; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+
+	expected = []string{inheritedGroupID}
+	actual = resp.Data["inherited_group_ids"].([]string)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: inherited_group_ids; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+}
 
 func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 	var err error
@@ -31,7 +112,7 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 	}
 
 	// Create the entity
-	resp, err = is.HandleRequest(entityReq)
+	resp, err = is.HandleRequest(context.Background(), entityReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -47,7 +128,7 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 	entityReq.Data = updateData
 
 	// Update the entity
-	resp, err = is.HandleRequest(entityReq)
+	resp, err = is.HandleRequest(context.Background(), entityReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -56,7 +137,7 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 	entityReq.Operation = logical.ReadOperation
 
 	// Read the entity
-	resp, err = is.HandleRequest(entityReq)
+	resp, err = is.HandleRequest(context.Background(), entityReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -70,9 +151,9 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 
 func TestIdentityStore_CloneImmutability(t *testing.T) {
 	alias := &identity.Alias{
-		ID:                  "testaliasid",
-		Name:                "testaliasname",
-		MergedFromEntityIDs: []string{"entityid1"},
+		ID:   "testaliasid",
+		Name: "testaliasname",
+		MergedFromCanonicalIDs: []string{"entityid1"},
 	}
 
 	entity := &identity.Entity{
@@ -100,9 +181,9 @@ func TestIdentityStore_CloneImmutability(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	alias.MergedFromEntityIDs[0] = "invalidid"
+	alias.MergedFromCanonicalIDs[0] = "invalidid"
 
-	if clonedAlias.MergedFromEntityIDs[0] == "invalidid" {
+	if clonedAlias.MergedFromCanonicalIDs[0] == "invalidid" {
 		t.Fatalf("cloned alias is mutated")
 	}
 }
@@ -117,7 +198,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 	}
 
 	alias1 := &identity.Alias{
-		EntityID:      "testentityid",
+		CanonicalID:   "testentityid",
 		ID:            "testaliasid",
 		MountAccessor: githubAccessor,
 		MountType:     validateMountResp.MountType,
@@ -141,12 +222,12 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 
 	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
 
-	err = is.memDBUpsertEntity(entity)
+	err = is.MemDBUpsertEntity(entity)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	entityFetched, err := is.memDBEntityByID(entity.ID, true)
+	entityFetched, err := is.MemDBEntityByID(entity.ID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +235,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 	// Modify the fetched entity outside of a transaction
 	entityFetched.Aliases[0].ID = "invalidaliasid"
 
-	entityFetched, err = is.memDBEntityByID(entity.ID, false)
+	entityFetched, err = is.MemDBEntityByID(entity.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +258,7 @@ func TestIdentityStore_ListEntities(t *testing.T) {
 
 	expected := []string{}
 	for i := 0; i < 10; i++ {
-		resp, err = is.HandleRequest(entityReq)
+		resp, err = is.HandleRequest(context.Background(), entityReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v", err, resp)
 		}
@@ -189,7 +270,7 @@ func TestIdentityStore_ListEntities(t *testing.T) {
 		Path:      "entity/id",
 	}
 
-	resp, err = is.HandleRequest(listReq)
+	resp, err = is.HandleRequest(context.Background(), listReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -256,7 +337,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	ghSysview := c.mountEntrySysView(meGH)
 
 	// Create new github auth credential backend
-	ghAuth, err := c.newCredentialBackend(meGH.Type, ghSysview, ghView, nil)
+	ghAuth, err := c.newCredentialBackend(context.Background(), meGH.Type, ghSysview, ghView, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +369,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	}
 
 	// Register the entity
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -301,7 +382,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	}
 
 	// Ensure that entity is created
-	resp, err = is.HandleRequest(readReq)
+	resp, err = is.HandleRequest(context.Background(), readReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -339,7 +420,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	}
 
 	// Check if the entity is restored
-	resp, err = is.HandleRequest(readReq)
+	resp, err = is.HandleRequest(context.Background(), readReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -360,7 +441,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	}
 
 	alias1 := &identity.Alias{
-		EntityID:      "testentityid",
+		CanonicalID:   "testentityid",
 		ID:            "testaliasid",
 		MountAccessor: githubAccessor,
 		MountType:     validateMountResp.MountType,
@@ -372,7 +453,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	}
 
 	alias2 := &identity.Alias{
-		EntityID:      "testentityid",
+		CanonicalID:   "testentityid",
 		ID:            "testaliasid2",
 		MountAccessor: validateMountResp.MountAccessor,
 		MountType:     validateMountResp.MountType,
@@ -397,13 +478,13 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 
 	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
 
-	err = is.memDBUpsertEntity(entity)
+	err = is.MemDBUpsertEntity(entity)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Fetch the entity using its ID
-	entityFetched, err := is.memDBEntityByID(entity.ID, false)
+	entityFetched, err := is.MemDBEntityByID(entity.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -413,7 +494,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	}
 
 	// Fetch the entity using its name
-	entityFetched, err = is.memDBEntityByName(entity.Name, false)
+	entityFetched, err = is.MemDBEntityByName(entity.Name, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -423,7 +504,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	}
 
 	// Fetch entities using the metadata
-	entitiesFetched, err := is.memDBEntitiesByMetadata(map[string]string{
+	entitiesFetched, err := is.MemDBEntitiesByMetadata(map[string]string{
 		"someusefulkey": "someusefulvalue",
 	}, false)
 	if err != nil {
@@ -438,7 +519,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		t.Fatalf("entity mismatch; entity: %#v\n entitiesFetched[0]: %#v\n", entity, entitiesFetched[0])
 	}
 
-	entitiesFetched, err = is.memDBEntitiesByBucketEntryKeyHash(entity.BucketKeyHash)
+	entitiesFetched, err = is.MemDBEntitiesByBucketEntryKeyHash(entity.BucketKeyHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -447,12 +528,12 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		t.Fatalf("bad: length of entities; expected: 1, actual: %d", len(entitiesFetched))
 	}
 
-	err = is.memDBDeleteEntityByID(entity.ID)
+	err = is.MemDBDeleteEntityByID(entity.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	entityFetched, err = is.memDBEntityByID(entity.ID, false)
+	entityFetched, err = is.MemDBEntityByID(entity.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -461,7 +542,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		t.Fatalf("bad: entity; expected: nil, actual: %#v\n", entityFetched)
 	}
 
-	entityFetched, err = is.memDBEntityByName(entity.Name, false)
+	entityFetched, err = is.MemDBEntityByName(entity.Name, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -490,13 +571,13 @@ func TestIdentityStore_EntitySameEntityNames(t *testing.T) {
 	}
 
 	// Register an entity
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	// Register another entity with same name
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -524,7 +605,7 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 	}
 
 	// Register the entity
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -543,7 +624,7 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 		Operation: logical.ReadOperation,
 	}
 
-	resp, err = is.HandleRequest(readReq)
+	resp, err = is.HandleRequest(context.Background(), readReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -566,12 +647,12 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 		Data:      updateData,
 	}
 
-	resp, err = is.HandleRequest(updateReq)
+	resp, err = is.HandleRequest(context.Background(), updateReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	resp, err = is.HandleRequest(readReq)
+	resp, err = is.HandleRequest(context.Background(), readReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -587,12 +668,12 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 		Operation: logical.DeleteOperation,
 	}
 
-	resp, err = is.HandleRequest(deleteReq)
+	resp, err = is.HandleRequest(context.Background(), deleteReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	resp, err = is.HandleRequest(readReq)
+	resp, err = is.HandleRequest(context.Background(), readReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -648,7 +729,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	}
 
 	// Register the entity
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -666,19 +747,19 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	}
 
 	// Register the alias
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	// Register the alias
 	aliasReq.Data = aliasRegisterData2
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	entity1, err := is.memDBEntityByID(entityID1, false)
+	entity1, err := is.MemDBEntityByID(entityID1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -691,7 +772,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	registerReq.Data = registerData2
 	// Register another entity
-	resp, err = is.HandleRequest(registerReq)
+	resp, err = is.HandleRequest(context.Background(), registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -708,19 +789,19 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	}
 
 	// Register the alias
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	// Register the alias
 	aliasReq.Data = aliasRegisterData4
-	resp, err = is.HandleRequest(aliasReq)
+	resp, err = is.HandleRequest(context.Background(), aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	entity2, err := is.memDBEntityByID(entityID2, false)
+	entity2, err := is.MemDBEntityByID(entityID2, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -742,7 +823,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		Data:      mergeData,
 	}
 
-	resp, err = is.HandleRequest(mergeReq)
+	resp, err = is.HandleRequest(context.Background(), mergeReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -751,7 +832,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Path:      "entity/id/" + entityID2,
 	}
-	resp, err = is.HandleRequest(entityReq)
+	resp, err = is.HandleRequest(context.Background(), entityReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -760,7 +841,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	}
 
 	entityReq.Path = "entity/id/" + entityID1
-	resp, err = is.HandleRequest(entityReq)
+	resp, err = is.HandleRequest(context.Background(), entityReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
@@ -772,7 +853,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	for _, aliasRaw := range entity2Aliases {
 		alias := aliasRaw.(map[string]interface{})
-		aliasLookedUp, err := is.memDBAliasByID(alias["id"].(string), false)
+		aliasLookedUp, err := is.MemDBAliasByID(alias["id"].(string), false, false)
 		if err != nil {
 			t.Fatal(err)
 		}

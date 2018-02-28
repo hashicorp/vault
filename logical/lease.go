@@ -1,6 +1,8 @@
 package logical
 
-import "time"
+import (
+	"time"
+)
 
 // LeaseOptions is an embeddable struct to capture common lease
 // settings between a Secret and Auth

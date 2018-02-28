@@ -1,9 +1,20 @@
-/*
-Package azure provides Azure-specific implementations used with AutoRest.
-
-See the included examples for more detail.
-*/
+// Package azure provides Azure-specific implementations used with AutoRest.
+// See the included examples for more detail.
 package azure
+
+// Copyright 2017 Microsoft Corporation
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
 
 import (
 	"encoding/json"
@@ -29,21 +40,88 @@ const (
 )
 
 // ServiceError encapsulates the error response from an Azure service.
+// It adhears to the OData v4 specification for error responses.
 type ServiceError struct {
-	Code    string         `json:"code"`
-	Message string         `json:"message"`
-	Details *[]interface{} `json:"details"`
+	Code       string                   `json:"code"`
+	Message    string                   `json:"message"`
+	Target     *string                  `json:"target"`
+	Details    []map[string]interface{} `json:"details"`
+	InnerError map[string]interface{}   `json:"innererror"`
 }
 
 func (se ServiceError) Error() string {
-	if se.Details != nil {
-		d, err := json.Marshal(*(se.Details))
-		if err != nil {
-			return fmt.Sprintf("Code=%q Message=%q Details=%v", se.Code, se.Message, *se.Details)
-		}
-		return fmt.Sprintf("Code=%q Message=%q Details=%v", se.Code, se.Message, string(d))
+	result := fmt.Sprintf("Code=%q Message=%q", se.Code, se.Message)
+
+	if se.Target != nil {
+		result += fmt.Sprintf(" Target=%q", *se.Target)
 	}
-	return fmt.Sprintf("Code=%q Message=%q", se.Code, se.Message)
+
+	if se.Details != nil {
+		d, err := json.Marshal(se.Details)
+		if err != nil {
+			result += fmt.Sprintf(" Details=%v", se.Details)
+		}
+		result += fmt.Sprintf(" Details=%v", string(d))
+	}
+
+	if se.InnerError != nil {
+		d, err := json.Marshal(se.InnerError)
+		if err != nil {
+			result += fmt.Sprintf(" InnerError=%v", se.InnerError)
+		}
+		result += fmt.Sprintf(" InnerError=%v", string(d))
+	}
+
+	return result
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for the ServiceError type.
+func (se *ServiceError) UnmarshalJSON(b []byte) error {
+	// per the OData v4 spec the details field must be an array of JSON objects.
+	// unfortunately not all services adhear to the spec and just return a single
+	// object instead of an array with one object.  so we have to perform some
+	// shenanigans to accommodate both cases.
+	// http://docs.oasis-open.org/odata/odata-json-format/v4.0/os/odata-json-format-v4.0-os.html#_Toc372793091
+
+	type serviceError1 struct {
+		Code       string                   `json:"code"`
+		Message    string                   `json:"message"`
+		Target     *string                  `json:"target"`
+		Details    []map[string]interface{} `json:"details"`
+		InnerError map[string]interface{}   `json:"innererror"`
+	}
+
+	type serviceError2 struct {
+		Code       string                 `json:"code"`
+		Message    string                 `json:"message"`
+		Target     *string                `json:"target"`
+		Details    map[string]interface{} `json:"details"`
+		InnerError map[string]interface{} `json:"innererror"`
+	}
+
+	se1 := serviceError1{}
+	err := json.Unmarshal(b, &se1)
+	if err == nil {
+		se.populate(se1.Code, se1.Message, se1.Target, se1.Details, se1.InnerError)
+		return nil
+	}
+
+	se2 := serviceError2{}
+	err = json.Unmarshal(b, &se2)
+	if err == nil {
+		se.populate(se2.Code, se2.Message, se2.Target, nil, se2.InnerError)
+		se.Details = append(se.Details, se2.Details)
+		return nil
+	}
+	return err
+}
+
+func (se *ServiceError) populate(code, message string, target *string, details []map[string]interface{}, inner map[string]interface{}) {
+	se.Code = code
+	se.Message = message
+	se.Target = target
+	se.Details = details
+	se.InnerError = inner
 }
 
 // RequestError describes an error response returned by Azure service.
@@ -165,7 +243,13 @@ func WithErrorUnlessStatusCode(codes ...int) autorest.RespondDecorator {
 				if decodeErr != nil {
 					return fmt.Errorf("autorest/azure: error response cannot be parsed: %q error: %v", b.String(), decodeErr)
 				} else if e.ServiceError == nil {
-					e.ServiceError = &ServiceError{Code: "Unknown", Message: "Unknown service error"}
+					// Check if error is unwrapped ServiceError
+					if err := json.Unmarshal(b.Bytes(), &e.ServiceError); err != nil || e.ServiceError.Message == "" {
+						e.ServiceError = &ServiceError{
+							Code:    "Unknown",
+							Message: "Unknown service error",
+						}
+					}
 				}
 
 				e.RequestID = ExtractRequestID(resp)
