@@ -180,9 +180,6 @@ PASSPHRASECORRECT:
 		if disableClientCerts {
 			tlsConf.ClientAuth = tls.NoClientCert
 		}
-		if !disableClientCerts {
-			tlsConf.ClientAuth = tls.VerifyClientCertIfGiven
-		}
 	}
 
 	ln = tls.NewListener(ln, tlsConf)
