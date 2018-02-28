@@ -9,6 +9,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
 )

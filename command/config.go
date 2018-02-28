@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/terraform/config"
+	"github.com/hashicorp/vault/command/config"
 )
 
 const (
@@ -33,7 +33,8 @@ type DefaultConfig struct {
 // Config just calls into config.Config for backwards compatibility purposes.
 // Use config.Config instead.
 func Config() (*DefaultConfig, error) {
-	return config.Config()
+	conf, err := config.Config()
+	return (*DefaultConfig)(conf), err
 }
 
 // LoadConfig reads the configuration from the given path. If path is
@@ -43,7 +44,8 @@ func Config() (*DefaultConfig, error) {
 // LoadConfig just calls into config.LoadConfig for backwards compatibility
 // purposes. Use config.LoadConfig instead.
 func LoadConfig(path string) (*DefaultConfig, error) {
-	return config.LoadConfig(path)
+	conf, err := config.LoadConfig(path)
+	return (*DefaultConfig)(conf), err
 }
 
 // ParseConfig parses the given configuration as a string.
@@ -51,7 +53,8 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 // ParseConfig just calls into config.ParseConfig for backwards compatibility
 // purposes. Use config.ParseConfig instead.
 func ParseConfig(contents string) (*DefaultConfig, error) {
-	return config.ParseConfig(contents)
+	conf, err := config.ParseConfig(contents)
+	return (*DefaultConfig)(conf), err
 }
 
 func checkHCLKeys(node ast.Node, valid []string) error {
