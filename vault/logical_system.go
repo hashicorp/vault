@@ -1802,9 +1802,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("audit_non_hmac_request_keys"); ok {
-		fmt.Println("=================== got here")
 		auditNonHMACRequestKeys := rawVal.([]string)
-		fmt.Printf("%#v\n", auditNonHMACRequestKeys)
 
 		oldVal := mountEntry.Config.AuditNonHMACRequestKeys
 		mountEntry.Config.AuditNonHMACRequestKeys = auditNonHMACRequestKeys
