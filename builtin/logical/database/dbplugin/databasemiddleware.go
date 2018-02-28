@@ -211,10 +211,10 @@ func (mw *databaseMetricsMiddleware) Close() (err error) {
 type DatabaseErrorSanitizerMiddleware struct {
 	l         sync.RWMutex
 	next      Database
-	secretsFn func() []string
+	secretsFn func() map[string]string
 }
 
-func NewDatabaseErrorSanitizerMiddleware(next Database, secretsFn func() []string) *DatabaseErrorSanitizerMiddleware {
+func NewDatabaseErrorSanitizerMiddleware(next Database, secretsFn func() map[string]string) *DatabaseErrorSanitizerMiddleware {
 	return &DatabaseErrorSanitizerMiddleware{
 		next:      next,
 		secretsFn: secretsFn,
@@ -267,11 +267,11 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 		return errors.New("unable to parse connection url")
 	}
 	if mw.secretsFn != nil {
-		for _, secret := range mw.secretsFn() {
-			if secret == "" {
+		for k, v := range mw.secretsFn() {
+			if k == "" {
 				continue
 			}
-			err = errors.New(strings.Replace(err.Error(), secret, "*****", -1))
+			err = errors.New(strings.Replace(err.Error(), k, v, -1))
 		}
 	}
 	return err

@@ -142,8 +142,10 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	return c.db, nil
 }
 
-func (c *SQLConnectionProducer) SecretValues() []string {
-	return []string{c.Password}
+func (c *SQLConnectionProducer) SecretValues() map[string]string {
+	return map[string]string{
+		c.Password: "[password]",
+	}
 }
 
 // Close attempts to close the connection

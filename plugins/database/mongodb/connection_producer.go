@@ -221,6 +221,8 @@ func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {
 	return &info, nil
 }
 
-func (c *mongoDBConnectionProducer) secretValues() []string {
-	return []string{c.Password}
+func (c *mongoDBConnectionProducer) secretValues() map[string]string {
+	return map[string]string{
+		c.Password: "[password]",
+	}
 }
