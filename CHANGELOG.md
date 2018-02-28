@@ -24,6 +24,7 @@ BUG FIXES:
  * replication: Fix issue where performance secondaries could be unable to
    automatically connect to a performance primary after that performance
    primary has been promoted to a DR primary from a DR secondary
+ * ui: Fix behavior when a value contains a `.`
  
 ## 0.9.4 (February 20th, 2018)
 

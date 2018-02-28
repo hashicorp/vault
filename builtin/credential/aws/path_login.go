@@ -1549,20 +1549,20 @@ type ResponseMetadata struct {
 // identityDocument represents the items of interest from the EC2 instance
 // identity document
 type identityDocument struct {
-	Tags        map[string]interface{} `json:"tags,omitempty" structs:"tags" mapstructure:"tags"`
-	InstanceID  string                 `json:"instanceId,omitempty" structs:"instanceId" mapstructure:"instanceId"`
-	AmiID       string                 `json:"imageId,omitempty" structs:"imageId" mapstructure:"imageId"`
-	AccountID   string                 `json:"accountId,omitempty" structs:"accountId" mapstructure:"accountId"`
-	Region      string                 `json:"region,omitempty" structs:"region" mapstructure:"region"`
-	PendingTime string                 `json:"pendingTime,omitempty" structs:"pendingTime" mapstructure:"pendingTime"`
+	Tags        map[string]interface{} `json:"tags,omitempty"`
+	InstanceID  string                 `json:"instanceId,omitempty"`
+	AmiID       string                 `json:"imageId,omitempty"`
+	AccountID   string                 `json:"accountId,omitempty"`
+	Region      string                 `json:"region,omitempty"`
+	PendingTime string                 `json:"pendingTime,omitempty"`
 }
 
 // roleTagLoginResponse represents the return values required after the process
 // of verifying a role tag login
 type roleTagLoginResponse struct {
-	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
-	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
+	Policies                 []string      `json:"policies"`
+	MaxTTL                   time.Duration `json:"max_ttl"`
+	DisallowReauthentication bool          `json:"disallow_reauthentication"`
 }
 
 type iamEntity struct {
