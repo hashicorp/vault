@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-const FixturePath = "./test-fixtures"
+const FixturePath = "../test-fixtures"
 
 func TestLoadConfig(t *testing.T) {
 	config, err := LoadConfig(filepath.Join(FixturePath, "config.hcl"))
