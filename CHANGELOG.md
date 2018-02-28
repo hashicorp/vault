@@ -1,3 +1,10 @@
+## 0.9.6 (Unreleased)
+
+IMPROVEMENTS:
+
+ * server: Make sure `tls_disable_client_cert` is actually a true value rather
+   than just set [GH-4049]
+
 ## 0.9.5 (February 26th, 2018)
 
 IMPROVEMENTS:
