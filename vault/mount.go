@@ -208,11 +208,15 @@ func (e *MountEntry) Clone() (*MountEntry, error) {
 
 // SyncCache syncs tunable configuration values to the cache
 func (e *MountEntry) SyncCache() {
-	if len(e.Config.AuditNonHMACRequestKeys) > 0 {
+	if len(e.Config.AuditNonHMACRequestKeys) == 0 {
+		e.synthesizedConfigCache.Delete("audit_non_hmac_request_keys")
+	} else {
 		e.synthesizedConfigCache.Store("audit_non_hmac_request_keys", e.Config.AuditNonHMACRequestKeys)
 	}
 
-	if len(e.Config.AuditNonHMACResponseKeys) > 0 {
+	if len(e.Config.AuditNonHMACResponseKeys) == 0 {
+		e.synthesizedConfigCache.Delete("audit_non_hmac_response_keys")
+	} else {
 		e.synthesizedConfigCache.Store("audit_non_hmac_response_keys", e.Config.AuditNonHMACResponseKeys)
 	}
 }

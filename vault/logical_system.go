@@ -1801,8 +1801,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	auditNonHMACRequestKeys := data.Get("audit_non_hmac_request_keys").([]string)
-	if len(auditNonHMACRequestKeys) > 0 {
+	if rawVal, ok := data.GetOk("audit_non_hmac_request_keys"); ok {
+		fmt.Println("=================== got here")
+		auditNonHMACRequestKeys := rawVal.([]string)
+		fmt.Printf("%#v\n", auditNonHMACRequestKeys)
+
 		oldVal := mountEntry.Config.AuditNonHMACRequestKeys
 		mountEntry.Config.AuditNonHMACRequestKeys = auditNonHMACRequestKeys
 
@@ -1826,8 +1829,9 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	auditNonHMACResponseKeys := data.Get("audit_non_hmac_response_keys").([]string)
-	if len(auditNonHMACResponseKeys) > 0 {
+	if rawVal, ok := data.GetOk("audit_non_hmac_response_keys"); ok {
+		auditNonHMACResponseKeys := rawVal.([]string)
+
 		oldVal := mountEntry.Config.AuditNonHMACResponseKeys
 		mountEntry.Config.AuditNonHMACResponseKeys = auditNonHMACResponseKeys
 
