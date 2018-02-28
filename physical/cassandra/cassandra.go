@@ -294,13 +294,21 @@ func (c *CassandraBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"cassandra", "delete"}, time.Now())
 
 	stmt := fmt.Sprintf(`DELETE FROM "%s" WHERE bucket = ? AND key = ?`, c.table)
-	batch := gocql.NewBatch(gocql.LoggedBatch)
-	for _, bucket := range c.buckets(key) {
-		batch.Entries = append(batch.Entries, gocql.BatchEntry{
-			Stmt: stmt,
-			Args: []interface{}{bucket, key}})
+	results := make(chan error)
+	buckets := c.buckets(key)
+
+	for _, bucket := range buckets {
+		go func(bucket string) {
+			results <- c.sess.Query(stmt, bucket, key).Exec()
+		}(bucket)
 	}
-	return c.sess.ExecuteBatch(batch)
+
+	for i := 0; i < len(buckets); i++ {
+		if err := <-results; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // List is used ot list all the keys under a given
