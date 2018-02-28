@@ -865,7 +865,6 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 	convertNilToEmptySlice(responseData, "bound_vpc_id")
 
 	return responseData
-
 }
 
 const pathRoleSyn = `

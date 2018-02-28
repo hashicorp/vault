@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -123,7 +122,10 @@ func (b *backend) pathConfigTidyIdentityWhitelistRead(ctx context.Context, req *
 	}
 
 	return &logical.Response{
-		Data: structs.New(clientConfig).Map(),
+		Data: map[string]interface{}{
+			"safety_buffer":         clientConfig.SafetyBuffer,
+			"disable_periodic_tidy": clientConfig.DisablePeriodicTidy,
+		},
 	}, nil
 }
 
@@ -135,8 +137,8 @@ func (b *backend) pathConfigTidyIdentityWhitelistDelete(ctx context.Context, req
 }
 
 type tidyWhitelistIdentityConfig struct {
-	SafetyBuffer        int  `json:"safety_buffer" structs:"safety_buffer" mapstructure:"safety_buffer"`
-	DisablePeriodicTidy bool `json:"disable_periodic_tidy" structs:"disable_periodic_tidy" mapstructure:"disable_periodic_tidy"`
+	SafetyBuffer        int  `json:"safety_buffer"`
+	DisablePeriodicTidy bool `json:"disable_periodic_tidy"`
 }
 
 const pathConfigTidyIdentityWhitelistHelpSyn = `
