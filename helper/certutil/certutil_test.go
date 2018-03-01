@@ -614,7 +614,7 @@ func setCerts() {
 			Bytes: marshaledKey,
 		}
 		privECKeyPem = string(pem.EncodeToMemory(keyPEMBlock))
-		marshaledKey, err = x509.MarshalPKCS8PrivateKey(key)
+		marshaledKey, err = MarshalPKCS8PrivateKey(key)
 		if err != nil {
 			panic(err)
 		}
@@ -680,7 +680,7 @@ func setCerts() {
 			Bytes: marshaledKey,
 		}
 		privRSAKeyPem = string(pem.EncodeToMemory(keyPEMBlock))
-		marshaledKey, err = x509.MarshalPKCS8PrivateKey(key)
+		marshaledKey, err = MarshalPKCS8PrivateKey(key)
 		if err != nil {
 			panic(err)
 		}

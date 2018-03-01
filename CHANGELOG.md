@@ -1,12 +1,43 @@
-## 0.9.5 (Unreleased)
+## 0.9.6 (Unreleased)
+
+IMPROVEMENTS:
+
+ * server: Make sure `tls_disable_client_cert` is actually a true value rather
+   than just set [GH-4049]
 
 BUG FIXES:
 
- * auth/aws: Switch libraries to fix regression verifying PKCS#7 identity
-   documents [GH-4014]
- * auth: The default_lease_ttl and max_lease_ttl values were not being honored
-   when enabling auth methods. [GH-4019]
+ * cli: Improve error messages around `vault auth help` when there is no CLI
+   helper for a particular method [GH-4056]
 
+## 0.9.5 (February 26th, 2018)
+
+IMPROVEMENTS:
+
+ * auth: Allow sending default_lease_ttl and max_lease_ttl values when enabling
+   auth methods. [GH-4019]
+ * secret/database: Add list functionality to `database/config` endpoint
+   [GH-4026]
+ * physical/consul: Allow setting a specific service address [GH-3971]
+ * replication: When bootstrapping a new secondary, if the initial cluster
+   connection fails, Vault will attempt to roll back state so that
+   bootstrapping can be tried again, rather than having to recreate the
+   downstream cluster. This will still require fetching a new secondary
+   activation token.
+
+BUG FIXES:
+
+ * auth/aws: Update libraries to fix regression verifying PKCS#7 identity
+   documents [GH-4014]
+ * listener: Revert to Go 1.9 for now to allow certificates with non-DNS names
+   in their DNS SANs to be used for Vault's TLS connections [GH-4028]
+ * replication: Fix issue with a performance secondary/DR primary node losing
+   its DR primary status when performing an update-primary operation
+ * replication: Fix issue where performance secondaries could be unable to
+   automatically connect to a performance primary after that performance
+   primary has been promoted to a DR primary from a DR secondary
+ * ui: Fix behavior when a value contains a `.`
+ 
 ## 0.9.4 (February 20th, 2018)
 
 SECURITY:
@@ -60,7 +91,6 @@ IMPROVEMENTS:
  * ui (Enterprise): Support for ChaCha20-Poly1305 keys in the transit engine.
 
 BUG FIXES:
-
  * api/renewer: Honor increment value in renew auth calls [GH-3904]
  * auth/approle: Fix inability to use limited-use-count secret IDs on
    replication performance secondaries
@@ -69,6 +99,7 @@ BUG FIXES:
  * auth/aws-ec2: Avoid masking of role tag response [GH-3941]
  * auth/cert: Verify DNS SANs in the authenticating certificate [GH-3982]
  * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
+ * auth/okta: Get all okta groups for a user vs. default 200 limit [GH-4034]
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens. [GH-3880]

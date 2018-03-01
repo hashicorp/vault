@@ -392,15 +392,15 @@ func createRoleTagNonce() (string, error) {
 
 // Struct roleTag represents a role tag in a struc form.
 type roleTag struct {
-	Version                  string        `json:"version" structs:"version" mapstructure:"version"`
-	InstanceID               string        `json:"instance_id" structs:"instance_id" mapstructure:"instance_id"`
-	Nonce                    string        `json:"nonce" structs:"nonce" mapstructure:"nonce"`
-	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
-	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	Role                     string        `json:"role" structs:"role" mapstructure:"role"`
-	HMAC                     string        `json:"hmac" structs:"hmac" mapstructure:"hmac"`
-	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
+	Version                  string        `json:"version"`
+	InstanceID               string        `json:"instance_id"`
+	Nonce                    string        `json:"nonce"`
+	Policies                 []string      `json:"policies"`
+	MaxTTL                   time.Duration `json:"max_ttl"`
+	Role                     string        `json:"role"`
+	HMAC                     string        `json:"hmac"`
+	DisallowReauthentication bool          `json:"disallow_reauthentication"`
+	AllowInstanceMigration   bool          `json:"allow_instance_migration"`
 }
 
 func (rTag1 *roleTag) Equal(rTag2 *roleTag) bool {

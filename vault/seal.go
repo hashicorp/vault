@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/physical"
@@ -84,53 +85,59 @@ type Seal interface {
 	VerifyRecoveryKey(context.Context, []byte) error
 }
 
-type DefaultSeal struct {
-	config *SealConfig
+type defaultSeal struct {
+	config atomic.Value
 	core   *Core
 }
 
-func (d *DefaultSeal) checkCore() error {
+func NewDefaultSeal() Seal {
+	ret := &defaultSeal{}
+	ret.config.Store((*SealConfig)(nil))
+	return ret
+}
+
+func (d *defaultSeal) checkCore() error {
 	if d.core == nil {
 		return fmt.Errorf("seal does not have a core set")
 	}
 	return nil
 }
 
-func (d *DefaultSeal) SetCore(core *Core) {
+func (d *defaultSeal) SetCore(core *Core) {
 	d.core = core
 }
 
-func (d *DefaultSeal) Init(ctx context.Context) error {
+func (d *defaultSeal) Init(ctx context.Context) error {
 	return nil
 }
 
-func (d *DefaultSeal) Finalize(ctx context.Context) error {
+func (d *defaultSeal) Finalize(ctx context.Context) error {
 	return nil
 }
 
-func (d *DefaultSeal) BarrierType() string {
+func (d *defaultSeal) BarrierType() string {
 	return SealTypeShamir
 }
 
-func (d *DefaultSeal) StoredKeysSupported() bool {
+func (d *defaultSeal) StoredKeysSupported() bool {
 	return false
 }
 
-func (d *DefaultSeal) RecoveryKeySupported() bool {
+func (d *defaultSeal) RecoveryKeySupported() bool {
 	return false
 }
 
-func (d *DefaultSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
+func (d *defaultSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	return fmt.Errorf("core: stored keys are not supported")
 }
 
-func (d *DefaultSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
+func (d *defaultSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
 	return nil, fmt.Errorf("core: stored keys are not supported")
 }
 
-func (d *DefaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
-	if d.config != nil {
-		return d.config.Clone(), nil
+func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
+	if d.config.Load().(*SealConfig) != nil {
+		return d.config.Load().(*SealConfig).Clone(), nil
 	}
 
 	if err := d.checkCore(); err != nil {
@@ -174,11 +181,11 @@ func (d *DefaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 		return nil, fmt.Errorf("seal validation failed: %v", err)
 	}
 
-	d.config = &conf
-	return d.config.Clone(), nil
+	d.config.Store(&conf)
+	return conf.Clone(), nil
 }
 
-func (d *DefaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) error {
+func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) error {
 	if err := d.checkCore(); err != nil {
 		return err
 	}
@@ -186,7 +193,7 @@ func (d *DefaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 	// Provide a way to wipe out the cached value (also prevents actually
 	// saving a nil config)
 	if config == nil {
-		d.config = nil
+		d.config.Store((*SealConfig)(nil))
 		return nil
 	}
 
@@ -209,28 +216,28 @@ func (d *DefaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 		return fmt.Errorf("failed to write seal configuration: %v", err)
 	}
 
-	d.config = config.Clone()
+	d.config.Store(config.Clone())
 
 	return nil
 }
 
-func (d *DefaultSeal) RecoveryType() string {
+func (d *defaultSeal) RecoveryType() string {
 	return RecoveryTypeUnsupported
 }
 
-func (d *DefaultSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
+func (d *defaultSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
 	return nil, fmt.Errorf("recovery not supported")
 }
 
-func (d *DefaultSeal) SetRecoveryConfig(ctx context.Context, config *SealConfig) error {
+func (d *defaultSeal) SetRecoveryConfig(ctx context.Context, config *SealConfig) error {
 	return fmt.Errorf("recovery not supported")
 }
 
-func (d *DefaultSeal) VerifyRecoveryKey(context.Context, []byte) error {
+func (d *defaultSeal) VerifyRecoveryKey(context.Context, []byte) error {
 	return fmt.Errorf("recovery not supported")
 }
 
-func (d *DefaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
+func (d *defaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	return fmt.Errorf("recovery not supported")
 }
 
