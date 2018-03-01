@@ -4,6 +4,8 @@ IMPROVEMENTS:
 
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
    than just set [GH-4049]
+ * sys/capabilities: Add the ability to use multiple paths for capability
+   checking [GH-3663]
 
 BUG FIXES:
 
