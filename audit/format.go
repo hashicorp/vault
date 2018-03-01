@@ -45,8 +45,10 @@ func (f *AuditFormatter) FormatRequest(w io.Writer, config FormatterConfig, in *
 		return errwrap.Wrapf("error fetching salt: {{err}}", err)
 	}
 
-	var auth *logical.Auth
-	var req *logical.Request
+	// Set these to the input values at first
+	auth := in.Auth
+	req := in.Request
+
 	if !config.Raw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
@@ -167,9 +169,11 @@ func (f *AuditFormatter) FormatResponse(w io.Writer, config FormatterConfig, in 
 		return errwrap.Wrapf("error fetching salt: {{err}}", err)
 	}
 
-	var auth *logical.Auth
-	var req *logical.Request
-	var resp *logical.Response
+	// Set these to the input values at first
+	auth := in.Auth
+	req := in.Request
+	resp := in.Response
+
 	if !config.Raw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
@@ -350,7 +354,7 @@ func (f *AuditFormatter) FormatResponse(w io.Writer, config FormatterConfig, in 
 	return f.AuditFormatWriter.WriteResponse(w, respEntry)
 }
 
-// AuditRequest is the structure of a request audit log entry in Audit.
+// AuditRequestEntry is the structure of a request audit log entry in Audit.
 type AuditRequestEntry struct {
 	Time    string       `json:"time,omitempty"`
 	Type    string       `json:"type"`
