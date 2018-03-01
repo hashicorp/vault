@@ -194,13 +194,13 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 - `description` `(string: "")` – Specifies the description of the mount. This
   overrides the current stored value, if any.
 
-- `tune_audit_non_hmac_request_keys` `(string:"")` - Specifies the
-  comma-separated list of keys that will no be HMAC'd by audit devices in the
-  request data object.
+- `audit_non_hmac_request_keys` `(string:"")` - Specifies the comma-separated
+  list of keys that will not be HMAC'd by audit devices in the request data
+  object.
 
-- `tune_audit_non_hmac_response_keys` `(string:"")` - Specifies the
-  comma-separated list of keys that will no be HMAC'd by audit devices in the
-  response data object.
+- `audit_non_hmac_response_keys` `(string:"")` - Specifies the comma-separated
+  list of keys that will not be HMAC'd by audit devices in the response data
+  object.
 
 ### Sample Payload
 

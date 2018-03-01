@@ -28,11 +28,7 @@ type AuditFormatter struct {
 var _ Formatter = (*AuditFormatter)(nil)
 
 func (f *AuditFormatter) FormatRequest(w io.Writer, config FormatterConfig, in *LogInput) error {
-	if in == nil {
-		in = &LogInput{}
-	}
-
-	if in.Request == nil {
+	if in == nil || in.Request == nil {
 		return fmt.Errorf("request to request-audit a nil request")
 	}
 
@@ -154,11 +150,7 @@ func (f *AuditFormatter) FormatRequest(w io.Writer, config FormatterConfig, in *
 }
 
 func (f *AuditFormatter) FormatResponse(w io.Writer, config FormatterConfig, in *LogInput) error {
-	if in == nil {
-		in = &LogInput{}
-	}
-
-	if in.Request == nil {
+	if in == nil || in.Request == nil {
 		return fmt.Errorf("request to response-audit a nil request")
 	}
 

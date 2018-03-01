@@ -268,6 +268,9 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 		}
 		entry.Accessor = accessor
 	}
+	// Sync values to the cache
+	entry.SyncCache()
+
 	viewPath := backendBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
 
