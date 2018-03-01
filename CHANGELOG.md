@@ -5,6 +5,11 @@ IMPROVEMENTS:
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
    than just set [GH-4049]
 
+BUG FIXES:
+
+ * cli: Improve error messages around `vault auth help` when there is no CLI
+   helper for a particular method [GH-4056]
+
 ## 0.9.5 (February 26th, 2018)
 
 IMPROVEMENTS:
