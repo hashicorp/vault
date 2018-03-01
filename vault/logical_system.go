@@ -101,8 +101,12 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Description: "Accessor of the token for which capabilities are being queried.",
 					},
 					"path": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Path on which capabilities are being queried.",
+						Type:        framework.TypeCommaStringSlice,
+						Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					},
+					"paths": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Paths on which capabilities are being queried.",
 					},
 				},
 
@@ -151,8 +155,12 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Description: "Token for which capabilities are being queried.",
 					},
 					"path": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Path on which capabilities are being queried.",
+						Type:        framework.TypeCommaStringSlice,
+						Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					},
+					"paths": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Paths on which capabilities are being queried.",
 					},
 				},
 
@@ -173,8 +181,12 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Description: "Token for which capabilities are being queried.",
 					},
 					"path": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Path on which capabilities are being queried.",
+						Type:        framework.TypeCommaStringSlice,
+						Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					},
+					"paths": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Paths on which capabilities are being queried.",
 					},
 				},
 
@@ -1264,24 +1276,6 @@ func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logic
 	}, nil
 }
 
-// handleCapabilities returns the ACL capabilities of the token for a given path
-func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	token := d.Get("token").(string)
-	if token == "" {
-		token = req.ClientToken
-	}
-	capabilities, err := b.Core.Capabilities(ctx, token, d.Get("path").(string))
-	if err != nil {
-		return nil, err
-	}
-
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"capabilities": capabilities,
-		},
-	}, nil
-}
-
 // handleCapabilitiesAccessor returns the ACL capabilities of the
 // token associted with the given accessor for a given path.
 func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1295,16 +1289,53 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 		return nil, err
 	}
 
-	capabilities, err := b.Core.Capabilities(ctx, aEntry.TokenID, d.Get("path").(string))
-	if err != nil {
-		return nil, err
+	d.Raw["token"] = aEntry.TokenID
+	return b.handleCapabilities(ctx, req, d)
+}
+
+// handleCapabilities returns the ACL capabilities of the token for a given path
+func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var token string
+	if strings.HasSuffix(req.Path, "capabilities-self") {
+		token = req.ClientToken
+	} else {
+		tokenRaw, ok := d.Raw["token"]
+		if ok {
+			token, _ = tokenRaw.(string)
+		}
+	}
+	if token == "" {
+		return nil, fmt.Errorf("no token found")
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"capabilities": capabilities,
-		},
-	}, nil
+	ret := &logical.Response{
+		Data: map[string]interface{}{},
+	}
+
+	paths := d.Get("paths").([]string)
+	if len(paths) == 0 {
+		// Read from the deprecated field
+		paths = d.Get("path").([]string)
+	}
+
+	if len(paths) == 0 {
+		return logical.ErrorResponse("paths must be supplied"), nil
+	}
+
+	for _, path := range paths {
+		pathCap, err := b.Core.Capabilities(ctx, token, path)
+		if err != nil {
+			return nil, err
+		}
+		ret.Data[path] = pathCap
+	}
+
+	// This is only here for backwards compatibility
+	if len(paths) == 1 {
+		ret.Data["capabilities"] = ret.Data[paths[0]]
+	}
+
+	return ret, nil
 }
 
 // handleRekeyRetrieve returns backed-up, PGP-encrypted unseal keys from a
