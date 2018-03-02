@@ -1,7 +1,15 @@
 ## 0.9.6 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * The AWS authentication backend now allows binds for inputs, as either a
+   comma-delimited string or a string array. However, to keep consistency with
+   input and output, when reading a role the binds will now be returned as
+   string arrays rather than strings.
+
 IMPROVEMENTS:
 
+ * auth/aws: Allow using lists in role bind parameters [GH-3907]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
    than just set [GH-4049]
  * sys/capabilities: Add the ability to use multiple paths for capability
