@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	uuid "github.com/hashicorp/go-uuid"
 )
 
 var (
@@ -12,9 +14,6 @@ var (
 	ErrRenewerMissingSecret = errors.New("missing secret to renew")
 	ErrRenewerNotRenewable  = errors.New("secret is not renewable")
 	ErrRenewerNoSecretData  = errors.New("returned empty secret data")
-
-	// DefaultRenewerGrace is the default grace period
-	DefaultRenewerGrace = 15 * time.Second
 
 	// DefaultRenewerRenewBuffer is the default size of the buffer for renew
 	// messages on the channel.
@@ -111,9 +110,6 @@ func (c *Client) NewRenewer(i *RenewerInput) (*Renewer, error) {
 	}
 
 	grace := i.Grace
-	if grace == 0 {
-		grace = DefaultRenewerGrace
-	}
 
 	random := i.Rand
 	if random == nil {
@@ -241,6 +237,9 @@ func (r *Renewer) renewLease() error {
 		return ErrRenewerNotRenewable
 	}
 
+	priorDuration := time.Duration(r.secret.LeaseDuration) * time.Second
+	r.calculateGrace(priorDuration)
+
 	client, leaseID := r.client, r.secret.LeaseID
 
 	for {
@@ -277,8 +276,16 @@ func (r *Renewer) renewLease() error {
 		leaseDuration := time.Duration(renewal.LeaseDuration) * time.Second
 		sleepDuration := r.sleepDuration(leaseDuration)
 
+		// We keep evaluating a new grace period so long as the lease is
+		// extending. Once it stops extending, we've hit the max and need to
+		// rely on the grace duration.
+		if leaseDuration > priorDuration {
+			r.calculateGrace(leaseDuration)
+		}
+		priorDuration = leaseDuration
+
 		// If we are within grace, return now.
-		if leaseDuration <= r.grace || sleepDuration <= r.grace {
+		if leaseDuration <= r.grace {
 			return nil
 		}
 
@@ -306,4 +313,25 @@ func (r *Renewer) sleepDuration(base time.Duration) time.Duration {
 	sleep = sleep * (r.random.Float64() + 1) / 2.0
 
 	return time.Duration(sleep)
+}
+
+// calculateGrace calculates the grace period based on a reasonable set of
+// assumptions given the total lease time; it also adds some jitter to not have
+// clients be in sync. We calculate this continuously so long as the new lease
+// duration is greater than the previous.
+func (r *Renewer) calculateGrace(leaseDuration time.Duration) {
+	leaseNanos := float64(leaseDuration.Nanoseconds())
+	b, err := uuid.GenerateRandomBytes(1)
+	if err != nil || len(b) != 1 {
+		r.grace = time.Duration(0.9 * leaseNanos)
+		return
+	}
+
+	var skew float64 = (float64(b[0]) - 128) / 128.0
+	switch skew {
+	case 0.0:
+		r.grace = time.Duration(0.9 * leaseNanos)
+	default:
+		r.grace = time.Duration(0.9*leaseNanos + 0.05*leaseNanos*skew)
+	}
 }
