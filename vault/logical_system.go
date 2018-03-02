@@ -257,6 +257,14 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
+					"audit_non_hmac_request_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
+					},
+					"audit_non_hmac_response_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
@@ -285,6 +293,14 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"description": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
+					},
+					"audit_non_hmac_request_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
+					},
+					"audit_non_hmac_response_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
 				},
 
@@ -1675,6 +1691,14 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 		},
 	}
 
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+		resp.Data["audit_non_hmac_request_keys"] = rawVal.([]string)
+	}
+
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+		resp.Data["audit_non_hmac_response_keys"] = rawVal.([]string)
+	}
+
 	return resp, nil
 }
 
@@ -1805,6 +1829,58 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("core: mount tuning of description successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("audit_non_hmac_request_keys"); ok {
+		auditNonHMACRequestKeys := rawVal.([]string)
+
+		oldVal := mountEntry.Config.AuditNonHMACRequestKeys
+		mountEntry.Config.AuditNonHMACRequestKeys = auditNonHMACRequestKeys
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AuditNonHMACRequestKeys = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of audit_non_hmac_request_keys successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("audit_non_hmac_response_keys"); ok {
+		auditNonHMACResponseKeys := rawVal.([]string)
+
+		oldVal := mountEntry.Config.AuditNonHMACResponseKeys
+		mountEntry.Config.AuditNonHMACResponseKeys = auditNonHMACResponseKeys
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AuditNonHMACResponseKeys = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of audit_non_hmac_response_keys successful", "path", path)
 		}
 	}
 
@@ -3097,6 +3173,14 @@ in the plugin catalog.`,
 
 	"tune_max_lease_ttl": {
 		`The max lease TTL for this mount.`,
+	},
+
+	"tune_audit_non_hmac_request_keys": {
+		`The list of keys in the request data object that will not be HMAC'ed by audit devices.`,
+	},
+
+	"tune_audit_non_hmac_response_keys": {
+		`The list of keys in the response data object that will not be HMAC'ed by audit devices.`,
 	},
 
 	"remount": {

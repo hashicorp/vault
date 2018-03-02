@@ -108,6 +108,8 @@ type Backend struct {
 	saltView   logical.Storage
 }
 
+var _ audit.Backend = (*Backend)(nil)
+
 func (b *Backend) GetHash(data string) (string, error) {
 	salt, err := b.Salt()
 	if err != nil {
@@ -116,9 +118,9 @@ func (b *Backend) GetHash(data string) (string, error) {
 	return audit.HashString(salt, data), nil
 }
 
-func (b *Backend) LogRequest(_ context.Context, auth *logical.Auth, req *logical.Request, outerErr error) error {
+func (b *Backend) LogRequest(_ context.Context, in *audit.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatRequest(&buf, b.formatConfig, auth, req, outerErr); err != nil {
+	if err := b.formatter.FormatRequest(&buf, b.formatConfig, in); err != nil {
 		return err
 	}
 
@@ -127,14 +129,14 @@ func (b *Backend) LogRequest(_ context.Context, auth *logical.Auth, req *logical
 	return err
 }
 
-func (b *Backend) LogResponse(_ context.Context, auth *logical.Auth, req *logical.Request, resp *logical.Response, err error) error {
+func (b *Backend) LogResponse(_ context.Context, in *audit.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatResponse(&buf, b.formatConfig, auth, req, resp, err); err != nil {
+	if err := b.formatter.FormatResponse(&buf, b.formatConfig, in); err != nil {
 		return err
 	}
 
 	// Write out to syslog
-	_, err = b.logger.Write(buf.Bytes())
+	_, err := b.logger.Write(buf.Bytes())
 	return err
 }
 
