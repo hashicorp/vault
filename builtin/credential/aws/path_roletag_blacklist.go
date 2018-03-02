@@ -219,8 +219,8 @@ func (b *backend) pathRoletagBlacklistUpdate(ctx context.Context, req *logical.R
 }
 
 type roleTagBlacklistEntry struct {
-	CreationTime   time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
-	ExpirationTime time.Time `json:"expiration_time" structs:"expiration_time" mapstructure:"expiration_time"`
+	CreationTime   time.Time `json:"creation_time"`
+	ExpirationTime time.Time `json:"expiration_time"`
 }
 
 const pathRoletagBlacklistSyn = `

@@ -1,7 +1,7 @@
 ---
 layout: "guides"
 page_title: "Policies - Guides"
-sidebar_current: "guides-configuration-policies"
+sidebar_current: "guides-identity-policies"
 description: |-
   Policies in Vault control what a user can access.
 ---
@@ -584,5 +584,5 @@ $ curl --request POST --header "X-Vault-Token: ..." --data '{"path":"sys/auth/ap
 ## Next steps
 
 In this guide, you learned how to write policies based on given policy
-requirements. Next, [AppRole Pull Authentication](/guides/configuration/authentication.html)
+requirements. Next, [AppRole Pull Authentication](/guides/identity/authentication.html)
 guide demonstrates how to associate policies to a role.

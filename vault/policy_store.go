@@ -137,6 +137,7 @@ var (
 // PolicyStore is used to provide durable storage of policy, and to
 // manage ACLs associated with them.
 type PolicyStore struct {
+	core             *Core
 	aclView          *BarrierView
 	tokenPoliciesLRU *lru.TwoQueueCache
 	// This is used to ensure that writes to the store (acl/rgp) or to the egp
@@ -158,11 +159,12 @@ type PolicyEntry struct {
 
 // NewPolicyStore creates a new PolicyStore that is backed
 // using a given view. It used used to durable store and manage named policy.
-func NewPolicyStore(ctx context.Context, baseView *BarrierView, system logical.SystemView, logger log.Logger) *PolicyStore {
+func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, system logical.SystemView, logger log.Logger) *PolicyStore {
 	ps := &PolicyStore{
 		aclView:    baseView.SubView(policyACLSubPath),
 		modifyLock: new(sync.RWMutex),
 		logger:     logger,
+		core:       core,
 	}
 	if !system.CachingDisabled() {
 		cache, _ := lru.New2Q(policyCacheSize)
@@ -187,7 +189,7 @@ func NewPolicyStore(ctx context.Context, baseView *BarrierView, system logical.S
 func (c *Core) setupPolicyStore(ctx context.Context) error {
 	// Create the policy store
 	sysView := &dynamicSystemView{core: c}
-	c.policyStore = NewPolicyStore(ctx, c.systemBarrierView, sysView, c.logger)
+	c.policyStore = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, c.logger)
 
 	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		// Policies will sync from the primary

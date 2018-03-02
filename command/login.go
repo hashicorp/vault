@@ -321,7 +321,8 @@ func (c *LoginCommand) Run(args []string) int {
 				"use the value set by this command, unset the VAULT_TOKEN environment "+
 				"variable or set it to the token displayed below.") + "\n")
 		}
-	} else {
+	} else if !c.flagTokenOnly {
+		// If token-only the user knows it won't be stored, so don't warn
 		c.UI.Warn(wrapAtLength(
 			"The token was not stored in token helper. Set the VAULT_TOKEN "+
 				"environment variable or pass the token below with each request to "+

@@ -86,6 +86,7 @@ type ServerCommand struct {
 	flagDevLeasedKV      bool
 	flagDevSkipInit      bool
 	flagDevThreeNode     bool
+	flagDevFourCluster   bool
 	flagDevTransactional bool
 	flagTestVerifyOnly   bool
 }
@@ -237,6 +238,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:    "dev-four-cluster",
+		Target:  &c.flagDevFourCluster,
+		Default: false,
+		Hidden:  true,
+	})
+
 	// TODO: should this be a public flag?
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
@@ -295,10 +303,11 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
-		if c.flagDevThreeNode {
+		if c.flagDevThreeNode || c.flagDevFourCluster {
 			c.logger = logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
+				Level:  hclog.Trace,
 			})).LogxiLogger()
 		} else {
 			c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
@@ -313,7 +322,7 @@ func (c *ServerCommand) Run(args []string) int {
 	})
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode {
+	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster {
 		c.flagDev = true
 	}
 
@@ -403,7 +412,7 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = c.flagLogLevel
 	infoKeys = append(infoKeys, "log level")
 
-	var seal vault.Seal = &vault.DefaultSeal{}
+	var seal vault.Seal = vault.NewDefaultSeal()
 
 	// Ensure that the seal finalizer is called, even if using verify-only
 	defer func() {
