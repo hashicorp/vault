@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
@@ -252,11 +253,15 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 
 	// See if the current key is part of the ignored keys
 	currentKey := w.key[len(w.key)-1]
-	for _, k := range w.IgnoredKeys {
-		if currentKey == k {
-			return nil
-		}
+	if strutil.StrListContains(w.IgnoredKeys, currentKey) {
+		return nil
 	}
+
+	// for _, k := range w.IgnoredKeys {
+	// 	if currentKey == k {
+	// 		return nil
+	// 	}
+	// }
 
 	replaceVal := w.Callback(v.String())
 
