@@ -35,7 +35,7 @@ const (
 	// equal sign delimited key pairs
 	TypeKVPairs
 
-	// TypeIntSlice is a helper for TypeSlice that returns a sanitized
+	// TypeCommaIntSlice is a helper for TypeSlice that returns a sanitized
 	// slice of Ints
 	TypeCommaIntSlice
 )
