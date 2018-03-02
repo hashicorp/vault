@@ -202,11 +202,11 @@ This endpoint tunes configuration parameters for a given mount point.
 - `description` `(string: "")` – Specifies the description of the mount. This
   overrides the current stored value, if any.
 
-- `audit_non_hmac_request_keys` `(string:"")` - Specifies the comma-separated
+- `audit_non_hmac_request_keys` `(array: [])` - Specifies the comma-separated
   list of keys that will not be HMAC'd by audit devices in the request data
   object.
 
-- `audit_non_hmac_response_keys` `(string:"")` - Specifies the comma-separated
+- `audit_non_hmac_response_keys` `(array: [])` - Specifies the comma-separated
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
