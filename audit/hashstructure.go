@@ -257,12 +257,6 @@ func (w *hashWalker) Primitive(v reflect.Value) error {
 		return nil
 	}
 
-	// for _, k := range w.IgnoredKeys {
-	// 	if currentKey == k {
-	// 		return nil
-	// 	}
-	// }
-
 	replaceVal := w.Callback(v.String())
 
 	resultVal := reflect.ValueOf(replaceVal)
