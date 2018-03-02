@@ -32,6 +32,8 @@ This endpoint defines a MFA method of type Okta.
 
 - `base_url` `(string)` -  If set, will be used as the base domain for API requests.  Examples are okta.com, oktapreview.com, and okta-emea.com.
 
+- `primary_email` `(bool: false)` -  If set, the username will only match the primary email for the account.
+
 ### Sample Payload
 
 ```json
