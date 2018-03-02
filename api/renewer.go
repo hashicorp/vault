@@ -5,8 +5,6 @@ import (
 	"math/rand"
 	"sync"
 	"time"
-
-	uuid "github.com/hashicorp/go-uuid"
 )
 
 var (
@@ -180,6 +178,9 @@ func (r *Renewer) renewAuth() error {
 		return ErrRenewerNotRenewable
 	}
 
+	priorDuration := time.Duration(r.secret.LeaseDuration) * time.Second
+	r.calculateGrace(priorDuration)
+
 	client, token := r.client, r.secret.Auth.ClientToken
 
 	for {
@@ -212,13 +213,28 @@ func (r *Renewer) renewAuth() error {
 			return ErrRenewerNotRenewable
 		}
 
-		// Grab the lease duration and sleep duration - note that we grab the auth
-		// lease duration, not the secret lease duration.
+		// Grab the lease duration
 		leaseDuration := time.Duration(renewal.Auth.LeaseDuration) * time.Second
-		sleepDuration := r.sleepDuration(leaseDuration)
 
-		// If we are within grace, return now.
-		if leaseDuration <= r.grace || sleepDuration <= r.grace {
+		// We keep evaluating a new grace period so long as the lease is
+		// extending. Once it stops extending, we've hit the max and need to
+		// rely on the grace duration.
+		if leaseDuration > priorDuration {
+			r.calculateGrace(leaseDuration)
+		}
+		priorDuration = leaseDuration
+
+		// The sleep duration is set to 2/3 of the current lease duration plus
+		// 1/3 of the current grace period, which adds jitter.
+		sleepDuration := time.Duration(float64(leaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds()*1/3))
+
+		// If we are within grace, return now; or, if the amount of time we
+		// would sleep would land us in the grace period. This helps with short
+		// tokens; for example, you don't want a current lease duration of 4
+		// seconds, a grace period of 3 seconds, and end up sleeping for more
+		// than three of those seconds and having a very small budget of time
+		// to renew.
+		if leaseDuration <= r.grace || leaseDuration-sleepDuration <= r.grace {
 			return nil
 		}
 
@@ -272,9 +288,8 @@ func (r *Renewer) renewLease() error {
 			return ErrRenewerNotRenewable
 		}
 
-		// Grab the lease duration and sleep duration
+		// Grab the lease duration
 		leaseDuration := time.Duration(renewal.LeaseDuration) * time.Second
-		sleepDuration := r.sleepDuration(leaseDuration)
 
 		// We keep evaluating a new grace period so long as the lease is
 		// extending. Once it stops extending, we've hit the max and need to
@@ -284,8 +299,17 @@ func (r *Renewer) renewLease() error {
 		}
 		priorDuration = leaseDuration
 
-		// If we are within grace, return now.
-		if leaseDuration <= r.grace {
+		// The sleep duration is set to 2/3 of the current lease duration plus
+		// 1/3 of the current grace period, which adds jitter.
+		sleepDuration := time.Duration(float64(leaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds()*1/3))
+
+		// If we are within grace, return now; or, if the amount of time we
+		// would sleep would land us in the grace period. This helps with short
+		// tokens; for example, you don't want a current lease duration of 4
+		// seconds, a grace period of 3 seconds, and end up sleeping for more
+		// than three of those seconds and having a very small budget of time
+		// to renew.
+		if leaseDuration <= r.grace || leaseDuration-sleepDuration <= r.grace {
 			return nil
 		}
 
@@ -318,20 +342,19 @@ func (r *Renewer) sleepDuration(base time.Duration) time.Duration {
 // calculateGrace calculates the grace period based on a reasonable set of
 // assumptions given the total lease time; it also adds some jitter to not have
 // clients be in sync. We calculate this continuously so long as the new lease
-// duration is greater than the previous.
+// duration is greater than the previous; no change means we don't need to
+// recalculate, and if the lease duration keeps decreasing we've hit max and
+// want to be able to rely on this.
 func (r *Renewer) calculateGrace(leaseDuration time.Duration) {
-	leaseNanos := float64(leaseDuration.Nanoseconds())
-	b, err := uuid.GenerateRandomBytes(1)
-	if err != nil || len(b) != 1 {
-		r.grace = time.Duration(0.9 * leaseNanos)
+	if leaseDuration == 0 {
+		r.grace = 0
 		return
 	}
 
-	var skew float64 = (float64(b[0]) - 128) / 128.0
-	switch skew {
-	case 0.0:
-		r.grace = time.Duration(0.9 * leaseNanos)
-	default:
-		r.grace = time.Duration(0.9*leaseNanos + 0.05*leaseNanos*skew)
-	}
+	leaseNanos := float64(leaseDuration.Nanoseconds())
+	jitterMax := 0.1 * leaseNanos
+
+	// For a given lease duration, we want to allow 80-90% of that to elapse,
+	// so the remaining amount is the grace period
+	r.grace = time.Duration(leaseNanos*0.1) + time.Duration(uint64(r.random.Int63())%uint64(jitterMax))
 }
