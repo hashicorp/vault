@@ -1084,7 +1084,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		"auth_type":          "ec2",
 		"policies":           "root",
 		"max_ttl":            "120s",
-		"bound_ami_id":       []string{"wrong_ami_id", "wrong_ami_id2"},
+		"bound_ami_id":       []string{"wrong_ami_id", amiID, "wrong_ami_id2"},
 		"bound_account_id":   accountID,
 		"bound_iam_role_arn": iamARN,
 	}
@@ -1096,50 +1096,42 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		Data:      data,
 	}
 
-	// Save the role with wrong AMI ID
-	resp, err := b.HandleRequest(context.Background(), roleReq)
-	if err != nil && (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
+	updateRoleExpectLoginFail := func(roleRequest, loginRequest *logical.Request) error {
+		resp, err := b.HandleRequest(context.Background(), roleRequest)
+		if err != nil || (resp != nil && resp.IsError()) {
+			return fmt.Errorf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+		}
+		resp, err = b.HandleRequest(context.Background(), loginRequest)
+		if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
+			return fmt.Errorf("bad: expected login failure: resp:%#v\nerr:%v", resp, err)
+		}
+		return nil
 	}
 
-	// Expect failure when tried to login with wrong AMI ID
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
-		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
+	// Test a role with the wrong AMI ID
+	data["bound_ami_id"] = []string{"ami-1234567", "ami-7654321"}
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
 	}
 
-	// Place the correct AMI ID in one of the values, but make the AccountID wrong
 	roleReq.Operation = logical.UpdateOperation
+	// Place the correct AMI ID in one of the values, but make the AccountID wrong
 	data["bound_ami_id"] = []string{"wrong_ami_id_1", amiID, "wrong_ami_id_2"}
 	data["bound_account_id"] = []string{"wrong-account-id", "wrong-account-id-2"}
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
-	}
-
-	// Expect failure when tried to login with incorrect AccountID
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
-		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
 	}
 
 	// Place the correct AccountID in one of the values, but make the wrong IAMRoleARN
 	data["bound_account_id"] = []string{"wrong-account-id-1", accountID, "wrong-account-id-2"}
 	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", "wrong_iam_role_arn_2"}
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
-	}
-
-	// Attempt to login and expect a fail because IAM Role ARN is wrong
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
-		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
 	}
 
 	// place a correct IAM role ARN
 	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", iamARN, "wrong_iam_role_arn_2"}
-	resp, err = b.HandleRequest(context.Background(), roleReq)
+	resp, err := b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
