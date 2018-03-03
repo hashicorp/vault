@@ -418,8 +418,8 @@ func (b *backend) pathConfigCertificateCreateUpdate(ctx context.Context, req *lo
 // Struct awsPublicCert holds the AWS Public Key that is used to verify the PKCS#7 signature
 // of the instnace identity document.
 type awsPublicCert struct {
-	AWSPublicCert string `json:"aws_public_cert" structs:"aws_public_cert" mapstructure:"aws_public_cert"`
-	Type          string `json:"type" structs:"type" mapstructure:"type"`
+	AWSPublicCert string `json:"aws_public_cert"`
+	Type          string `json:"type"`
 }
 
 const pathConfigCertificateSyn = `

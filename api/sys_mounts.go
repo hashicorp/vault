@@ -129,10 +129,12 @@ type MountInput struct {
 }
 
 type MountConfigInput struct {
-	DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	DefaultLeaseTTL          string   `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL              string   `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache             bool     `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
+	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 }
 
 type MountOutput struct {
@@ -145,8 +147,10 @@ type MountOutput struct {
 }
 
 type MountConfigOutput struct {
-	DefaultLeaseTTL int    `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL     int    `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	DefaultLeaseTTL          int      `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL              int      `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache             bool     `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
+	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 }

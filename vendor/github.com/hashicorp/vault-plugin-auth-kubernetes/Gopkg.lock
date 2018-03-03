@@ -67,7 +67,7 @@
   branch = "master"
   name = "github.com/go-openapi/swag"
   packages = ["."]
-  revision = "84f4bee7c0a6db40e3166044c7983c1c32125429"
+  revision = "0d03ad0b6405ada874d59d97c416b5cf4234e154"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -209,7 +209,7 @@
     "physical/inmem",
     "version"
   ]
-  revision = "49ca5ef5b3e1cb04c6fba0153cc1103b2889dd17"
+  revision = "e296886cb6531a8283920cf3d7f30018d59d662d"
 
 [[projects]]
   branch = "master"
@@ -267,7 +267,7 @@
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "a4e142e9c047c904fa2f1e144d9a84e6133024bc"
+  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
 
 [[projects]]
   name = "github.com/oklog/run"
@@ -311,10 +311,9 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
+  revision = "f6cff0780e542efa0c8e864dc8fa522808f6a598"
 
 [[projects]]
-  branch = "master"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -333,7 +332,8 @@
     "unicode/rangetable",
     "width"
   ]
-  revision = "4e4a3210bb54bb31f6ab2cdca2edcc0b50c420c1"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"
@@ -380,10 +380,10 @@
   version = "v0.9.0"
 
 [[projects]]
-  branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
+  revision = "7f97868eec74b32b0982dd158a51a446d1da7eb5"
+  version = "v2.1.1"
 
 [[projects]]
   branch = "release-1.8"

@@ -1,4 +1,26 @@
-## 0.9.5 (Soon)
+## 0.9.6 (Unreleased)
+
+DEPRECATIONS/CHANGES:
+
+ * The AWS authentication backend now allows binds for inputs, as either a
+   comma-delimited string or a string array. However, to keep consistency with
+   input and output, when reading a role the binds will now be returned as
+   string arrays rather than strings.
+
+IMPROVEMENTS:
+
+ * auth/aws: Allow using lists in role bind parameters [GH-3907]
+ * server: Make sure `tls_disable_client_cert` is actually a true value rather
+   than just set [GH-4049]
+ * sys/capabilities: Add the ability to use multiple paths for capability
+   checking [GH-3663]
+
+BUG FIXES:
+
+ * cli: Improve error messages around `vault auth help` when there is no CLI
+   helper for a particular method [GH-4056]
+
+## 0.9.5 (February 26th, 2018)
 
 IMPROVEMENTS:
 
@@ -7,6 +29,11 @@ IMPROVEMENTS:
  * secret/database: Add list functionality to `database/config` endpoint
    [GH-4026]
  * physical/consul: Allow setting a specific service address [GH-3971]
+ * replication: When bootstrapping a new secondary, if the initial cluster
+   connection fails, Vault will attempt to roll back state so that
+   bootstrapping can be tried again, rather than having to recreate the
+   downstream cluster. This will still require fetching a new secondary
+   activation token.
 
 BUG FIXES:
 
@@ -19,6 +46,7 @@ BUG FIXES:
  * replication: Fix issue where performance secondaries could be unable to
    automatically connect to a performance primary after that performance
    primary has been promoted to a DR primary from a DR secondary
+ * ui: Fix behavior when a value contains a `.`
  
 ## 0.9.4 (February 20th, 2018)
 
@@ -73,7 +101,6 @@ IMPROVEMENTS:
  * ui (Enterprise): Support for ChaCha20-Poly1305 keys in the transit engine.
 
 BUG FIXES:
-
  * api/renewer: Honor increment value in renew auth calls [GH-3904]
  * auth/approle: Fix inability to use limited-use-count secret IDs on
    replication performance secondaries
@@ -82,6 +109,7 @@ BUG FIXES:
  * auth/aws-ec2: Avoid masking of role tag response [GH-3941]
  * auth/cert: Verify DNS SANs in the authenticating certificate [GH-3982]
  * auth/okta: Return configured durations as seconds, not nanoseconds [GH-3871]
+ * auth/okta: Get all okta groups for a user vs. default 200 limit [GH-4034]
  * auth/token: Token creation via the CLI no longer forces periodic token
    creation. Passing an explicit zero value for the period no longer create
    periodic tokens. [GH-3880]

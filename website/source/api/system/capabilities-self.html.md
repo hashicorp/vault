@@ -4,20 +4,24 @@ page_title: "/sys/capabilities-self - HTTP API"
 sidebar_current: "docs-http-system-capabilities-self"
 description: |-
   The `/sys/capabilities-self` endpoint is used to fetch the capabilities of
-  client token on a given path.
+  client token on the given paths.
 ---
 
 # `/sys/capabilities-self`
 
-The `/sys/capabilities-self` endpoint is used to fetch the capabilities of a
-the supplied token.  The capabilities returned will be derived from the
-policies that are on the token, and from the policies to which token is
-entitled to through the entity and entity's group memberships.
+The `/sys/capabilities-self` endpoint is used to fetch the capabilities of the
+token used to make the API call, on the given paths. The capabilities returned
+will be derived from the policies that are on the token, and from the policies
+to which the token is entitled to through the entity and entity's group
+memberships.
 
 ## Query Self Capabilities
 
-This endpoint returns the capabilities of client token on the given path. The
-client token is the Vault token with which this API call is made.
+This endpoint returns the capabilities of client token on the given paths. The
+client token is the Vault token with which this API call is made. Multiple
+paths are taken in at once and the capabilities of the token for each path is
+returned. For backwards compatibility, if a single path is supplied, a
+`capabilities` field will also be returned.
 
 | Method   | Path                     | Produces               |
 | :------- | :----------------------- | :--------------------- |
@@ -26,14 +30,13 @@ client token is the Vault token with which this API call is made.
 
 ### Parameters
 
-- `path` `(string: <required>)` – Specifies the path on which the client token's
-  capabilities will be checked.
+- `paths` `(list: <required>)` – Paths on which capabilities are being queried.
 
 ### Sample Payload
 
 ```json
 {
-  "path": "secret/foo"
+  "paths": ["secret/foo"]
 }
 ```
 
@@ -51,6 +54,16 @@ $ curl \
 
 ```json
 {
-  "capabilities": ["read", "list"]
+  "capabilities": [
+    "delete",
+    "list",
+    "read",
+    "update"
+  ],
+  "secret/foo": [
+    "delete",
+    "list",
+    "read",
+    "update"
+  ]
 }
-```

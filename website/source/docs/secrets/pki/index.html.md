@@ -222,7 +222,7 @@ The first step to using the PKI backend is to mount it. Unlike the `kv`
 backend, the `pki` backend is not mounted by default.
 
 ```text
-$ vault mount pki
+$ vault secrets enable pki
 Successfully mounted 'pki' at 'pki'!
 ```
 
@@ -435,7 +435,7 @@ To add another certificate authority to our Vault instance, we have to mount it
 at a different path.
 
 ```text
-$ vault mount -path=pki_int pki
+$ vault secrets enable -path=pki_int pki
 Successfully mounted 'pki' at 'pki_int'!
 ```
 

@@ -555,8 +555,8 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		roleEntry.BoundIamInstanceProfileARNs = boundIamInstanceProfileARNRaw.([]string)
 	}
 
-	if boundEc2InstanceIDsRaw, ok := data.GetOk("bound_ec2_instance_id"); ok {
-		roleEntry.BoundEc2InstanceIDs = boundEc2InstanceIDsRaw.([]string)
+	if boundEc2InstanceIDRaw, ok := data.GetOk("bound_ec2_instance_id"); ok {
+		roleEntry.BoundEc2InstanceIDs = boundEc2InstanceIDRaw.([]string)
 	}
 
 	if boundIamPrincipalARNRaw, ok := data.GetOk("bound_iam_principal_arn"); ok {
@@ -812,7 +812,7 @@ type awsRoleEntry struct {
 	AuthType                    string        `json:"auth_type" `
 	BoundAmiIDs                 []string      `json:"bound_ami_id_list"`
 	BoundAccountIDs             []string      `json:"bound_account_id_list"`
-	BoundEc2InstanceIDs         []string      `json:"bound_ec2_instance_id"`
+	BoundEc2InstanceIDs         []string      `json:"bound_ec2_instance_id_list"`
 	BoundIamPrincipalARNs       []string      `json:"bound_iam_principal_arn_list"`
 	BoundIamPrincipalIDs        []string      `json:"bound_iam_principal_id_list"`
 	BoundIamRoleARNs            []string      `json:"bound_iam_role_arn_list"`
