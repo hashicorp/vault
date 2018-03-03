@@ -709,6 +709,43 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	}
 }
 
+func TestRoleEntryUpgradeV1(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roleEntryToUpgrade := &awsRoleEntry{
+		BoundIamRoleARNs:            []string{"arn:aws:iam::123456789012:role/my_role_prefix"},
+		BoundIamInstanceProfileARNs: []string{"arn:aws:iam::123456789012:instance-profile/my_profile-prefix"},
+		Version:                     1,
+	}
+	expected := &awsRoleEntry{
+		BoundIamRoleARNs:            []string{"arn:aws:iam::123456789012:role/my_role_prefix*"},
+		BoundIamInstanceProfileARNs: []string{"arn:aws:iam::123456789012:instance-profile/my_profile-prefix*"},
+		Version:                     currentRoleStorageVersion,
+	}
+
+	upgraded, err := b.upgradeRoleEntry(context.Background(), storage, roleEntryToUpgrade)
+	if err != nil {
+		t.Fatalf("error upgrading role entry: %#v", err)
+	}
+	if !upgraded {
+		t.Fatalf("expected to upgrade role entry %#v but got no upgrade", roleEntryToUpgrade)
+	}
+	if !reflect.DeepEqual(*roleEntryToUpgrade, *expected) {
+		t.Fatalf("bad: expected upgraded role of %#v, got %#v instead", expected, roleEntryToUpgrade)
+	}
+}
+
 func resolveArnToFakeUniqueId(ctx context.Context, s logical.Storage, arn string) (string, error) {
 	return "FakeUniqueId1", nil
 }

@@ -1129,8 +1129,22 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatal(err)
 	}
 
-	// place a correct IAM role ARN
-	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", iamARN, "wrong_iam_role_arn_2"}
+	// place a substring of the IAM role ARN
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", iamARN[:len(iamARN)-2], "wrong_iam_role_arn_2"}
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
+	}
+
+	// place a wildcard in the middle of the role ARN
+	// The :31 gets arn:aws:iam::123456789012:role/
+	// This test relies on the role name having at least two characters
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", fmt.Sprintf("%s*%s", iamARN[:31], iamARN[32:])}
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
+	}
+
+	// place a globbed IAM role ARN
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", fmt.Sprintf("%s*", iamARN[:len(iamARN)-2]), "wrong_iam_role_arn_2"}
 	resp, err := b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
