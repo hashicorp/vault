@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -41,6 +41,8 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_basicSTS(t *testing.T) {
+	accessKey := &awsAccessKey{}
+	createUser(t, accessKey)
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck: func() {
@@ -49,7 +51,7 @@ func TestBackend_basicSTS(t *testing.T) {
 		},
 		Backend: getBackend(t),
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
+			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepWritePolicy(t, "test", testPolicy),
 			testAccStepReadSTS(t, "test"),
 			testAccStepWriteArnPolicyRef(t, "test", testPolicyArn),
@@ -57,7 +59,9 @@ func TestBackend_basicSTS(t *testing.T) {
 			testAccStepWriteArnRoleRef(t, testRoleName),
 			testAccStepReadSTS(t, testRoleName),
 		},
-		Teardown: teardown,
+		Teardown: func() error {
+			return teardown(accessKey)
+		},
 	})
 }
 
@@ -81,14 +85,6 @@ func TestBackend_policyCrud(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("AWS_ACCESS_KEY_ID"); v == "" {
-		t.Fatal("AWS_ACCESS_KEY_ID must be set for acceptance tests")
-	}
-
-	if v := os.Getenv("AWS_SECRET_ACCESS_KEY"); v == "" {
-		t.Fatal("AWS_SECRET_ACCESS_KEY must be set for acceptance tests")
-	}
-
 	if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
 		log.Println("[INFO] Test: Using us-west-2 as test region")
 		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
@@ -97,7 +93,7 @@ func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("AWS_ACCOUNT_ID"); v == "" {
 		accountId, err := getAccountId()
 		if err != nil {
-			t.Fatal("AWS_ACCOUNT_ID could not be read from iam:GetUser for acceptance tests")
+			t.Fatalf("AWS_ACCOUNT_ID could not be read from iam:GetUser for acceptance tests: %#v", err)
 		}
 		log.Printf("[INFO] Test: Used %s as AWS_ACCOUNT_ID", accountId)
 		os.Setenv("AWS_ACCOUNT_ID", accountId)
@@ -105,27 +101,23 @@ func testAccPreCheck(t *testing.T) {
 }
 
 func getAccountId() (string, error) {
-	creds := credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY_ID"),
-		os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		"")
-
 	awsConfig := &aws.Config{
-		Credentials: creds,
-		Region:      aws.String("us-east-1"),
-		HTTPClient:  cleanhttp.DefaultClient(),
+		Region:     aws.String("us-east-1"),
+		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	svc := iam.New(session.New(awsConfig))
+	svc := sts.New(session.New(awsConfig))
 
-	params := &iam.GetUserInput{}
-	res, err := svc.GetUser(params)
+	params := &sts.GetCallerIdentityInput{}
+	res, err := svc.GetCallerIdentity(params)
 
 	if err != nil {
 		return "", err
 	}
+	if res == nil {
+		return "", fmt.Errorf("got nil response from GetCallerIdentity")
+	}
 
-	// split "arn:aws:iam::012345678912:user/username"
-	accountId := strings.Split(*res.User.Arn, ":")[4]
-	return accountId, nil
+	return *res.Account, nil
 }
 
 const testRoleName = "Vault-Acceptance-Test-AWS-Assume-Role"
@@ -144,12 +136,9 @@ func createRole(t *testing.T) {
       ]
 }
 `
-	creds := credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "")
-
 	awsConfig := &aws.Config{
-		Credentials: creds,
-		Region:      aws.String("us-east-1"),
-		HTTPClient:  cleanhttp.DefaultClient(),
+		Region:     aws.String("us-east-1"),
+		HTTPClient: cleanhttp.DefaultClient(),
 	}
 	svc := iam.New(session.New(awsConfig))
 	trustPolicy := fmt.Sprintf(testRoleAssumePolicy, os.Getenv("AWS_ACCOUNT_ID"))
@@ -182,13 +171,92 @@ func createRole(t *testing.T) {
 	time.Sleep(10 * time.Second)
 }
 
-func teardown() error {
-	creds := credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), "")
+const testUserName = "Vault-Acceptance-Test-AWS-FederationToken"
 
+func createUser(t *testing.T, accessKey *awsAccessKey) {
+	// The sequence of user creation actions is carefully chosen to minimize
+	// impact of stolen IAM user credentials
+	// 1. Create user, without any permissions or credentials. At this point,
+	//	  nobody cares if creds compromised because this user can do nothing.
+	// 2. Attach the timebomb policy. This grants no access but puts a time limit
+	//	  on validitity of compromised credentials. If this fails, nobody cares
+	//	  because the user has no permissions to do anything anyway
+	// 3. Attach the AdminAccess policy. The IAM user still has no credentials to
+	//	  do anything
+	// 4. Generate API creds to get an actual access key and secret key
+	timebombPolicyTemplate := `{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Deny",
+				"Action": "*",
+				"Resource": "*",
+				"Condition": {
+					"DateGreaterThan": {
+						"aws:CurrentTime": "%s"
+					}
+				}
+			}
+		]
+	}
+	`
+	validity := time.Duration(2 * time.Hour)
+	expiry := time.Now().Add(validity)
+	timebombPolicy := fmt.Sprintf(timebombPolicyTemplate, expiry.Format(time.RFC3339))
 	awsConfig := &aws.Config{
-		Credentials: creds,
-		Region:      aws.String("us-east-1"),
-		HTTPClient:  cleanhttp.DefaultClient(),
+		Region:     aws.String("us-east-1"),
+		HTTPClient: cleanhttp.DefaultClient(),
+	}
+	svc := iam.New(session.New(awsConfig))
+
+	createUserInput := &iam.CreateUserInput{
+		UserName: aws.String(testUserName),
+	}
+	log.Printf("[INFO] AWS CreateUser: %s", testUserName)
+	_, err := svc.CreateUser(createUserInput)
+	if err != nil {
+		t.Fatalf("AWS CreateUser failed: %v", err)
+	}
+
+	putPolicyInput := &iam.PutUserPolicyInput{
+		PolicyDocument: aws.String(timebombPolicy),
+		PolicyName:     aws.String("SelfDestructionTimebomb"),
+		UserName:       aws.String(testUserName),
+	}
+	_, err = svc.PutUserPolicy(putPolicyInput)
+	if err != nil {
+		t.Fatalf("AWS PutUserPolicy failed: %v", err)
+	}
+
+	attachUserPolicyInput := &iam.AttachUserPolicyInput{
+		PolicyArn: aws.String("arn:aws:iam::aws:policy/AdministratorAccess"),
+		UserName:  aws.String(testUserName),
+	}
+	_, err = svc.AttachUserPolicy(attachUserPolicyInput)
+	if err != nil {
+		t.Fatalf("AWS AttachUserPolicy failed, %v", err)
+	}
+
+	createAccessKeyInput := &iam.CreateAccessKeyInput{
+		UserName: aws.String(testUserName),
+	}
+	createAccessKeyOutput, err := svc.CreateAccessKey(createAccessKeyInput)
+	if err != nil {
+		t.Fatalf("AWS CreateAccessKey failed: %v", err)
+	}
+	if createAccessKeyOutput == nil {
+		t.Fatalf("AWS CreateAccessKey returned nil")
+	}
+	genAccessKey := createAccessKeyOutput.AccessKey
+
+	accessKey.AccessKeyId = *genAccessKey.AccessKeyId
+	accessKey.SecretAccessKey = *genAccessKey.SecretAccessKey
+}
+
+func teardown(accessKey *awsAccessKey) error {
+	awsConfig := &aws.Config{
+		Region:     aws.String("us-east-1"),
+		HTTPClient: cleanhttp.DefaultClient(),
 	}
 	svc := iam.New(session.New(awsConfig))
 
@@ -214,6 +282,45 @@ func teardown() error {
 		return err
 	}
 
+	userDetachment := &iam.DetachUserPolicyInput{
+		PolicyArn: aws.String("arn:aws:iam::aws:policy/AdministratorAccess"),
+		UserName:  aws.String(testUserName),
+	}
+	_, err = svc.DetachUserPolicy(userDetachment)
+	if err != nil {
+		log.Printf("[WARN] AWS DetachUserPolicy failed: %v", err)
+		return err
+	}
+
+	deleteAccessKeyInput := &iam.DeleteAccessKeyInput{
+		AccessKeyId: aws.String(accessKey.AccessKeyId),
+		UserName:    aws.String(testUserName),
+	}
+	_, err = svc.DeleteAccessKey(deleteAccessKeyInput)
+	if err != nil {
+		log.Printf("[WARN] AWS DeleteAccessKey failed: %v", err)
+		return err
+	}
+
+	deleteUserPolicyInput := &iam.DeleteUserPolicyInput{
+		PolicyName: aws.String("SelfDestructionTimebomb"),
+		UserName:   aws.String(testUserName),
+	}
+	_, err = svc.DeleteUserPolicy(deleteUserPolicyInput)
+	if err != nil {
+		log.Printf("[WARN] AWS DeleteUserPolicy failed: %v", err)
+		return err
+	}
+	deleteUserInput := &iam.DeleteUserInput{
+		UserName: aws.String(testUserName),
+	}
+	log.Printf("[INFO] AWS DeleteUser: %s", testUserName)
+	_, err = svc.DeleteUser(deleteUserInput)
+	if err != nil {
+		log.Printf("[WARN] AWS DeleteUser failed: %v", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -222,9 +329,19 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config/root",
 		Data: map[string]interface{}{
-			"access_key": os.Getenv("AWS_ACCESS_KEY_ID"),
-			"secret_key": os.Getenv("AWS_SECRET_ACCESS_KEY"),
+			"region": os.Getenv("AWS_DEFAULT_REGION"),
+		},
+	}
+}
+
+func testAccStepConfigWithCreds(t *testing.T, accessKey *awsAccessKey) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config/root",
+		Data: map[string]interface{}{
 			"region":     os.Getenv("AWS_DEFAULT_REGION"),
+			"access_key": accessKey.AccessKeyId,
+			"secret_key": accessKey.SecretAccessKey,
 		},
 	}
 }
@@ -457,4 +574,9 @@ func testAccStepWriteArnRoleRef(t *testing.T, roleName string) logicaltest.TestS
 			"arn": fmt.Sprintf("arn:aws:iam::%s:role/%s", os.Getenv("AWS_ACCOUNT_ID"), roleName),
 		},
 	}
+}
+
+type awsAccessKey struct {
+	AccessKeyId     string
+	SecretAccessKey string
 }
