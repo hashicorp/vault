@@ -35,6 +35,7 @@ func (dbi *dbPluginInstance) Close() error {
 	if dbi.closed {
 		return nil
 	}
+	dbi.closed = true
 
 	return dbi.Database.Close()
 }
