@@ -142,8 +142,8 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	return c.db, nil
 }
 
-func (c *SQLConnectionProducer) SecretValues() map[string]string {
-	return map[string]string{
+func (c *SQLConnectionProducer) SecretValues() map[string]interface{} {
+	return map[string]interface{}{
 		c.Password: "[password]",
 	}
 }

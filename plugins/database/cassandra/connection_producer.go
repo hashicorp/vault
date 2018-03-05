@@ -246,8 +246,8 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	return session, nil
 }
 
-func (c *cassandraConnectionProducer) secretValues() map[string]string {
-	return map[string]string{
+func (c *cassandraConnectionProducer) secretValues() map[string]interface{} {
+	return map[string]interface{}{
 		c.Password:  "[password]",
 		c.PemBundle: "[pem_bundle]",
 		c.PemJSON:   "[pem_json]",
