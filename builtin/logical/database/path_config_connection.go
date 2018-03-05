@@ -63,6 +63,11 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 			return nil, err
 		}
 
+		// Execute plugin again, we don't need the object so throw away.
+		if _, err := b.GetConnection(ctx, req.Storage, name); err != nil {
+			return nil, err
+		}
+
 		return nil, nil
 	}
 }
