@@ -250,6 +250,6 @@ func (c *cassandraConnectionProducer) secretValues() map[string]string {
 	return map[string]string{
 		c.Password:  "[password]",
 		c.PemBundle: "[pem_bundle]",
-		c.PemJSON:   "[pem_json",
+		c.PemJSON:   "[pem_json]",
 	}
 }

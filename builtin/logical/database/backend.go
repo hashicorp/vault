@@ -235,9 +235,8 @@ func (b *databaseBackend) ClearConnection(name string) error {
 func (b *databaseBackend) clearConnection(name string) error {
 	db, ok := b.connections[name]
 	if ok {
-		if err := db.Close(); err != nil {
-			return err
-		}
+		// Ignore error here since the database client is always killed
+		db.Close()
 		delete(b.connections, name)
 	}
 	return nil
@@ -247,8 +246,9 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
 	case rpc.ErrShutdown, dbplugin.ErrPluginShutdown:
-		// Put this in a goroutine so that requests can release the read lock
-		// and we will close the connection for the specific id
+		// Put this in a goroutine so that requests can run with the read or write lock
+		// and simply defer the unlock.  Since we are attaching the instance and matching
+		// the id in the conneciton map, we can safely do this.
 		go func() {
 			b.Lock()
 			defer b.Unlock()

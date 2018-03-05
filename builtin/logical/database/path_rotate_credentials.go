@@ -39,7 +39,6 @@ func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc 
 			return nil, err
 		}
 
-		// Close plugin and delete the entry in the connections cache.
 		db, err := b.GetConnection(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
