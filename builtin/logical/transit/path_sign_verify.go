@@ -48,18 +48,9 @@ including ed25519.`,
 			},
 
 			"algorithm": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "sha2-256",
-				Description: `Deprecated: use "hash_algorithm" instead. Hash algorithm to use (POST body parameter). Valid values are:
-
-
-* sha2-224
-* sha2-256
-* sha2-384
-* sha2-512
-
-Defaults to "sha2-256". Not valid for all key types,
-including ed25519.`,
+				Type:        framework.TypeString,
+				Default:     "sha2-256",
+				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
 			"urlalgorithm": &framework.FieldSchema{
@@ -79,8 +70,7 @@ to the min_encryption_version configured on the key.`,
 				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
 			"signature_algorithm": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "pss",
+				Type: framework.TypeString,
 				Description: `The signature algorithm to use for signing. Currently only applies to RSA key types.
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
@@ -143,17 +133,9 @@ derivation is enabled; currently only available with ed25519 keys.`,
 Defaults to "sha2-256". Not valid for all key types.`,
 			},
 			"algorithm": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "sha2-256",
-				Description: `Deprecated: use "hash_algorithm" instead. Hash algorithm to use (POST body parameter).
-Valid values are:
-
-* sha2-224
-* sha2-256
-* sha2-384
-* sha2-512
-
-Defaults to "sha2-256". Not valid for all key types.`,
+				Type:        framework.TypeString,
+				Default:     "sha2-256",
+				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
 			"prehashed": &framework.FieldSchema{
@@ -161,8 +143,7 @@ Defaults to "sha2-256". Not valid for all key types.`,
 				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
 			"signature_algorithm": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "pss",
+				Type: framework.TypeString,
 				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types. 
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
@@ -183,9 +164,9 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	inputB64 := d.Get("input").(string)
 	hashAlgorithm := d.Get("urlalgorithm").(string)
 	if hashAlgorithm == "" {
-		hashAlgorithm = d.Get("algorithm").(string)
+		hashAlgorithm = d.Get("hash_algorithm").(string)
 		if hashAlgorithm == "" {
-			hashAlgorithm = d.Get("hash_algorithm").(string)
+			hashAlgorithm = d.Get("algorithm").(string)
 		}
 	}
 	prehashed := d.Get("prehashed").(bool)
@@ -280,9 +261,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	inputB64 := d.Get("input").(string)
 	hashAlgorithm := d.Get("urlalgorithm").(string)
 	if hashAlgorithm == "" {
-		hashAlgorithm = d.Get("algorithm").(string)
+		hashAlgorithm = d.Get("hash_algorithm").(string)
 		if hashAlgorithm == "" {
-			hashAlgorithm = d.Get("hash_algorithm").(string)
+			hashAlgorithm = d.Get("algorithm").(string)
 		}
 	}
 	prehashed := d.Get("prehashed").(bool)

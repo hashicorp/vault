@@ -918,6 +918,10 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorith
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)}
 		}
 
+		if sigAlgorithm == "" {
+			sigAlgorithm = "pss"
+		}
+
 		switch sigAlgorithm {
 		case "pss":
 			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
@@ -1032,6 +1036,10 @@ func (p *Policy) VerifySignature(context, input []byte, sig, hashAlgorithm strin
 			algo = crypto.SHA512
 		default:
 			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)}
+		}
+
+		if sigAlgorithm == "" {
+			sigAlgorithm = "pss"
 		}
 
 		switch sigAlgorithm {
