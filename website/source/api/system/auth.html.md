@@ -77,7 +77,14 @@ For example, enable the "foo" auth method will make it accessible at
 - `config` `(map<string|string>: nil)` – Specifies configuration options for
   this auth method. These are the possible values:
 
-    - `plugin_name`
+  - `plugin_name` `(string: "")` - The name of the plugin in the plugin catalog
+     to use.
+
+  - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
+     that will not be HMAC'd by audit devices in the request data object.
+
+  - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
+     that will not be HMAC'd by audit devices in the response data object.
 
     The plugin_name can be provided in the config map or as a top-level option,
     with the former taking precedence.
