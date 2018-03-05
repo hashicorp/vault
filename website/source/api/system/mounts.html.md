@@ -81,10 +81,10 @@ This endpoint enables a new secrets engine at the given path.
   this mount. This is an object with four possible values:
 
   - `default_lease_ttl` `(string: "")` - The default lease duration, specified
-     as a go string duration like "5s" or "30m".
+     as a string duration like "5s" or "30m".
 
   - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
-     go string duration like "5s" or "30m".
+     string duration like "5s" or "30m".
 
   - `force_no_cache` `(bool: false)` - Disable caching.
 

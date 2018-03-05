@@ -78,10 +78,10 @@ For example, enable the "foo" auth method will make it accessible at
   this auth method. These are the possible values:
 
   - `default_lease_ttl` `(string: "")` - The default lease duration, specified
-     as a go string duration like "5s" or "30m".
+     as a string duration like "5s" or "30m".
 
   - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
-     go string duration like "5s" or "30m".
+     string duration like "5s" or "30m".
 
   - `plugin_name` `(string: "")` - The name of the plugin in the plugin catalog
      to use.
