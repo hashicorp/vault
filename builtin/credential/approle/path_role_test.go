@@ -24,6 +24,7 @@ func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 		"bound_cidr_list": []string{"127.0.0.1/18", "192.178.1.2/24"},
 	}
 
+	// Create a role with bound_cidr_list set
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.CreateOperation,
@@ -34,6 +35,7 @@ func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
 
+	// Read the role and check that the bound_cidr_list is set properly
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.ReadOperation,
@@ -50,7 +52,7 @@ func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 		t.Fatalf("bad: bound_cidr_list; expected: %#v\nactual: %#v\n", expected, actual)
 	}
 
-	// Save a role with old style string typed bound_cidr_list
+	// Modify the storage entry of the role to hold the old style string typed bound_cidr_list
 	role := &roleStorageEntry{
 		RoleID:           "testroleid",
 		HMACKey:          "testhmackey",
@@ -63,6 +65,7 @@ func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Read the role. The upgrade code should have migrated the old type to the new type
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.ReadOperation,
@@ -75,6 +78,7 @@ func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 		t.Fatalf("bad: bound_cidr_list; expected: %#v\nactual: %#v\n", expected, actual)
 	}
 
+	// Create a secret-id by supplying a subset of the role's CIDR blocks with the new type
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "role/testrole/secret-id",
 		Operation: logical.UpdateOperation,
@@ -90,6 +94,7 @@ func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
 		t.Fatalf("failed to generate secret-id")
 	}
 
+	// Check that the backwards compatibility for the string type is not broken
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "role/testrole/secret-id",
 		Operation: logical.UpdateOperation,
