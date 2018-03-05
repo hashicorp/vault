@@ -38,13 +38,13 @@ func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]
 	return err
 }
 
-func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
+func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.RawConfig = conf
 
-	err = mapstructure.WeakDecode(conf, &c)
+	err := mapstructure.WeakDecode(conf, &c)
 	if err != nil {
 		return nil, err
 	}
