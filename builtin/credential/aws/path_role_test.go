@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/policyutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -187,10 +188,11 @@ func Test_enableIamIDResolution(t *testing.T) {
 
 	b.resolveArnToUniqueIDFunc = resolveArnToFakeUniqueId
 
+	boundIamRoleARNs := []string{"arn:aws:iam::123456789012:role/MyRole", "arn:aws:iam::123456789012:role/path/*"}
 	data := map[string]interface{}{
 		"auth_type":               iamAuthType,
 		"policies":                "p,q",
-		"bound_iam_principal_arn": "arn:aws:iam::123456789012:role/MyRole",
+		"bound_iam_principal_arn": boundIamRoleARNs,
 		"resolve_aws_unique_ids":  false,
 	}
 
@@ -218,7 +220,7 @@ func Test_enableIamIDResolution(t *testing.T) {
 	if resp == nil || resp.IsError() {
 		t.Fatalf("failed to read role: resp:%#v,\nerr:%#v", resp, err)
 	}
-	if resp.Data["bound_iam_principal_id"] != "" {
+	if resp.Data["bound_iam_principal_id"] != nil && len(resp.Data["bound_iam_principal_id"].([]string)) > 0 {
 		t.Fatalf("expected to get no unique ID in role, but got %q", resp.Data["bound_iam_principal_id"])
 	}
 
@@ -240,8 +242,13 @@ func Test_enableIamIDResolution(t *testing.T) {
 	if resp == nil || resp.IsError() {
 		t.Fatalf("failed to read role: resp:%#v,\nerr:%#v", resp, err)
 	}
-	if resp.Data["bound_iam_principal_id"] != "FakeUniqueId1" {
+	principalIDs := resp.Data["bound_iam_principal_id"].([]string)
+	if len(principalIDs) != 1 || principalIDs[0] != "FakeUniqueId1" {
 		t.Fatalf("bad: expected upgrade of role resolve principal ID to %q, but got %q instead", "FakeUniqueId1", resp.Data["bound_iam_principal_id"])
+	}
+	returnedARNs := resp.Data["bound_iam_principal_arn"].([]string)
+	if !strutil.EquivalentSlices(returnedARNs, boundIamRoleARNs) {
+		t.Fatalf("bad: expected to return bound_iam_principal_arn of %q, but got %q instead", boundIamRoleARNs, returnedARNs)
 	}
 }
 
@@ -466,7 +473,8 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 
 	data["auth_type"] = iamAuthType
 	delete(data, "bound_ami_id")
-	data["bound_iam_principal_arn"] = "arn:aws:iam::123456789012:role/MyRole"
+	boundIamPrincipalARNs := []string{"arn:aws:iam::123456789012:role/MyRole", "arn:aws:iam::123456789012:role/path/*"}
+	data["bound_iam_principal_arn"] = boundIamPrincipalARNs
 	resp, err = submitRequest("ec2_to_iam", logical.UpdateOperation)
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("changed auth type on the role")
@@ -499,8 +507,13 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.Data["bound_iam_principal_id"] != "FakeUniqueId1" {
+	principalIDs := resp.Data["bound_iam_principal_id"].([]string)
+	if len(principalIDs) != 1 || principalIDs[0] != "FakeUniqueId1" {
 		t.Fatalf("expected fake unique ID of FakeUniqueId1, got %q", resp.Data["bound_iam_principal_id"])
+	}
+	returnedARNs := resp.Data["bound_iam_principal_arn"].([]string)
+	if !strutil.EquivalentSlices(returnedARNs, boundIamPrincipalARNs) {
+		t.Fatalf("bad: expected to return bound_iam_principal_arn of %q, but got %q instead", boundIamPrincipalARNs, returnedARNs)
 	}
 	data["resolve_aws_unique_ids"] = false
 	resp, err = submitRequest("withInternalIdResolution", logical.UpdateOperation)
@@ -584,15 +597,15 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 
 	expected := map[string]interface{}{
 		"auth_type":                      ec2AuthType,
-		"bound_ami_id":                   "testamiid",
-		"bound_account_id":               "testaccountid",
-		"bound_region":                   "testregion",
-		"bound_iam_principal_arn":        "",
-		"bound_iam_principal_id":         "",
-		"bound_iam_role_arn":             "arn:aws:iam::123456789012:role/MyRole",
-		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/MyInstanceProfile",
-		"bound_subnet_id":                "testsubnetid",
-		"bound_vpc_id":                   "testvpcid",
+		"bound_ami_id":                   []string{"testamiid"},
+		"bound_account_id":               []string{"testaccountid"},
+		"bound_region":                   []string{"testregion"},
+		"bound_iam_principal_arn":        []string{},
+		"bound_iam_principal_id":         []string{},
+		"bound_iam_role_arn":             []string{"arn:aws:iam::123456789012:role/MyRole"},
+		"bound_iam_instance_profile_arn": []string{"arn:aws:iam::123456789012:instance-profile/MyInstanceProfile"},
+		"bound_subnet_id":                []string{"testsubnetid"},
+		"bound_vpc_id":                   []string{"testvpcid"},
 		"inferred_entity_type":           "",
 		"inferred_aws_region":            "",
 		"resolve_aws_unique_ids":         false,
@@ -624,7 +637,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	expected["bound_vpc_id"] = "newvpcid"
+	expected["bound_vpc_id"] = []string{"newvpcid"}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: role data: expected: %#v\n actual: %#v", expected, resp.Data)

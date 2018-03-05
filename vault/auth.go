@@ -94,9 +94,11 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 		}
 		entry.Accessor = accessor
 	}
+	// Sync values to the cache
+	entry.SyncCache()
+
 	viewPath := credentialBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
-
 	// Mark the view as read-only until the mounting is complete and
 	// ensure that it is reset after. This ensures that there will be no
 	// writes during the construction of the backend.
@@ -347,6 +349,9 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 			entry.Accessor = accessor
 			needPersist = true
 		}
+
+		// Sync values to the cache
+		entry.SyncCache()
 	}
 
 	if !needPersist {

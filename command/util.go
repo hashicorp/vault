@@ -9,27 +9,14 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
 )
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
 func DefaultTokenHelper() (token.TokenHelper, error) {
-	config, err := LoadConfig("")
-	if err != nil {
-		return nil, err
-	}
-
-	path := config.TokenHelper
-	if path == "" {
-		return &token.InternalTokenHelper{}, nil
-	}
-
-	path, err = token.ExternalTokenHelperPath(path)
-	if err != nil {
-		return nil, err
-	}
-	return &token.ExternalTokenHelper{BinaryPath: path}, nil
+	return config.DefaultTokenHelper()
 }
 
 // RawField extracts the raw field from the given data and returns it as a

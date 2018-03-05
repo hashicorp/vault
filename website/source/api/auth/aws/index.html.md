@@ -529,11 +529,13 @@ Registers a role in the method. Only those instances or principals which
 are using the role registered using this endpoint, will be able to perform
 the login operation. Contraints can be specified on the role, that are
 applied on the instances or principals attempting to login. At least one
-constraint should be specified on the role. The available constraints you
+constraint must be specified on the role. The available constraints you
 can choose are dependent on the `auth_type` of the role and, if the
 `auth_type` is `iam`, then whether inferencing is enabled. A role will not
 let you configure a constraint if it is not checked by the `auth_type` and
-inferencing configuration of that role.
+inferencing configuration of that role. For the constraints which accept a list
+of values, the authenticating instance/principal must match any one value in the
+list in order to satisfy that constraint.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -547,53 +549,64 @@ inferencing configuration of that role.
   "iam" (except for legacy `aws-ec2` auth types, for which it will default to
   "ec2"). Only those bindings applicable to the auth type chosen will be allowed
   to be configured on the role.
-- `bound_ami_id` `(string: "")` - If set, defines a constraint on the EC2
-  instances that they should be using the AMI ID specified by this parameter.
+- `bound_ami_id` `(list: [])` - If set, defines a constraint on the EC2
+  instances that they should be using one of the AMI ID specified by this parameter.
   This constraint is checked during ec2 auth as well as the iam auth method only
-  when inferring an EC2 instance.
-- `bound_account_id` `(string: "")` - If set, defines a constraint on the EC2
-  instances that the account ID in its identity document to match the one
+  when inferring an EC2 instance. This is a comma-separated string or JSON
+  array.
+- `bound_account_id` `(list: [])` - If set, defines a constraint on the EC2
+  instances that the account ID in its identity document to match one of the ones
   specified by this parameter. This constraint is checked during ec2 auth as
-  well as the iam auth method only when inferring an EC2 instance.
-- `bound_region` `(string: "")` - If set, defines a constraint on the EC2
-  instances that the region in its identity document must match the one
-  specified by this parameter. This constraint is only checked by the ec2 auth
+  well as the iam auth method only when inferring an EC2 instance. This is a
+  comma-separated string or JSON array.
+- `bound_region` `(list: [])` - If set, defines a constraint on the EC2
+  instances that the region in its identity document must match one of the
+  regions specified by this parameter. This constraint is only checked by the ec2 auth
   method as well as the iam auth method only when inferring an ec2 instance.
-- `bound_vpc_id` `(string: "")` - If set, defines a constraint on the EC2
-  instance to be associated with the VPC ID that matches the value specified by
+  This is a comma-separated string or JSON array.
+- `bound_vpc_id` `(list: [])` - If set, defines a constraint on the EC2
+  instance to be associated with a VPC ID that matches one of the values specified by
   this parameter. This constraint is only checked by the ec2 auth method as well
-  as the iam auth method only when inferring an ec2 instance.
-- `bound_subnet_id` `(string: "")` - If set, defines a constraint on the EC2
-  instance to be associated with the subnet ID that matches the value specified
+  as the iam auth method only when inferring an ec2 instance. This is a
+  comma-separated string or JSON array.
+- `bound_subnet_id` `(list: [])` - If set, defines a constraint on the EC2
+  instance to be associated with a subnet ID that matches one of the values specified
   by this parameter. This constraint is only checked by the ec2 auth method as
-  well as the iam auth method only when inferring an ec2 instance.
-- `bound_iam_role_arn` `(string: "")` - If set, defines a constraint on the
-  authenticating EC2 instance that it must match the IAM role ARN specified by
+  well as the iam auth method only when inferring an ec2 instance. This is a
+  comma-separated string or a JSON array.
+- `bound_iam_role_arn` `(list: [])` - If set, defines a constraint on the
+  authenticating EC2 instance that it must match one of the IAM role ARNs specified by
   this parameter.  The value is refix-matched (as though it were a glob ending
   in `*`).  The configured IAM user or EC2 instance role must be allowed to
   execute the `iam:GetInstanceProfile` action if this is specified. This
   constraint is checked by the ec2 auth method as well as the iam auth method
-  only when inferring an EC2 instance.
-- `bound_iam_instance_profile_arn` `(string: "")` - If set, defines a constraint
+  only when inferring an EC2 instance. This is a comma-separated string or a
+  JSON array.
+- `bound_iam_instance_profile_arn` `(list: [])` - If set, defines a constraint
   on the EC2 instances to be associated with an IAM instance profile ARN which
-  has a prefix that matches the value specified by this parameter. The value is
+  has a prefix that matches one of the values specified by this parameter. The value is
   prefix-matched (as though it were a glob ending in `*`). This constraint is
   checked by the ec2 auth method as well as the iam auth method only when
-  inferring an ec2 instance.
+  inferring an ec2 instance. This is a comma-separated string or a JSON array.
 - `role_tag` `(string: "")` - If set, enables the role tags for this role. The
   value set for this field should be the 'key' of the tag on the EC2 instance.
   The 'value' of the tag should be generated using `role/<role>/tag` endpoint.
   Defaults to an empty string, meaning that role tags are disabled. This
-  constraint is valid only with the ec2 auth method and is not allowed when an
-  auth_type is iam.
-- `bound_iam_principal_arn` `(string: "")` - Defines the IAM principal that must
-  be authenticated using the iam auth method. It should look like
-  "arn:aws:iam::123456789012:user/MyUserName" or
+  constraint is valid only with the ec2 auth method and is not allowed when
+  `auth_type` is iam.
+- `bound_iam_principal_arn` `(list: [])` - Defines the list of IAM principals
+  that are permitted to login to the role using the iam auth method. Individual
+  values should look like "arn:aws:iam::123456789012:user/MyUserName" or
   "arn:aws:iam::123456789012:role/MyRoleName". Wildcards are supported at the
   end of the ARN, e.g., "arn:aws:iam::123456789012:\*" will match any IAM
-  principal in the AWS account 123456789012. This constraint is only checked by
+  principal in the AWS account 123456789012. When `resolve_aws_unique_ids` is
+  `false` and you are binding to IAM roles (as opposed to users) and you are not
+  using a wildcard at the end, then you must specify the ARN by ommitting any
+  path component; see the documentation for `resolve_aws_unique_ids` below.
+  This constraint is only checked by
   the iam auth method. Wildcards are supported at the end of the ARN, e.g.,
   "arn:aws:iam::123456789012:role/\*" will match all roles in the AWS account.
+  This is a comma-separated string or JSON array.
 - `inferred_entity_type` `(string: "")` -  When set, instructs Vault to turn on
   inferencing. The only current valid value is "ec2\_instance" instructing Vault
   to infer that the role comes from an EC2 instance in an IAM instance profile.
@@ -631,11 +644,13 @@ inferencing configuration of that role.
   Vault still has the necessary IAM permissions to resolve the unique ID, Vault
   will update the unique ID. (If it does not have the necessary permissions to
   resolve the unique ID, then it will fail to update.) If this option is set to
-  false, then you MUST leave out the path component in bound_iam_principal_arn
-  for **roles** only, but not IAM users. That is, if your IAM role ARN is of the
-  form `arn:aws:iam::123456789012:role/some/path/to/MyRoleName`, you **must**
-  specify a bound_iam_principal_arn of
-  `arn:aws:iam::123456789012:role/MyRoleName` for authentication to work.
+  false, then you MUST leave out the path component in `bound_iam_principal_arn`
+  for **roles** that do not specify a wildcard at the end, but not IAM users or
+  role bindings that have a wildcard. That is, if your IAM role ARN is of the
+  form `arn:aws:iam::123456789012:role/some/path/to/MyRoleName`, and
+  `resolve_aws_unique_ids` is `false`, you **must** specify a
+  `bound_iam_principal_arn` of `arn:aws:iam::123456789012:role/MyRoleName` for
+  authentication to work.
 - `ttl` `(string: "")` - The TTL period of tokens issued using this role,
   provided as "1h", where hour is the largest suffix.
 - `max_ttl` `(string: "")` - The maximum allowed lifetime of tokens issued using
@@ -665,7 +680,7 @@ inferencing configuration of that role.
 
 ```json
 {
-  "bound_ami_id": "ami-fce36987",
+  "bound_ami_id": ["ami-fce36987"],
   "role_tag": "",
   "policies": [
     "default",
@@ -713,7 +728,7 @@ $ curl \
 ```json
 {
   "data": {
-    "bound_ami_id": "ami-fce36987",
+    "bound_ami_id": ["ami-fce36987"],
     "role_tag": "",
     "policies": [
       "default",

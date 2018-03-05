@@ -1084,7 +1084,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		"auth_type":          "ec2",
 		"policies":           "root",
 		"max_ttl":            "120s",
-		"bound_ami_id":       "wrong_ami_id",
+		"bound_ami_id":       []string{"wrong_ami_id", "wrong_ami_id2"},
 		"bound_account_id":   accountID,
 		"bound_iam_role_arn": iamARN,
 	}
@@ -1108,10 +1108,10 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Place the correct AMI ID, but make the AccountID wrong
+	// Place the correct AMI ID in one of the values, but make the AccountID wrong
 	roleReq.Operation = logical.UpdateOperation
-	data["bound_ami_id"] = amiID
-	data["bound_account_id"] = "wrong-account-id"
+	data["bound_ami_id"] = []string{"wrong_ami_id_1", amiID, "wrong_ami_id_2"}
+	data["bound_account_id"] = []string{"wrong-account-id", "wrong-account-id-2"}
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1123,9 +1123,9 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Place the correct AccountID, but make the wrong IAMRoleARN
-	data["bound_account_id"] = accountID
-	data["bound_iam_role_arn"] = "wrong_iam_role_arn"
+	// Place the correct AccountID in one of the values, but make the wrong IAMRoleARN
+	data["bound_account_id"] = []string{"wrong-account-id-1", accountID, "wrong-account-id-2"}
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", "wrong_iam_role_arn_2"}
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1137,8 +1137,8 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// place the correct IAM role ARN
-	data["bound_iam_role_arn"] = iamARN
+	// place a correct IAM role ARN
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", iamARN, "wrong_iam_role_arn_2"}
 	resp, err = b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1456,7 +1456,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 
 	// configuring the valid role we'll be able to login to
 	roleData := map[string]interface{}{
-		"bound_iam_principal_arn": entity.canonicalArn(),
+		"bound_iam_principal_arn": []string{entity.canonicalArn(), "arn:aws:iam::123456789012:role/FakeRoleArn1*"}, // Fake ARN MUST be wildcard terminated because we're resolving unique IDs, and the wildcard termination prevents unique ID resolution
 		"policies":                "root",
 		"auth_type":               iamAuthType,
 	}
@@ -1489,16 +1489,19 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	fakeArn := "arn:aws:iam::123456789012:role/somePath/FakeRole"
+	fakeArn2 := "arn:aws:iam::123456789012:role/somePath/FakeRole2"
+	fakeArnResolverCount := 0
 	fakeArnResolver := func(ctx context.Context, s logical.Storage, arn string) (string, error) {
-		if arn == fakeArn {
-			return fmt.Sprintf("FakeUniqueIdFor%s", fakeArn), nil
+		if strings.HasPrefix(arn, fakeArn) {
+			fakeArnResolverCount++
+			return fmt.Sprintf("FakeUniqueIdFor%s%d", arn, fakeArnResolverCount), nil
 		}
 		return b.resolveArnToRealUniqueId(context.Background(), s, arn)
 	}
 	b.resolveArnToUniqueIDFunc = fakeArnResolver
 
 	// now we're creating the invalid role we won't be able to login to
-	roleData["bound_iam_principal_arn"] = fakeArn
+	roleData["bound_iam_principal_arn"] = []string{fakeArn, fakeArn2}
 	roleRequest.Path = "role/" + testInvalidRoleName
 	resp, err = b.HandleRequest(context.Background(), roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1630,11 +1633,11 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	wildcardRoleName := "valid_wildcard"
 	wildcardEntity := *entity
 	wildcardEntity.FriendlyName = "*"
-	roleData["bound_iam_principal_arn"] = wildcardEntity.canonicalArn()
+	roleData["bound_iam_principal_arn"] = []string{wildcardEntity.canonicalArn(), "arn:aws:iam::123456789012:role/DoesNotExist/Vault_Fake_Role*"}
 	roleRequest.Path = "role/" + wildcardRoleName
 	resp, err = b.HandleRequest(context.Background(), roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create wildcard role: resp:%#v\nerr:%v", resp, err)
+		t.Fatalf("bad: failed to create wildcard roles: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = wildcardRoleName
