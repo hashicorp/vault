@@ -332,6 +332,12 @@ func (f *FlagSets) Args() []string {
 	return f.mainSet.Args()
 }
 
+// Visit visits the flags in lexicographical order, calling fn for each. It
+// visits only those flags that have been set.
+func (f *FlagSets) Visit(fn func(*flag.Flag)) {
+	f.mainSet.Visit(fn)
+}
+
 // Help builds custom help for this command, grouping by flag set.
 func (fs *FlagSets) Help() string {
 	var out bytes.Buffer
