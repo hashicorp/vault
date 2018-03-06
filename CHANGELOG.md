@@ -12,6 +12,8 @@ IMPROVEMENTS:
  * auth/aws: Allow using lists in role bind parameters [GH-3907]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
    than just set [GH-4049]
+ * storage/gcs: Allow specifying chunk size for transfers, which can reduce
+   memory utilization [GH-4060]
  * sys/capabilities: Add the ability to use multiple paths for capability
    checking [GH-3663]
 
