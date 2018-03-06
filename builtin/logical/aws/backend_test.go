@@ -42,12 +42,16 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_basicSTS(t *testing.T) {
 	accessKey := &awsAccessKey{}
-	createUser(t, accessKey)
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck: func() {
 			testAccPreCheck(t)
+			createUser(t, accessKey)
 			createRole(t)
+			// Sleep sometime because AWS is eventually consistent
+			// Both the createUser and createRole depend on this
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
 		},
 		Backend: getBackend(t),
 		Steps: []logicaltest.TestStep{
@@ -165,10 +169,6 @@ func createRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AWS CreateRole failed: %v", err)
 	}
-
-	// Sleep sometime because AWS is eventually consistent
-	log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
-	time.Sleep(10 * time.Second)
 }
 
 const testUserName = "Vault-Acceptance-Test-AWS-FederationToken"
@@ -339,9 +339,16 @@ func testAccStepConfigWithCreds(t *testing.T, accessKey *awsAccessKey) logicalte
 		Operation: logical.UpdateOperation,
 		Path:      "config/root",
 		Data: map[string]interface{}{
-			"region":     os.Getenv("AWS_DEFAULT_REGION"),
-			"access_key": accessKey.AccessKeyId,
-			"secret_key": accessKey.SecretAccessKey,
+			"region": os.Getenv("AWS_DEFAULT_REGION"),
+		},
+		PreFlight: func(req *logical.Request) error {
+			// Values in Data above get eagerly evaluated due to the testing framework.
+			// In particular, they get evaluated before accessKey gets set by CreateUser
+			// and thus would fail. By moving to a closure in a PreFlight, we ensure that
+			// the creds get evaluated lazily after they've been properly set
+			req.Data["access_key"] = accessKey.AccessKeyId
+			req.Data["secret_key"] = accessKey.SecretAccessKey
+			return nil
 		},
 	}
 }
