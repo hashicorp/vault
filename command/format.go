@@ -325,7 +325,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 
 			// This is down here just to keep ordering consistent
 			if showLeaderAddr {
-				out = append(out, fmt.Sprintf("Active Node Address: | %s", leaderStatus.LeaderAddress))
+				out = append(out, fmt.Sprintf("Active Node Address | %s", leaderStatus.LeaderAddress))
 			}
 		}
 	}
