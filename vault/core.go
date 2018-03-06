@@ -1831,6 +1831,14 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, lockAcquisitionStopCh chan s
 		// before advertising;
 		c.stateLock.Lock()
 
+		if c.sealed {
+			c.logger.Warn("core: grabbed HA lock but already sealed, exiting")
+			lock.Unlock()
+			c.stateLock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+			return
+		}
+
 		// Store the lock so that we can manually clear it later if needed
 		c.heldHALock = lock
 
