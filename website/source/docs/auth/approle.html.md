@@ -85,7 +85,7 @@ management tool.
 1. Enable the AppRole auth method:
 
     ```text
-    $ vault auth enable approle
+    $ vault auth-enable approle
     ```
 
 1. Create a named role:
