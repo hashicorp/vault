@@ -1240,7 +1240,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
 		c.manualStepDownCh = make(chan struct{})
-		c.lockAcquisitionStopCh = make(chan struct{}, 1)
+		c.lockAcquisitionStopCh = make(chan struct{})
 		c.standbyStopCh = make(chan StopOptions)
 		go c.runStandby(c.standbyDoneCh, c.manualStepDownCh, c.lockAcquisitionStopCh, c.standbyStopCh)
 	}
@@ -1540,7 +1540,8 @@ func (c *Core) sealInternal(keepLock bool) error {
 	} else {
 		// If we are trying to acquire the lock, force it to return with nil so
 		// runStandby will exit
-		c.lockAcquisitionStopCh <- struct{}{}
+		close(c.lockAcquisitionStopCh)
+		c.lockAcquisitionStopCh = nil
 		// If we are active, signal the standby goroutine to shut down and wait
 		// for completion. We have the state lock here so nothing else should
 		// be toggling standby status.
@@ -1754,7 +1755,16 @@ func stopReplicationImpl(c *Core) error {
 func (c *Core) runStandby(doneCh, manualStepDownCh, lockAcquisitionStopCh chan struct{}, stopCh chan StopOptions) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
-	defer close(lockAcquisitionStopCh)
+	defer func() {
+		go func() {
+			c.stateLock.Lock()
+			defer c.stateLock.Unlock()
+			if c.lockAcquisitionStopCh != nil {
+				close(c.lockAcquisitionStopCh)
+			}
+			c.lockAcquisitionStopCh = nil
+		}()
+	}()
 	c.logger.Info("core: entering standby mode")
 
 	// Monitor for key rotation
