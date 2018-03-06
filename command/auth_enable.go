@@ -108,7 +108,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
-		Target: &c.flagAuditNonHMACRequestKeys,
+		Target: &c.flagAuditNonHMACResponseKeys,
 		Usage: "Comma-separated list of keys that will not be HMAC'd by audit" +
 			"devices in the response data object.",
 	})
