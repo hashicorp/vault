@@ -1540,8 +1540,10 @@ func (c *Core) sealInternal(keepLock bool) error {
 	} else {
 		// If we are trying to acquire the lock, force it to return with nil so
 		// runStandby will exit
-		close(c.lockAcquisitionStopCh)
-		c.lockAcquisitionStopCh = nil
+		if c.lockAcquisitionStopCh != nil {
+			close(c.lockAcquisitionStopCh)
+			c.lockAcquisitionStopCh = nil
+		}
 		// If we are active, signal the standby goroutine to shut down and wait
 		// for completion. We have the state lock here so nothing else should
 		// be toggling standby status.
