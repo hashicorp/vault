@@ -232,7 +232,7 @@ func TestSystemBackend_Plugin_continueOnError(t *testing.T) {
 
 func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatch bool) {
 	cluster := testSystemBackendMock(t, 1, 1, btype)
-	//defer cluster.Cleanup()
+	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
 
