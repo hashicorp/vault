@@ -632,6 +632,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // problem. It is only used to gracefully quit in the case of HA so that failover
 // happens as quickly as possible.
 func (c *Core) Shutdown() error {
+	c.logger.Trace("core: shutdown called")
 	c.stateLock.RLock()
 	// Tell any requests that know about this to stop
 	if c.activeContextCancelFunc != nil {
@@ -639,10 +640,12 @@ func (c *Core) Shutdown() error {
 	}
 	c.stateLock.RUnlock()
 
+	c.logger.Trace("core: shutdown initiating internal seal")
 	// Seal the Vault, causes a leader stepdown
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 
+	c.logger.Trace("core: shutdown running internal seal")
 	return c.sealInternal(false)
 }
 
@@ -1541,6 +1544,7 @@ func (c *Core) sealInternal(keepLock bool) error {
 		// If we are trying to acquire the lock, force it to return with nil so
 		// runStandby will exit
 		if c.lockAcquisitionStopCh != nil {
+			c.logger.Trace("core: closing lock acquisition stop channel")
 			close(c.lockAcquisitionStopCh)
 			c.lockAcquisitionStopCh = nil
 		}
@@ -1549,7 +1553,6 @@ func (c *Core) sealInternal(keepLock bool) error {
 		// be toggling standby status.
 		if !c.standby {
 			c.standbyStopCh <- StopOptions{KeepLock: keepLock}
-
 			c.logger.Trace("core: finished triggering standbyStopCh for runStandby")
 
 			// Wait for runStandby to stop
@@ -1757,16 +1760,6 @@ func stopReplicationImpl(c *Core) error {
 func (c *Core) runStandby(doneCh, manualStepDownCh, lockAcquisitionStopCh chan struct{}, stopCh chan StopOptions) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
-	defer func() {
-		go func() {
-			c.stateLock.Lock()
-			defer c.stateLock.Unlock()
-			if c.lockAcquisitionStopCh != nil {
-				close(c.lockAcquisitionStopCh)
-			}
-			c.lockAcquisitionStopCh = nil
-		}()
-	}()
 	c.logger.Info("core: entering standby mode")
 
 	// Monitor for key rotation
@@ -1778,10 +1771,11 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, lockAcquisitionStopCh chan s
 	checkLeaderStop := make(chan struct{})
 	go c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
 	defer func() {
+		c.logger.Trace("core: closed periodic key rotation checker stop channel")
 		close(keyRotateStop)
 		<-keyRotateDone
 		close(checkLeaderStop)
-		c.logger.Trace("core: closed periodic leader refresh channel")
+		c.logger.Trace("core: closed periodic leader refresh stop channel")
 		<-checkLeaderDone
 		c.logger.Trace("core: periodic leader refresh returned")
 	}()
@@ -1859,8 +1853,8 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, lockAcquisitionStopCh chan s
 				// statelock and have this shut us down; sealInternal has a
 				// workflow where it watches for the stopCh to close so we want
 				// to return from here
-				go c.Shutdown()
 				c.logger.Error("core: error performing key upgrades", "error", err)
+				go c.Shutdown()
 				c.heldHALock = nil
 				lock.Unlock()
 				c.stateLock.Unlock()
