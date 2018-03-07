@@ -91,9 +91,10 @@ type EnableAuthOptions struct {
 }
 
 type AuthConfigInput struct {
-	DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	DefaultLeaseTTL      string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL          string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	PluginName           string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	InternalUIShowMounts bool   `json:"internal_ui_show_mounts,omitempty" structs:"internal_ui_show_mounts" mapstructure:"internal_ui_show_mounts"`
 }
 
 type AuthMount struct {
@@ -106,7 +107,8 @@ type AuthMount struct {
 }
 
 type AuthConfigOutput struct {
-	DefaultLeaseTTL int    `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL     int    `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	DefaultLeaseTTL      int    `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL          int    `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	PluginName           string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	InternalUIShowMounts bool   `json:"internal_ui_show_mounts,omitempty" structs:"internal_ui_show_mounts" mapstructure:"internal_ui_show_mounts"`
 }

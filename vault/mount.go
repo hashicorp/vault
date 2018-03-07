@@ -185,6 +185,7 @@ type MountConfig struct {
 	PluginName               string        `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys  []string      `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys []string      `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	InternalUIShowMounts     *bool         `json:"internal_ui_show_mounts,omitempty" structs:"internal_ui_show_mounts" mapstructure:"internal_ui_show_mounts"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -195,6 +196,7 @@ type APIMountConfig struct {
 	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	InternalUIShowMounts     *bool    `json:"internal_ui_show_mounts,omitempty" structs:"internal_ui_show_mounts" mapstructure:"internal_ui_show_mounts"`
 }
 
 // Clone returns a deep copy of the mount entry

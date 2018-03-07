@@ -265,6 +265,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
+					"internal_ui_show_mounts": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Description: `Toggle whether this shows on sys/internal/ui/mounts`,
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
@@ -301,6 +305,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"audit_non_hmac_response_keys": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
+					},
+					"internal_ui_show_mounts": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Description: `Toggle whether this shows on sys/internal/ui/mounts`,
 					},
 				},
 
@@ -992,6 +1000,14 @@ func NewSystemBackend(core *Core) *SystemBackend {
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["random"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["random"][1]),
+			},
+			&framework.Path{
+				Pattern: "internal/ui/mounts",
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.pathInternalUIMountsRead,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
 			},
 		},
 	}
@@ -1699,6 +1715,10 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 		resp.Data["audit_non_hmac_response_keys"] = rawVal.([]string)
 	}
 
+	if mountEntry.Config.InternalUIShowMounts != nil {
+		resp.Data["internal_ui_show_mounts"] = mountEntry.Config.InternalUIShowMounts
+	}
+
 	return resp, nil
 }
 
@@ -1881,6 +1901,26 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("core: mount tuning of audit_non_hmac_response_keys successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("internal_ui_show_mounts"); ok {
+		internalUIShowMounts := rawVal.(bool)
+
+		oldVal := mountEntry.Config.InternalUIShowMounts
+		mountEntry.Config.InternalUIShowMounts = &internalUIShowMounts
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.InternalUIShowMounts = oldVal
+			return handleError(err)
 		}
 	}
 
@@ -3002,6 +3042,42 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 			"random_bytes": retStr,
 		},
 	}
+	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.mountsLock.RLock()
+	defer b.Core.mountsLock.RUnlock()
+
+	resp := &logical.Response{
+		Data: make(map[string]interface{}),
+	}
+
+	secretMounts := make(map[string]interface{})
+	authMounts := make(map[string]interface{})
+	resp.Data["secret"] = secretMounts
+	resp.Data["auth"] = authMounts
+
+	for _, entry := range b.Core.mounts.Entries {
+		if entry.Config.InternalUIShowMounts != nil && *entry.Config.InternalUIShowMounts != false {
+			info := map[string]interface{}{
+				"type":        entry.Type,
+				"description": entry.Description,
+			}
+			secretMounts[entry.Path] = info
+		}
+	}
+
+	for _, entry := range b.Core.auth.Entries {
+		if entry.Config.InternalUIShowMounts != nil && *entry.Config.InternalUIShowMounts != false {
+			info := map[string]interface{}{
+				"type":        entry.Type,
+				"description": entry.Description,
+			}
+			authMounts[entry.Path] = info
+		}
+	}
+
 	return resp, nil
 }
 
