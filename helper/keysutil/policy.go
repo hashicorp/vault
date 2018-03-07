@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -258,6 +259,12 @@ type Policy struct {
 	// version prefix and the ciphertext.
 	VersionTemplate string `json:"version_template"`
 
+	// StoragePrefix is used to add a prefix when storing and retrieving the
+	// policy object.
+	StoragePrefix string
+
+	// versionPrefixCache stores caches of verison prefix strings and the split
+	// version template.
 	versionPrefixCache *sync.Map
 }
 
@@ -270,7 +277,7 @@ type archivedKeys struct {
 func (p *Policy) LoadArchive(ctx context.Context, storage logical.Storage) (*archivedKeys, error) {
 	archive := &archivedKeys{}
 
-	raw, err := storage.Get(ctx, "archive/"+p.Name)
+	raw, err := storage.Get(ctx, path.Join(p.StoragePrefix, "archive", p.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +302,7 @@ func (p *Policy) storeArchive(ctx context.Context, storage logical.Storage, arch
 
 	// Write the policy into storage
 	err = storage.Put(ctx, &logical.StorageEntry{
-		Key:   "archive/" + p.Name,
+		Key:   path.Join(p.StoragePrefix, "archive", p.Name),
 		Value: buf,
 	})
 	if err != nil {
@@ -420,7 +427,7 @@ func (p *Policy) Persist(ctx context.Context, storage logical.Storage) (retErr e
 
 	// Write the policy into storage
 	err = storage.Put(ctx, &logical.StorageEntry{
-		Key:   "policy/" + p.Name,
+		Key:   path.Join(p.StoragePrefix, "policy", p.Name),
 		Value: buf,
 	})
 	if err != nil {
