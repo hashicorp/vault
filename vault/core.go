@@ -1976,14 +1976,23 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 // the result.
 func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
+	var opCount int32
 	for {
 		select {
 		case <-time.After(leaderCheckInterval):
+			count := atomic.AddInt32(&opCount, 1)
+			if count > 1 {
+				atomic.AddInt32(&opCount, -1)
+				continue
+			}
 			// We do this in a goroutine because otherwise if this refresh is
 			// called while we're shutting down the call to Leader() can
 			// deadlock, which then means stopCh can never been seen and we can
 			// block shutdown
-			go c.Leader()
+			go func() {
+				defer atomic.AddInt32(&opCount, -1)
+				c.Leader()
+			}()
 		case <-stopCh:
 			return
 		}
@@ -1993,30 +2002,40 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
 func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
+	var opCount int32
 	for {
 		select {
 		case <-time.After(keyRotateCheckInterval):
-			// Only check if we are a standby
-			c.stateLock.RLock()
-			standby := c.standby
-			c.stateLock.RUnlock()
-			if !standby {
+			count := atomic.AddInt32(&opCount, 1)
+			if count > 1 {
+				atomic.AddInt32(&opCount, -1)
 				continue
 			}
 
-			// Check for a poison pill. If we can read it, it means we have stale
-			// keys (e.g. from replication being activated) and we need to seal to
-			// be unsealed again.
-			entry, _ := c.barrier.Get(ctx, poisonPillPath)
-			if entry != nil && len(entry.Value) > 0 {
-				c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
-				go c.Shutdown()
-				continue
-			}
+			go func() {
+				defer atomic.AddInt32(&opCount, -1)
+				// Only check if we are a standby
+				c.stateLock.RLock()
+				standby := c.standby
+				c.stateLock.RUnlock()
+				if !standby {
+					return
+				}
 
-			if err := c.checkKeyUpgrades(ctx); err != nil {
-				c.logger.Error("core: key rotation periodic upgrade check failed", "error", err)
-			}
+				// Check for a poison pill. If we can read it, it means we have stale
+				// keys (e.g. from replication being activated) and we need to seal to
+				// be unsealed again.
+				entry, _ := c.barrier.Get(ctx, poisonPillPath)
+				if entry != nil && len(entry.Value) > 0 {
+					c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
+					go c.Shutdown()
+					return
+				}
+
+				if err := c.checkKeyUpgrades(ctx); err != nil {
+					c.logger.Error("core: key rotation periodic upgrade check failed", "error", err)
+				}
+			}()
 		case <-stopCh:
 			return
 		}
