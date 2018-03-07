@@ -1815,7 +1815,31 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 
 		// Grab the lock as we need it for cluster setup, which needs to happen
 		// before advertising;
-		c.stateLock.Lock()
+
+		lockGrabbedCh := make(chan struct{})
+		go func() {
+			// Grab the lock
+			c.stateLock.Lock()
+			// If stopCh has been closed, which only happens while the
+			// stateLock is held, we have actually terminated, so we just
+			// instantly give up the lock, otherwise we notify that it's ready
+			// for consumption
+			select {
+			case <-stopCh:
+				c.stateLock.Unlock()
+			default:
+				close(lockGrabbedCh)
+			}
+		}()
+
+		select {
+		case <-stopCh:
+			lock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+			return
+		case <-lockGrabbedCh:
+			// We now have the lock and can use it
+		}
 
 		if c.sealed {
 			c.logger.Warn("core: grabbed HA lock but already sealed, exiting")
