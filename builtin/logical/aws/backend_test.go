@@ -367,10 +367,6 @@ func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 			}
 			log.Printf("[WARN] Generated credentials: %v", d)
 
-			// Sleep sometime because AWS is eventually consistent
-			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
-			time.Sleep(10 * time.Second)
-
 			// Build a client and verify that the credentials work
 			creds := credentials.NewStaticCredentials(d.AccessKey, d.SecretKey, "")
 			awsConfig := &aws.Config{
@@ -381,12 +377,19 @@ func testAccStepReadUser(t *testing.T, name string) logicaltest.TestStep {
 			client := ec2.New(session.New(awsConfig))
 
 			log.Printf("[WARN] Verifying that the generated credentials work...")
-			_, err := client.DescribeInstances(&ec2.DescribeInstancesInput{})
-			if err != nil {
-				return err
+			retryCount := 0
+			success := false
+			var err error
+			for !success && retryCount < 10 {
+				_, err = client.DescribeInstances(&ec2.DescribeInstancesInput{})
+				if err == nil {
+					return nil
+				}
+				time.Sleep(time.Second)
+				retryCount++
 			}
 
-			return nil
+			return err
 		},
 	}
 }
