@@ -480,7 +480,7 @@ func (b *backend) secretIDAccessorEntry(ctx context.Context, s logical.Storage, 
 	var result secretIDAccessorStorageEntry
 
 	// Create index entry, mapping the accessor to the token ID
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -513,7 +513,7 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 	entry.SecretIDAccessor = accessorUUID
 
 	// Create index entry, mapping the accessor to the token ID
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return err
 	}
@@ -536,7 +536,7 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 
 // deleteSecretIDAccessorEntry deletes the storage index mapping the accessor to a SecretID.
 func (b *backend) deleteSecretIDAccessorEntry(ctx context.Context, s logical.Storage, secretIDAccessor string) error {
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return err
 	}
