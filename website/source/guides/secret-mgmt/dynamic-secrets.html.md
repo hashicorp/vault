@@ -197,10 +197,10 @@ $ curl --header "X-Vault-Token: ..." \
 ### <a name="step1"></a>Step 2: Configure PostgreSQL secret engine
 (**Persona:** admin)
 
-The PostgreSQL engine needs to be configured with valid credentials. It is very
-common to give Vault the **root** credentials and let Vault manage the auditing
-and lifecycle credentials; it's much better than having one person manage the
-credentials.
+The PostgreSQL secret engine needs to be configured with valid credentials. It
+is very common to give Vault the **root** credentials and let Vault manage the
+auditing and lifecycle credentials; it's much better than having one person
+manage the credentials.
 
 
 The following command configures the database secret engine using
