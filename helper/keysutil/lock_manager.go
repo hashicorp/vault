@@ -239,6 +239,9 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 
 	name = keyData.Policy.Name
 
+	// set the policy version cache
+	keyData.Policy.versionPrefixCache = &sync.Map{}
+
 	lockType := exclusive
 	lock := lm.policyLock(name, lockType)
 	defer lm.UnlockPolicy(lock, lockType)
@@ -387,6 +390,7 @@ func (lm *LockManager) getPolicyCommon(ctx context.Context, req PolicyRequest, l
 			Derived:              req.Derived,
 			Exportable:           req.Exportable,
 			AllowPlaintextBackup: req.AllowPlaintextBackup,
+			versionPrefixCache:   &sync.Map{},
 		}
 		if req.Derived {
 			p.KDF = Kdf_hkdf_sha256
@@ -510,6 +514,10 @@ func (lm *LockManager) getStoredPolicy(ctx context.Context, storage logical.Stor
 	err = jsonutil.DecodeJSON(raw.Value, &policy)
 	if err != nil {
 		return nil, err
+	}
+
+	if &policy != nil {
+		policy.versionPrefixCache = &sync.Map{}
 	}
 
 	return &policy, nil

@@ -156,7 +156,7 @@ func (s *EncryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 			k = strings.TrimSuffix(k, "/")
 		}
 
-		decoded := Base58Decode(k)
+		decoded := Base62Decode(k)
 		if len(decoded) == 0 {
 			return nil, errors.New("Could not decode key")
 		}
@@ -245,23 +245,23 @@ func (s *EncryptedKeyStorage) encryptPath(path string) (string, error) {
 			return "", err
 		}
 
-		encPath = paths.Join(encPath, Base58Encode([]byte(ciphertext)))
+		encPath = paths.Join(encPath, Base62Encode([]byte(ciphertext)))
 		context = paths.Join(context, p)
 	}
 
 	return encPath, nil
 }
 
-func Base58Encode(buf []byte) string {
+func Base62Encode(buf []byte) string {
 	encoder := &big.Int{}
 
 	encoder.SetBytes(buf)
-	return encoder.Text(58)
+	return encoder.Text(62)
 }
 
-func Base58Decode(input string) []byte {
+func Base62Decode(input string) []byte {
 	decoder := &big.Int{}
 
-	decoder.SetString(input, 58)
+	decoder.SetString(input, 62)
 	return decoder.Bytes()
 }

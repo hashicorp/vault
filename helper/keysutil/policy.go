@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/chacha20poly1305"
@@ -256,6 +257,8 @@ type Policy struct {
 	// the key version. It must inclide {{version}} and a delimiter between the
 	// version prefix and the ciphertext.
 	VersionTemplate string `json:"version_template"`
+
+	versionPrefixCache *sync.Map
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -714,12 +717,19 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(ciphertext)
 
-	template := p.VersionTemplate
-	if template == "" {
-		template = DefaultVersionTemplate
-	}
+	var prefix string
+	prefixRaw, ok := p.versionPrefixCache.Load(ver)
+	if !ok {
+		template := p.VersionTemplate
+		if template == "" {
+			template = DefaultVersionTemplate
+		}
 
-	prefix := strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
+		prefix = strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
+		p.versionPrefixCache.Store(ver, prefix)
+	} else {
+		prefix = prefixRaw.(string)
+	}
 
 	// Prepend some information
 	encoded = prefix + encoded
@@ -959,12 +969,19 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(sig)
 
-	template := p.VersionTemplate
-	if template == "" {
-		template = DefaultVersionTemplate
-	}
+	var prefix string
+	prefixRaw, ok := p.versionPrefixCache.Load(ver)
+	if !ok {
+		template := p.VersionTemplate
+		if template == "" {
+			template = DefaultVersionTemplate
+		}
 
-	prefix := strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
+		prefix = strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
+		p.versionPrefixCache.Store(ver, prefix)
+	} else {
+		prefix = prefixRaw.(string)
+	}
 
 	res := &SigningResult{
 		Signature: prefix + encoded,
