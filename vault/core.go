@@ -194,12 +194,12 @@ type Core struct {
 	stateLock sync.RWMutex
 	sealed    bool
 
-	standby               bool
-	standbyDoneCh         chan struct{}
-	lockAcquisitionStopCh chan struct{}
-	standbyStopCh         chan StopOptions
-	manualStepDownCh      chan struct{}
-	heldHALock            physical.Lock
+	standby              bool
+	standbyDoneCh        chan struct{}
+	standbyStopCh        chan struct{}
+	manualStepDownCh     chan struct{}
+	keepHALockOnStepDown uint32
+	heldHALock           physical.Lock
 
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
 	unlockInfo *unlockInformation
@@ -1243,9 +1243,8 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
 		c.manualStepDownCh = make(chan struct{})
-		c.lockAcquisitionStopCh = make(chan struct{})
-		c.standbyStopCh = make(chan StopOptions)
-		go c.runStandby(c.standbyDoneCh, c.manualStepDownCh, c.lockAcquisitionStopCh, c.standbyStopCh)
+		c.standbyStopCh = make(chan struct{})
+		go c.runStandby(c.standbyDoneCh, c.manualStepDownCh, c.standbyStopCh)
 	}
 
 	// Success!
@@ -1541,24 +1540,21 @@ func (c *Core) sealInternal(keepLock bool) error {
 			return fmt.Errorf("internal error")
 		}
 	} else {
+		if keepLock {
+			atomic.StoreUint32(&c.keepHALockOnStepDown, 1)
+		}
 		// If we are trying to acquire the lock, force it to return with nil so
 		// runStandby will exit
-		if c.lockAcquisitionStopCh != nil {
-			c.logger.Trace("core: closing lock acquisition stop channel")
-			close(c.lockAcquisitionStopCh)
-			c.lockAcquisitionStopCh = nil
-		}
 		// If we are active, signal the standby goroutine to shut down and wait
 		// for completion. We have the state lock here so nothing else should
 		// be toggling standby status.
-		if !c.standby {
-			c.standbyStopCh <- StopOptions{KeepLock: keepLock}
-			c.logger.Trace("core: finished triggering standbyStopCh for runStandby")
+		close(c.standbyStopCh)
+		c.logger.Trace("core: finished triggering standbyStopCh for runStandby")
 
-			// Wait for runStandby to stop
-			<-c.standbyDoneCh
-			c.logger.Trace("core: runStandby done")
-		}
+		// Wait for runStandby to stop
+		<-c.standbyDoneCh
+		atomic.StoreUint32(&c.keepHALockOnStepDown, 0)
+		c.logger.Trace("core: runStandby done")
 	}
 
 	c.logger.Debug("core: sealing barrier")
@@ -1757,7 +1753,7 @@ func stopReplicationImpl(c *Core) error {
 // runStandby is a long running routine that is used when an HA backend
 // is enabled. It waits until we are leader and switches this Vault to
 // active.
-func (c *Core) runStandby(doneCh, manualStepDownCh, lockAcquisitionStopCh chan struct{}, stopCh chan StopOptions) {
+func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
 	c.logger.Info("core: entering standby mode")
@@ -1809,7 +1805,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, lockAcquisitionStopCh chan s
 		}
 
 		// Attempt the acquisition
-		leaderLostCh := c.acquireLock(lock, lockAcquisitionStopCh)
+		leaderLostCh := c.acquireLock(lock, stopCh)
 
 		// Bail if we are being shutdown
 		if leaderLostCh == nil {
@@ -1905,16 +1901,18 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, lockAcquisitionStopCh chan s
 		}
 
 		// Monitor a loss of leadership
-		var stopOpts StopOptions
+		releaseHALock := true
 		grabStateLock := true
 		select {
 		case <-leaderLostCh:
 			c.logger.Warn("core: leadership lost, stopping active operation")
-		case stopOpts = <-stopCh:
+		case <-stopCh:
 			// This case comes from sealInternal; we will already be having the
 			// state lock held so we do toggle grabStateLock to false
+			if atomic.LoadUint32(&c.keepHALockOnStepDown) == 1 {
+				releaseHALock = false
+			}
 			grabStateLock = false
-			close(stopCh)
 		case <-manualStepDownCh:
 			c.logger.Warn("core: stepping down from active operation to standby")
 			manualStepDown = true
@@ -1937,7 +1935,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, lockAcquisitionStopCh chan s
 			c.stateLock.Unlock()
 		}
 
-		if !stopOpts.KeepLock {
+		if releaseHALock {
 			if err := c.clearLeader(uuid); err != nil {
 				c.logger.Error("core: clearing leader advertisement failed", "error", err)
 			}
