@@ -78,7 +78,7 @@ First, however, the shared secret key must be specified.
 ### Mount the secrets engine
 
 ```text
-$ vault mount ssh
+$ vault secrets enable ssh
 Successfully mounted 'ssh' at 'ssh'!
 ```
 

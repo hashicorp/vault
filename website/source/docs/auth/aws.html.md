@@ -514,7 +514,7 @@ time which is dynamically determined by three factors: `max_ttl` set on the role
 least of these three dictates the maximum TTL of the issued token, and
 correspondingly will be set as the expiration times of these entries.
 
-The endpoints `aws/auth/tidy/identity-whitelist` and `aws/auth/tidy/roletag-blacklist` are
+The endpoints `auth/aws/tidy/identity-whitelist` and `auth/aws/tidy/roletag-blacklist` are
 provided to clean up the entries present in these lists. These endpoints allow
 defining a safety buffer, such that an entry must not only be expired, but be
 past expiration by the amount of time dictated by the safety buffer in order

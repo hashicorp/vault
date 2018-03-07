@@ -1,6 +1,7 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"strings"
 	"time"
@@ -16,14 +17,16 @@ var _ cli.CommandAutocomplete = (*SecretsEnableCommand)(nil)
 type SecretsEnableCommand struct {
 	*BaseCommand
 
-	flagDescription     string
-	flagPath            string
-	flagDefaultLeaseTTL time.Duration
-	flagMaxLeaseTTL     time.Duration
-	flagForceNoCache    bool
-	flagPluginName      string
-	flagLocal           bool
-	flagSealWrap        bool
+	flagDescription              string
+	flagPath                     string
+	flagDefaultLeaseTTL          time.Duration
+	flagMaxLeaseTTL              time.Duration
+	flagAuditNonHMACRequestKeys  []string
+	flagAuditNonHMACResponseKeys []string
+	flagForceNoCache             bool
+	flagPluginName               string
+	flagLocal                    bool
+	flagSealWrap                 bool
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -102,6 +105,20 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Usage: "The maximum lease TTL for this secrets engine. If unspecified, " +
 			"this defaults to the Vault server's globally configured maximum lease " +
 			"TTL.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAuditNonHMACRequestKeys,
+		Target: &c.flagAuditNonHMACRequestKeys,
+		Usage: "Comma-separated list of keys that will not be HMAC'd by audit" +
+			"devices in the request data object.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAuditNonHMACResponseKeys,
+		Target: &c.flagAuditNonHMACResponseKeys,
+		Usage: "Comma-separated list of keys that will not be HMAC'd by audit" +
+			"devices in the response data object.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -201,6 +218,17 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 			PluginName:      c.flagPluginName,
 		},
 	}
+
+	// Set these values only if they are provided in the CLI
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == flagNameAuditNonHMACRequestKeys {
+			mountInput.Config.AuditNonHMACRequestKeys = c.flagAuditNonHMACRequestKeys
+		}
+
+		if fl.Name == flagNameAuditNonHMACResponseKeys {
+			mountInput.Config.AuditNonHMACRequestKeys = c.flagAuditNonHMACResponseKeys
+		}
+	})
 
 	if err := client.Sys().Mount(mountPath, mountInput); err != nil {
 		c.UI.Error(fmt.Sprintf("Error enabling: %s", err))

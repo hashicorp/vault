@@ -39,7 +39,7 @@ team, or configuration management tooling.
 must be mounted before use.
 
     ```text
-    $ vault mount -path=ssh-client-signer ssh
+    $ vault secrets enable -path=ssh-client-signer ssh
     Successfully mounted 'ssh' at 'ssh-client-signer'!
     ```
 
@@ -201,7 +201,7 @@ accidentally SSHing into an unmanaged or malicious machine.
 client signer.
 
     ```text
-    $ vault mount -path=ssh-host-signer ssh
+    $ vault secrets enable -path=ssh-host-signer ssh
     Successfully mounted 'ssh' at 'ssh-host-signer'!
     ```
 
