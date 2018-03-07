@@ -717,22 +717,8 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(ciphertext)
 
-	var prefix string
-	prefixRaw, ok := p.versionPrefixCache.Load(ver)
-	if !ok {
-		template := p.VersionTemplate
-		if template == "" {
-			template = DefaultVersionTemplate
-		}
-
-		prefix = strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
-		p.versionPrefixCache.Store(ver, prefix)
-	} else {
-		prefix = prefixRaw.(string)
-	}
-
 	// Prepend some information
-	encoded = prefix + encoded
+	encoded = p.getVersionPrefix(ver) + encoded
 
 	return encoded, nil
 }
@@ -968,23 +954,8 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(sig)
-
-	var prefix string
-	prefixRaw, ok := p.versionPrefixCache.Load(ver)
-	if !ok {
-		template := p.VersionTemplate
-		if template == "" {
-			template = DefaultVersionTemplate
-		}
-
-		prefix = strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
-		p.versionPrefixCache.Store(ver, prefix)
-	} else {
-		prefix = prefixRaw.(string)
-	}
-
 	res := &SigningResult{
-		Signature: prefix + encoded,
+		Signature: p.getVersionPrefix(ver) + encoded,
 		PublicKey: pubKey,
 	}
 
@@ -1257,4 +1228,21 @@ func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (out strin
 	}
 
 	return base64.StdEncoding.EncodeToString(encodedBackup), nil
+}
+
+func (p *Policy) getVersionPrefix(ver int) string {
+	prefixRaw, ok := p.versionPrefixCache.Load(ver)
+	if ok {
+		return prefixRaw.(string)
+	}
+
+	template := p.VersionTemplate
+	if template == "" {
+		template = DefaultVersionTemplate
+	}
+
+	prefix := strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
+	p.versionPrefixCache.Store(ver, prefix)
+
+	return prefix
 }

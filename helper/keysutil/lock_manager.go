@@ -516,9 +516,7 @@ func (lm *LockManager) getStoredPolicy(ctx context.Context, storage logical.Stor
 		return nil, err
 	}
 
-	if &policy != nil {
-		policy.versionPrefixCache = &sync.Map{}
-	}
+	policy.versionPrefixCache = &sync.Map{}
 
 	return &policy, nil
 }
