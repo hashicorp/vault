@@ -10,27 +10,27 @@ description: |-
 # Authentication
 
 Before a client can interact with Vault, it must authenticate against an [**auth
-backend**](/docs/auth/index.html) to acquire a token. This token has policies attached so
+method**](/docs/auth/index.html) to acquire a token. This token has policies attached so
 that the behavior of the client can be governed.
 
 Since tokens are the core method for authentication within Vault, there is a
-**token** auth backend (often refer as **_token store_**). This is a special
-auth backend responsible for creating and storing tokens.
+**token** auth method (often refer as **_token store_**). This is a special
+auth method responsible for creating and storing tokens.
 
 ### Auth Backends
 
 Auth backends perform authentication to verify the user or machine-supplied
 information. Some of the supported auth backends are targeted towards users
 while others are targeted toward machines or apps. For example,
-[**LDAP**](/docs/auth/ldap.html) auth backend enables user authentication using
+[**LDAP**](/docs/auth/ldap.html) auth method enables user authentication using
 an existing LDAP server while [**AppRole**](/docs/auth/approle.html) auth
-backend is recommended for machines or apps.
+method is recommended for machines or apps.
 
 The [Getting Started](/intro/getting-started/authentication.html) guide walks you
-through how to enable the GitHub auth backend for user authentication.
+through how to enable the GitHub auth method for user authentication.
 
 This introductory guide focuses on generating tokens for machines or apps by
-enabling the [**AppRole**](/docs/auth/approle.html) auth backend.
+enabling the [**AppRole**](/docs/auth/approle.html) auth method.
 
 
 ## Reference Material
@@ -48,7 +48,7 @@ enabling the [**AppRole**](/docs/auth/approle.html) auth backend.
 
 The end-to-end scenario described in this guide involves two personas:
 
-- **`admin`** with privileged permissions to configure an auth backend
+- **`admin`** with privileged permissions to configure an auth method
 - **`app`** is the consumer of secrets stored in Vault
 
 
@@ -71,7 +71,7 @@ secrets from Vault?
 
 ## Solution
 
-Enable **AppRole** auth backend so that the Jenkins server can obtain a Vault
+Enable **AppRole** auth method so that the Jenkins server can obtain a Vault
 token with appropriate policies attached. Since each AppRole has attached
 policies, you can write fine-grained policies limiting which app can access
 which path.  
@@ -96,12 +96,12 @@ To perform all tasks demonstrated in this guide, your policy must include the
 following permissions:
 
 ```shell
-# Mount the AppRole auth backend
+# Mount the AppRole auth method
 path "sys/auth/approle" {
   capabilities = [ "create", "read", "update", "delete", "sudo" ]
 }
 
-# Configure the AppRole auth backend
+# Configure the AppRole auth method
 path "sys/auth/approle/*" {
   capabilities = [ "create", "read", "update", "delete" ]
 }
@@ -133,7 +133,7 @@ to allow machines or apps to acquire a token to interact with Vault. It uses
 **Role ID** and **Secret ID** for login.
 
 The basic workflow is:
-![AppRole auth backend workflow](/assets/images/vault-approle-workflow.png)
+![AppRole auth method workflow](/assets/images/vault-approle-workflow.png)
 
 > For the purpose of introducing the basics of AppRole, this guide walks you
 > through a very simple scenario involving only two personas (admin and app).
@@ -142,7 +142,7 @@ The basic workflow is:
 
 In this guide, you are going to perform the following steps:
 
-1. [Enable AppRole auth backend](#step1)
+1. [Enable AppRole auth method](#step1)
 2. [Create a role with policy attached](#step2)
 3. [Get Role ID and Secret ID](#step3)
 4. [Login with Role ID & Secret ID](#step4)
@@ -152,14 +152,14 @@ Step 1 through 3 need to be performed by an `admin` user.  Step 4 and 5 describe
 the commands that an `app` runs to get a token and read secrets from Vault.
 
 
-### <a name="step1"></a>Step 1: Enable AppRole auth backend
+### <a name="step1"></a>Step 1: Enable AppRole auth method
 (**Persona:** admin)
 
 Like many other auth backends, AppRole must be enabled before it can be used.
 
 #### CLI command
 
-Enable `approle` auth backend by executing the following command:
+Enable `approle` auth method by executing the following command:
 
 ```shell
 $ vault auth enable approle
@@ -167,7 +167,7 @@ $ vault auth enable approle
 
 #### API call using cURL
 
-Enable `approle` auth backend by mounting its endpoint at `/sys/auth/approle`:
+Enable `approle` auth method by mounting its endpoint at `/sys/auth/approle`:
 
 ```shell
 $ curl --header "X-Vault-Token: <TOKEN>" \
@@ -177,7 +177,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
-parameters](/api/system/auth.html#mount-auth-backend) of the backend.
+parameters](/api/system/auth.html#mount-auth-backend) of the method.
 
 
 **Example:**
@@ -195,7 +195,7 @@ at the `sys/auth/approle` endpoint.
 ### <a name="step2"></a>Step 2: Create a role with policy attached
 (**Persona:** admin)
 
-When you enabled AppRole auth backend, it gets mounted at the
+When you enabled AppRole auth method, it gets mounted at the
 **`/auth/approle`** path. In this example, you are going to create a role for
 **`app`** persona (`jenkins` in our scenario).
 
@@ -547,7 +547,7 @@ Since there is no value in the `secret/mysql/webapp`, it returns "no value
 found" message.
 
 **Optional:** Using the `admin` user's token, you can store some secrets in the
-`secret/mysql/webapp` backend.
+`secret/mysql/webapp` path.
 
 ```shell
 $ vault write secret/dev/config/mongodb @mysqldb.txt
@@ -584,7 +584,7 @@ $ curl --header "X-Vault-Token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e" \
 Since there is no value in the `secret/mysql/webapp`, it returns an empty array.
 
 **Optional:** Using the **`admin`** user's token, create some secrets in the
-`secret/mysql/webapp` backend.
+`secret/mysql/webapp` path.
 
 ```shell
 $ curl --header "X-Vault-Token: ..." --request POST --data @mysqldb.txt \
@@ -617,7 +617,7 @@ For example, Terraform as a trusted entity can deliver the Role ID onto the
 virtual machine.  When the app runs on the virtual machine, the Role ID already
 exists on the virtual machine.
 
-![AppRole auth backend workflow](/assets/images/vault-approle-workflow2.png)
+![AppRole auth method workflow](/assets/images/vault-approle-workflow2.png)
 
 Secret ID is like a password. To keep the Secret ID confidential, use
 [**response wrapping**](/docs/concepts/response-wrapping.html) so that the only

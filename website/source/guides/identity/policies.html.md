@@ -71,7 +71,7 @@ permissions before any user or machine can gain access.
 
 Restrict the use of root policy, and write fine-grained policies to practice
 **least privileged**. For example, if an app gets AWS credentials from Vault,
-write policy grants to `read` from AWS secret backend but not to `delete`, etc.
+write policy grants to `read` from AWS secret engine but not to `delete`, etc.
 
 Policies are attached to tokens and roles to enforce client permissions on
 Vault.
@@ -209,7 +209,7 @@ providing bespoke support to Vault users.
 
 **`provisioner`** is a type of user or service that will be used by an automated
 tool (e.g. Terraform) to provision and configure a namespace within a Vault
-secret backend for a new Vault user to access and write secrets.
+secret engine for a new Vault user to access and write secrets.
 
 `provisioner` must be able to:
 

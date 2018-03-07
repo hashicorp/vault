@@ -45,7 +45,7 @@ two hours later, `b519c6aa...` will be revoked and takes its child
 [Secret as a Service](/guides/secret-mgmt/dynamic-secrets.html) guide demonstrated lease
 renewal and revocation
 - [Tokens documentation](/docs/concepts/tokens.html)
-- [Token Auth Backend HTTP API](/api/auth/token/index.html)
+- [Token Auth Method (API)](/api/auth/token/index.html)
 - [Lease, Renew, and Revoke](/docs/concepts/lease.html)
 
 ## Estimated Time to Complete
@@ -104,7 +104,7 @@ To perform all tasks demonstrated in this guide, your policy must include the
 following permissions:
 
 ```shell
-# List available auth backend - Step 1
+# List available auth method - Step 1
 path "sys/auth" {
   capabilities = [ "read" ]
 }
@@ -124,7 +124,7 @@ path "sys/mounts" {
   capabilities = [ "read" ]
 }
 
-# For Advanced Features - tune the database backend TTL
+# For Advanced Features - tune the database secret engine TTL
 path "sys/mounts/database/tune" {
   capabilities = [ "update" ]
 }
@@ -142,7 +142,7 @@ need valid tokens to interact with Vault.
 
 This guide demonstrates the lifecycle of tokens.
 
-1. [Read token backend configuration](#step1)
+1. [Read token auth method configuration](#step1)
 2. [Create short-lived tokens](#step2)
 3. [Create tokens with use limit](#step3)
 4. [Periodic tokens](#step4)
@@ -150,7 +150,7 @@ This guide demonstrates the lifecycle of tokens.
 6. [Revoke tokens](#step6)
 
 
-### <a name="step1"></a>Step 1: Read token backend configuration
+### <a name="step1"></a>Step 1: Read token auth method configuration
 
 When you create leases with no specific TTL values, the default value applies
 to the lease.
@@ -170,15 +170,15 @@ shorter in Vault's configuration file.
 
 Another option is to tune the mount configuration to override the system
 defaults by calling the **`/sys/mounts/<PATH>/tune`** endpoint (e.g.
-`/sys/mounts/database/tune`). For the auth backend system configuration, call
+`/sys/mounts/database/tune`). For the auth method system configuration, call
 **`/sys/auth/<METHOD>/tune`** endpoint.
 
 NOTE: Refer to the [Advanced Features](#advanced-features) section for tuning
-the backend system configuration.
+the system configuration.
 
 #### CLI command
 
-Read the default TTL settings for **token** auth backend:
+Read the default TTL settings for **token** auth method:
 
 ```shell
 $ vault read sys/auth/token/tune
@@ -193,7 +193,7 @@ max_lease_ttl    	2764800
 #### API call using cURL
 
 Use `/sys/auth/token/tune` endpoint to read the default TTL settings for **token** auth
-backend:
+method:
 
 ```shell
 $ curl --header "X-Vault-Token: <TOKEN>" \
@@ -446,7 +446,7 @@ Code: 403. Errors:
 ```
 
 First command read the token properties, and then wrote a value to cubbyhole
-secret backend. This exhausted the use limit of 2 for this token.  Therefore,
+secret engine. This exhausted the use limit of 2 for this token.  Therefore,
 the attempt to read the secret from cubbyhole failed.
 
 
@@ -523,7 +523,7 @@ $ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
 ```
 
 First command read the token properties, and then wrote a value to cubbyhole
-secret backend. This exhausted the use limit of 2 for this token.  Therefore,
+secret engine. This exhausted the use limit of 2 for this token.  Therefore,
 the attempt to read the secret from cubbyhole failed.
 
 
@@ -625,7 +625,7 @@ are talking about long-running apps need to be able to renew its token
 indefinitely.
 
 -> For more details about AppRole, read the [AppRole Pull
--Authentication](/guides/identity/authentication.html) guide.
+Authentication](/guides/identity/authentication.html) guide.
 
 To create AppRole periodic tokens, create your AppRole role with
 `period` specified.
@@ -702,7 +702,7 @@ $ vault lease revoke -prefix <PATH>
 # Revoke a specific token
 $ vault token revoke eeaf890e-4b0f-a687-4190-c75b1d6d70bc
 
-# Revoke all leases for database auth backend
+# Revoke all leases for database auth method
 $ vault lease revoke -prefix database/creds
 
 # Revoke all tokens
@@ -723,7 +723,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
        --data '{ "token": "eeaf890e-4b0f-a687-4190-c75b1d6d70bc" }' \
        https://vault.rocks/v1/auth/token/revoke
 
-# Revoke all secrets for database auth backend
+# Revoke all secrets for database auth method
 $ curl --header "X-Vault-Token:..." --request POST \
        https://vault.rocks/v1/sys/leases/revoke-prefix/database/creds
 
@@ -763,7 +763,7 @@ Override the global defaults by specifying `default_lease_ttl` and
 
 **Example:**
 
-The following example assumes that you have database secret backend configured.
+The following example assumes that you have database secret engine configured.
 
 ```shell
 $ vault write sys/mounts/database/tune default_lease_ttl="8640"
@@ -781,7 +781,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
 
 #### 3. Check the role specific TTLs
 
-Depending on the backend, there may be more specific TTLs configured (e.g.
+Depending on the auth method, there may be more specific TTLs configured (e.g.
 roles, groups, users) as you have done so in [Step 4](#step4).
 
 ```shell
