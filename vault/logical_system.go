@@ -265,7 +265,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
-					"internal_ui_show_mounts": &framework.FieldSchema{
+					"internal_ui_show_mount": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Description: `Toggle whether this shows on sys/internal/ui/mounts`,
 					},
@@ -306,7 +306,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
-					"internal_ui_show_mounts": &framework.FieldSchema{
+					"internal_ui_show_mount": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Description: `Toggle whether this shows on sys/internal/ui/mounts`,
 					},
@@ -1459,15 +1459,21 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 			"type":        entry.Type,
 			"description": entry.Description,
 			"accessor":    entry.Accessor,
-			"config": map[string]interface{}{
-				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-				"force_no_cache":    entry.Config.ForceNoCache,
-				"plugin_name":       entry.Config.PluginName,
-			},
-			"local":     entry.Local,
-			"seal_wrap": entry.SealWrap,
+			"local":       entry.Local,
+			"seal_wrap":   entry.SealWrap,
 		}
+
+		entryConfig := map[string]interface{}{
+			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+			"force_no_cache":    entry.Config.ForceNoCache,
+			"plugin_name":       entry.Config.PluginName,
+		}
+		if entry.Config.InternalUIShowMount != nil {
+			entryConfig["internal_ui_show_mount"] = entry.Config.InternalUIShowMount
+		}
+		info["config"] = entryConfig
+
 		resp.Data[entry.Path] = info
 	}
 
@@ -1485,12 +1491,12 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	// Get all the options
 	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
+
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
-
-	path = sanitizeMountPath(path)
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1567,6 +1573,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	// Copy over the force no cache if set
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
+	}
+
+	if apiConfig.InternalUIShowMount != nil {
+		config.InternalUIShowMount = apiConfig.InternalUIShowMount
 	}
 
 	// Create the mount entry
@@ -1715,8 +1725,8 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 		resp.Data["audit_non_hmac_response_keys"] = rawVal.([]string)
 	}
 
-	if mountEntry.Config.InternalUIShowMounts != nil {
-		resp.Data["internal_ui_show_mounts"] = mountEntry.Config.InternalUIShowMounts
+	if mountEntry.Config.InternalUIShowMount != nil {
+		resp.Data["internal_ui_show_mount"] = mountEntry.Config.InternalUIShowMount
 	}
 
 	return resp, nil
@@ -1904,11 +1914,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	if rawVal, ok := data.GetOk("internal_ui_show_mounts"); ok {
+	if rawVal, ok := data.GetOk("internal_ui_show_mount"); ok {
 		internalUIShowMounts := rawVal.(bool)
 
-		oldVal := mountEntry.Config.InternalUIShowMounts
-		mountEntry.Config.InternalUIShowMounts = &internalUIShowMounts
+		oldVal := mountEntry.Config.InternalUIShowMount
+		mountEntry.Config.InternalUIShowMount = &internalUIShowMounts
 
 		// Update the mount table
 		var err error
@@ -1919,7 +1929,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
 		}
 		if err != nil {
-			mountEntry.Config.InternalUIShowMounts = oldVal
+			mountEntry.Config.InternalUIShowMount = oldVal
 			return handleError(err)
 		}
 	}
@@ -2068,13 +2078,20 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			"type":        entry.Type,
 			"description": entry.Description,
 			"accessor":    entry.Accessor,
-			"config": map[string]interface{}{
-				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-			},
-			"local":     entry.Local,
-			"seal_wrap": entry.SealWrap,
+			"local":       entry.Local,
+			"seal_wrap":   entry.SealWrap,
 		}
+
+		entryConfig := map[string]interface{}{
+			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+			"plugin_name":       entry.Config.PluginName,
+		}
+		if entry.Config.InternalUIShowMount != nil {
+			entryConfig["internal_ui_show_mount"] = entry.Config.InternalUIShowMount
+		}
+		info["config"] = entryConfig
+
 		resp.Data[entry.Path] = info
 	}
 	return resp, nil
@@ -2090,6 +2107,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	// Get all the options
 	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
@@ -2146,9 +2164,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 			logical.ErrInvalidRequest
 	}
 
-	// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
-	// option taking precedence.
-	if logicalType == "plugin" {
+	switch logicalType {
+	case "":
+		return logical.ErrorResponse(
+				"backend type must be specified as a string"),
+			logical.ErrInvalidRequest
+
+	case "plugin":
+		// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
+		// option taking precedence.
 		switch {
 		case apiConfig.PluginName != "":
 			config.PluginName = apiConfig.PluginName
@@ -2161,13 +2185,9 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	if logicalType == "" {
-		return logical.ErrorResponse(
-				"backend type must be specified as a string"),
-			logical.ErrInvalidRequest
+	if apiConfig.InternalUIShowMount != nil {
+		config.InternalUIShowMount = apiConfig.InternalUIShowMount
 	}
-
-	path = sanitizeMountPath(path)
 
 	// Create the mount entry
 	me := &MountEntry{
@@ -3059,7 +3079,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	resp.Data["auth"] = authMounts
 
 	for _, entry := range b.Core.mounts.Entries {
-		if entry.Config.InternalUIShowMounts != nil && *entry.Config.InternalUIShowMounts != false {
+		if entry.Config.InternalUIShowMount != nil && *entry.Config.InternalUIShowMount != false {
 			info := map[string]interface{}{
 				"type":        entry.Type,
 				"description": entry.Description,
@@ -3069,7 +3089,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	}
 
 	for _, entry := range b.Core.auth.Entries {
-		if entry.Config.InternalUIShowMounts != nil && *entry.Config.InternalUIShowMounts != false {
+		if entry.Config.InternalUIShowMount != nil && *entry.Config.InternalUIShowMount != false {
 			info := map[string]interface{}{
 				"type":        entry.Type,
 				"description": entry.Description,

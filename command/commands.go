@@ -76,6 +76,8 @@ const (
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACResponseKeys = "audit-non-hmac-response-keys"
+	// flagUIShowMount is the flag to toggles whether to show the mount in the UI-specific listing endpoint
+	flagNameUIShowMount = "ui-show-mount"
 )
 
 var (
