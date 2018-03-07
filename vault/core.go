@@ -110,10 +110,6 @@ var (
 	LastRemoteWAL        = lastRemoteWALImpl
 )
 
-type StopOptions struct {
-	KeepLock bool
-}
-
 // NonFatalError is an error that can be returned during NewCore that should be
 // displayed but not cause a program exit
 type NonFatalError struct {
