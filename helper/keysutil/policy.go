@@ -728,14 +728,9 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
 
-	template := p.VersionTemplate
-	if template == "" {
-		template = DefaultVersionTemplate
-	}
-
-	tplParts := strings.Split(template, "{{version}}")
-	if len(tplParts) != 2 {
-		return "", errutil.InternalError{Err: "error parsing version template"}
+	tplParts, err := p.getTemplateParts()
+	if err != nil {
+		return "", err
 	}
 
 	// Verify the prefix
@@ -967,14 +962,9 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
 
-	template := p.VersionTemplate
-	if template == "" {
-		template = DefaultVersionTemplate
-	}
-
-	tplParts := strings.Split(template, "{{version}}")
-	if len(tplParts) != 2 {
-		return false, errutil.InternalError{Err: "error parsing version template"}
+	tplParts, err := p.getTemplateParts()
+	if err != nil {
+		return false, err
 	}
 
 	// Verify the prefix
@@ -1228,6 +1218,26 @@ func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (out strin
 	}
 
 	return base64.StdEncoding.EncodeToString(encodedBackup), nil
+}
+
+func (p *Policy) getTemplateParts() ([]string, error) {
+	partsRaw, ok := p.versionPrefixCache.Load("template-parts")
+	if ok {
+		return partsRaw.([]string), nil
+	}
+
+	template := p.VersionTemplate
+	if template == "" {
+		template = DefaultVersionTemplate
+	}
+
+	tplParts := strings.Split(template, "{{version}}")
+	if len(tplParts) != 2 {
+		return nil, errutil.InternalError{Err: "error parsing version template"}
+	}
+
+	p.versionPrefixCache.Store("template-parts", tplParts)
+	return tplParts, nil
 }
 
 func (p *Policy) getVersionPrefix(ver int) string {
