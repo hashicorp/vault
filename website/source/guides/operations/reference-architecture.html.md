@@ -3,19 +3,18 @@ layout: "guides"
 page_title: "Vault Deployment Reference Architecture - Guides"
 sidebar_current: "guides-operations-reference-architecture"
 description: |-
-  This guide provides guidance in the best practices of Vault Enterprise
+  This guide provides guidance in the best practices of Vault
   implementations through use of a reference architecture.
 ---
 
 # Vault Deployment Reference Architecture
 
-The goal of this document is to provide guidance in the best practices of
-_HashiCorp Vault Enterprise_ implementations through use of a Reference
-Architecture. This example is meant to convey a general architecture, which is
-likely to be adapted to accommodate the specific needs of each implementation.
+The goal of this document is to recommend deployment practices of
+_HashiCorp Vault_. This reference architecture conveys a general architecture
+that should be adapted to accommodate the specific needs of each implementation.
 
--> This document assumes Vault to be leveraging Consul as the [storage
-backend](/docs/internals/architecture.html), as this is the recommendation
+-> This document assumes Vault uses Consul as the [storage
+backend](/docs/internals/architecture.html) since that is the recommended
 storage backend for production deployments.
 
 The following topics are addressed in this guide:
@@ -33,9 +32,9 @@ The following topics are addressed in this guide:
 
 ## Deployment System Requirements
 
-The following table provides high level server recommendations, and is meant as
-a guideline. Of particular note is the strong recommendation to avoid non-fixed
-performance CPUs, or “Burstable CPU” in AWS term, such as T-series instances.
+The following table provides guidelines for server sizing. Of particular note is
+the strong recommendation to avoid non-fixed performance CPUs, or “Burstable
+CPU” in AWS terms, such as T-series instances.
 
 ### Vault Servers
 
@@ -121,7 +120,7 @@ secured with TLS as well as a Consul token to provide encryption of all traffic.
 
 #### Failure Tolerance
 
-Typical Distribution in a Cloud environment is to spread Consul/Vault nodes into
+Typical distribution in a dloud environment is to spread Consul/Vault nodes into
 separate Availability Zones (AZs) within a high bandwidth, low latency network,
 such as an AWS Region. The diagram below shows Vault and Consul spread between
 AZs, with Consul servers in Redundancy Zone configurations, promoting a single
@@ -134,10 +133,10 @@ voting member per AZ, providing both Zone and Node level failure protection.
 
 Consul can provide load balancing capabilities, but it requires that any Vault
 clients are Consul aware. This means that a client can either utilize Consul DNS
-or API interfaces to resolve the active Vault node.  A client might access Vault
+or API interfaces to resolve the active Vault node. A client might access Vault
 via a URL like the following: `http://active.vault.service.consul:8200`
 
-This would rely upon the operating system DNS resolution system being used, and
+This relies upon the operating system DNS resolution system, and
 the request could be forwarded to Consul for the actual IP address response.
 The operation can be completely transparent to legacy applications and would
 operate just as a typical DNS resolution operation.
@@ -196,24 +195,25 @@ to support this functionality.
 
 ### High Availability
 
-A Vault cluster is the unit by which high availability within a site is
-achieved. A common approach is three Vault servers with a Consul storage backend.
+A Vault cluster is the high-available unit of deployment within one datacenter.
+A recommended approach is three Vault servers with a Consul storage backend.
 With this configuration, during a Vault server outage, failover is handled
 immediately without human intervention. For more information on this topic,
 please see the [Vault site documentation about HA
 concepts](/docs/concepts/ha.html).
 
+High-availability and data locality across datacenters requires
+Vault Enterprise.
 
 ### Vault Replication
 
-HashiCorp Vault provides two modes of replication, allowing for a global secrets
-management solution. The [Vault
-documentation](/docs/enterprise/replication/index.html)  provides information
+HashiCorp Vault Enterprise provides two modes of replication, allowing for a
+global secrets management solution. The [Vault
+documentation](/docs/enterprise/replication/index.html) provides information
 related to replication capability within Vault Enterprise.
 
 #### Replication Notes
 
-- There is also documentation related to replication setup and guidance.
 - There is no set limit on number of clusters within a replication set. Largest
 deployments today are in the 30+ cluster range.
 - Any cluster within a Performance replication set can act as a Disaster
