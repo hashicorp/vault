@@ -801,18 +801,18 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	}
 
 	if roleEntry.MaxTTL > time.Duration(0) {
-		shortestTTL := b.System().DefaultLeaseTTL()
-		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-			shortestTTL = roleEntry.TTL
+		ttl := b.System().DefaultLeaseTTL()
+		if roleEntry.TTL > time.Duration(0) {
+			ttl = roleEntry.TTL
 		}
 
 		// Cap TTL to shortestMaxTTL
-		if shortestTTL > shortestMaxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", shortestTTL, shortestMaxTTL))
-			shortestTTL = shortestMaxTTL
+		if ttl > shortestMaxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", ttl, shortestMaxTTL))
+			ttl = shortestMaxTTL
 		}
 
-		resp.Auth.TTL = shortestTTL
+		resp.Auth.TTL = ttl
 	}
 
 	return resp, nil
@@ -1321,18 +1321,18 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			shortestMaxTTL = roleEntry.MaxTTL
 		}
 
-		shortestTTL := b.System().DefaultLeaseTTL()
-		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-			shortestTTL = roleEntry.TTL
+		ttl := b.System().DefaultLeaseTTL()
+		if roleEntry.TTL > time.Duration(0) {
+			ttl = roleEntry.TTL
 		}
 
 		// Cap TTL to shortestMaxTTL
-		if shortestTTL > shortestMaxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", shortestTTL, shortestMaxTTL))
-			shortestTTL = shortestMaxTTL
+		if ttl > shortestMaxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", ttl, shortestMaxTTL))
+			ttl = shortestMaxTTL
 		}
 
-		resp.Auth.TTL = shortestTTL
+		resp.Auth.TTL = ttl
 	}
 
 	return resp, nil
