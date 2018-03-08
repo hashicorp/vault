@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -16,7 +15,6 @@ type KVGetCommand struct {
 	*BaseCommand
 
 	flagVersion int
-	testStdin   io.Reader // for tests
 }
 
 func (c *KVGetCommand) Synopsis() string {

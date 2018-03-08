@@ -1,30 +1,32 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVMetadataPutCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVMetadataPutCommand)(nil)
+var _ cli.Command = (*KVPutCommand)(nil)
+var _ cli.CommandAutocomplete = (*KVPutCommand)(nil)
 
-type KVMetadataPutCommand struct {
+type KVPutCommand struct {
 	*BaseCommand
 
-	flagMaxVersions int
-	flagCASRequired bool
+	flagCAS   int
+	testStdin io.Reader // for tests
 }
 
-func (c *KVMetadataPutCommand) Synopsis() string {
+func (c *KVPutCommand) Synopsis() string {
 	return "Sets or updates data in the KV store"
 }
 
-func (c *KVMetadataPutCommand) Help() string {
+func (c *KVPutCommand) Help() string {
 	helpText := `
 Usage: vault kv put [options] KEY [DATA]
 
@@ -54,31 +56,35 @@ Usage: vault kv put [options] KEY [DATA]
 	return strings.TrimSpace(helpText)
 }
 
-func (c *KVMetadataPutCommand) Flags() *FlagSets {
+func (c *KVPutCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
 
 	f.IntVar(&IntVar{
-		Name:    "max-versions",
-		Target:  &c.flagMaxVersions,
-		Default: 0,
-		Usage:   `The number of versions to keep`,
+		Name:    "cas",
+		Target:  &c.flagCAS,
+		Default: -1,
+		Usage: `Specifies to use a Check-And-Set operation. If not set the write
+		will be allowed. If set to 0 a write will only be allowed if the key
+		doesn’t exist. If the index is non-zero the write will only be allowed
+		if the key’s current version matches the version specified in the cas
+		parameter.`,
 	})
 
 	return set
 }
 
-func (c *KVMetadataPutCommand) AutocompleteArgs() complete.Predictor {
+func (c *KVPutCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *KVMetadataPutCommand) AutocompleteFlags() complete.Flags {
+func (c *KVPutCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *KVMetadataPutCommand) Run(args []string) int {
+func (c *KVPutCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -107,6 +113,11 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 		return 1
 	}
 
+	data = map[string]interface{}{
+		"data":    data,
+		"options": map[string]interface{}{},
+	}
+
 	if c.flagCAS > -1 {
 		data["options"].(map[string]interface{})["cas"] = c.flagCAS
 	}
@@ -131,4 +142,13 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	}
 
 	return OutputSecret(c.UI, secret)
+}
+
+func addPrefixToVKVPath(p, apiPrefix string) (string, error) {
+	parts := strings.SplitN(p, "/", 2)
+	if len(parts) != 2 {
+		return "", errors.New("Invalid path")
+	}
+
+	return path.Join(parts[0], apiPrefix, parts[1]), nil
 }
