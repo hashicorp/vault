@@ -219,7 +219,7 @@ func (m *ExpirationManager) Tidy() error {
 
 		isValid, ok = tokenCache[le.ClientToken]
 		if !ok {
-			saltedID, err := m.tokenStore.SaltID(le.ClientToken)
+			saltedID, err := m.tokenStore.SaltID(m.quitContext, le.ClientToken)
 			if err != nil {
 				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup salt id: %v", err))
 				return
@@ -563,7 +563,7 @@ func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 	}
 
 	if te.Path != "" {
-		saltedID, err := m.tokenStore.SaltID(te.ID)
+		saltedID, err := m.tokenStore.SaltID(m.quitContext, te.ID)
 		if err != nil {
 			return err
 		}
@@ -715,7 +715,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 
 	// Compute the Lease ID
-	saltedID, err := m.tokenStore.SaltID(token)
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
 	if err != nil {
 		return nil, err
 	}
@@ -891,7 +891,7 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 		return fmt.Errorf("expiration: %s", consts.ErrPathContainsParentReferences)
 	}
 
-	saltedID, err := m.tokenStore.SaltID(auth.ClientToken)
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, auth.ClientToken)
 	if err != nil {
 		return err
 	}
@@ -928,7 +928,7 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(source, token string) (*lease
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times-by-token"}, time.Now())
 
 	// Compute the Lease ID
-	saltedID, err := m.tokenStore.SaltID(token)
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
 	if err != nil {
 		return nil, err
 	}
@@ -1180,12 +1180,12 @@ func (m *ExpirationManager) deleteEntry(leaseID string) error {
 
 // createIndexByToken creates a secondary index from the token to a lease entry
 func (m *ExpirationManager) createIndexByToken(token, leaseID string) error {
-	saltedID, err := m.tokenStore.SaltID(token)
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
 	if err != nil {
 		return err
 	}
 
-	leaseSaltedID, err := m.tokenStore.SaltID(leaseID)
+	leaseSaltedID, err := m.tokenStore.SaltID(m.quitContext, leaseID)
 	if err != nil {
 		return err
 	}
@@ -1202,12 +1202,12 @@ func (m *ExpirationManager) createIndexByToken(token, leaseID string) error {
 
 // indexByToken looks up the secondary index from the token to a lease entry
 func (m *ExpirationManager) indexByToken(token, leaseID string) (*logical.StorageEntry, error) {
-	saltedID, err := m.tokenStore.SaltID(token)
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
 	if err != nil {
 		return nil, err
 	}
 
-	leaseSaltedID, err := m.tokenStore.SaltID(leaseID)
+	leaseSaltedID, err := m.tokenStore.SaltID(m.quitContext, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -1222,12 +1222,12 @@ func (m *ExpirationManager) indexByToken(token, leaseID string) (*logical.Storag
 
 // removeIndexByToken removes the secondary index from the token to a lease entry
 func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
-	saltedID, err := m.tokenStore.SaltID(token)
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
 	if err != nil {
 		return err
 	}
 
-	leaseSaltedID, err := m.tokenStore.SaltID(leaseID)
+	leaseSaltedID, err := m.tokenStore.SaltID(m.quitContext, leaseID)
 	if err != nil {
 		return err
 	}
@@ -1241,7 +1241,7 @@ func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
 
 // lookupByToken is used to lookup all the leaseID's via the
 func (m *ExpirationManager) lookupByToken(token string) ([]string, error) {
-	saltedID, err := m.tokenStore.SaltID(token)
+	saltedID, err := m.tokenStore.SaltID(m.quitContext, token)
 	if err != nil {
 		return nil, err
 	}

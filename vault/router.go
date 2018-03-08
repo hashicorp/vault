@@ -19,7 +19,7 @@ type Router struct {
 	root               *radix.Tree
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
-	tokenStoreSaltFunc func() (*salt.Salt, error)
+	tokenStoreSaltFunc func(context.Context) (*salt.Salt, error)
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
@@ -447,7 +447,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	case strings.HasPrefix(originalPath, "cubbyhole/"):
 		// In order for the token store to revoke later, we need to have the same
 		// salted ID, so we double-salt what's going to the cubbyhole backend
-		salt, err := r.tokenStoreSaltFunc()
+		salt, err := r.tokenStoreSaltFunc(ctx)
 		if err != nil {
 			return nil, false, false, err
 		}

@@ -51,7 +51,7 @@ type Config struct {
 }
 
 // NewSalt creates a new salt based on the configuration
-func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
+func NewSalt(ctx context.Context, view logical.Storage, config *Config) (*Salt, error) {
 	// Setup the configuration
 	if config == nil {
 		config = &Config{}
@@ -76,7 +76,7 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 	var raw *logical.StorageEntry
 	var err error
 	if view != nil {
-		raw, err = view.Get(context.Background(), config.Location)
+		raw, err = view.Get(ctx, config.Location)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read salt: %v", err)
 		}
@@ -99,7 +99,7 @@ func NewSalt(view logical.Storage, config *Config) (*Salt, error) {
 				Key:   config.Location,
 				Value: []byte(s.salt),
 			}
-			if err := view.Put(context.Background(), raw); err != nil {
+			if err := view.Put(ctx, raw); err != nil {
 				return nil, fmt.Errorf("failed to persist salt: %v", err)
 			}
 		}

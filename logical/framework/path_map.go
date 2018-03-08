@@ -22,7 +22,7 @@ type PathMap struct {
 	Schema        map[string]*FieldSchema
 	CaseSensitive bool
 	Salt          *saltpkg.Salt
-	SaltFunc      func() (*saltpkg.Salt, error)
+	SaltFunc      func(context.Context) (*saltpkg.Salt, error)
 
 	once sync.Once
 }
@@ -58,7 +58,7 @@ func (p *PathMap) pathStruct(ctx context.Context, s logical.Storage, k string) (
 	salt := p.Salt
 	var err error
 	if p.SaltFunc != nil {
-		salt, err = p.SaltFunc()
+		salt, err = p.SaltFunc(ctx)
 		if err != nil {
 			return nil, err
 		}
