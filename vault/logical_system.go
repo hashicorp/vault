@@ -1462,18 +1462,22 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 			"local":       entry.Local,
 			"seal_wrap":   entry.SealWrap,
 		}
-
 		entryConfig := map[string]interface{}{
 			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
 			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 			"force_no_cache":    entry.Config.ForceNoCache,
 			"plugin_name":       entry.Config.PluginName,
 		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
+		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
+		}
 		if entry.Config.InternalUIShowMount != nil {
 			entryConfig["internal_ui_show_mount"] = entry.Config.InternalUIShowMount
 		}
 		info["config"] = entryConfig
-
 		resp.Data[entry.Path] = info
 	}
 
@@ -2081,17 +2085,21 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			"local":       entry.Local,
 			"seal_wrap":   entry.SealWrap,
 		}
-
 		entryConfig := map[string]interface{}{
 			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
 			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 			"plugin_name":       entry.Config.PluginName,
 		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
+		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
+		}
 		if entry.Config.InternalUIShowMount != nil {
 			entryConfig["internal_ui_show_mount"] = entry.Config.InternalUIShowMount
 		}
 		info["config"] = entryConfig
-
 		resp.Data[entry.Path] = info
 	}
 	return resp, nil

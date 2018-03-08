@@ -1388,6 +1388,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
+				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -1438,6 +1439,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(2100),
 				"max_lease_ttl":     int64(2700),
+				"plugin_name":       "",
 			},
 			"local":     true,
 			"seal_wrap": true,
@@ -1449,6 +1451,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
+				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
