@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
@@ -15,11 +16,13 @@ var _ cli.CommandAutocomplete = (*AuthEnableCommand)(nil)
 type AuthEnableCommand struct {
 	*BaseCommand
 
-	flagDescription string
-	flagPath        string
-	flagPluginName  string
-	flagLocal       bool
-	flagSealWrap    bool
+	flagDescription     string
+	flagPath            string
+	flagDefaultLeaseTTL time.Duration
+	flagMaxLeaseTTL     time.Duration
+	flagPluginName      string
+	flagLocal           bool
+	flagSealWrap        bool
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -73,6 +76,24 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 			"unique across all auth methods. This defaults to the \"type\" of " +
 			"the auth method. The auth method will be accessible at " +
 			"\"/auth/<path>\".",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "default-lease-ttl",
+		Target:     &c.flagDefaultLeaseTTL,
+		Completion: complete.PredictAnything,
+		Usage: "The default lease TTL for this auth method. If unspecified, " +
+			"this defaults to the Vault server's globally configured default lease " +
+			"TTL.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "max-lease-ttl",
+		Target:     &c.flagMaxLeaseTTL,
+		Completion: complete.PredictAnything,
+		Usage: "The maximum lease TTL for this auth method. If unspecified, " +
+			"this defaults to the Vault server's globally configured maximum lease " +
+			"TTL.",
 	})
 
 	f.StringVar(&StringVar{
@@ -155,7 +176,9 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		Local:       c.flagLocal,
 		SealWrap:    c.flagSealWrap,
 		Config: api.AuthConfigInput{
-			PluginName: c.flagPluginName,
+			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
+			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
+			PluginName:      c.flagPluginName,
 		},
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error enabling %s auth: %s", authType, err))

@@ -117,6 +117,51 @@ func TestConsul_ServiceTags(t *testing.T) {
 	}
 }
 
+func TestConsul_ServiceAddress(t *testing.T) {
+	tests := []struct {
+		consulConfig   map[string]string
+		serviceAddrNil bool
+	}{
+		{
+			consulConfig: map[string]string{
+				"service_address": "",
+			},
+		},
+		{
+			consulConfig: map[string]string{
+				"service_address": "vault.example.com",
+			},
+		},
+		{
+			serviceAddrNil: true,
+		},
+	}
+
+	for _, test := range tests {
+		logger := logformat.NewVaultLogger(log.LevelTrace)
+
+		be, err := NewConsulBackend(test.consulConfig, logger)
+		if err != nil {
+			t.Fatalf("expected Consul to initialize: %v", err)
+		}
+
+		c, ok := be.(*ConsulBackend)
+		if !ok {
+			t.Fatalf("Expected ConsulBackend")
+		}
+
+		if test.serviceAddrNil {
+			if c.serviceAddress != nil {
+				t.Fatalf("expected service address to be nil")
+			}
+		} else {
+			if c.serviceAddress == nil {
+				t.Fatalf("did not expect service address to be nil")
+			}
+		}
+	}
+}
+
 func TestConsul_newConsulBackend(t *testing.T) {
 	tests := []struct {
 		name            string

@@ -10,6 +10,7 @@ import (
 	"errors"
 
 	"fmt"
+
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -84,7 +85,12 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		config := FormatterConfig{
 			HMACAccessor: false,
 		}
-		if err := formatter.FormatRequest(&buf, config, tc.Auth, tc.Req, tc.Err); err != nil {
+		in := &LogInput{
+			Auth:     tc.Auth,
+			Request:  tc.Req,
+			OuterErr: tc.Err,
+		}
+		if err := formatter.FormatRequest(&buf, config, in); err != nil {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
 

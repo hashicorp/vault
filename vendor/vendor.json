@@ -835,10 +835,10 @@
 			"revisionTime": "2018-02-02T13:34:58Z"
 		},
 		{
-			"checksumSHA1": "BjjcPf2i7KfBnVazHZCAe9xn6jY=",
+			"checksumSHA1": "nCoffb4ZRRyCPy2FgR8gMAkQiFo=",
 			"path": "github.com/fullsailor/pkcs7",
-			"revision": "a009d8d7de53d9503c797cb8ec66fa3b21eed209",
-			"revisionTime": "2017-06-13T20:12:21Z"
+			"revision": "1d5002593acb237433a98512c6343587b03ebe5d",
+			"revisionTime": "2018-02-23T00:23:17Z"
 		},
 		{
 			"checksumSHA1": "ImX1uv6O09ggFeBPUJJ2nu7MPSA=",
@@ -1225,28 +1225,28 @@
 			"revisionTime": "2018-02-03T00:31:27Z"
 		},
 		{
-			"checksumSHA1": "fMVB9N2Oq1yEvuJEXXoaHhU+/1w=",
+			"checksumSHA1": "hhW4T7s0a0CljwjQE0/qrsnCNOs=",
 			"path": "github.com/hashicorp/vault-plugin-auth-centrify",
-			"revision": "8df2ab0af558697b167f5d946ef2bf100461339f",
-			"revisionTime": "2018-02-20T19:13:32Z"
+			"revision": "75fba37ce1ee5da40f574494f29f00ad20a6eba9",
+			"revisionTime": "2018-02-26T17:21:39Z"
 		},
 		{
 			"checksumSHA1": "eVlMWanJ2W+/9c1kz72iefRcrYM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "f4b9d381481e2976a5ed9460f835979330bef28c",
-			"revisionTime": "2018-02-20T19:14:07Z"
+			"revision": "0c1e26171a389b348823edd6739da2f3cf02fb3f",
+			"revisionTime": "2018-02-26T17:20:54Z"
 		},
 		{
 			"checksumSHA1": "ffJQvzbQvmCG/PdaElGSfGnDgNM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/util",
-			"revision": "f4b9d381481e2976a5ed9460f835979330bef28c",
-			"revisionTime": "2018-02-20T19:14:07Z"
+			"revision": "0c1e26171a389b348823edd6739da2f3cf02fb3f",
+			"revisionTime": "2018-02-26T17:20:54Z"
 		},
 		{
-			"checksumSHA1": "Sx2Ezwlt8NFTkibr/sOaCYheM8c=",
+			"checksumSHA1": "O0HdHCxJRoDUYlBts3MfjLEgPXI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "40c3fdcf46f52806d9c53b8de66f261e21f7fd59",
-			"revisionTime": "2018-02-20T19:14:46Z"
+			"revision": "60136e299bb6a25b81a4dcb89754414cc76a7057",
+			"revisionTime": "2018-02-26T17:23:32Z"
 		},
 		{
 			"checksumSHA1": "vTfeYxi0Z1y176bjQaYh1/FpQ9s=",

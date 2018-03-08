@@ -25,7 +25,7 @@ The first step to using the vault backend is to mount it.
 Unlike the `generic` backend, the `nomad` backend is not mounted by default.
 
 ```
-$ vault mount nomad
+$ vault secrets enable nomad
 Successfully mounted 'nomad' at 'nomad'!
 ```
 

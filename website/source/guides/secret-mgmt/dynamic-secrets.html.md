@@ -1,9 +1,9 @@
 ---
 layout: "guides"
 page_title: "Secret as a Service - Guides"
-sidebar_current: "guides-secret-mgmt-dataynamic-secrets"
+sidebar_current: "guides-secret-mgmt-dynamic-secrets"
 description: |-
-  Vault can dynamically generate secrets on--dataemand for some systems.
+  Vault can dynamically generate secrets on-demand for some systems.
 ---
 
 # Secret as a Service: Dynamic Secrets
@@ -124,7 +124,7 @@ path "auth/token/create" {
 ```
 
 If you are not familiar with policies, complete the
-[policies](/guides/configuration/policies.html) guide.
+[policies](/guides/identity/policies.html) guide.
 
 ## Steps
 
@@ -330,7 +330,7 @@ $ vault token create -policy="apps"
 Key            	Value
 ---            	-----
 token          	e4bdf7dc-cbbf-1bb1-c06c-6a4f9a826cf2
-token_accessor 	54700b7e--data828-a6c4-6141-96e71e002bd7
+token_accessor 	54700b7e-d828-a6c4-6141-96e71e002bd7
 token_duration 	768h0m0s
 token_renewable	true
 token_policies 	[apps default]
@@ -338,7 +338,7 @@ token_policies 	[apps default]
 
 Use the returned token to perform the remaining.
 
-**NOTE:** [AppRole Pull Authentication](/guides/configuration/authentication.html) guide
+**NOTE:** [AppRole Pull Authentication](/guides/identity/authentication.html) guide
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
@@ -354,7 +354,7 @@ $ vault read database/creds/readonly
 
 Key            	Value
 ---            	-----
-lease_id       	database/creds/readonly/4b5c6e82--dataf88-0dec-c0cb-f07eee8f0329
+lease_id       	database/creds/readonly/4b5c6e82-df88-0dec-c0cb-f07eee8f0329
 lease_duration 	1h0m0s
 lease_renewable	true
 password       	A1a-4urzp0wu92r5s1q0
@@ -412,7 +412,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 
 Be sure to use the returned token to perform the remaining.
 
-**NOTE:** [AppRole Pull Authentication](/guides/configuration/authentication.html) guide
+**NOTE:** [AppRole Pull Authentication](/guides/identity/authentication.html) guide
 demonstrates more sophisticated way of generating a token for your apps.
 
 ```shell
@@ -496,7 +496,7 @@ user name exists.
 
 ## Next steps
 
-This guide discussed how to generate credentials on--dataemand so that the access
+This guide discussed how to generate credentials on-demand so that the access
 credentials no longer need to be written to disk. Next, learn about the
-[Tokens and Leases](/guides/configuration/lease.html) so that you can control the lifecycle of
+[Tokens and Leases](/guides/identity/lease.html) so that you can control the lifecycle of
 those credentials.

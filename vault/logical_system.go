@@ -101,8 +101,12 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Description: "Accessor of the token for which capabilities are being queried.",
 					},
 					"path": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Path on which capabilities are being queried.",
+						Type:        framework.TypeCommaStringSlice,
+						Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					},
+					"paths": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Paths on which capabilities are being queried.",
 					},
 				},
 
@@ -151,8 +155,12 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Description: "Token for which capabilities are being queried.",
 					},
 					"path": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Path on which capabilities are being queried.",
+						Type:        framework.TypeCommaStringSlice,
+						Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					},
+					"paths": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Paths on which capabilities are being queried.",
 					},
 				},
 
@@ -173,8 +181,12 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Description: "Token for which capabilities are being queried.",
 					},
 					"path": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Path on which capabilities are being queried.",
+						Type:        framework.TypeCommaStringSlice,
+						Description: "(DEPRECATED) Path on which capabilities are being queried. Use 'paths' instead.",
+					},
+					"paths": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "Paths on which capabilities are being queried.",
 					},
 				},
 
@@ -245,6 +257,14 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
+					"audit_non_hmac_request_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
+					},
+					"audit_non_hmac_response_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
@@ -273,6 +293,14 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"description": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
+					},
+					"audit_non_hmac_request_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_request_keys"][0]),
+					},
+					"audit_non_hmac_response_keys": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
 				},
 
@@ -1264,24 +1292,6 @@ func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logic
 	}, nil
 }
 
-// handleCapabilities returns the ACL capabilities of the token for a given path
-func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	token := d.Get("token").(string)
-	if token == "" {
-		token = req.ClientToken
-	}
-	capabilities, err := b.Core.Capabilities(ctx, token, d.Get("path").(string))
-	if err != nil {
-		return nil, err
-	}
-
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"capabilities": capabilities,
-		},
-	}, nil
-}
-
 // handleCapabilitiesAccessor returns the ACL capabilities of the
 // token associted with the given accessor for a given path.
 func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1295,16 +1305,53 @@ func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *log
 		return nil, err
 	}
 
-	capabilities, err := b.Core.Capabilities(ctx, aEntry.TokenID, d.Get("path").(string))
-	if err != nil {
-		return nil, err
+	d.Raw["token"] = aEntry.TokenID
+	return b.handleCapabilities(ctx, req, d)
+}
+
+// handleCapabilities returns the ACL capabilities of the token for a given path
+func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var token string
+	if strings.HasSuffix(req.Path, "capabilities-self") {
+		token = req.ClientToken
+	} else {
+		tokenRaw, ok := d.Raw["token"]
+		if ok {
+			token, _ = tokenRaw.(string)
+		}
+	}
+	if token == "" {
+		return nil, fmt.Errorf("no token found")
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"capabilities": capabilities,
-		},
-	}, nil
+	ret := &logical.Response{
+		Data: map[string]interface{}{},
+	}
+
+	paths := d.Get("paths").([]string)
+	if len(paths) == 0 {
+		// Read from the deprecated field
+		paths = d.Get("path").([]string)
+	}
+
+	if len(paths) == 0 {
+		return logical.ErrorResponse("paths must be supplied"), nil
+	}
+
+	for _, path := range paths {
+		pathCap, err := b.Core.Capabilities(ctx, token, path)
+		if err != nil {
+			return nil, err
+		}
+		ret.Data[path] = pathCap
+	}
+
+	// This is only here for backwards compatibility
+	if len(paths) == 1 {
+		ret.Data["capabilities"] = ret.Data[paths[0]]
+	}
+
+	return ret, nil
 }
 
 // handleRekeyRetrieve returns backed-up, PGP-encrypted unseal keys from a
@@ -1644,6 +1691,14 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 		},
 	}
 
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+		resp.Data["audit_non_hmac_request_keys"] = rawVal.([]string)
+	}
+
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+		resp.Data["audit_non_hmac_response_keys"] = rawVal.([]string)
+	}
+
 	return resp, nil
 }
 
@@ -1774,6 +1829,58 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("core: mount tuning of description successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("audit_non_hmac_request_keys"); ok {
+		auditNonHMACRequestKeys := rawVal.([]string)
+
+		oldVal := mountEntry.Config.AuditNonHMACRequestKeys
+		mountEntry.Config.AuditNonHMACRequestKeys = auditNonHMACRequestKeys
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AuditNonHMACRequestKeys = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of audit_non_hmac_request_keys successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("audit_non_hmac_response_keys"); ok {
+		auditNonHMACResponseKeys := rawVal.([]string)
+
+		oldVal := mountEntry.Config.AuditNonHMACResponseKeys
+		mountEntry.Config.AuditNonHMACResponseKeys = auditNonHMACResponseKeys
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AuditNonHMACResponseKeys = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of audit_non_hmac_response_keys successful", "path", path)
 		}
 	}
 
@@ -1959,6 +2066,44 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 					"unable to convert given auth config information"),
 				logical.ErrInvalidRequest
 		}
+	}
+
+	switch apiConfig.DefaultLeaseTTL {
+	case "":
+	case "system":
+	default:
+		tmpDef, err := parseutil.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
+				logical.ErrInvalidRequest
+		}
+		config.DefaultLeaseTTL = tmpDef
+	}
+
+	switch apiConfig.MaxLeaseTTL {
+	case "":
+	case "system":
+	default:
+		tmpMax, err := parseutil.ParseDurationSecond(apiConfig.MaxLeaseTTL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
+				logical.ErrInvalidRequest
+		}
+		config.MaxLeaseTTL = tmpMax
+	}
+
+	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
+		return logical.ErrorResponse(
+				"given default lease TTL greater than given max lease TTL"),
+			logical.ErrInvalidRequest
+	}
+
+	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
+		return logical.ErrorResponse(fmt.Sprintf(
+				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
+			logical.ErrInvalidRequest
 	}
 
 	// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
@@ -3028,6 +3173,14 @@ in the plugin catalog.`,
 
 	"tune_max_lease_ttl": {
 		`The max lease TTL for this mount.`,
+	},
+
+	"tune_audit_non_hmac_request_keys": {
+		`The list of keys in the request data object that will not be HMAC'ed by audit devices.`,
+	},
+
+	"tune_audit_non_hmac_response_keys": {
+		`The list of keys in the response data object that will not be HMAC'ed by audit devices.`,
 	},
 
 	"remount": {
