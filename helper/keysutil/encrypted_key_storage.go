@@ -44,6 +44,9 @@ var (
 
 	// ErrNilStorage is returned if the provided storage is nil.
 	ErrNilStorage = errors.New("nil storage provided")
+
+	// ErrNilPolicy is returned if the provided policy is nil.
+	ErrNilPolicy = errors.New("nil policy provided")
 )
 
 // EncryptedKeyStorageConfig is used to configure an EncryptedKeyStorage object.
@@ -67,6 +70,10 @@ type EncryptedKeyStorageConfig struct {
 // NewEncryptedKeyStorage takes an EncryptedKeyStorageConfig and returns a new
 // EncryptedKeyStorage object.
 func NewEncryptedKeyStorage(config EncryptedKeyStorageConfig) (*EncryptedKeyStorage, error) {
+	if config.Policy == nil {
+		return nil, ErrNilPolicy
+	}
+
 	if !config.Policy.Derived {
 		return nil, ErrPolicyDerivedKeys
 	}
