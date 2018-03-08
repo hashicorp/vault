@@ -801,18 +801,11 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	}
 
 	if roleEntry.MaxTTL > time.Duration(0) {
-		shortestTTL := b.System().DefaultLeaseTTL()
-		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-			shortestTTL = roleEntry.TTL
-		}
-
 		// Cap TTL to shortestMaxTTL
-		if shortestTTL > shortestMaxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", shortestTTL, shortestMaxTTL))
-			shortestTTL = shortestMaxTTL
+		if resp.Auth.TTL > shortestMaxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (shortestMaxTTL / time.Second)))
+			resp.Auth.TTL = shortestMaxTTL
 		}
-
-		resp.Auth.TTL = shortestTTL
 	}
 
 	return resp, nil
@@ -1316,23 +1309,17 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	}
 
 	if roleEntry.MaxTTL > time.Duration(0) {
-		shortestMaxTTL := b.System().MaxLeaseTTL()
-		if roleEntry.MaxTTL < shortestMaxTTL {
-			shortestMaxTTL = roleEntry.MaxTTL
+		// Cap maxTTL to the sysview's max TTL
+		maxTTL := roleEntry.MaxTTL
+		if maxTTL > b.System().MaxLeaseTTL() {
+			maxTTL = b.System().MaxLeaseTTL()
 		}
 
-		shortestTTL := b.System().DefaultLeaseTTL()
-		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-			shortestTTL = roleEntry.TTL
+		// Cap TTL to MaxTTL
+		if resp.Auth.TTL > maxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
+			resp.Auth.TTL = maxTTL
 		}
-
-		// Cap TTL to shortestMaxTTL
-		if shortestTTL > shortestMaxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", shortestTTL, shortestMaxTTL))
-			shortestTTL = shortestMaxTTL
-		}
-
-		resp.Auth.TTL = shortestTTL
 	}
 
 	return resp, nil
