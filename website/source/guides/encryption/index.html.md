@@ -20,5 +20,5 @@ exfiltrating data.
 This guide walks you through Encryption as a Service topics.
 
 - [Transit Secrets Re-wrapping](/guides/encryption/transit-rewrap.html) guide
-demonstrate one possible way to re-wrap data after rotating an encryption key
+demonstrates one possible way to re-wrap data after rotating an encryption key
 in the transit engine in Vault.
