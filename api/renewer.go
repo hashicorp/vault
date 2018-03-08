@@ -162,8 +162,8 @@ func (r *Renewer) Stop() {
 }
 
 // Renew starts a background process for renewing this secret. When the secret
-// is has auth data, this attempts to renew the auth (token). When the secret
-// has a lease, this attempts to renew the lease.
+// has auth data, this attempts to renew the auth (token). When the secret has
+// a lease, this attempts to renew the lease.
 func (r *Renewer) Renew() {
 	var result error
 	if r.secret.Auth != nil {
