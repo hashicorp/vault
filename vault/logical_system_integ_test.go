@@ -174,10 +174,11 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 		if sealed {
 			t.Fatal("should not be sealed")
 		}
-		// Wait for active so post-unseal takes place
-		// If it fails, it means unseal process failed
-		vault.TestWaitActive(t, core.Core)
 	}
+
+	// Wait for active so post-unseal takes place
+	// If it fails, it means unseal process failed
+	vault.TestWaitActive(t, core.Core)
 
 	if testMount {
 		// Mount the plugin at the same path after plugin is re-added to the catalog
@@ -286,10 +287,11 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 		if sealed {
 			t.Fatal("should not be sealed")
 		}
-		// Wait for active so post-unseal takes place
-		// If it fails, it means unseal process failed
-		vault.TestWaitActive(t, core.Core)
 	}
+
+	// Wait for active so post-unseal takes place
+	// If it fails, it means unseal process failed
+	vault.TestWaitActive(t, core.Core)
 
 	// Re-add the plugin to the catalog
 	switch btype {
@@ -394,10 +396,11 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 		if sealed {
 			t.Fatal("should not be sealed")
 		}
-		// Wait for active so post-unseal takes place
-		// If it fails, it means unseal process failed
-		vault.TestWaitActive(t, core.Core)
 	}
+
+	// Wait for active so post-unseal takes place
+	// If it fails, it means unseal process failed
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
 }
 
 func TestSystemBackend_Plugin_reload(t *testing.T) {

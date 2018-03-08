@@ -99,7 +99,7 @@ func TestHashString(t *testing.T) {
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
-	localSalt, err := salt.NewSalt(inmemStorage, &salt.Config{
+	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
 		HMAC:     sha256.New,
 		HMACType: "hmac-sha256",
 	})
@@ -206,7 +206,7 @@ func TestHash(t *testing.T) {
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
-	localSalt, err := salt.NewSalt(inmemStorage, &salt.Config{
+	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
 		HMAC:     sha256.New,
 		HMACType: "hmac-sha256",
 	})

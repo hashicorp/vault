@@ -2387,7 +2387,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 
 	path = sanitizeMountPath(path)
 
-	hash, err := b.Core.auditBroker.GetHash(path, input)
+	hash, err := b.Core.auditBroker.GetHash(ctx, path, input)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}

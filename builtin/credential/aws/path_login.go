@@ -800,12 +800,14 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		resp.Auth.Metadata["nonce"] = clientNonce
 	}
 
-	if roleEntry.MaxTTL > time.Duration(0) {
-		// Cap TTL to shortestMaxTTL
-		if resp.Auth.TTL > shortestMaxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (shortestMaxTTL / time.Second)))
-			resp.Auth.TTL = shortestMaxTTL
-		}
+	// In this case no role value was set so pull in what will be assigned by
+	// Core for comparison
+	if resp.Auth.TTL == 0 {
+		resp.Auth.TTL = b.System().DefaultLeaseTTL()
+	}
+	if resp.Auth.TTL > shortestMaxTTL {
+		resp.Auth.TTL = shortestMaxTTL
+		resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, shortestMaxTTL))
 	}
 
 	return resp, nil
@@ -1308,6 +1310,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		},
 	}
 
+	if resp.Auth.TTL == 0 {
+		resp.Auth.TTL = b.System().DefaultLeaseTTL()
+	}
 	if roleEntry.MaxTTL > time.Duration(0) {
 		// Cap maxTTL to the sysview's max TTL
 		maxTTL := roleEntry.MaxTTL
@@ -1317,7 +1322,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 		// Cap TTL to MaxTTL
 		if resp.Auth.TTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, maxTTL))
 			resp.Auth.TTL = maxTTL
 		}
 	}
