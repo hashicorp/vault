@@ -564,6 +564,48 @@ func initCommands(ui, serverCmdUi cli.Ui) {
 				},
 			}, nil
 		},
+		"kv": func() (cli.Command, error) {
+			return &KVCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv put": func() (cli.Command, error) {
+			return &KVPutCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv get": func() (cli.Command, error) {
+			return &KVGetCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv destroy": func() (cli.Command, error) {
+			return &KVDestroyCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv archive": func() (cli.Command, error) {
+			return &KVArchiveCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv unarchive": func() (cli.Command, error) {
+			return &KVUnarchiveCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
 	}
 
 	// Deprecated commands
