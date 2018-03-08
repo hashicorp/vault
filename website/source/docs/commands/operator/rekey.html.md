@@ -22,7 +22,7 @@ An unseal key may be provided directly on the command line as an argument to the
 command. If key is specified as "-", the command will read from stdin. If a TTY
 is available, the command will prompt for text.
 
-Please see the [rotating and rekeying](/guides/configuration/rekeying-and-rotating.html) for
+Please see the [rotating and rekeying](/guides/operations/rekeying-and-rotating.html) for
 step-by-step instructions.
 
 ## Examples

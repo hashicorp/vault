@@ -2,8 +2,6 @@ package audit
 
 import (
 	"io"
-
-	"github.com/hashicorp/vault/logical"
 )
 
 // Formatter is an interface that is responsible for formating a
@@ -12,8 +10,8 @@ import (
 //
 // It is recommended that you pass data through Hash prior to formatting it.
 type Formatter interface {
-	FormatRequest(io.Writer, FormatterConfig, *logical.Auth, *logical.Request, error) error
-	FormatResponse(io.Writer, FormatterConfig, *logical.Auth, *logical.Request, *logical.Response, error) error
+	FormatRequest(io.Writer, FormatterConfig, *LogInput) error
+	FormatResponse(io.Writer, FormatterConfig, *LogInput) error
 }
 
 type FormatterConfig struct {

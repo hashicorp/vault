@@ -8,6 +8,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -113,8 +114,33 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
 	}
 
+	var nonHMACReqDataKeys []string
+	var nonHMACRespDataKeys []string
+	entry := c.router.MatchingMountEntry(req.Path)
+	if entry != nil {
+		// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
+		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			nonHMACReqDataKeys = rawVals.([]string)
+		}
+
+		// Get and set ignored HMAC'd value. Reset those back to empty afterwards.
+		if auditResp != nil {
+			if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+				nonHMACRespDataKeys = rawVals.([]string)
+			}
+		}
+	}
+
 	// Create an audit trail of the response
-	if auditErr := c.auditBroker.LogResponse(ctx, auth, req, auditResp, c.auditedHeaders, err); auditErr != nil {
+	logInput := &audit.LogInput{
+		Auth:                auth,
+		Request:             req,
+		Response:            auditResp,
+		OuterErr:            err,
+		NonHMACReqDataKeys:  nonHMACReqDataKeys,
+		NonHMACRespDataKeys: nonHMACRespDataKeys,
+	}
+	if auditErr := c.auditBroker.LogResponse(ctx, logInput, c.auditedHeaders); auditErr != nil {
 		c.logger.Error("core: failed to audit response", "request_path", req.Path, "error", auditErr)
 		return nil, ErrInternalError
 	}
@@ -124,6 +150,15 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
+
+	var nonHMACReqDataKeys []string
+	entry := c.router.MatchingMountEntry(req.Path)
+	if entry != nil {
+		// Get and set ignored HMAC'd value.
+		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			nonHMACReqDataKeys = rawVals.([]string)
+		}
+	}
 
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
@@ -172,7 +207,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			errType = ctErr
 		}
 
-		if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, ctErr); err != nil {
+		logInput := &audit.LogInput{
+			Auth:               auth,
+			Request:            req,
+			OuterErr:           ctErr,
+			NonHMACReqDataKeys: nonHMACReqDataKeys,
+		}
+		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 			c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		}
 
@@ -189,7 +230,12 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	req.DisplayName = auth.DisplayName
 
 	// Create an audit trail of the request
-	if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, nil); err != nil {
+	logInput := &audit.LogInput{
+		Auth:               auth,
+		Request:            req,
+		NonHMACReqDataKeys: nonHMACReqDataKeys,
+	}
+	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, ErrInternalError)
 		return nil, auth, retErr
@@ -358,7 +404,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Create an audit trail of the request, auth is not available on login requests
 	// Create an audit trail of the request. Attach auth if it was returned,
 	// e.g. if a token was provided.
-	if err := c.auditBroker.LogRequest(ctx, auth, req, c.auditedHeaders, nil); err != nil {
+	logInput := &audit.LogInput{
+		Auth:    auth,
+		Request: req,
+	}
+	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		return nil, nil, ErrInternalError
 	}

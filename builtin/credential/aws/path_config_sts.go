@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 // awsStsEntry is used to store details of an STS role for assumption
 type awsStsEntry struct {
-	StsRole string `json:"sts_role" structs:"sts_role" mapstructure:"sts_role"`
+	StsRole string `json:"sts_role"`
 }
 
 func pathListSts(b *backend) *framework.Path {
@@ -170,7 +169,9 @@ func (b *backend) pathConfigStsRead(ctx context.Context, req *logical.Request, d
 	}
 
 	return &logical.Response{
-		Data: structs.New(stsEntry).Map(),
+		Data: map[string]interface{}{
+			"sts_role": stsEntry.StsRole,
+		},
 	}, nil
 }
 

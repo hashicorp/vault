@@ -17,3 +17,5 @@ description: |-
 - [Okta](/api/system/mfa-okta.html)
 
 - [Duo](/api/system/mfa-duo.html)
+
+- [PingID](/api/system/mfa-pingid.html)

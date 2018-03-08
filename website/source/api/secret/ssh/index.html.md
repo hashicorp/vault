@@ -106,8 +106,9 @@ This endpoint creates or updates a named role.
     in `allowed_users`.
 
 - `cidr_list` `(string: "")` – Specifies a comma separated list of CIDR blocks
-  for which the role is applicable for.CIDR blocks can belong to more than one
-  role.
+  for which the role is applicable for. It is possible that a same set of CIDR
+  blocks are part of multiple roles. This is a required parameter, unless the
+  role is registered under the `/config/zeroaddress` endpoint.
 
 - `exclude_cidr_list` `(string: "")` – Specifies a comma-separated list of CIDR
   blocks. IP addresses belonging to these blocks are not accepted by the role.

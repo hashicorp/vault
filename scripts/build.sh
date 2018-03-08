@@ -18,6 +18,16 @@ BUILD_TAGS="${BUILD_TAGS:-"vault"}"
 GIT_COMMIT="$(git rev-parse HEAD)"
 GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
 
+# If its dev mode, only build for ourself
+if [ "${VAULT_DEV_BUILD}x" != "x" ] && [ "${XC_OSARCH}x" == "x" ]; then
+    XC_OS=$(go env GOOS)
+    XC_ARCH=$(go env GOARCH)
+    XC_OSARCH=$(go env GOOS)/$(go env GOARCH)
+elif [ "${XC_OSARCH}x" != "x" ]; then
+    IFS='/' read -ra SPLITXC <<< "${XC_OSARCH}"
+	DEV_PLATFORM="./pkg/${SPLITXC[0]}_${SPLITXC[1]}"
+fi
+
 # Determine the arch/os combos we're building for
 XC_ARCH=${XC_ARCH:-"386 amd64"}
 XC_OS=${XC_OS:-linux darwin windows freebsd openbsd netbsd solaris}
@@ -36,13 +46,6 @@ rm -f bin/*
 rm -rf pkg/*
 mkdir -p bin/
 
-# If its dev mode, only build for ourself
-if [ "${VAULT_DEV_BUILD}x" != "x" ]; then
-    XC_OS=$(go env GOOS)
-    XC_ARCH=$(go env GOARCH)
-    XC_OSARCH=$(go env GOOS)/$(go env GOARCH)
-fi
-
 # Build!
 echo "==> Building..."
 gox \
@@ -59,7 +62,7 @@ IFS=: MAIN_GOPATH=($GOPATH)
 IFS=$OLDIFS
 
 # Copy our OS/Arch to the bin/ directory
-DEV_PLATFORM="./pkg/$(go env GOOS)_$(go env GOARCH)"
+DEV_PLATFORM=${DEV_PLATFORM:-"./pkg/$(go env GOOS)_$(go env GOARCH)"}
 for F in $(find ${DEV_PLATFORM} -mindepth 1 -maxdepth 1 -type f); do
     cp ${F} bin/
     cp ${F} ${MAIN_GOPATH}/bin/

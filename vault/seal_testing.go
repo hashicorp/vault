@@ -17,7 +17,7 @@ type TestSealOpts struct {
 }
 
 func NewTestSeal(t testing.T, opts *TestSealOpts) Seal {
-	return &DefaultSeal{}
+	return NewDefaultSeal()
 }
 
 func testCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
