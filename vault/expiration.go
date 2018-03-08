@@ -768,14 +768,14 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		// framework.LeaseExtend call against the request. Also, cap period value to
 		// the sys/mount max value.
 		if resp.Auth.Period > sysView.MaxLeaseTTL() {
-			retResp.AddWarning(fmt.Sprintf("Period of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", resp.Auth.TTL, sysView.MaxLeaseTTL()))
+			retResp.AddWarning(fmt.Sprintf("Period of %s is greater than current mount/system default of %s, value will be truncated.", resp.Auth.TTL, sysView.MaxLeaseTTL()))
 			resp.Auth.Period = sysView.MaxLeaseTTL()
 		}
 		resp.Auth.TTL = resp.Auth.Period
 	case resp.Auth.TTL > time.Duration(0):
 		// Cap TTL value to the sys/mount max value
 		if resp.Auth.TTL > sysView.MaxLeaseTTL() {
-			retResp.AddWarning(fmt.Sprintf("TTL of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", resp.Auth.TTL, sysView.MaxLeaseTTL()))
+			retResp.AddWarning(fmt.Sprintf("TTL of %s is greater than current mount/system default of %s, value will be truncated.", resp.Auth.TTL, sysView.MaxLeaseTTL()))
 			resp.Auth.TTL = sysView.MaxLeaseTTL()
 		}
 	}
