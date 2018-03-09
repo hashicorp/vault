@@ -1443,15 +1443,22 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 			"type":        entry.Type,
 			"description": entry.Description,
 			"accessor":    entry.Accessor,
-			"config": map[string]interface{}{
-				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-				"force_no_cache":    entry.Config.ForceNoCache,
-				"plugin_name":       entry.Config.PluginName,
-			},
-			"local":     entry.Local,
-			"seal_wrap": entry.SealWrap,
+			"local":       entry.Local,
+			"seal_wrap":   entry.SealWrap,
 		}
+		entryConfig := map[string]interface{}{
+			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+			"force_no_cache":    entry.Config.ForceNoCache,
+			"plugin_name":       entry.Config.PluginName,
+		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
+		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
+		}
+		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
 	}
 
@@ -1551,6 +1558,14 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	// Copy over the force no cache if set
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
+	}
+
+	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
+		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
+	}
+
+	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
+		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
 	}
 
 	// Create the mount entry
@@ -2028,13 +2043,21 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			"type":        entry.Type,
 			"description": entry.Description,
 			"accessor":    entry.Accessor,
-			"config": map[string]interface{}{
-				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-			},
-			"local":     entry.Local,
-			"seal_wrap": entry.SealWrap,
+			"local":       entry.Local,
+			"seal_wrap":   entry.SealWrap,
 		}
+		entryConfig := map[string]interface{}{
+			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+			"plugin_name":       entry.Config.PluginName,
+		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
+		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
+			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
+		}
+		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
 	}
 	return resp, nil
@@ -2128,6 +2151,14 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	path = sanitizeMountPath(path)
+
+	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
+		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
+	}
+
+	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
+		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
+	}
 
 	// Create the mount entry
 	me := &MountEntry{
