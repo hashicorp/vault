@@ -1893,6 +1893,12 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	sysView := ts.System()
 
 	if periodToUse > 0 {
+		// Cap period value to the sys/mount max value; this matches behavior
+		// in expiration manager for renewals
+		if periodToUse > sysView.MaxLeaseTTL() {
+			resp.AddWarning(fmt.Sprintf("Period of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", int64(periodToUse.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
+			periodToUse = sysView.MaxLeaseTTL()
+		}
 		te.TTL = periodToUse
 	} else {
 		// Set the default lease if not provided, root tokens are exempt
