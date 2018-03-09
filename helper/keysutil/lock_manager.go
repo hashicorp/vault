@@ -500,23 +500,5 @@ func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage
 }
 
 func (lm *LockManager) getStoredPolicy(ctx context.Context, storage logical.Storage, name string) (*Policy, error) {
-	// Check if the policy already exists
-	raw, err := storage.Get(ctx, "policy/"+name)
-	if err != nil {
-		return nil, err
-	}
-	if raw == nil {
-		return nil, nil
-	}
-
-	// Decode the policy
-	var policy Policy
-	err = jsonutil.DecodeJSON(raw.Value, &policy)
-	if err != nil {
-		return nil, err
-	}
-
-	policy.versionPrefixCache = &sync.Map{}
-
-	return &policy, nil
+	return LoadPolicy(ctx, storage, "policy/"+name)
 }
