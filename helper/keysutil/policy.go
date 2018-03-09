@@ -20,8 +20,10 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/chacha20poly1305"
@@ -52,7 +54,14 @@ const (
 	KeyType_ChaCha20_Poly1305
 )
 
-const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
+const (
+	// ErrTooOld is returned whtn the ciphertext or signatures's key version is
+	// too old.
+	ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
+
+	// DefaultVersionTemplate is used when no version template is provided.
+	DefaultVersionTemplate = "vault:v{{version}}:"
+)
 
 type RestoreInfo struct {
 	Time    time.Time `json:"time"`
@@ -244,6 +253,19 @@ type Policy struct {
 
 	// AllowPlaintextBackup allows taking backup of the policy in plaintext
 	AllowPlaintextBackup bool `json:"allow_plaintext_backup"`
+
+	// VersionTemplate is used to prefix the ciphertext with information about
+	// the key version. It must inclide {{version}} and a delimiter between the
+	// version prefix and the ciphertext.
+	VersionTemplate string `json:"version_template"`
+
+	// StoragePrefix is used to add a prefix when storing and retrieving the
+	// policy object.
+	StoragePrefix string
+
+	// versionPrefixCache stores caches of verison prefix strings and the split
+	// version template.
+	versionPrefixCache *sync.Map
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -255,7 +277,7 @@ type archivedKeys struct {
 func (p *Policy) LoadArchive(ctx context.Context, storage logical.Storage) (*archivedKeys, error) {
 	archive := &archivedKeys{}
 
-	raw, err := storage.Get(ctx, "archive/"+p.Name)
+	raw, err := storage.Get(ctx, path.Join(p.StoragePrefix, "archive", p.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +302,7 @@ func (p *Policy) storeArchive(ctx context.Context, storage logical.Storage, arch
 
 	// Write the policy into storage
 	err = storage.Put(ctx, &logical.StorageEntry{
-		Key:   "archive/" + p.Name,
+		Key:   path.Join(p.StoragePrefix, "archive", p.Name),
 		Value: buf,
 	})
 	if err != nil {
@@ -405,7 +427,7 @@ func (p *Policy) Persist(ctx context.Context, storage logical.Storage) (retErr e
 
 	// Write the policy into storage
 	err = storage.Put(ctx, &logical.StorageEntry{
-		Key:   "policy/" + p.Name,
+		Key:   path.Join(p.StoragePrefix, "policy", p.Name),
 		Value: buf,
 	})
 	if err != nil {
@@ -703,7 +725,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 	encoded := base64.StdEncoding.EncodeToString(ciphertext)
 
 	// Prepend some information
-	encoded = "vault:v" + strconv.Itoa(ver) + ":" + encoded
+	encoded = p.getVersionPrefix(ver) + encoded
 
 	return encoded, nil
 }
@@ -713,8 +735,13 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
 
+	tplParts, err := p.getTemplateParts()
+	if err != nil {
+		return "", err
+	}
+
 	// Verify the prefix
-	if !strings.HasPrefix(value, "vault:v") {
+	if !strings.HasPrefix(value, tplParts[0]) {
 		return "", errutil.UserError{Err: "invalid ciphertext: no prefix"}
 	}
 
@@ -722,7 +749,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: "invalid convergent nonce supplied"}
 	}
 
-	splitVerCiphertext := strings.SplitN(strings.TrimPrefix(value, "vault:v"), ":", 2)
+	splitVerCiphertext := strings.SplitN(strings.TrimPrefix(value, tplParts[0]), tplParts[1], 2)
 	if len(splitVerCiphertext) != 2 {
 		return "", errutil.UserError{Err: "invalid ciphertext: wrong number of fields"}
 	}
@@ -929,9 +956,8 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(sig)
-
 	res := &SigningResult{
-		Signature: "vault:v" + strconv.Itoa(ver) + ":" + encoded,
+		Signature: p.getVersionPrefix(ver) + encoded,
 		PublicKey: pubKey,
 	}
 
@@ -943,12 +969,17 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
 
+	tplParts, err := p.getTemplateParts()
+	if err != nil {
+		return false, err
+	}
+
 	// Verify the prefix
-	if !strings.HasPrefix(sig, "vault:v") {
+	if !strings.HasPrefix(sig, tplParts[0]) {
 		return false, errutil.UserError{Err: "invalid signature: no prefix"}
 	}
 
-	splitVerSig := strings.SplitN(strings.TrimPrefix(sig, "vault:v"), ":", 2)
+	splitVerSig := strings.SplitN(strings.TrimPrefix(sig, tplParts[0]), tplParts[1], 2)
 	if len(splitVerSig) != 2 {
 		return false, errutil.UserError{Err: "invalid signature: wrong number of fields"}
 	}
@@ -1194,4 +1225,41 @@ func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (out strin
 	}
 
 	return base64.StdEncoding.EncodeToString(encodedBackup), nil
+}
+
+func (p *Policy) getTemplateParts() ([]string, error) {
+	partsRaw, ok := p.versionPrefixCache.Load("template-parts")
+	if ok {
+		return partsRaw.([]string), nil
+	}
+
+	template := p.VersionTemplate
+	if template == "" {
+		template = DefaultVersionTemplate
+	}
+
+	tplParts := strings.Split(template, "{{version}}")
+	if len(tplParts) != 2 {
+		return nil, errutil.InternalError{Err: "error parsing version template"}
+	}
+
+	p.versionPrefixCache.Store("template-parts", tplParts)
+	return tplParts, nil
+}
+
+func (p *Policy) getVersionPrefix(ver int) string {
+	prefixRaw, ok := p.versionPrefixCache.Load(ver)
+	if ok {
+		return prefixRaw.(string)
+	}
+
+	template := p.VersionTemplate
+	if template == "" {
+		template = DefaultVersionTemplate
+	}
+
+	prefix := strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
+	p.versionPrefixCache.Store(ver, prefix)
+
+	return prefix
 }

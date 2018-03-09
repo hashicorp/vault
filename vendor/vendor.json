@@ -925,6 +925,12 @@
 			"revisionTime": "2016-01-25T20:49:56Z"
 		},
 		{
+			"checksumSHA1": "y1GG7DFXzx8ABfTWlVdgMVvlYU0=",
+			"path": "github.com/golang/go/src/math/big",
+			"revision": "bf86aec25972f3a100c3aa58a6abcbcc35bdea49",
+			"revisionTime": "2018-02-16T04:20:11Z"
+		},
+		{
 			"checksumSHA1": "WX1+2gktHcBmE9MGwFSGs7oqexU=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175",
