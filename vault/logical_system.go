@@ -1560,6 +1560,14 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.ForceNoCache = true
 	}
 
+	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
+		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
+	}
+
+	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
+		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
+	}
+
 	// Create the mount entry
 	me := &MountEntry{
 		Table:       mountTableType,
@@ -2143,6 +2151,14 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 
 	path = sanitizeMountPath(path)
+
+	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
+		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
+	}
+
+	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
+		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
+	}
 
 	// Create the mount entry
 	me := &MountEntry{
