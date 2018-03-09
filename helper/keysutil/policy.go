@@ -220,9 +220,6 @@ type PolicyConfig struct {
 	KDF                  int
 	ConvergentEncryption bool
 
-	// The version of the convergent nonce to use
-	ConvergentVersion int
-
 	// Whether the key is exportable
 	Exportable bool
 
@@ -244,12 +241,18 @@ type PolicyConfig struct {
 
 // NewPolicy takes a policy config and returns a Policy with those settings.
 func NewPolicy(config PolicyConfig) *Policy {
+	var convergentVersion int
+	if config.ConvergentEncryption {
+		convergentVersion = 2
+	}
+
 	return &Policy{
 		Name:                 config.Name,
 		Type:                 config.Type,
 		Derived:              config.Derived,
 		KDF:                  config.KDF,
 		ConvergentEncryption: config.ConvergentEncryption,
+		ConvergentVersion:    convergentVersion,
 		Exportable:           config.Exportable,
 		DeletionAllowed:      config.DeletionAllowed,
 		AllowPlaintextBackup: config.AllowPlaintextBackup,
