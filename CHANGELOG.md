@@ -2,7 +2,7 @@
 
 DEPRECATIONS/CHANGES:
 
- * The AWS authentication backend now allows binds for inputs, as either a
+ * The AWS authentication backend now allows binds for inputs as either a
    comma-delimited string or a string array. However, to keep consistency with
    input and output, when reading a role the binds will now be returned as
    string arrays rather than strings.
@@ -23,6 +23,7 @@ BUG FIXES:
    set [GH-4107]
  * cli: Improve error messages around `vault auth help` when there is no CLI
    helper for a particular method [GH-4056]
+ * cli: Fix autocomplete installation when using Fish as the shell [GH-4094]
  * secret/ssh: Return `key_bits` value when reading a role [GH-4098]
 
 ## 0.9.5 (February 26th, 2018)
