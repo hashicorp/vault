@@ -205,6 +205,60 @@ func (kem deprecatedKeyEntryMap) UnmarshalJSON(data []byte) error {
 // keyEntryMap is used to allow JSON marshal/unmarshal
 type keyEntryMap map[string]KeyEntry
 
+// PolicyConfig is used to create a new policy
+type PolicyConfig struct {
+	// The name of the policy
+	Name string `json:"name"`
+
+	// The type of key
+	Type KeyType
+
+	// Derived keys MUST provide a context and the master underlying key is
+	// never used. If convergent encryption is true, the context will be used
+	// as the nonce as well.
+	Derived              bool
+	KDF                  int
+	ConvergentEncryption bool
+
+	// The version of the convergent nonce to use
+	ConvergentVersion int
+
+	// Whether the key is exportable
+	Exportable bool
+
+	// Whether the key is allowed to be deleted
+	DeletionAllowed bool
+
+	// AllowPlaintextBackup allows taking backup of the policy in plaintext
+	AllowPlaintextBackup bool
+
+	// VersionTemplate is used to prefix the ciphertext with information about
+	// the key version. It must inclide {{version}} and a delimiter between the
+	// version prefix and the ciphertext.
+	VersionTemplate string
+
+	// StoragePrefix is used to add a prefix when storing and retrieving the
+	// policy object.
+	StoragePrefix string
+}
+
+// NewPolicy takes a policy config and returns a Policy with those settings.
+func NewPolicy(config PolicyConfig) *Policy {
+	return &Policy{
+		Name:                 config.Name,
+		Type:                 config.Type,
+		Derived:              config.Derived,
+		KDF:                  config.KDF,
+		ConvergentEncryption: config.ConvergentEncryption,
+		Exportable:           config.Exportable,
+		DeletionAllowed:      config.DeletionAllowed,
+		AllowPlaintextBackup: config.AllowPlaintextBackup,
+		VersionTemplate:      config.VersionTemplate,
+		StoragePrefix:        config.StoragePrefix,
+		versionPrefixCache:   &sync.Map{},
+	}
+}
+
 // Policy is the struct used to store metadata
 type Policy struct {
 	Name string      `json:"name"`
@@ -261,7 +315,7 @@ type Policy struct {
 
 	// StoragePrefix is used to add a prefix when storing and retrieving the
 	// policy object.
-	StoragePrefix string
+	StoragePrefix string `json:"storage_prefix"`
 
 	// versionPrefixCache stores caches of verison prefix strings and the split
 	// version template.
