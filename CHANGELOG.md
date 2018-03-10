@@ -9,6 +9,7 @@ DEPRECATIONS/CHANGES:
 
 IMPROVEMENTS:
 
+ * auth/approle: Allow array input for bound_cidr_list [4078]
  * auth/aws: Allow using lists in role bind parameters [GH-3907]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
    than just set [GH-4049]
