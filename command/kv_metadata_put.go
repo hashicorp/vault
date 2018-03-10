@@ -1,32 +1,30 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"os"
-	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVPutCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVPutCommand)(nil)
+var _ cli.Command = (*KVMetadataPutCommand)(nil)
+var _ cli.CommandAutocomplete = (*KVMetadataPutCommand)(nil)
 
-type KVPutCommand struct {
+type KVMetadataPutCommand struct {
 	*BaseCommand
 
-	flagCAS   int
-	testStdin io.Reader // for tests
+	flagMaxVersions int
+	flagCASRequired bool
+	testStdin       io.Reader // for tests
 }
 
-func (c *KVPutCommand) Synopsis() string {
+func (c *KVMetadataPutCommand) Synopsis() string {
 	return "Sets or updates data in the KV store"
 }
 
-func (c *KVPutCommand) Help() string {
+func (c *KVMetadataPutCommand) Help() string {
 	helpText := `
 Usage: vault kv put [options] KEY [DATA]
 
@@ -56,35 +54,38 @@ Usage: vault kv put [options] KEY [DATA]
 	return strings.TrimSpace(helpText)
 }
 
-func (c *KVPutCommand) Flags() *FlagSets {
+func (c *KVMetadataPutCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
 
 	f.IntVar(&IntVar{
-		Name:    "cas",
-		Target:  &c.flagCAS,
-		Default: -1,
-		Usage: `Specifies to use a Check-And-Set operation. If not set the write
-		will be allowed. If set to 0 a write will only be allowed if the key
-		doesn’t exist. If the index is non-zero the write will only be allowed
-		if the key’s current version matches the version specified in the cas
-		parameter.`,
+		Name:    "max-versions",
+		Target:  &c.flagMaxVersions,
+		Default: 0,
+		Usage:   `The number of versions to keep. If not set, the backend’s configured max version is used.`,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "cas-required",
+		Target:  &c.flagCASRequired,
+		Default: false,
+		Usage:   `If true the key will require the cas parameter to be set on all write requests. If false, the backend’s configuration will be used.`,
 	})
 
 	return set
 }
 
-func (c *KVPutCommand) AutocompleteArgs() complete.Predictor {
+func (c *KVMetadataPutCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *KVPutCommand) AutocompleteFlags() complete.Flags {
+func (c *KVMetadataPutCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *KVPutCommand) Run(args []string) int {
+func (c *KVMetadataPutCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -93,33 +94,27 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	// Pull our fake stdin if needed
-	stdin := (io.Reader)(os.Stdin)
-	if c.testStdin != nil {
-		stdin = c.testStdin
+
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		return 1
+	case len(args) > 1:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
 	}
 
 	var err error
 	path := sanitizePath(args[0])
-	path, err = addPrefixToVKVPath(path, "data")
+	path, err = addPrefixToVKVPath(path, "metadata")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
-	data, err := parseArgsData(stdin, args[1:])
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
-		return 1
-	}
-
-	data = map[string]interface{}{
-		"data":    data,
-		"options": map[string]interface{}{},
-	}
-
-	if c.flagCAS > -1 {
-		data["options"].(map[string]interface{})["cas"] = c.flagCAS
+	data := map[string]interface{}{
+		"max_versions": c.flagMaxVersions,
+		"cas_required": c.flagCASRequired,
 	}
 
 	client, err := c.Client()
@@ -142,13 +137,4 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	return OutputSecret(c.UI, secret)
-}
-
-func addPrefixToVKVPath(p, apiPrefix string) (string, error) {
-	parts := strings.SplitN(p, "/", 2)
-	if len(parts) != 2 {
-		return "", errors.New("Invalid path")
-	}
-
-	return path.Join(parts[0], apiPrefix, parts[1]), nil
 }

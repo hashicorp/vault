@@ -585,6 +585,13 @@ func initCommands(ui, serverCmdUi cli.Ui) {
 				},
 			}, nil
 		},
+		"kv delete": func() (cli.Command, error) {
+			return &KVDeleteCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
 		"kv destroy": func() (cli.Command, error) {
 			return &KVDestroyCommand{
 				BaseCommand: &BaseCommand{
@@ -601,6 +608,34 @@ func initCommands(ui, serverCmdUi cli.Ui) {
 		},
 		"kv unarchive": func() (cli.Command, error) {
 			return &KVUnarchiveCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata": func() (cli.Command, error) {
+			return &KVMetadataCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata put": func() (cli.Command, error) {
+			return &KVMetadataPutCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata get": func() (cli.Command, error) {
+			return &KVMetadataGetCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata delete": func() (cli.Command, error) {
+			return &KVMetadataDeleteCommand{
 				BaseCommand: &BaseCommand{
 					UI: ui,
 				},
