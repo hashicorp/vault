@@ -1021,7 +1021,7 @@ client_encryption_options:
     keystore: conf/.keystore
     keystore_password: cassandra
     # require_client_auth: false
-    # Set trustore and truststore_password if require_client_auth is true
+    # Set truststore and truststore_password if require_client_auth is true
     # truststore: conf/.truststore
     # truststore_password: cassandra
     # More advanced defaults below:
