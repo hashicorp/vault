@@ -2169,7 +2169,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 		}
 		rand2 := getResponse()
 		if len(rand1) != numBytes || len(rand2) != numBytes {
-			t.Fatal("length of output random bytes not what is exepcted")
+			t.Fatal("length of output random bytes not what is expected")
 		}
 		if reflect.DeepEqual(rand1, rand2) {
 			t.Fatal("found identical ouputs")
