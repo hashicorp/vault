@@ -259,7 +259,7 @@ commit_failure_policy: stop
 # i.e. use bind markers for variable parts.
 #
 # Do only change the default value, if you really have more prepared statements than
-# fit in the cache. In most cases it is not neccessary to change this value.
+# fit in the cache. In most cases it is not necessary to change this value.
 # Constantly re-preparing statements is a performance penalty.
 #
 # Default value ("auto") is 1/256th of the heap or 10MB, whichever is greater
