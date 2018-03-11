@@ -78,7 +78,7 @@ func (c *Sys) DisableAuth(path string) error {
 }
 
 // Structures for the requests/resposne are all down here. They aren't
-// individually documentd because the map almost directly to the raw HTTP API
+// individually documented because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 
 type EnableAuthOptions struct {
