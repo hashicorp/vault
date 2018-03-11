@@ -1178,7 +1178,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 	return nil
 }
 
-// RevokeTree is used to invalide a given token and all
+// RevokeTree is used to invalidate a given token and all
 // child tokens.
 func (ts *TokenStore) RevokeTree(ctx context.Context, id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
