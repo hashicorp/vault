@@ -1293,7 +1293,7 @@ func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logic
 }
 
 // handleCapabilitiesAccessor returns the ACL capabilities of the
-// token associted with the given accessor for a given path.
+// token associated with the given accessor for a given path.
 func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	accessor := d.Get("accessor").(string)
 	if accessor == "" {
