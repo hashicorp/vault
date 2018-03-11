@@ -3338,7 +3338,7 @@ Example: you might have an OAuth backend for GitHub, and one for Google Apps.
 	},
 
 	"auth_desc": {
-		`User-friendly description for this crential backend.`,
+		`User-friendly description for this credential backend.`,
 		"",
 	},
 
