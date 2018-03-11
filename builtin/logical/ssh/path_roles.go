@@ -273,7 +273,7 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				When supplied, this value specifies a custom format for the key id of a signed certificate.
-				The following variables are availble for use: '{{token_display_name}}' - The display name of
+				The following variables are available for use: '{{token_display_name}}' - The display name of
 				the token used to make the request. '{{role_name}}' - The name of the role signing the request.
 				'{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
 				`,

@@ -17,7 +17,7 @@ import (
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
-// for availible plugins and returns a PluginRunner
+// for available plugins and returns a PluginRunner
 type Looker interface {
 	LookupPlugin(context.Context, string) (*PluginRunner, error)
 }
