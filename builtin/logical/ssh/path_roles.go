@@ -490,7 +490,7 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ss
 }
 
 // parseRole converts a sshRole object into its map[string]interface representation,
-// with appropriate values for each KeyType. If the KeyType is invalid, it will retun
+// with appropriate values for each KeyType. If the KeyType is invalid, it will return
 // an error.
 func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 	var result map[string]interface{}
