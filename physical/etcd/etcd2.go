@@ -372,7 +372,7 @@ func (c *Etcd2Lock) isHeld() (bool, error) {
 		return false, nil
 	}
 
-	// Get the key of the curren holder of the lock.
+	// Get the key of the current holder of the lock.
 	currentSemaphoreKey, _, _, err := c.getSemaphoreKey()
 	if err != nil {
 		return false, err
