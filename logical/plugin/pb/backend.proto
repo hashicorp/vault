@@ -356,7 +356,7 @@ message InvalidateKeyArgs {
 
 // Backend is the interface that plugins must satisfy. The plugin should
 // implement the server for this service. Requests will first run the
-// HandleExistanceCheck rpc then run the HandleRequests rpc.
+// HandleExistenceCheck rpc then run the HandleRequests rpc.
 service Backend {
 	// HandleRequest is used to handle a request and generate a response.
 	// The plugins must check the operation type and handle appropriately.
