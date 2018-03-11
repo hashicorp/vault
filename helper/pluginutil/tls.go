@@ -128,7 +128,7 @@ func wrapServerConfig(ctx context.Context, sys RunnerUtil, certBytes []byte, key
 	return wrapInfo.Token, nil
 }
 
-// VaultPluginTLSProvider is run inside a plugin and retrives the response
+// VaultPluginTLSProvider is run inside a plugin and retrieves the response
 // wrapped TLS certificate from vault. It returns a configured TLS Config.
 func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, error) {
 	if os.Getenv(PluginMetadataModeEnv) == "true" {
