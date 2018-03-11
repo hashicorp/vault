@@ -60,7 +60,7 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 	// - a UUID
 	//
 	// the entire concatenated string is then truncated to role.usernameLength,
-	// which by default is 16 due to limitations in older but still-prevalant
+	// which by default is 16 due to limitations in older but still-prevalent
 	// versions of MySQL.
 	roleName := name
 	if len(roleName) > role.RolenameLength {
