@@ -1998,7 +1998,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Error().Error() != "must not speficy args in command and args field" {
+	if resp.Error().Error() != "must not specify args in command and args field" {
 		t.Fatalf("err: %v", resp.Error())
 	}
 

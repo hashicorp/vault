@@ -1137,7 +1137,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 	if len(parts) <= 0 {
 		return logical.ErrorResponse("missing command value"), nil
 	} else if len(parts) > 1 && len(args) > 0 {
-		return logical.ErrorResponse("must not speficy args in command and args field"), nil
+		return logical.ErrorResponse("must not specify args in command and args field"), nil
 	} else if len(parts) > 1 {
 		args = parts[1:]
 	}
