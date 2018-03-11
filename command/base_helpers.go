@@ -158,7 +158,7 @@ func truncateToSeconds(d time.Duration) int {
 	d = d.Truncate(1 * time.Second)
 
 	// Handle the case where someone requested a ridiculously short increment -
-	// incremenents must be larger than a second.
+	// increments must be larger than a second.
 	if d < 1*time.Second {
 		return 0
 	}
