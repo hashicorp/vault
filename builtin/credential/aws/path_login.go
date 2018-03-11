@@ -1451,7 +1451,7 @@ func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, 
 	// It's also annoying because:
 	// 1. The AWS Sigv4 algorithm requires the Host header to be defined
 	// 2. Some of the official SDKs (at least botocore and aws-sdk-go) don't actually
-	//    incude an explicit Host header in the HTTP requests they generate, relying on
+	//    include an explicit Host header in the HTTP requests they generate, relying on
 	//    the underlying HTTP library to do that for them.
 	// 3. To get a validly signed request, the SDKs check if a Host header has been set
 	//    and, if not, add an inferred host header (based on the URI) to the internal
