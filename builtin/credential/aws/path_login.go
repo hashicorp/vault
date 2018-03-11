@@ -1458,7 +1458,7 @@ func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, 
 	//    data structure used for calculating the signature, but never actually expose
 	//    that to clients. So then they just "hope" that the underlying library actually
 	//    adds the right Host header which was included in the signature calculation.
-	// We could either explicity require all Vault clients to explicitly add the Host header
+	// We could either explicitly require all Vault clients to explicitly add the Host header
 	// in the encoded request, or we could also implicitly infer it from the URI.
 	// We choose to support both -- allow you to explicitly set a Host header, but if not,
 	// infer one from the URI.
