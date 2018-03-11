@@ -194,7 +194,7 @@ Login with the username and password.
 ### Parameters
 
 - `username` `(string: <required>)` - Username for this user.
-- `password` `(string: <required>)` - Password for the autheticating user.
+- `password` `(string: <required>)` - Password for the authenticating user.
 
 ### Sample Payload
 
