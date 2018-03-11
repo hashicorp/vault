@@ -1080,7 +1080,7 @@ windows_timer_interval: 1
 
 # Enables encrypting data at-rest (on disk). Different key providers can be plugged in, but the default reads from
 # a JCE-style keystore. A single keystore can hold multiple keys, but the one referenced by
-# the "key_alias" is the only key that will be used for encrypt opertaions; previously used keys
+# the "key_alias" is the only key that will be used for encrypt operations; previously used keys
 # can still (and should!) be in the keystore and will be used on decrypt operations
 # (to handle the case of key rotation).
 #
