@@ -106,7 +106,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		Data: map[string]interface{}{},
 	}
 
-	// More about Okta's Auth transation state here:
+	// More about Okta's Auth transaction state here:
 	// https://developer.okta.com/docs/api/resources/authn#transaction-state
 
 	// If lockout failures are not configured to be hidden, the status needs to
