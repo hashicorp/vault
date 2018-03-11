@@ -961,7 +961,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	return nil
 }
 
-// addKeyUsages adds approrpiate key usages to the template given the creation
+// addKeyUsages adds appropriate key usages to the template given the creation
 // information
 func addKeyUsages(data *dataBundle, certTemplate *x509.Certificate) {
 	if data.params.IsCA {
