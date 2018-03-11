@@ -321,5 +321,5 @@ groups are pulled down from Okta.
 
 Configuration of the connection is done through the "config" and "policies"
 endpoints by a user with root access. Authentication is then done
-by suppying the two fields for "login".
+by supplying the two fields for "login".
 `
