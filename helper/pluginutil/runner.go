@@ -24,7 +24,7 @@ type Looker interface {
 
 // Wrapper interface defines the functions needed by the runner to wrap the
 // metadata needed to run a plugin process. This includes looking up Mlock
-// configuration and wrapping data in a respose wrapped token.
+// configuration and wrapping data in a response wrapped token.
 // logical.SystemView implementations satisfy this interface.
 type RunnerUtil interface {
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)

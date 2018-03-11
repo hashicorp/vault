@@ -349,7 +349,7 @@ func (c *LoginCommand) Run(args []string) int {
 
 // extractToken extracts the token from the given secret, automatically
 // unwrapping responses and handling error conditions if unwrap is true. The
-// result also returns whether it was a wrapped resonse that was not unwrapped.
+// result also returns whether it was a wrapped response that was not unwrapped.
 func (c *LoginCommand) extractToken(client *api.Client, secret *api.Secret, unwrap bool) (*api.Secret, bool, error) {
 	switch {
 	case secret == nil:
