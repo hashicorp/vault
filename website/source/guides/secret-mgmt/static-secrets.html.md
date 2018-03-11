@@ -136,7 +136,7 @@ strongly discouraged because it can lead to unexpected client-side behavior.
 
 Let's assume that the path convention in your organization is
 **`secret/<OWNER>/apikey/<APP>`** for API keys. To store the Google API key used
-by the engineering team, the path would be `secret/eng/apikey/Googl`. If you
+by the engineering team, the path would be `secret/eng/apikey/Google`. If you
 have an API key for New Relic owned by the DevOps team, the path would look like
 `secret/devops/apikey/New_Relic`.
 
