@@ -114,7 +114,7 @@ func Run(args []string) int {
 		return 1
 	}
 
-	// Only use colored UI if stdoout is a tty, and not disabled
+	// Only use colored UI if stdout is a tty, and not disabled
 	if isTerminal && color && format == "table" {
 		ui.Ui = &cli.ColoredUi{
 			ErrorColor: cli.UiColorRed,
