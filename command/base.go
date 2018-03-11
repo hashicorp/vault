@@ -177,7 +177,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded CA " +
 					"certificate to verify the Vault server's SSL certificate. This " +
-					"takes precendence over -ca-path.",
+					"takes precedence over -ca-path.",
 			})
 
 			f.StringVar(&StringVar{
