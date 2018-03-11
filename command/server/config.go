@@ -177,7 +177,7 @@ type Telemetry struct {
 	// check, it will *NOT* be activated. This setting overrides that behavior.
 	// Default: "false"
 	CirconusCheckForceMetricActivation string `hcl:"circonus_check_force_metric_activation"`
-	// CirconusCheckInstanceID serves to uniquely identify the metrics comming from this "instance".
+	// CirconusCheckInstanceID serves to uniquely identify the metrics coming from this "instance".
 	// It can be used to maintain metric continuity with transient or ephemeral instances as
 	// they move around within an infrastructure.
 	// Default: hostname:app
