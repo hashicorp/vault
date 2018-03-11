@@ -167,7 +167,7 @@ func ParseStringSlice(input string, sep string) []string {
 // * JSON string
 // * Base64 encoded JSON string
 // * `sep` separated list of values
-// * Base64-encoded string containting a `sep` separated list of values
+// * Base64-encoded string containing a `sep` separated list of values
 //
 // Note that the separator is ignored if the input is found to already be in a
 // structured format (e.g., JSON)
