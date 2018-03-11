@@ -513,7 +513,7 @@ func generateCert(ctx context.Context,
 		return nil, err
 	}
 	if data.params == nil {
-		return nil, errutil.InternalError{Err: "nil paramaters received from parameter bundle generation"}
+		return nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
 	if isCA {
@@ -560,7 +560,7 @@ func generateIntermediateCSR(b *backend, data *dataBundle) (*certutil.ParsedCSRB
 		return nil, err
 	}
 	if data.params == nil {
-		return nil, errutil.InternalError{Err: "nil paramaters received from parameter bundle generation"}
+		return nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
 	parsedBundle, err := createCSR(data)
@@ -666,7 +666,7 @@ func signCert(b *backend,
 		return nil, err
 	}
 	if data.params == nil {
-		return nil, errutil.InternalError{Err: "nil paramaters received from parameter bundle generation"}
+		return nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
 	data.params.IsCA = isCA

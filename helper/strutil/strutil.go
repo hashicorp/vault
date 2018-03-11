@@ -104,7 +104,7 @@ func ParseKeyValues(input string, out map[string]string, sep string) error {
 // * Base64 encoded string containing comma separated list of
 //   `<key>=<value>` pairs
 //
-// Input will be parsed into the output paramater, which should
+// Input will be parsed into the output parameter, which should
 // be a non-nil map[string]string.
 func ParseArbitraryKeyValues(input string, out map[string]string, sep string) error {
 	input = strings.TrimSpace(input)
