@@ -779,7 +779,7 @@ IMPROVEMENTS:
    client certificate verification when `tls_require_and_verify_client_cert` is
    enabled [GH-3034]
  * storage/cockroachdb: Add CockroachDB storage backend [GH-2713]
- * storage/couchdb: Add CouchhDB storage backend [GH-2880]
+ * storage/couchdb: Add CouchDB storage backend [GH-2880]
  * storage/mssql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Improve listing speed [GH-2945]
