@@ -17,7 +17,7 @@ type LockEntry struct {
 // order.
 //
 // This is only threadsafe if a process is using a single lock, or iterating
-// over the entire lock slice in order. Using a consistant order avoids
+// over the entire lock slice in order. Using a consistent order avoids
 // deadlocks because you can never have the following:
 //
 // Lock A, Lock B
