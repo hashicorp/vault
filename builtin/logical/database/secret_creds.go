@@ -64,7 +64,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
-				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+				return nil, fmt.Errorf("could not retrieve db with name: %s, got error: %s", role.DBName, err)
 			}
 		}
 
@@ -123,7 +123,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
-				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+				return nil, fmt.Errorf("could not retrieve db with name: %s, got error: %s", role.DBName, err)
 			}
 		}
 
