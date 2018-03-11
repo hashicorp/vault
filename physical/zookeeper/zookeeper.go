@@ -172,7 +172,7 @@ func (c *ZooKeeperBackend) ensurePath(path string, value []byte) error {
 	return nil
 }
 
-// cleanupLogicalPath is used to remove all empty nodes, begining with deepest one,
+// cleanupLogicalPath is used to remove all empty nodes, beginning with deepest one,
 // aborting on first non-empty one, up to top-level node.
 func (c *ZooKeeperBackend) cleanupLogicalPath(path string) error {
 	nodes := strings.Split(path, "/")

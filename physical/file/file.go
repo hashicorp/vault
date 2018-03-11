@@ -106,7 +106,7 @@ func (b *FileBackend) DeleteInternal(ctx context.Context, path string) error {
 	return err
 }
 
-// cleanupLogicalPath is used to remove all empty nodes, begining with deepest
+// cleanupLogicalPath is used to remove all empty nodes, beginning with deepest
 // one, aborting on first non-empty one, up to top-level node.
 func (b *FileBackend) cleanupLogicalPath(path string) error {
 	nodes := strings.Split(path, fmt.Sprintf("%c", os.PathSeparator))
