@@ -1177,7 +1177,7 @@ func (c *Core) unsealPart(ctx context.Context, config *SealConfig, key []byte, u
 		// Get stored keys and shamir combine into single master key. Unsealing with
 		// recovery keys currently does not support: 1) mixed stored and non-stored
 		// keys setup, nor 2) seals that support recovery keys but not stored keys.
-		// If insuffiencient shares are provided, shamir.Combine will error, and if
+		// If insufficient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
 		var masterKey []byte
 		if c.seal.StoredKeysSupported() {
