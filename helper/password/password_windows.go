@@ -12,7 +12,7 @@ var (
 	setConsoleModeProc = kernel32.MustFindProc("SetConsoleMode")
 )
 
-// Magic constant from MSDN to control whether charactesr read are
+// Magic constant from MSDN to control whether characters read are
 // repeated back on the console.
 //
 // http://msdn.microsoft.com/en-us/library/windows/desktop/ms686033(v=vs.85).aspx
