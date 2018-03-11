@@ -2445,7 +2445,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	}
 }
 
-func TestBackend_Root_Idempotentcy(t *testing.T) {
+func TestBackend_Root_Idempotency(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,
