@@ -290,7 +290,7 @@ func (b *Etcd2Backend) nodePathDir(key string) string {
 }
 
 // nodePathLock returns an etcd directory path used specifically for semaphore
-// indicies based on the given key.
+// indices based on the given key.
 func (b *Etcd2Backend) nodePathLock(key string) string {
 	return filepath.Join(b.path, filepath.Dir(key), Etcd2NodeLockPrefix+filepath.Base(key)+"/")
 }
