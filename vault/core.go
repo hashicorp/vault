@@ -2227,7 +2227,7 @@ func (c *Core) clearLeader(uuid string) error {
 	return err
 }
 
-// emitMetrics is used to periodically expose metrics while runnig
+// emitMetrics is used to periodically expose metrics while running
 func (c *Core) emitMetrics(stopCh chan struct{}) {
 	for {
 		select {
