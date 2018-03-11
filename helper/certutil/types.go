@@ -211,7 +211,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 			result.CAChain = append(result.CAChain, certBlock)
 		}
 
-	// For backwards compabitibility
+	// For backwards compatibility
 	case len(c.IssuingCA) > 0:
 		pemBlock, _ = pem.Decode([]byte(c.IssuingCA))
 		if pemBlock == nil {
