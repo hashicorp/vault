@@ -310,7 +310,7 @@ func (e *Etcd2Backend) HAEnabled() bool {
 	return e.haEnabled
 }
 
-// Etcd2Lock emplements a lock using and Etcd2 backend.
+// Etcd2Lock implements a lock using and Etcd2 backend.
 type Etcd2Lock struct {
 	kAPI                                 client.KeysAPI
 	value, semaphoreDirKey, semaphoreKey string
