@@ -1680,7 +1680,7 @@ implemented based on that inferred type.
 
 An EC2 instance is authenticated using the PKCS#7 signature of the instance identity
 document and a client created nonce. This nonce should be unique and should be used by
-the instance for all future logins, unless 'disallow_reauthenitcation' option on the
+the instance for all future logins, unless 'disallow_reauthentication' option on the
 registered role is enabled, in which case client nonce is optional.
 
 First login attempt, creates a whitelist entry in Vault associating the instance to the nonce
