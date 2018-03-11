@@ -96,7 +96,7 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		},
 	}
 
-	// Authnetication info
+	// Authentication info
 	var schemaAndUser string
 	var useAddAuth bool
 	schemaAndUser, useAddAuth = conf["auth_info"]
