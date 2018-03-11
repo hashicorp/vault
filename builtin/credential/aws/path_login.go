@@ -1441,7 +1441,7 @@ func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, 
 	// The use cases we want to support, in order of increasing complexity, are:
 	// 1. All defaults (client assumes sts.amazonaws.com and server has no override)
 	// 2. Alternate STS regions: client wants to go to a specific region, in which case
-	//    Vault must be confiugred with that endpoint as well. The client's signed request
+	//    Vault must be configured with that endpoint as well. The client's signed request
 	//    will include a signature over what the client expects the Host header to be,
 	//    so we cannot change that and must match.
 	// 3. Alternate STS regions with a proxy that is transparent to Vault's clients.
