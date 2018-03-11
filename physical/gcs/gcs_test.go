@@ -61,7 +61,7 @@ func TestGCSBackend(t *testing.T) {
 			}
 
 			// ignore errors in deleting a single object, we only care about deleting the bucket
-			// occassionally we get "storage: object doesn't exist" which is fine
+			// occasionally we get "storage: object doesn't exist" which is fine
 			bucket.Object(objAttrs.Name).Delete(context.Background())
 		}
 
