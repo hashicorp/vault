@@ -407,7 +407,7 @@ func TestTransit_Export_EncryptionKey_DoesNotExportHMACKey(t *testing.T) {
 		t.Error("could not cast to keys object")
 	}
 	if len(hmacKeys) != len(encryptionKeys) {
-		t.Errorf("hmac (%d) and encyryption (%d) key count don't match",
+		t.Errorf("hmac (%d) and encryption (%d) key count don't match",
 			len(hmacKeys), len(encryptionKeys))
 	}
 
