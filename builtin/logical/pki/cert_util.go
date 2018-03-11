@@ -383,7 +383,7 @@ func validateNames(data *dataBundle, names []string) string {
 						splitDisplay := strings.Split(data.req.DisplayName, "@")
 						if len(splitDisplay) == 2 {
 							// Compare the sanitized name against the hostname
-							// portion of the email address in the roken
+							// portion of the email address in the broken
 							// display name
 							if strings.HasSuffix(sanitizedName, "."+splitDisplay[1]) {
 								continue
