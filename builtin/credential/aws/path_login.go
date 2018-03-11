@@ -815,7 +815,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 
 // handleRoleTagLogin is used to fetch the role tag of the instance and
 // verifies it to be correct.  Then the policies for the login request will be
-// set off of the role tag, if certain creteria satisfies.
+// set off of the role tag, if certain criteria satisfies.
 func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry, instance *ec2.Instance) (*roleTagLoginResponse, error) {
 	if roleEntry == nil {
 		return nil, fmt.Errorf("nil role entry")
