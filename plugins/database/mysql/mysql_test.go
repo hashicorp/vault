@@ -186,7 +186,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	// Test with a manualy prepare statement
+	// Test with a manually prepare statement
 	statements.CreationStatements = testMySQLRolePreparedStmt
 
 	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
