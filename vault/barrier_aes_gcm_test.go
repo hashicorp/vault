@@ -157,7 +157,7 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Check for migraiton
+	// Check for migration
 	out, err := inm.Get(context.Background(), barrierInitPath)
 	if err != nil {
 		t.Fatalf("err: %v", err)
