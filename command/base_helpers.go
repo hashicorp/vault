@@ -151,7 +151,7 @@ func parseArgsDataString(stdin io.Reader, args []string) (map[string]string, err
 	return result, nil
 }
 
-// truncateToSeconds truncates the given duaration to the number of seconds. If
+// truncateToSeconds truncates the given duration to the number of seconds. If
 // the duration is less than 1s, it is returned as 0. The integer represents
 // the whole number unit of seconds for the duration.
 func truncateToSeconds(d time.Duration) int {
