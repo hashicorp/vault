@@ -222,7 +222,7 @@ func (c *LoginCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
-	// If the user provided a token, pass it along to the auth provier.
+	// If the user provided a token, pass it along to the auth provider.
 	if authMethod == "token" && len(args) > 0 && !strings.Contains(args[0], "=") {
 		args = append([]string{"token=" + args[0]}, args[1:]...)
 	}
