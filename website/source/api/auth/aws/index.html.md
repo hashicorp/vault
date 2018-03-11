@@ -527,7 +527,7 @@ $ curl \
 
 Registers a role in the method. Only those instances or principals which
 are using the role registered using this endpoint, will be able to perform
-the login operation. Contraints can be specified on the role, that are
+the login operation. Constraints can be specified on the role, that are
 applied on the instances or principals attempting to login. At least one
 constraint must be specified on the role. The available constraints you
 can choose are dependent on the `auth_type` of the role and, if the
