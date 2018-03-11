@@ -178,7 +178,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	wrappedSecret := new(Secret)
 	buf := bytes.NewBufferString(secret.Data["response"].(string))
 	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
-		return nil, fmt.Errorf("error unmarshaling wrapped secret: %s", err)
+		return nil, fmt.Errorf("error unmarshalling wrapped secret: %s", err)
 	}
 
 	return wrappedSecret, nil

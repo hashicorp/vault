@@ -185,7 +185,7 @@ func (kem deprecatedKeyEntryMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&intermediate)
 }
 
-// MarshalJSON implements JSON unmarshaling
+// MarshalJSON implements JSON unmarshalling
 func (kem deprecatedKeyEntryMap) UnmarshalJSON(data []byte) error {
 	intermediate := map[string]KeyEntry{}
 	if err := jsonutil.DecodeJSON(data, &intermediate); err != nil {
