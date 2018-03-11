@@ -13,7 +13,7 @@ type LockEntry struct {
 	sync.RWMutex
 }
 
-// CreateLocks returns an array so that the locks can be itterated over in
+// CreateLocks returns an array so that the locks can be iterated over in
 // order.
 //
 // This is only threadsafe if a process is using a single lock, or iterating
