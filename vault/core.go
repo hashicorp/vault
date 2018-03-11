@@ -830,7 +830,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 		switch {
 		case checkExists == false:
-			// No existence check, so always treate it as an update operation, which is how it is pre 0.5
+			// No existence check, so always treat it as an update operation, which is how it is pre 0.5
 			req.Operation = logical.UpdateOperation
 		case resourceExists == true:
 			// It exists, so force an update operation
