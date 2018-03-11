@@ -258,7 +258,7 @@ func TestTransit_Export_KeysNotMarkedExportable_ReturnsError(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !rsp.IsError() {
-		t.Fatal("Key not marked as exportble but was exported.")
+		t.Fatal("Key not marked as exportable but was exported.")
 	}
 }
 
