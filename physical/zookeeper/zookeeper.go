@@ -312,7 +312,7 @@ func (c *ZooKeeperBackend) List(ctx context.Context, prefix string) ([]string, e
 			}
 		} else if stat.DataLength == 0 {
 			// No, we cannot differentiate here on number of children as node
-			// can have all it leafs remoed, and it still is a node.
+			// can have all it leafs removed, and it still is a node.
 			children = append(children, key+"/")
 		} else {
 			children = append(children, key[1:])
