@@ -81,7 +81,7 @@ func (c *AuthCommand) Run(args []string) int {
 				"WARNING! The -method-help flag is deprecated. Please use "+
 					"\"vault auth help\" instead. This flag will be removed in "+
 					"Vault 0.11 (or later).") + "\n")
-			// Parse the args to pull out the method, surpressing any errors because
+			// Parse the args to pull out the method, suppressing any errors because
 			// there could be other flags that we don't care about.
 			f := flag.NewFlagSet("", flag.ContinueOnError)
 			f.Usage = func() {}
