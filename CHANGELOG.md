@@ -653,7 +653,7 @@ FEATURES:
  * **GCP IAM Auth Backend**: There is now an authentication backend that allows
    using GCP IAM credentials to retrieve Vault tokens. This is available as
    both a plugin and built-in to Vault.
- * **PingID Push Support for Path-Baased MFA (Enterprise)**: PingID Push can
+ * **PingID Push Support for Path-Based MFA (Enterprise)**: PingID Push can
    now be used for MFA with the new path-based MFA introduced in Vault
    Enterprise 0.8.
  * **Permitted DNS Domains Support in PKI**: The `pki` backend now supports
