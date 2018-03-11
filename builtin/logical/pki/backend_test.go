@@ -592,7 +592,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("expected an error response but did not get one")
 				}
 				if !strings.Contains(resp.Data["error"].(string), "2048") {
-					return fmt.Errorf("recieved an error but not about a 1024-bit key, error was: %s", resp.Data["error"].(string))
+					return fmt.Errorf("received an error but not about a 1024-bit key, error was: %s", resp.Data["error"].(string))
 				}
 
 				return nil
