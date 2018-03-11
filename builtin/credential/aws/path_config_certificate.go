@@ -423,7 +423,7 @@ type awsPublicCert struct {
 }
 
 const pathConfigCertificateSyn = `
-Adds the AWS Public Key that is used to verify the PKCS#7 signature of the identidy document.
+Adds the AWS Public Key that is used to verify the PKCS#7 signature of the identity document.
 `
 
 const pathConfigCertificateDesc = `
