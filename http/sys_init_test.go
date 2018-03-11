@@ -62,7 +62,7 @@ func TestSysInit_pgpKeysEntries(t *testing.T) {
 
 	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
 		"secret_shares":   5,
-		"secret_threhold": 3,
+		"secret_threshold": 3,
 		"pgp_keys":        []string{"pgpkey1"},
 	})
 	testResponseStatus(t, resp, 400)
