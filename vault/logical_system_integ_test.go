@@ -249,7 +249,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 		t.Fatal("invalid command")
 	}
 
-	// Trigger a sha256 mistmatch or missing plugin error
+	// Trigger a sha256 mismatch or missing plugin error
 	if mismatch {
 		req = logical.TestRequest(t, logical.UpdateOperation, "sys/plugins/catalog/mock-plugin")
 		req.Data = map[string]interface{}{
