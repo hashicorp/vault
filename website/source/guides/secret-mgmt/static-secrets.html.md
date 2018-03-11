@@ -123,7 +123,7 @@ You will perform the following:
 
 ![Personas Introduction](/assets/images/vault-static-secrets.png)
 
-Step 1 through 3 are performed by `devops` psersona.  Step 4 describes the
+Step 1 through 3 are performed by `devops` persona.  Step 4 describes the
 commands that `apps` persona runs to read secrets from Vault.
 
 ### <a name="step1"></a>Step 1: Store the Google API key
