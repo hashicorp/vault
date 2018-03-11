@@ -282,7 +282,7 @@ func EquivalentSlices(a, b []string) bool {
 	return true
 }
 
-// StrListDelete removes the first occurance of the given item from the slice
+// StrListDelete removes the first occurrence of the given item from the slice
 // of strings if the item exists.
 func StrListDelete(s []string, d string) []string {
 	if s == nil {
