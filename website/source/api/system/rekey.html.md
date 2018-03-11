@@ -12,7 +12,7 @@ The `/sys/rekey` endpoints are used to rekey the unseal keys for Vault.
 
 On seals that support stored keys (e.g. HSM PKCS11), the recovery key share(s)
 can be provided to rekey the master key since no unseal keys are available. The
-secret shares, secret threshold, and stored shares parameteres must be set to 1.
+secret shares, secret threshold, and stored shares parameters must be set to 1.
 Upon successful rekey, no split unseal key shares are returned.
 
 ## Read Rekey Progress
