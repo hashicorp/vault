@@ -186,7 +186,7 @@ If no "creation_cql" parameter is given, a default will be used:
 This default should be suitable for Cassandra installations using the password
 authenticator but not configured to use authorization.
 
-Similarly, the "rollback_cql" is used if user creation fails, in the absense of
+Similarly, the "rollback_cql" is used if user creation fails, in the absence of
 Cassandra transactions. The default should be suitable for almost any
 instance of Cassandra:
 
