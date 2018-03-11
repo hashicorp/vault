@@ -18,13 +18,11 @@ guide provides guidance in the best practices of _Vault Enterprise_ implementati
 through use of a reference architecture. This example is to convey a general
 architecture, which is likely to be adapted to accommodate the specific needs of
 each implementation.
-- [Multi-Tenant Pattern](/guides/operations/multi-tenant.html) guide provides
-guidance in creating a multi-tenant environment.
 - [Production Hardening](/guides/operations/production.html) guide provides
 guidance on best practices for a production hardened deployment of Vault.
 The recommendations are based on the [security model](/docs/internals/security.html)
 and focus on defense in depth.
-- [Replication Setup & Guidance](/guides/operations/replication.html)
+- **[Enterprise Only]** [Replication Setup & Guidance](/guides/operations/replication.html)
 walks you through the commands to activate the Vault servers in replication mode.
 Please note that [Vault Replication](/docs/vault-enterprise/replication/index.html)
 is a Vault Enterprise feature.
