@@ -25,7 +25,7 @@ const (
 	Etcd2NodeFilePrefix = "."
 
 	// The lock prefix can (and probably should) cause an entry to be excluded
-	// from diretory listings, so "_" works here.
+	// from directory listings, so "_" works here.
 	Etcd2NodeLockPrefix = "_"
 
 	// The delimiter is the same as the `-C` flag of etcdctl.
