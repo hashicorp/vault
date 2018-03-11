@@ -20,7 +20,7 @@ import (
 
 const (
 	// Ideally, this prefix would match the "_" used in the file backend, but
-	// that prefix has special meaining in etcd. Specifically, it excludes those
+	// that prefix has special meaning in etcd. Specifically, it excludes those
 	// entries from directory listings.
 	Etcd2NodeFilePrefix = "."
 
