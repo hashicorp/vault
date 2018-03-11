@@ -1245,7 +1245,7 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 	return nil, nil
 }
 
-// handleAudtedHeaderDelete deletes the header with the given name
+// handleAuditedHeaderDelete deletes the header with the given name
 func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
