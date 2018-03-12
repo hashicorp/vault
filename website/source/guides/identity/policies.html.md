@@ -8,7 +8,7 @@ description: |-
 
 # Policies
 
-In Vault, use policies to govern the behavior of clients and instrument
+In Vault, we use policies to govern the behavior of clients and instrument
 Role-Based Access Control (RBAC) by specifying access privileges
 (_authorization_).
 
@@ -18,13 +18,13 @@ default. The `root` policy is a special policy that gives superuser access to
 _everything_ in Vault. This allows the superuser to set up initial policies,
 tokens, etc.
 
-In addition, there is another built-in policy,
-[**`default`**](/docs/concepts/policies.html#default-policy) gets created. The
+In addition, another built-in policy,
+[**`default`**](/docs/concepts/policies.html#default-policy), is created. The
 `default` policy is attached to all tokens and provides common permissions.
 
 Everything in Vault is path based, and admins write policies to grant or forbid
 access to certain paths and operations in Vault. Vault operates on a **secure by
-default** standard, and as such as empty policy grants **no permission** in the
+default** standard, and as such, an empty policy grants **no permissions** in the
 system.
 
 
@@ -62,7 +62,7 @@ client apps
 
 ## Challenge
 
-Since Vault centrally secure, store, and access control secrets across
+Since Vault centrally secures, stores, and controls access to secrets across
 distributed infrastructure and applications, it is critical to control
 permissions before any user or machine can gain access.
 
@@ -157,14 +157,14 @@ The basic workflow of creating policies is:
 This guide demonstrates basic policy authoring and management tasks.
 
 1. [Write ACL policies in HCL format](#step1)
-2. [Create policies](#step2)
-3. [View existing policies](#step3)
-4. [Check capabilities of a token](#step4)
+1. [Create policies](#step2)
+1. [View existing policies](#step3)
+1. [Check capabilities of a token](#step4)
 
 
 ### <a name="step1"></a>Step 1: Write ACL policies in HCL format
 
-Remember, empty policy grants **no permission** in the system. Therefore, ACL
+Remember, an mpty policy grants **no permission** in the system. Therefore, ACL
 policies are defined for each path.
 
 ```shell
@@ -173,9 +173,9 @@ path "<PATH>" {
 }
 ```
 
--> The path can have a wildcard ("`*`") specifying at the end to allow for
+-> The path can have a wildcard ("`*`") at the end to allow for
 namespacing. For example, "`secret/training_*`" grants permissions on any
-path starts with "`secret/training_`" (e.g. `secret/training_vault`).
+path starting with "`secret/training_`" (e.g. `secret/training_vault`).
 
 Define one or more [capabilities](/docs/concepts/policies.html#capabilities) on each path to control operations that are
 permitted.
@@ -191,7 +191,7 @@ permitted.
 
 #### Policy requirements
 
-First step in creating policies is to **gather policy requirements**.
+The first step in creating policies is to **gather policy requirements**.
 
 **Example:**
 
@@ -218,7 +218,7 @@ secret engine for a new Vault user to access and write secrets.
 - Create and manage ACL policies
 
 
-Now, you are ready to author policies to fulfill the requirements.
+Now, you are ready to author policies to fulfill these requirements.
 
 #### Example policy for admin
 
@@ -331,7 +331,7 @@ passing your modified policy (`*.hcl`).
 
 #### API call using cURL
 
-To create a policy, use `/sys/policy` endpoint:
+To create a policy, use the `/sys/policy` endpoint:
 
 ```shell
 $ curl --header "X-Vault-Token: <TOKEN>" \
@@ -340,7 +340,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
        <VAULT_ADDRESS>/v1/sys/policy/<POLICY_NAME>
 ```
 
-Where `<TOKEN>` is your valid token, and `<PAYLOAD>` includes policy name and
+Where `<TOKEN>` is your valid token, and `<PAYLOAD>` includes the policy name and
 stringfied policy.
 
 **Example:**
@@ -367,9 +367,9 @@ $ cat provisioner-payload.json
 }
 ```
 
--> NOTE: You can also use `/sys/policies` endpoint which is used to manage
+-> NOTE: You can also use the `/sys/policies` endpoint which is used to manage
 ACL, RGP, and EGP policies in Vault (RGP and EGP policies are enterprise-only
-features). To list policies, invoke `/sys/policies/acl` endpoint.
+features). To list policies, invoke the `/sys/policies/acl` endpoint.
 
 **NOTE:** To update an existing policy, simply re-run the same command by
 passing your modified policy in the request payload (`*.json`).
@@ -476,19 +476,19 @@ token_renewable	true
 token_policies 	[admin default]
 ```
 
-Now, fetch the capabilities of this token on `sys/auth/approle` path.
+Now, fetch the capabilities of this token on the `sys/auth/approle` path.
 
 ```plaintext
 $ vault token capabilities 79ecdd41-9bac-1ac7-1ee4-99fbce796221 sys/auth/approle
 Capabilities: [create delete read sudo update]
 ```
 
-The result should match the policy rule you wrote on `sys/auth/*` path. You can
+The result should match the policy rule you wrote on the `sys/auth/*` path. You can
 repeat the steps to generate a token for `provisioner` and check its
 capabilities on paths.
 
 
-In the absence of token, it returns capabilities of current token invoking this
+In the absence of a token, it returns the capabilities of the current token invoking this
 command.
 
 ```shell
@@ -502,7 +502,7 @@ Use the `sys/capabilities` endpoint.
 
 **Example:**
 
-First, create a token attached to `admin` policy:
+First, create a token attached to the `admin` policy:
 
 ```shell
 $ curl --request POST --header "X-Vault-Token: ..." --data '{ "policies":"admin" }' \
@@ -529,7 +529,7 @@ $ curl --request POST --header "X-Vault-Token: ..." --data '{ "policies":"admin"
 }
 ```
 
-Now, fetch the capabilities of this token on `sys/auth/approle` path.
+Now, fetch the capabilities of this token on the `sys/auth/approle` path.
 
 ```shell
 # Request payload
@@ -568,12 +568,12 @@ $ curl --request POST --header "X-Vault-Token: ..." --data @payload.json \
 }
 ```
 
-The result should match the policy rule you wrote on `sys/auth/*` path. You can
+The result should match the policy rule you wrote on the `sys/auth/*` path. You can
 repeat the steps to generate a token for `provisioner` and check its
 capabilities on paths.
 
-To check current token's capabilities permitted on a path, use
-`sys/capabilities-self` endpoint.
+To check the current token's capabilities permitted on a path, use
+the `sys/capabilities-self` endpoint.
 
 ```plaintext
 $ curl --request POST --header "X-Vault-Token: ..." --data '{"path":"sys/auth/approle"}' \
@@ -584,5 +584,5 @@ $ curl --request POST --header "X-Vault-Token: ..." --data '{"path":"sys/auth/ap
 ## Next steps
 
 In this guide, you learned how to write policies based on given policy
-requirements. Next, [AppRole Pull Authentication](/guides/identity/authentication.html)
+requirements. Next, the [AppRole Pull Authentication](/guides/identity/authentication.html)
 guide demonstrates how to associate policies to a role.
