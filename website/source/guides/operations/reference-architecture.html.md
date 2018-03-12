@@ -13,30 +13,59 @@ The goal of this document is to recommend deployment practices of
 _HashiCorp Vault_. This reference architecture conveys a general architecture
 that should be adapted to accommodate the specific needs of each implementation.
 
+The following topics are addressed in this guide:
+
+- [Deployment Topology for One datacenter](#one-dc)
+    - [Network Connectivity](#network-connectivity-details)
+    - [Deployment System Requirements](#deployment-system-requirements)
+    - [Hardware Considerations](#hardware-considerations)
+    - [Load Balancing](#load-balancing)
+    - [High Availability](#high-availability)
+- [Deployment Topology for Multiple Datacenters](#multi-dc)
+    - [Vault Replication](#vault-replication)
+- [Additional References](#additional-references)
+
 -> This document assumes Vault uses Consul as the [storage
 backend](/docs/internals/architecture.html) since that is the recommended
 storage backend for production deployments.
 
-The following topics are addressed in this guide:
+## <a name="one-dc"></a>Deployment Topology for One datacenter
 
-- [Deployment System Requirements](#deployment-system-requirements)
-- [Hardware Considerations](#hardware-considerations)
-- [Other Considerations](#other-considerations)
-- [Load Balancing Using Consul Interface](#consul-lb)
-- [Load Balancing Using External Load Balancer](#external-lb)
-- [High Availability](#high-availability)
-- [Vault Replication](#vault-replication)
-- [Additional References](#additional-references)
+### Reference Diagram
 
+Eight Nodes with [Consul Storage Backend](/docs/configuration/storage/consul.html)
+![Reference diagram](/assets/images/vault-ref-arch-2.png)
 
+#### Design Summary
 
-## Deployment System Requirements
+This design is the recommended architecture for production environments, as it
+is the most flexible and resilient design. It allows Consul servers to be
+disparate from the Vault servers, such that software upgrades can be performed
+easier, as well as the fact that server sizing/flexibility can be more easily
+accommodated.  Vault to Consul backend connectivity is over HTTP and should be
+secured with TLS as well as a Consul token to provide encryption of all traffic.
+
+#### Failure Tolerance
+
+Typical distribution in a cloud environment is to spread Consul/Vault nodes into
+separate Availability Zones (AZs) within a high bandwidth, low latency network,
+such as an AWS Region. The diagram below shows Vault and Consul spread between
+AZs, with Consul servers in Redundancy Zone configurations, promoting a single
+voting member per AZ, providing both Zone and Node level failure protection.
+
+![Failure tolerance|40%](/assets/images/vault-ref-arch-3.png)
+
+### Network Connectivity Details
+
+![Network Connectivity Details](/assets/images/vault-ref-arch.png)
+
+### Deployment System Requirements
 
 The following table provides guidelines for server sizing. Of particular note is
 the strong recommendation to avoid non-fixed performance CPUs, or “Burstable
 CPU” in AWS terms, such as T-series instances.
 
-### Vault Servers
+#### Sizing for Vault Servers
 
 | Size  | CPU      | Memory          | Disk      | Typical Cloud Instance Types               |
 |-------|----------|-----------------|-----------|--------------------------------------------|
@@ -47,7 +76,7 @@ CPU” in AWS terms, such as T-series instances.
 |       |          |                 |           | **Azure:** Standard_D4_v3, Standard_D8_v3  |
 |       |          |                 |           | **GCE:** n1-standard-16, n1-standard-32    |
 
-### Consul Servers
+#### Sizing for Consul Servers
 
 | Size  | CPU      | Memory          | Disk      | Typical Cloud Instance Types               |
 |-------|----------|-----------------|-----------|--------------------------------------------|
@@ -58,8 +87,7 @@ CPU” in AWS terms, such as T-series instances.
 |       |          |                 |           | **Azure:** Standard_D4_v3, Standard_D5_v3  |
 |       |          |                 |           | **GCE:** n1-standard-32, n1-standard-64    |
 
-
-## Hardware Considerations
+### Hardware Considerations
 
 The small size category would be appropriate for most initial production
 deployments, or for development/testing environments.  
@@ -96,38 +124,13 @@ Consul cluster members, communications with external systems (per auth or secret
 engine configuration, and some audit logging configurations) and responses
 consume network bandwidth.
 
-## Other Considerations
+### Other Considerations
 
-[Vault Production Hardening Recommendations](/guides/operations/production.html).
+[Vault Production Hardening Recommendations](/guides/operations/production.html)
+provides guidance on best practices for a production hardened deployment of
+Vault.
 
-### Network Connectivity Details
-
-![Network Connectivity Details](/assets/images/vault-ref-arch.png)
-
-### Reference Diagram
-
-Eight Nodes with Consul Storage Backend
-![Reference diagram](/assets/images/vault-ref-arch-2.png)
-
-#### Design Summary
-
-This design is the recommended architecture for production environments, as it
-is the most flexible and resilient design. It allows Consul servers to be
-disparate from the Vault servers, such that software upgrades can be performed
-easier, as well as the fact that server sizing/flexibility can be more easily
-accommodated.  Vault to Consul backend connectivity is over HTTP and should be
-secured with TLS as well as a Consul token to provide encryption of all traffic.
-
-#### Failure Tolerance
-
-Typical distribution in a dloud environment is to spread Consul/Vault nodes into
-separate Availability Zones (AZs) within a high bandwidth, low latency network,
-such as an AWS Region. The diagram below shows Vault and Consul spread between
-AZs, with Consul servers in Redundancy Zone configurations, promoting a single
-voting member per AZ, providing both Zone and Node level failure protection.
-
-![Failure tolerance|40%](/assets/images/vault-ref-arch-3.png)
-
+## Load Balancing
 
 ### <a name="consul-lb"></a>Load Balancing Using Consul Interface
 
@@ -191,8 +194,6 @@ configured](/docs/configuration/listener/tcp.html#proxy_protocol_behavior)
 to support this functionality.
 
 
-## High Availability and Replication
-
 ### High Availability
 
 A Vault cluster is the high-available unit of deployment within one datacenter.
@@ -205,7 +206,14 @@ concepts](/docs/concepts/ha.html).
 High-availability and data locality across datacenters requires
 Vault Enterprise.
 
+
+## <a name="multi-dc"></a>Deployment Topology for Multiple Datacenters
+
+<img src="/assets/images/vault-ref-arch-6.png">
+
 ### Vault Replication
+
+~> **Enterprise Only:** Vault replication is a part of _Vault Enterprise_.
 
 HashiCorp Vault Enterprise provides two modes of replication, allowing for a
 global secrets management solution. The [Vault
