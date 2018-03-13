@@ -265,7 +265,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
-					"internal_ui_show_mount": &framework.FieldSchema{
+					"_ui_show_mount": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Description: `Toggle whether this shows on sys/internal/ui/mounts`,
 					},
@@ -306,7 +306,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
-					"internal_ui_show_mount": &framework.FieldSchema{
+					"_ui_show_mount": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Description: `Toggle whether this shows on sys/internal/ui/mounts`,
 					},
@@ -1475,7 +1475,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
 		if entry.Config.InternalUIShowMount != nil {
-			entryConfig["internal_ui_show_mount"] = entry.Config.InternalUIShowMount
+			entryConfig["_ui_show_mount"] = entry.Config.InternalUIShowMount
 		}
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
@@ -1730,7 +1730,7 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 	}
 
 	if mountEntry.Config.InternalUIShowMount != nil {
-		resp.Data["internal_ui_show_mount"] = mountEntry.Config.InternalUIShowMount
+		resp.Data["_ui_show_mount"] = mountEntry.Config.InternalUIShowMount
 	}
 
 	return resp, nil
@@ -1918,7 +1918,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	if rawVal, ok := data.GetOk("internal_ui_show_mount"); ok {
+	if rawVal, ok := data.GetOk("_ui_show_mount"); ok {
 		internalUIShowMounts := rawVal.(bool)
 
 		oldVal := mountEntry.Config.InternalUIShowMount
@@ -2097,7 +2097,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
 		if entry.Config.InternalUIShowMount != nil {
-			entryConfig["internal_ui_show_mount"] = entry.Config.InternalUIShowMount
+			entryConfig["_ui_show_mount"] = entry.Config.InternalUIShowMount
 		}
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info

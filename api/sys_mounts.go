@@ -135,7 +135,7 @@ type MountConfigInput struct {
 	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	InternalUIShowMount      *bool    `json:"internal_ui_show_mount,omitempty" structs:"internal_ui_show_mount" mapstructure:"internal_ui_show_mount"`
+	InternalUIShowMount      *bool    `json:"_ui_show_mount,omitempty" structs:"_ui_show_mount" mapstructure:"_ui_show_mount"`
 }
 
 type MountOutput struct {
@@ -154,5 +154,5 @@ type MountConfigOutput struct {
 	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	InternalUIShowMount      *bool    `json:"internal_ui_show_mount,omitempty" structs:"internal_ui_show_mount" mapstructure:"internal_ui_show_mount"`
+	InternalUIShowMount      *bool    `json:"_ui_show_mount,omitempty" structs:"_ui_show_mount" mapstructure:"_ui_show_mount"`
 }
