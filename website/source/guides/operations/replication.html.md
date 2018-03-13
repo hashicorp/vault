@@ -8,7 +8,7 @@ description: |-
 
 # Replication Setup &amp; Guidance
 
-~> **Enterprise Only:** Vault replication is a part of _Vault Enterprise_.
+~> **Enterprise Only:** Vault replication feature is a part of _Vault Enterprise_.
 
 If you're unfamiliar with Vault Replication concepts, please first look at the
 [general information page](/docs/vault-enterprise/replication/index.html). More

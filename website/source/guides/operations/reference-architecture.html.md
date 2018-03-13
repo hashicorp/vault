@@ -213,7 +213,7 @@ Vault Enterprise.
 
 ### Vault Replication
 
-~> **Enterprise Only:** Vault replication is a part of _Vault Enterprise_.
+~> **Enterprise Only:** Vault replication feature is a part of _Vault Enterprise_.
 
 HashiCorp Vault Enterprise provides two modes of replication, allowing for a
 global secrets management solution. The [Vault
@@ -247,7 +247,9 @@ within that replication set must use an HSM as well.
   secret sharing method), the clusters within that replication set can be mixed,
   such that some may use an HSM, others may use Shamir.
 
-For sake of this discussion, the cloud auto-unseal feature is treated as an HSM.
+For sake of this discussion, the [cloud
+auto-unseal](/docs/enterprise/auto-unseal/index.html) feature is treated as an
+HSM.
 
 
 #### Performance Replication
