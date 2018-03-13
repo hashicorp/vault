@@ -56,7 +56,7 @@ The scenario described in this guide introduces the following personas:
 - **`root`** sets up initial policies for `admin`
 - **`admin`** is empowered with managing a Vault infrastructure for a team or
 organizations
-- **`provisioner`** configures secret backends and creates policies for
+- **`provisioner`** configures secret engines and creates policies for
 client apps
 
 
@@ -92,13 +92,13 @@ Since this guide demonstrates the creation of an **`admin`** policy, log in with
 permissions:
 
 ```shell
-# Manage auth backends broadly across Vault
+# Manage auth methods broadly across Vault
 path "auth/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
-# List, create, update, and delete auth backends
+# List, create, update, and delete auth methods
 path "sys/auth/*"
 {
   capabilities = ["create", "read", "update", "delete", "sudo"]
@@ -122,7 +122,7 @@ path "secret/*"
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
-# Manage and manage secret backends broadly across Vault.
+# Manage and manage secret engines broadly across Vault.
 path "sys/mounts/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
@@ -202,8 +202,8 @@ providing bespoke support to Vault users.
 
 `admin` must be able to:
 
-- Mount and manage auth backends broadly across Vault
-- Mount and manage secret backends broadly across Vault
+- Mount and manage auth methods broadly across Vault
+- Mount and manage secret engines broadly across Vault
 - Create and manage ACL policies broadly across Vault
 - Read system health check
 
@@ -213,8 +213,8 @@ secret engine for a new Vault user to access and write secrets.
 
 `provisioner` must be able to:
 
-- Mount and manage auth backends
-- Mount and manage secret backends
+- Mount and manage auth methods
+- Mount and manage secret engines
 - Create and manage ACL policies
 
 
@@ -225,13 +225,13 @@ Now, you are ready to author policies to fulfill these requirements.
 `admin-policy.hcl`
 
 ```shell
-# Manage auth backends broadly across Vault
+# Manage auth methods broadly across Vault
 path "auth/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
-# List, create, update, and delete auth backends
+# List, create, update, and delete auth methods
 path "sys/auth/*"
 {
   capabilities = ["create", "read", "update", "delete", "sudo"]
@@ -255,7 +255,7 @@ path "secret/*"
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
-# Manage and manage secret backends broadly across Vault.
+# Manage and manage secret engines broadly across Vault.
 path "sys/mounts/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
@@ -273,13 +273,13 @@ path "sys/health"
 `provisioner-policy.hcl`
 
 ```shell
-# Manage auth backends broadly across Vault
+# Manage auth methods broadly across Vault
 path "auth/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
-# List, create, update, and delete auth backends
+# List, create, update, and delete auth methods
 path "sys/auth/*"
 {
   capabilities = ["create", "read", "update", "delete", "sudo"]
@@ -400,7 +400,7 @@ $ vault policy read <POLICY_NAME>
 # Read admin policy
 $ vault policy read admin
 
-# Mount and manage auth backends broadly across Vault
+# Mount and manage auth methods broadly across Vault
 path "auth/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
@@ -438,7 +438,7 @@ Read the admin policy:
 $ curl --request GET --header "X-Vault-Token: ..." https://vault.rocks/v1/sys/policy/admin | jq
 {
   "name": "admin",
-  "rules": "# Mount and manage auth backends broadly across Vault\npath \"auth/*\"\n{\n  ...",
+  "rules": "# Mount and manage auth methods broadly across Vault\npath \"auth/*\"\n{\n  ...",
   "request_id": "e8151bf3-8136-fef9-428b-1506042350cf",
   "lease_id": "",
   "renewable": false,

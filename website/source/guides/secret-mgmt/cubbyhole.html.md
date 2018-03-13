@@ -17,7 +17,7 @@ expires or is revoked, all the secrets in its cubbyhole are revoked as well.
 
 It is not possible to reach into another token's cubbyhole even as the root
 user. This is the key difference between the cubbyhole and the key/value secret
-engine. The secrets in the key/value backends are accessible to any token for as
+engine. The secrets in the key/value secret engine are accessible to any token for as
 long as its policy allows it.
 
 

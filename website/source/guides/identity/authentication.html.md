@@ -17,10 +17,10 @@ Since tokens are the core method for authentication within Vault, there is a
 **token** auth method (often referred to as **_token store_**). This is a special
 auth method responsible for creating and storing tokens.
 
-### Auth Backends
+### Auth Methods
 
-Auth backends perform authentication to verify the user or machine-supplied
-information. Some of the supported auth backends are targeted towards users
+Auth methods perform authentication to verify the user or machine-supplied
+information. Some of the supported auth methods are targeted towards users
 while others are targeted toward machines or apps. For example,
 [**LDAP**](/docs/auth/ldap.html) auth method enables user authentication using
 an existing LDAP server while [**AppRole**](/docs/auth/approle.html) auth
@@ -36,7 +36,7 @@ enabling the [**AppRole**](/docs/auth/approle.html) auth method.
 ## Reference Material
 
 - [Getting Started](/intro/getting-started/authentication.html)
-- [Auth Backends](/docs/auth/index.html)
+- [Auth Methods](/docs/auth/index.html)
 - [GitHub Auth APIs](/api/auth/github/index.html)
 
 
@@ -155,7 +155,7 @@ the commands that an `app` runs to get a token and read secrets from Vault.
 ### <a name="step1"></a>Step 1: Enable AppRole auth method
 (**Persona:** admin)
 
-Like many other auth backends, AppRole must be enabled before it can be used.
+Like many other auth methods, AppRole must be enabled before it can be used.
 
 #### CLI command
 
@@ -177,7 +177,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
-parameters](/api/system/auth.html#mount-auth-backend) of the method.
+parameters](/api/system/auth.html#enable-auth-method) of the method.
 
 
 **Example:**
@@ -620,7 +620,7 @@ exists on the virtual machine.
 ![AppRole auth method workflow](/assets/images/vault-approle-workflow2.png)
 
 Secret ID is like a password. To keep the Secret ID confidential, use
-[**response wrapping**](/docs/concepts/response-wrapping.html) so that only the 
+[**response wrapping**](/docs/concepts/response-wrapping.html) so that only the
 expected client can unwrap the Secret ID.
 
 In [Step 3](#step3), you executed the following command to retrieve the Secret

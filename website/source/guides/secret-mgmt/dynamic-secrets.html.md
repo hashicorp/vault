@@ -20,7 +20,7 @@ you through the generation of dynamic AWS credentials.
 ## Reference Material
 
 - [Getting Started - Dynamic Secrets](/intro/getting-started/dynamic-secrets.html)
-- [Database Backends](/docs/secrets/databases/index.html)
+- [Secret Engines - Databases](/docs/secrets/databases/index.html)
 - [Role API](/api/secret/databases/index.html#create-role)
 
 ## Estimated Time to Complete
@@ -31,7 +31,7 @@ you through the generation of dynamic AWS credentials.
 
 The end-to-end scenario described in this guide involves two personas:
 
-- **`admin`** with privileged permissions to configure secret backends
+- **`admin`** with privileged permissions to configure secret engines
 - **`apps`** read the secrets from Vault
 
 ## Challenge
@@ -102,7 +102,7 @@ To perform all tasks demonstrated in this guide, your policy must include the
 following permissions:
 
 ```shell
-# Mount secret backends
+# Mount secret engines
 path "sys/mounts/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
@@ -145,7 +145,7 @@ the commands that an `app` runs to get a database credentials from Vault.
 ### <a name="step1"></a>Step 1: Mount the database secret engine
 (**Persona:** admin)
 
-As most of the secret backends, the [database secret engine](/docs/secrets/databases/index.html)
+As most of the secret engines, the [database secret engine](/docs/secrets/databases/index.html)
 must be mounted.
 
 #### CLI command
@@ -163,7 +163,7 @@ $ vault secrets enable database
 ```
 
 **NOTE:** In this guide, the database secret engine is mounted at the `/database path` in
-Vault.  However, it is possible to mount your secret backends at any location.
+Vault.  However, it is possible to mount your secret engines at any location.
 
 #### API call using cURL
 
@@ -177,7 +177,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
-parameters](/api/system/mounts.html#mount-secret-backend) of the secret engine.
+parameters](/api/system/mounts.html#enable-secrets-engine) of the secret engine.
 
 **Example:**
 
@@ -191,7 +191,7 @@ $ curl --header "X-Vault-Token: ..." \
        https://$ vault.rocks/v1/sys/mounts/database
 ```
 
-**NOTE:** It is possible to mount your database secret backends at any location.
+**NOTE:** It is possible to mount your database secret engines at any location.
 
 
 ### <a name="step1"></a>Step 2: Configure PostgreSQL secret engine
