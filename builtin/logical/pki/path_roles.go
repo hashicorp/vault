@@ -262,6 +262,11 @@ for "generate_lease".`,
 				Default:     true,
 				Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
 			},
+			"policy_identifiers": &framework.FieldSchema{
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: `A comma-separated string or list of policy oids.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -458,6 +463,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		GenerateLease:       new(bool),
 		NoStore:             data.Get("no_store").(bool),
 		RequireCN:           data.Get("require_cn").(bool),
+		PolicyIdentifiers:   data.Get("policy_identifiers").([]string),
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -604,6 +610,7 @@ type roleEntry struct {
 	NoStore               bool     `json:"no_store" mapstructure:"no_store"`
 	RequireCN             bool     `json:"require_cn" mapstructure:"require_cn"`
 	AllowedOtherSANs      []string `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
+	PolicyIdentifiers     []string `json:"policy_identifiers" mapstructure:"policy_identifiers"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -640,6 +647,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"postal_code":             r.PostalCode,
 		"no_store":                r.NoStore,
 		"allowed_other_sans":      r.AllowedOtherSANs,
+		"policy_identifiers":      r.PolicyIdentifiers,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength
