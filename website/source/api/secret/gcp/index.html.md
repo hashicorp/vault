@@ -22,50 +22,20 @@ update your API calls accordingly.
 | :------- | :------------------------| :------------------------ |
 | `POST`   | `/gcp/config`            | `204 (empty body)`        |
 
-This endpoint configures IAM credentials that Vault will use to communicate with GCP. 
-There are multiple ways to pass IAM credentials to the Vault server, specified
-below with the highest precedence first.
-
-- Static credential JSON provided to the API as a payload
-- Credentials in the environment variables `GOOGLE_CREDENTIALS` or `GOOGLE_CLOUD_KEYFILE_JSON`
-- Parse JSON file ~/.gcp/credentials
-- Google Application Default Credentials
-
-At present, this endpoint does not confirm that the provided GCP credentials
-are for existing IAM users or have valid permissions. However, they will need
-the following permissions:
-
-```
-iam.serviceAccounts.create
-iam.serviceAccounts.delete
-iam.serviceAccounts.get
-iam.serviceAccounts.list
-iam.serviceAccountKeys.create
-iam.serviceAccountKeys.delete
-iam.serviceAccountKeys.get
-iam.serviceAccountKeys.list
-iam.serviceAccounts.update
-*service.*resource.getIamPolicy
-*service.*resource.setIamPolicy
-```
-
-where `*service.*resource` refers to the GCP service/resources you wish to
-assign credentials permissions on, e.g. 
-`cloudresourcemanager.projects.get/setIamPolicy` for GCP projects
-
-At present, we recommend you create a [custom role](https://cloud.google.com/iam/docs/creating-custom-roles) 
-with these permissions and assign it at a project-level to an IAM service account
-for Vault to use. 
+This endpoint configures shared information for the secrets engine. 
 
 ### Parameters
 
 - `credentials` (`string:""`) - JSON credentials (either file contents or '@path/to/file')
+    See docs for [alternative ways](/docs/secrets/gcp/index.html#passing-credentials-to-vault) 
+    to pass in to this parameter, as well as the 
+    [required permissions](/docs/secrets/gcp/index.html#required-permissions).
 
 - `ttl` (`int: 0 || string:"0s"`) – Specifies default config TTL for long-lived credentials
     (i.e. service account keys). Accepts integer number of seconds or Go duration format string.
 
 - `max_ttl` (`int: 0 || string:"0s"`)– Specifies default config TTL for long-lived credentials
-    (i.e. service account keys). Accepts integer number of seconds or Go duration format string.
+    (i.e. service account keys). Accepts integer number of seconds or Go duration format string.**
     
 ### Sample Payload
 
