@@ -269,7 +269,7 @@ options are:
         ```
 
     * If any keys are specified, all non-specified parameters will be denied
-      unless there the parameter `"*"` is set to an empty array, which will
+      unless the parameter `"*"` is set to an empty array, which will
       allow all other parameters to be modified. Parameters with specific values
       will still be restricted to those values.
 
