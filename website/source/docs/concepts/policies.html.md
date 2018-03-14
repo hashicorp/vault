@@ -331,18 +331,15 @@ options are:
         }
         ```
 
-    * If any parameters are specified, all non-specified parameters are allowed,
-      unless `allowed_parameters` is also set, in which case normal rules apply.
-
 Parameter values also support prefix/suffix globbing. Globbing is enabled by
 prepending or appending or prepending a splat (`*`) to the value:
 
 ```ruby
-# Allow any parameter as long as the value starts with "foo-*".
+# Only allow a parameter named "bar" with a value starting with "foo-*".
 path "secret/foo" {
   capabilities = ["create"]
   allowed_parameters = {
-    "*" = ["foo-*"]
+    "bar" = ["foo-*"]
   }
 }
 ```
