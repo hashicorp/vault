@@ -52,18 +52,19 @@ type dataBundle struct {
 }
 
 type creationParameters struct {
-	Subject           pkix.Name
-	DNSNames          []string
-	EmailAddresses    []string
-	IPAddresses       []net.IP
-	OtherSANs         map[string][]string
-	IsCA              bool
-	KeyType           string
-	KeyBits           int
-	NotAfter          time.Time
-	KeyUsage          x509.KeyUsage
-	ExtKeyUsage       certExtKeyUsage
-	PolicyIdentifiers []string
+	Subject                pkix.Name
+	DNSNames               []string
+	EmailAddresses         []string
+	IPAddresses            []net.IP
+	OtherSANs              map[string][]string
+	IsCA                   bool
+	KeyType                string
+	KeyBits                int
+	NotAfter               time.Time
+	KeyUsage               x509.KeyUsage
+	ExtKeyUsage            certExtKeyUsage
+	PolicyIdentifiers      []string
+	BasicConstraintCAFalse bool
 
 	// Only used when signing a CA cert
 	UseCSRValues        bool
@@ -918,17 +919,18 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	}
 
 	data.params = &creationParameters{
-		Subject:           subject,
-		DNSNames:          dnsNames,
-		EmailAddresses:    emailAddresses,
-		IPAddresses:       ipAddresses,
-		OtherSANs:         otherSANs,
-		KeyType:           data.role.KeyType,
-		KeyBits:           data.role.KeyBits,
-		NotAfter:          notAfter,
-		KeyUsage:          x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
-		ExtKeyUsage:       extUsage,
-		PolicyIdentifiers: data.role.PolicyIdentifiers,
+		Subject:                subject,
+		DNSNames:               dnsNames,
+		EmailAddresses:         emailAddresses,
+		IPAddresses:            ipAddresses,
+		OtherSANs:              otherSANs,
+		KeyType:                data.role.KeyType,
+		KeyBits:                data.role.KeyBits,
+		NotAfter:               notAfter,
+		KeyUsage:               x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
+		ExtKeyUsage:            extUsage,
+		PolicyIdentifiers:      data.role.PolicyIdentifiers,
+		BasicConstraintCAFalse: data.role.BasicConstraintCAFalse,
 	}
 
 	// Don't deal with URLs or max path length if it's self-signed, as these
@@ -1041,6 +1043,9 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	// Add this before calling addKeyUsages
 	if data.signingBundle == nil {
 		certTemplate.IsCA = true
+	} else if data.params.BasicConstraintCAFalse {
+		certTemplate.BasicConstraintsValid = true
+		certTemplate.IsCA = false
 	}
 
 	// This will only be filled in from the generation paths
@@ -1259,7 +1264,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		if certTemplate.MaxPathLen == 0 {
 			certTemplate.MaxPathLenZero = true
 		}
-	} else {
+	} else if data.params.BasicConstraintCAFalse {
 		certTemplate.BasicConstraintsValid = true
 		certTemplate.IsCA = false
 	}

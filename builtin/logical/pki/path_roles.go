@@ -267,6 +267,11 @@ for "generate_lease".`,
 				Default:     []string{},
 				Description: `A comma-separated string or list of policy oids.`,
 			},
+			"basic_constraint_ca_false": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `Add Basic Constraint CA:False to issued certificates.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -434,36 +439,37 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
-		MaxTTL:              data.Get("max_ttl").(string),
-		TTL:                 (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
-		AllowLocalhost:      data.Get("allow_localhost").(bool),
-		AllowedDomains:      data.Get("allowed_domains").([]string),
-		AllowBareDomains:    data.Get("allow_bare_domains").(bool),
-		AllowSubdomains:     data.Get("allow_subdomains").(bool),
-		AllowGlobDomains:    data.Get("allow_glob_domains").(bool),
-		AllowAnyName:        data.Get("allow_any_name").(bool),
-		EnforceHostnames:    data.Get("enforce_hostnames").(bool),
-		AllowIPSANs:         data.Get("allow_ip_sans").(bool),
-		ServerFlag:          data.Get("server_flag").(bool),
-		ClientFlag:          data.Get("client_flag").(bool),
-		CodeSigningFlag:     data.Get("code_signing_flag").(bool),
-		EmailProtectionFlag: data.Get("email_protection_flag").(bool),
-		KeyType:             data.Get("key_type").(string),
-		KeyBits:             data.Get("key_bits").(int),
-		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
-		UseCSRSANs:          data.Get("use_csr_sans").(bool),
-		KeyUsage:            data.Get("key_usage").([]string),
-		OU:                  data.Get("ou").([]string),
-		Organization:        data.Get("organization").([]string),
-		Country:             data.Get("country").([]string),
-		Locality:            data.Get("locality").([]string),
-		Province:            data.Get("province").([]string),
-		StreetAddress:       data.Get("street_address").([]string),
-		PostalCode:          data.Get("postal_code").([]string),
-		GenerateLease:       new(bool),
-		NoStore:             data.Get("no_store").(bool),
-		RequireCN:           data.Get("require_cn").(bool),
-		PolicyIdentifiers:   data.Get("policy_identifiers").([]string),
+		MaxTTL:                 data.Get("max_ttl").(string),
+		TTL:                    (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
+		AllowLocalhost:         data.Get("allow_localhost").(bool),
+		AllowedDomains:         data.Get("allowed_domains").([]string),
+		AllowBareDomains:       data.Get("allow_bare_domains").(bool),
+		AllowSubdomains:        data.Get("allow_subdomains").(bool),
+		AllowGlobDomains:       data.Get("allow_glob_domains").(bool),
+		AllowAnyName:           data.Get("allow_any_name").(bool),
+		EnforceHostnames:       data.Get("enforce_hostnames").(bool),
+		AllowIPSANs:            data.Get("allow_ip_sans").(bool),
+		ServerFlag:             data.Get("server_flag").(bool),
+		ClientFlag:             data.Get("client_flag").(bool),
+		CodeSigningFlag:        data.Get("code_signing_flag").(bool),
+		EmailProtectionFlag:    data.Get("email_protection_flag").(bool),
+		KeyType:                data.Get("key_type").(string),
+		KeyBits:                data.Get("key_bits").(int),
+		UseCSRCommonName:       data.Get("use_csr_common_name").(bool),
+		UseCSRSANs:             data.Get("use_csr_sans").(bool),
+		KeyUsage:               data.Get("key_usage").([]string),
+		OU:                     data.Get("ou").([]string),
+		Organization:           data.Get("organization").([]string),
+		Country:                data.Get("country").([]string),
+		Locality:               data.Get("locality").([]string),
+		Province:               data.Get("province").([]string),
+		StreetAddress:          data.Get("street_address").([]string),
+		PostalCode:             data.Get("postal_code").([]string),
+		GenerateLease:          new(bool),
+		NoStore:                data.Get("no_store").(bool),
+		RequireCN:              data.Get("require_cn").(bool),
+		PolicyIdentifiers:      data.Get("policy_identifiers").([]string),
+		BasicConstraintCAFalse: data.Get("basic_constraint_ca_false").(bool),
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -570,47 +576,48 @@ func parseKeyUsages(input []string) int {
 }
 
 type roleEntry struct {
-	LeaseMax              string   `json:"lease_max"`
-	Lease                 string   `json:"lease"`
-	MaxTTL                string   `json:"max_ttl" mapstructure:"max_ttl"`
-	TTL                   string   `json:"ttl" mapstructure:"ttl"`
-	AllowLocalhost        bool     `json:"allow_localhost" mapstructure:"allow_localhost"`
-	AllowedBaseDomain     string   `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
-	AllowedDomainsOld     string   `json:"allowed_domains,omit_empty"`
-	AllowedDomains        []string `json:"allowed_domains_list" mapstructure:"allowed_domains"`
-	AllowBaseDomain       bool     `json:"allow_base_domain"`
-	AllowBareDomains      bool     `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
-	AllowTokenDisplayName bool     `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
-	AllowSubdomains       bool     `json:"allow_subdomains" mapstructure:"allow_subdomains"`
-	AllowGlobDomains      bool     `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
-	AllowAnyName          bool     `json:"allow_any_name" mapstructure:"allow_any_name"`
-	EnforceHostnames      bool     `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
-	AllowIPSANs           bool     `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
-	ServerFlag            bool     `json:"server_flag" mapstructure:"server_flag"`
-	ClientFlag            bool     `json:"client_flag" mapstructure:"client_flag"`
-	CodeSigningFlag       bool     `json:"code_signing_flag" mapstructure:"code_signing_flag"`
-	EmailProtectionFlag   bool     `json:"email_protection_flag" mapstructure:"email_protection_flag"`
-	UseCSRCommonName      bool     `json:"use_csr_common_name" mapstructure:"use_csr_common_name"`
-	UseCSRSANs            bool     `json:"use_csr_sans" mapstructure:"use_csr_sans"`
-	KeyType               string   `json:"key_type" mapstructure:"key_type"`
-	KeyBits               int      `json:"key_bits" mapstructure:"key_bits"`
-	MaxPathLength         *int     `json:",omitempty" mapstructure:"max_path_length"`
-	KeyUsageOld           string   `json:"key_usage,omitempty"`
-	KeyUsage              []string `json:"key_usage_list" mapstructure:"key_usage"`
-	OUOld                 string   `json:"ou,omitempty"`
-	OU                    []string `json:"ou_list" mapstructure:"ou"`
-	OrganizationOld       string   `json:"organization,omitempty"`
-	Organization          []string `json:"organization_list" mapstructure:"organization"`
-	Country               []string `json:"country" mapstructure:"country"`
-	Locality              []string `json:"locality" mapstructure:"locality"`
-	Province              []string `json:"province" mapstructure:"province"`
-	StreetAddress         []string `json:"street_address" mapstructure:"street_address"`
-	PostalCode            []string `json:"postal_code" mapstructure:"postal_code"`
-	GenerateLease         *bool    `json:"generate_lease,omitempty"`
-	NoStore               bool     `json:"no_store" mapstructure:"no_store"`
-	RequireCN             bool     `json:"require_cn" mapstructure:"require_cn"`
-	AllowedOtherSANs      []string `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
-	PolicyIdentifiers     []string `json:"policy_identifiers" mapstructure:"policy_identifiers"`
+	LeaseMax               string   `json:"lease_max"`
+	Lease                  string   `json:"lease"`
+	MaxTTL                 string   `json:"max_ttl" mapstructure:"max_ttl"`
+	TTL                    string   `json:"ttl" mapstructure:"ttl"`
+	AllowLocalhost         bool     `json:"allow_localhost" mapstructure:"allow_localhost"`
+	AllowedBaseDomain      string   `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
+	AllowedDomainsOld      string   `json:"allowed_domains,omit_empty"`
+	AllowedDomains         []string `json:"allowed_domains_list" mapstructure:"allowed_domains"`
+	AllowBaseDomain        bool     `json:"allow_base_domain"`
+	AllowBareDomains       bool     `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
+	AllowTokenDisplayName  bool     `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
+	AllowSubdomains        bool     `json:"allow_subdomains" mapstructure:"allow_subdomains"`
+	AllowGlobDomains       bool     `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
+	AllowAnyName           bool     `json:"allow_any_name" mapstructure:"allow_any_name"`
+	EnforceHostnames       bool     `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
+	AllowIPSANs            bool     `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
+	ServerFlag             bool     `json:"server_flag" mapstructure:"server_flag"`
+	ClientFlag             bool     `json:"client_flag" mapstructure:"client_flag"`
+	CodeSigningFlag        bool     `json:"code_signing_flag" mapstructure:"code_signing_flag"`
+	EmailProtectionFlag    bool     `json:"email_protection_flag" mapstructure:"email_protection_flag"`
+	UseCSRCommonName       bool     `json:"use_csr_common_name" mapstructure:"use_csr_common_name"`
+	UseCSRSANs             bool     `json:"use_csr_sans" mapstructure:"use_csr_sans"`
+	KeyType                string   `json:"key_type" mapstructure:"key_type"`
+	KeyBits                int      `json:"key_bits" mapstructure:"key_bits"`
+	MaxPathLength          *int     `json:",omitempty" mapstructure:"max_path_length"`
+	KeyUsageOld            string   `json:"key_usage,omitempty"`
+	KeyUsage               []string `json:"key_usage_list" mapstructure:"key_usage"`
+	OUOld                  string   `json:"ou,omitempty"`
+	OU                     []string `json:"ou_list" mapstructure:"ou"`
+	OrganizationOld        string   `json:"organization,omitempty"`
+	Organization           []string `json:"organization_list" mapstructure:"organization"`
+	Country                []string `json:"country" mapstructure:"country"`
+	Locality               []string `json:"locality" mapstructure:"locality"`
+	Province               []string `json:"province" mapstructure:"province"`
+	StreetAddress          []string `json:"street_address" mapstructure:"street_address"`
+	PostalCode             []string `json:"postal_code" mapstructure:"postal_code"`
+	GenerateLease          *bool    `json:"generate_lease,omitempty"`
+	NoStore                bool     `json:"no_store" mapstructure:"no_store"`
+	RequireCN              bool     `json:"require_cn" mapstructure:"require_cn"`
+	AllowedOtherSANs       []string `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
+	PolicyIdentifiers      []string `json:"policy_identifiers" mapstructure:"policy_identifiers"`
+	BasicConstraintCAFalse bool     `json:"basic_constraint_ca_false" mapstructure:"basic_constraint_ca_false"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -618,36 +625,37 @@ type roleEntry struct {
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
 	responseData := map[string]interface{}{
-		"ttl":                     r.TTL,
-		"max_ttl":                 r.MaxTTL,
-		"allow_localhost":         r.AllowLocalhost,
-		"allowed_domains":         r.AllowedDomains,
-		"allow_bare_domains":      r.AllowBareDomains,
-		"allow_token_displayname": r.AllowTokenDisplayName,
-		"allow_subdomains":        r.AllowSubdomains,
-		"allow_glob_domains":      r.AllowGlobDomains,
-		"allow_any_name":          r.AllowAnyName,
-		"enforce_hostnames":       r.EnforceHostnames,
-		"allow_ip_sans":           r.AllowIPSANs,
-		"server_flag":             r.ServerFlag,
-		"client_flag":             r.ClientFlag,
-		"code_signing_flag":       r.CodeSigningFlag,
-		"email_protection_flag":   r.EmailProtectionFlag,
-		"use_csr_common_name":     r.UseCSRCommonName,
-		"use_csr_sans":            r.UseCSRSANs,
-		"key_type":                r.KeyType,
-		"key_bits":                r.KeyBits,
-		"key_usage":               r.KeyUsage,
-		"ou":                      r.OU,
-		"organization":            r.Organization,
-		"country":                 r.Country,
-		"locality":                r.Locality,
-		"province":                r.Province,
-		"street_address":          r.StreetAddress,
-		"postal_code":             r.PostalCode,
-		"no_store":                r.NoStore,
-		"allowed_other_sans":      r.AllowedOtherSANs,
-		"policy_identifiers":      r.PolicyIdentifiers,
+		"ttl":                       r.TTL,
+		"max_ttl":                   r.MaxTTL,
+		"allow_localhost":           r.AllowLocalhost,
+		"allowed_domains":           r.AllowedDomains,
+		"allow_bare_domains":        r.AllowBareDomains,
+		"allow_token_displayname":   r.AllowTokenDisplayName,
+		"allow_subdomains":          r.AllowSubdomains,
+		"allow_glob_domains":        r.AllowGlobDomains,
+		"allow_any_name":            r.AllowAnyName,
+		"enforce_hostnames":         r.EnforceHostnames,
+		"allow_ip_sans":             r.AllowIPSANs,
+		"server_flag":               r.ServerFlag,
+		"client_flag":               r.ClientFlag,
+		"code_signing_flag":         r.CodeSigningFlag,
+		"email_protection_flag":     r.EmailProtectionFlag,
+		"use_csr_common_name":       r.UseCSRCommonName,
+		"use_csr_sans":              r.UseCSRSANs,
+		"key_type":                  r.KeyType,
+		"key_bits":                  r.KeyBits,
+		"key_usage":                 r.KeyUsage,
+		"ou":                        r.OU,
+		"organization":              r.Organization,
+		"country":                   r.Country,
+		"locality":                  r.Locality,
+		"province":                  r.Province,
+		"street_address":            r.StreetAddress,
+		"postal_code":               r.PostalCode,
+		"no_store":                  r.NoStore,
+		"allowed_other_sans":        r.AllowedOtherSANs,
+		"policy_identifiers":        r.PolicyIdentifiers,
+		"basic_constraint_ca_false": r.BasicConstraintCAFalse,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength
