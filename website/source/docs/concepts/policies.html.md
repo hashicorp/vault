@@ -331,6 +331,9 @@ options are:
         }
         ```
 
+    * If any parameters are specified, all non-specified parameters are allowed,
+      unless `allowed_parameters` is also set, in which case normal rules apply.
+
 Parameter values also support prefix/suffix globbing. Globbing is enabled by
 prepending or appending or prepending a splat (`*`) to the value:
 
@@ -343,6 +346,9 @@ path "secret/foo" {
   }
 }
 ```
+
+Note: the only value that can be used with the `*` parameter is `[]`.
+
 
 ### Required Response Wrapping TTLs
 
