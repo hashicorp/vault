@@ -187,7 +187,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if dynamodbMaxRetryString == "" {
 		dynamodbMaxRetryString = conf["dynamodb_max_retries"]
 		if dynamodbMaxRetryString == "" {
-			dynamodbMaxRetryString = "0"
+			dynamodbMaxRetryString = "-1"
 		}
 	}
 	dynamodbMaxRetry, err := strconv.Atoi(dynamodbMaxRetryString)
