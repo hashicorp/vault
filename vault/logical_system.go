@@ -88,6 +88,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				"wrapping/lookup",
 				"wrapping/pubkey",
 				"replication/status",
+				"internal/ui/mounts",
 			},
 		},
 

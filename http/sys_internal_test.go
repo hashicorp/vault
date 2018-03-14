@@ -15,7 +15,7 @@ func TestSysInternal_UIMounts(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	// Get original tune values, ensure that _ui_show_mount is not set
-	resp := testHttpGet(t, token, addr+"/v1/sys/internal/ui/mounts")
+	resp := testHttpGet(t, "", addr+"/v1/sys/internal/ui/mounts")
 	testResponseStatus(t, resp, 200)
 
 	actual := map[string]interface{}{}
@@ -49,7 +49,7 @@ func TestSysInternal_UIMounts(t *testing.T) {
 	testResponseStatus(t, resp, 204)
 
 	// Check results
-	resp = testHttpGet(t, token, addr+"/v1/sys/internal/ui/mounts")
+	resp = testHttpGet(t, "", addr+"/v1/sys/internal/ui/mounts")
 	testResponseStatus(t, resp, 200)
 
 	actual = map[string]interface{}{}

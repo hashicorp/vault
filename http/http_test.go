@@ -16,6 +16,9 @@ import (
 )
 
 func testHttpGet(t *testing.T, token string, addr string) *http.Response {
+	if len(token) == 0 {
+		token = "<empty>"
+	}
 	t.Logf("Token is %s", token)
 	return testHttpData(t, "GET", token, addr, nil, false)
 }
