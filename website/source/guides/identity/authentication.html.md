@@ -35,9 +35,10 @@ enabling the [**AppRole**](/docs/auth/approle.html) auth method.
 
 ## Reference Material
 
-- [Getting Started](/intro/getting-started/authentication.html)
-- [Auth Methods](/docs/auth/index.html)
-- [GitHub Auth APIs](/api/auth/github/index.html)
+- [AppRole Auth Methods](/docs/auth/approle.html)
+- [AppRole Auth Method (API)](/api/auth/approle/index.html)
+- [Authenticating Applications with HashiCorp Vault AppRole](https://www.hashicorp.com/blog/authenticating-applications-with-vault-approle)
+
 
 
 ## Estimated Time to Complete
@@ -666,6 +667,9 @@ b07d7a47-1d0d-741d-20b4-ae0de7c6d964
 
 
 ## Next steps
+
+Watch the video recording of the [Delivering Secret Zero: Vault AppRole with Terraform and Chef](Docs.google.com/document/d/1CCbAQ-ZEeSpxQqvo40hM0Y5oe3tBCxM1qYrk7_Wyvww/edit?ts=5a865277#heading=h.i52qa2wbjcsk)
+webinar which talks about the usage of AppRole with Terraform and Chef as its trusted entities.
 
 To learn more about response wrapping, go to the [Cubbyhole Response
 Wrapping](/guides/secret-mgmt/cubbyhole.html) guide.
