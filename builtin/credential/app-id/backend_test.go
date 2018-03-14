@@ -54,7 +54,7 @@ func TestBackend_basic(t *testing.T) {
 	if len(keys) != 1 {
 		t.Fatalf("expected 1 key, got %d", len(keys))
 	}
-	bSalt, err := b.Salt()
+	bSalt, err := b.Salt(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

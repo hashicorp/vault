@@ -1578,9 +1578,14 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
 	}
-
 	if apiConfig.InternalUIShowMount != nil {
 		config.InternalUIShowMount = apiConfig.InternalUIShowMount
+	}
+	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
+		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
+	}
+	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
+		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
 	}
 
 	// Create the mount entry
@@ -2196,6 +2201,12 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	if apiConfig.InternalUIShowMount != nil {
 		config.InternalUIShowMount = apiConfig.InternalUIShowMount
 	}
+	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
+		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
+	}
+	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
+		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
+	}
 
 	// Create the mount entry
 	me := &MountEntry{
@@ -2455,7 +2466,7 @@ func (b *SystemBackend) handleAuditHash(ctx context.Context, req *logical.Reques
 
 	path = sanitizeMountPath(path)
 
-	hash, err := b.Core.auditBroker.GetHash(path, input)
+	hash, err := b.Core.auditBroker.GetHash(ctx, path, input)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}

@@ -14,7 +14,7 @@ func TestSalt(t *testing.T) {
 	inm := &logical.InmemStorage{}
 	conf := &Config{}
 
-	salt, err := NewSalt(inm, conf)
+	salt, err := NewSalt(context.Background(), inm, conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestSalt(t *testing.T) {
 	}
 
 	// Create a new salt, should restore
-	salt2, err := NewSalt(inm, conf)
+	salt2, err := NewSalt(context.Background(), inm, conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

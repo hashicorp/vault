@@ -46,10 +46,10 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 // authorized_keys file is hard coded to resemble Linux.
 //
 // The last param 'install' if false, uninstalls the key.
-func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port int, hostkey, dynamicPublicKey, installScript string, install bool) error {
+func (b *backend) installPublicKeyInTarget(ctx context.Context, adminUser, username, ip string, port int, hostkey, dynamicPublicKey, installScript string, install bool) error {
 	// Transfer the newly generated public key to remote host under a random
 	// file name. This is to avoid name collisions from other requests.
-	_, publicKeyFileName, err := b.GenerateSaltedOTP()
+	_, publicKeyFileName, err := b.GenerateSaltedOTP(ctx)
 	if err != nil {
 		return err
 	}
