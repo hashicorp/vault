@@ -9,6 +9,7 @@ DEPRECATIONS/CHANGES:
 
 IMPROVEMENTS:
 
+ * auth/approle: Allow array input for bound_cidr_list [4078]
  * auth/aws: Allow using lists in role bind parameters [GH-3907]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
    than just set [GH-4049]
@@ -21,6 +22,7 @@ BUG FIXES:
 
  * auth/aws: Fix honoring `max_ttl` when a corresponding role `ttl` is not also
    set [GH-4107]
+ * auth/okta: Fix honoring configured `max_ttl` value [GH-4110]
  * auth/token: If a periodic token being issued has a period greater than the
    max_lease_ttl configured on the token store mount, truncate it. This matches
    renewal behavior; before it was inconsistent between issuance and renewal.

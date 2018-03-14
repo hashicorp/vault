@@ -262,6 +262,28 @@ func NewPolicy(config PolicyConfig) *Policy {
 	}
 }
 
+// LoadPolicy will load a policy from the provided storage path and set the
+// necessary un-exported variables. It is particularly useful when accessing a
+// policy without the lock manager.
+func LoadPolicy(ctx context.Context, s logical.Storage, path string) (*Policy, error) {
+	raw, err := s.Get(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	if raw == nil {
+		return nil, nil
+	}
+
+	var policy Policy
+	err = jsonutil.DecodeJSON(raw.Value, &policy)
+	if err != nil {
+		return nil, err
+	}
+
+	policy.versionPrefixCache = &sync.Map{}
+	return &policy, nil
+}
+
 // Policy is the struct used to store metadata
 type Policy struct {
 	Name string      `json:"name"`

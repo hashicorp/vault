@@ -304,7 +304,7 @@ method.
       "Effect": "Allow",
       "Action": ["sts:AssumeRole"],
       "Resource": [
-        "arn:aws:iam:<AccountId>:role/<VaultRole>"
+        "arn:aws:iam::<AccountId>:role/<VaultRole>"
       ]
     }
   ]
