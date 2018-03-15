@@ -384,6 +384,11 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		return nil, fmt.Errorf("nil identityDoc")
 	}
 
+	// Verify that the instance ID matches one of the ones set by the role
+	if len(roleEntry.BoundEc2InstanceIDs) > 0 && !strutil.StrListContains(roleEntry.BoundEc2InstanceIDs, *instance.InstanceId) {
+		return fmt.Errorf("instance ID %q does not belong to the role %q", *instance.InstanceId, roleName), nil
+	}
+
 	// Verify that the AccountID of the instance trying to login matches the
 	// AccountID specified as a constraint on role
 	if len(roleEntry.BoundAccountIDs) > 0 && !strutil.StrListContains(roleEntry.BoundAccountIDs, identityDoc.AccountID) {
