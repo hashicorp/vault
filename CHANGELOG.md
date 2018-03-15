@@ -11,6 +11,7 @@ IMPROVEMENTS:
 
  * auth/approle: Allow array input for bound_cidr_list [4078]
  * auth/aws: Allow using lists in role bind parameters [GH-3907]
+ * auth/aws: Allow binding by EC2 instance IDs [GH-3816]
  * secret/transit: Allow selecting signature algorithm as well as hash
    algorithm when signing/verifying [GH-4018]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
