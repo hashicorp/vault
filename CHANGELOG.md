@@ -32,6 +32,7 @@ BUG FIXES:
  * cli: Improve error messages around `vault auth help` when there is no CLI
    helper for a particular method [GH-4056]
  * cli: Fix autocomplete installation when using Fish as the shell [GH-4094]
+ * secret/database: Properly honor mount-tuned max TTL [GH-4051]
  * secret/ssh: Return `key_bits` value when reading a role [GH-4098]
 
 ## 0.9.5 (February 26th, 2018)
