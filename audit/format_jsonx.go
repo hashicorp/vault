@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,7 +14,7 @@ import (
 // a XML format.
 type JSONxFormatWriter struct {
 	Prefix   string
-	SaltFunc func() (*salt.Salt, error)
+	SaltFunc func(context.Context) (*salt.Salt, error)
 }
 
 func (f *JSONxFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
@@ -68,6 +69,6 @@ func (f *JSONxFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry)
 	return err
 }
 
-func (f *JSONxFormatWriter) Salt() (*salt.Salt, error) {
-	return f.SaltFunc()
+func (f *JSONxFormatWriter) Salt(ctx context.Context) (*salt.Salt, error) {
+	return f.SaltFunc(ctx)
 }

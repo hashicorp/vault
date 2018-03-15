@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"context"
 	"io"
 )
 
@@ -10,8 +11,8 @@ import (
 //
 // It is recommended that you pass data through Hash prior to formatting it.
 type Formatter interface {
-	FormatRequest(io.Writer, FormatterConfig, *LogInput) error
-	FormatResponse(io.Writer, FormatterConfig, *LogInput) error
+	FormatRequest(context.Context, io.Writer, FormatterConfig, *LogInput) error
+	FormatResponse(context.Context, io.Writer, FormatterConfig, *LogInput) error
 }
 
 type FormatterConfig struct {

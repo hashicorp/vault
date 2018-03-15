@@ -384,6 +384,11 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		return nil, fmt.Errorf("nil identityDoc")
 	}
 
+	// Verify that the instance ID matches one of the ones set by the role
+	if len(roleEntry.BoundEc2InstanceIDs) > 0 && !strutil.StrListContains(roleEntry.BoundEc2InstanceIDs, *instance.InstanceId) {
+		return fmt.Errorf("instance ID %q does not belong to the role %q", *instance.InstanceId, roleName), nil
+	}
+
 	// Verify that the AccountID of the instance trying to login matches the
 	// AccountID specified as a constraint on role
 	if len(roleEntry.BoundAccountIDs) > 0 && !strutil.StrListContains(roleEntry.BoundAccountIDs, identityDoc.AccountID) {
@@ -800,12 +805,14 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		resp.Auth.Metadata["nonce"] = clientNonce
 	}
 
-	if roleEntry.MaxTTL > time.Duration(0) {
-		// Cap TTL to shortestMaxTTL
-		if resp.Auth.TTL > shortestMaxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (shortestMaxTTL / time.Second)))
-			resp.Auth.TTL = shortestMaxTTL
-		}
+	// In this case no role value was set so pull in what will be assigned by
+	// Core for comparison
+	if resp.Auth.TTL == 0 {
+		resp.Auth.TTL = b.System().DefaultLeaseTTL()
+	}
+	if resp.Auth.TTL > shortestMaxTTL {
+		resp.Auth.TTL = shortestMaxTTL
+		resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, shortestMaxTTL))
 	}
 
 	return resp, nil
@@ -1308,6 +1315,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		},
 	}
 
+	if resp.Auth.TTL == 0 {
+		resp.Auth.TTL = b.System().DefaultLeaseTTL()
+	}
 	if roleEntry.MaxTTL > time.Duration(0) {
 		// Cap maxTTL to the sysview's max TTL
 		maxTTL := roleEntry.MaxTTL
@@ -1317,7 +1327,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 		// Cap TTL to MaxTTL
 		if resp.Auth.TTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, maxTTL))
 			resp.Auth.TTL = maxTTL
 		}
 	}

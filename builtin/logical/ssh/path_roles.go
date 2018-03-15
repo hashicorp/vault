@@ -530,6 +530,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"allow_user_key_ids":       role.AllowUserKeyIDs,
 			"key_id_format":            role.KeyIDFormat,
 			"key_type":                 role.KeyType,
+			"key_bits":                 role.KeyBits,
 			"default_critical_options": role.DefaultCriticalOptions,
 			"default_extensions":       role.DefaultExtensions,
 		}

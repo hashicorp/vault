@@ -19,8 +19,8 @@ The DynamoDB storage backend is used to persist Vault's data in
 
 - **Community Supported** – the DynamoDB storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
-  be as knowledgeable about the technology. If you encounter problems with them,
-  you may be referred to the original author.
+  be as knowledgeable about the technology. If you encounter problems with this
+  storage backend, you could be referred to the original author for support.
 
 ```hcl
 storage "dynamodb" {

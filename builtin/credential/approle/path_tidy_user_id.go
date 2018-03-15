@@ -104,7 +104,7 @@ func (b *backend) tidySecretID(ctx context.Context, s logical.Storage) error {
 			// the corresponding accessor from the accessorMap. This will leave
 			// only the dangling accessors in the map which can then be cleaned
 			// up later.
-			salt, err := b.Salt()
+			salt, err := b.Salt(ctx)
 			if err != nil {
 				lock.Unlock()
 				return err
