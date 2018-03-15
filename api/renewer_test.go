@@ -41,7 +41,6 @@ func TestRenewer_NewRenewer(t *testing.T) {
 			},
 			&Renewer{
 				secret: &Secret{},
-				grace:  DefaultRenewerGrace,
 			},
 			false,
 		},

@@ -341,10 +341,7 @@ func (r *Renewer) sleepDuration(base time.Duration) time.Duration {
 
 // calculateGrace calculates the grace period based on a reasonable set of
 // assumptions given the total lease time; it also adds some jitter to not have
-// clients be in sync. We calculate this continuously so long as the new lease
-// duration is greater than the previous; no change means we don't need to
-// recalculate, and if the lease duration keeps decreasing we've hit max and
-// want to be able to rely on this.
+// clients be in sync.
 func (r *Renewer) calculateGrace(leaseDuration time.Duration) {
 	if leaseDuration == 0 {
 		r.grace = 0

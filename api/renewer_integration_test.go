@@ -146,15 +146,20 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Errorf("no renewal")
 			}
 
-			select {
-			case err := <-v.DoneCh():
-				if err != nil {
-					t.Fatal(err)
+		outer:
+			for {
+				select {
+				case err := <-v.DoneCh():
+					if err != nil {
+						t.Fatal(err)
+					}
+					break outer
+				case <-v.RenewCh():
+					continue outer
+				case <-time.After(3 * time.Second):
+					t.Errorf("no data")
+					break outer
 				}
-			case renew := <-v.RenewCh():
-				t.Fatalf("should not have renewed (lease should be up): %#v", renew)
-			case <-time.After(3 * time.Second):
-				t.Errorf("no data")
 			}
 		})
 
@@ -205,15 +210,20 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Errorf("no renewal")
 			}
 
-			select {
-			case err := <-v.DoneCh():
-				if err != nil {
-					t.Fatal(err)
+		outer:
+			for {
+				select {
+				case err := <-v.DoneCh():
+					if err != nil {
+						t.Fatal(err)
+					}
+					break outer
+				case <-v.RenewCh():
+					continue outer
+				case <-time.After(3 * time.Second):
+					t.Errorf("no data")
+					break outer
 				}
-			case renew := <-v.RenewCh():
-				t.Fatalf("should not have renewed (lease should be up): %#v", renew)
-			case <-time.After(3 * time.Second):
-				t.Errorf("no data")
 			}
 		})
 	})
