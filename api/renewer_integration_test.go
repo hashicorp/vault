@@ -109,8 +109,8 @@ func TestRenewer_Renew(t *testing.T) {
 				"creation_statements": `` +
 					`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';` +
 					`GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
-				"default_ttl": "1s",
-				"max_ttl":     "3s",
+				"default_ttl": "5s",
+				"max_ttl":     "10s",
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -139,10 +139,10 @@ func TestRenewer_Renew(t *testing.T) {
 				if !renew.Secret.Renewable {
 					t.Errorf("expected lease to be renewable: %#v", renew)
 				}
-				if renew.Secret.LeaseDuration > 2 {
-					t.Errorf("expected lease to < 2s: %#v", renew)
+				if renew.Secret.LeaseDuration > 5 {
+					t.Errorf("expected lease to <= 5s: %#v", renew)
 				}
-			case <-time.After(3 * time.Second):
+			case <-time.After(5 * time.Second):
 				t.Errorf("no renewal")
 			}
 
@@ -154,9 +154,10 @@ func TestRenewer_Renew(t *testing.T) {
 						t.Fatal(err)
 					}
 					break outer
-				case <-v.RenewCh():
+				case renew := <-v.RenewCh():
+					t.Logf("renew called, remaining lease duration: %d", renew.Secret.LeaseDuration)
 					continue outer
-				case <-time.After(3 * time.Second):
+				case <-time.After(5 * time.Second):
 					t.Errorf("no data")
 					break outer
 				}
