@@ -63,9 +63,16 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		db.RLock()
 		defer db.RUnlock()
 
-		ttl := role.DefaultTTL
-		if ttl == 0 || (role.MaxTTL > 0 && ttl > role.MaxTTL) {
-			ttl = role.MaxTTL
+		ttl := b.System().DefaultLeaseTTL()
+		if role.DefaultTTL != 0 {
+			ttl = role.DefaultTTL
+		}
+		maxTTL := b.System().MaxLeaseTTL()
+		if role.MaxTTL != 0 && role.MaxTTL < maxTTL {
+			maxTTL = role.MaxTTL
+		}
+		if ttl > maxTTL {
+			ttl = maxTTL
 		}
 
 		expiration := time.Now().Add(ttl)

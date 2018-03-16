@@ -71,6 +71,11 @@ const (
 	EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
 	// EnvVaultFormat is the output format
 	EnvVaultFormat = `VAULT_FORMAT`
+
+	// flagNameAuditNonHMACRequestKeys is the flag name used for auth/secrets enable
+	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
+	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
+	flagNameAuditNonHMACResponseKeys = "audit-non-hmac-response-keys"
 )
 
 var (

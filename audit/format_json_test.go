@@ -2,6 +2,7 @@ package audit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -17,11 +18,11 @@ import (
 )
 
 func TestFormatJSON_formatRequest(t *testing.T) {
-	salter, err := salt.NewSalt(nil, nil)
+	salter, err := salt.NewSalt(context.Background(), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	saltFunc := func() (*salt.Salt, error) {
+	saltFunc := func(context.Context) (*salt.Salt, error) {
 		return salter, nil
 	}
 
@@ -90,7 +91,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			Request:  tc.Req,
 			OuterErr: tc.Err,
 		}
-		if err := formatter.FormatRequest(&buf, config, in); err != nil {
+		if err := formatter.FormatRequest(context.Background(), &buf, config, in); err != nil {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
 

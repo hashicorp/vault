@@ -27,7 +27,7 @@ type Backend interface {
 	// GetHash is used to return the given data with the backend's hash,
 	// so that a caller can determine if a value in the audit log matches
 	// an expected plaintext value
-	GetHash(string) (string, error)
+	GetHash(context.Context, string) (string, error)
 
 	// Reload is called on SIGHUP for supporting backends.
 	Reload(context.Context) error

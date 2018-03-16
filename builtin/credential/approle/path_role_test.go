@@ -12,6 +12,105 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func TestApprole_UpgradeBoundCIDRList(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"policies":        []string{"default"},
+		"bind_secret_id":  true,
+		"bound_cidr_list": []string{"127.0.0.1/18", "192.178.1.2/24"},
+	}
+
+	// Create a role with bound_cidr_list set
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Read the role and check that the bound_cidr_list is set properly
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	expected := []string{"127.0.0.1/18", "192.178.1.2/24"}
+	actual := resp.Data["bound_cidr_list"].([]string)
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: bound_cidr_list; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+
+	// Modify the storage entry of the role to hold the old style string typed bound_cidr_list
+	role := &roleStorageEntry{
+		RoleID:           "testroleid",
+		HMACKey:          "testhmackey",
+		Policies:         []string{"default"},
+		BindSecretID:     true,
+		BoundCIDRListOld: "127.0.0.1/18,192.178.1.2/24",
+	}
+	err = b.setRoleEntry(context.Background(), storage, "testrole", role, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the role. The upgrade code should have migrated the old type to the new type
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: bound_cidr_list; expected: %#v\nactual: %#v\n", expected, actual)
+	}
+
+	// Create a secret-id by supplying a subset of the role's CIDR blocks with the new type
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole/secret-id",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"cidr_list": []string{"127.0.0.1/24"},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Data["secret_id"].(string) == "" {
+		t.Fatalf("failed to generate secret-id")
+	}
+
+	// Check that the backwards compatibility for the string type is not broken
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole/secret-id",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"cidr_list": "127.0.0.1/24",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Data["secret_id"].(string) == "" {
+		t.Fatalf("failed to generate secret-id")
+	}
+}
+
 func TestApprole_RoleNameLowerCasing(t *testing.T) {
 	var resp *logical.Response
 	var err error
@@ -858,8 +957,9 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 		"token_ttl":          400,
 		"token_max_ttl":      500,
 		"token_num_uses":     600,
-		"bound_cidr_list":    "127.0.0.1/32,127.0.0.1/16",
+		"bound_cidr_list":    []string{"127.0.0.1/32", "127.0.0.1/16"},
 	}
+
 	var expectedStruct roleStorageEntry
 	err = mapstructure.Decode(expected, &expectedStruct)
 	if err != nil {
