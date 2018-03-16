@@ -207,6 +207,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -215,6 +216,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -223,6 +225,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -231,6 +234,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -239,6 +243,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -247,6 +252,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 				Handlers: loginHandlers,
 			}, nil
@@ -256,6 +262,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -264,6 +271,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -272,6 +280,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 				Handlers: loginHandlers,
 			}, nil
@@ -281,6 +290,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -289,6 +299,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -297,6 +308,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -305,6 +317,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -313,6 +326,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -321,6 +335,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -329,6 +344,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 				Handlers: loginHandlers,
 			}, nil
@@ -338,6 +354,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -346,6 +363,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -354,6 +372,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -362,6 +381,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -370,6 +390,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -378,6 +399,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -386,6 +408,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -394,6 +417,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -402,6 +426,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -410,6 +435,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -418,6 +444,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -426,6 +453,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -434,6 +462,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -442,6 +471,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -450,6 +480,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -458,6 +489,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -466,6 +498,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -474,6 +507,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -482,6 +516,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -490,6 +525,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -498,6 +534,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -506,6 +543,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -514,6 +552,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -522,6 +561,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          serverCmdUi,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 				AuditBackends:      auditBackends,
 				CredentialBackends: credentialBackends,
@@ -536,6 +576,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -544,6 +585,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -552,6 +594,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -560,6 +603,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -568,6 +612,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -576,6 +621,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -584,6 +630,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -592,6 +639,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -600,6 +648,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -609,6 +658,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -617,6 +667,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: &BaseCommand{
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
+					flagAddress: runOpts.Address,
 				},
 			}, nil
 		},
@@ -634,6 +685,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -648,6 +700,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -662,6 +715,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -676,6 +730,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -690,6 +745,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -704,6 +760,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -718,6 +775,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -732,6 +790,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -746,6 +805,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -760,6 +820,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -774,6 +835,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -788,6 +850,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -802,6 +865,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -816,6 +880,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -830,6 +895,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -844,6 +910,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -858,6 +925,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -872,6 +940,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -886,6 +955,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -900,6 +970,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -914,6 +985,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -928,6 +1000,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -942,6 +1015,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -956,6 +1030,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -970,6 +1045,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -984,6 +1060,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -998,6 +1075,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil
@@ -1012,6 +1090,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					BaseCommand: &BaseCommand{
 						UI:          ui,
 						tokenHelper: runOpts.TokenHelper,
+						flagAddress: runOpts.Address,
 					},
 				},
 			}, nil

@@ -114,6 +114,11 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	return client, nil
 }
 
+// SetAddress sets the token helper on the command; useful for the demo server and other outside cases.
+func (c *BaseCommand) SetAddress(addr string) {
+	c.flagAddress = addr
+}
+
 // SetTokenHelper sets the token helper on the command.
 func (c *BaseCommand) SetTokenHelper(th token.TokenHelper) {
 	c.tokenHelper = th

@@ -85,6 +85,7 @@ type RunOptions struct {
 	TokenHelper token.TokenHelper
 	Stdout      io.Writer
 	Stderr      io.Writer
+	Address     string
 }
 
 func Run(args []string) int {
