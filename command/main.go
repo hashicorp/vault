@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -80,15 +81,27 @@ func setupEnv(args []string) []string {
 	return args
 }
 
+type RunOptions struct {
+	TokenHelper token.TokenHelper
+	Stdout      io.Writer
+	Stderr      io.Writer
+}
+
 func Run(args []string) int {
 	return RunCustom(args, nil)
 }
 
 // RunCustom allows passing in a base command template to pass to other
 // commands. Currenty, this is only used for setting a custom token helper.
-func RunCustom(args []string, baseCmdTemplate *BaseCommand) int {
-	if baseCmdTemplate == nil {
-		baseCmdTemplate = &BaseCommand{}
+func RunCustom(args []string, runOpts *RunOptions) int {
+	if runOpts == nil {
+		runOpts = &RunOptions{}
+	}
+	if runOpts.Stdout == nil {
+		runOpts.Stdout = os.Stdout
+	}
+	if runOpts.Stderr == nil {
+		runOpts.Stderr = os.Stderr
 	}
 
 	args = setupEnv(args)
@@ -105,15 +118,15 @@ func RunCustom(args []string, baseCmdTemplate *BaseCommand) int {
 
 	ui := &VaultUI{
 		Ui: &cli.BasicUi{
-			Writer:      os.Stdout,
-			ErrorWriter: os.Stderr,
+			Writer:      runOpts.Stdout,
+			ErrorWriter: runOpts.Stderr,
 		},
 		isTerminal: isTerminal,
 		format:     format,
 	}
 	serverCmdUi := &VaultUI{
 		Ui: &cli.BasicUi{
-			Writer: os.Stdout,
+			Writer: runOpts.Stdout,
 		},
 		isTerminal: isTerminal,
 		format:     format,
@@ -139,7 +152,7 @@ func RunCustom(args []string, baseCmdTemplate *BaseCommand) int {
 		}
 	}
 
-	initCommands(ui, serverCmdUi, baseCmdTemplate)
+	initCommands(ui, serverCmdUi, runOpts)
 
 	// Calculate hidden commands from the deprecated ones
 	hiddenCommands := make([]string, 0, len(DeprecatedCommands)+1)
@@ -162,7 +175,7 @@ func RunCustom(args []string, baseCmdTemplate *BaseCommand) int {
 
 	exitCode, err := cli.Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error executing CLI: %s\n", err.Error())
+		fmt.Fprintf(runOpts.Stderr, "Error executing CLI: %s\n", err.Error())
 		return 1
 	}
 

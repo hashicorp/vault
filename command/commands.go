@@ -184,7 +184,7 @@ func (c *DeprecatedCommand) warn() {
 var Commands map[string]cli.CommandFactory
 var DeprecatedCommands map[string]cli.CommandFactory
 
-func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 	loginHandlers := map[string]LoginHandler{
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
@@ -206,7 +206,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuditCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -214,7 +214,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuditDisableCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -222,7 +222,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuditEnableCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -230,7 +230,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuditListCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -238,7 +238,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuthTuneCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -246,7 +246,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuthCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 				Handlers: loginHandlers,
 			}, nil
@@ -255,7 +255,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuthDisableCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -263,7 +263,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuthEnableCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -271,7 +271,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuthHelpCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 				Handlers: loginHandlers,
 			}, nil
@@ -280,7 +280,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &AuthListCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -288,7 +288,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &DeleteCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -296,7 +296,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &LeaseCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -304,7 +304,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &LeaseRenewCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -312,7 +312,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &LeaseRevokeCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -320,7 +320,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &ListCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -328,7 +328,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &LoginCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 				Handlers: loginHandlers,
 			}, nil
@@ -337,7 +337,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &OperatorCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -345,7 +345,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &OperatorGenerateRootCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -353,7 +353,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &OperatorInitCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -361,7 +361,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &OperatorKeyStatusCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -369,7 +369,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &OperatorRekeyCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -377,7 +377,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &OperatorRotateCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -385,7 +385,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &OperatorSealCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -393,7 +393,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &OperatorStepDownCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -401,7 +401,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &OperatorUnsealCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -409,7 +409,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &PathHelpCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -417,7 +417,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &PolicyCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -425,7 +425,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &PolicyDeleteCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -433,7 +433,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &PolicyFmtCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -441,7 +441,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &PolicyListCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -449,7 +449,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &PolicyReadCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -457,7 +457,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &PolicyWriteCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -465,7 +465,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &ReadCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -473,7 +473,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &SecretsCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -481,7 +481,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &SecretsDisableCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -489,7 +489,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &SecretsEnableCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -497,7 +497,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &SecretsListCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -505,7 +505,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &SecretsMoveCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -513,7 +513,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &SecretsTuneCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -521,7 +521,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &ServerCommand{
 				BaseCommand: &BaseCommand{
 					UI:          serverCmdUi,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 				AuditBackends:      auditBackends,
 				CredentialBackends: credentialBackends,
@@ -535,7 +535,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &SSHCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -543,7 +543,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &StatusCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -551,7 +551,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &TokenCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -559,7 +559,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &TokenCreateCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -567,7 +567,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &TokenCapabilitiesCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -575,7 +575,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &TokenLookupCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -583,7 +583,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &TokenRenewCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -591,7 +591,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &TokenRevokeCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -599,7 +599,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &UnwrapCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -608,7 +608,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				VersionInfo: version.GetVersion(),
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -616,7 +616,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 			return &WriteCommand{
 				BaseCommand: &BaseCommand{
 					UI:          ui,
-					tokenHelper: baseCmdTemplate.tokenHelper,
+					tokenHelper: runOpts.TokenHelper,
 				},
 			}, nil
 		},
@@ -633,7 +633,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &AuditDisableCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -647,7 +647,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &AuditEnableCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -661,7 +661,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &AuditListCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -675,7 +675,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &AuthDisableCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -689,7 +689,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &AuthEnableCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -703,7 +703,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &TokenCapabilitiesCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -717,7 +717,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &OperatorGenerateRootCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -731,7 +731,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &OperatorInitCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -745,7 +745,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &OperatorKeyStatusCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -759,7 +759,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &LeaseRenewCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -773,7 +773,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &LeaseRevokeCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -787,7 +787,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &SecretsEnableCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -801,7 +801,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &SecretsTuneCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -815,7 +815,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &SecretsListCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -829,7 +829,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &PoliciesDeprecatedCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -843,7 +843,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &PolicyDeleteCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -857,7 +857,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &PolicyWriteCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -871,7 +871,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &OperatorRekeyCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -885,7 +885,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &SecretsMoveCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -899,7 +899,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &OperatorRotateCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -913,7 +913,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &OperatorSealCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -927,7 +927,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &OperatorStepDownCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -941,7 +941,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &TokenCreateCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -955,7 +955,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &TokenLookupCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -969,7 +969,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &TokenRenewCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -983,7 +983,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &TokenRevokeCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -997,7 +997,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &SecretsDisableCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
@@ -1011,7 +1011,7 @@ func initCommands(ui, serverCmdUi cli.Ui, baseCmdTemplate *BaseCommand) {
 				Command: &OperatorUnsealCommand{
 					BaseCommand: &BaseCommand{
 						UI:          ui,
-						tokenHelper: baseCmdTemplate.tokenHelper,
+						tokenHelper: runOpts.TokenHelper,
 					},
 				},
 			}, nil
