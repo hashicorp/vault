@@ -266,9 +266,9 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
-					"_ui_show_mount": &framework.FieldSchema{
-						Type:        framework.TypeBool,
-						Description: `Toggle whether this shows on sys/internal/ui/mounts`,
+					"listing_visibility": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
 					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -307,9 +307,9 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
-					"_ui_show_mount": &framework.FieldSchema{
-						Type:        framework.TypeBool,
-						Description: `Toggle whether this shows on sys/internal/ui/mounts`,
+					"listing_visibility": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
 					},
 				},
 
@@ -1475,8 +1475,8 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
-		if entry.Config.InternalUIShowMount != nil {
-			entryConfig["_ui_show_mount"] = entry.Config.InternalUIShowMount
+		if len(entry.Config.ListingVisibility) > 0 {
+			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
 		}
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
@@ -1579,9 +1579,16 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
 	}
-	if apiConfig.InternalUIShowMount != nil {
-		config.InternalUIShowMount = apiConfig.InternalUIShowMount
+
+	switch apiConfig.ListingVisibility {
+	case "auth":
+	case "unauth":
+	case "":
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
+	config.ListingVisibility = apiConfig.ListingVisibility
+
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
 	}
@@ -1735,8 +1742,8 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 		resp.Data["audit_non_hmac_response_keys"] = rawVal.([]string)
 	}
 
-	if mountEntry.Config.InternalUIShowMount != nil {
-		resp.Data["_ui_show_mount"] = mountEntry.Config.InternalUIShowMount
+	if len(mountEntry.Config.ListingVisibility) > 0 {
+		resp.Data["listing_visibility"] = mountEntry.Config.ListingVisibility
 	}
 
 	return resp, nil
@@ -1924,11 +1931,19 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	if rawVal, ok := data.GetOk("_ui_show_mount"); ok {
-		internalUIShowMounts := rawVal.(bool)
+	if rawVal, ok := data.GetOk("listing_visibility"); ok {
+		listingVisibility := rawVal.(string)
 
-		oldVal := mountEntry.Config.InternalUIShowMount
-		mountEntry.Config.InternalUIShowMount = &internalUIShowMounts
+		switch listingVisibility {
+		case "auth":
+		case "unauth":
+		case "":
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported listing_visibility %s", listingVisibility)), nil
+		}
+
+		oldVal := mountEntry.Config.ListingVisibility
+		mountEntry.Config.ListingVisibility = listingVisibility
 
 		// Update the mount table
 		var err error
@@ -1939,7 +1954,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
 		}
 		if err != nil {
-			mountEntry.Config.InternalUIShowMount = oldVal
+			mountEntry.Config.ListingVisibility = oldVal
 			return handleError(err)
 		}
 	}
@@ -2102,8 +2117,8 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
-		if entry.Config.InternalUIShowMount != nil {
-			entryConfig["_ui_show_mount"] = entry.Config.InternalUIShowMount
+		if len(entry.Config.ListingVisibility) > 0 {
+			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
 		}
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
@@ -2199,9 +2214,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	if apiConfig.InternalUIShowMount != nil {
-		config.InternalUIShowMount = apiConfig.InternalUIShowMount
+	switch apiConfig.ListingVisibility {
+	case "auth":
+	case "unauth":
+	case "":
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("unsupported listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
+	config.ListingVisibility = apiConfig.ListingVisibility
+
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
 	}
@@ -3099,7 +3120,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	resp.Data["auth"] = authMounts
 
 	for _, entry := range b.Core.mounts.Entries {
-		if entry.Config.InternalUIShowMount != nil && *entry.Config.InternalUIShowMount != false {
+		if entry.Config.ListingVisibility == "unauth" {
 			info := map[string]interface{}{
 				"type":        entry.Type,
 				"description": entry.Description,
@@ -3109,7 +3130,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	}
 
 	for _, entry := range b.Core.auth.Entries {
-		if entry.Config.InternalUIShowMount != nil && *entry.Config.InternalUIShowMount != false {
+		if entry.Config.ListingVisibility == "unauth" {
 			info := map[string]interface{}{
 				"type":        entry.Type,
 				"description": entry.Description,
@@ -3690,5 +3711,8 @@ This path responds to the following HTTP methods.
 	"random": {
 		"Generate random bytes",
 		"This function can be used to generate high-entropy random bytes.",
+	},
+	"listing_visibility": {
+		"Determines the visibility of the mount in the UI-specific listing endpoint.",
 	},
 }

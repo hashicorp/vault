@@ -14,7 +14,7 @@ func TestSysInternal_UIMounts(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	// Get original tune values, ensure that _ui_show_mount is not set
+	// Get original tune values, ensure that listing_visibility is not set
 	resp := testHttpGet(t, "", addr+"/v1/sys/internal/ui/mounts")
 	testResponseStatus(t, resp, 200)
 
@@ -37,14 +37,14 @@ func TestSysInternal_UIMounts(t *testing.T) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}
 
-	// Mount-tune the _ui_show_mount
+	// Mount-tune the listing_visibility
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
-		"_ui_show_mount": true,
+		"listing_visibility": "unauth",
 	})
 	testResponseStatus(t, resp, 204)
 
 	resp = testHttpPost(t, token, addr+"/v1/sys/auth/token/tune", map[string]interface{}{
-		"_ui_show_mount": true,
+		"listing_visibility": "unauth",
 	})
 	testResponseStatus(t, resp, 204)
 

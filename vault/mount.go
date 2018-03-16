@@ -40,6 +40,14 @@ const (
 	mountTableType = "mounts"
 )
 
+type ListingVisiblityType string
+
+const (
+	ListingVisibilityHidden ListingVisiblityType = ""
+	ListingVisibilityAuth   ListingVisiblityType = "auth"
+	ListingVisibilityUnauth ListingVisiblityType = "unauth"
+)
+
 var (
 	// loadMountsFailed if loadMounts encounters an error
 	errLoadMountsFailed = errors.New("failed to setup mount table")
@@ -185,7 +193,7 @@ type MountConfig struct {
 	PluginName               string        `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys  []string      `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys []string      `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	InternalUIShowMount      *bool         `json:"_ui_show_mount,omitempty" structs:"_ui_show_mount" mapstructure:"_ui_show_mount"`
+	ListingVisibility        string        `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -196,7 +204,7 @@ type APIMountConfig struct {
 	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
-	InternalUIShowMount      *bool    `json:"_ui_show_mount,omitempty" structs:"_ui_show_mount" mapstructure:"_ui_show_mount"`
+	ListingVisibility        string   `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 }
 
 // Clone returns a deep copy of the mount entry

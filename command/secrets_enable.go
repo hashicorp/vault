@@ -23,7 +23,7 @@ type SecretsEnableCommand struct {
 	flagMaxLeaseTTL              time.Duration
 	flagAuditNonHMACRequestKeys  []string
 	flagAuditNonHMACResponseKeys []string
-	flagUIShowMount              bool
+	flagListingVisibility        string
 	flagForceNoCache             bool
 	flagPluginName               string
 	flagLocal                    bool
@@ -122,10 +122,10 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 			"devices in the response data object.",
 	})
 
-	f.BoolVar(&BoolVar{
-		Name:   flagNameUIShowMount,
-		Target: &c.flagUIShowMount,
-		Usage:  "Toggles whether to show the mount in the UI-specific listing endpoint",
+	f.StringVar(&StringVar{
+		Name:   flagNameListingVisibility,
+		Target: &c.flagListingVisibility,
+		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -236,8 +236,8 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 			mountInput.Config.AuditNonHMACRequestKeys = c.flagAuditNonHMACResponseKeys
 		}
 
-		if fl.Name == flagNameUIShowMount {
-			mountInput.Config.InternalUIShowMount = &c.flagUIShowMount
+		if fl.Name == flagNameListingVisibility {
+			mountInput.Config.ListingVisibility = c.flagListingVisibility
 		}
 	})
 

@@ -2214,12 +2214,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 
 	// Mount-tune an auth mount
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
-	req.Data["_ui_show_mount"] = true
+	req.Data["listing_visibility"] = "unauth"
 	b.HandleRequest(context.Background(), req)
 
 	// Mount-tune a secret mount
 	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/secret/tune")
-	req.Data["_ui_show_mount"] = true
+	req.Data["listing_visibility"] = "unauth"
 	b.HandleRequest(context.Background(), req)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")

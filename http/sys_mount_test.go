@@ -1166,7 +1166,7 @@ func TestSysTuneMount_showUIMount(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	// Get original tune values, ensure that _ui_show_mount is not set
+	// Get original tune values, ensure that listing_visibility is not set
 	resp := testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
 	testResponseStatus(t, resp, 200)
 
@@ -1193,9 +1193,9 @@ func TestSysTuneMount_showUIMount(t *testing.T) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}
 
-	// Mount-tune the _ui_show_mount
+	// Mount-tune the listing_visibility
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
-		"_ui_show_mount": true,
+		"listing_visibility": "unauth",
 	})
 	testResponseStatus(t, resp, 204)
 
@@ -1212,15 +1212,15 @@ func TestSysTuneMount_showUIMount(t *testing.T) {
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
-			"default_lease_ttl": json.Number("2764800"),
-			"max_lease_ttl":     json.Number("2764800"),
-			"force_no_cache":    false,
-			"_ui_show_mount":    true,
+			"default_lease_ttl":  json.Number("2764800"),
+			"max_lease_ttl":      json.Number("2764800"),
+			"force_no_cache":     false,
+			"listing_visibility": "unauth",
 		},
-		"default_lease_ttl": json.Number("2764800"),
-		"max_lease_ttl":     json.Number("2764800"),
-		"force_no_cache":    false,
-		"_ui_show_mount":    true,
+		"default_lease_ttl":  json.Number("2764800"),
+		"max_lease_ttl":      json.Number("2764800"),
+		"force_no_cache":     false,
+		"listing_visibility": "unauth",
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
