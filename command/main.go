@@ -168,6 +168,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		HelpFunc: groupedHelpFunc(
 			cli.BasicHelpFunc("vault"),
 		),
+		HelpWriter:                 runOpts.Stderr,
 		HiddenCommands:             hiddenCommands,
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,
