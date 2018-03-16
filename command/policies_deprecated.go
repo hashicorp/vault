@@ -38,7 +38,7 @@ func (c *PoliciesDeprecatedCommand) Run(args []string) int {
 			BaseCommand: &BaseCommand{
 				UI:          c.UI,
 				client:      c.client,
-				tokenHelper: c.TokenHelper,
+				tokenHelper: c.tokenHelper,
 				flagAddress: c.flagAddress,
 			},
 		}).Run(oargs)
@@ -50,7 +50,7 @@ func (c *PoliciesDeprecatedCommand) Run(args []string) int {
 		BaseCommand: &BaseCommand{
 			UI:          c.UI,
 			client:      c.client,
-			tokenHelper: c.TokenHelper,
+			tokenHelper: c.tokenHelper,
 			flagAddress: c.flagAddress,
 		},
 	}).Run(oargs)
