@@ -170,14 +170,19 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 		if bit&FlagSetHTTP != 0 {
 			f := set.NewFlagSet("HTTP Options")
 
-			f.StringVar(&StringVar{
+			addrStringVar := &StringVar{
 				Name:       "address",
 				Target:     &c.flagAddress,
-				Default:    "https://127.0.0.1:8200",
 				EnvVar:     "VAULT_ADDR",
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Vault server.",
-			})
+			}
+			if c.flagAddress != "" {
+				addrStringVar.Default = c.flagAddress
+			} else {
+				addrStringVar.Default = "https://127.0.0.1:8200"
+			}
+			f.StringVar(addrStringVar)
 
 			f.StringVar(&StringVar{
 				Name:       "ca-cert",
