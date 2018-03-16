@@ -9,13 +9,13 @@ description: |-
 
 # Vault Deployment Reference Architecture
 
-The goal of this document is to recommend deployment practices of
-_HashiCorp Vault_. This reference architecture conveys a general architecture
+The goal of this document is to recommend _HashiCorp Vault_ deployment
+practices. This reference architecture conveys a general architecture
 that should be adapted to accommodate the specific needs of each implementation.
 
 The following topics are addressed in this guide:
 
-- [Deployment Topology for One datacenter](#one-dc)
+- [Deployment Topology within One Datacenter](#one-dc)
     - [Network Connectivity](#network-connectivity-details)
     - [Deployment System Requirements](#deployment-system-requirements)
     - [Hardware Considerations](#hardware-considerations)
@@ -29,7 +29,11 @@ The following topics are addressed in this guide:
 backend](/docs/internals/architecture.html) since that is the recommended
 storage backend for production deployments.
 
-## <a name="one-dc"></a>Deployment Topology for One datacenter
+## <a name="one-dc"></a>Deployment Topology within One Datacenter
+
+This section explains how to deploy a Vault open source cluster in one datacenter.
+Once a Vault cluster is running succesfully within one datacenter,
+move on to deploying Vault Enterprise across [multiple datacenters](#multi-dc).
 
 ### Reference Diagram
 
@@ -39,10 +43,10 @@ Eight Nodes with [Consul Storage Backend](/docs/configuration/storage/consul.htm
 #### Design Summary
 
 This design is the recommended architecture for production environments, as it
-is the most flexible and resilient design. It allows Consul servers to be
-disparate from the Vault servers, such that software upgrades can be performed
-easier, as well as the fact that server sizing/flexibility can be more easily
-accommodated.  Vault to Consul backend connectivity is over HTTP and should be
+provides flexibility and resilience. Consul servers are separate
+from the Vault servers so that software upgrades are easier to perform. Additionally,
+separate Consul and Vault servers allows for separate sizing for each.
+Vault to Consul backend connectivity is over HTTP and should be
 secured with TLS as well as a Consul token to provide encryption of all traffic.
 
 #### Failure Tolerance
@@ -215,42 +219,9 @@ Vault Enterprise.
 
 ~> **Enterprise Only:** Vault replication feature is a part of _Vault Enterprise_.
 
-HashiCorp Vault Enterprise provides two modes of replication, allowing for a
-global secrets management solution. The [Vault
-documentation](/docs/enterprise/replication/index.html) provides information
-related to replication capability within Vault Enterprise.
-
-#### Replication Notes
-
-- There is no set limit on number of clusters within a replication set. Largest
-deployments today are in the 30+ cluster range.
-- Any cluster within a Performance replication set can act as a Disaster
-Recovery primary cluster.
-- A cluster within a Performance replication set can also replicate to multiple
-Disaster Recovery secondary clusters.
-- While a Vault cluster can possess a replication role (or roles), there are no
-special considerations required in terms of infrastructure, and clusters can
-assume (or be promoted) to another role. Special circumstances related to mount
-filters and HSM usage may limit swapping of roles, but those are based on
-specific organization configurations.
-
-
-#### Considerations Related to Unseal proxy_protocol_behavior
-
-Using replication with Vault clusters integrated with HSM devices for automated
-unseal operations has some details that should be understood during the planning
-phase.
-
-- If a **performance** primary cluster utilizes an HSM, all other clusters
-within that replication set must use an HSM as well.
-- If a **performance** primary cluster does NOT utilize an HSM (uses Shamir
-  secret sharing method), the clusters within that replication set can be mixed,
-  such that some may use an HSM, others may use Shamir.
-
-For sake of this discussion, the [cloud
-auto-unseal](/docs/enterprise/auto-unseal/index.html) feature is treated as an
-HSM.
-
+HashiCorp Vault Enterprise provides two modes of replication, performance
+and disaster recovery. The [Vault documentation](/docs/enterprise/replication/index.html)
+provides more detailed information on the replication capabilities within Vault Enterprise.
 
 #### Performance Replication
 
@@ -271,6 +242,35 @@ in environments where high availability is of the utmost concern.
 The following diagrams illustrate some possible replication scenarios.
 ![Replication Pattern|40%](/assets/images/vault-ref-arch-4.png)
 
+#### Replication Notes
+
+- There is no set limit on number of clusters within a replication set. Largest
+deployments today are in the 30+ cluster range.
+- Any cluster within a Performance replication set can act as a Disaster
+Recovery primary cluster.
+- A cluster within a Performance replication set can also replicate to multiple
+Disaster Recovery secondary clusters.
+- While a Vault cluster can possess a replication role (or roles), there are no
+special considerations required in terms of infrastructure, and clusters can
+assume (or be promoted) to another role. Special circumstances related to mount
+filters and HSM usage may limit swapping of roles, but those are based on
+specific organization configurations.
+
+#### Considerations Related to Unseal proxy_protocol_behavior
+
+Using replication with Vault clusters integrated with HSM devices for automated
+unseal operations has some details that should be understood during the planning
+phase.
+
+- If a **performance** primary cluster utilizes an HSM, all other clusters
+within that replication set must use an HSM as well.
+- If a **performance** primary cluster does NOT utilize an HSM (uses Shamir
+  secret sharing method), the clusters within that replication set can be mixed,
+  such that some may use an HSM, others may use Shamir.
+
+For sake of this discussion, the [cloud
+auto-unseal](/docs/enterprise/auto-unseal/index.html) feature is treated as an
+HSM.
 
 ## Additional References
 
@@ -281,7 +281,6 @@ each Vault component
 - Refer to the [AppRole Pull
 Authentication](/guides/identity/authentication.html) guide to programmatically
 generate a token for a machine or app
-
 
 ## Next steps
 
