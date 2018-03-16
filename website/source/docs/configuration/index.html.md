@@ -89,6 +89,8 @@ to specify where the configuration is.
     sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
     ```
 
+    Note: Since each plugin runs as a separate process, you need to do the same for each plugin in your [plugins directory](https://www.vaultproject.io/docs/internals/plugins.html#plugin-directory).
+
     If you use a Linux distribution with a modern version of systemd, you can add
     the following directive to the "[Service]" configuration section:
 
