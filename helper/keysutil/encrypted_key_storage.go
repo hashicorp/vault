@@ -7,7 +7,7 @@ import (
 	paths "path"
 	"strings"
 
-	"github.com/golang/go/src/math/big"
+	big "github.com/hashicorp/golang-math-big/big"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/logical"
