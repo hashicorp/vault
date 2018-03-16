@@ -81,6 +81,16 @@ func setupEnv(args []string) []string {
 }
 
 func Run(args []string) int {
+	return RunCustom(args, nil)
+}
+
+// RunCustom allows passing in a base command template to pass to other
+// commands. Currenty, this is only used for setting a custom token helper.
+func RunCustom(args []string, baseCmdTemplate *BaseCommand) int {
+	if baseCmdTemplate == nil {
+		baseCmdTemplate = &BaseCommand{}
+	}
+
 	args = setupEnv(args)
 
 	// Don't use color if disabled
@@ -129,7 +139,7 @@ func Run(args []string) int {
 		}
 	}
 
-	initCommands(ui, serverCmdUi)
+	initCommands(ui, serverCmdUi, baseCmdTemplate)
 
 	// Calculate hidden commands from the deprecated ones
 	hiddenCommands := make([]string, 0, len(DeprecatedCommands)+1)

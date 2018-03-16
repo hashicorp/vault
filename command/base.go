@@ -114,6 +114,11 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	return client, nil
 }
 
+// SetTokenHelper sets the token helper on the command.
+func (c *BaseCommand) SetTokenHelper(th token.TokenHelper) {
+	c.tokenHelper = th
+}
+
 // TokenHelper returns the token helper attached to the command.
 func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
 	if c.tokenHelper != nil {
