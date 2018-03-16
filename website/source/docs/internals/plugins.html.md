@@ -15,7 +15,7 @@ and require no additional operator intervention to run. Builtin plugins are
 just like any other backend code inside vault. External plugins, on the other
 hand, are not shipped with the vault binary and must be registered to vault by
 a privileged vault user. This section of the documentation will describe the
-architecture and security of external plugins. 
+architecture and security of external plugins.
 
 # Plugin Architecture
 Vault's plugins are completely separate, standalone applications that Vault
@@ -72,7 +72,7 @@ docs](/api/system/plugins-catalog.html).
 An example plugin submission looks like:
 
 ```
-$ vault write sys/plugins/catalog/myplugin-database-plugin \ 
+$ vault write sys/plugins/catalog/myplugin-database-plugin \
     sha_256=<expected SHA256 Hex value of the plugin binary> \
     command="myplugin"
 Success! Data written to: sys/plugins/catalog/myplugin-database-plugin
@@ -83,7 +83,7 @@ When a backend wants to run a plugin, it first looks up the plugin, by name, in
 the catalog. It then checks the executable's SHA256 sum against the one
 configured in the plugin catalog. Finally vault runs the command configured in
 the catalog, sending along the JWT formatted response wrapping token and mlock
-settings (like Vault, plugins support the use of mlock when available).
+settings (like Vault, plugins support [the use of mlock when available](https://www.vaultproject.io/docs/configuration/index.html#disable_mlock)).
 
 # Plugin Development
 
@@ -114,7 +114,7 @@ package main
 
 import (
 	"os"
-	
+
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/plugins"
 )
@@ -123,7 +123,7 @@ func main() {
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args)
-	
+
 	plugins.Serve(New().(MyPlugin), apiClientMeta.GetTLSConfig())
 }
 ```
