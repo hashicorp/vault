@@ -491,7 +491,7 @@ func (ts *TokenStore) Invalidate(ctx context.Context, key string) {
 	}
 }
 
-func (ts *TokenStore) Salt() (*salt.Salt, error) {
+func (ts *TokenStore) Salt(ctx context.Context) (*salt.Salt, error) {
 	ts.saltLock.RLock()
 	if ts.salt != nil {
 		defer ts.saltLock.RUnlock()
@@ -503,7 +503,7 @@ func (ts *TokenStore) Salt() (*salt.Salt, error) {
 	if ts.salt != nil {
 		return ts.salt, nil
 	}
-	salt, err := salt.NewSalt(ts.view, &salt.Config{
+	salt, err := salt.NewSalt(ctx, ts.view, &salt.Config{
 		HashFunc: salt.SHA1Hash,
 		Location: salt.DefaultLocation,
 	})
@@ -667,8 +667,8 @@ func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 }
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversible
-func (ts *TokenStore) SaltID(id string) (string, error) {
-	s, err := ts.Salt()
+func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
+	s, err := ts.Salt(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -731,7 +731,7 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *TokenEntry) err
 	entry.Accessor = accessorUUID
 
 	// Create index entry, mapping the accessor to the token ID
-	saltID, err := ts.SaltID(entry.Accessor)
+	saltID, err := ts.SaltID(ctx, entry.Accessor)
 	if err != nil {
 		return err
 	}
@@ -766,7 +766,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *TokenEntry) error {
 		entry.ID = entryUUID
 	}
 
-	saltedId, err := ts.SaltID(entry.ID)
+	saltedId, err := ts.SaltID(ctx, entry.ID)
 	if err != nil {
 		return err
 	}
@@ -795,7 +795,7 @@ func (ts *TokenStore) store(ctx context.Context, entry *TokenEntry) error {
 // storeCommon handles the actual storage of an entry, possibly generating
 // secondary indexes
 func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeSecondary bool) error {
-	saltedId, err := ts.SaltID(entry.ID)
+	saltedId, err := ts.SaltID(ctx, entry.ID)
 	if err != nil {
 		return err
 	}
@@ -822,7 +822,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeS
 			}
 
 			// Create the index entry
-			parentSaltedID, err := ts.SaltID(entry.Parent)
+			parentSaltedID, err := ts.SaltID(ctx, entry.Parent)
 			if err != nil {
 				return err
 			}
@@ -875,7 +875,7 @@ func (ts *TokenStore) UseToken(ctx context.Context, te *TokenEntry) (*TokenEntry
 	defer lock.Unlock()
 
 	// Call lookupSalted instead of Lookup to avoid deadlocking since Lookup grabs a read lock
-	saltedID, err := ts.SaltID(te.ID)
+	saltedID, err := ts.SaltID(ctx, te.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -932,7 +932,7 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*TokenEntry, error
 	lock.RLock()
 	defer lock.RUnlock()
 
-	saltedID, err := ts.SaltID(id)
+	saltedID, err := ts.SaltID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -951,7 +951,7 @@ func (ts *TokenStore) lookupTainted(ctx context.Context, id string) (*TokenEntry
 	lock.RLock()
 	defer lock.RUnlock()
 
-	saltedID, err := ts.SaltID(id)
+	saltedID, err := ts.SaltID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1051,7 +1051,7 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
 		return fmt.Errorf("cannot revoke blank token")
 	}
 
-	saltedID, err := ts.SaltID(id)
+	saltedID, err := ts.SaltID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -1145,7 +1145,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 
 	// Clear the secondary index if any
 	if entry.Parent != "" {
-		parentSaltedID, err := ts.SaltID(entry.Parent)
+		parentSaltedID, err := ts.SaltID(ctx, entry.Parent)
 		if err != nil {
 			return err
 		}
@@ -1158,7 +1158,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 
 	// Clear the accessor index if any
 	if entry.Accessor != "" {
-		accessorSaltedID, err := ts.SaltID(entry.Accessor)
+		accessorSaltedID, err := ts.SaltID(ctx, entry.Accessor)
 		if err != nil {
 			return err
 		}
@@ -1188,7 +1188,7 @@ func (ts *TokenStore) RevokeTree(ctx context.Context, id string) error {
 	}
 
 	// Get the salted ID
-	saltedId, err := ts.SaltID(id)
+	saltedId, err := ts.SaltID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -1251,7 +1251,7 @@ func (ts *TokenStore) handleCreateAgainstRole(ctx context.Context, req *logical.
 }
 
 func (ts *TokenStore) lookupByAccessor(ctx context.Context, accessor string, tainted bool) (accessorEntry, error) {
-	saltedID, err := ts.SaltID(accessor)
+	saltedID, err := ts.SaltID(ctx, accessor)
 	if err != nil {
 		return accessorEntry{}, err
 	}
@@ -1272,7 +1272,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(ctx context.Context, saltedAccessor
 	err = jsonutil.DecodeJSON(entry.Value, &aEntry)
 	// If we hit an error, assume it's a pre-struct straight token ID
 	if err != nil {
-		saltedID, err := ts.SaltID(string(entry.Value))
+		saltedID, err := ts.SaltID(ctx, string(entry.Value))
 		if err != nil {
 			return accessorEntry{}, err
 		}
@@ -1395,7 +1395,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 		// Look up tainted variants so we only find entries that truly don't
 		// exist
-		saltedId, err := ts.SaltID(accessorEntry.TokenID)
+		saltedId, err := ts.SaltID(ctx, accessorEntry.TokenID)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read salt id: %v", err))
 			lock.RUnlock()
@@ -1893,6 +1893,12 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	sysView := ts.System()
 
 	if periodToUse > 0 {
+		// Cap period value to the sys/mount max value; this matches behavior
+		// in expiration manager for renewals
+		if periodToUse > sysView.MaxLeaseTTL() {
+			resp.AddWarning(fmt.Sprintf("Period of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", int64(periodToUse.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
+			periodToUse = sysView.MaxLeaseTTL()
+		}
 		te.TTL = periodToUse
 	} else {
 		// Set the default lease if not provided, root tokens are exempt
@@ -2086,7 +2092,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	defer lock.RUnlock()
 
 	// Lookup the token
-	saltedId, err := ts.SaltID(id)
+	saltedId, err := ts.SaltID(ctx, id)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}

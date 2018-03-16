@@ -93,7 +93,7 @@ type backend struct {
 	MapUserId *framework.PathMap
 }
 
-func (b *backend) Salt() (*salt.Salt, error) {
+func (b *backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	b.SaltMutex.RLock()
 	if b.salt != nil {
 		defer b.SaltMutex.RUnlock()
@@ -105,7 +105,7 @@ func (b *backend) Salt() (*salt.Salt, error) {
 	if b.salt != nil {
 		return b.salt, nil
 	}
-	salt, err := salt.NewSalt(b.view, &salt.Config{
+	salt, err := salt.NewSalt(ctx, b.view, &salt.Config{
 		HashFunc: salt.SHA1Hash,
 		Location: salt.DefaultLocation,
 	})

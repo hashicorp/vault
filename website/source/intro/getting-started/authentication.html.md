@@ -86,7 +86,7 @@ is only used for revoking _leases_. For revoking _tokens_, use
 To authenticate with a token:
 
 ```text
-$ vault login d08e2bd5-ffb0-440d-6486-b8f650ec8c0c
+$ vault login a402d075-6d59-6129-1ac7-3718796d4346
 Success! You are now authenticated. The token information displayed below
 is already stored in the token helper. You do NOT need to run "vault login"
 again. Future Vault requests will automatically use this token.

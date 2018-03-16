@@ -588,6 +588,10 @@ list in order to satisfy that constraint.
   This constraint is
   checked by the ec2 auth method as well as the iam auth method only when
   inferring an ec2 instance. This is a comma-separated string or a JSON array.
+- `bound_ec2_instance_id` `(list: [])` - If set, defines a constraint on the
+  EC2 instances to have one of these instance IDs. This constraint is checked by
+  the ec2 auth method as well as the iam auth method only when inferring an ec2
+  instance. This is a comma-separated string or a JSON array.
 - `role_tag` `(string: "")` - If set, enables the role tags for this role. The
   value set for this field should be the 'key' of the tag on the EC2 instance.
   The 'value' of the tag should be generated using `role/<role>/tag` endpoint.
@@ -681,6 +685,7 @@ list in order to satisfy that constraint.
 ```json
 {
   "bound_ami_id": ["ami-fce36987"],
+  "bound_ec2_instance_id": ["i-12345678901234567"],
   "role_tag": "",
   "policies": [
     "default",
