@@ -576,16 +576,16 @@ list in order to satisfy that constraint.
   comma-separated string or a JSON array.
 - `bound_iam_role_arn` `(list: [])` - If set, defines a constraint on the
   authenticating EC2 instance that it must match one of the IAM role ARNs specified by
-  this parameter.  The value is refix-matched (as though it were a glob ending
-  in `*`).  The configured IAM user or EC2 instance role must be allowed to
+  this parameter.  Wildcards are supported at the end of the ARN to allow for
+  prefix matching. The configured IAM user or EC2 instance role must be allowed to
   execute the `iam:GetInstanceProfile` action if this is specified. This
   constraint is checked by the ec2 auth method as well as the iam auth method
   only when inferring an EC2 instance. This is a comma-separated string or a
   JSON array.
 - `bound_iam_instance_profile_arn` `(list: [])` - If set, defines a constraint
-  on the EC2 instances to be associated with an IAM instance profile ARN which
-  has a prefix that matches one of the values specified by this parameter. The value is
-  prefix-matched (as though it were a glob ending in `*`). This constraint is
+  on the EC2 instances to be associated with an IAM instance profile ARN.
+  Wildcards are supported at the end of the ARN to allow for prefix matching.
+  This constraint is
   checked by the ec2 auth method as well as the iam auth method only when
   inferring an ec2 instance. This is a comma-separated string or a JSON array.
 - `bound_ec2_instance_id` `(list: [])` - If set, defines a constraint on the
