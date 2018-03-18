@@ -41,6 +41,8 @@ BUG FIXES:
  * cli: Fix autocomplete installation when using Fish as the shell [GH-4094]
  * secret/database: Properly honor mount-tuned max TTL [GH-4051]
  * secret/ssh: Return `key_bits` value when reading a role [GH-4098]
+ * sys: When writing policies on a performance replication secondary, properly
+   forward requests to the primary [GH-4129]
 
 ## 0.9.5 (February 26th, 2018)
 
