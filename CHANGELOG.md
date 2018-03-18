@@ -6,12 +6,18 @@ DEPRECATIONS/CHANGES:
    comma-delimited string or a string array. However, to keep consistency with
    input and output, when reading a role the binds will now be returned as
    string arrays rather than strings.
+ * In order to prefix-match IAM role and instance profile ARNs in AWS auth
+   backend, you now must explicitly opt-in by adding a `*` to the end of the
+   ARN. Existing configurations will be upgraded automatically, but when
+   writing a new role configuration the updated behavior will be used.
 
 IMPROVEMENTS:
 
  * auth/approle: Allow array input for bound_cidr_list [4078]
  * auth/aws: Allow using lists in role bind parameters [GH-3907]
  * auth/aws: Allow binding by EC2 instance IDs [GH-3816]
+ * auth/aws: Allow non-prefix-matched IAM role and instance profile ARNs
+   [GH-4071]
  * secret/transit: Allow selecting signature algorithm as well as hash
    algorithm when signing/verifying [GH-4018]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
