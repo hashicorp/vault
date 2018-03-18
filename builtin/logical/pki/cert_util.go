@@ -1386,7 +1386,7 @@ func convertRespToPKCS8(resp *logical.Response) error {
 	if pemUsed {
 		block.Type = "PRIVATE KEY"
 		block.Bytes = keyData
-		resp.Data["private_key"] = string(pem.EncodeToMemory(block))
+		resp.Data["private_key"] = strings.TrimSpace(string(pem.EncodeToMemory(block)))
 	} else {
 		resp.Data["private_key"] = base64.StdEncoding.EncodeToString(keyData)
 	}

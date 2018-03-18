@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -437,7 +438,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"certificate": string(pemCert),
+			"certificate": strings.TrimSpace(string(pemCert)),
 			"issuing_ca":  signingCB.Certificate,
 		},
 	}, nil

@@ -108,8 +108,10 @@ func (c *AuthCommand) Run(args []string) int {
 			"compatability will be removed in Vault 0.11 (or later).") + "\n")
 	return (&LoginCommand{
 		BaseCommand: &BaseCommand{
-			UI:     c.UI,
-			client: c.client,
+			UI:          c.UI,
+			client:      c.client,
+			tokenHelper: c.tokenHelper,
+			flagAddress: c.flagAddress,
 		},
 		Handlers: c.Handlers,
 	}).Run(args)
