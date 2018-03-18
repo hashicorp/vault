@@ -64,7 +64,7 @@ type creationParameters struct {
 	KeyUsage               x509.KeyUsage
 	ExtKeyUsage            certExtKeyUsage
 	PolicyIdentifiers      []string
-	BasicConstraintCAFalse bool
+	BasicConstraintsValidForNonCA   bool
 
 	// Only used when signing a CA cert
 	UseCSRValues        bool
@@ -930,7 +930,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		KeyUsage:               x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
 		ExtKeyUsage:            extUsage,
 		PolicyIdentifiers:      data.role.PolicyIdentifiers,
-		BasicConstraintCAFalse: data.role.BasicConstraintCAFalse,
+		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 	}
 
 	// Don't deal with URLs or max path length if it's self-signed, as these
@@ -1043,7 +1043,7 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	// Add this before calling addKeyUsages
 	if data.signingBundle == nil {
 		certTemplate.IsCA = true
-	} else if data.params.BasicConstraintCAFalse {
+	} else if data.params.BasicConstraintsValidForNonCA {
 		certTemplate.BasicConstraintsValid = true
 		certTemplate.IsCA = false
 	}
@@ -1264,7 +1264,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		if certTemplate.MaxPathLen == 0 {
 			certTemplate.MaxPathLenZero = true
 		}
-	} else if data.params.BasicConstraintCAFalse {
+	} else if data.params.BasicConstraintsValidForNonCA {
 		certTemplate.BasicConstraintsValid = true
 		certTemplate.IsCA = false
 	}
