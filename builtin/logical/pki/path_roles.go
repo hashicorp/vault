@@ -267,10 +267,10 @@ for "generate_lease".`,
 				Default:     []string{},
 				Description: `A comma-separated string or list of policy oids.`,
 			},
-			"basic_constraint_ca_false": &framework.FieldSchema{
+			"basic_constraints_valid_for_non_ca": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: `Add Basic Constraint CA:False to issued certificates.`,
+				Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
 			},
 		},
 
@@ -469,7 +469,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		NoStore:                data.Get("no_store").(bool),
 		RequireCN:              data.Get("require_cn").(bool),
 		PolicyIdentifiers:      data.Get("policy_identifiers").([]string),
-		BasicConstraintCAFalse: data.Get("basic_constraint_ca_false").(bool),
+		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -617,7 +617,7 @@ type roleEntry struct {
 	RequireCN              bool     `json:"require_cn" mapstructure:"require_cn"`
 	AllowedOtherSANs       []string `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
 	PolicyIdentifiers      []string `json:"policy_identifiers" mapstructure:"policy_identifiers"`
-	BasicConstraintCAFalse bool     `json:"basic_constraint_ca_false" mapstructure:"basic_constraint_ca_false"`
+	BasicConstraintsValidForNonCA bool     `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -655,7 +655,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"no_store":                  r.NoStore,
 		"allowed_other_sans":        r.AllowedOtherSANs,
 		"policy_identifiers":        r.PolicyIdentifiers,
-		"basic_constraint_ca_false": r.BasicConstraintCAFalse,
+		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength
