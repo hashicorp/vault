@@ -91,7 +91,6 @@ func TestBase58(t *testing.T) {
 }
 
 func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
-	s := &logical.InmemStorage{}
 	policy := &Policy{
 		Name:                 "metadata",
 		Type:                 KeyType_AES256_GCM96,
@@ -103,10 +102,9 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		versionPrefixCache:   &sync.Map{},
 	}
 
-	_, err := NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
-		Storage: s,
-		Policy:  policy,
-		Prefix:  "prefix",
+	_, err := NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
+		Policy: policy,
+		Prefix: "prefix",
 	})
 	if err != ErrPolicyDerivedKeys {
 		t.Fatalf("Unexpected Error: %s", err)
@@ -123,10 +121,9 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		versionPrefixCache:   &sync.Map{},
 	}
 
-	_, err = NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
-		Storage: s,
-		Policy:  policy,
-		Prefix:  "prefix",
+	_, err = NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
+		Policy: policy,
+		Prefix: "prefix",
 	})
 	if err != ErrPolicyConvergentEncryption {
 		t.Fatalf("Unexpected Error: %s", err)
@@ -143,10 +140,9 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		versionPrefixCache:   &sync.Map{},
 	}
 
-	_, err = NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
-		Storage: s,
-		Policy:  policy,
-		Prefix:  "prefix",
+	_, err = NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
+		Policy: policy,
+		Prefix: "prefix",
 	})
 	if err != ErrPolicyConvergentVersion {
 		t.Fatalf("Unexpected Error: %s", err)
@@ -161,15 +157,6 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 		ConvergentVersion:    2,
 		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
 		versionPrefixCache:   &sync.Map{},
-	}
-
-	_, err = NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
-		Storage: nil,
-		Policy:  policy,
-		Prefix:  "prefix",
-	})
-	if err != ErrNilStorage {
-		t.Fatalf("Unexpected Error: %s", err)
 	}
 }
 
@@ -193,16 +180,15 @@ func TestEncrytedKeysStorage_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	es, err := NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
-		Storage: s,
-		Policy:  policy,
-		Prefix:  "prefix",
+	es, err := NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
+		Policy: policy,
+		Prefix: "prefix",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = es.Put(ctx, &logical.StorageEntry{
+	err = es.Wrap(s).Put(ctx, &logical.StorageEntry{
 		Key:   "test/foo",
 		Value: []byte("test"),
 	})
@@ -210,7 +196,7 @@ func TestEncrytedKeysStorage_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = es.Put(ctx, &logical.StorageEntry{
+	err = es.Wrap(s).Put(ctx, &logical.StorageEntry{
 		Key:   "test/foo1/test",
 		Value: []byte("test"),
 	})
@@ -218,13 +204,13 @@ func TestEncrytedKeysStorage_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keys, err := es.List(ctx, "test/")
+	keys, err := es.Wrap(s).List(ctx, "test/")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Test prefixed with "/"
-	keys, err = es.List(ctx, "/test/")
+	keys, err = es.Wrap(s).List(ctx, "/test/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +220,7 @@ func TestEncrytedKeysStorage_CRUD(t *testing.T) {
 	}
 
 	// Test the cached value is correct
-	keys, err = es.List(ctx, "test/")
+	keys, err = es.Wrap(s).List(ctx, "test/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +229,7 @@ func TestEncrytedKeysStorage_CRUD(t *testing.T) {
 		t.Fatalf("bad keys: %#v", keys)
 	}
 
-	data, err := es.Get(ctx, "test/foo")
+	data, err := es.Wrap(s).Get(ctx, "test/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,12 +237,12 @@ func TestEncrytedKeysStorage_CRUD(t *testing.T) {
 		t.Fatalf("bad data: %#v", data)
 	}
 
-	err = es.Delete(ctx, "test/foo")
+	err = es.Wrap(s).Delete(ctx, "test/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	data, err = es.Get(ctx, "test/foo")
+	data, err = es.Wrap(s).Get(ctx, "test/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,17 +272,16 @@ func BenchmarkEncrytedKeyStorage_List(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	es, err := NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
-		Storage: s,
-		Policy:  policy,
-		Prefix:  "prefix",
+	es, err := NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
+		Policy: policy,
+		Prefix: "prefix",
 	})
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	for i := 0; i < 10000; i++ {
-		err = es.Put(ctx, &logical.StorageEntry{
+		err = es.Wrap(s).Put(ctx, &logical.StorageEntry{
 			Key:   fmt.Sprintf("test/%d", i),
 			Value: []byte("test"),
 		})
@@ -307,7 +292,7 @@ func BenchmarkEncrytedKeyStorage_List(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		keys, err := es.List(ctx, "test/")
+		keys, err := es.Wrap(s).List(ctx, "test/")
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -335,10 +320,9 @@ func BenchmarkEncrytedKeyStorage_Put(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	es, err := NewEncryptedKeyStorage(EncryptedKeyStorageConfig{
-		Storage: s,
-		Policy:  policy,
-		Prefix:  "prefix",
+	es, err := NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
+		Policy: policy,
+		Prefix: "prefix",
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -347,7 +331,7 @@ func BenchmarkEncrytedKeyStorage_Put(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		err = es.Put(ctx, &logical.StorageEntry{
+		err = es.Wrap(s).Put(ctx, &logical.StorageEntry{
 			Key:   fmt.Sprintf("test/%d", i),
 			Value: []byte("test"),
 		})
