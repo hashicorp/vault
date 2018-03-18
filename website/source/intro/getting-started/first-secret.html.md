@@ -26,8 +26,30 @@ have the means necessary to decrypt it without Vault.
 
 ## Writing a Secret
 
-Let's start by writing a secret. This is done very simply with the
-`vault write` command, as shown below:
+Let's start by writing a secret. Before we do that though, we need to authenticate with the Vault server. We will be using the root token the server provided us in the previous step:
+
+```text
+$ vault login
+Token (will be hidden):
+```
+
+Upon successful authentication, you should see something like the following:
+
+```text
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
+
+Key                Value
+---                -----
+token              deb4c4bc-fed3-cea5-8cac-bc1fba790ea5
+token_accessor     cb8f39f7-8eb7-06a6-a738-3768246b41ed
+token_duration     ∞
+token_renewable    false
+token_policies     [root]
+```
+
+We should now be ready to writing our first secret by using the `vault write` command as shown below:
 
 ```text
 $ vault write secret/hello value=world
