@@ -35,7 +35,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
-				"/",
+				"*",
 			},
 		},
 
