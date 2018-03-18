@@ -52,19 +52,19 @@ type dataBundle struct {
 }
 
 type creationParameters struct {
-	Subject                pkix.Name
-	DNSNames               []string
-	EmailAddresses         []string
-	IPAddresses            []net.IP
-	OtherSANs              map[string][]string
-	IsCA                   bool
-	KeyType                string
-	KeyBits                int
-	NotAfter               time.Time
-	KeyUsage               x509.KeyUsage
-	ExtKeyUsage            certExtKeyUsage
-	PolicyIdentifiers      []string
-	BasicConstraintsValidForNonCA   bool
+	Subject                       pkix.Name
+	DNSNames                      []string
+	EmailAddresses                []string
+	IPAddresses                   []net.IP
+	OtherSANs                     map[string][]string
+	IsCA                          bool
+	KeyType                       string
+	KeyBits                       int
+	NotAfter                      time.Time
+	KeyUsage                      x509.KeyUsage
+	ExtKeyUsage                   certExtKeyUsage
+	PolicyIdentifiers             []string
+	BasicConstraintsValidForNonCA bool
 
 	// Only used when signing a CA cert
 	UseCSRValues        bool
@@ -919,17 +919,17 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	}
 
 	data.params = &creationParameters{
-		Subject:                subject,
-		DNSNames:               dnsNames,
-		EmailAddresses:         emailAddresses,
-		IPAddresses:            ipAddresses,
-		OtherSANs:              otherSANs,
-		KeyType:                data.role.KeyType,
-		KeyBits:                data.role.KeyBits,
-		NotAfter:               notAfter,
-		KeyUsage:               x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
-		ExtKeyUsage:            extUsage,
-		PolicyIdentifiers:      data.role.PolicyIdentifiers,
+		Subject:                       subject,
+		DNSNames:                      dnsNames,
+		EmailAddresses:                emailAddresses,
+		IPAddresses:                   ipAddresses,
+		OtherSANs:                     otherSANs,
+		KeyType:                       data.role.KeyType,
+		KeyBits:                       data.role.KeyBits,
+		NotAfter:                      notAfter,
+		KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
+		ExtKeyUsage:                   extUsage,
+		PolicyIdentifiers:             data.role.PolicyIdentifiers,
 		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 	}
 
