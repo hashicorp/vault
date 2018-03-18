@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"sort"
@@ -283,13 +284,9 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	var backend logical.Backend
 	var err error
 	sysView := c.mountEntrySysView(entry)
-	conf := make(map[string]string)
-	if entry.Config.PluginName != "" {
-		conf["plugin_name"] = entry.Config.PluginName
-	}
 
 	// Consider having plugin name under entry.Options
-	backend, err = c.newLogicalBackend(ctx, entry.Type, sysView, view, conf)
+	backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
 	}
@@ -779,13 +776,9 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		var backend logical.Backend
 		var err error
 		sysView := c.mountEntrySysView(entry)
-		// Set up conf to pass in plugin_name
-		conf := make(map[string]string)
-		if entry.Config.PluginName != "" {
-			conf["plugin_name"] = entry.Config.PluginName
-		}
+
 		// Create the new backend
-		backend, err = c.newLogicalBackend(ctx, entry.Type, sysView, view, conf)
+		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
 			if entry.Type == "plugin" {
@@ -852,7 +845,8 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 }
 
 // newLogicalBackend is used to create and configure a new logical backend by name
-func (c *Core) newLogicalBackend(ctx context.Context, t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, error) {
+	t := entry.Type
 	if alias, ok := mountAliases[t]; ok {
 		t = alias
 	}
@@ -860,6 +854,26 @@ func (c *Core) newLogicalBackend(ctx context.Context, t string, sysView logical.
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
+
+	// Set up conf to pass in plugin_name
+	conf := make(map[string]string, len(entry.Options)+1)
+	for k, v := range entry.Options {
+		conf[k] = v
+	}
+	if entry.Config.PluginName != "" {
+		conf["plugin_name"] = entry.Config.PluginName
+	}
+
+	uuidBytes, err := uuid.ParseUUID(entry.UUID)
+	if err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256(uuidBytes)
+	deterministicID, err := uuid.FormatUUID(sum[0:16])
+	if err != nil {
+		return nil, err
+	}
+	conf["uid"] = deterministicID
 
 	config := &logical.BackendConfig{
 		StorageView: view,
@@ -908,6 +922,9 @@ func (c *Core) defaultMountTable() *MountTable {
 		Description: "key/value secret storage",
 		UUID:        mountUUID,
 		Accessor:    mountAccessor,
+		Options: map[string]string{
+			"versioned": "true",
+		},
 	}
 	table.Entries = append(table.Entries, kvMount)
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)

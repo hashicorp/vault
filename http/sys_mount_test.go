@@ -37,6 +37,7 @@ func TestSysMounts(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{"versioned": "true"},
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -49,6 +50,7 @@ func TestSysMounts(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -61,6 +63,7 @@ func TestSysMounts(t *testing.T) {
 				},
 				"local":     true,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"identity/": map[string]interface{}{
 				"description": "identity store",
@@ -73,6 +76,7 @@ func TestSysMounts(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -86,6 +90,7 @@ func TestSysMounts(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{"versioned": "true"},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -98,6 +103,7 @@ func TestSysMounts(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -110,6 +116,7 @@ func TestSysMounts(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -122,6 +129,7 @@ func TestSysMounts(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -149,6 +157,9 @@ func TestSysMount(t *testing.T) {
 	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo", map[string]interface{}{
 		"type":        "kv",
 		"description": "foo",
+		"options": map[string]string{
+			"versioned": "true",
+		},
 	})
 	testResponseStatus(t, resp, 204)
 
@@ -174,6 +185,7 @@ func TestSysMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{"versioned": "true"},
 			},
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
@@ -186,6 +198,7 @@ func TestSysMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{"versioned": "true"},
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -198,6 +211,7 @@ func TestSysMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -210,6 +224,7 @@ func TestSysMount(t *testing.T) {
 				},
 				"local":     true,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"identity/": map[string]interface{}{
 				"description": "identity store",
@@ -222,6 +237,7 @@ func TestSysMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -235,6 +251,7 @@ func TestSysMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{"versioned": "true"},
 		},
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
@@ -247,6 +264,7 @@ func TestSysMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{"versioned": "true"},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -259,6 +277,7 @@ func TestSysMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -271,6 +290,7 @@ func TestSysMount(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -283,6 +303,7 @@ func TestSysMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -357,6 +378,7 @@ func TestSysRemount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{},
 			},
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
@@ -369,6 +391,7 @@ func TestSysRemount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{"versioned": "true"},
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -381,6 +404,7 @@ func TestSysRemount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -393,6 +417,7 @@ func TestSysRemount(t *testing.T) {
 				},
 				"local":     true,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"identity/": map[string]interface{}{
 				"description": "identity store",
@@ -405,6 +430,7 @@ func TestSysRemount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 		},
 		"bar/": map[string]interface{}{
@@ -418,6 +444,7 @@ func TestSysRemount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{},
 		},
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
@@ -430,6 +457,7 @@ func TestSysRemount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{"versioned": "true"},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -442,6 +470,7 @@ func TestSysRemount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -454,6 +483,7 @@ func TestSysRemount(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -466,6 +496,7 @@ func TestSysRemount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -521,6 +552,7 @@ func TestSysUnmount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{"versioned": "true"},
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -533,6 +565,7 @@ func TestSysUnmount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -545,6 +578,7 @@ func TestSysUnmount(t *testing.T) {
 				},
 				"local":     true,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"identity/": map[string]interface{}{
 				"description": "identity store",
@@ -557,6 +591,7 @@ func TestSysUnmount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -570,6 +605,7 @@ func TestSysUnmount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{"versioned": "true"},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -582,6 +618,7 @@ func TestSysUnmount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -594,6 +631,7 @@ func TestSysUnmount(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -606,6 +644,7 @@ func TestSysUnmount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -658,6 +697,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{},
 			},
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
@@ -670,6 +710,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{"versioned": "true"},
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -682,6 +723,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -694,6 +736,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     true,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"identity/": map[string]interface{}{
 				"description": "identity store",
@@ -706,6 +749,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -719,6 +763,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{},
 		},
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
@@ -731,6 +776,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{"versioned": "true"},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -743,6 +789,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -755,6 +802,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -767,6 +815,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -820,6 +869,14 @@ func TestSysTuneMount(t *testing.T) {
 	})
 	testResponseStatus(t, resp, 204)
 
+	// mark as versioned
+	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
+		"options": map[string]string{
+			"versioned": "true",
+		},
+	})
+	testResponseStatus(t, resp, 204)
+
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts")
 	expected = map[string]interface{}{
 		"lease_id":       "",
@@ -840,6 +897,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{"versioned": "true"},
 			},
 			"secret/": map[string]interface{}{
 				"description": "key/value secret storage",
@@ -852,6 +910,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{"versioned": "true"},
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -864,6 +923,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -876,6 +936,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     true,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 			"identity/": map[string]interface{}{
 				"description": "identity store",
@@ -888,6 +949,7 @@ func TestSysTuneMount(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -901,6 +963,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{"versioned": "true"},
 		},
 		"secret/": map[string]interface{}{
 			"description": "key/value secret storage",
@@ -913,6 +976,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{"versioned": "true"},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -925,6 +989,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -937,6 +1002,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -949,6 +1015,7 @@ func TestSysTuneMount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 

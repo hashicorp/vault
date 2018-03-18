@@ -129,6 +129,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options": map[string]string{
+				"versioned": "true",
+			},
 		},
 		"sys/": map[string]interface{}{
 			"type":        "system",
@@ -142,6 +145,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]string(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -155,6 +159,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": false,
+			"options":   map[string]string(nil),
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -168,6 +173,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]string(nil),
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -186,6 +192,9 @@ func TestSystemBackend_mount(t *testing.T) {
 	}
 	req.Data["local"] = true
 	req.Data["seal_wrap"] = true
+	req.Data["options"] = map[string]string{
+		"versioned": "true",
+	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
@@ -216,6 +225,9 @@ func TestSystemBackend_mount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options": map[string]string{
+				"versioned": "true",
+			},
 		},
 		"sys/": map[string]interface{}{
 			"type":        "system",
@@ -229,6 +241,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]string(nil),
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -242,6 +255,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": false,
+			"options":   map[string]string(nil),
 		},
 		"identity/": map[string]interface{}{
 			"description": "identity store",
@@ -255,6 +269,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]string(nil),
 		},
 		"prod/secret/": map[string]interface{}{
 			"description": "",
@@ -268,6 +283,9 @@ func TestSystemBackend_mount(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": true,
+			"options": map[string]string{
+				"versioned": "true",
+			},
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -1392,6 +1410,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]string(nil),
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -1443,6 +1462,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			},
 			"local":     true,
 			"seal_wrap": true,
+			"options":   map[string]string{},
 		},
 		"token/": map[string]interface{}{
 			"type":        "token",
@@ -1455,6 +1475,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]string(nil),
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {

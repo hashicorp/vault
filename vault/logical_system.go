@@ -265,6 +265,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
+					"options": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["tune_mount_config"][0]),
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
@@ -301,6 +305,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"audit_non_hmac_response_keys": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
+					},
+					"options": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["tune_mount_config"][0]),
 					},
 				},
 
@@ -346,6 +354,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"plugin_name": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_plugin_name"][0]),
+					},
+					"options": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["mount_options"][0]),
 					},
 				},
 
@@ -566,6 +578,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"plugin_name": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
+					},
+					"options": &framework.FieldSchema{
+						Type:        framework.TypeMap,
+						Description: strings.TrimSpace(sysHelp["auth_options"][0]),
 					},
 				},
 
@@ -1445,6 +1461,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 			"accessor":    entry.Accessor,
 			"local":       entry.Local,
 			"seal_wrap":   entry.SealWrap,
+			"options":     entry.Options,
 		}
 		entryConfig := map[string]interface{}{
 			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -1480,6 +1497,18 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
+
+	options := data.Get("options").(map[string]interface{})
+
+	optionMap := make(map[string]string)
+	for k, v := range options {
+		vStr, ok := v.(string)
+		if !ok {
+			return logical.ErrorResponse("options must be string valued"),
+				logical.ErrInvalidRequest
+		}
+		optionMap[k] = vStr
+	}
 
 	path = sanitizeMountPath(path)
 
@@ -1577,6 +1606,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Config:      config,
 		Local:       local,
 		SealWrap:    sealWrap,
+		Options:     optionMap,
 	}
 
 	// Attempt mount
@@ -1899,6 +1929,51 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	if optionsRaw, ok := data.GetOk("options"); ok {
+		b.Core.logger.Info("core: mount tuning of options", "path", path)
+		options := optionsRaw.(map[string]interface{})
+		optionMap := make(map[string]string)
+		for k, v := range options {
+			vStr, ok := v.(string)
+			if !ok {
+				return logical.ErrorResponse("options must be string valued"),
+					logical.ErrInvalidRequest
+			}
+			optionMap[k] = vStr
+		}
+
+		b.Core.logger.Info("core: mount tuning of options", "path", path, "options", optionMap)
+		// Special case to make sure we can not disable versioning once it's
+		// enabeled. If the vkv backend suports downgrading this can be removed.
+		if mountEntry.Options["versioned"] == "true" && optionMap["versioned"] != "true" {
+			return logical.ErrorResponse("cannot disable versioning once it's enabled"), logical.ErrInvalidRequest
+		}
+
+		oldVal := mountEntry.Options
+		mountEntry.Options = optionMap
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Options = oldVal
+			return handleError(err)
+		}
+
+		// Another special case to trigger the upgrade path if we are enabling
+		// versioning for the first time.
+		if oldVal["versioned"] != "true" && optionMap["versioned"] == "true" {
+			mountEntry.Options["upgrade"] = "true"
+		}
+
+		b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
+
+		delete(mountEntry.Options, "upgrade")
+	}
 	return nil, nil
 }
 
@@ -2045,6 +2120,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			"accessor":    entry.Accessor,
 			"local":       entry.Local,
 			"seal_wrap":   entry.SealWrap,
+			"options":     entry.Options,
 		}
 		entryConfig := map[string]interface{}{
 			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -2077,6 +2153,17 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
+	options := data.Get("options").(map[string]interface{})
+
+	optionMap := make(map[string]string)
+	for k, v := range options {
+		vStr, ok := v.(string)
+		if !ok {
+			return logical.ErrorResponse("options must be string valued"),
+				logical.ErrInvalidRequest
+		}
+		optionMap[k] = vStr
+	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -2169,6 +2256,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Config:      config,
 		Local:       local,
 		SealWrap:    sealWrap,
+		Options:     optionMap,
 	}
 
 	// Attempt enabling

@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"strings"
@@ -108,13 +109,9 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 	var err error
 	var backend logical.Backend
 	sysView := c.mountEntrySysView(entry)
-	conf := make(map[string]string)
-	if entry.Config.PluginName != "" {
-		conf["plugin_name"] = entry.Config.PluginName
-	}
 
 	// Create the new backend
-	backend, err = c.newCredentialBackend(ctx, entry.Type, sysView, view, conf)
+	backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
 	}
@@ -466,12 +463,8 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
-		conf := make(map[string]string)
-		if entry.Config.PluginName != "" {
-			conf["plugin_name"] = entry.Config.PluginName
-		}
 
-		backend, err = c.newCredentialBackend(ctx, entry.Type, sysView, view, conf)
+		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
 			if entry.Type == "plugin" {
@@ -546,12 +539,8 @@ func (c *Core) teardownCredentials(ctx context.Context) error {
 }
 
 // newCredentialBackend is used to create and configure a new credential backend by name
-func (c *Core) newCredentialBackend(
-	ctx context.Context,
-	t string,
-	sysView logical.SystemView,
-	view logical.Storage,
-	conf map[string]string) (logical.Backend, error) {
+func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, error) {
+	t := entry.Type
 	if alias, ok := credentialAliases[t]; ok {
 		t = alias
 	}
@@ -559,6 +548,26 @@ func (c *Core) newCredentialBackend(
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
+
+	// Set up conf to pass in plugin_name
+	conf := make(map[string]string, len(entry.Options)+1)
+	for k, v := range entry.Options {
+		conf[k] = v
+	}
+	if entry.Config.PluginName != "" {
+		conf["plugin_name"] = entry.Config.PluginName
+	}
+
+	uuidBytes, err := uuid.ParseUUID(entry.UUID)
+	if err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256(uuidBytes)
+	deterministicID, err := uuid.FormatUUID(sum[0:16])
+	if err != nil {
+		return nil, err
+	}
+	conf["uid"] = deterministicID
 
 	config := &logical.BackendConfig{
 		StorageView: view,

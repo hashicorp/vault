@@ -35,6 +35,7 @@ func TestSysAuth(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -47,6 +48,7 @@ func TestSysAuth(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -99,6 +101,7 @@ func TestSysEnableAuth(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   map[string]interface{}{},
 			},
 			"token/": map[string]interface{}{
 				"description": "token based credentials",
@@ -110,6 +113,7 @@ func TestSysEnableAuth(t *testing.T) {
 				},
 				"local":     false,
 				"seal_wrap": false,
+				"options":   interface{}(nil),
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -122,6 +126,7 @@ func TestSysEnableAuth(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   map[string]interface{}{},
 		},
 		"token/": map[string]interface{}{
 			"description": "token based credentials",
@@ -133,6 +138,7 @@ func TestSysEnableAuth(t *testing.T) {
 			},
 			"local":     false,
 			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -188,6 +194,7 @@ func TestSysDisableAuth(t *testing.T) {
 				"type":        "token",
 				"local":       false,
 				"seal_wrap":   false,
+				"options":     interface{}(nil),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -200,6 +207,7 @@ func TestSysDisableAuth(t *testing.T) {
 			"type":        "token",
 			"local":       false,
 			"seal_wrap":   false,
+			"options":     interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
