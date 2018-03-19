@@ -100,8 +100,7 @@ to learn more about what happens when you create or update a roleset.
 - `name` (`string: <required>`): Required. Name of the role. Cannot be updated.
 - `secret_type` (`string: "access_token"`): Type of secret generated for this role set. Accepted values: `access_token`, `service_account_key`. Cannot be updated.
 - `project` (`string: <required>`): Name of the GCP project that this roleset's service account will belong to. Cannot be updated. 
-- `bindings` (`string: <required>`): Bindings configuration string (expect HCL or JSON format)
-- `base64_encoded` (`bool: false`): Whether given bindings string is base64 encoded
+- `bindings` (`string: <required>`): Bindings configuration string (expects HCL or JSON format in raw or base64-encoded string)
 - `token_scopes` (`array: []`): List of OAuth scopes to assign to `access_token` secrets generated under this role set (`access_token` role sets only)
 
 ### Sample Payload
@@ -111,7 +110,6 @@ to learn more about what happens when you create or update a roleset.
   "secret_type": "access_token",
   "project": "mygcpproject",
   "bindings": "...",
-  "base64_encoded": false,
   "token_scopes": [ 
     "https://www.googleapis.com/auth/cloud-platform", 
     "https://www.googleapis.com/auth/bigquery"

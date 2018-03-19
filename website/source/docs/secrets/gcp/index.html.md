@@ -175,8 +175,7 @@ Parameters For Write:
     Accepted values: `access_token`, `service_account_key`. Cannot be updated.
 * `project` (`string: <required>`): Name of the GCP project that this roleset's service account will belong to. 
     Cannot be updated. 
-* `bindings` (`string: <required>`): Bindings configuration string (expect HCL or JSON format)
-* `base64_encoded` (`bool: false`): Whether given bindings string is base64 encoded.
+* `bindings` (`string: <required>`): Bindings configuration string (expected HCL or JSON string, raw or base64-encoded)
 * `token_scopes` (`array: []`): List of OAuth scopes to assign to `access_token` secrets generated under 
     this role set (`access_token` role sets only)
 
@@ -198,7 +197,7 @@ $ vault write gcp/roleset/my-token-roleset \
 $ vault write gcp/roleset/my-key-roleset \
     project="mygcpproject" \
     secret_type="service_account_key"  \
-    bindings=@binds.hcl
+    bindings="<base64-encoded-hcl-string>"
 ```
 
 #### Roleset Bindings
@@ -275,8 +274,8 @@ Each `resource` block accepts the following arguments:
     Each string must be a global role name (`roles/roleFoo`), a project-level custom role 
     (`projects/myproj/roles/roleFoo`) or an organization-level custom role (`organizations/myorg/roles/roleFoo`)  
     
-You can provide this as a plaintext string (or using Vault-syntax `@path/to/bindings.hcl`) or
-as a base64-encoded string. If you do the second, please pass argument `base64_encoded=true` as well
+You can provide this as a plaintext string blob, the base64-encoded version of this string,
+or using syntax `@path/to/bindings.hcl` to pass in a filename
     
 #### Creation Workflow:
 
