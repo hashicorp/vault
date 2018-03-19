@@ -68,7 +68,7 @@ Success! Uploaded policy: my-policy
 Here is an example you can copy-paste in the terminal:
 
 ```text
-$ vault policy write my-policy -<<EOF
+$ vault policy write my-policy
 path "secret/*" {
   capabilities = ["create"]
 }
@@ -76,7 +76,6 @@ path "secret/*" {
 path "secret/foo" {
   capabilities = ["read"]
 }
-EOF
 ```
 
 To see the list of policies, run:

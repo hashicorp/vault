@@ -94,7 +94,7 @@ As mentioned above, we need to map this policy document to a named role. To do
 that, write to `aws/roles/:name`:
 
 ```text
-$ vault write aws/roles/my-role policy=-<<EOF
+$ vault write aws/roles/my-role policy
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -110,7 +110,6 @@ $ vault write aws/roles/my-role policy=-<<EOF
     }
   ]
 }
-EOF
 Success! Data written to: aws/roles/my-role
 ```
 
