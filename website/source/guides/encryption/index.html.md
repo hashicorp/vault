@@ -12,10 +12,7 @@ description: |-
 
 Vault provides Encryption as a Service (EaaS) to enables security teams to
 fortify data during transit and at rest. So even if an intrusion occurs, your
-data is encrypted with AES 256-bit CBC encryption (TLS in transit). Even if an
-attacker were able to access the raw data, they would only have encrypted bits.
-This means attackers would need to compromise multiple systems before
-exfiltrating data.
+data is encrypted and the attacker would never get a hold of the raw data.
 
 This guide walks you through Encryption as a Service topics.
 
