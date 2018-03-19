@@ -1475,6 +1475,8 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
+		// Even though empty value is valid for ListingVisibility, we can ignore
+		// this case during mount since there's nothing to unset/hide.
 		if len(entry.Config.ListingVisibility) > 0 {
 			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
 		}
@@ -1580,12 +1582,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.ForceNoCache = true
 	}
 
-	switch apiConfig.ListingVisibility {
-	case "auth":
-	case "unauth":
-	case "":
-	default:
-		return logical.ErrorResponse(fmt.Sprintf("unsupported listing_visibility %s", apiConfig.ListingVisibility)), nil
+	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
 	config.ListingVisibility = apiConfig.ListingVisibility
 
@@ -1950,14 +1948,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("listing_visibility"); ok {
-		listingVisibility := rawVal.(string)
+		listingVisibility := rawVal.(ListingVisiblityType)
 
-		switch listingVisibility {
-		case "auth":
-		case "unauth":
-		case "":
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unsupported listing_visibility %s", listingVisibility)), nil
+		if err := checkListingVisibility(listingVisibility); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
 		}
 
 		oldVal := mountEntry.Config.ListingVisibility
@@ -2139,6 +2133,8 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
+		// Even though empty value is valid for ListingVisibility, we can ignore
+		// this case during mount since there's nothing to unset/hide.
 		if len(entry.Config.ListingVisibility) > 0 {
 			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
 		}
@@ -2236,12 +2232,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	switch apiConfig.ListingVisibility {
-	case "auth":
-	case "unauth":
-	case "":
-	default:
-		return logical.ErrorResponse(fmt.Sprintf("unsupported listing_visibility %s", apiConfig.ListingVisibility)), nil
+	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
 	config.ListingVisibility = apiConfig.ListingVisibility
 
@@ -3174,6 +3166,18 @@ func sanitizeMountPath(path string) string {
 	}
 
 	return path
+}
+
+func checkListingVisibility(visibility ListingVisiblityType) error {
+	switch visibility {
+	case ListingVisibilityHidden:
+	case ListingVisibilityAuth:
+	case ListingVisibilityUnauth:
+	default:
+		return fmt.Errorf("invalid listing visilibity type")
+	}
+
+	return nil
 }
 
 const sysHelpRoot = `
