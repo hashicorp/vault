@@ -186,13 +186,14 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	dynamodbMaxRetryString := os.Getenv("AWS_DYNAMODB_MAX_RETRIES")
 	if dynamodbMaxRetryString == "" {
 		dynamodbMaxRetryString = conf["dynamodb_max_retries"]
-		if dynamodbMaxRetryString == "" {
-			dynamodbMaxRetryString = "-1"
-		}
 	}
-	dynamodbMaxRetry, err := strconv.Atoi(dynamodbMaxRetryString)
-	if err != nil {
-		return nil, fmt.Errorf("invalid max retry: %s", dynamodbMaxRetryString)
+	var dynamodbMaxRetry int = aws.UseServiceDefaultRetries
+	if dynamodbMaxRetryString != "" {
+		var err error
+		dynamodbMaxRetry, err = strconv.Atoi(dynamodbMaxRetryString)
+		if err != nil {
+			return nil, fmt.Errorf("invalid max retry: %s", dynamodbMaxRetryString)
+		}
 	}
 
 	credsConfig := &awsutil.CredentialsConfig{
