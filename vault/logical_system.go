@@ -1947,6 +1947,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	var resp *logical.Response
 	if optionsRaw, ok := data.GetOk("options"); ok {
 		b.Core.logger.Info("core: mount tuning of options", "path", path)
 		options := optionsRaw.(map[string]interface{})
@@ -1985,6 +1986,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		// Another special case to trigger the upgrade path if we are enabling
 		// versioning for the first time.
 		if oldVal["versioned"] != "true" && optionMap["versioned"] == "true" {
+			resp = &logical.Response{}
+			resp.AddWarning("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly.")
 			mountEntry.Options["upgrade"] = "true"
 		}
 
@@ -1992,7 +1995,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		delete(mountEntry.Options, "upgrade")
 	}
-	return nil, nil
+	return resp, nil
 }
 
 // handleLease is use to view the metadata for a given LeaseID
