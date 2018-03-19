@@ -178,7 +178,7 @@ func (r *Renewer) renewAuth() error {
 		return ErrRenewerNotRenewable
 	}
 
-	priorDuration := time.Duration(r.secret.LeaseDuration) * time.Second
+	priorDuration := time.Duration(r.secret.Auth.LeaseDuration) * time.Second
 	r.calculateGrace(priorDuration)
 
 	client, token := r.client, r.secret.Auth.ClientToken
@@ -226,7 +226,7 @@ func (r *Renewer) renewAuth() error {
 
 		// The sleep duration is set to 2/3 of the current lease duration plus
 		// 1/3 of the current grace period, which adds jitter.
-		sleepDuration := time.Duration(float64(leaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds()*1/3))
+		sleepDuration := time.Duration(float64(leaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
 
 		// If we are within grace, return now; or, if the amount of time we
 		// would sleep would land us in the grace period. This helps with short
@@ -301,7 +301,7 @@ func (r *Renewer) renewLease() error {
 
 		// The sleep duration is set to 2/3 of the current lease duration plus
 		// 1/3 of the current grace period, which adds jitter.
-		sleepDuration := time.Duration(float64(leaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds()*1/3))
+		sleepDuration := time.Duration(float64(leaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
 
 		// If we are within grace, return now; or, if the amount of time we
 		// would sleep would land us in the grace period. This helps with short
@@ -353,5 +353,5 @@ func (r *Renewer) calculateGrace(leaseDuration time.Duration) {
 
 	// For a given lease duration, we want to allow 80-90% of that to elapse,
 	// so the remaining amount is the grace period
-	r.grace = time.Duration(leaseNanos*0.1) + time.Duration(uint64(r.random.Int63())%uint64(jitterMax))
+	r.grace = time.Duration(jitterMax) + time.Duration(uint64(r.random.Int63())%uint64(jitterMax))
 }
