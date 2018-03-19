@@ -13,33 +13,31 @@ var _ cli.CommandAutocomplete = (*KVDeleteCommand)(nil)
 
 type KVDeleteCommand struct {
 	*BaseCommand
+
+	flagVersions []string
 }
 
 func (c *KVDeleteCommand) Synopsis() string {
-	return "Delete secrets and configuration"
+	return "Deletes versions in the KV store"
 }
 
 func (c *KVDeleteCommand) Help() string {
 	helpText := `
-Usage: vault delete [options] PATH
+Usage: vault kv delete [options] PATH
 
-  Deletes secrets and configuration from Vault at the given path. The behavior
-  of "delete" is delegated to the backend corresponding to the given path.
+  Deletes the data for the provided version and path in the key-value store. The
+  versioned data will not be fully removed, but marked as deleted and  will no
+  longer be returned in normal get requests.
 
-  Remove data in the status secret backend:
+  To delete the lastest version of the key "foo": 
 
-      $ vault delete secret/my-secret
+      $ vault kv delete secret/foo
 
-  Uninstall an encryption key in the transit backend:
+  To delete version 3 of key foo:
 
-      $ vault delete transit/keys/my-key
+      $ vault kv delete -versions=3 secret/foo
 
-  Delete an IAM role:
-
-      $ vault delete aws/roles/ops
-
-  For a full list of examples and paths, please see the documentation that
-  corresponds to the secret backend in use.
+  Additional flags and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
 
@@ -47,7 +45,19 @@ Usage: vault delete [options] PATH
 }
 
 func (c *KVDeleteCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP)
+	// Common Options
+	f := set.NewFlagSet("Common Options")
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:    "versions",
+		Target:  &c.flagVersions,
+		Default: nil,
+		Usage:   `Specifies the version numbers to delete.`,
+	})
+
+	return set
+
 }
 
 func (c *KVDeleteCommand) AutocompleteArgs() complete.Predictor {
@@ -76,24 +86,55 @@ func (c *KVDeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	client, err := c.Client()
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
-	}
-
 	path := sanitizePath(args[0])
-	path, err = addPrefixToVKVPath(path, "data")
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	var err error
+	if len(c.flagVersions) > 0 {
+		err = c.deleteVersions(path, c.flagVersions)
+	} else {
+		err = c.deleteLatest(path)
 	}
-
-	if _, err := client.Logical().Delete(path); err != nil {
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
 		return 2
 	}
 
 	c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", path))
 	return 0
+}
+
+func (c *KVDeleteCommand) deleteLatest(path string) error {
+	var err error
+	path, err = addPrefixToVKVPath(path, "data")
+	if err != nil {
+		return err
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Logical().Delete(path)
+
+	return err
+}
+
+func (c *KVDeleteCommand) deleteVersions(path string, versions []string) error {
+	var err error
+	path, err = addPrefixToVKVPath(path, "delete")
+	if err != nil {
+		return err
+	}
+
+	data := map[string]interface{}{
+		"versions": c.flagVersions,
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		return err
+	}
+
+	_, err = client.Logical().Write(path, data)
+	return err
 }

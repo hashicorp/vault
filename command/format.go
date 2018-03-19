@@ -261,6 +261,34 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	return nil
 }
 
+func OutputMap(ui cli.Ui, data map[string]interface{}) {
+	out := make([]string, 0, 8)
+	if len(data) > 0 {
+		keys := make([]string, 0, len(data))
+		for k := range data {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, data[k]))
+		}
+	}
+
+	// If we got this far and still don't have any data, there's nothing to print,
+	// sorry.
+	if len(out) == 0 {
+		return
+	}
+
+	// Prepend the header
+	out = append([]string{"Key" + hopeDelim + "Value"}, out...)
+
+	ui.Output(tableOutput(out, &columnize.Config{
+		Delim: hopeDelim,
+	}))
+}
+
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
 func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
 	switch Format(ui) {

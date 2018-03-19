@@ -599,15 +599,8 @@ func initCommands(ui, serverCmdUi cli.Ui) {
 				},
 			}, nil
 		},
-		"kv archive": func() (cli.Command, error) {
-			return &KVArchiveCommand{
-				BaseCommand: &BaseCommand{
-					UI: ui,
-				},
-			}, nil
-		},
-		"kv unarchive": func() (cli.Command, error) {
-			return &KVUnarchiveCommand{
+		"kv undelete": func() (cli.Command, error) {
+			return &KVUndeleteCommand{
 				BaseCommand: &BaseCommand{
 					UI: ui,
 				},

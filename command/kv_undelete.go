@@ -8,29 +8,29 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVUnarchiveCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVUnarchiveCommand)(nil)
+var _ cli.Command = (*KVUndeleteCommand)(nil)
+var _ cli.CommandAutocomplete = (*KVUndeleteCommand)(nil)
 
-type KVUnarchiveCommand struct {
+type KVUndeleteCommand struct {
 	*BaseCommand
 
 	flagVersions []string
 }
 
-func (c *KVUnarchiveCommand) Synopsis() string {
-	return "Unarchives versions in the KV store"
+func (c *KVUndeleteCommand) Synopsis() string {
+	return "Undeletes versions in the KV store"
 }
 
-func (c *KVUnarchiveCommand) Help() string {
+func (c *KVUndeleteCommand) Help() string {
 	helpText := `
-Usage: vault kv unarchive [options] KEY
+Usage: vault kv undelete [options] KEY
 
-  Unarchives the data for the provided version and path in the key-value store.
+  Undeletes the data for the provided version and path in the key-value store.
   This restores the data, allowing it to be returned on get requests.
 
-  To unarchive version 3 of key "foo":
+  To undelete version 3 of key "foo":
   
-      $ vault kv unarchive -versions=3 secret/foo
+      $ vault kv undelete -versions=3 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -38,7 +38,7 @@ Usage: vault kv unarchive [options] KEY
 	return strings.TrimSpace(helpText)
 }
 
-func (c *KVUnarchiveCommand) Flags() *FlagSets {
+func (c *KVUndeleteCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	// Common Options
@@ -48,21 +48,21 @@ func (c *KVUnarchiveCommand) Flags() *FlagSets {
 		Name:    "versions",
 		Target:  &c.flagVersions,
 		Default: nil,
-		Usage:   `Specifies the version numbers to unarchive.`,
+		Usage:   `Specifies the version numbers to undelete.`,
 	})
 
 	return set
 }
 
-func (c *KVUnarchiveCommand) AutocompleteArgs() complete.Predictor {
+func (c *KVUndeleteCommand) AutocompleteArgs() complete.Predictor {
 	return nil
 }
 
-func (c *KVUnarchiveCommand) AutocompleteFlags() complete.Flags {
+func (c *KVUndeleteCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
 }
 
-func (c *KVUnarchiveCommand) Run(args []string) int {
+func (c *KVUndeleteCommand) Run(args []string) int {
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -81,12 +81,12 @@ func (c *KVUnarchiveCommand) Run(args []string) int {
 	}
 
 	if len(c.flagVersions) == 0 {
-		c.UI.Error("No versions provided, use the \"-versions\" flag to specify the version to unarchive.")
+		c.UI.Error("No versions provided, use the \"-versions\" flag to specify the version to undelete.")
 		return 1
 	}
 	var err error
 	path := sanitizePath(args[0])
-	path, err = addPrefixToVKVPath(path, "unarchive")
+	path, err = addPrefixToVKVPath(path, "undelete")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
