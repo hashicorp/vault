@@ -992,12 +992,10 @@ func addKeyUsages(data *dataBundle, certTemplate *x509.Certificate) {
 // addPolicyIdentifiers adds certificate policies extension
 //
 func addPolicyIdentifiers(data *dataBundle, certTemplate *x509.Certificate) {
-	if len(data.params.PolicyIdentifiers) > 0 {
-		for _, oidstr := range data.params.PolicyIdentifiers {
-			oid, err := stringToOid(oidstr)
-			if err == nil {
-				certTemplate.PolicyIdentifiers = append(certTemplate.PolicyIdentifiers, oid)
-			}
+	for _, oidstr := range data.params.PolicyIdentifiers {
+		oid, err := stringToOid(oidstr)
+		if err == nil {
+			certTemplate.PolicyIdentifiers = append(certTemplate.PolicyIdentifiers, oid)
 		}
 	}
 }
