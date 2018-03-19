@@ -135,7 +135,7 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 		}
 
 		if fl.Name == flagNameAuditNonHMACResponseKeys {
-			mountConfigInput.AuditNonHMACRequestKeys = c.flagAuditNonHMACResponseKeys
+			mountConfigInput.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
 		}
 	})
 
