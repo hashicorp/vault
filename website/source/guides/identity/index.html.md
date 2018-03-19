@@ -18,7 +18,7 @@ policies is probably the first step the Vault administrator performs. This guide
 walks you through creating example policies for `admin` and `provisioner` users.
 - [AppRole Pull Authentication](/guides/identity/authentication.html) guide
 that introduces the steps to generate tokens for machines or apps by enabling
-AppRole auth backend.
+AppRole auth method.
 - [Token and Leases](/guides/identity/lease.html) guide helps you
 understand how tokens and leases work in Vault. The understanding of the
 lease hierarchy and expiration mechanism helps you plan for break glass
