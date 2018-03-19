@@ -13,6 +13,9 @@ DEPRECATIONS/CHANGES:
 
 IMPROVEMENTS:
 
+ * api: Update renewer grace period logic. It no longer is static, but rather
+   dynamically calculates one based on the current lease duration after each
+   renew. [GH-4090]
  * auth/approle: Allow array input for bound_cidr_list [4078]
  * auth/aws: Allow using lists in role bind parameters [GH-3907]
  * auth/aws: Allow binding by EC2 instance IDs [GH-3816]
