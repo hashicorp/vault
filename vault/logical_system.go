@@ -267,7 +267,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					},
 					"options": &framework.FieldSchema{
 						Type:        framework.TypeMap,
-						Description: strings.TrimSpace(sysHelp["tune_mount_config"][0]),
+						Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
 					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -308,7 +308,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					},
 					"options": &framework.FieldSchema{
 						Type:        framework.TypeMap,
-						Description: strings.TrimSpace(sysHelp["tune_mount_config"][0]),
+						Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
 					},
 				},
 
@@ -3303,6 +3303,10 @@ and is unaffected by replication.`,
 in the plugin catalog.`,
 	},
 
+	"mount_options": {
+		`The options to pass into the backend. Should be a json object with string keys and values.`,
+	},
+
 	"seal_wrap": {
 		`Whether to turn on seal wrapping for the mount.`,
 	},
@@ -3321,6 +3325,10 @@ in the plugin catalog.`,
 
 	"tune_audit_non_hmac_response_keys": {
 		`The list of keys in the response data object that will not be HMAC'ed by audit devices.`,
+	},
+
+	"tune_mount_options": {
+		`The options to pass into the backend. Should be a json object with string keys and values.`,
 	},
 
 	"remount": {
@@ -3458,6 +3466,10 @@ Example: you might have an OAuth backend for GitHub, and one for Google Apps.
 	"auth_plugin": {
 		`Name of the auth plugin to use based from the name in the plugin catalog.`,
 		"",
+	},
+
+	"auth_options": {
+		`The options to pass into the backend. Should be a json object with string keys and values.`,
 	},
 
 	"policy-list": {
