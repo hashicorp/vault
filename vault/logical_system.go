@@ -1948,7 +1948,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("listing_visibility"); ok {
-		listingVisibility := rawVal.(ListingVisiblityType)
+		lvString := rawVal.(string)
+		listingVisibility := ListingVisiblityType(lvString)
 
 		if err := checkListingVisibility(listingVisibility); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
