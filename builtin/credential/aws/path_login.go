@@ -384,6 +384,11 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		return nil, fmt.Errorf("nil identityDoc")
 	}
 
+	// Verify that the instance ID matches one of the ones set by the role
+	if len(roleEntry.BoundEc2InstanceIDs) > 0 && !strutil.StrListContains(roleEntry.BoundEc2InstanceIDs, *instance.InstanceId) {
+		return fmt.Errorf("instance ID %q does not belong to the role %q", *instance.InstanceId, roleName), nil
+	}
+
 	// Verify that the AccountID of the instance trying to login matches the
 	// AccountID specified as a constraint on role
 	if len(roleEntry.BoundAccountIDs) > 0 && !strutil.StrListContains(roleEntry.BoundAccountIDs, identityDoc.AccountID) {
@@ -440,8 +445,24 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		}
 		iamInstanceProfileARN := *instance.IamInstanceProfile.Arn
 		matchesInstanceProfile := false
+		// NOTE: Can't use strutil.StrListContainsGlob. A * is a perfectly valid character in the "path" component
+		// of an ARN. See, e.g., https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateInstanceProfile.html :
+		// The path allows strings "containing any ASCII character from the ! (\u0021) thru the DEL character
+		// (\u007F), including most punctuation characters, digits, and upper and lowercased letters."
+		// So, e.g., arn:aws:iam::123456789012:instance-profile/Some*Path/MyProfileName is a perfectly valid instance
+		// profile ARN, and it wouldn't be correct to expand the * in the middle as a wildcard.
+		// If a user wants to match an IAM instance profile arn beginning with arn:aws:iam::123456789012:instance-profile/foo*
+		// then bound_iam_instance_profile_arn would need to be arn:aws:iam::123456789012:instance-profile/foo**
+		// Wanting to exactly match an ARN that has a * at the end is not a valid use case. The * is only valid in the
+		// path; it's not valid in the name. That means no valid ARN can ever end with a *. For example,
+		// arn:aws:iam::123456789012:instance-profile/Foo* is NOT valid as an instance profile ARN, so no valid instance
+		// profile ARN could ever equal that value.
 		for _, boundInstanceProfileARN := range roleEntry.BoundIamInstanceProfileARNs {
-			if strings.HasPrefix(iamInstanceProfileARN, boundInstanceProfileARN) {
+			switch {
+			case strings.HasSuffix(boundInstanceProfileARN, "*") && strings.HasPrefix(iamInstanceProfileARN, boundInstanceProfileARN[:len(boundInstanceProfileARN)-1]):
+				matchesInstanceProfile = true
+				break
+			case iamInstanceProfileARN == boundInstanceProfileARN:
 				matchesInstanceProfile = true
 				break
 			}
@@ -493,7 +514,12 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 
 		matchesInstanceRoleARN := false
 		for _, boundIamRoleARN := range roleEntry.BoundIamRoleARNs {
-			if strings.HasPrefix(iamRoleARN, boundIamRoleARN) {
+			switch {
+			// as with boundInstanceProfileARN, can't use strutil.StrListContainsGlob because * can validly exist in the middle of an ARN
+			case strings.HasSuffix(boundIamRoleARN, "*") && strings.HasPrefix(iamRoleARN, boundIamRoleARN[:len(boundIamRoleARN)-1]):
+				matchesInstanceRoleARN = true
+				break
+			case iamRoleARN == boundIamRoleARN:
 				matchesInstanceRoleARN = true
 				break
 			}

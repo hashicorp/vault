@@ -233,7 +233,7 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 		}
 
 		if fl.Name == flagNameAuditNonHMACResponseKeys {
-			mountInput.Config.AuditNonHMACRequestKeys = c.flagAuditNonHMACResponseKeys
+			mountInput.Config.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
 		}
 
 		if fl.Name == flagNameListingVisibility {

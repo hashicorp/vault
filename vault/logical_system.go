@@ -1092,7 +1092,7 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 	err := b.Core.expiration.Tidy()
 	if err != nil {
 		b.Backend.Logger().Error("sys: failed to tidy leases", "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, err
 }
@@ -1619,6 +1619,24 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 // used to intercept an HTTPCodedError so it goes back to callee
 func handleError(
 	err error) (*logical.Response, error) {
+	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+		return logical.ErrorResponse(err.Error()), err
+	}
+	switch err.(type) {
+	case logical.HTTPCodedError:
+		return logical.ErrorResponse(err.Error()), err
+	default:
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+}
+
+// Performs a similar function to handleError, but upon seeing a ReadOnlyError
+// will actually strip it out to prevent forwarding
+func handleErrorNoReadOnlyForward(
+	err error) (*logical.Response, error) {
+	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+		return nil, fmt.Errorf("operation could not be completed as storage is read-only")
+	}
 	switch err.(type) {
 	case logical.HTTPCodedError:
 		return logical.ErrorResponse(err.Error()), err
@@ -2010,7 +2028,7 @@ func (b *SystemBackend) handleLeaseLookupList(ctx context.Context, req *logical.
 	keys, err := b.Core.expiration.idView.List(ctx, prefix)
 	if err != nil {
 		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return logical.ListResponse(keys), nil
 }
@@ -2035,7 +2053,7 @@ func (b *SystemBackend) handleRenew(ctx context.Context, req *logical.Request, d
 	resp, err := b.Core.expiration.Renew(leaseID, increment)
 	if err != nil {
 		b.Backend.Logger().Error("sys: lease renewal failed", "lease_id", leaseID, "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return resp, err
 }
@@ -2055,7 +2073,7 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.Revoke(leaseID); err != nil {
 		b.Backend.Logger().Error("sys: lease revocation failed", "lease_id", leaseID, "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, nil
 }
@@ -2085,7 +2103,7 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 	}
 	if err != nil {
 		b.Backend.Logger().Error("sys: revoke prefix failed", "prefix", prefix, "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, nil
 }
@@ -2569,7 +2587,7 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 
 	entry, err := b.Core.barrier.Get(ctx, path)
 	if err != nil {
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	if entry == nil {
 		return nil, nil
@@ -2581,7 +2599,7 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 	// will be nil.
 	outputBytes, _, err := compressutil.Decompress(entry.Value)
 	if err != nil {
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 
 	// `outputBytes` is nil if the input is uncompressed. In that case set it to the original input.
@@ -2633,7 +2651,7 @@ func (b *SystemBackend) handleRawDelete(ctx context.Context, req *logical.Reques
 	}
 
 	if err := b.Core.barrier.Delete(ctx, path); err != nil {
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, nil
 }
@@ -2655,7 +2673,7 @@ func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request,
 
 	keys, err := b.Core.barrier.List(ctx, path)
 	if err != nil {
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return logical.ListResponse(keys), nil
 }

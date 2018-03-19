@@ -942,7 +942,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[strconv.Itoa(version)].HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorithm string) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -1011,7 +1011,7 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 
 		var algo crypto.Hash
-		switch algorithm {
+		switch hashAlgorithm {
 		case "sha2-224":
 			algo = crypto.SHA224
 		case "sha2-256":
@@ -1021,12 +1021,26 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 		case "sha2-512":
 			algo = crypto.SHA512
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)}
 		}
 
-		sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
-		if err != nil {
-			return nil, err
+		if sigAlgorithm == "" {
+			sigAlgorithm = "pss"
+		}
+
+		switch sigAlgorithm {
+		case "pss":
+			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
+			if err != nil {
+				return nil, err
+			}
+		case "pkcs1v15":
+			sig, err = rsa.SignPKCS1v15(rand.Reader, key, algo, input)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
 
 	default:
@@ -1043,7 +1057,7 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 	return res, nil
 }
 
-func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (bool, error) {
+func (p *Policy) VerifySignature(context, input []byte, sig, hashAlgorithm string, sigAlgorithm string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -1121,7 +1135,7 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 
 		var algo crypto.Hash
-		switch algorithm {
+		switch hashAlgorithm {
 		case "sha2-224":
 			algo = crypto.SHA224
 		case "sha2-256":
@@ -1131,10 +1145,21 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 		case "sha2-512":
 			algo = crypto.SHA512
 		default:
-			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
+			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)}
 		}
 
-		err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, nil)
+		if sigAlgorithm == "" {
+			sigAlgorithm = "pss"
+		}
+
+		switch sigAlgorithm {
+		case "pss":
+			err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, nil)
+		case "pkcs1v15":
+			err = rsa.VerifyPKCS1v15(&key.PublicKey, algo, input, sigBytes)
+		default:
+			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
+		}
 
 		return err == nil, nil
 

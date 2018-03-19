@@ -7,7 +7,7 @@ import (
 	paths "path"
 	"strings"
 
-	"github.com/golang/go/src/math/big"
+	big "github.com/hashicorp/golang-math-big/big"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/logical"
@@ -52,9 +52,6 @@ var (
 
 // EncryptedKeyStorageConfig is used to configure an EncryptedKeyStorage object.
 type EncryptedKeyStorageConfig struct {
-	// Storage is the underlying storage to wrap requests to.
-	Storage logical.Storage
-
 	// Policy is the key policy to use to encrypt the key paths.
 	Policy *Policy
 
@@ -68,9 +65,9 @@ type EncryptedKeyStorageConfig struct {
 	CacheSize int
 }
 
-// NewEncryptedKeyStorage takes an EncryptedKeyStorageConfig and returns a new
+// NewEncryptedKeyStorageWrapper takes an EncryptedKeyStorageConfig and returns a new
 // EncryptedKeyStorage object.
-func NewEncryptedKeyStorage(config EncryptedKeyStorageConfig) (*EncryptedKeyStorage, error) {
+func NewEncryptedKeyStorageWrapper(config EncryptedKeyStorageConfig) (*EncryptedKeyStorageWrapper, error) {
 	if config.Policy == nil {
 		return nil, ErrNilPolicy
 	}
@@ -85,10 +82,6 @@ func NewEncryptedKeyStorage(config EncryptedKeyStorageConfig) (*EncryptedKeyStor
 
 	if config.Policy.ConvergentVersion < 2 {
 		return nil, ErrPolicyConvergentVersion
-	}
-
-	if config.Storage == nil {
-		return nil, ErrNilStorage
 	}
 
 	if config.Prefix == "" {
@@ -109,17 +102,31 @@ func NewEncryptedKeyStorage(config EncryptedKeyStorageConfig) (*EncryptedKeyStor
 		return nil, err
 	}
 
-	return &EncryptedKeyStorage{
+	return &EncryptedKeyStorageWrapper{
 		policy: config.Policy,
-		s:      config.Storage,
 		prefix: config.Prefix,
 		lru:    cache,
 	}, nil
 }
 
+type EncryptedKeyStorageWrapper struct {
+	policy *Policy
+	lru    *lru.TwoQueueCache
+	prefix string
+}
+
+func (f *EncryptedKeyStorageWrapper) Wrap(s logical.Storage) logical.Storage {
+	return &encryptedKeyStorage{
+		policy: f.policy,
+		s:      s,
+		prefix: f.prefix,
+		lru:    f.lru,
+	}
+}
+
 // EncryptedKeyStorage implements the logical.Storage interface and ensures the
 // storage paths are encrypted in the underlying storage.
-type EncryptedKeyStorage struct {
+type encryptedKeyStorage struct {
 	policy *Policy
 	s      logical.Storage
 	lru    *lru.TwoQueueCache
@@ -130,7 +137,7 @@ type EncryptedKeyStorage struct {
 // List implements the logical.Storage List method, and decrypts all the items
 // in a path prefix. This can only operate on full folder structures so the
 // prefix should end in a "/".
-func (s *EncryptedKeyStorage) List(ctx context.Context, prefix string) ([]string, error) {
+func (s *encryptedKeyStorage) List(ctx context.Context, prefix string) ([]string, error) {
 	encPrefix, err := s.encryptPath(prefix)
 	if err != nil {
 		return nil, err
@@ -200,7 +207,7 @@ func (s *EncryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 }
 
 // Get implements the logical.Storage Get method.
-func (s *EncryptedKeyStorage) Get(ctx context.Context, path string) (*logical.StorageEntry, error) {
+func (s *encryptedKeyStorage) Get(ctx context.Context, path string) (*logical.StorageEntry, error) {
 	encPath, err := s.encryptPath(path)
 	if err != nil {
 		return nil, err
@@ -210,7 +217,7 @@ func (s *EncryptedKeyStorage) Get(ctx context.Context, path string) (*logical.St
 }
 
 // Put implements the logical.Storage Put method.
-func (s *EncryptedKeyStorage) Put(ctx context.Context, entry *logical.StorageEntry) error {
+func (s *encryptedKeyStorage) Put(ctx context.Context, entry *logical.StorageEntry) error {
 	encPath, err := s.encryptPath(entry.Key)
 	if err != nil {
 		return err
@@ -224,7 +231,7 @@ func (s *EncryptedKeyStorage) Put(ctx context.Context, entry *logical.StorageEnt
 }
 
 // Delete implements the logical.Storage Delete method.
-func (s *EncryptedKeyStorage) Delete(ctx context.Context, path string) error {
+func (s *encryptedKeyStorage) Delete(ctx context.Context, path string) error {
 	encPath, err := s.encryptPath(path)
 	if err != nil {
 		return err
@@ -236,7 +243,7 @@ func (s *EncryptedKeyStorage) Delete(ctx context.Context, path string) error {
 // encryptPath takes a plaintext path and encrypts each path section (separated
 // by "/") with the object's key policy. The context for each encryption is the
 // plaintext path prefix for the key.
-func (s *EncryptedKeyStorage) encryptPath(path string) (string, error) {
+func (s *encryptedKeyStorage) encryptPath(path string) (string, error) {
 	path = paths.Clean(path)
 
 	// Trim the prefix if it starts with a "/"

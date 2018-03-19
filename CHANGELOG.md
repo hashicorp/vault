@@ -6,11 +6,21 @@ DEPRECATIONS/CHANGES:
    comma-delimited string or a string array. However, to keep consistency with
    input and output, when reading a role the binds will now be returned as
    string arrays rather than strings.
+ * In order to prefix-match IAM role and instance profile ARNs in AWS auth
+   backend, you now must explicitly opt-in by adding a `*` to the end of the
+   ARN. Existing configurations will be upgraded automatically, but when
+   writing a new role configuration the updated behavior will be used.
 
 IMPROVEMENTS:
 
  * auth/approle: Allow array input for bound_cidr_list [4078]
  * auth/aws: Allow using lists in role bind parameters [GH-3907]
+ * auth/aws: Allow binding by EC2 instance IDs [GH-3816]
+ * auth/aws: Allow non-prefix-matched IAM role and instance profile ARNs
+   [GH-4071]
+ * physical/couchdb: Removed limit on the listing of items [GH-4149]
+ * secret/transit: Allow selecting signature algorithm as well as hash
+   algorithm when signing/verifying [GH-4018]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
    than just set [GH-4049]
  * storage/gcs: Allow specifying chunk size for transfers, which can reduce
@@ -30,7 +40,10 @@ BUG FIXES:
  * cli: Improve error messages around `vault auth help` when there is no CLI
    helper for a particular method [GH-4056]
  * cli: Fix autocomplete installation when using Fish as the shell [GH-4094]
+ * secret/database: Properly honor mount-tuned max TTL [GH-4051]
  * secret/ssh: Return `key_bits` value when reading a role [GH-4098]
+ * sys: When writing policies on a performance replication secondary, properly
+   forward requests to the primary [GH-4129]
 
 ## 0.9.5 (February 26th, 2018)
 

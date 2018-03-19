@@ -269,7 +269,7 @@ options are:
         ```
 
     * If any keys are specified, all non-specified parameters will be denied
-      unless there the parameter `"*"` is set to an empty array, which will
+      unless the parameter `"*"` is set to an empty array, which will
       allow all other parameters to be modified. Parameters with specific values
       will still be restricted to those values.
 
@@ -338,14 +338,17 @@ Parameter values also support prefix/suffix globbing. Globbing is enabled by
 prepending or appending or prepending a splat (`*`) to the value:
 
 ```ruby
-# Allow any parameter as long as the value starts with "foo-*".
+# Only allow a parameter named "bar" with a value starting with "foo-*".
 path "secret/foo" {
   capabilities = ["create"]
   allowed_parameters = {
-    "*" = ["foo-*"]
+    "bar" = ["foo-*"]
   }
 }
 ```
+
+Note: the only value that can be used with the `*` parameter is `[]`.
+
 
 ### Required Response Wrapping TTLs
 

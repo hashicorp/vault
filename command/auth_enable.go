@@ -213,7 +213,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		}
 
 		if fl.Name == flagNameAuditNonHMACResponseKeys {
-			authOpts.Config.AuditNonHMACRequestKeys = c.flagAuditNonHMACResponseKeys
+			authOpts.Config.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
 		}
 
 		if fl.Name == flagNameListingVisibility {
