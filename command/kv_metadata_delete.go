@@ -16,30 +16,18 @@ type KVMetadataDeleteCommand struct {
 }
 
 func (c *KVMetadataDeleteCommand) Synopsis() string {
-	return "Delete secrets and configuration"
+	return "Deletes all versions and metadata for a key in the KV store"
 }
 
 func (c *KVMetadataDeleteCommand) Help() string {
 	helpText := `
-Usage: vault delete [options] PATH
+Usage: vault kv metadata delete [options] PATH
 
-  Deletes secrets and configuration from Vault at the given path. The behavior
-  of "delete" is delegated to the backend corresponding to the given path.
+  Deletes all versions and metadata for the provided key. 
 
-  Remove data in the status secret backend:
+      $ vault kv metadata delete secret/foo
 
-      $ vault delete secret/my-secret
-
-  Uninstall an encryption key in the transit backend:
-
-      $ vault delete transit/keys/my-key
-
-  Delete an IAM role:
-
-      $ vault delete aws/roles/ops
-
-  For a full list of examples and paths, please see the documentation that
-  corresponds to the secret backend in use.
+  Additional flags and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
 

@@ -16,23 +16,17 @@ type KVMetadataGetCommand struct {
 }
 
 func (c *KVMetadataGetCommand) Synopsis() string {
-	return "Retrieves data from the KV store"
+	return "Retrieves key metadata from the KV store"
 }
 
 func (c *KVMetadataGetCommand) Help() string {
 	helpText := `
-Usage: vault kv get [options] KEY
+Usage: vault kv metadata get [options] KEY
 
-  Retrieves the value from Vault's key-value store at the given key name. If no
-  key exists with that name, an error is returned. If a key exists with that
-  name but has no data, nothing is returned.
+  Retrieves the metadata from Vault's key-value store at the given key name. If no
+  key exists with that name, an error is returned.
 
-      $ vault kv get secret/foo
-
-  To view the given key name at a specific version in time, specify the "-version"
-  flag:
-
-      $ vault kv get -version=1 secret/foo
+      $ vault kv metadata get secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 

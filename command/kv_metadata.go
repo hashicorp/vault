@@ -24,22 +24,18 @@ Usage: vault kv metadata <subcommand> [options] [args]
   Vault's key-value store. Here are some simple examples, and more detailed
   examples are  available in the subcommands or the documentation.
 
-  Create or update the key named "foo" in the "secret" mount with the value
-  "bar=baz":
+  Create or update a metadata entry for a key: 
 
-      $ vault kv put secret/foo bar=baz
+      $ vault kv metadata put -max_versions=5 secret/foo
 
-  Read this value back:
-
-      $ vault kv get secret/foo
-
-  Get metadata for the key:
+  Get the metadata for a key, this provides information about each existing
+  version:
 
       $ vault kv metadata get secret/foo
-	  
-  Get a specific version of the key:
 
-      $ vault kv get -version=1 secret/foo
+  Delete a key and all existing versions:
+
+      $ vault kv metadata delete secret/foo
 
   Please see the individual subcommand help for detailed usage information.
 `

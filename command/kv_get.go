@@ -8,8 +8,8 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorInitCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
+var _ cli.Command = (*KVGetCommand)(nil)
+var _ cli.CommandAutocomplete = (*KVGetCommand)(nil)
 
 type KVGetCommand struct {
 	*BaseCommand

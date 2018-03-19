@@ -18,32 +18,19 @@ type KVArchiveCommand struct {
 }
 
 func (c *KVArchiveCommand) Synopsis() string {
-	return "Destroys a version in the KV store"
+	return "Archives versions in the KV store"
 }
 
 func (c *KVArchiveCommand) Help() string {
 	helpText := `
-Usage: vault kv destroy [options] KEY
+Usage: vault kv archive [options] KEY
 
-  Writes the data to the given path in the key-value store. The data can be of
-  any type.
+  Archives the data for the provided version and path in the key-value store.
+  This marks the data as archived, but will not delete the underlying data.
 
-      $ vault kv put secret/foo bar=baz
+  To archive version 3 of key foo:
 
-  The data can also be consumed from a file on disk by prefixing with the "@"
-  symbol. For example:
-
-      $ vault kv put secret/foo @data.json
-
-  Or it can be read from stdin using the "-" symbol:
-
-      $ echo "abcd1234" | vault kv put secret/foo bar=-
-
-  To perform a Check-And-Set operation, specify the -cas flag with the
-  appropriate version numer corresponding to the key you want to perform
-  the CAS operation on:
-
-      $ vault kv put -cas=1 secret/foo bar=baz
+      $ vault kv archive -versions=3 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 

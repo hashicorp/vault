@@ -25,25 +25,12 @@ func (c *KVDestroyCommand) Help() string {
 	helpText := `
 Usage: vault kv destroy [options] KEY
 
-  Writes the data to the given path in the key-value store. The data can be of
-  any type.
+  Permanently removes the specified versions' data from the key-value store. If
+  no key exists at the path, no action is taken.
 
-      $ vault kv put secret/foo bar=baz
+  To destroy version 3 of key foo:
 
-  The data can also be consumed from a file on disk by prefixing with the "@"
-  symbol. For example:
-
-      $ vault kv put secret/foo @data.json
-
-  Or it can be read from stdin using the "-" symbol:
-
-      $ echo "abcd1234" | vault kv put secret/foo bar=-
-
-  To perform a Check-And-Set operation, specify the -cas flag with the
-  appropriate version numer corresponding to the key you want to perform
-  the CAS operation on:
-
-      $ vault kv put -cas=1 secret/foo bar=baz
+      $ vault kv destroy -versions=3 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 

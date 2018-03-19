@@ -21,12 +21,12 @@ type KVMetadataPutCommand struct {
 }
 
 func (c *KVMetadataPutCommand) Synopsis() string {
-	return "Sets or updates data in the KV store"
+	return "Sets or updates key settings in the KV store"
 }
 
 func (c *KVMetadataPutCommand) Help() string {
 	helpText := `
-Usage: vault kv put [options] KEY [DATA]
+Usage: vault metadata kv put [options] KEY [DATA]
 
   Writes the data to the given path in the key-value store. The data can be of
   any type.
