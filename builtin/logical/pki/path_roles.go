@@ -37,8 +37,7 @@ func pathRoles(b *backend) *framework.Path {
 			},
 
 			"ttl": &framework.FieldSchema{
-				Type:    framework.TypeDurationSecond,
-				Default: "",
+				Type: framework.TypeDurationSecond,
 				Description: `The lease duration if no specific lease duration is
 requested. The lease duration controls the expiration
 of certificates issued by this backend. Defaults to
@@ -46,8 +45,7 @@ the value of max_ttl.`,
 			},
 
 			"max_ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
+				Type:        framework.TypeDurationSecond,
 				Description: "The maximum allowed lease duration",
 			},
 
@@ -68,8 +66,7 @@ string or list of domains.`,
 			},
 
 			"allow_bare_domains": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: false,
+				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates
 for the base domains themselves, e.g. "example.com".
 This is a separate option as in some cases this can
@@ -77,8 +74,7 @@ be considered a security threat.`,
 			},
 
 			"allow_subdomains": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: false,
+				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
 subdomains of the CNs allowed by the other role options,
 including wildcard subdomains. See the documentation for
@@ -86,16 +82,14 @@ more information.`,
 			},
 
 			"allow_glob_domains": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: false,
+				Type: framework.TypeBool,
 				Description: `If set, domains specified in "allowed_domains"
 can include glob patterns, e.g. "ftp*.example.com". See
 the documentation for more information.`,
 			},
 
 			"allow_any_name": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: false,
+				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
 any CN they like. See the documentation for more
 information.`,
@@ -135,15 +129,13 @@ Defaults to true.`,
 			},
 
 			"code_signing_flag": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: false,
+				Type: framework.TypeBool,
 				Description: `If set, certificates are flagged for code signing
 use. Defaults to false.`,
 			},
 
 			"email_protection_flag": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: false,
+				Type: framework.TypeBool,
 				Description: `If set, certificates are flagged for email
 protection use. Defaults to false.`,
 			},
@@ -234,8 +226,7 @@ this value in certificates issued by this role.`,
 			},
 
 			"generate_lease": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: false,
+				Type: framework.TypeBool,
 				Description: `
 If set, certificates issued/signed against this role will have Vault leases
 attached to them. Defaults to "false". Certificates can be added to the CRL by
@@ -247,8 +238,7 @@ lifetimes, it is recommended that lease generation be disabled, as large amount 
 leases adversely affect the startup time of Vault.`,
 			},
 			"no_store": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: false,
+				Type: framework.TypeBool,
 				Description: `
 If set, certificates issued/signed against this role will not be stored in the
 storage backend. This can improve performance when issuing large numbers of 
@@ -429,7 +419,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
-		MaxTTL:              data.Get("max_ttl").(string),
+		MaxTTL:              (time.Duration(data.Get("max_ttl").(int)) * time.Second).String(),
 		TTL:                 (time.Duration(data.Get("ttl").(int)) * time.Second).String(),
 		AllowLocalhost:      data.Get("allow_localhost").(bool),
 		AllowedDomains:      data.Get("allowed_domains").([]string),
@@ -480,44 +470,21 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
 	}
 
-	var maxTTL time.Duration
-	maxSystemTTL := b.System().MaxLeaseTTL()
-	if len(entry.MaxTTL) == 0 {
-		maxTTL = maxSystemTTL
-	} else {
-		maxTTL, err = parseutil.ParseDurationSecond(entry.MaxTTL)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid max ttl: %s", err)), nil
-		}
+	maxTTL, err := parseutil.ParseDurationSecond(entry.MaxTTL)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Invalid max ttl: %s", err)), nil
 	}
-	if maxTTL > maxSystemTTL {
-		return logical.ErrorResponse("Requested max TTL is higher than backend maximum"), nil
+	ttl, err := parseutil.ParseDurationSecond(entry.TTL)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Invalid ttl: %s", err)), nil
 	}
-
-	ttl := b.System().DefaultLeaseTTL()
-	if len(entry.TTL) != 0 {
-		ttl, err = parseutil.ParseDurationSecond(entry.TTL)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid ttl: %s", err)), nil
-		}
+	if maxTTL != 0 && ttl > maxTTL {
+		return logical.ErrorResponse(
+			`"ttl" value must be less than "max_ttl" value`,
+		), nil
 	}
-	if ttl > maxTTL {
-		// If they are using the system default, cap it to the role max;
-		// if it was specified on the command line, make it an error
-		if len(entry.TTL) == 0 {
-			ttl = maxTTL
-		} else {
-			return logical.ErrorResponse(
-				`"ttl" value must be less than "max_ttl" and/or backend default max lease TTL value`,
-			), nil
-		}
-	}
-
-	// Persist clamped TTLs
-	entry.TTL = ttl.String()
-	entry.MaxTTL = maxTTL.String()
 
 	if errResp := validateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
 		return errResp, nil

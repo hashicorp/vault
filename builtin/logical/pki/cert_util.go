@@ -688,7 +688,6 @@ func signCert(b *backend,
 // from the various endpoints and generates a creationParameters with the
 // parameters that can be used to issue or sign
 func generateCreationBundle(b *backend, data *dataBundle) error {
-	var err error
 	var ok bool
 
 	// Read in names -- CN, DNS and email addresses
@@ -860,21 +859,23 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		ttl = time.Duration(data.apiData.Get("ttl").(int)) * time.Second
 
 		if ttl == 0 {
-			if data.role.TTL != "" {
-				ttl, err = parseutil.ParseDurationSecond(data.role.TTL)
-				if err != nil {
-					return errutil.UserError{Err: fmt.Sprintf(
-						"invalid role ttl: %s", err)}
-				}
+			roleTTL, err := parseutil.ParseDurationSecond(data.role.TTL)
+			if err != nil {
+				return errutil.UserError{Err: fmt.Sprintf(
+					"invalid role ttl: %s", err)}
+			}
+			if roleTTL != 0 {
+				ttl = roleTTL
 			}
 		}
 
-		if data.role.MaxTTL != "" {
-			maxTTL, err = parseutil.ParseDurationSecond(data.role.MaxTTL)
-			if err != nil {
-				return errutil.UserError{Err: fmt.Sprintf(
-					"invalid role max_ttl: %s", err)}
-			}
+		roleMaxTTL, err := parseutil.ParseDurationSecond(data.role.MaxTTL)
+		if err != nil {
+			return errutil.UserError{Err: fmt.Sprintf(
+				"invalid role max_ttl: %s", err)}
+		}
+		if roleMaxTTL != 0 {
+			maxTTL = roleMaxTTL
 		}
 
 		if ttl == 0 {
@@ -895,7 +896,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 			notAfter.After(data.signingBundle.Certificate.NotAfter) && !data.role.AllowExpirationPastCA {
 
 			return errutil.UserError{Err: fmt.Sprintf(
-				"cannot satisfy request, as TTL is beyond the expiration of the CA certificate")}
+				"cannot satisfy request, as TTL would result in notAfter %s that is beyond the expiration of the CA certificate at %s", notAfter.Format(time.RFC3339Nano), data.signingBundle.Certificate.NotAfter.Format(time.RFC3339Nano))}
 		}
 	}
 
