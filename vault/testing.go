@@ -603,8 +603,8 @@ type noopAudit struct {
 	saltMutex sync.RWMutex
 }
 
-func (n *noopAudit) GetHash(data string) (string, error) {
-	salt, err := n.Salt()
+func (n *noopAudit) GetHash(ctx context.Context, data string) (string, error) {
+	salt, err := n.Salt(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -629,7 +629,7 @@ func (n *noopAudit) Invalidate(_ context.Context) {
 	n.salt = nil
 }
 
-func (n *noopAudit) Salt() (*salt.Salt, error) {
+func (n *noopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	n.saltMutex.RLock()
 	if n.salt != nil {
 		defer n.saltMutex.RUnlock()
@@ -641,7 +641,7 @@ func (n *noopAudit) Salt() (*salt.Salt, error) {
 	if n.salt != nil {
 		return n.salt, nil
 	}
-	salt, err := salt.NewSalt(n.Config.SaltView, n.Config.SaltConfig)
+	salt, err := salt.NewSalt(ctx, n.Config.SaltView, n.Config.SaltConfig)
 	if err != nil {
 		return nil, err
 	}

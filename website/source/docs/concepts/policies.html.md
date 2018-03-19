@@ -269,7 +269,7 @@ options are:
         ```
 
     * If any keys are specified, all non-specified parameters will be denied
-      unless there the parameter `"*"` is set to an empty array, which will
+      unless the parameter `"*"` is set to an empty array, which will
       allow all other parameters to be modified. Parameters with specific values
       will still be restricted to those values.
 
@@ -338,14 +338,17 @@ Parameter values also support prefix/suffix globbing. Globbing is enabled by
 prepending or appending or prepending a splat (`*`) to the value:
 
 ```ruby
-# Allow any parameter as long as the value starts with "foo-*".
+# Only allow a parameter named "bar" with a value starting with "foo-*".
 path "secret/foo" {
   capabilities = ["create"]
   allowed_parameters = {
-    "*" = ["foo-*"]
+    "bar" = ["foo-*"]
   }
 }
 ```
+
+Note: the only value that can be used with the `*` parameter is `[]`.
+
 
 ### Required Response Wrapping TTLs
 
@@ -368,9 +371,9 @@ wrapping mandatory for a particular path.
     wrapped response.
 
 If both are specified, the minimum value must be less than the maximum. In
-addition, if paths are merged from different stanzas, the lowest value specified
-for each is the value that will result, in line with the idea of keeping token
-lifetimes as short as possible.
+addition, if paths are merged from different stanzas, the lowest value
+specified for each is the value that will result, in line with the idea of
+keeping token lifetimes as short as possible.
 
 ## Builtin Policies
 
@@ -379,10 +382,17 @@ the two builtin policies.
 
 ### Default Policy
 
-The `default` policy is a builtin Vault policy that cannot be modified or
-removed. By default, it is attached to all tokens, but may be explicitly
-detached at creation time. The policy contains basic functionality such as the
-ability for the token to lookup data about itself and to use its cubbyhole data.
+The `default` policy is a builtin Vault policy that cannot be removed. By
+default, it is attached to all tokens, but may be explicitly excluded at token
+creation time by supporting authentication methods.
+
+The policy contains basic functionality such as the ability for the token to
+look up data about itself and to use its cubbyhole data. However, Vault is not
+proscriptive about its contents. It can be modified to suit your needs; Vault
+will never overwrite your modifications. If you want to stay up-to-date with
+the latest upstream version of the `default` policy, simply read the contents
+of the policy from an up-to-date `dev` server, and write those contents into
+your Vault's `default` policy.
 
 To view all permissions granted by the default policy on your Vault
 installation, run:

@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -16,7 +17,7 @@ import (
 type AuditFormatWriter interface {
 	WriteRequest(io.Writer, *AuditRequestEntry) error
 	WriteResponse(io.Writer, *AuditResponseEntry) error
-	Salt() (*salt.Salt, error)
+	Salt(context.Context) (*salt.Salt, error)
 }
 
 // AuditFormatter implements the Formatter interface, and allows the underlying
@@ -27,7 +28,7 @@ type AuditFormatter struct {
 
 var _ Formatter = (*AuditFormatter)(nil)
 
-func (f *AuditFormatter) FormatRequest(w io.Writer, config FormatterConfig, in *LogInput) error {
+func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *LogInput) error {
 	if in == nil || in.Request == nil {
 		return fmt.Errorf("request to request-audit a nil request")
 	}
@@ -40,7 +41,7 @@ func (f *AuditFormatter) FormatRequest(w io.Writer, config FormatterConfig, in *
 		return fmt.Errorf("no format writer specified")
 	}
 
-	salt, err := f.Salt()
+	salt, err := f.Salt(ctx)
 	if err != nil {
 		return errwrap.Wrapf("error fetching salt: {{err}}", err)
 	}
@@ -151,7 +152,7 @@ func (f *AuditFormatter) FormatRequest(w io.Writer, config FormatterConfig, in *
 	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
 }
 
-func (f *AuditFormatter) FormatResponse(w io.Writer, config FormatterConfig, in *LogInput) error {
+func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *LogInput) error {
 	if in == nil || in.Request == nil {
 		return fmt.Errorf("request to response-audit a nil request")
 	}
@@ -164,7 +165,7 @@ func (f *AuditFormatter) FormatResponse(w io.Writer, config FormatterConfig, in 
 		return fmt.Errorf("no format writer specified")
 	}
 
-	salt, err := f.Salt()
+	salt, err := f.Salt(ctx)
 	if err != nil {
 		return errwrap.Wrapf("error fetching salt: {{err}}", err)
 	}
