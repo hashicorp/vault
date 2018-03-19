@@ -1,11 +1,9 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -128,7 +126,7 @@ func (c *KVPutCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Logical().Write(path, data)
+	secret, err := kvWriteRequest(client, path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
 		return 2
@@ -142,13 +140,4 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	return OutputSecret(c.UI, secret)
-}
-
-func addPrefixToVKVPath(p, apiPrefix string) (string, error) {
-	parts := strings.SplitN(p, "/", 2)
-	if len(parts) != 2 {
-		return "", errors.New("Invalid path")
-	}
-
-	return path.Join(parts[0], apiPrefix, parts[1]), nil
 }

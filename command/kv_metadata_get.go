@@ -79,7 +79,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Logical().Read(path)
+	secret, err := kvReadRequest(client, path, nil)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
 		return 2

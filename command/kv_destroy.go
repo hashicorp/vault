@@ -102,7 +102,7 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Logical().Write(path, data)
+	secret, err := kvWriteRequest(client, path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
 		return 2

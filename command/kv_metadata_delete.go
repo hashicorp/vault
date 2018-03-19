@@ -77,7 +77,7 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 		return 2
 	}
 
-	if _, err := client.Logical().Delete(path); err != nil {
+	if _, err := kvDeleteRequest(client, path); err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", path, err))
 		return 2
 	}

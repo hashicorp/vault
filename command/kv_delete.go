@@ -114,7 +114,7 @@ func (c *KVDeleteCommand) deleteLatest(path string) error {
 		return err
 	}
 
-	_, err = client.Logical().Delete(path)
+	_, err = kvDeleteRequest(client, path)
 
 	return err
 }
@@ -135,6 +135,6 @@ func (c *KVDeleteCommand) deleteVersions(path string, versions []string) error {
 		return err
 	}
 
-	_, err = client.Logical().Write(path, data)
+	_, err = kvWriteRequest(client, path, data)
 	return err
 }
