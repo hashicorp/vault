@@ -11,6 +11,24 @@ DEPRECATIONS/CHANGES:
    ARN. Existing configurations will be upgraded automatically, but when
    writing a new role configuration the updated behavior will be used.
 
+FEATURES:
+
+ * Replication Activation Enhancements: When activating a replication
+   secondary, a public key can now be fetched first from the target cluster.
+   This public key can be provided to the primary when requesting the
+   activation token. If provided, the public key will be used to perform a
+   Diffie-Hellman key exchange resulting in a shared key that encrypts the
+   contents of the activation token. The purpose is to protect against
+   accidental disclosure of the contents of the token if unwrapped by the wrong
+   party, given that the contents of the token are highly sensitive. If
+   accidentally unwrapped, the contents of the token are not usable by the
+   unwrapping party. It is important to note that just as a malicious operator
+   could unwrap the contents of the token, a malicious operator can pretend to
+   be a secondary and complete the Diffie-Hellman exchange on their own; this
+   feature provides defense in depth but still requires due diligence around
+   replication activation, including multiple eyes on the commands/tokens and
+   proper auditing.
+
 IMPROVEMENTS:
 
  * api: Update renewer grace period logic. It no longer is static, but rather
