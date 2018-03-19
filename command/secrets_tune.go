@@ -21,6 +21,7 @@ type SecretsTuneCommand struct {
 	flagMaxLeaseTTL              time.Duration
 	flagAuditNonHMACRequestKeys  []string
 	flagAuditNonHMACResponseKeys []string
+	flagListingVisibility        string
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -85,6 +86,12 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 			"devices in the response data object.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:   flagNameListingVisibility,
+		Target: &c.flagListingVisibility,
+		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
+	})
+
 	return set
 }
 
@@ -136,6 +143,10 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAuditNonHMACResponseKeys {
 			mountConfigInput.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
+		}
+
+		if fl.Name == flagNameListingVisibility {
+			mountConfigInput.ListingVisibility = c.flagListingVisibility
 		}
 	})
 

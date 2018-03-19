@@ -1975,6 +1975,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			mountEntry.Config.ListingVisibility = oldVal
 			return handleError(err)
 		}
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of listing_visibility successful", "path", path)
+		}
 	}
 
 	return nil, nil
