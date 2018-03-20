@@ -2,6 +2,8 @@ package command
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -93,5 +95,35 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
-	return OutputSecret(c.UI, secret)
+	// If we have wrap info print the secret normally.
+	if secret.WrapInfo != nil || c.flagFormat != "table" {
+		return OutputSecret(c.UI, secret)
+	}
+
+	versions := secret.Data["versions"].(map[string]interface{})
+
+	delete(secret.Data, "versions")
+
+	c.UI.Info(getHeaderForMap("Metadata", secret.Data))
+	OutputSecret(c.UI, secret)
+
+	versionKeys := []int{}
+	for k := range versions {
+		i, err := strconv.Atoi(k)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error parsing version %s", k))
+			return 2
+		}
+
+		versionKeys = append(versionKeys, i)
+	}
+
+	sort.Ints(versionKeys)
+
+	for _, v := range versionKeys {
+		c.UI.Info("\n" + getHeaderForMap(fmt.Sprintf("Version %d", v), versions[strconv.Itoa(v)].(map[string]interface{})))
+		OutputData(c.UI, versions[strconv.Itoa(v)])
+	}
+
+	return 0
 }

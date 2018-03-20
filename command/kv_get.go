@@ -116,5 +116,19 @@ func (c *KVGetCommand) Run(args []string) int {
 		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
-	return OutputSecret(c.UI, secret)
+	// If we have wrap info print the secret normally.
+	if secret.WrapInfo != nil || c.flagFormat != "table" {
+		return OutputSecret(c.UI, secret)
+	}
+
+	if metadata, ok := secret.Data["metadata"]; ok {
+		c.UI.Info(getHeaderForMap("Metadata", metadata.(map[string]interface{})))
+		OutputData(c.UI, metadata)
+	}
+	if data, ok := secret.Data["data"]; ok {
+		c.UI.Info("\n" + getHeaderForMap("Data", data.(map[string]interface{})))
+		OutputData(c.UI, data)
+	}
+
+	return 0
 }

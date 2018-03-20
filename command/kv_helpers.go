@@ -2,6 +2,7 @@ package command
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"path"
 	"strings"
@@ -111,4 +112,31 @@ func addPrefixToVKVPath(p, apiPrefix string) (string, error) {
 	}
 
 	return path.Join(parts[0], apiPrefix, parts[1]), nil
+}
+
+func getHeaderForMap(header string, data map[string]interface{}) string {
+	maxKey := 0
+	for k := range data {
+		if len(k) > maxKey {
+			maxKey = len(k)
+		}
+	}
+
+	// 4 for the column spaces and 5 for the len("value")
+	totalLen := maxKey + 4 + 5
+
+	equalSigns := totalLen - (len(header) + 2)
+
+	// If we have zero or fewer equal signs bump it back up to two on either
+	// side of the header.
+	if equalSigns <= 0 {
+		equalSigns = 4
+	}
+
+	// If the number of equal signs is not divisible by two add a sign.
+	if equalSigns%2 != 0 {
+		equalSigns = equalSigns + 1
+	}
+
+	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
 }
