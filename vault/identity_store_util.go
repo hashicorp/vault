@@ -716,7 +716,6 @@ func (i *IdentityStore) MemDBAliasesByMetadata(filters map[string]string, clone 
 	}
 
 	txn := i.db.Txn(false)
-	defer txn.Abort()
 
 	var args []interface{}
 	for key, value := range filters {
@@ -949,7 +948,6 @@ func (i *IdentityStore) MemDBEntitiesByMetadata(filters map[string]string, clone
 	}
 
 	txn := i.db.Txn(false)
-	defer txn.Abort()
 
 	var args []interface{}
 	for key, value := range filters {
@@ -984,7 +982,6 @@ func (i *IdentityStore) MemDBEntitiesByBucketEntryKeyHash(hashValue string) ([]*
 	}
 
 	txn := i.db.Txn(false)
-	defer txn.Abort()
 
 	return i.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, hashValue)
 }
@@ -1922,7 +1919,6 @@ func (i *IdentityStore) MemDBGroupsByParentGroupID(memberGroupID string, clone b
 
 func (i *IdentityStore) MemDBGroupsByMemberEntityID(entityID string, clone bool, externalOnly bool) ([]*identity.Group, error) {
 	txn := i.db.Txn(false)
-	defer txn.Abort()
 
 	return i.MemDBGroupsByMemberEntityIDInTxn(txn, entityID, clone, externalOnly)
 }
@@ -2185,7 +2181,6 @@ func (i *IdentityStore) MemDBGroupsByBucketEntryKeyHash(hashValue string) ([]*id
 	}
 
 	txn := i.db.Txn(false)
-	defer txn.Abort()
 
 	return i.MemDBGroupsByBucketEntryKeyHashInTxn(txn, hashValue)
 }
