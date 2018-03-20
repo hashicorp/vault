@@ -592,6 +592,13 @@ func initCommands(ui, serverCmdUi cli.Ui) {
 				},
 			}, nil
 		},
+		"kv list": func() (cli.Command, error) {
+			return &KVListCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
 		"kv destroy": func() (cli.Command, error) {
 			return &KVDestroyCommand{
 				BaseCommand: &BaseCommand{
