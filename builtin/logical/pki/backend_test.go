@@ -2401,7 +2401,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	}
 	cert := certs[0]
 	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
-		t.Fatalf("sign-verbatim did not properly cap validiaty period on signed CSR")
+		t.Fatalf("sign-verbatim did not properly cap validity period on signed CSR")
 	}
 
 	// now check that if we set generate-lease it takes it from the role and the TTLs match

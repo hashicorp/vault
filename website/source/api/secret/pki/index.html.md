@@ -537,7 +537,9 @@ hints on submitting.
 ## Parameters
 
 - `certificate` `(string: <required>)` – Specifies the certificate in PEM
-  format.
+  format. May optionally append additional CA certificates to populate the
+  whole chain, which will then enable returning the full chain from issue and
+  sign operations.
 
 ### Sample Payload
 

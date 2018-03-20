@@ -5,9 +5,9 @@ sidebar_current: "guides-identity-lease"
 description: |-
   Tokens are the core method for authentication within Vault. For every
   authentication token and dynamic secret, Vault creates a lease
-  containing information such as a duration, renewability, and more.
-  Understanding the lifecycle of lease means understanding the lifecycle of
-  tokens on some sense.
+  containing information such as duration, renewability, and more.
+  Understanding the lifecycle of leases means understanding the lifecycle of
+  tokens in some sense.
 ---
 
 # Tokens and Leases
@@ -15,7 +15,7 @@ description: |-
 Almost everything in Vault has an associated lease, and when the lease is
 expired, the secret is revoked. Tokens are not an exception. Every non-root
 token has a time-to-live (TTL) associated with it. When a token expires and it's
-not renewed, the token automatically gets revoked.
+not renewed, the token is automatically revoked.
 
 ## Lease Hierarchy
 
@@ -24,12 +24,14 @@ parent is revoked or expires, so do all its children regardless of their own
 leases. A child may be a token, secret, or authentication created by a parent. A
 parent is almost always a **token**.
 
-Suppose a hierarchy exists with respective TTL as follow:
+Suppose a hierarchy exists with respective TTL as follows:
 
+```
     b519c6aa... (3h)
         6a2cf3e7... (4h)
         1d3fd4b2... (1h)
             794b6f2f... (2h)
+```
 
 In this scenario, the lease ID of `1d3fd4b2..` will expire in an hour. If a
 token or secret with a lease is not renewed before the lease expires, it will be
@@ -42,10 +44,10 @@ two hours later, `b519c6aa...` will be revoked and takes its child
 ## Reference Material
 
 - The [Validation](/guides/secret-mgmt/dynamic-secrets.html#validation) section of the
-[Secret as a Service](/guides/secret-mgmt/dynamic-secrets.html) guide demonstrated lease
+[Secret as a Service](/guides/secret-mgmt/dynamic-secrets.html) guide demonstrates lease
 renewal and revocation
 - [Tokens documentation](/docs/concepts/tokens.html)
-- [Token Auth Backend HTTP API](/api/auth/token/index.html)
+- [Token Auth Method (API)](/api/auth/token/index.html)
 - [Lease, Renew, and Revoke](/docs/concepts/lease.html)
 
 ## Estimated Time to Complete
@@ -62,23 +64,23 @@ See the [policy requirements](#policy-requirements) section for details.
 
 ## Challenge
 
-Consider the following scenarios:
+Consider the following scenarios often encountered outside of Vault:
 
-- Currently, there is no **break glass** procedure available for revoking
+- There is no **break glass** procedure available for revoking
 access to credentials in the event of a breach
 - Credentials for external systems (e.g. AWS, MySQL) are shared
-- Need a temporal access to database in a specific scenario
+- Need temporal access to a database in a specific scenario
 
 ## Solution
 
 Vault has built-in support for secret revocation. Vault can revoke not only
-single secret, but also a tree of secrets. For example, Vault can revoke all
+a single secret, but also a tree of secrets. For example, Vault can revoke all
 secrets read by a specific **user** or all secrets of a specific **type**.
 Revocation assists in key rolling as well as locking down systems in the case of
 an intrusion.
 
 If a user or machine needs a temporal access to Vault, you can set a short TTL
-or number of use to a token so that the token gets revoked automatically at the
+or a number of uses to a token so the token is automatically revoked at the
 end of its life.
 
 This also allows for organizations to plan and train for various
@@ -95,16 +97,16 @@ unsealed](/intro/getting-started/deploy.html).
 
 ### Policy requirements
 
--> **NOTE:** For the purpose of this guide, you can use **`root`** token to work
-with Vault. However, it is recommended that root tokens are only used for just
+-> **NOTE:** For the purpose of this guide, you can use the **`root`** token to work
+with Vault. However, it is recommended that root tokens are used for just
 enough initial setup or in emergencies. As a best practice, use tokens with
-appropriate set of policies based on your role in the organization.
+an appropriate set of policies based on your role in the organization.
 
 To perform all tasks demonstrated in this guide, your policy must include the
 following permissions:
 
 ```shell
-# List available auth backend - Step 1
+# List available auth method - Step 1
 path "sys/auth" {
   capabilities = [ "read" ]
 }
@@ -119,12 +121,12 @@ path "auth/token/*" {
   capabilities = [ "create", "read", "update", "delete", "list", "sudo" ]
 }
 
-# For Advanced Features - list available secret backends
+# For Advanced Features - list available secret engines
 path "sys/mounts" {
   capabilities = [ "read" ]
 }
 
-# For Advanced Features - tune the database backend TTL
+# For Advanced Features - tune the database secret engine TTL
 path "sys/mounts/database/tune" {
   capabilities = [ "update" ]
 }
@@ -137,20 +139,20 @@ If you are not familiar with policies, complete the
 ## Steps
 
 Tokens are the core method for authentication within Vault. Tokens can be used
-directly or dynamically generated by the auth backends. Regardless, the clients
+directly or dynamically generated by the auth methods. Regardless, the clients
 need valid tokens to interact with Vault.
 
 This guide demonstrates the lifecycle of tokens.
 
-1. [Read token backend configuration](#step1)
-2. [Create short-lived tokens](#step2)
-3. [Create tokens with use limit](#step3)
-4. [Periodic tokens](#step4)
-5. [Orphan tokens](#step5)
-6. [Revoke tokens](#step6)
+1. [Read token auth method configuration](#step1)
+1. [Create short-lived tokens](#step2)
+1. [Create tokens with use limit](#step3)
+1. [Periodic tokens](#step4)
+1. [Orphan tokens](#step5)
+1. [Revoke tokens](#step6)
 
 
-### <a name="step1"></a>Step 1: Read token backend configuration
+### <a name="step1"></a>Step 1: Read token auth method configuration
 
 When you create leases with no specific TTL values, the default value applies
 to the lease.
@@ -170,15 +172,15 @@ shorter in Vault's configuration file.
 
 Another option is to tune the mount configuration to override the system
 defaults by calling the **`/sys/mounts/<PATH>/tune`** endpoint (e.g.
-`/sys/mounts/database/tune`). For the auth backend system configuration, call
+`/sys/mounts/database/tune`). For the auth method system configuration, call
 **`/sys/auth/<METHOD>/tune`** endpoint.
 
 NOTE: Refer to the [Advanced Features](#advanced-features) section for tuning
-the backend system configuration.
+the system configuration.
 
 #### CLI command
 
-Read the default TTL settings for **token** auth backend:
+Read the default TTL settings for **token** auth method:
 
 ```shell
 $ vault read sys/auth/token/tune
@@ -193,7 +195,7 @@ max_lease_ttl    	2764800
 #### API call using cURL
 
 Use `/sys/auth/token/tune` endpoint to read the default TTL settings for **token** auth
-backend:
+method:
 
 ```shell
 $ curl --header "X-Vault-Token: <TOKEN>" \
@@ -283,13 +285,13 @@ ttl             	8
 **NOTE:** The `vault token lookup` command returns the token's properties.
 In this example, it shows that this token has 8 more seconds before it expires.
 
-When you execute a vault command using the new token immediately following its
+When you execute a Vault command using the new token immediately following its
 creation, it should work. Wait for 30 seconds and try again. It returns
 **`Code: 403. Errors:`** which indicates a forbidden API call due to expired
 token usage.
 
 
-You can **renew** the token's TTL as long as the token has not expired, yet.
+You can **renew** the token's TTL as long as the token has not expired.
 
 ```shell
 $ vault token renew <TOKEN>
@@ -307,7 +309,7 @@ duration (e.g. "1h").
 
 #### API call using cURL
 
-Use `auth/token/create` endpoint to create a new token. There are a number of
+Use the `auth/token/create` endpoint to create a new token. There are a number of
 optional [parameters](/api/auth/token/index.html#create-token) that you can pass
 in the request payload.
 
@@ -371,8 +373,8 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 
 -> **NOTE:** Tokens can be renewed as long as its life hasn't reached its max
 TTL. For example, if the token's TTL is 1 hour and max TTL is 24 hours, you can
-renew the token up to 24 hours from its creation time. Once 24 hours past from
-the token's creation time, it gets revoked by Vault. For a long running
+renew the token up to 24 hours from its creation time. Once 24 hours has passed from
+the token's creation time, the token is revoked by Vault. For long running
 processes, this may introduce complexity. In such case, use [periodic tokens](#step4).
 
 
@@ -383,12 +385,12 @@ limit tokens expire at the end of their last use regardless of their remaining
 TTLs. On the same note, use limit tokens expire at the end of their TTLs
 regardless of their remaining uses.
 
-To create tokens with use limit, simply set the number of use when you
+To create tokens with a use limit, set the number of uses when you
 create them.
 
 #### CLI command
 
-Create a token with `-use-limit` property argument.
+Create a token with the `-use-limit` property argument.
 
 **Example:**
 
@@ -404,7 +406,7 @@ token_renewable	true
 token_policies 	[default]
 ```
 
-This creates a token with _default_ policy with use limit of 2.
+This creates a token with the _default_ policy and a use limit of 2.
 
 #### Verification
 
@@ -445,9 +447,9 @@ Code: 403. Errors:
 * permission denied
 ```
 
-First command read the token properties, and then wrote a value to cubbyhole
-secret backend. This exhausted the use limit of 2 for this token.  Therefore,
-the attempt to read the secret from cubbyhole failed.
+The first command read the token's properties and then wrote a value to the cubbyhole
+secret engine. This exhausted the use limit of 2 for this token.  Therefore,
+the attempt to read the secret from the cubbyhole failed.
 
 
 #### API call using cURL
@@ -479,7 +481,7 @@ $ curl --header "X-Vault-Token: ..." --request POST  \
 }
 ```
 
-This creates a token with _default_ policy with use limit of 2.
+This creates a token with the _default_ policy and a use limit of 2.
 
 #### Verification
 
@@ -522,16 +524,16 @@ $ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
 }
 ```
 
-First command read the token properties, and then wrote a value to cubbyhole
-secret backend. This exhausted the use limit of 2 for this token.  Therefore,
-the attempt to read the secret from cubbyhole failed.
+The first command read the token's properties and then wrote a value to the cubbyhole
+secret engine. This exhausted the use limit of 2 for this token.  Therefore,
+the attempt to read the secret from the cubbyhole failed.
 
 
 
 ### <a name="step4"></a>Step 4: Periodic tokens
 
 **Root** or **sudo** users have the ability to generate **periodic tokens**.
-Periodic tokens have a TTL, but no max TTL; therefore, it may live for an
+Periodic tokens have a TTL, but no max TTL; therefore, they may live for an
 infinite duration of time so long as they are renewed within their TTL. This
 is useful for long-running services that cannot handle regenerating a token.
 
@@ -590,8 +592,8 @@ $ cat payload.json
 }
 ```
 
-This creates a token role named `zabbix` with `default` policies attached. Also,
-its renewal period is set to 24 hours.
+This creates a token role named `zabbix` with `default` policies attached.
+Its renewal period is set to 24 hours.
 
 Now, generate a token:
 
@@ -613,19 +615,19 @@ $ curl --header "X-Vault-Token: ..." --request POST \
   }
 ```
 
-Generated tokens are renewable indefinitely for as long as it gets renewed
-before its lease duration expires. The token renew command was covered in
+Generated tokens are renewable indefinitely as long as they are renewed
+before the lease duration expires. The token renew command was covered in
 [Step 2](#step2).
 
 
 #### Additional Note: Periodic Tokens with AppRole
 
 It probably makes better sense to create **AppRole** periodic tokens since we
-are talking about long-running apps need to be able to renew its token
+are talking about long-running apps that need to be able to renew their token
 indefinitely.
 
 -> For more details about AppRole, read the [AppRole Pull
--Authentication](/guides/identity/authentication.html) guide.
+Authentication](/guides/identity/authentication.html) guide.
 
 To create AppRole periodic tokens, create your AppRole role with
 `period` specified.
@@ -657,7 +659,7 @@ $ cat payload.json
 ### <a name="step5"></a>Step 5: Orphan tokens
 
 **Root** or **sudo users** have the ability to generate **orphan** tokens. Orphan tokens
-are **not** children of their parent; therefore, it does not expire when their
+are **not** children of their parent; therefore, orphan tokens do not expire when their
 parent does.
 
 
@@ -702,7 +704,7 @@ $ vault lease revoke -prefix <PATH>
 # Revoke a specific token
 $ vault token revoke eeaf890e-4b0f-a687-4190-c75b1d6d70bc
 
-# Revoke all leases for database auth backend
+# Revoke all leases for database auth method
 $ vault lease revoke -prefix database/creds
 
 # Revoke all tokens
@@ -723,7 +725,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
        --data '{ "token": "eeaf890e-4b0f-a687-4190-c75b1d6d70bc" }' \
        https://vault.rocks/v1/auth/token/revoke
 
-# Revoke all secrets for database auth backend
+# Revoke all secrets for database auth method
 $ curl --header "X-Vault-Token:..." --request POST \
        https://vault.rocks/v1/sys/leases/revoke-prefix/database/creds
 
@@ -735,8 +737,8 @@ $ curl --header "X-Vault-Token:..." --request POST \
 
 ## Advanced Features
 
-It is important to understand the lease configuration to avoid having your
-secret leases expiring earlier than you expected.
+It is important to understand lease configuration to avoid having your
+secret leases expire earlier than you expected.
 
 #### 1. Determine the TTLs specific to the mount
 
@@ -763,7 +765,7 @@ Override the global defaults by specifying `default_lease_ttl` and
 
 **Example:**
 
-The following example assumes that you have database secret backend configured.
+The following example assumes that you have a database secret engine configured.
 
 ```shell
 $ vault write sys/mounts/database/tune default_lease_ttl="8640"
@@ -781,7 +783,7 @@ $ curl --header "X-Vault-Token:..." --request POST \
 
 #### 3. Check the role specific TTLs
 
-Depending on the backend, there may be more specific TTLs configured (e.g.
+Depending on the auth method, there may be more specific TTLs configured (e.g.
 roles, groups, users) as you have done so in [Step 4](#step4).
 
 ```shell
@@ -802,6 +804,6 @@ renewable          	true
 
 ## Next steps
 
-Now you have learned the lifecycle of tokens and leases, read [AppRole Pull
+Now that you have learned the lifecycle of tokens and leases, read the [AppRole Pull
 Authentication](/guides/identity/authentication.html) guide to learn how to generate
 tokens for apps or machines.

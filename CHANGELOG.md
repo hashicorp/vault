@@ -11,18 +11,41 @@ DEPRECATIONS/CHANGES:
    ARN. Existing configurations will be upgraded automatically, but when
    writing a new role configuration the updated behavior will be used.
 
+FEATURES:
+
+ * Replication Activation Enhancements: When activating a replication
+   secondary, a public key can now be fetched first from the target cluster.
+   This public key can be provided to the primary when requesting the
+   activation token. If provided, the public key will be used to perform a
+   Diffie-Hellman key exchange resulting in a shared key that encrypts the
+   contents of the activation token. The purpose is to protect against
+   accidental disclosure of the contents of the token if unwrapped by the wrong
+   party, given that the contents of the token are highly sensitive. If
+   accidentally unwrapped, the contents of the token are not usable by the
+   unwrapping party. It is important to note that just as a malicious operator
+   could unwrap the contents of the token, a malicious operator can pretend to
+   be a secondary and complete the Diffie-Hellman exchange on their own; this
+   feature provides defense in depth but still requires due diligence around
+   replication activation, including multiple eyes on the commands/tokens and
+   proper auditing.
+
 IMPROVEMENTS:
 
+ * api: Update renewer grace period logic. It no longer is static, but rather
+   dynamically calculates one based on the current lease duration after each
+   renew. [GH-4090]
  * auth/approle: Allow array input for bound_cidr_list [4078]
  * auth/aws: Allow using lists in role bind parameters [GH-3907]
  * auth/aws: Allow binding by EC2 instance IDs [GH-3816]
  * auth/aws: Allow non-prefix-matched IAM role and instance profile ARNs
    [GH-4071]
  * physical/couchdb: Removed limit on the listing of items [GH-4149]
+ * secret/pki: Support certificate policies [GH-4125]
  * secret/transit: Allow selecting signature algorithm as well as hash
    algorithm when signing/verifying [GH-4018]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
    than just set [GH-4049]
+ * storage/dynamodb: Allow specifying max retries for dynamo client [GH-4115]
  * storage/gcs: Allow specifying chunk size for transfers, which can reduce
    memory utilization [GH-4060]
  * sys/capabilities: Add the ability to use multiple paths for capability

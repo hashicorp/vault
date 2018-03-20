@@ -88,6 +88,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				"wrapping/lookup",
 				"wrapping/pubkey",
 				"replication/status",
+				"internal/ui/mounts",
 			},
 		},
 
@@ -269,6 +270,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeMap,
 						Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
 					},
+					"listing_visibility": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
@@ -309,6 +314,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"options": &framework.FieldSchema{
 						Type:        framework.TypeMap,
 						Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
+					},
+					"listing_visibility": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
 					},
 				},
 
@@ -1009,6 +1018,14 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["random"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["random"][1]),
 			},
+			&framework.Path{
+				Pattern: "internal/ui/mounts",
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.pathInternalUIMountsRead,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
+			},
 		},
 	}
 
@@ -1475,6 +1492,11 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
+		// Even though empty value is valid for ListingVisibility, we can ignore
+		// this case during mount since there's nothing to unset/hide.
+		if len(entry.Config.ListingVisibility) > 0 {
+			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
+		}
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
 	}
@@ -1493,6 +1515,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	// Get all the options
 	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
+
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
@@ -1509,8 +1533,6 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		}
 		optionMap[k] = vStr
 	}
-
-	path = sanitizeMountPath(path)
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1589,10 +1611,14 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.ForceNoCache = true
 	}
 
+	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
+	}
+	config.ListingVisibility = apiConfig.ListingVisibility
+
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
 	}
-
 	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
 		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
 	}
@@ -1760,6 +1786,10 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 		resp.Data["audit_non_hmac_response_keys"] = rawVal.([]string)
+	}
+
+	if len(mountEntry.Config.ListingVisibility) > 0 {
+		resp.Data["listing_visibility"] = mountEntry.Config.ListingVisibility
 	}
 
 	return resp, nil
@@ -1947,6 +1977,35 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	if rawVal, ok := data.GetOk("listing_visibility"); ok {
+		lvString := rawVal.(string)
+		listingVisibility := ListingVisiblityType(lvString)
+
+		if err := checkListingVisibility(listingVisibility); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
+		}
+
+		oldVal := mountEntry.Config.ListingVisibility
+		mountEntry.Config.ListingVisibility = listingVisibility
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.ListingVisibility = oldVal
+			return handleError(err)
+		}
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of listing_visibility successful", "path", path)
+		}
+	}
+
 	var resp *logical.Response
 	if optionsRaw, ok := data.GetOk("options"); ok {
 		b.Core.logger.Info("core: mount tuning of options", "path", path)
@@ -1970,6 +2029,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		oldVal := mountEntry.Options
 		mountEntry.Options = optionMap
+
 		// Update the mount table
 		var err error
 		switch {
@@ -2154,6 +2214,11 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
+		// Even though empty value is valid for ListingVisibility, we can ignore
+		// this case during mount since there's nothing to unset/hide.
+		if len(entry.Config.ListingVisibility) > 0 {
+			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
+		}
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
 	}
@@ -2170,6 +2235,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	// Get all the options
 	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
@@ -2237,9 +2303,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 			logical.ErrInvalidRequest
 	}
 
-	// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
-	// option taking precedence.
-	if logicalType == "plugin" {
+	switch logicalType {
+	case "":
+		return logical.ErrorResponse(
+				"backend type must be specified as a string"),
+			logical.ErrInvalidRequest
+
+	case "plugin":
+		// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
+		// option taking precedence.
 		switch {
 		case apiConfig.PluginName != "":
 			config.PluginName = apiConfig.PluginName
@@ -2252,18 +2324,14 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	if logicalType == "" {
-		return logical.ErrorResponse(
-				"backend type must be specified as a string"),
-			logical.ErrInvalidRequest
+	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
-
-	path = sanitizeMountPath(path)
+	config.ListingVisibility = apiConfig.ListingVisibility
 
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
 	}
-
 	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
 		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
 	}
@@ -3145,6 +3213,42 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.mountsLock.RLock()
+	defer b.Core.mountsLock.RUnlock()
+
+	resp := &logical.Response{
+		Data: make(map[string]interface{}),
+	}
+
+	secretMounts := make(map[string]interface{})
+	authMounts := make(map[string]interface{})
+	resp.Data["secret"] = secretMounts
+	resp.Data["auth"] = authMounts
+
+	for _, entry := range b.Core.mounts.Entries {
+		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
+			info := map[string]interface{}{
+				"type":        entry.Type,
+				"description": entry.Description,
+			}
+			secretMounts[entry.Path] = info
+		}
+	}
+
+	for _, entry := range b.Core.auth.Entries {
+		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
+			info := map[string]interface{}{
+				"type":        entry.Type,
+				"description": entry.Description,
+			}
+			authMounts[entry.Path] = info
+		}
+	}
+
+	return resp, nil
+}
+
 func sanitizeMountPath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -3155,6 +3259,17 @@ func sanitizeMountPath(path string) string {
 	}
 
 	return path
+}
+
+func checkListingVisibility(visibility ListingVisiblityType) error {
+	switch visibility {
+	case ListingVisibilityHidden:
+	case ListingVisibilityUnauth:
+	default:
+		return fmt.Errorf("invalid listing visilibity type")
+	}
+
+	return nil
 }
 
 const sysHelpRoot = `
@@ -3726,5 +3841,8 @@ This path responds to the following HTTP methods.
 	"random": {
 		"Generate random bytes",
 		"This function can be used to generate high-entropy random bytes.",
+	},
+	"listing_visibility": {
+		"Determines the visibility of the mount in the UI-specific listing endpoint.",
 	},
 }
