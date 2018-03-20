@@ -79,7 +79,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-plugin"
   packages = ["."]
-  revision = "baa83ead6ff956b3f99bcd609ae3499c028e019e"
+  revision = "8068b0bdcfb702b4ab69d0e42c6023b4996c3026"
 
 [[projects]]
   branch = "master"
@@ -91,7 +91,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-uuid"
   packages = ["."]
-  revision = "64130c7a86d732268a38cb04cfbaf0cc987fda98"
+  revision = "27454136f0364f2d44b1276c552d69105cf8c498"
 
 [[projects]]
   branch = "master"
@@ -153,13 +153,13 @@
     "physical/inmem",
     "version"
   ]
-  revision = "e296886cb6531a8283920cf3d7f30018d59d662d"
+  revision = "f90c4c9c12a5c25d9eb79a4e0a6b3bd89c7b2c01"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/yamux"
   packages = ["."]
-  revision = "683f49123a33db61abfb241b7ac5e4af4dc54d55"
+  revision = "2658be15c5f05e76244154714161f17e3e77de2e"
 
 [[projects]]
   name = "github.com/mattn/go-colorable"
@@ -219,13 +219,13 @@
   branch = "master"
   name = "github.com/sethgrid/pester"
   packages = ["."]
-  revision = "b18953f5db2922a73aaf89652abf7b5ee95cb516"
+  revision = "ed9870dad3170c0b25ab9b11830cc57c3a7798fb"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "beaf6a35706e5032ae4c3fcf342c663c069f44d2"
+  revision = "c3a3ad6d03f7a915c0f7e194b7152974bb73d287"
 
 [[projects]]
   branch = "master"
@@ -239,7 +239,7 @@
     "lex/httplex",
     "trace"
   ]
-  revision = "cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb"
+  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
 
 [[projects]]
   branch = "master"
@@ -248,7 +248,7 @@
     "unix",
     "windows"
   ]
-  revision = "f6cff0780e542efa0c8e864dc8fa522808f6a598"
+  revision = "7ceb54c8418b8f9cdf0177b511d5cbb06e9fae39"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -275,7 +275,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "2b5a72b8730b0b16380010cfe5286c42108d88e7"
+  revision = "f8c8703595236ae70fdf8789ecb656ea0bcdcf46"
 
 [[projects]]
   name = "google.golang.org/grpc"
