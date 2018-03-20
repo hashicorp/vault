@@ -123,7 +123,6 @@ func (m *couchDBClient) list(prefix string) ([]couchDBListItem, error) {
 	req.SetBasicAuth(m.username, m.password)
 	values := req.URL.Query()
 	values.Set("skip", "0")
-	values.Set("limit", "100")
 	values.Set("include_docs", "false")
 	if prefix != "" {
 		values.Set("startkey", fmt.Sprintf("%q", prefix))

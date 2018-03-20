@@ -20,7 +20,7 @@ you through the generation of dynamic AWS credentials.
 ## Reference Material
 
 - [Getting Started - Dynamic Secrets](/intro/getting-started/dynamic-secrets.html)
-- [Database Backends](/docs/secrets/databases/index.html)
+- [Secret Engines - Databases](/docs/secrets/databases/index.html)
 - [Role API](/api/secret/databases/index.html#create-role)
 
 ## Estimated Time to Complete
@@ -31,7 +31,7 @@ you through the generation of dynamic AWS credentials.
 
 The end-to-end scenario described in this guide involves two personas:
 
-- **`admin`** with privileged permissions to configure secret backends
+- **`admin`** with privileged permissions to configure secret engines
 - **`apps`** read the secrets from Vault
 
 ## Challenge
@@ -102,12 +102,12 @@ To perform all tasks demonstrated in this guide, your policy must include the
 following permissions:
 
 ```shell
-# Mount secret backends
+# Mount secret engines
 path "sys/mounts/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
 
-# Configure the database backend and create roles
+# Configure the database secret engine and create roles
 path "database/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
@@ -128,12 +128,12 @@ If you are not familiar with policies, complete the
 
 ## Steps
 
-In this guide, you are going to configure PostgreSQL secret backend, and create
+In this guide, you are going to configure PostgreSQL secret engine, and create
 a read-only database role. The Vault generated PostgreSQL credentials will only
 have read permission.
 
-1. [Mount the database secret backend](#step1)
-2. [Configure PostgreSQL backend](#step2)
+1. [Mount the database secret engine](#step1)
+2. [Configure PostgreSQL secret engine](#step2)
 3. [Create a role](#step3)
 4. [Request PostgreSQL credentials](#step4)
 5. [Validation](#validation)
@@ -142,15 +142,15 @@ Step 1 through 3 need to be performed by an `admin` user.  Step 4 describes
 the commands that an `app` runs to get a database credentials from Vault.
 
 
-### <a name="step1"></a>Step 1: Mount the database secret backend
+### <a name="step1"></a>Step 1: Mount the database secret engine
 (**Persona:** admin)
 
-As most of the secret backends, the [database backend](/docs/secrets/databases/index.html)
+As most of the secret engines, the [database secret engine](/docs/secrets/databases/index.html)
 must be mounted.
 
 #### CLI command
 
-To mount a database backend:
+To mount a database secret engine:
 
 ```shell
 $ vault secrets enable <PATH>
@@ -162,12 +162,12 @@ $ vault secrets enable <PATH>
 $ vault secrets enable database
 ```
 
-**NOTE:** In this guide, the database backend is mounted at the `/database path` in
-Vault.  However, it is possible to mount your secret backends at any location.
+**NOTE:** In this guide, the database secret engine is mounted at the `/database path` in
+Vault.  However, it is possible to mount your secret engines at any location.
 
 #### API call using cURL
 
-Mount `database` secret backend using `/sys/mounts` endpoint:
+Mount `database` secret engine using `/sys/mounts` endpoint:
 
 ```shell
 $ curl --header "X-Vault-Token: <TOKEN>" \
@@ -177,12 +177,12 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PARAMETERS>` holds [configuration
-parameters](/api/system/mounts.html#mount-secret-backend) of the backend.
+parameters](/api/system/mounts.html#enable-secrets-engine) of the secret engine.
 
 **Example:**
 
-The following example mounts database backend at `sys/mounts/database` path, and
-passed the backend type ("database") in the request payload.
+The following example mounts database secret engine at `sys/mounts/database`
+path, and passed the secret engine type ("database") in the request payload.
 
 ```shell
 $ curl --header "X-Vault-Token: ..." \
@@ -191,19 +191,19 @@ $ curl --header "X-Vault-Token: ..." \
        https://$ vault.rocks/v1/sys/mounts/database
 ```
 
-**NOTE:** It is possible to mount your database secret backends at any location.
+**NOTE:** It is possible to mount your database secret engines at any location.
 
 
-### <a name="step1"></a>Step 2: Configure PostgreSQL backend
+### <a name="step1"></a>Step 2: Configure PostgreSQL secret engine
 (**Persona:** admin)
 
-The PostgreSQL backend needs to be configured with valid credentials. It is very
-common to give Vault the **root** credentials and let Vault manage the auditing
-and lifecycle credentials; it's much better than having one person manage the
-credentials.
+The PostgreSQL secret engine needs to be configured with valid credentials. It
+is very common to give Vault the **root** credentials and let Vault manage the
+auditing and lifecycle credentials; it's much better than having one person
+manage the credentials.
 
 
-The following command configures the database secret backend using
+The following command configures the database secret engine using
 `postgresql-database-plugin` where the database connection URL is
 `postgresql://root:rootpassword@localhost:5432/myapp`.  The allowed role is
 `readonly` which you will create in [Step 3](#step3).
@@ -242,7 +242,7 @@ $ cat payload.json
 ### <a name="step3"></a>Step 3: Create a role
 (**Persona:** admin)
 
-In [Step 2](#step2), you configured the PostgreSQL backend by passing **`readonly`** role
+In [Step 2](#step2), you configured the PostgreSQL secret engine by passing **`readonly`** role
 as an allowed member. The next step is to define the `readonly` role. A role is
 a logical name that maps to a policy used to generate credentials.
 
@@ -307,7 +307,7 @@ the read permission.
 `apps-policy.hcl`
 
 ```shell
-# Get credentials from the database backend
+# Get credentials from the database secret engine
 path "database/creds/readonly" {
   capabilities = [ "read" ]
 }
