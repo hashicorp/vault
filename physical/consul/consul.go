@@ -159,7 +159,9 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	var serviceAddr *string
 	serviceAddrStr, ok := conf["service_address"]
 	if ok {
-		serviceAddr = &serviceAddrStr
+		if addresses, err := net.LookupHost(serviceAddrStr); err == nil {
+			serviceAddr = &addresses[0]
+		}
 	}
 	if logger.IsDebug() {
 		logger.Debug("physical/consul: config service_address set", "service_address", serviceAddr)
