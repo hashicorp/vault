@@ -46,8 +46,6 @@ type ListingVisiblityType string
 const (
 	// ListingVisibilityHidden is the hidden type for listing visibility
 	ListingVisibilityHidden ListingVisiblityType = ""
-	// ListingVisibilityAuth is the auth type for listing visibility
-	ListingVisibilityAuth ListingVisiblityType = "auth"
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisiblityType = "unauth"
 )

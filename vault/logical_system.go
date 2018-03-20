@@ -3135,7 +3135,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	resp.Data["auth"] = authMounts
 
 	for _, entry := range b.Core.mounts.Entries {
-		if entry.Config.ListingVisibility == "unauth" {
+		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
 			info := map[string]interface{}{
 				"type":        entry.Type,
 				"description": entry.Description,
@@ -3145,7 +3145,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	}
 
 	for _, entry := range b.Core.auth.Entries {
-		if entry.Config.ListingVisibility == "unauth" {
+		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
 			info := map[string]interface{}{
 				"type":        entry.Type,
 				"description": entry.Description,
@@ -3172,7 +3172,6 @@ func sanitizeMountPath(path string) string {
 func checkListingVisibility(visibility ListingVisiblityType) error {
 	switch visibility {
 	case ListingVisibilityHidden:
-	case ListingVisibilityAuth:
 	case ListingVisibilityUnauth:
 	default:
 		return fmt.Errorf("invalid listing visilibity type")
