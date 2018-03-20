@@ -2022,7 +2022,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		b.Core.logger.Info("core: mount tuning of options", "path", path, "options", optionMap)
 		// Special case to make sure we can not disable versioning once it's
-		// enabeled. If the vkv backend suports downgrading this can be removed.
+		// enabled. If the vkv backend suports downgrading this can be removed.
 		if mountEntry.Options["versioned"] == "true" && optionMap["versioned"] != "true" {
 			return logical.ErrorResponse("cannot disable versioning once it's enabled"), logical.ErrInvalidRequest
 		}
