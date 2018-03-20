@@ -114,6 +114,16 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	return client, nil
 }
 
+// SetAddress sets the token helper on the command; useful for the demo server and other outside cases.
+func (c *BaseCommand) SetAddress(addr string) {
+	c.flagAddress = addr
+}
+
+// SetTokenHelper sets the token helper on the command.
+func (c *BaseCommand) SetTokenHelper(th token.TokenHelper) {
+	c.tokenHelper = th
+}
+
 // TokenHelper returns the token helper attached to the command.
 func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
 	if c.tokenHelper != nil {
@@ -160,14 +170,19 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 		if bit&FlagSetHTTP != 0 {
 			f := set.NewFlagSet("HTTP Options")
 
-			f.StringVar(&StringVar{
+			addrStringVar := &StringVar{
 				Name:       "address",
 				Target:     &c.flagAddress,
-				Default:    "https://127.0.0.1:8200",
 				EnvVar:     "VAULT_ADDR",
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Vault server.",
-			})
+			}
+			if c.flagAddress != "" {
+				addrStringVar.Default = c.flagAddress
+			} else {
+				addrStringVar.Default = "https://127.0.0.1:8200"
+			}
+			f.StringVar(addrStringVar)
 
 			f.StringVar(&StringVar{
 				Name:       "ca-cert",

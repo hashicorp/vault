@@ -88,6 +88,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				"wrapping/lookup",
 				"wrapping/pubkey",
 				"replication/status",
+				"internal/ui/mounts",
 			},
 		},
 
@@ -265,6 +266,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
+					"listing_visibility": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
@@ -301,6 +306,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"audit_non_hmac_response_keys": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
+					},
+					"listing_visibility": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
 					},
 				},
 
@@ -993,6 +1002,14 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["random"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["random"][1]),
 			},
+			&framework.Path{
+				Pattern: "internal/ui/mounts",
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.pathInternalUIMountsRead,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
+			},
 		},
 	}
 
@@ -1075,7 +1092,7 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 	err := b.Core.expiration.Tidy()
 	if err != nil {
 		b.Backend.Logger().Error("sys: failed to tidy leases", "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, err
 }
@@ -1458,6 +1475,11 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
+		// Even though empty value is valid for ListingVisibility, we can ignore
+		// this case during mount since there's nothing to unset/hide.
+		if len(entry.Config.ListingVisibility) > 0 {
+			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
+		}
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
 	}
@@ -1476,12 +1498,12 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	// Get all the options
 	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
+
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
-
-	path = sanitizeMountPath(path)
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1560,10 +1582,14 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.ForceNoCache = true
 	}
 
+	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
+	}
+	config.ListingVisibility = apiConfig.ListingVisibility
+
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
 	}
-
 	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
 		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
 	}
@@ -1591,6 +1617,24 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 // used to intercept an HTTPCodedError so it goes back to callee
 func handleError(
 	err error) (*logical.Response, error) {
+	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+		return logical.ErrorResponse(err.Error()), err
+	}
+	switch err.(type) {
+	case logical.HTTPCodedError:
+		return logical.ErrorResponse(err.Error()), err
+	default:
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+}
+
+// Performs a similar function to handleError, but upon seeing a ReadOnlyError
+// will actually strip it out to prevent forwarding
+func handleErrorNoReadOnlyForward(
+	err error) (*logical.Response, error) {
+	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+		return nil, fmt.Errorf("operation could not be completed as storage is read-only")
+	}
 	switch err.(type) {
 	case logical.HTTPCodedError:
 		return logical.ErrorResponse(err.Error()), err
@@ -1712,6 +1756,10 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 		resp.Data["audit_non_hmac_response_keys"] = rawVal.([]string)
+	}
+
+	if len(mountEntry.Config.ListingVisibility) > 0 {
+		resp.Data["listing_visibility"] = mountEntry.Config.ListingVisibility
 	}
 
 	return resp, nil
@@ -1899,6 +1947,35 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	if rawVal, ok := data.GetOk("listing_visibility"); ok {
+		lvString := rawVal.(string)
+		listingVisibility := ListingVisiblityType(lvString)
+
+		if err := checkListingVisibility(listingVisibility); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
+		}
+
+		oldVal := mountEntry.Config.ListingVisibility
+		mountEntry.Config.ListingVisibility = listingVisibility
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.ListingVisibility = oldVal
+			return handleError(err)
+		}
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of listing_visibility successful", "path", path)
+		}
+	}
+
 	return nil, nil
 }
 
@@ -1950,7 +2027,7 @@ func (b *SystemBackend) handleLeaseLookupList(ctx context.Context, req *logical.
 	keys, err := b.Core.expiration.idView.List(ctx, prefix)
 	if err != nil {
 		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return logical.ListResponse(keys), nil
 }
@@ -1975,7 +2052,7 @@ func (b *SystemBackend) handleRenew(ctx context.Context, req *logical.Request, d
 	resp, err := b.Core.expiration.Renew(leaseID, increment)
 	if err != nil {
 		b.Backend.Logger().Error("sys: lease renewal failed", "lease_id", leaseID, "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return resp, err
 }
@@ -1995,7 +2072,7 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.Revoke(leaseID); err != nil {
 		b.Backend.Logger().Error("sys: lease revocation failed", "lease_id", leaseID, "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, nil
 }
@@ -2025,7 +2102,7 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 	}
 	if err != nil {
 		b.Backend.Logger().Error("sys: revoke prefix failed", "prefix", prefix, "error", err)
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, nil
 }
@@ -2057,6 +2134,11 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
 			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
 		}
+		// Even though empty value is valid for ListingVisibility, we can ignore
+		// this case during mount since there's nothing to unset/hide.
+		if len(entry.Config.ListingVisibility) > 0 {
+			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
+		}
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
 	}
@@ -2073,6 +2155,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	// Get all the options
 	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
@@ -2129,9 +2212,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 			logical.ErrInvalidRequest
 	}
 
-	// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
-	// option taking precedence.
-	if logicalType == "plugin" {
+	switch logicalType {
+	case "":
+		return logical.ErrorResponse(
+				"backend type must be specified as a string"),
+			logical.ErrInvalidRequest
+
+	case "plugin":
+		// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
+		// option taking precedence.
 		switch {
 		case apiConfig.PluginName != "":
 			config.PluginName = apiConfig.PluginName
@@ -2144,18 +2233,14 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	if logicalType == "" {
-		return logical.ErrorResponse(
-				"backend type must be specified as a string"),
-			logical.ErrInvalidRequest
+	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
-
-	path = sanitizeMountPath(path)
+	config.ListingVisibility = apiConfig.ListingVisibility
 
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
 	}
-
 	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
 		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
 	}
@@ -2499,7 +2584,7 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 
 	entry, err := b.Core.barrier.Get(ctx, path)
 	if err != nil {
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	if entry == nil {
 		return nil, nil
@@ -2511,7 +2596,7 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 	// will be nil.
 	outputBytes, _, err := compressutil.Decompress(entry.Value)
 	if err != nil {
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 
 	// `outputBytes` is nil if the input is uncompressed. In that case set it to the original input.
@@ -2563,7 +2648,7 @@ func (b *SystemBackend) handleRawDelete(ctx context.Context, req *logical.Reques
 	}
 
 	if err := b.Core.barrier.Delete(ctx, path); err != nil {
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, nil
 }
@@ -2585,7 +2670,7 @@ func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request,
 
 	keys, err := b.Core.barrier.List(ctx, path)
 	if err != nil {
-		return handleError(err)
+		return handleErrorNoReadOnlyForward(err)
 	}
 	return logical.ListResponse(keys), nil
 }
@@ -3036,6 +3121,42 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.mountsLock.RLock()
+	defer b.Core.mountsLock.RUnlock()
+
+	resp := &logical.Response{
+		Data: make(map[string]interface{}),
+	}
+
+	secretMounts := make(map[string]interface{})
+	authMounts := make(map[string]interface{})
+	resp.Data["secret"] = secretMounts
+	resp.Data["auth"] = authMounts
+
+	for _, entry := range b.Core.mounts.Entries {
+		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
+			info := map[string]interface{}{
+				"type":        entry.Type,
+				"description": entry.Description,
+			}
+			secretMounts[entry.Path] = info
+		}
+	}
+
+	for _, entry := range b.Core.auth.Entries {
+		if entry.Config.ListingVisibility == ListingVisibilityUnauth {
+			info := map[string]interface{}{
+				"type":        entry.Type,
+				"description": entry.Description,
+			}
+			authMounts[entry.Path] = info
+		}
+	}
+
+	return resp, nil
+}
+
 func sanitizeMountPath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -3046,6 +3167,17 @@ func sanitizeMountPath(path string) string {
 	}
 
 	return path
+}
+
+func checkListingVisibility(visibility ListingVisiblityType) error {
+	switch visibility {
+	case ListingVisibilityHidden:
+	case ListingVisibilityUnauth:
+	default:
+		return fmt.Errorf("invalid listing visilibity type")
+	}
+
+	return nil
 }
 
 const sysHelpRoot = `
@@ -3605,5 +3737,8 @@ This path responds to the following HTTP methods.
 	"random": {
 		"Generate random bytes",
 		"This function can be used to generate high-entropy random bytes.",
+	},
+	"listing_visibility": {
+		"Determines the visibility of the mount in the UI-specific listing endpoint.",
 	},
 }

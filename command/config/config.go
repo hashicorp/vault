@@ -64,7 +64,12 @@ func LoadConfig(path string) (*DefaultConfig, error) {
 		return nil, err
 	}
 
-	return ParseConfig(string(contents))
+	conf, err := ParseConfig(string(contents))
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing config file at %s: %q. Ensure that the file is valid; Ansible Vault is known to conflict with it.", path, err)
+	}
+
+	return conf, nil
 }
 
 // ParseConfig parses the given configuration as a string.
