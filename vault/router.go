@@ -467,7 +467,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	originalClientTokenRemainingUses := req.ClientTokenRemainingUses
 	req.ClientTokenRemainingUses = 0
 
-	// Cache the headers and hide them from backends
+	// Cache the headers and clear req.Headers
 	headers := req.Headers
 	req.Headers = make(map[string][]string)
 

@@ -184,10 +184,9 @@ type MountEntry struct {
 	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
 
 	// synthesizedConfigCache is used to cache configuration values. These
-	// particular values are cached since they are references such as slices or
-	// maps, and we want to get them at a point-in-time without separately
-	// managing their locks individually. See SyncCache() for the specific values
-	// that are being cached.
+	// particular values are cached since we want to get them at a point-in-time
+	// without separately managing their locks individually. See SyncCache() for
+	// the specific values that are being cached.
 	synthesizedConfigCache sync.Map
 }
 
@@ -226,7 +225,7 @@ func (e *MountEntry) Clone() (*MountEntry, error) {
 
 // SyncCache syncs tunable configuration values to the cache. In the case of
 // cached values, they should be retrieved via synthesizedConfigCache.Load()
-// instead of accessing them directly via e.MountConfig.
+// instead of accessing them directly through MountConfig.
 func (e *MountEntry) SyncCache() {
 	if len(e.Config.AuditNonHMACRequestKeys) == 0 {
 		e.synthesizedConfigCache.Delete("audit_non_hmac_request_keys")
