@@ -40,6 +40,7 @@ IMPROVEMENTS:
  * auth/aws: Allow non-prefix-matched IAM role and instance profile ARNs
    [GH-4071]
  * physical/couchdb: Removed limit on the listing of items [GH-4149]
+ * secret/pki: Support certificate policies [GH-4125]
  * secret/transit: Allow selecting signature algorithm as well as hash
    algorithm when signing/verifying [GH-4018]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
