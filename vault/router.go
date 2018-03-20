@@ -96,7 +96,6 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 
 	// Build the paths
-	var localView logical.Storage = storageView
 	paths := new(logical.Paths)
 	if backend != nil {
 		specialPaths := backend.SpecialPaths()
@@ -111,7 +110,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		backend:       backend,
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.prefix,
-		storageView:   localView,
+		storageView:   storageView,
 	}
 	re.rootPaths.Store(pathsToRadix(paths.Root))
 	re.loginPaths.Store(pathsToRadix(paths.Unauthenticated))
