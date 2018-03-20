@@ -24,6 +24,9 @@ const (
 // StoragePackerV1 packs the objects into a specific number of buckets by
 // hashing its ID and indexing it. Currently this supports only 256 bucket
 // entries and hence relies on the first byte of the hash value for indexing.
+// This is only here for backwards compatibility. Use StoragePackerV2 for any
+// newer implementations which allows infinite storage capacity as opposed to
+// this.
 type StoragePackerV1 struct {
 	view         logical.Storage
 	logger       log.Logger

@@ -19,7 +19,7 @@ import (
 const (
 	defaultBucketCount      = 256
 	defaultBucketShardCount = 32
-	defaultBucketMaxSize    = 256 * 1024 // 512KB
+	defaultBucketMaxSize    = 256 * 1024
 )
 
 const (
@@ -56,11 +56,7 @@ type Config struct {
 // indefinitely expanding the capacity of the storage by sharding the buckets
 // when they exceed the imposed limit.
 type StoragePackerV2 struct {
-	config *Config
-	// bucketLocksCache holds the locks to safely operate on the bucket
-	// entries. Each lock is exclusive to a particular storage key. Once a
-	// lock is created it is never deleted from this map and this serves as a
-	// cache of locks.
+	config           *Config
 	bucketLocksCache *sync.Map
 }
 
@@ -85,7 +81,8 @@ func (b *BucketV2) Clone() (*BucketV2, error) {
 }
 
 // putItemIntoBucket is a recursive function that finds the appropriate bucket
-// to store the item based on the storage space available in the buckets.
+// to store the item based on the storage space available in the buckets. This
+// method also takes care of race conditions by acquiring appropriate locks.
 func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (string, error) {
 	var lock *sync.RWMutex
 	if bucket == nil {
@@ -95,10 +92,10 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 			return "", err
 		}
 
-		// Prepend the index with the prefix
+		// Prepend the index by the prefix
 		primaryKey := s.config.ViewPrefix + primaryIndex
 
-		// Check if the primary bucket exists
+		// Read the primary bucket
 		bucket, lock, err = s.GetBucket(primaryKey, exclusive)
 		if err != nil {
 			s.UnlockBucket(lock, exclusive)
@@ -127,7 +124,9 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 	}
 
 	// Serializing and deserializing a proto message with empty map translates
-	// to a nil. Ensure that the required fields are initialized properly.
+	// to a nil. Hence an already initialized field can potentially be nil when
+	// its read from storage. Ensure that the required fields are initialized
+	// properly.
 	if bucket.Buckets == nil {
 		bucket.Buckets = make(map[string]*BucketV2)
 	}
@@ -154,6 +153,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 		bucket.Buckets[shardIndex] = bucketShard
 	}
 
+	// For safety
 	if bucketShard == nil {
 		s.UnlockBucket(lock, exclusive)
 		return "", fmt.Errorf("bucket shard is nil")
