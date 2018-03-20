@@ -1151,6 +1151,23 @@ func createCSR(data *dataBundle) (*certutil.ParsedCSRBundle, error) {
 		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
 	}
 
+	if data.apiData != nil && data.apiData.Get("add_basic_constraints").(bool) {
+		type basicConstraints struct {
+			IsCA       bool `asn1:"optional"`
+			MaxPathLen int  `asn1:"optional,default:-1"`
+		}
+		val, err := asn1.Marshal(basicConstraints{IsCA: true, MaxPathLen: -1})
+		if err != nil {
+			return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling basic constraints: {{err}}", err).Error()}
+		}
+		ext := pkix.Extension{
+			Id:       oidExtensionBasicConstraints,
+			Value:    val,
+			Critical: true,
+		}
+		csrTemplate.ExtraExtensions = append(csrTemplate.ExtraExtensions, ext)
+	}
+
 	switch data.params.KeyType {
 	case "rsa":
 		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
