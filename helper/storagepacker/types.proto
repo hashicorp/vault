@@ -4,12 +4,40 @@ package storagepacker;
 
 import "google/protobuf/any.proto";
 
+// Item represents a entry that gets inserted into the storage packer
 message Item {
-  string id = 1;
-  google.protobuf.Any message = 2;
+	// ID is the UUID to identify the item
+	string id = 1;
+	// message is the contents of the item
+	google.protobuf.Any message = 2;
 }
 
+message BucketWrapper {
+	bytes data = 1;
+	int64 size = 2;
+}
+
+message BucketV2{
+	// Key is the storage path where the bucket gets stored
+	string key = 1;
+	// Buckets are the buckets contained within this bucket
+	map <string, BucketV2> buckets = 3;
+	// ItemsMap holds the items contained within this bucket
+	map <string, Item> items = 4;
+	// IsShard indicates if the bucket is pushed out of its parent bucket
+	bool external = 5;
+	// Depth indicates the hierarchical positioning of the bucket
+	int32 depth = 6;
+	// Size of the bucket in number of bytes
+	int64 size = 7;
+}
+
+// Bucket is the entity that holds the packed items. It can
+// contain multiple buckets within itself that gets sharded out
+// when the bucket becomes big enough to not contain them all.
 message Bucket {
-  string key = 1;
-  repeated Item items = 2;
+	// Key is the storage path where the bucket gets stored
+	string key = 1;
+	// For backwards compatibility
+	repeated Item items = 2;
 }

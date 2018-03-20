@@ -92,7 +92,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	// Accumulate existing entities
 	i.logger.Debug("identity: loading entities")
-	existing, err := i.entityPacker.View().List(ctx, storagepacker.StoragePackerBucketsPrefix)
+	existing, err := i.entityPacker.View().List(ctx, storagepacker.DefaultStoragePackerBucketsPrefix)
 	if err != nil {
 		return fmt.Errorf("failed to scan for entities: %v", err)
 	}

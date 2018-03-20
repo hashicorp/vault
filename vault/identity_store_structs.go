@@ -68,11 +68,11 @@ type IdentityStore struct {
 
 	// entityPacker is used to pack multiple entity storage entries into 256
 	// buckets
-	entityPacker *storagepacker.StoragePacker
+	entityPacker *storagepacker.StoragePackerV1
 
 	// groupPacker is used to pack multiple group storage entries into 256
 	// buckets
-	groupPacker *storagepacker.StoragePacker
+	groupPacker *storagepacker.StoragePackerV1
 }
 
 type groupDiff struct {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	glob "github.com/ryanuber/go-glob"
@@ -323,4 +324,46 @@ func AppendIfMissing(slice []string, i string) []string {
 		return slice
 	}
 	return append(slice, i)
+}
+
+// BitMaskedIndex returns the integer value formed from the given number of most
+// significant bits of a given byte slice.
+func BitMaskedIndex(input []byte, bitCount int) (int64, error) {
+	switch {
+	case len(input) == 0:
+		return -1, fmt.Errorf("input length is zero")
+	case bitCount <= 0:
+		return -1, fmt.Errorf("bit count is zero or negative")
+	case bitCount > len(input)*8:
+		return -1, fmt.Errorf("input is shorter for the given bit count")
+	}
+
+	if bitCount < 8 {
+		return int64(uint8(input[0]) >> uint8(8-bitCount)), nil
+	}
+
+	decimalVal := int64(uint8(input[0]))
+	input = input[1:]
+	bitCount -= 8
+
+	for bitCount > 8 {
+		decimalVal = decimalVal*256 + int64(int(input[0]))
+		bitCount -= 8
+		input = input[1:]
+	}
+
+	decimalVal = decimalVal << uint8(bitCount)
+	decimalVal = decimalVal + int64(uint8(input[0])>>uint8(8-bitCount))
+
+	return decimalVal, nil
+}
+
+// BitMaskedIndexHex returnes the hex value formed from the given number of
+// most significant bits of a given byte slice.
+func BitMaskedIndexHex(input []byte, bitCount int) (string, error) {
+	index, err := BitMaskedIndex(input, bitCount)
+	if err != nil {
+		return "", err
+	}
+	return strconv.FormatInt(index, 16), nil
 }

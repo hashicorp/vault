@@ -11,8 +11,12 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
-func BenchmarkStoragePacker(b *testing.B) {
-	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New("storagepackertest"), "")
+func BenchmarkStoragePackerV1(b *testing.B) {
+	storagePacker, err := NewStoragePackerV1(
+		&logical.InmemStorage{},
+		log.New("storagepackertest"),
+		"",
+	)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -60,8 +64,12 @@ func BenchmarkStoragePacker(b *testing.B) {
 	}
 }
 
-func TestStoragePacker(t *testing.T) {
-	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New("storagepackertest"), "")
+func TestStoragePackerV1(t *testing.T) {
+	storagePacker, err := NewStoragePackerV1(
+		&logical.InmemStorage{},
+		log.New("storagepackertest"),
+		"",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,8 +114,12 @@ func TestStoragePacker(t *testing.T) {
 	}
 }
 
-func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
-	storagePacker, err := NewStoragePacker(&logical.InmemStorage{}, log.New("storagepackertest"), "")
+func TestStoragePackerV1_SerializeDeserializeComplexItem_Version1(t *testing.T) {
+	storagePacker, err := NewStoragePackerV1(
+		&logical.InmemStorage{},
+		log.New("storagepackertest"),
+		"",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
