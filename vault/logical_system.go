@@ -2004,11 +2004,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		b.Core.logger.Info("core: mount tuning of options", "path", path, "options", options)
 		// Special case to make sure we can not disable versioning once it's
 		// enabeled. If the vkv backend suports downgrading this can be removed.
-		meVersioned, err := strconv.ParseBool(mountEntry.Options["versioned"])
+		meVersioned, err := parseutil.ParseBool(mountEntry.Options["versioned"])
 		if err != nil {
 			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
 		}
-		optVersioned, err := strconv.ParseBool(options["versioned"])
+		optVersioned, err := parseutil.ParseBool(options["versioned"])
 		if err != nil {
 			return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
 		}
@@ -2032,7 +2032,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		// Another special case to trigger the upgrade path if we are enabling
 		// versioning for the first time.
-		oldVersioned, err := strconv.ParseBool(oldVal["versioned"])
+		oldVersioned, err := parseutil.ParseBool(oldVal["versioned"])
 		if err != nil {
 			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
 		}
