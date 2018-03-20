@@ -99,7 +99,9 @@ func (c *KVGetCommand) Run(args []string) int {
 
 	var versionParam map[string]string
 	if c.flagVersion > 0 {
-		versionParam["version"] = fmt.Sprintf("%d", c.flagVersion)
+		versionParam = map[string]string{
+			"version": fmt.Sprintf("%d", c.flagVersion),
+		}
 	}
 
 	secret, err := kvReadRequest(client, path, versionParam)

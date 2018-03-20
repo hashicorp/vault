@@ -26,7 +26,7 @@ Usage: vault kv metadata <subcommand> [options] [args]
 
   Create or update a metadata entry for a key: 
 
-      $ vault kv metadata put -max_versions=5 secret/foo
+      $ vault kv metadata put -max-versions=5 secret/foo
 
   Get the metadata for a key, this provides information about each existing
   version:

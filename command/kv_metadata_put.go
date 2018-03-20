@@ -28,25 +28,20 @@ func (c *KVMetadataPutCommand) Help() string {
 	helpText := `
 Usage: vault metadata kv put [options] KEY [DATA]
 
-  Writes the data to the given path in the key-value store. The data can be of
-  any type.
+  This command can be used to create a blank key in the key-value store or to
+  update key configuration for a specified key.
+  
+  Create a key in the key-value store with no data: 
 
-      $ vault kv put secret/foo bar=baz
+      $ vault kv metadata put secret/foo
 
-  The data can also be consumed from a file on disk by prefixing with the "@"
-  symbol. For example:
+  Set a max versions setting on the key: 
 
-      $ vault kv put secret/foo @data.json
+      $ vault kv metadata put -max-versions=5 secret/foo
 
-  Or it can be read from stdin using the "-" symbol:
+  Require Check-and-Set for this key: 
 
-      $ echo "abcd1234" | vault kv put secret/foo bar=-
-
-  To perform a Check-And-Set operation, specify the -cas flag with the
-  appropriate version numer corresponding to the key you want to perform
-  the CAS operation on:
-
-      $ vault kv put -cas=1 secret/foo bar=baz
+      $ vault kv metadata put -require-cas secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 
