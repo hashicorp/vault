@@ -39,6 +39,7 @@ IMPROVEMENTS:
  * auth/aws: Allow binding by EC2 instance IDs [GH-3816]
  * auth/aws: Allow non-prefix-matched IAM role and instance profile ARNs
    [GH-4071]
+ * auth/ldap: Set a very large size limit on queries [GH-4169]
  * core: Log info notifications of revoked leases for all leases/reasons, not
    just expirations [GH-4164]
  * physical/couchdb: Removed limit on the listing of items [GH-4149]
