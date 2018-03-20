@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"strings"
@@ -87,6 +86,13 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 			return err
 		}
 		entry.UUID = entryUUID
+	}
+	if entry.BackendAwareUUID == "" {
+		bUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
+		}
+		entry.BackendAwareUUID = bUUID
 	}
 	if entry.Accessor == "" {
 		accessor, err := c.generateMountAccessor("auth_" + entry.Type)
@@ -346,6 +352,14 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 			entry.Accessor = accessor
 			needPersist = true
 		}
+		if entry.BackendAwareUUID == "" {
+			bUUID, err := uuid.GenerateUUID()
+			if err != nil {
+				return err
+			}
+			entry.BackendAwareUUID = bUUID
+			needPersist = true
+		}
 
 		// Sync values to the cache
 		entry.SyncCache()
@@ -558,17 +572,6 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		conf["plugin_name"] = entry.Config.PluginName
 	}
 
-	uuidBytes, err := uuid.ParseUUID(entry.UUID)
-	if err != nil {
-		return nil, err
-	}
-	sum := sha256.Sum256(uuidBytes)
-	deterministicID, err := uuid.FormatUUID(sum[0:16])
-	if err != nil {
-		return nil, err
-	}
-	conf["uid"] = deterministicID
-
 	config := &logical.BackendConfig{
 		StorageView: view,
 		Logger:      c.logger,
@@ -597,13 +600,18 @@ func (c *Core) defaultAuthTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate accessor for default auth table token entry: %v", err))
 	}
+	tokenBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity backend UUID: %v", err))
+	}
 	tokenAuth := &MountEntry{
-		Table:       credentialTableType,
-		Path:        "token/",
-		Type:        "token",
-		Description: "token based credentials",
-		UUID:        tokenUUID,
-		Accessor:    tokenAccessor,
+		Table:            credentialTableType,
+		Path:             "token/",
+		Type:             "token",
+		Description:      "token based credentials",
+		UUID:             tokenUUID,
+		Accessor:         tokenAccessor,
+		BackendAwareUUID: tokenBackendUUID,
 	}
 	table.Entries = append(table.Entries, tokenAuth)
 	return table
