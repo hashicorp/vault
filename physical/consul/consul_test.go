@@ -126,10 +126,22 @@ func TestConsul_ServiceAddress(t *testing.T) {
 			consulConfig: map[string]string{
 				"service_address": "",
 			},
+			serviceAddrNil: true,
 		},
 		{
 			consulConfig: map[string]string{
-				"service_address": "vault.example.com",
+				"service_address": "this.should.not.resolve.to.anything.0",
+			},
+			serviceAddrNil: true,
+		},
+		{
+			consulConfig: map[string]string{
+				"service_address": "127.0.0.2",
+			},
+		},
+		{
+			consulConfig: map[string]string{
+				"service_address": "localhost",
 			},
 		},
 		{
@@ -157,6 +169,11 @@ func TestConsul_ServiceAddress(t *testing.T) {
 		} else {
 			if c.serviceAddress == nil {
 				t.Fatalf("did not expect service address to be nil")
+			}
+			if test.consulConfig["service_address"] == "localhost" {
+				if *c.serviceAddress != "127.0.0.1" && *c.serviceAddress != "::1" {
+					t.Fatalf("%s: service_address was not resolved to an IP", *c.serviceAddress)
+				}
 			}
 		}
 	}
