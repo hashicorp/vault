@@ -23,6 +23,7 @@ type AuthEnableCommand struct {
 	flagMaxLeaseTTL              time.Duration
 	flagAuditNonHMACRequestKeys  []string
 	flagAuditNonHMACResponseKeys []string
+	flagListingVisibility        string
 	flagPluginName               string
 	flagLocal                    bool
 	flagSealWrap                 bool
@@ -111,6 +112,12 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Target: &c.flagAuditNonHMACResponseKeys,
 		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
 			"devices in the response data object.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   flagNameListingVisibility,
+		Target: &c.flagListingVisibility,
+		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
 	})
 
 	f.StringVar(&StringVar{
@@ -207,6 +214,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAuditNonHMACResponseKeys {
 			authOpts.Config.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
+		}
+
+		if fl.Name == flagNameListingVisibility {
+			authOpts.Config.ListingVisibility = c.flagListingVisibility
 		}
 	})
 
