@@ -1977,7 +1977,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if err != nil {
 			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
 		}
-		if oldVersioned && optVersioned {
+		if !oldVersioned && optVersioned {
 			resp = &logical.Response{}
 			resp.AddWarning("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly.")
 			mountEntry.Options["upgrade"] = "true"
