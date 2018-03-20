@@ -469,7 +469,18 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// Cache the headers and hide them from backends
 	headers := req.Headers
-	req.Headers = nil
+	req.Headers = make(map[string][]string)
+
+	// Add passthrough headers to the backend
+	var passthroughRequestHeaders []string
+	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
+		passthroughRequestHeaders = rawVal.([]string)
+	}
+	for _, header := range passthroughRequestHeaders {
+		if val, ok := headers[header]; ok {
+			req.Headers[header] = val
+		}
+	}
 
 	// Cache the wrap info of the request
 	var wrapInfo *logical.RequestWrapInfo

@@ -2276,3 +2276,65 @@ func TestCore_Standby_Rotate(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
+
+// Ensure that InternalData is never returned
+func TestCore_HandleRequest_Headers(t *testing.T) {
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Data: map[string]interface{}{},
+		},
+	}
+
+	c, _, root := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the backend
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Mount tune
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo/tune")
+	req.Data["passthrough_request_headers"] = "Should-Passthrough"
+	req.ClientToken = root
+	_, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to read
+	lreq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "foo/test",
+		ClientToken: root,
+		Headers: map[string][]string{
+			"Should-Passthrough":     []string{"foo"},
+			"Should-Not-Passthrough": []string{"bar"},
+		},
+	}
+	_, err = c.HandleRequest(lreq)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check the headers
+	headers := noop.Requests[0].Headers
+	if val, ok := headers["Should-Passthrough"]; ok {
+		expected := []string{"foo"}
+		if !reflect.DeepEqual(val, expected) {
+			t.Fatalf("expected: %v, got: %v", expected, val)
+		}
+	} else {
+		t.Fatalf("expected 'Should-Passthrough' to be present in the headers map")
+	}
+
+	if _, ok := headers["Should-Not-Passthrough"]; ok {
+		t.Fatalf("did not expect 'Should-Not-Passthrough' to be in the headers map")
+	}
+}

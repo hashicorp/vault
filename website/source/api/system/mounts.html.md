@@ -97,6 +97,12 @@ This endpoint enables a new secrets engine at the given path.
   - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the response data object.
 
+  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+     in the UI-specific listing endpoint.
+
+  - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+     to whitelist and pass from the request to the backend.
+
     These control the default and maximum lease time-to-live, force
     disabling backend caching, and option plugin name for plugin backends
     respectively. The first three options override the global defaults if
@@ -215,6 +221,12 @@ This endpoint tunes configuration parameters for a given mount point.
 - `audit_non_hmac_response_keys` `(array: [])` - Specifies the comma-separated
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
+
+- `listing_visibility` `(string: "")` - Speficies whether to show this mount
+    in the UI-specific listing endpoint.
+
+- `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+    to whitelist and pass from the request to the backend.
 
 ### Sample Payload
 
