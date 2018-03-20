@@ -82,12 +82,13 @@ func (c *Sys) DisableAuth(path string) error {
 // documentation. Please refer to that documentation for more details.
 
 type EnableAuthOptions struct {
-	Type        string          `json:"type" structs:"type"`
-	Description string          `json:"description" structs:"description"`
-	Config      AuthConfigInput `json:"config" structs:"config"`
-	Local       bool            `json:"local" structs:"local"`
-	PluginName  string          `json:"plugin_name,omitempty" structs:"plugin_name,omitempty"`
-	SealWrap    bool            `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Type        string            `json:"type" structs:"type"`
+	Description string            `json:"description" structs:"description"`
+	Config      AuthConfigInput   `json:"config" structs:"config"`
+	Local       bool              `json:"local" structs:"local"`
+	PluginName  string            `json:"plugin_name,omitempty" structs:"plugin_name,omitempty"`
+	SealWrap    bool              `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Options     map[string]string `json:"options" structs:"options" mapstructure:"options"`
 }
 
 type AuthConfigInput struct {
@@ -96,15 +97,17 @@ type AuthConfigInput struct {
 	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility        string   `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 }
 
 type AuthMount struct {
-	Type        string           `json:"type" structs:"type" mapstructure:"type"`
-	Description string           `json:"description" structs:"description" mapstructure:"description"`
-	Accessor    string           `json:"accessor" structs:"accessor" mapstructure:"accessor"`
-	Config      AuthConfigOutput `json:"config" structs:"config" mapstructure:"config"`
-	Local       bool             `json:"local" structs:"local" mapstructure:"local"`
-	SealWrap    bool             `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Type        string            `json:"type" structs:"type" mapstructure:"type"`
+	Description string            `json:"description" structs:"description" mapstructure:"description"`
+	Accessor    string            `json:"accessor" structs:"accessor" mapstructure:"accessor"`
+	Config      AuthConfigOutput  `json:"config" structs:"config" mapstructure:"config"`
+	Local       bool              `json:"local" structs:"local" mapstructure:"local"`
+	SealWrap    bool              `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Options     map[string]string `json:"options" structs:"options" mapstructure:"options"`
 }
 
 type AuthConfigOutput struct {
@@ -113,4 +116,5 @@ type AuthConfigOutput struct {
 	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility        string   `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 }

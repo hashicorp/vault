@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"sort"
@@ -39,6 +38,16 @@ const (
 	// mountTableType is the value we expect to find for the mount table and
 	// corresponding entries
 	mountTableType = "mounts"
+)
+
+// ListingVisiblityType represents the types for listing visilibity
+type ListingVisiblityType string
+
+const (
+	// ListingVisibilityHidden is the hidden type for listing visibility
+	ListingVisibilityHidden ListingVisiblityType = ""
+	// ListingVisibilityUnauth is the unauth type for listing visibility
+	ListingVisibilityUnauth ListingVisiblityType = "unauth"
 )
 
 var (
@@ -162,17 +171,18 @@ func (t *MountTable) sortEntriesByPath() *MountTable {
 
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
-	Table       string            `json:"table"`             // The table it belongs to
-	Path        string            `json:"path"`              // Mount Path
-	Type        string            `json:"type"`              // Logical backend Type
-	Description string            `json:"description"`       // User-provided description
-	UUID        string            `json:"uuid"`              // Barrier view UUID
-	Accessor    string            `json:"accessor"`          // Unique but more human-friendly ID. Does not change, not used for any sensitive things (like as a salt, which the UUID sometimes is).
-	Config      MountConfig       `json:"config"`            // Configuration related to this mount (but not backend-derived)
-	Options     map[string]string `json:"options"`           // Backend options
-	Local       bool              `json:"local"`             // Local mounts are not replicated or affected by replication
-	SealWrap    bool              `json:"seal_wrap"`         // Whether to wrap CSPs
-	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
+	Table            string            `json:"table"`              // The table it belongs to
+	Path             string            `json:"path"`               // Mount Path
+	Type             string            `json:"type"`               // Logical backend Type
+	Description      string            `json:"description"`        // User-provided description
+	UUID             string            `json:"uuid"`               // Barrier view UUID
+	BackendAwareUUID string            `json:"backend_aware_uuid"` // UUID that can be used by the backend as a helper when a consistent value is needed outside of storage.
+	Accessor         string            `json:"accessor"`           // Unique but more human-friendly ID. Does not change, not used for any sensitive things (like as a salt, which the UUID sometimes is).
+	Config           MountConfig       `json:"config"`             // Configuration related to this mount (but not backend-derived)
+	Options          map[string]string `json:"options"`            // Backend options
+	Local            bool              `json:"local"`              // Local mounts are not replicated or affected by replication
+	SealWrap         bool              `json:"seal_wrap"`          // Whether to wrap CSPs
+	Tainted          bool              `json:"tainted,omitempty"`  // Set as a Write-Ahead flag for unmount/remount
 
 	// synthesizedConfigCache is used to cache configuration values
 	synthesizedConfigCache sync.Map
@@ -180,22 +190,24 @@ type MountEntry struct {
 
 // MountConfig is used to hold settable options
 type MountConfig struct {
-	DefaultLeaseTTL          time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
-	MaxLeaseTTL              time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
-	ForceNoCache             bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
-	PluginName               string        `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys  []string      `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys []string      `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	DefaultLeaseTTL          time.Duration        `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
+	MaxLeaseTTL              time.Duration        `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
+	ForceNoCache             bool                 `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
+	PluginName               string               `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys  []string             `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys []string             `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility        ListingVisiblityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
 type APIMountConfig struct {
-	DefaultLeaseTTL          string   `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL              string   `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache             bool     `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName               string   `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
-	AuditNonHMACRequestKeys  []string `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys []string `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	DefaultLeaseTTL          string               `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL              string               `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache             bool                 `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
+	PluginName               string               `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	AuditNonHMACRequestKeys  []string             `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys []string             `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility        ListingVisiblityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 }
 
 // Clone returns a deep copy of the mount entry
@@ -261,6 +273,13 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 			return err
 		}
 		entry.UUID = entryUUID
+	}
+	if entry.BackendAwareUUID == "" {
+		bUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
+		}
+		entry.BackendAwareUUID = bUUID
 	}
 	if entry.Accessor == "" {
 		accessor, err := c.generateMountAccessor(entry.Type)
@@ -659,6 +678,14 @@ func (c *Core) loadMounts(ctx context.Context) error {
 			entry.Accessor = accessor
 			needPersist = true
 		}
+		if entry.BackendAwareUUID == "" {
+			bUUID, err := uuid.GenerateUUID()
+			if err != nil {
+				return err
+			}
+			entry.BackendAwareUUID = bUUID
+			needPersist = true
+		}
 
 		// Sync values to the cache
 		entry.SyncCache()
@@ -864,22 +891,12 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		conf["plugin_name"] = entry.Config.PluginName
 	}
 
-	uuidBytes, err := uuid.ParseUUID(entry.UUID)
-	if err != nil {
-		return nil, err
-	}
-	sum := sha256.Sum256(uuidBytes)
-	deterministicID, err := uuid.FormatUUID(sum[0:16])
-	if err != nil {
-		return nil, err
-	}
-	conf["uid"] = deterministicID
-
 	config := &logical.BackendConfig{
 		StorageView: view,
 		Logger:      c.logger,
 		Config:      conf,
 		System:      sysView,
+		BackendUUID: entry.BackendAwareUUID,
 	}
 
 	b, err := f(ctx, config)
@@ -915,13 +932,19 @@ func (c *Core) defaultMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
 	}
+	bUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
+	}
+
 	kvMount := &MountEntry{
-		Table:       mountTableType,
-		Path:        "secret/",
-		Type:        "kv",
-		Description: "key/value secret storage",
-		UUID:        mountUUID,
-		Accessor:    mountAccessor,
+		Table:            mountTableType,
+		Path:             "secret/",
+		Type:             "kv",
+		Description:      "key/value secret storage",
+		UUID:             mountUUID,
+		Accessor:         mountAccessor,
+		BackendAwareUUID: bUUID,
 		Options: map[string]string{
 			"versioned": "true",
 		},
@@ -945,14 +968,19 @@ func (c *Core) requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate cubbyhole accessor: %v", err))
 	}
+	cubbyholeBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create cubbyhole backend UUID: %v", err))
+	}
 	cubbyholeMount := &MountEntry{
-		Table:       mountTableType,
-		Path:        "cubbyhole/",
-		Type:        "cubbyhole",
-		Description: "per-token private secret storage",
-		UUID:        cubbyholeUUID,
-		Accessor:    cubbyholeAccessor,
-		Local:       true,
+		Table:            mountTableType,
+		Path:             "cubbyhole/",
+		Type:             "cubbyhole",
+		Description:      "per-token private secret storage",
+		UUID:             cubbyholeUUID,
+		Accessor:         cubbyholeAccessor,
+		Local:            true,
+		BackendAwareUUID: cubbyholeBackendUUID,
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -963,13 +991,18 @@ func (c *Core) requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate sys accessor: %v", err))
 	}
+	sysBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create sys backend UUID: %v", err))
+	}
 	sysMount := &MountEntry{
-		Table:       mountTableType,
-		Path:        "sys/",
-		Type:        "system",
-		Description: "system endpoints used for control, policy and debugging",
-		UUID:        sysUUID,
-		Accessor:    sysAccessor,
+		Table:            mountTableType,
+		Path:             "sys/",
+		Type:             "system",
+		Description:      "system endpoints used for control, policy and debugging",
+		UUID:             sysUUID,
+		Accessor:         sysAccessor,
+		BackendAwareUUID: sysBackendUUID,
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -980,14 +1013,18 @@ func (c *Core) requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate identity accessor: %v", err))
 	}
-
+	identityBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity backend UUID: %v", err))
+	}
 	identityMount := &MountEntry{
-		Table:       mountTableType,
-		Path:        "identity/",
-		Type:        "identity",
-		Description: "identity store",
-		UUID:        identityUUID,
-		Accessor:    identityAccessor,
+		Table:            mountTableType,
+		Path:             "identity/",
+		Type:             "identity",
+		Description:      "identity store",
+		UUID:             identityUUID,
+		Accessor:         identityAccessor,
+		BackendAwareUUID: identityBackendUUID,
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

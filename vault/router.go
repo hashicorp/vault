@@ -478,7 +478,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	headers := req.Headers
 	req.Headers = nil
 
-	// Whitelist the X-Vault-KV-Client header for use in the kv backend.
+	// Whitelist the X-Vault-Kv-Client header for use in the kv backend.
 	if val, ok := headers[consts.VaultKVCLIClientHeader]; ok {
 		req.Headers = map[string][]string{
 			consts.VaultKVCLIClientHeader: val,

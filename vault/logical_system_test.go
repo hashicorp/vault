@@ -2214,3 +2214,56 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	req.Data["bytes"] = -1
 	doRequest(req, true, "", 0)
 }
+
+func TestSystemBackend_InternalUIMounts(t *testing.T) {
+	b := testSystemBackend(t)
+
+	// Ensure no entries are in the endpoint as a starting point
+	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"secret": map[string]interface{}{},
+		"auth":   map[string]interface{}{},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// Mount-tune an auth mount
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
+	req.Data["listing_visibility"] = "unauth"
+	b.HandleRequest(context.Background(), req)
+
+	// Mount-tune a secret mount
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/secret/tune")
+	req.Data["listing_visibility"] = "unauth"
+	b.HandleRequest(context.Background(), req)
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"secret": map[string]interface{}{
+			"secret/": map[string]interface{}{
+				"type":        "kv",
+				"description": "key/value secret storage",
+			},
+		},
+		"auth": map[string]interface{}{
+			"token/": map[string]interface{}{
+				"type":        "token",
+				"description": "token based credentials",
+			},
+		},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
