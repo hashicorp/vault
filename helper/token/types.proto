@@ -17,4 +17,8 @@ message TokenMapping {
 
 	// CubbyholeID is the storage path identifier for token
 	string cubbyhole_id = 5;
+
+	// BucketKey is the bucket in storage packer which persists this token
+	// mapping
+	string bucket_key = 6;
 }

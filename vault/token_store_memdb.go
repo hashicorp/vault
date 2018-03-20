@@ -212,10 +212,12 @@ func (ts *TokenStore) UpsertTokenMappingInTxn(txn *memdb.Txn, tokenMapping *toke
 		Message: tokenMappingAsAny,
 	}
 
-	_, err = ts.mappingPacker.PutItem(item)
+	bucketKey, err := ts.mappingPacker.PutItem(item)
 	if err != nil {
 		return err
 	}
+
+	tokenMapping.BucketKey = bucketKey
 
 	return nil
 }
