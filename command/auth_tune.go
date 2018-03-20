@@ -17,6 +17,7 @@ var _ cli.CommandAutocomplete = (*AuthTuneCommand)(nil)
 type AuthTuneCommand struct {
 	*BaseCommand
 
+	flagOptions                  map[string]string
 	flagDefaultLeaseTTL          time.Duration
 	flagMaxLeaseTTL              time.Duration
 	flagAuditNonHMACRequestKeys  []string
@@ -49,6 +50,14 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
+
+	f.StringMapVar(&StringMapVar{
+		Name:       "options",
+		Target:     &c.flagOptions,
+		Completion: complete.PredictAnything,
+		Usage: "Key-value pair provided as key=value for the mount options." +
+			"This can be specified multiple times",
+	})
 
 	f.DurationVar(&DurationVar{
 		Name:       "default-lease-ttl",
@@ -128,6 +137,7 @@ func (c *AuthTuneCommand) Run(args []string) int {
 	}
 
 	mountConfigInput := api.MountConfigInput{
+		Options:         c.flagOptions,
 		DefaultLeaseTTL: ttlToAPI(c.flagDefaultLeaseTTL),
 		MaxLeaseTTL:     ttlToAPI(c.flagMaxLeaseTTL),
 	}

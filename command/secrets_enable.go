@@ -26,6 +26,7 @@ type SecretsEnableCommand struct {
 	flagListingVisibility        string
 	flagForceNoCache             bool
 	flagPluginName               string
+	flagOptions                  map[string]string
 	flagLocal                    bool
 	flagSealWrap                 bool
 }
@@ -145,6 +146,14 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 			"exist in Vault's plugin catalog.",
 	})
 
+	f.StringMapVar(&StringMapVar{
+		Name:       "options",
+		Target:     &c.flagOptions,
+		Completion: complete.PredictAnything,
+		Usage: "Key-value pair provided as key=value for the mount options." +
+			"This can be specified multiple times",
+	})
+
 	f.BoolVar(&BoolVar{
 		Name:    "local",
 		Target:  &c.flagLocal,
@@ -224,6 +233,7 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 			ForceNoCache:    c.flagForceNoCache,
 			PluginName:      c.flagPluginName,
 		},
+		Options: c.flagOptions,
 	}
 
 	// Set these values only if they are provided in the CLI
