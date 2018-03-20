@@ -45,7 +45,7 @@
         Initialize Vault now, with 1 unseal key for simplicity, using the command:
     </p>
     <p>
-        <code>vault init -key-shares=1 -key-threshold=1</code>
+        <code>vault operator init -key-shares=1 -key-threshold=1</code>
     </p>
     <p>
         You'll notice Vault prints out several keys here. Don't clear your terminal,
@@ -68,7 +68,7 @@
         Unseal the Vault:
     </p>
     <p>
-        <code>vault unseal &lt;key 1&gt;</code>
+        <code>vault operator unseal &lt;key 1&gt;</code>
     </p>
 </script>
 
@@ -88,7 +88,7 @@
         Authorize with a client token:
     </p>
     <p>
-        <code>vault auth &lt;root token&gt;</code>
+        <code>vault login &lt;root token&gt;</code>
     </p>
 </script>
 
@@ -126,7 +126,7 @@
         without access to the master key shards.
     </p>
     <p>
-        <code>vault seal</code>
+        <code>vault operator seal</code>
     </p>
 </script>
 

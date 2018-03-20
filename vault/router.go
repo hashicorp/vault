@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -44,8 +45,8 @@ type routeEntry struct {
 	mountEntry    *MountEntry
 	storageView   logical.Storage
 	storagePrefix string
-	rootPaths     *radix.Tree
-	loginPaths    *radix.Tree
+	rootPaths     atomic.Value
+	loginPaths    atomic.Value
 }
 
 type validateMountResponse struct {
@@ -95,7 +96,6 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 
 	// Build the paths
-	var localView logical.Storage = storageView
 	paths := new(logical.Paths)
 	if backend != nil {
 		specialPaths := backend.SpecialPaths()
@@ -110,10 +110,10 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		backend:       backend,
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.prefix,
-		storageView:   localView,
-		rootPaths:     pathsToRadix(paths.Root),
-		loginPaths:    pathsToRadix(paths.Unauthenticated),
+		storageView:   storageView,
 	}
+	re.rootPaths.Store(pathsToRadix(paths.Root))
+	re.loginPaths.Store(pathsToRadix(paths.Unauthenticated))
 
 	switch {
 	case prefix == "":
@@ -548,7 +548,8 @@ func (r *Router) RootPath(path string) bool {
 	remain := strings.TrimPrefix(path, mount)
 
 	// Check the rootPaths of this backend
-	match, raw, ok := re.rootPaths.LongestPrefix(remain)
+	rootPaths := re.rootPaths.Load().(*radix.Tree)
+	match, raw, ok := rootPaths.LongestPrefix(remain)
 	if !ok {
 		return false
 	}
@@ -577,7 +578,8 @@ func (r *Router) LoginPath(path string) bool {
 	remain := strings.TrimPrefix(path, mount)
 
 	// Check the loginPaths of this backend
-	match, raw, ok := re.loginPaths.LongestPrefix(remain)
+	loginPaths := re.loginPaths.Load().(*radix.Tree)
+	match, raw, ok := loginPaths.LongestPrefix(remain)
 	if !ok {
 		return false
 	}

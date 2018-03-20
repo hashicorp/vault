@@ -19,8 +19,8 @@ Secret Storage.
 
 ## Reference Material
 
-- [Key/Value Secret Backend](/docs/secrets/kv/index.html)
-- [Key/Value Secret Backend API](/api/secret/kv/index.html)
+- [Key/Value Secret Engine](/docs/secrets/kv/index.html)
+- [Key/Value Secret Engine API](/api/secret/kv/index.html)
 - [Client libraries](/api/libraries.html) for Vault API for commonly used languages
 
 ## Estimated Time to Complete
@@ -77,7 +77,7 @@ To perform all tasks demonstrated in this guide, your policy must include the
 following permissions:
 
 ```shell
-# Write and manage secrets in key/value backend
+# Write and manage secrets in key/value secret engine
 path "secret/*" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
@@ -106,9 +106,9 @@ scenario here is to store the following secrets:
 - Root certificate of a production database (MySQL)
 
 To store your API key within the configured physical storage for Vault, use the
-**key/value** secret backend via **`secret/`** prefixed path.
+**key/value** secret engine via **`secret/`** prefixed path.
 
--> Key/Value secret backend passes through any operation back to the configured
+-> Key/Value secret engine passes through any operation back to the configured
 storage backend for Vault. For example, if your Vault server is configured with
 Consul as its storage backend, a "read" operation turns into a read from Consul
 at the same path.
@@ -123,20 +123,20 @@ You will perform the following:
 
 ![Personas Introduction](/assets/images/vault-static-secrets.png)
 
-Step 1 through 3 are performed by `devops` psersona.  Step 4 describes the
+Step 1 through 3 are performed by `devops` persona.  Step 4 describes the
 commands that `apps` persona runs to read secrets from Vault.
 
 ### <a name="step1"></a>Step 1: Store the Google API key
 (**Persona:** devops)
 
 Everything after the **`secret/`** path is a key-value pair to write to the
-secret backend. You can specify multiple values. If the value has a space, you
+secret engine. You can specify multiple values. If the value has a space, you
 need to surround it with quotes. Having keys with spaces is permitted, but
 strongly discouraged because it can lead to unexpected client-side behavior.
 
 Let's assume that the path convention in your organization is
 **`secret/<OWNER>/apikey/<APP>`** for API keys. To store the Google API key used
-by the engineering team, the path would be `secret/eng/apikey/Googl`. If you
+by the engineering team, the path would be `secret/eng/apikey/Google`. If you
 have an API key for New Relic owned by the DevOps team, the path would look like
 `secret/devops/apikey/New_Relic`.
 
@@ -262,7 +262,7 @@ $ curl --header "X-Vault-Token: ..." \
 ### <a name="step3"></a>Step 3: Generate a token for apps
 (**Persona:** devops)
 
-To read the secrets, `apps` persona needs "read" permit on those secret backend
+To read the secrets, `apps` persona needs "read" permit on those secret engine
 paths. In this scenario, the `apps` policy must include the following:
 
 **Example:** `apps-policy.hcl`
@@ -416,7 +416,7 @@ MIIEowIBAAKCAQEA6E2Uq0XqreZISgVMUu9pnoMsq+OoK1PI54rsA9vtDE6wiRk0GWhf5vD4DGf1
 
 #### API call using cURL
 
-Use `secret/` endpoint to retrieve secrets from key/value backend:
+Use `secret/` endpoint to retrieve secrets from key/value secret engine:
 
 ```shell
 $ curl --header "X-Vault-Token: <TOKEN_FROM_STEP3>" \
@@ -519,7 +519,8 @@ $ export HISTIGNORE="&:vault*"
 
 ### Q: How do I save multiple values?
 
-The two examples introduced in this guide only had a single key-value pair.  You can pass multiple values in the command.
+The two examples introduced in this guide only had a single key-value pair.  You
+can pass multiple values in the command.
 
 ```shell
 $ vault write secret/dev/config/mongodb url=foo.example.com:35533 db_name=users \
@@ -543,7 +544,7 @@ $ cat mongodb.txt
 ## Next steps
 
 This guide introduced the CLI commands and API endpoints to read and write
-secrets in key/value backend. To keep it simple, the `devops` persona generated a
-token for `apps`.  Read [AppRole Pull
+secrets in key/value secret engine. To keep it simple, the `devops` persona
+generated a token for `apps`.  Read [AppRole Pull
 Authentication](/guides/identity/authentication.html) guide to learn about
 programmatically generate a token for apps.

@@ -42,7 +42,7 @@ func (h *CLIHandler) Help() string {
 	help := `
 Usage: vault login -method=cert [CONFIG K=V...]
 
-  The certificate auth method allows uers to authenticate with a
+  The certificate auth method allows users to authenticate with a
   client certificate passed with the request. The -client-cert and -client-key
   flags are included with the "vault login" command, NOT as configuration to the
   auth method.

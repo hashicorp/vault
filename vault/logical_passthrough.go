@@ -35,7 +35,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
-				"/",
+				"*",
 			},
 		},
 
@@ -69,7 +69,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 	}
 
 	if conf == nil {
-		return nil, fmt.Errorf("Configuation passed into backend is nil")
+		return nil, fmt.Errorf("Configuration passed into backend is nil")
 	}
 	b.Backend.Setup(ctx, conf)
 

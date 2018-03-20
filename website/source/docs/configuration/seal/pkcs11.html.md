@@ -110,7 +110,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   specified by the `VAULT_HSM_REGENERATE_KEY` environment variable.
 
 ~> **Note:** Although the configuration file allows you to pass in
-`VAULT_HSM_PIN` as part of the seal's parameters, it is *strongly* reccommended
+`VAULT_HSM_PIN` as part of the seal's parameters, it is *strongly* recommended
 to set this value via environment variables.
 
 ## `pkcs11` Environment Variables

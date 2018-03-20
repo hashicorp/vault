@@ -126,7 +126,7 @@ func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[stri
 	return result, nil
 }
 
-// Initalize the headers config by loading from the barrier view
+// Initialize the headers config by loading from the barrier view
 func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 	// Create a sub-view
 	view := c.systemBarrierView.SubView(auditedHeadersSubPath)

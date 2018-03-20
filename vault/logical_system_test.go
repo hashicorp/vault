@@ -1998,7 +1998,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Error().Error() != "must not speficy args in command and args field" {
+	if resp.Error().Error() != "must not specify args in command and args field" {
 		t.Fatalf("err: %v", resp.Error())
 	}
 
@@ -2169,7 +2169,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 		}
 		rand2 := getResponse()
 		if len(rand1) != numBytes || len(rand2) != numBytes {
-			t.Fatal("length of output random bytes not what is exepcted")
+			t.Fatal("length of output random bytes not what is expected")
 		}
 		if reflect.DeepEqual(rand1, rand2) {
 			t.Fatal("found identical ouputs")
@@ -2192,4 +2192,57 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	req.Data["format"] = "hex"
 	req.Data["bytes"] = -1
 	doRequest(req, true, "", 0)
+}
+
+func TestSystemBackend_InternalUIMounts(t *testing.T) {
+	b := testSystemBackend(t)
+
+	// Ensure no entries are in the endpoint as a starting point
+	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"secret": map[string]interface{}{},
+		"auth":   map[string]interface{}{},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// Mount-tune an auth mount
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
+	req.Data["listing_visibility"] = "unauth"
+	b.HandleRequest(context.Background(), req)
+
+	// Mount-tune a secret mount
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/secret/tune")
+	req.Data["listing_visibility"] = "unauth"
+	b.HandleRequest(context.Background(), req)
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"secret": map[string]interface{}{
+			"secret/": map[string]interface{}{
+				"type":        "kv",
+				"description": "key/value secret storage",
+			},
+		},
+		"auth": map[string]interface{}{
+			"token/": map[string]interface{}{
+				"type":        "token",
+				"description": "token based credentials",
+			},
+		},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
 }

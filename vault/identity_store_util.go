@@ -146,7 +146,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 		defer wg.Done()
 		for j, bucketKey := range existing {
 			if j%500 == 0 {
-				i.logger.Trace("identity: enities loading", "progress", j)
+				i.logger.Trace("identity: entities loading", "progress", j)
 			}
 
 			select {

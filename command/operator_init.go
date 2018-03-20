@@ -383,7 +383,7 @@ func (c *OperatorInitCommand) consulAuto(client *api.Client, req *api.InitReques
 		// Update the client to connect to this Vault server
 		client.SetAddress(vaultAddr)
 
-		// Let the client know that initialization is perfomed on the
+		// Let the client know that initialization is performed on the
 		// discovered node.
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"Discovered an initialized Vault node at %q with Consul service name "+

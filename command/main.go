@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -80,7 +81,30 @@ func setupEnv(args []string) []string {
 	return args
 }
 
+type RunOptions struct {
+	TokenHelper token.TokenHelper
+	Stdout      io.Writer
+	Stderr      io.Writer
+	Address     string
+}
+
 func Run(args []string) int {
+	return RunCustom(args, nil)
+}
+
+// RunCustom allows passing in a base command template to pass to other
+// commands. Currenty, this is only used for setting a custom token helper.
+func RunCustom(args []string, runOpts *RunOptions) int {
+	if runOpts == nil {
+		runOpts = &RunOptions{}
+	}
+	if runOpts.Stdout == nil {
+		runOpts.Stdout = os.Stdout
+	}
+	if runOpts.Stderr == nil {
+		runOpts.Stderr = os.Stderr
+	}
+
 	args = setupEnv(args)
 
 	// Don't use color if disabled
@@ -95,15 +119,15 @@ func Run(args []string) int {
 
 	ui := &VaultUI{
 		Ui: &cli.BasicUi{
-			Writer:      os.Stdout,
-			ErrorWriter: os.Stderr,
+			Writer:      runOpts.Stdout,
+			ErrorWriter: runOpts.Stderr,
 		},
 		isTerminal: isTerminal,
 		format:     format,
 	}
 	serverCmdUi := &VaultUI{
 		Ui: &cli.BasicUi{
-			Writer: os.Stdout,
+			Writer: runOpts.Stdout,
 		},
 		isTerminal: isTerminal,
 		format:     format,
@@ -114,7 +138,7 @@ func Run(args []string) int {
 		return 1
 	}
 
-	// Only use colored UI if stdoout is a tty, and not disabled
+	// Only use colored UI if stdout is a tty, and not disabled
 	if isTerminal && color && format == "table" {
 		ui.Ui = &cli.ColoredUi{
 			ErrorColor: cli.UiColorRed,
@@ -129,7 +153,7 @@ func Run(args []string) int {
 		}
 	}
 
-	initCommands(ui, serverCmdUi)
+	initCommands(ui, serverCmdUi, runOpts)
 
 	// Calculate hidden commands from the deprecated ones
 	hiddenCommands := make([]string, 0, len(DeprecatedCommands)+1)
@@ -145,6 +169,7 @@ func Run(args []string) int {
 		HelpFunc: groupedHelpFunc(
 			cli.BasicHelpFunc("vault"),
 		),
+		HelpWriter:                 runOpts.Stderr,
 		HiddenCommands:             hiddenCommands,
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,
@@ -152,7 +177,7 @@ func Run(args []string) int {
 
 	exitCode, err := cli.Run()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error executing CLI: %s\n", err.Error())
+		fmt.Fprintf(runOpts.Stderr, "Error executing CLI: %s\n", err.Error())
 		return 1
 	}
 

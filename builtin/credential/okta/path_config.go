@@ -40,7 +40,7 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"base_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: `The base domain to use for the Okta API. When not specified in the configuraiton, "okta.com" is used.`,
+				Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
 			},
 			"production": &framework.FieldSchema{
 				Type:        framework.TypeBool,

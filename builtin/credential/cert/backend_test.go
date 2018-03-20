@@ -1444,7 +1444,7 @@ func Test_Renew(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	// Put the policies back, this shold be okay
+	// Put the policies back, this should be okay
 	fd.Raw["policies"] = "bar,foo"
 	resp, err = b.pathCertWrite(context.Background(), req, fd)
 	if err != nil {

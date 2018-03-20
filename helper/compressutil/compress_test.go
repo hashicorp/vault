@@ -82,7 +82,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	if len(compressedJSONBytes) == 0 {
 		t.Fatal("failed to compress data in lzw format")
 	}
-	// Check the presense of the canary
+	// Check the presence of the canary
 	if compressedJSONBytes[0] != CompressionCanaryLzw {
 		t.Fatalf("bad: compression canary: expected: %d actual: %d", CompressionCanaryLzw, compressedJSONBytes[0])
 	}
@@ -113,7 +113,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	if len(compressedJSONBytes) == 0 {
 		t.Fatal("failed to compress data in lzw format")
 	}
-	// Check the presense of the canary
+	// Check the presence of the canary
 	if compressedJSONBytes[0] != CompressionCanaryGzip {
 		t.Fatalf("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
 	}
@@ -145,7 +145,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	if len(compressedJSONBytes) == 0 {
 		t.Fatal("failed to compress data in lzw format")
 	}
-	// Check the presense of the canary
+	// Check the presence of the canary
 	if compressedJSONBytes[0] != CompressionCanaryGzip {
 		t.Fatalf("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
 	}
@@ -177,7 +177,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	if len(compressedJSONBytes) == 0 {
 		t.Fatal("failed to compress data in lzw format")
 	}
-	// Check the presense of the canary
+	// Check the presence of the canary
 	if compressedJSONBytes[0] != CompressionCanaryGzip {
 		t.Fatalf("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
 	}
@@ -209,7 +209,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	if len(compressedJSONBytes) == 0 {
 		t.Fatal("failed to compress data in lzw format")
 	}
-	// Check the presense of the canary
+	// Check the presence of the canary
 	if compressedJSONBytes[0] != CompressionCanaryGzip {
 		t.Fatalf("bad: compression canary: expected: %d actual: %d",
 			CompressionCanaryGzip, compressedJSONBytes[0])

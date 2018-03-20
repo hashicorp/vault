@@ -277,7 +277,7 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 				Fields: map[string]*framework.FieldSchema{
 					"urltoken": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to lookup (URL parameter)",
+						Description: "DEPRECATED: Token to lookup (URL parameter). Do not use this; use the POST version instead with the token in the body.",
 					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -300,7 +300,7 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 				Fields: map[string]*framework.FieldSchema{
 					"urlaccessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor of the token to look up (URL parameter)",
+						Description: "DEPRECATED: Accessor of the token to lookup (URL parameter). Do not use this; use the POST version instead with the accessor in the body.",
 					},
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -341,7 +341,7 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 				Fields: map[string]*framework.FieldSchema{
 					"urlaccessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor of the token (URL parameter)",
+						Description: "DEPRECATED: Accessor of the token to revoke (URL parameter). Do not use this; use the POST version instead with the accessor in the body.",
 					},
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -374,7 +374,7 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 				Fields: map[string]*framework.FieldSchema{
 					"urltoken": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to revoke (URL parameter)",
+						Description: "DEPRECATED: Token to revoke (URL parameter). Do not use this; use the POST version instead with the token in the body.",
 					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -396,7 +396,7 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 				Fields: map[string]*framework.FieldSchema{
 					"urltoken": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to revoke (URL parameter)",
+						Description: "DEPRECATED: Token to revoke (URL parameter). Do not use this; use the POST version instead with the token in the body.",
 					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -441,7 +441,7 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 				Fields: map[string]*framework.FieldSchema{
 					"urltoken": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to renew (URL parameter)",
+						Description: "DEPRECATED: Token to renew (URL parameter). Do not use this; use the POST version instead with the token in the body.",
 					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -1178,7 +1178,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 	return nil
 }
 
-// RevokeTree is used to invalide a given token and all
+// RevokeTree is used to invalidate a given token and all
 // child tokens.
 func (ts *TokenStore) RevokeTree(ctx context.Context, id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
@@ -2536,7 +2536,7 @@ no effect on the token being renewed.`
 renewable or not according to this value.
 Defaults to "true".`
 	tokenListAccessorsHelp = `List token accessors, which can then be
-be used to iterate and discover their properities
+be used to iterate and discover their properties
 or revoke them. Because this can be used to
 cause a denial of service, this endpoint
 requires 'sudo' capability in addition to

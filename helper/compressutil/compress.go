@@ -33,7 +33,7 @@ const (
 )
 
 // SnappyReadCloser embeds the snappy reader which implements the io.Reader
-// interface. The decompress procedure in this utility expectes an
+// interface. The decompress procedure in this utility expects an
 // io.ReadCloser. This type implements the io.Closer interface to retain the
 // generic way of decompression.
 type SnappyReadCloser struct {

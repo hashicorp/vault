@@ -140,7 +140,7 @@ $ curl \
       "user": "armon"
     },
     "lease_duration": 3600,
-    "renewable": true,
+    "renewable": true
   }
 }
 ```
@@ -152,7 +152,6 @@ Returns information about the client token.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`  | `/auth/token/lookup`          | `200 application/json` |
-| `GET`   | `/auth/token/lookup/:token`   | `200 application/json` |
 
 ### Parameters
 
@@ -192,7 +191,7 @@ $ curl \
       "organization": "hashicorp"
     },
     "display_name": "github-armon",
-    "num_uses": 0,
+    "num_uses": 0
   }
 }
 ```
@@ -229,7 +228,7 @@ $ curl \
       "organization": "hashicorp"
     },
     "display_name": "github-armon",
-    "num_uses": 0,
+    "num_uses": 0
   }
 }
 ```
@@ -241,7 +240,6 @@ Returns information about the client token from the accessor.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`  | `/auth/token/lookup-accessor`          | `200 application/json` |
-| `GET`   | `/auth/token/lookup-accessor/:accessor`   | `200 application/json` |
 
 ### Parameters
 
@@ -300,7 +298,6 @@ if there is a lease associated with it.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/auth/token/renew`          | `200 application/json` |
-| `POST`   | `/auth/token/renew/:token`   | `200 application/json` |
 
 ### Parameters
 
@@ -341,7 +338,7 @@ $ curl \
       "user": "armon"
     },
     "lease_duration": 3600,
-    "renewable": true,
+    "renewable": true
   }
 }
 ```
@@ -393,7 +390,7 @@ $ curl \
       "user": "armon"
     },
     "lease_duration": 3600,
-    "renewable": true,
+    "renewable": true
   }
 }
 ```
@@ -489,7 +486,6 @@ endpoint.
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/auth/token/revoke-orphan`          | `204 (empty body)` |
-| `POST`   | `/auth/token/revoke-orphan/:token`   | `204 (empty body)` |
 
 ### Parameters
 
