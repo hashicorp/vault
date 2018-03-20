@@ -25,6 +25,13 @@ func pathGenerateIntermediate(b *backend) *framework.Path {
 
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
+	ret.Fields["add_basic_constraints"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Whether to add a Basic Constraints
+extension with CA: true. Only needed as a
+workaround in some compatibility scenarios
+with Active Directory Certificate Services.`,
+	}
 
 	return ret
 }
