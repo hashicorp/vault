@@ -254,12 +254,10 @@ for "generate_lease".`,
 			},
 			"policy_identifiers": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Default:     []string{},
 				Description: `A comma-separated string or list of policy oids.`,
 			},
 			"basic_constraints_valid_for_non_ca": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Default:     false,
 				Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
 			},
 		},
