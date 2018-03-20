@@ -500,6 +500,15 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return errResp, nil
 	}
 
+	if len(entry.PolicyIdentifiers) > 0 {
+		for _, oidstr := range entry.PolicyIdentifiers {
+			_, err := stringToOid(oidstr)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for a policy identifier", oidstr)), nil
+			}
+		}
+	}
+
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
 	if err != nil {
