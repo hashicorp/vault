@@ -875,7 +875,7 @@ func TestSysTuneMount(t *testing.T) {
 			"versioned": "true",
 		},
 	})
-	testResponseStatus(t, resp, 204)
+	testResponseStatus(t, resp, 200)
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts")
 	expected = map[string]interface{}{

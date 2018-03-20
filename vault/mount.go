@@ -896,6 +896,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		Logger:      c.logger,
 		Config:      conf,
 		System:      sysView,
+		BackendUUID: entry.BackendAwareUUID,
 	}
 
 	b, err := f(ctx, config)

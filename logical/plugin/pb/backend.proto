@@ -338,6 +338,7 @@ message HandleExistenceCheckReply {
 message SetupArgs {
 	uint32 broker_id = 1; 
 	map<string, string> Config = 2;
+	string backendUUID = 3;
 }
 
 // SetupReply is the reply for Setup method.
