@@ -39,6 +39,8 @@ IMPROVEMENTS:
  * auth/aws: Allow binding by EC2 instance IDs [GH-3816]
  * auth/aws: Allow non-prefix-matched IAM role and instance profile ARNs
    [GH-4071]
+ * core: Log info notifications of revoked leases for all leases/reasons, not
+   just expirations [GH-4164]
  * physical/couchdb: Removed limit on the listing of items [GH-4149]
  * secret/pki: Support certificate policies [GH-4125]
  * secret/pki: Add ability to have CA:true encoded into intermediate CSRs, to
