@@ -131,7 +131,7 @@ type TokenStore struct {
 	db *memdb.MemDB
 
 	mappingLocks  []*locksutil.LockEntry
-	mappingPacker *storagepacker.StoragePacker
+	mappingPacker *storagepacker.StoragePackerV2
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -147,7 +147,12 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 	}
 
 	// Create a storage packer for storing the token mappings
-	mappingPacker, err := storagepacker.NewStoragePacker(view, c.logger, tokenMappingBucketsPrefix)
+	mappingPacker, err := storagepacker.NewStoragePackerV2(&storagepacker.Config{
+		View:       view,
+		ViewPrefix: tokenMappingBucketsPrefix,
+		Logger:     c.logger,
+	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create mappings packer: %v", err)
 	}

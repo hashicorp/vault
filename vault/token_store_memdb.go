@@ -96,14 +96,15 @@ func (ts *TokenStore) parseTokenMappingFromBucketItem(item *storagepacker.Item) 
 
 func (ts *TokenStore) loadTokenMappings(ctx context.Context) error {
 	ts.logger.Debug("token: loading token mappings")
-	existing, err := ts.mappingPacker.View().List(ctx, tokenMappingBucketsPrefix)
+	existing, err := ts.view.List(ctx, tokenMappingBucketsPrefix)
 	if err != nil {
 		return fmt.Errorf("failed to scan for token mappings: %v", err)
 	}
 	ts.logger.Debug("token: token mappings collected", "num_existing", len(existing))
 
 	for _, key := range existing {
-		bucket, err := ts.mappingPacker.GetBucket(ts.mappingPacker.BucketPath(key))
+		bucket, lock, err := ts.mappingPacker.GetBucket(tokenMappingBucketsPrefix+key, false)
+		defer ts.mappingPacker.UnlockBucket(lock, false)
 		if err != nil {
 			return err
 		}
@@ -211,7 +212,7 @@ func (ts *TokenStore) UpsertTokenMappingInTxn(txn *memdb.Txn, tokenMapping *toke
 		Message: tokenMappingAsAny,
 	}
 
-	err = ts.mappingPacker.PutItem(item)
+	_, err = ts.mappingPacker.PutItem(item)
 	if err != nil {
 		return err
 	}
