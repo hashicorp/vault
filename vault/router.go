@@ -10,6 +10,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
@@ -478,9 +479,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	req.Headers = nil
 
 	// Whitelist the X-Vault-KV-Client header for use in the kv backend.
-	if val, ok := headers["X-Vault-KV-Client"]; ok {
+	if val, ok := headers[consts.VaultKVCLIClientHeader]; ok {
 		req.Headers = map[string][]string{
-			"X-Vault-KV-Client": val,
+			consts.VaultKVCLIClientHeader: val,
 		}
 	}
 
