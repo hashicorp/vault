@@ -213,7 +213,7 @@ Configure the connection information to talk to Cassandra.
 const pathConfigConnectionHelpDesc = `
 This path configures the connection information used to connect to Cassandra.
 
-"hosts" is a comma-deliniated list of hostnames in the Cassandra cluster.
+"hosts" is a comma-delimited list of hostnames in the Cassandra cluster.
 
 "username" and "password" are self-explanatory, although the given user
 must have superuser access within Cassandra. Note that since this backend

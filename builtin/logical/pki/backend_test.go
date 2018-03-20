@@ -592,7 +592,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("expected an error response but did not get one")
 				}
 				if !strings.Contains(resp.Data["error"].(string), "2048") {
-					return fmt.Errorf("recieved an error but not about a 1024-bit key, error was: %s", resp.Data["error"].(string))
+					return fmt.Errorf("received an error but not about a 1024-bit key, error was: %s", resp.Data["error"].(string))
 				}
 
 				return nil
@@ -2445,7 +2445,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	}
 }
 
-func TestBackend_Root_Idempotentcy(t *testing.T) {
+func TestBackend_Root_Idempotency(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,

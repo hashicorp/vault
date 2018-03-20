@@ -61,7 +61,7 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 
 	keys := resp.Data["keys"].([]string)
 	if len(keys) != 2 {
-		t.Fatalf("bad: lengh of alias IDs listed; expected: 2, actual: %d", len(keys))
+		t.Fatalf("bad: length of alias IDs listed; expected: 2, actual: %d", len(keys))
 	}
 }
 

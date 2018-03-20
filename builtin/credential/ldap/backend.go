@@ -421,5 +421,5 @@ to set of policies.
 
 Configuration of the server is done through the "config" and "groups"
 endpoints by a user with root access. Authentication is then done
-by suppying the two fields for "login".
+by supplying the two fields for "login".
 `

@@ -51,7 +51,7 @@ func TestKeyring(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Should not allow conficting set
+	// Should not allow conflicting set
 	testConflict := []byte("nope")
 	key1Conf := &Key{Term: 1, Version: 1, Value: testConflict, InstallTime: time.Now()}
 	_, err = k.AddKey(key1Conf)

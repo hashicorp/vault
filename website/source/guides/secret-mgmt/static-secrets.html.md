@@ -123,7 +123,7 @@ You will perform the following:
 
 ![Personas Introduction](/assets/images/vault-static-secrets.png)
 
-Step 1 through 3 are performed by `devops` psersona.  Step 4 describes the
+Step 1 through 3 are performed by `devops` persona.  Step 4 describes the
 commands that `apps` persona runs to read secrets from Vault.
 
 ### <a name="step1"></a>Step 1: Store the Google API key
@@ -136,7 +136,7 @@ strongly discouraged because it can lead to unexpected client-side behavior.
 
 Let's assume that the path convention in your organization is
 **`secret/<OWNER>/apikey/<APP>`** for API keys. To store the Google API key used
-by the engineering team, the path would be `secret/eng/apikey/Googl`. If you
+by the engineering team, the path would be `secret/eng/apikey/Google`. If you
 have an API key for New Relic owned by the DevOps team, the path would look like
 `secret/devops/apikey/New_Relic`.
 

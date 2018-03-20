@@ -224,7 +224,7 @@ func TestFieldDataGet(t *testing.T) {
 			[]string{},
 		},
 
-		"commma string slice type, string slice with one value": {
+		"comma string slice type, string slice with one value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeCommaStringSlice},
 			},
@@ -301,7 +301,7 @@ func TestFieldDataGet(t *testing.T) {
 			[]int{},
 		},
 
-		"commma int slice type, int slice with one value": {
+		"comma int slice type, int slice with one value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeCommaIntSlice},
 			},

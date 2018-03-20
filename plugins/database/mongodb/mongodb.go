@@ -155,7 +155,7 @@ func (m *MongoDB) RenewUser(ctx context.Context, statements dbplugin.Statements,
 	return nil
 }
 
-// RevokeUser drops the specified user from the authentication databse. If none is provided
+// RevokeUser drops the specified user from the authentication database. If none is provided
 // in the revocation statement, the default "admin" authentication database will be assumed.
 func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
 	session, err := m.getConnection(ctx)

@@ -385,7 +385,7 @@ func validateNames(data *dataBundle, names []string) string {
 						splitDisplay := strings.Split(data.req.DisplayName, "@")
 						if len(splitDisplay) == 2 {
 							// Compare the sanitized name against the hostname
-							// portion of the email address in the roken
+							// portion of the email address in the broken
 							// display name
 							if strings.HasSuffix(sanitizedName, "."+splitDisplay[1]) {
 								continue
@@ -515,7 +515,7 @@ func generateCert(ctx context.Context,
 		return nil, err
 	}
 	if data.params == nil {
-		return nil, errutil.InternalError{Err: "nil paramaters received from parameter bundle generation"}
+		return nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
 	if isCA {
@@ -562,7 +562,7 @@ func generateIntermediateCSR(b *backend, data *dataBundle) (*certutil.ParsedCSRB
 		return nil, err
 	}
 	if data.params == nil {
-		return nil, errutil.InternalError{Err: "nil paramaters received from parameter bundle generation"}
+		return nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
 	parsedBundle, err := createCSR(data)
@@ -668,7 +668,7 @@ func signCert(b *backend,
 		return nil, err
 	}
 	if data.params == nil {
-		return nil, errutil.InternalError{Err: "nil paramaters received from parameter bundle generation"}
+		return nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
 	data.params.IsCA = isCA
@@ -966,7 +966,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 	return nil
 }
 
-// addKeyUsages adds approrpiate key usages to the template given the creation
+// addKeyUsages adds appropriate key usages to the template given the creation
 // information
 func addKeyUsages(data *dataBundle, certTemplate *x509.Certificate) {
 	if data.params.IsCA {

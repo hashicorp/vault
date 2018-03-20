@@ -1154,7 +1154,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 	if len(parts) <= 0 {
 		return logical.ErrorResponse("missing command value"), nil
 	} else if len(parts) > 1 && len(args) > 0 {
-		return logical.ErrorResponse("must not speficy args in command and args field"), nil
+		return logical.ErrorResponse("must not specify args in command and args field"), nil
 	} else if len(parts) > 1 {
 		args = parts[1:]
 	}
@@ -1262,7 +1262,7 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(ctx context.Context, req *logi
 	return nil, nil
 }
 
-// handleAudtedHeaderDelete deletes the header with the given name
+// handleAuditedHeaderDelete deletes the header with the given name
 func (b *SystemBackend) handleAuditedHeaderDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
 	if header == "" {
@@ -1310,7 +1310,7 @@ func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logic
 }
 
 // handleCapabilitiesAccessor returns the ACL capabilities of the
-// token associted with the given accessor for a given path.
+// token associated with the given accessor for a given path.
 func (b *SystemBackend) handleCapabilitiesAccessor(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	accessor := d.Get("accessor").(string)
 	if accessor == "" {
@@ -3470,7 +3470,7 @@ Example: you might have an OAuth backend for GitHub, and one for Google Apps.
 	},
 
 	"auth_desc": {
-		`User-friendly description for this crential backend.`,
+		`User-friendly description for this credential backend.`,
 		"",
 	},
 

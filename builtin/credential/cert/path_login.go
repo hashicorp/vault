@@ -266,7 +266,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
 	return !b.checkForChainInCRLs(trustedChain) &&
 		b.matchesNames(clientCert, config) &&
-		b.matchesCertificateExtenions(clientCert, config)
+		b.matchesCertificateExtensions(clientCert, config)
 }
 
 // matchesNames verifies that the certificate matches at least one configured
@@ -297,9 +297,9 @@ func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert)
 	return false
 }
 
-// matchesCertificateExtenions verifies that the certificate matches configured
+// matchesCertificateExtensions verifies that the certificate matches configured
 // required extensions
-func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, config *ParsedCert) bool {
+func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, config *ParsedCert) bool {
 	// If no required extensions, nothing to check here
 	if len(config.Entry.RequiredExtensions) == 0 {
 		return true

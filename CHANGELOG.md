@@ -417,7 +417,7 @@ BUG FIXES:
 DEPRECATIONS/CHANGES:
 
  * HSM config parameter requirements: When using Vault with an HSM, a new
-   paramter is required: `hmac_key_label`.  This performs a similar function to
+   parameter is required: `hmac_key_label`.  This performs a similar function to
    `key_label` but for the HMAC key Vault will use. Vault will generate a
    suitable key if this value is specified and `generate_key` is set true.
  * API HTTP client behavior: When calling `NewClient` the API no longer
@@ -694,7 +694,7 @@ FEATURES:
  * **GCP IAM Auth Backend**: There is now an authentication backend that allows
    using GCP IAM credentials to retrieve Vault tokens. This is available as
    both a plugin and built-in to Vault.
- * **PingID Push Support for Path-Baased MFA (Enterprise)**: PingID Push can
+ * **PingID Push Support for Path-Based MFA (Enterprise)**: PingID Push can
    now be used for MFA with the new path-based MFA introduced in Vault
    Enterprise 0.8.
  * **Permitted DNS Domains Support in PKI**: The `pki` backend now supports
@@ -820,7 +820,7 @@ IMPROVEMENTS:
    client certificate verification when `tls_require_and_verify_client_cert` is
    enabled [GH-3034]
  * storage/cockroachdb: Add CockroachDB storage backend [GH-2713]
- * storage/couchdb: Add CouchhDB storage backend [GH-2880]
+ * storage/couchdb: Add CouchDB storage backend [GH-2880]
  * storage/mssql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Improve listing speed [GH-2945]

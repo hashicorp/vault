@@ -841,7 +841,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 
 // handleRoleTagLogin is used to fetch the role tag of the instance and
 // verifies it to be correct.  Then the policies for the login request will be
-// set off of the role tag, if certain creteria satisfies.
+// set off of the role tag, if certain criteria satisfies.
 func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry, instance *ec2.Instance) (*roleTagLoginResponse, error) {
 	if roleEntry == nil {
 		return nil, fmt.Errorf("nil role entry")
@@ -1467,7 +1467,7 @@ func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, 
 	// The use cases we want to support, in order of increasing complexity, are:
 	// 1. All defaults (client assumes sts.amazonaws.com and server has no override)
 	// 2. Alternate STS regions: client wants to go to a specific region, in which case
-	//    Vault must be confiugred with that endpoint as well. The client's signed request
+	//    Vault must be configured with that endpoint as well. The client's signed request
 	//    will include a signature over what the client expects the Host header to be,
 	//    so we cannot change that and must match.
 	// 3. Alternate STS regions with a proxy that is transparent to Vault's clients.
@@ -1477,14 +1477,14 @@ func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, 
 	// It's also annoying because:
 	// 1. The AWS Sigv4 algorithm requires the Host header to be defined
 	// 2. Some of the official SDKs (at least botocore and aws-sdk-go) don't actually
-	//    incude an explicit Host header in the HTTP requests they generate, relying on
+	//    include an explicit Host header in the HTTP requests they generate, relying on
 	//    the underlying HTTP library to do that for them.
 	// 3. To get a validly signed request, the SDKs check if a Host header has been set
 	//    and, if not, add an inferred host header (based on the URI) to the internal
 	//    data structure used for calculating the signature, but never actually expose
 	//    that to clients. So then they just "hope" that the underlying library actually
 	//    adds the right Host header which was included in the signature calculation.
-	// We could either explicity require all Vault clients to explicitly add the Host header
+	// We could either explicitly require all Vault clients to explicitly add the Host header
 	// in the encoded request, or we could also implicitly infer it from the URI.
 	// We choose to support both -- allow you to explicitly set a Host header, but if not,
 	// infer one from the URI.
@@ -1706,7 +1706,7 @@ implemented based on that inferred type.
 
 An EC2 instance is authenticated using the PKCS#7 signature of the instance identity
 document and a client created nonce. This nonce should be unique and should be used by
-the instance for all future logins, unless 'disallow_reauthenitcation' option on the
+the instance for all future logins, unless 'disallow_reauthentication' option on the
 registered role is enabled, in which case client nonce is optional.
 
 First login attempt, creates a whitelist entry in Vault associating the instance to the nonce

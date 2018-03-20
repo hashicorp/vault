@@ -1178,7 +1178,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 	return nil
 }
 
-// RevokeTree is used to invalide a given token and all
+// RevokeTree is used to invalidate a given token and all
 // child tokens.
 func (ts *TokenStore) RevokeTree(ctx context.Context, id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
@@ -2536,7 +2536,7 @@ no effect on the token being renewed.`
 renewable or not according to this value.
 Defaults to "true".`
 	tokenListAccessorsHelp = `List token accessors, which can then be
-be used to iterate and discover their properities
+be used to iterate and discover their properties
 or revoke them. Because this can be used to
 cause a denial of service, this endpoint
 requires 'sudo' capability in addition to

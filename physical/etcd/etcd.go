@@ -22,7 +22,7 @@ var (
 	EtcdSemaphoreKeysEmptyError  = errors.New("lock queue is empty")
 	EtcdLockHeldError            = errors.New("lock already held")
 	EtcdLockNotHeldError         = errors.New("lock not held")
-	EtcdSemaphoreKeyRemovedError = errors.New("semaphore key removed before lock aquisition")
+	EtcdSemaphoreKeyRemovedError = errors.New("semaphore key removed before lock acquisition")
 	EtcdVersionUnknown           = errors.New("etcd: unknown API version")
 )
 

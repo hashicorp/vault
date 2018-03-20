@@ -91,6 +91,6 @@ Configure the root credentials that are used to manage IAM.
 const pathConfigRootHelpDesc = `
 Before doing anything, the AWS backend needs credentials that are able
 to manage IAM policies, users, access keys, etc. This endpoint is used
-to configure those credentials. They don't necessarilly need to be root
+to configure those credentials. They don't necessarily need to be root
 keys as long as they have permission to manage IAM.
 `

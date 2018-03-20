@@ -604,7 +604,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 		t.Fatalf("bad: ent:%#v ent2:%#v", ent, ent2)
 	}
 
-	// Create a retstricted token
+	// Create a restricted token
 	ent = &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}, NumUses: 2}
 	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)

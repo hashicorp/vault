@@ -56,7 +56,7 @@ type Statements struct {
 ```
 
 It is up to your plugin to replace the `{{name}}`, `{{password}}`, and
-`{{expiration}}` in these statements with the proper vaules.
+`{{expiration}}` in these statements with the proper values.
 
 The `Initialize` function is passed a map of keys to values, this data is what the
 user specified as the configuration for the plugin. Your plugin should use this

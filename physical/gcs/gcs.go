@@ -55,7 +55,7 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 	ctx := context.Background()
 	client, err := newGCSClient(ctx, conf, logger)
 	if err != nil {
-		return nil, errwrap.Wrapf("error establishing strorage client: {{err}}", err)
+		return nil, errwrap.Wrapf("error establishing storage client: {{err}}", err)
 	}
 
 	// check client connectivity by getting bucket attributes
