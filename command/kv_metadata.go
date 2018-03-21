@@ -22,7 +22,7 @@ Usage: vault kv metadata <subcommand> [options] [args]
 
   This command has subcommands for interacting with the metadata endpoint in
   Vault's key-value store. Here are some simple examples, and more detailed
-  examples are  available in the subcommands or the documentation.
+  examples are available in the subcommands or the documentation.
 
   Create or update a metadata entry for a key: 
 

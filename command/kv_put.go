@@ -43,7 +43,7 @@ Usage: vault kv put [options] KEY [DATA]
       $ echo "abcd1234" | vault kv put secret/foo bar=-
 
   To perform a Check-And-Set operation, specify the -cas flag with the
-  appropriate version numer corresponding to the key you want to perform
+  appropriate version number corresponding to the key you want to perform
   the CAS operation on:
 
       $ vault kv put -cas=1 secret/foo bar=baz
