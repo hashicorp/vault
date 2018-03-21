@@ -240,7 +240,7 @@ func (e *MountEntry) SyncCache() {
 	}
 
 	if len(e.Config.PassthroughRequestHeaders) == 0 {
-		e.synthesizedConfigCache.Delete("passthrough_requeset_headers")
+		e.synthesizedConfigCache.Delete("passthrough_request_headers")
 	} else {
 		e.synthesizedConfigCache.Store("passthrough_request_headers", e.Config.PassthroughRequestHeaders)
 	}
