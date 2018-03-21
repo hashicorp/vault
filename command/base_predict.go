@@ -67,7 +67,7 @@ func PredictClient() *api.Client {
 }
 
 // PredictVaultAvailableMounts returns a predictor for the available mounts in
-// Vault. For now, there is no way to programatically get this list. If, in the
+// Vault. For now, there is no way to programmatically get this list. If, in the
 // future, such a list exists, we can adapt it here. Until then, it's
 // hard-coded.
 func (b *BaseCommand) PredictVaultAvailableMounts() complete.Predictor {
@@ -88,7 +88,7 @@ func (b *BaseCommand) PredictVaultAvailableMounts() complete.Predictor {
 }
 
 // PredictVaultAvailableAuths returns a predictor for the available auths in
-// Vault. For now, there is no way to programatically get this list. If, in the
+// Vault. For now, there is no way to programmatically get this list. If, in the
 // future, such a list exists, we can adapt it here. Until then, it's
 // hard-coded.
 func (b *BaseCommand) PredictVaultAvailableAuths() complete.Predictor {

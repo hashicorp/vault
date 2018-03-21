@@ -271,7 +271,7 @@ func TestBackend_RSARoles(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Data: map[string]interface{}{
-					"pem_bundle": rsaCAKey + rsaCACert,
+					"pem_bundle": strings.Join([]string{rsaCAKey, rsaCACert}, "\n"),
 				},
 			},
 		},
@@ -312,7 +312,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Data: map[string]interface{}{
-					"pem_bundle": rsaCAKey + rsaCACert,
+					"pem_bundle": strings.Join([]string{rsaCAKey, rsaCACert}, "\n"),
 				},
 			},
 		},
@@ -353,7 +353,7 @@ func TestBackend_ECRoles(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Data: map[string]interface{}{
-					"pem_bundle": ecCAKey + ecCACert,
+					"pem_bundle": strings.Join([]string{ecCAKey, ecCACert}, "\n"),
 				},
 			},
 		},
@@ -394,7 +394,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Data: map[string]interface{}{
-					"pem_bundle": ecCAKey + ecCACert,
+					"pem_bundle": strings.Join([]string{ecCAKey, ecCACert}, "\n"),
 				},
 			},
 		},
@@ -519,17 +519,17 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 
 	priv1024, _ := rsa.GenerateKey(rand.Reader, 1024)
 	csr1024, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv1024)
-	csrPem1024 := pem.EncodeToMemory(&pem.Block{
+	csrPem1024 := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: csr1024,
-	})
+	})))
 
 	priv2048, _ := rsa.GenerateKey(rand.Reader, 2048)
 	csr2048, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv2048)
-	csrPem2048 := pem.EncodeToMemory(&pem.Block{
+	csrPem2048 := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: csr2048,
-	})
+	})))
 
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
@@ -583,7 +583,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
 				"common_name": "intermediate.cert.com",
-				"csr":         string(csrPem1024),
+				"csr":         csrPem1024,
 				"format":      "der",
 			},
 			ErrorOk: true,
@@ -592,7 +592,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("expected an error response but did not get one")
 				}
 				if !strings.Contains(resp.Data["error"].(string), "2048") {
-					return fmt.Errorf("recieved an error but not about a 1024-bit key, error was: %s", resp.Data["error"].(string))
+					return fmt.Errorf("received an error but not about a 1024-bit key, error was: %s", resp.Data["error"].(string))
 				}
 
 				return nil
@@ -604,7 +604,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
 				"common_name": "intermediate.cert.com",
-				"csr":         string(csrPem2048),
+				"csr":         csrPem2048,
 				"format":      "der",
 			},
 			Check: func(resp *logical.Response) error {
@@ -646,7 +646,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
 				"common_name":          "intermediate.cert.com",
-				"csr":                  string(csrPem2048),
+				"csr":                  csrPem2048,
 				"format":               "der",
 				"exclude_cn_from_sans": true,
 			},
@@ -712,10 +712,10 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 
 	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
 	csr, _ := x509.CreateCertificateRequest(rand.Reader, &csrTemplate, priv)
-	csrPem := pem.EncodeToMemory(&pem.Block{
+	csrPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: csr,
-	})
+	})))
 
 	ret := []logicaltest.TestStep{
 		logicaltest.TestStep{
@@ -733,7 +733,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
 				"use_csr_values": true,
-				"csr":            string(csrPem),
+				"csr":            csrPem,
 				"format":         "der",
 			},
 			ErrorOk: true,
@@ -759,7 +759,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
 				"use_csr_values": true,
-				"csr":            string(csrPem),
+				"csr":            csrPem,
 				"format":         "der",
 			},
 			Check: func(resp *logical.Response) error {
@@ -818,7 +818,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Operation: logical.UpdateOperation,
 			Path:      "config/ca",
 			Data: map[string]interface{}{
-				"pem_bundle": caKey + caCert,
+				"pem_bundle": strings.Join([]string{caKey, caCert}, "\n"),
 			},
 		},
 
@@ -865,12 +865,12 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Unauthenticated: true,
 			Check: func(resp *logical.Response) error {
 				rawBytes := resp.Data["http_raw_body"].([]byte)
-				pemBytes := pem.EncodeToMemory(&pem.Block{
+				pemBytes := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 					Type:  "CERTIFICATE",
 					Bytes: rawBytes,
-				})
-				if string(pemBytes) != caCert {
-					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", string(pemBytes), caCert)
+				})))
+				if pemBytes != caCert {
+					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", pemBytes, caCert)
 				}
 				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
 					return fmt.Errorf("Expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
@@ -946,12 +946,12 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Unauthenticated: true,
 			Check: func(resp *logical.Response) error {
 				rawBytes := resp.Data["http_raw_body"].([]byte)
-				pemBytes := pem.EncodeToMemory(&pem.Block{
+				pemBytes := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 					Type:  "CERTIFICATE",
 					Bytes: rawBytes,
-				})
-				if string(pemBytes) != caCert {
-					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", string(pemBytes), caCert)
+				})))
+				if pemBytes != caCert {
+					return fmt.Errorf("CA certificate:\n%s\ndoes not match original:\n%s\n", pemBytes, caCert)
 				}
 				if resp.Data["http_content_type"].(string) != "application/pkix-cert" {
 					return fmt.Errorf("Expected application/pkix-cert as content-type, but got %s", resp.Data["http_content_type"].(string))
@@ -976,7 +976,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			Check: func(resp *logical.Response) error {
 				intdata["root"] = resp.Data["certificate"].(string)
 				intdata["rootkey"] = resp.Data["private_key"].(string)
-				reqdata["pem_bundle"] = intdata["root"].(string) + "\n" + intdata["rootkey"].(string)
+				reqdata["pem_bundle"] = strings.Join([]string{intdata["root"].(string), intdata["rootkey"].(string)}, "\n")
 				return nil
 			},
 		},
@@ -1021,7 +1021,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				reqdata["serial_number"] = resp.Data["serial_number"].(string)
 				reqdata["rsa_int_serial_number"] = resp.Data["serial_number"].(string)
 				reqdata["certificate"] = resp.Data["certificate"].(string)
-				reqdata["pem_bundle"] = intdata["intermediatekey"].(string) + "\n" + resp.Data["certificate"].(string)
+				reqdata["pem_bundle"] = strings.Join([]string{intdata["intermediatekey"].(string), resp.Data["certificate"].(string)}, "\n")
 				return nil
 			},
 		},
@@ -1115,18 +1115,18 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			},
 			Check: func(resp *logical.Response) error {
 				certBytes, _ := base64.StdEncoding.DecodeString(resp.Data["certificate"].(string))
-				certPem := pem.EncodeToMemory(&pem.Block{
+				certPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 					Type:  "CERTIFICATE",
 					Bytes: certBytes,
-				})
+				})))
 				keyBytes, _ := base64.StdEncoding.DecodeString(resp.Data["private_key"].(string))
-				keyPem := pem.EncodeToMemory(&pem.Block{
+				keyPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 					Type:  "EC PRIVATE KEY",
 					Bytes: keyBytes,
-				})
-				intdata["root"] = string(certPem)
-				intdata["rootkey"] = string(keyPem)
-				reqdata["pem_bundle"] = string(certPem) + "\n" + string(keyPem)
+				})))
+				intdata["root"] = certPem
+				intdata["rootkey"] = keyPem
+				reqdata["pem_bundle"] = strings.Join([]string{certPem, keyPem}, "\n")
 				return nil
 			},
 		},
@@ -1142,17 +1142,17 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 			},
 			Check: func(resp *logical.Response) error {
 				csrBytes, _ := base64.StdEncoding.DecodeString(resp.Data["csr"].(string))
-				csrPem := pem.EncodeToMemory(&pem.Block{
+				csrPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 					Type:  "CERTIFICATE REQUEST",
 					Bytes: csrBytes,
-				})
+				})))
 				keyBytes, _ := base64.StdEncoding.DecodeString(resp.Data["private_key"].(string))
-				keyPem := pem.EncodeToMemory(&pem.Block{
+				keyPem := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 					Type:  "EC PRIVATE KEY",
 					Bytes: keyBytes,
-				})
-				intdata["intermediatecsr"] = string(csrPem)
-				intdata["intermediatekey"] = string(keyPem)
+				})))
+				intdata["intermediatecsr"] = csrPem
+				intdata["intermediatekey"] = keyPem
 				return nil
 			},
 		},
@@ -1183,7 +1183,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				reqdata["serial_number"] = resp.Data["serial_number"].(string)
 				reqdata["ec_int_serial_number"] = resp.Data["serial_number"].(string)
 				reqdata["certificate"] = resp.Data["certificate"].(string)
-				reqdata["pem_bundle"] = intdata["intermediatekey"].(string) + "\n" + resp.Data["certificate"].(string)
+				reqdata["pem_bundle"] = strings.Join([]string{intdata["intermediatekey"].(string), resp.Data["certificate"].(string)}, "\n")
 				return nil
 			},
 		},
@@ -1944,7 +1944,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					Type:  "CERTIFICATE REQUEST",
 					Bytes: csr,
 				}
-				issueVals.CSR = string(pem.EncodeToMemory(&block))
+				issueVals.CSR = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 
 				addTests(getCnCheck(issueVals.CommonName, roleVals, privKey, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
 			} else {
@@ -2308,10 +2308,10 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if len(csr) == 0 {
 		t.Fatal("generated csr is empty")
 	}
-	pemCSR := pem.EncodeToMemory(&pem.Block{
+	pemCSR := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: csr,
-	})
+	})))
 	if len(pemCSR) == 0 {
 		t.Fatal("pem csr is empty")
 	}
@@ -2321,7 +2321,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		Path:      "sign-verbatim",
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"csr": string(pemCSR),
+			"csr": pemCSR,
 		},
 	})
 	if resp != nil && resp.IsError() {
@@ -2356,7 +2356,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"csr": string(pemCSR),
+			"csr": pemCSR,
 			"ttl": "5h",
 		},
 	})
@@ -2374,7 +2374,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"csr": string(pemCSR),
+			"csr": pemCSR,
 			"ttl": "12h",
 		},
 	})
@@ -2401,7 +2401,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	}
 	cert := certs[0]
 	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
-		t.Fatalf("sign-verbatim did not properly cap validiaty period on signed CSR")
+		t.Fatalf("sign-verbatim did not properly cap validity period on signed CSR")
 	}
 
 	// now check that if we set generate-lease it takes it from the role and the TTLs match
@@ -2427,7 +2427,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		Path:      "sign-verbatim/test",
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"csr": string(pemCSR),
+			"csr": pemCSR,
 			"ttl": "5h",
 		},
 	})
@@ -2445,7 +2445,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	}
 }
 
-func TestBackend_Root_Idempotentcy(t *testing.T) {
+func TestBackend_Root_Idempotency(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,
@@ -2638,10 +2638,10 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 			t.Fatal(err)
 		}
 		delete(argMap, "common_name")
-		argMap["csr"] = string(pem.EncodeToMemory(&pem.Block{
+		argMap["csr"] = strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE REQUEST",
 			Bytes: csr,
-		}))
+		})))
 
 		_, err = client.Logical().Write(path+"sign/example", argMap)
 		switch {
@@ -2849,11 +2849,11 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		pemSS := pem.EncodeToMemory(&pem.Block{
+		pemSS := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: selfSigned,
-		})
-		return string(pemSS), cert
+		})))
+		return pemSS, cert
 	}
 
 	template := &x509.Certificate{
@@ -3221,7 +3221,7 @@ func setCerts() {
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledKey,
 	}
-	ecCAKey = string(pem.EncodeToMemory(keyPEMBlock))
+	ecCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
 	if err != nil {
 		panic(err)
 	}
@@ -3250,7 +3250,7 @@ func setCerts() {
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}
-	ecCACert = string(pem.EncodeToMemory(caCertPEMBlock))
+	ecCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 
 	rak, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -3261,7 +3261,7 @@ func setCerts() {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: marshaledKey,
 	}
-	rsaCAKey = string(pem.EncodeToMemory(keyPEMBlock))
+	rsaCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
 	if err != nil {
 		panic(err)
 	}
@@ -3277,7 +3277,7 @@ func setCerts() {
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}
-	rsaCACert = string(pem.EncodeToMemory(caCertPEMBlock))
+	rsaCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 }
 
 var (

@@ -88,7 +88,7 @@ type roleIDStorageEntry struct {
 // role/<role_name>/bound-cidr-list - For updating the param
 // role/<role_name>/period - For updating the param
 // role/<role_name>/role-id - For fetching the role_id of an role
-// role/<role_name>/secret-id - For issuing a secret_id against an role, also to list the secret_id_accessorss
+// role/<role_name>/secret-id - For issuing a secret_id against an role, also to list the secret_id_accessors
 // role/<role_name>/custom-secret-id - For assigning a custom SecretID against an role
 // role/<role_name>/secret-id/lookup - For reading the properties of a secret_id
 // role/<role_name>/secret-id/destroy - For deleting a secret_id

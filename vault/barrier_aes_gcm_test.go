@@ -157,7 +157,7 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Check for migraiton
+	// Check for migration
 	out, err := inm.Get(context.Background(), barrierInitPath)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -208,7 +208,7 @@ func TestAESGCMBarrier_Confidential(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Check the physcial entry
+	// Check the physical entry
 	pe, err := inm.Get(context.Background(), "test")
 	if err != nil {
 		t.Fatalf("err: %v", err)

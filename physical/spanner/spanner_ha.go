@@ -313,7 +313,7 @@ func (l *Lock) watchLock() {
 	}
 }
 
-// writeLock writes the given lock using the following algorith:
+// writeLock writes the given lock using the following algorithm:
 //
 // - lock does not exist
 //   - write the lock

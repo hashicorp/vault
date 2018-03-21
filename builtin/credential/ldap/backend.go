@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"text/template"
 
 	"github.com/go-ldap/ldap"
@@ -262,9 +263,10 @@ func (b *backend) getUserBindDN(cfg *ConfigEntry, c *ldap.Conn, username string)
 			b.Logger().Debug("auth/ldap: Discovering user", "userdn", cfg.UserDN, "filter", filter)
 		}
 		result, err := c.Search(&ldap.SearchRequest{
-			BaseDN: cfg.UserDN,
-			Scope:  2, // subtree
-			Filter: filter,
+			BaseDN:    cfg.UserDN,
+			Scope:     2, // subtree
+			Filter:    filter,
+			SizeLimit: math.MaxInt32,
 		})
 		if err != nil {
 			return bindDN, fmt.Errorf("LDAP search for binddn failed: %v", err)
@@ -296,9 +298,10 @@ func (b *backend) getUserDN(cfg *ConfigEntry, c *ldap.Conn, bindDN string) (stri
 			b.Logger().Debug("auth/ldap: Searching UPN", "userdn", cfg.UserDN, "filter", filter)
 		}
 		result, err := c.Search(&ldap.SearchRequest{
-			BaseDN: cfg.UserDN,
-			Scope:  2, // subtree
-			Filter: filter,
+			BaseDN:    cfg.UserDN,
+			Scope:     2, // subtree
+			Filter:    filter,
+			SizeLimit: math.MaxInt32,
 		})
 		if err != nil {
 			return userDN, fmt.Errorf("LDAP search failed for detecting user: %v", err)
@@ -381,6 +384,7 @@ func (b *backend) getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userDN string, u
 		Attributes: []string{
 			cfg.GroupAttr,
 		},
+		SizeLimit: math.MaxInt32,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("LDAP search failed: %v", err)
@@ -421,5 +425,5 @@ to set of policies.
 
 Configuration of the server is done through the "config" and "groups"
 endpoints by a user with root access. Authentication is then done
-by suppying the two fields for "login".
+by supplying the two fields for "login".
 `

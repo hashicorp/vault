@@ -259,13 +259,13 @@ func TestACL_PolicyMerge(t *testing.T) {
 
 		p := raw.(*ACLPermissions)
 		if !reflect.DeepEqual(tc.allowed, p.AllowedParameters) {
-			t.Fatalf("Allowed paramaters did not match, Expected: %#v, Got: %#v", tc.allowed, p.AllowedParameters)
+			t.Fatalf("Allowed parameters did not match, Expected: %#v, Got: %#v", tc.allowed, p.AllowedParameters)
 		}
 		if !reflect.DeepEqual(tc.denied, p.DeniedParameters) {
-			t.Fatalf("Denied paramaters did not match, Expected: %#v, Got: %#v", tc.denied, p.DeniedParameters)
+			t.Fatalf("Denied parameters did not match, Expected: %#v, Got: %#v", tc.denied, p.DeniedParameters)
 		}
 		if !reflect.DeepEqual(tc.required, p.RequiredParameters) {
-			t.Fatalf("Required paramaters did not match, Expected: %#v, Got: %#v", tc.required, p.RequiredParameters)
+			t.Fatalf("Required parameters did not match, Expected: %#v, Got: %#v", tc.required, p.RequiredParameters)
 		}
 		if tc.minWrappingTTL != nil && *tc.minWrappingTTL != p.MinWrappingTTL {
 			t.Fatalf("Min wrapping TTL did not match, Expected: %#v, Got: %#v", tc.minWrappingTTL, p.MinWrappingTTL)

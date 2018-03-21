@@ -96,7 +96,7 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		},
 	}
 
-	// Authnetication info
+	// Authentication info
 	var schemaAndUser string
 	var useAddAuth bool
 	schemaAndUser, useAddAuth = conf["auth_info"]
@@ -172,7 +172,7 @@ func (c *ZooKeeperBackend) ensurePath(path string, value []byte) error {
 	return nil
 }
 
-// cleanupLogicalPath is used to remove all empty nodes, begining with deepest one,
+// cleanupLogicalPath is used to remove all empty nodes, beginning with deepest one,
 // aborting on first non-empty one, up to top-level node.
 func (c *ZooKeeperBackend) cleanupLogicalPath(path string) error {
 	nodes := strings.Split(path, "/")
@@ -312,7 +312,7 @@ func (c *ZooKeeperBackend) List(ctx context.Context, prefix string) ([]string, e
 			}
 		} else if stat.DataLength == 0 {
 			// No, we cannot differentiate here on number of children as node
-			// can have all it leafs remoed, and it still is a node.
+			// can have all it leafs removed, and it still is a node.
 			children = append(children, key+"/")
 		} else {
 			children = append(children, key[1:])

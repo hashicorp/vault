@@ -20,12 +20,12 @@ import (
 
 const (
 	// Ideally, this prefix would match the "_" used in the file backend, but
-	// that prefix has special meaining in etcd. Specifically, it excludes those
+	// that prefix has special meaning in etcd. Specifically, it excludes those
 	// entries from directory listings.
 	Etcd2NodeFilePrefix = "."
 
 	// The lock prefix can (and probably should) cause an entry to be excluded
-	// from diretory listings, so "_" works here.
+	// from directory listings, so "_" works here.
 	Etcd2NodeLockPrefix = "_"
 
 	// The delimiter is the same as the `-C` flag of etcdctl.
@@ -290,7 +290,7 @@ func (b *Etcd2Backend) nodePathDir(key string) string {
 }
 
 // nodePathLock returns an etcd directory path used specifically for semaphore
-// indicies based on the given key.
+// indices based on the given key.
 func (b *Etcd2Backend) nodePathLock(key string) string {
 	return filepath.Join(b.path, filepath.Dir(key), Etcd2NodeLockPrefix+filepath.Base(key)+"/")
 }
@@ -310,7 +310,7 @@ func (e *Etcd2Backend) HAEnabled() bool {
 	return e.haEnabled
 }
 
-// Etcd2Lock emplements a lock using and Etcd2 backend.
+// Etcd2Lock implements a lock using and Etcd2 backend.
 type Etcd2Lock struct {
 	kAPI                                 client.KeysAPI
 	value, semaphoreDirKey, semaphoreKey string
@@ -372,7 +372,7 @@ func (c *Etcd2Lock) isHeld() (bool, error) {
 		return false, nil
 	}
 
-	// Get the key of the curren holder of the lock.
+	// Get the key of the current holder of the lock.
 	currentSemaphoreKey, _, _, err := c.getSemaphoreKey()
 	if err != nil {
 		return false, err

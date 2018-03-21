@@ -671,7 +671,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("Statements did not match, exepected %#v, got %#v", expected, actual)
+		t.Fatalf("Statements did not match, expected %#v, got %#v", expected, actual)
 	}
 
 	// Delete the role

@@ -830,7 +830,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 		switch {
 		case checkExists == false:
-			// No existence check, so always treate it as an update operation, which is how it is pre 0.5
+			// No existence check, so always treat it as an update operation, which is how it is pre 0.5
 			req.Operation = logical.UpdateOperation
 		case resourceExists == true:
 			// It exists, so force an update operation
@@ -1177,7 +1177,7 @@ func (c *Core) unsealPart(ctx context.Context, config *SealConfig, key []byte, u
 		// Get stored keys and shamir combine into single master key. Unsealing with
 		// recovery keys currently does not support: 1) mixed stored and non-stored
 		// keys setup, nor 2) seals that support recovery keys but not stored keys.
-		// If insuffiencient shares are provided, shamir.Combine will error, and if
+		// If insufficient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
 		var masterKey []byte
 		if c.seal.StoredKeysSupported() {
@@ -2227,7 +2227,7 @@ func (c *Core) clearLeader(uuid string) error {
 	return err
 }
 
-// emitMetrics is used to periodically expose metrics while runnig
+// emitMetrics is used to periodically expose metrics while running
 func (c *Core) emitMetrics(stopCh chan struct{}) {
 	for {
 		select {

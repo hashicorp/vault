@@ -10,6 +10,9 @@
       <li<%= sidebar_current("guides-operations")%>>
         <a href="/guides/operations/index.html">Vault Operations</a>
         <ul class="nav">
+          <li<%= sidebar_current("guides-operations-reference-architecture") %>>
+            <a href="/guides/operations/reference-architecture.html">Reference Architecture</a>
+          </li>
           <li<%= sidebar_current("guides-operations-production-hardening") %>>
             <a href="/guides/operations/production.html">Production Hardening</a>
           </li>
@@ -49,11 +52,20 @@
           <li<%= sidebar_current("guides-secret-mgmt-static-secrets") %>>
             <a href="/guides/secret-mgmt/static-secrets.html">Static Secrets</a>
           </li>
-          <li<%= sidebar_current("guides-secret-mgmt-dataynamic-secrets") %>>
+          <li<%= sidebar_current("guides-secret-mgmt-dynamic-secrets") %>>
             <a href="/guides/secret-mgmt/dynamic-secrets.html">Secret as a Service</a>
           </li>
           <li<%= sidebar_current("guides-secret-mgmt-cubbyhole") %>>
             <a href="/guides/secret-mgmt/cubbyhole.html">Cubbyhole Response Wrapping</a>
+          </li>
+        </ul>
+      </li>
+
+      <li<%= sidebar_current("guides-encryption")%>>
+        <a href="/guides/encryption/index.html">Encryption as a Service</a>
+        <ul class="nav">
+          <li<%= sidebar_current("guides-encryption-transit-rewrap") %>>
+            <a href="/guides/encryption/transit-rewrap.html">Transit Secrets Re-wrapping</a>
           </li>
         </ul>
       </li>
@@ -101,6 +113,9 @@
           </li>
           <li<%= sidebar_current("guides-upgrading-to-0.9.3") %>>
             <a href="/guides/upgrading/upgrade-to-0.9.3.html">Upgrade to 0.9.3</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.9.6") %>>
+            <a href="/guides/upgrading/upgrade-to-0.9.6.html">Upgrade to 0.9.6</a>
           </li>
         </ul>
       </li>

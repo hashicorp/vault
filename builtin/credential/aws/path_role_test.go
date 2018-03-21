@@ -567,7 +567,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"bound_account_id":               "testaccountid",
 		"bound_region":                   "testregion",
 		"bound_iam_role_arn":             "arn:aws:iam::123456789012:role/MyRole",
-		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/MyInstanceProfile",
+		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/MyInstancePro*",
 		"bound_subnet_id":                "testsubnetid",
 		"bound_vpc_id":                   "testvpcid",
 		"bound_ec2_instance_id":          "i-12345678901234567,i-76543210987654321",
@@ -605,7 +605,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"bound_iam_principal_arn":        []string{},
 		"bound_iam_principal_id":         []string{},
 		"bound_iam_role_arn":             []string{"arn:aws:iam::123456789012:role/MyRole"},
-		"bound_iam_instance_profile_arn": []string{"arn:aws:iam::123456789012:instance-profile/MyInstanceProfile"},
+		"bound_iam_instance_profile_arn": []string{"arn:aws:iam::123456789012:instance-profile/MyInstancePro*"},
 		"bound_subnet_id":                []string{"testsubnetid"},
 		"bound_vpc_id":                   []string{"testvpcid"},
 		"inferred_entity_type":           "",
@@ -708,6 +708,43 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	}
 	if int64(resp.Data["period"].(time.Duration)) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
+	}
+}
+
+func TestRoleEntryUpgradeV1(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roleEntryToUpgrade := &awsRoleEntry{
+		BoundIamRoleARNs:            []string{"arn:aws:iam::123456789012:role/my_role_prefix"},
+		BoundIamInstanceProfileARNs: []string{"arn:aws:iam::123456789012:instance-profile/my_profile-prefix"},
+		Version:                     1,
+	}
+	expected := &awsRoleEntry{
+		BoundIamRoleARNs:            []string{"arn:aws:iam::123456789012:role/my_role_prefix*"},
+		BoundIamInstanceProfileARNs: []string{"arn:aws:iam::123456789012:instance-profile/my_profile-prefix*"},
+		Version:                     currentRoleStorageVersion,
+	}
+
+	upgraded, err := b.upgradeRoleEntry(context.Background(), storage, roleEntryToUpgrade)
+	if err != nil {
+		t.Fatalf("error upgrading role entry: %#v", err)
+	}
+	if !upgraded {
+		t.Fatalf("expected to upgrade role entry %#v but got no upgrade", roleEntryToUpgrade)
+	}
+	if !reflect.DeepEqual(*roleEntryToUpgrade, *expected) {
+		t.Fatalf("bad: expected upgraded role of %#v, got %#v instead", expected, roleEntryToUpgrade)
 	}
 }
 

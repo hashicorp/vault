@@ -105,7 +105,7 @@ func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]in
 	return conf, nil
 }
 
-// Connection creates or returns an exisitng a database connection. If the session fails
+// Connection creates or returns an existing a database connection. If the session fails
 // on a ping check, the session will be closed and then re-created.
 func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, error) {
 	if !c.Initialized {

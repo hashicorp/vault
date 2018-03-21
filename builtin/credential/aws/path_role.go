@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	currentRoleStorageVersion = 1
+	currentRoleStorageVersion = 2
 )
 
 func pathRole(b *backend) *framework.Path {
@@ -320,7 +320,7 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 	if roleEntry == nil {
 		return false, fmt.Errorf("received nil roleEntry")
 	}
-	var upgraded bool
+	upgraded := roleEntry.Version < currentRoleStorageVersion
 	switch roleEntry.Version {
 	case 0:
 		// Check if the value held by role ARN field is actually an instance profile ARN
@@ -330,15 +330,12 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 
 			// Reset the old field
 			roleEntry.BoundIamRoleARN = ""
-
-			upgraded = true
 		}
 
 		// Check if there was no pre-existing AuthType set (from older versions)
 		if roleEntry.AuthType == "" {
 			// then default to the original behavior of ec2
 			roleEntry.AuthType = ec2AuthType
-			upgraded = true
 		}
 
 		// Check if we need to resolve the unique ID on the role
@@ -354,56 +351,56 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 			roleEntry.BoundIamPrincipalID = principalId
 			// Not setting roleEntry.BoundIamPrincipalARN to "" here so that clients can see the original
 			// ARN that the role was bound to
-			upgraded = true
 		}
 
 		// Check if we need to convert individual string values to lists
 		if roleEntry.BoundAmiID != "" {
 			roleEntry.BoundAmiIDs = []string{roleEntry.BoundAmiID}
 			roleEntry.BoundAmiID = ""
-			upgraded = true
 		}
 		if roleEntry.BoundAccountID != "" {
 			roleEntry.BoundAccountIDs = []string{roleEntry.BoundAccountID}
 			roleEntry.BoundAccountID = ""
-			upgraded = true
 		}
 		if roleEntry.BoundIamPrincipalARN != "" {
 			roleEntry.BoundIamPrincipalARNs = []string{roleEntry.BoundIamPrincipalARN}
 			roleEntry.BoundIamPrincipalARN = ""
-			upgraded = true
 		}
 		if roleEntry.BoundIamPrincipalID != "" {
 			roleEntry.BoundIamPrincipalIDs = []string{roleEntry.BoundIamPrincipalID}
 			roleEntry.BoundIamPrincipalID = ""
-			upgraded = true
 		}
 		if roleEntry.BoundIamRoleARN != "" {
 			roleEntry.BoundIamRoleARNs = []string{roleEntry.BoundIamRoleARN}
 			roleEntry.BoundIamRoleARN = ""
-			upgraded = true
 		}
 		if roleEntry.BoundIamInstanceProfileARN != "" {
 			roleEntry.BoundIamInstanceProfileARNs = []string{roleEntry.BoundIamInstanceProfileARN}
 			roleEntry.BoundIamInstanceProfileARN = ""
-			upgraded = true
 		}
 		if roleEntry.BoundRegion != "" {
 			roleEntry.BoundRegions = []string{roleEntry.BoundRegion}
 			roleEntry.BoundRegion = ""
-			upgraded = true
 		}
 		if roleEntry.BoundSubnetID != "" {
 			roleEntry.BoundSubnetIDs = []string{roleEntry.BoundSubnetID}
 			roleEntry.BoundSubnetID = ""
-			upgraded = true
 		}
 		if roleEntry.BoundVpcID != "" {
 			roleEntry.BoundVpcIDs = []string{roleEntry.BoundVpcID}
 			roleEntry.BoundVpcID = ""
-			upgraded = true
 		}
 		roleEntry.Version = 1
+		fallthrough
+	case 1:
+		// Make BoundIamRoleARNs and BoundIamInstanceProfileARNs explicitly prefix-matched
+		for i, arn := range roleEntry.BoundIamRoleARNs {
+			roleEntry.BoundIamRoleARNs[i] = fmt.Sprintf("%s*", arn)
+		}
+		for i, arn := range roleEntry.BoundIamInstanceProfileARNs {
+			roleEntry.BoundIamInstanceProfileARNs[i] = fmt.Sprintf("%s*", arn)
+		}
+		roleEntry.Version = 2
 		fallthrough
 	case currentRoleStorageVersion:
 	default:

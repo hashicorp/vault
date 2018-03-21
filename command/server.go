@@ -900,7 +900,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
 
-			// Stop the listners so that we don't process further client requests.
+			// Stop the listeners so that we don't process further client requests.
 			c.cleanupGuard.Do(listenerCloseFunc)
 
 			// Shutdown will wait until after Vault is sealed, which means the
@@ -1196,7 +1196,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
 
-			// Stop the listners so that we don't process further client requests.
+			// Stop the listeners so that we don't process further client requests.
 			c.cleanupGuard.Do(testCluster.Cleanup)
 
 			// Shutdown will wait until after Vault is sealed, which means the

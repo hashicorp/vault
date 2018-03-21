@@ -56,5 +56,5 @@ are supported.
 
 The username/password combination is configured using the "users/"
 endpoints by a user with root access. Authentication is then done
-by suppying the two fields for "login".
+by supplying the two fields for "login".
 `

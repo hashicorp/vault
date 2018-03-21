@@ -181,7 +181,7 @@ func (c *PluginCatalog) List(ctx context.Context) ([]string, error) {
 		retList[i] = k
 		i++
 	}
-	// sort for consistent ordering of builtin pluings
+	// sort for consistent ordering of builtin plugins
 	sort.Strings(retList)
 
 	return retList, nil

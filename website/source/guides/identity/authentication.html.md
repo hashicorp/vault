@@ -35,7 +35,7 @@ enabling the [**AppRole**](/docs/auth/approle.html) auth method.
 
 ## Reference Material
 
-- [AppRole Auth Methods](/docs/auth/approle.html)
+- [AppRole Auth Method](/docs/auth/approle.html)
 - [AppRole Auth Method (API)](/api/auth/approle/index.html)
 - [Authenticating Applications with HashiCorp Vault AppRole](https://www.hashicorp.com/blog/authenticating-applications-with-vault-approle)
 

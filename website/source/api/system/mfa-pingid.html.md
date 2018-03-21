@@ -24,7 +24,7 @@ This endpoint defines a MFA method of type PingID.
   - alias.name: The name returned by the mount configured via the `mount_accessor` parameter
   - entity.name: The name configured for the Entity
   - alias.metadata.`<key>`: The value of the Alias's metadata parameter
-  - entity.metadata.`<key>`: The value of the Entity's metadata paramater
+  - entity.metadata.`<key>`: The value of the Entity's metadata parameter
 
 - `settings_file_base64` `(string)` - A base64-encoded third-party settings file retrieved from PingID's configuration page.
 

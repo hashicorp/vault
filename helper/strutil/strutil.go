@@ -104,7 +104,7 @@ func ParseKeyValues(input string, out map[string]string, sep string) error {
 // * Base64 encoded string containing comma separated list of
 //   `<key>=<value>` pairs
 //
-// Input will be parsed into the output paramater, which should
+// Input will be parsed into the output parameter, which should
 // be a non-nil map[string]string.
 func ParseArbitraryKeyValues(input string, out map[string]string, sep string) error {
 	input = strings.TrimSpace(input)
@@ -167,7 +167,7 @@ func ParseStringSlice(input string, sep string) []string {
 // * JSON string
 // * Base64 encoded JSON string
 // * `sep` separated list of values
-// * Base64-encoded string containting a `sep` separated list of values
+// * Base64-encoded string containing a `sep` separated list of values
 //
 // Note that the separator is ignored if the input is found to already be in a
 // structured format (e.g., JSON)
@@ -282,7 +282,7 @@ func EquivalentSlices(a, b []string) bool {
 	return true
 }
 
-// StrListDelete removes the first occurance of the given item from the slice
+// StrListDelete removes the first occurrence of the given item from the slice
 // of strings if the item exists.
 func StrListDelete(s []string, d string) []string {
 	if s == nil {
