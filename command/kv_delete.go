@@ -26,10 +26,10 @@ func (c *KVDeleteCommand) Help() string {
 Usage: vault kv delete [options] PATH
 
   Deletes the data for the provided version and path in the key-value store. The
-  versioned data will not be fully removed, but marked as deleted and  will no
+  versioned data will not be fully removed, but marked as deleted and will no
   longer be returned in normal get requests.
 
-  To delete the lastest version of the key "foo": 
+  To delete the latest version of the key "foo": 
 
       $ vault kv delete secret/foo
 
@@ -57,7 +57,6 @@ func (c *KVDeleteCommand) Flags() *FlagSets {
 	})
 
 	return set
-
 }
 
 func (c *KVDeleteCommand) AutocompleteArgs() complete.Predictor {

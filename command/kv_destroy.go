@@ -18,7 +18,7 @@ type KVDestroyCommand struct {
 }
 
 func (c *KVDestroyCommand) Synopsis() string {
-	return "Destroys a version in the KV store"
+	return "Permanently removes one or more versions in the KV store"
 }
 
 func (c *KVDestroyCommand) Help() string {

@@ -265,7 +265,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 }
 
 func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) {
-	out := make([]string, 0, 8)
+	out := make([]string, 0, len(data)+1)
 	if len(data) > 0 {
 		keys := make([]string, 0, len(data))
 		for k := range data {

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 )
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
@@ -15,7 +16,7 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 	if r.Headers == nil {
 		r.Headers = http.Header{}
 	}
-	r.Headers.Add("X-Vault-Kv-Client", "v1")
+	r.Headers.Add(consts.VaultKVCLIClientHeader, "v1")
 
 	for k, v := range params {
 		r.Params.Set(k, v)
@@ -39,7 +40,7 @@ func kvListRequest(client *api.Client, path string) (*api.Secret, error) {
 	if r.Headers == nil {
 		r.Headers = http.Header{}
 	}
-	r.Headers.Add("X-Vault-Kv-Client", "v1")
+	r.Headers.Add(consts.VaultKVCLIClientHeader, "v1")
 
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
@@ -64,7 +65,7 @@ func kvWriteRequest(client *api.Client, path string, data map[string]interface{}
 	if r.Headers == nil {
 		r.Headers = http.Header{}
 	}
-	r.Headers.Add("X-Vault-Kv-Client", "v1")
+	r.Headers.Add(consts.VaultKVCLIClientHeader, "v1")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
@@ -89,7 +90,7 @@ func kvDeleteRequest(client *api.Client, path string) (*api.Secret, error) {
 	if r.Headers == nil {
 		r.Headers = http.Header{}
 	}
-	r.Headers.Add("X-Vault-Kv-Client", "v1")
+	r.Headers.Add(consts.VaultKVCLIClientHeader, "v1")
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
