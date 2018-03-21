@@ -675,7 +675,7 @@ func TestSysTuneMount_Options(t *testing.T) {
 	})
 
 	testResponseStatus(t, resp, 204)
-	// Mount-tune the audit_non_hmac_request_keys
+	// Mount-tune the options
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
 		"options": map[string]string{
 			"test": "true",
@@ -1131,10 +1131,12 @@ func TestSysTuneMount(t *testing.T) {
 			"default_lease_ttl": json.Number("259196400"),
 			"max_lease_ttl":     json.Number("259200000"),
 			"force_no_cache":    false,
+			"options":           map[string]interface{}{"versioned": "true"},
 		},
 		"default_lease_ttl": json.Number("259196400"),
 		"max_lease_ttl":     json.Number("259200000"),
 		"force_no_cache":    false,
+		"options":           map[string]interface{}{"versioned": "true"},
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -1164,10 +1166,12 @@ func TestSysTuneMount(t *testing.T) {
 			"default_lease_ttl": json.Number("40"),
 			"max_lease_ttl":     json.Number("80"),
 			"force_no_cache":    false,
+			"options":           map[string]interface{}{"versioned": "true"},
 		},
 		"default_lease_ttl": json.Number("40"),
 		"max_lease_ttl":     json.Number("80"),
 		"force_no_cache":    false,
+		"options":           map[string]interface{}{"versioned": "true"},
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -1259,12 +1263,14 @@ func TestSysTuneMount_nonHMACKeys(t *testing.T) {
 			"force_no_cache":               false,
 			"audit_non_hmac_request_keys":  []interface{}{"foo"},
 			"audit_non_hmac_response_keys": []interface{}{"bar"},
+			"options":                      map[string]interface{}{"versioned": "true"},
 		},
 		"default_lease_ttl":            json.Number("2764800"),
 		"max_lease_ttl":                json.Number("2764800"),
 		"force_no_cache":               false,
 		"audit_non_hmac_request_keys":  []interface{}{"foo"},
 		"audit_non_hmac_response_keys": []interface{}{"bar"},
+		"options":                      map[string]interface{}{"versioned": "true"},
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -1298,10 +1304,12 @@ func TestSysTuneMount_nonHMACKeys(t *testing.T) {
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
+			"options":           map[string]interface{}{"versioned": "true"},
 		},
 		"default_lease_ttl": json.Number("2764800"),
 		"max_lease_ttl":     json.Number("2764800"),
 		"force_no_cache":    false,
+		"options":           map[string]interface{}{"versioned": "true"},
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -1332,10 +1340,12 @@ func TestSysTuneMount_showUIMount(t *testing.T) {
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
+			"options":           map[string]interface{}{"versioned": "true"},
 		},
 		"default_lease_ttl": json.Number("2764800"),
 		"max_lease_ttl":     json.Number("2764800"),
 		"force_no_cache":    false,
+		"options":           map[string]interface{}{"versioned": "true"},
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -1366,11 +1376,13 @@ func TestSysTuneMount_showUIMount(t *testing.T) {
 			"max_lease_ttl":      json.Number("2764800"),
 			"force_no_cache":     false,
 			"listing_visibility": "unauth",
+			"options":            map[string]interface{}{"versioned": "true"},
 		},
 		"default_lease_ttl":  json.Number("2764800"),
 		"max_lease_ttl":      json.Number("2764800"),
 		"force_no_cache":     false,
 		"listing_visibility": "unauth",
+		"options":            map[string]interface{}{"versioned": "true"},
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
