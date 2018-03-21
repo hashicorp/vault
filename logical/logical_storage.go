@@ -58,11 +58,10 @@ func (s *LogicalStorage) Underlying() physical.Backend {
 	return s.underlying
 }
 
-func (s *LogicalStorage) init() {
-}
-
 func NewLogicalStorage(logicalType LogicalType, config map[string]string, logger log.Logger) (*LogicalStorage, error) {
-	s := &LogicalStorage{}
+	s := &LogicalStorage{
+		logicalType: logicalType,
+	}
 	var err error
 	switch logicalType {
 	case LogicalTypeInmem:

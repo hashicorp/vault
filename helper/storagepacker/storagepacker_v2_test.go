@@ -142,17 +142,14 @@ func TestStoragePackerV2_PutGetDelete_File(t *testing.T) {
 	}
 
 	sp, err := NewStoragePackerV2(&Config{
-		View:             storage,
-		Logger:           logger,
-		BucketCount:      64,
-		BucketShardCount: 4,
-		BucketMaxSize:    2048,
+		View:   storage,
+		Logger: logger,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	count := 10000
+	count := 100000
 	entity := &identity.Entity{
 		Metadata: map[string]string{
 			"samplekey1": "samplevalue1",
