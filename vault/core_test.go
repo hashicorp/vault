@@ -2314,6 +2314,7 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
+			"X-Vault-Kv-Client":                   []string{"foo"},
 			"Should-Passthrough":                  []string{"foo"},
 			"Should-Passthrough-Case-Insensitive": []string{"baz"},
 			"Should-Not-Passthrough":              []string{"bar"},
@@ -2326,6 +2327,18 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 
 	// Check the headers
 	headers := noop.Requests[0].Headers
+
+	// Test whitelisted values
+	if val, ok := headers["X-Vault-Kv-Client"]; ok {
+		expected := []string{"foo"}
+		if !reflect.DeepEqual(val, expected) {
+			t.Fatalf("expected: %v, got: %v", expected, val)
+		}
+	} else {
+		t.Fatalf("expected 'X-Vault-Kv-Client' to be present in the headers map")
+	}
+
+	// Test passthrough values
 	if val, ok := headers["Should-Passthrough"]; ok {
 		expected := []string{"foo"}
 		if !reflect.DeepEqual(val, expected) {
