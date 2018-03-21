@@ -10,13 +10,14 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
 
 var (
 	whitelistedHeaders = []string{
-		"X-Vault-Kv-Client",
+		consts.VaultKVCLIClientHeader,
 		"x-vault-kv-client",
 	}
 )
