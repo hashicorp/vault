@@ -37,6 +37,8 @@ Usage: vault kv delete [options] PATH
 
       $ vault kv delete -versions=3 secret/foo
 
+  To delete all versions and metadata, see the "vault kv metadata" subcommand.
+
   Additional flags and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
