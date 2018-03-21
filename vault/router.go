@@ -14,6 +14,10 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+var (
+	whitelistedHeaders = []string{}
+)
+
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
 	l                  sync.RWMutex
@@ -467,10 +471,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	originalClientTokenRemainingUses := req.ClientTokenRemainingUses
 	req.ClientTokenRemainingUses = 0
 
-	// Cache the headers and clear req.Headers
+	// Cache the headers
 	headers := req.Headers
 
-	// Add passthrough headers to the backend
+	// Filter and add passthrough headers to the backend
 	var passthroughRequestHeaders []string
 	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		passthroughRequestHeaders = rawVal.([]string)
@@ -618,8 +622,19 @@ func pathsToRadix(paths []string) *radix.Tree {
 	return tree
 }
 
+// filteredPassthroughHeaders returns a headers map[string][]string that
+// contains the filtered values contained in passthroughHeaders, as well as the
+// values in whitelistedHeaders. Filtering of passthroughHeaders from the
+// origHeaders is done is a case-insensitive manner.
 func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
 	retHeaders := make(map[string][]string)
+
+	// Handle whitelisted values
+	for _, header := range whitelistedHeaders {
+		if val, ok := origHeaders[header]; ok {
+			retHeaders[header] = val
+		}
+	}
 
 	// Short-circuit if there's nothing to filter
 	if len(passthroughHeaders) == 0 {
