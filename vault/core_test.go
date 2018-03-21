@@ -2301,7 +2301,7 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 
 	// Mount tune
 	req = logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo/tune")
-	req.Data["passthrough_request_headers"] = "Should-Passthrough"
+	req.Data["passthrough_request_headers"] = []string{"Should-Passthrough", "should-passthrough-case-insensitive"}
 	req.ClientToken = root
 	_, err = c.HandleRequest(req)
 	if err != nil {
@@ -2314,8 +2314,9 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
-			"Should-Passthrough":     []string{"foo"},
-			"Should-Not-Passthrough": []string{"bar"},
+			"Should-Passthrough":                  []string{"foo"},
+			"Should-Passthrough-Case-Insensitive": []string{"baz"},
+			"Should-Not-Passthrough":              []string{"bar"},
 		},
 	}
 	_, err = c.HandleRequest(lreq)
@@ -2332,6 +2333,15 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 		}
 	} else {
 		t.Fatalf("expected 'Should-Passthrough' to be present in the headers map")
+	}
+
+	if val, ok := headers["Should-Passthrough-Case-Insensitive"]; ok {
+		expected := []string{"baz"}
+		if !reflect.DeepEqual(val, expected) {
+			t.Fatalf("expected: %v, got: %v", expected, val)
+		}
+	} else {
+		t.Fatalf("expected 'Should-Passthrough-Case-Insensitive' to be present in the headers map")
 	}
 
 	if _, ok := headers["Should-Not-Passthrough"]; ok {

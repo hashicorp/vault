@@ -476,11 +476,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		passthroughRequestHeaders = rawVal.([]string)
 	}
-	for _, header := range passthroughRequestHeaders {
-		if val, ok := headers[header]; ok {
-			req.Headers[header] = val
-		}
-	}
+	req.Headers = filteredPassthroughHeaders(headers, passthroughRequestHeaders)
 
 	// Cache the wrap info of the request
 	var wrapInfo *logical.RequestWrapInfo
@@ -621,4 +617,26 @@ func pathsToRadix(paths []string) *radix.Tree {
 	}
 
 	return tree
+}
+
+func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
+	retHeaders := make(map[string][]string)
+
+	// Create a map that uses lowercased header values as the key and the original
+	// header naming as the value for comparison down below.
+	lowerHeadersRef := make(map[string]string, len(origHeaders))
+	for key := range origHeaders {
+		lowerHeadersRef[strings.ToLower(key)] = key
+	}
+
+	// Case-insensitive compare of passthrough headers against originating
+	// headers. The returned headers will be the same casing as the originating
+	// header name.
+	for _, ph := range passthroughHeaders {
+		if header, ok := lowerHeadersRef[strings.ToLower(ph)]; ok {
+			retHeaders[header] = origHeaders[header]
+		}
+	}
+
+	return retHeaders
 }
