@@ -123,12 +123,13 @@ func (c *KVGetCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	if metadata, ok := secret.Data["metadata"]; ok {
+	if metadata, ok := secret.Data["metadata"]; ok && metadata != nil {
 		c.UI.Info(getHeaderForMap("Metadata", metadata.(map[string]interface{})))
 		OutputData(c.UI, metadata)
+		c.UI.Info("")
 	}
-	if data, ok := secret.Data["data"]; ok {
-		c.UI.Info("\n" + getHeaderForMap("Data", data.(map[string]interface{})))
+	if data, ok := secret.Data["data"]; ok && data != nil {
+		c.UI.Info(getHeaderForMap("Data", data.(map[string]interface{})))
 		OutputData(c.UI, data)
 	}
 
