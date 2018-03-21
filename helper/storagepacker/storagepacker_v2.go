@@ -82,7 +82,13 @@ func (b *BucketV2) Clone() (*BucketV2, error) {
 
 // putItemIntoBucket is a recursive function that finds the appropriate bucket
 // to store the item based on the storage space available in the buckets. This
-// method also takes care of race conditions by acquiring appropriate locks.
+// method avoids race conditions by acquiring locks on each bucket key. Note
+// that this function is optimized for a write-heavy workload. Locks are
+// directly held for writing. Acquiring the lock for reading first and then
+// switching the locks for writing provides less value as the readers are
+// scarce. Acquiring a read lock first and then switching to a write lock would
+// mean that the code gets complex and that the bucket gets deserialized twice
+// adversely affecting the performance.
 func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (string, error) {
 	var lock *sync.RWMutex
 	if bucket == nil {
@@ -123,10 +129,17 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 		return "", fmt.Errorf("bucket is nil")
 	}
 
+	if lock == nil {
+		lockRaw, ok := s.bucketLocksCache.Load(bucket.Key)
+		if !ok {
+			return "", fmt.Errorf("unable to acquire lock for key %q", bucket.Key)
+		}
+		lock = lockRaw.(*sync.RWMutex)
+	}
+
 	// Serializing and deserializing a proto message with empty map translates
-	// to a nil. Hence an already initialized field can potentially be nil when
-	// its read from storage. Ensure that the required fields are initialized
-	// properly.
+	// to a nil. Hence, an already initialized field can potentially be nil
+	// when its read from storage.
 	if bucket.Buckets == nil {
 		bucket.Buckets = make(map[string]*BucketV2)
 	}
@@ -162,14 +175,11 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 	// If the bucket shard is already pushed out, continue the operation in the
 	// external bucket
 	if bucketShard.External {
-		externalBucket, externalBucketLock, err := s.GetBucket(bucketShard.Key, exclusive)
+		externalBucket, _, err := s.GetBucket(bucketShard.Key, exclusive)
 
 		// By now, the lock on the external bucket will be held. Release the
 		// lock on the current bucket.
 		s.UnlockBucket(lock, exclusive)
-
-		// Ensure that the lock on the external bucket eventually gets released
-		defer s.UnlockBucket(externalBucketLock, exclusive)
 
 		if err != nil {
 			return "", err
@@ -186,47 +196,60 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 	// Bucket shard is local to the parent bucket
 	//
 
+	// At this point only 2 things can happen. The current bucket accommodates
+	// the item or the respective bucket shard gets pushed out as an
+	// independent bucket to hold the item. In both the cases the lock on the
+	// current bucket should be held until the operation completes.
+	// Essentially, we can defer the lock release.
+
 	// Ensure that the lock on the current bucket eventually gets released
 	defer s.UnlockBucket(lock, exclusive)
 
 	// Update the item in the bucket shard
 	bucketShard.Items[item.ID] = item
 
-	// Check if the bucket exceeds the size limit after the addition
+	// Check if the bucket exceeds the size limit after the item addition
 	limitExceeded, err := s.bucketExceedsSizeLimit(bucket, item)
 	if err != nil {
 		return "", err
 	}
 
-	// If the bucket size is within the limit, return the updated bucket
+	// If the bucket size is within the limit, persist the bucket and return
 	if !limitExceeded {
 		return bucketShard.Key, s.PutBucket(bucket)
 	}
 
 	//
-	// If the bucket size has exceeded the limit, push the bucket shard out as
-	// an independent bucket and insert the item in the pushed out bucket.
+	// The bucket size has exceeded the limit, push the bucket shard out as an
+	// independent bucket and insert the item in the pushed out bucket.
 	//
 
 	// Mark the bucket shard as external, indicating that it doesn't
 	// reside in its parent bucket
 	bucketShard.External = true
 
-	// Clone the bucket and use the clone as the pushed out bucket
+	// Clone the bucket shard and use the clone as the pushed out bucket
 	externalBucket, err := bucketShard.Clone()
 	if err != nil {
 		return "", err
 	}
 
-	// Clear the items in the pushed out bucket shard
+	// Clear the items in the bucket shard
 	bucketShard.Items = nil
 
-	// Split the items in the bucket that gets pushed out, among their
-	// respective bucket shards
+	// Split the items in the external bucket, among their respective bucket
+	// shards
 	err = s.splitItemsInBucket(externalBucket)
 	if err != nil {
 		return "", err
 	}
+
+	lockRaw, ok := s.bucketLocksCache.Load(externalBucket.Key)
+	if !ok {
+		return "", fmt.Errorf("failed to acquire lock for external bucket key %q", externalBucket.Key)
+	}
+	externalBucketLock := lockRaw.(*sync.RWMutex)
+	externalBucketLock.Lock()
 
 	// Insert the item in the bucket that got pushed out. Note that the lock on
 	// the current bucket is still not released. When a bucket is getting
@@ -237,6 +260,10 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 		return "", err
 	}
 
+	// By now the item is already persisted in the external bucket, all the
+	// while lock on its parent bucket was held. The parent bucket now needs to
+	// persist the fact that a shard got moved out, thus reducing its size; and
+	// release the lock.
 	return bucketKey, s.PutBucket(bucket)
 }
 
@@ -259,7 +286,7 @@ func (s *StoragePackerV2) GetBucket(key string, lockType bool) (*BucketV2, *sync
 
 	// By now, a lock should have been created. If not, error out.
 	if !ok {
-		return nil, nil, fmt.Errorf("failed to create lock for key %q", key)
+		return nil, nil, fmt.Errorf("failed to acquire lock for bucket key %q", key)
 	}
 
 	lock := lockRaw.(*sync.RWMutex)
@@ -277,7 +304,12 @@ func (s *StoragePackerV2) GetBucket(key string, lockType bool) (*BucketV2, *sync
 		return nil, lock, errwrap.Wrapf("failed to read bucket: {{err}}", err)
 	}
 	if entry == nil {
-		return nil, lock, nil
+		// If the key is invalid, there shouldn't be a corresponding lock
+		s.bucketLocksCache.Delete(key)
+
+		// Release the lock
+		s.UnlockBucket(lock, lockType)
+		return nil, nil, nil
 	}
 
 	var bucketWrapper BucketWrapper
