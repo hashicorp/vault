@@ -18,7 +18,6 @@ import (
 var (
 	whitelistedHeaders = []string{
 		consts.VaultKVCLIClientHeader,
-		"x-vault-kv-client",
 	}
 )
 
@@ -642,6 +641,13 @@ func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHead
 	for _, header := range whitelistedHeaders {
 		if val, ok := origHeaders[header]; ok {
 			retHeaders[header] = val
+		} else {
+			// Try to check if a lowercased version of the header exists in the
+			// originating request. The header key that gets used is the one from the
+			// whitelist.
+			if val, ok := origHeaders[strings.ToLower(header)]; ok {
+				retHeaders[header] = val
+			}
 		}
 	}
 
