@@ -1,0 +1,104 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Specify a Vault version
+VAULT_DEMO_VERSION = ENV['VAULT_DEMO_VERSION'] || "0.9.5"
+
+# Specify a custom Vagrant box for the demo
+VAULT_DEMO_BOX_NAME = ENV['VAULT_DEMO_BOX_NAME'] || "debian/stretch64"
+
+# Vault demo username
+VAULT_DEMO_USERNAME = ENV['VAULT_DEMO_USERNAME'] || "vagrant"
+
+# Vagrantfile API/syntax version.
+# NB: Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+$script = <<SCRIPT
+echo "Installing dependencies ..."
+sudo apt-get update
+sudo apt-get install -y unzip curl jq
+
+mkdir -p /home/"${VAULT_DEMO_USERNAME}"/vault/data
+mkdir -p /home/"${VAULT_DEMO_USERNAME}"/vault/config
+
+echo "Fetching Vault version ${VAULT_DEMO_VERSION} ..."
+cd /tmp/
+curl -s https://releases.hashicorp.com/vault/"${VAULT_DEMO_VERSION}"/vault_"${VAULT_DEMO_VERSION}"_linux_amd64.zip -o vault.zip
+
+echo "Installing Vault version ${VAULT_DEMO_VERSION} ..."
+unzip vault.zip
+sudo chmod +x vault
+sudo mv vault /usr/bin/vault
+
+# Vault server configuration
+read -r -d '' VAULT_DEMO_CONFIG <<EOF
+listener "tcp" {
+  address = "0.0.0.0:8200"
+  tls_disable = "true"
+}
+
+storage "file" {
+  path    = "/home/${VAULT_DEMO_USERNAME}/vault/data"
+}
+EOF
+
+# Vault server systemd unit file
+read -r -d '' VAULT_DEMO_SYSTEMD_UNIT <<EOF
+### BEGIN INIT INFO
+# Provides:          vault
+# Required-Start:    \$local_fs \$remote_fs
+# Required-Stop:     \$local_fs \$remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Vault agent
+# Description:       Vault secret management tool
+### END INIT INFO
+### Vault server systemd unit file
+
+[Unit]
+Description=Vault secret management tool
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+User=$VAULT_NANO_USER
+Group=$VAULT_NANO_GROUP
+PIDFile=$VAULT_NANO_RUN_DIR/vault.pid
+ExecStartPre=setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
+PermissionsStartOnly=true
+ExecStart=/usr/bin/vault server -config=/home/${VAULT_DEMO_USERNAME}/vault/config/vault_server.hcl -log-level=debug
+ExecReload=/bin/kill -HUP \$MAINPID
+KillMode=process
+KillSignal=SIGTERM
+Restart=on-failure
+RestartSec=42s
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "$VAULT_DEMO_CONFIG" > /home/"${VAULT_DEMO_USERNAME}"/vault/config/vault_server.hcl
+
+echo "$VAULT_DEMO_SYSTEMD_UNIT" > /etc/systemd/system/vault.service
+
+sudo systemctl daemon-reload > /dev/null 2>&1
+sudo systemctl enable vault > /dev/null 2>&1
+
+SCRIPT
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = VAULT_DEMO_BOX_NAME
+
+  config.vm.provision "shell",
+                          inline: $script,
+                          env: {'VAULT_DEMO_VERSION' => VAULT_DEMO_VERSION,
+                                'VAULT_DEMO_USERNAME' => VAULT_DEMO_USERNAME}
+
+  config.vm.define "v1" do |v1|
+      v1.vm.hostname = "v1"
+      v1.vm.network "private_network", ip: "172.20.20.20"
+  end
+
+end
