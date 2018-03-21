@@ -621,6 +621,11 @@ func pathsToRadix(paths []string) *radix.Tree {
 func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
 	retHeaders := make(map[string][]string)
 
+	// Short-circuit if there's nothing to filter
+	if len(passthroughHeaders) == 0 {
+		return retHeaders
+	}
+
 	// Create a map that uses lowercased header values as the key and the original
 	// header naming as the value for comparison down below.
 	lowerHeadersRef := make(map[string]string, len(origHeaders))
