@@ -103,7 +103,12 @@ func (ts *TokenStore) loadTokenMappings(ctx context.Context) error {
 
 	for _, key := range existing {
 		bucket, lock, err := ts.mappingPacker.GetBucket(tokenMappingBucketsPrefix+key, false)
-		defer ts.mappingPacker.UnlockBucket(lock, false)
+
+		// Locking really isn't necessary at this point. Release the lock soon.
+		// Also, holding this lock here will potentially dead lock when the
+		// below code tries to persist the item into this bucket.
+		ts.mappingPacker.UnlockBucket(lock, false)
+
 		if err != nil {
 			return err
 		}
@@ -112,24 +117,29 @@ func (ts *TokenStore) loadTokenMappings(ctx context.Context) error {
 			continue
 		}
 
-		for _, item := range bucket.Items {
-			tokenMapping, err := ts.parseTokenMappingFromBucketItem(item)
-			if err != nil {
-				return err
-			}
-			if tokenMapping == nil {
+		for _, bucketShard := range bucket.Buckets {
+			if bucketShard.External {
 				continue
 			}
+			for _, item := range bucketShard.Items {
+				tokenMapping, err := ts.parseTokenMappingFromBucketItem(item)
+				if err != nil {
+					return err
+				}
+				if tokenMapping == nil {
+					continue
+				}
 
-			txn := ts.db.Txn(true)
+				txn := ts.db.Txn(true)
 
-			err = ts.UpsertTokenMappingInTxn(txn, tokenMapping)
-			if err != nil {
-				txn.Abort()
-				return fmt.Errorf("failed to update token mapping in memdb: %v", err)
+				err = ts.UpsertTokenMappingInTxn(txn, tokenMapping)
+				if err != nil {
+					txn.Abort()
+					return fmt.Errorf("failed to update token mapping in memdb: %v", err)
+				}
+
+				txn.Commit()
 			}
-
-			txn.Commit()
 		}
 	}
 
