@@ -81,8 +81,9 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 	}
 }
 
-// SaltID is used to apply a salt and hash to an ID to make sure its not reversible
-func (re *routeEntry) SaltID(id string) string {
+// SaltIDSHA1 is used to apply a salt and hash to an ID to make sure its not
+// reversible. This is only here for backwards compatibility.
+func (re *routeEntry) SaltIDSHA1(id string) string {
 	return salt.SaltID(re.mountEntry.UUID, id, salt.SHA1Hash)
 }
 
@@ -468,13 +469,14 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			if err != nil {
 				return nil, false, false, err
 			}
-			req.ClientToken = re.SaltID(salt.SaltID(req.ClientToken))
+			// `salt.SaltID` here will use SHA1 as the salt for token store is
+			// configured to use SHA1
+			req.ClientToken = re.SaltIDSHA1(salt.SaltID(req.ClientToken))
 		}
 	default:
-		// Obfuscate the client token before passing on to the backends. First,
-		// salt the client token using the mount entry's identifier, and then
-		// hash the combination using SHA2-256.
-		req.ClientToken = re.SaltIDSHA256(req.ClientToken)
+		// As of today, there are no use cases that would require ClientToken
+		// to be sent to other backends.
+		req.ClientToken = ""
 	}
 
 	// Cache the pointer to the original connection object

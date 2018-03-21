@@ -7,7 +7,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	memdb "github.com/hashicorp/go-memdb"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/helper/token"
 )
@@ -194,10 +193,6 @@ func (ts *TokenStore) UpsertTokenMapping(tokenMapping *token.TokenMapping) error
 func (ts *TokenStore) UpsertTokenMappingInTxn(txn *memdb.Txn, tokenMapping *token.TokenMapping) error {
 	var err error
 
-	lock := locksutil.LockForKey(ts.mappingLocks, tokenMapping.ID)
-	lock.Lock()
-	defer lock.Unlock()
-
 	err = ts.MemDBUpsertTokenMappingInTxn(txn, tokenMapping)
 	if err != nil {
 		return err
@@ -362,10 +357,6 @@ func (ts *TokenStore) DeleteTokenMappingByTokenID(tokenID string) error {
 	if err != nil {
 		return err
 	}
-
-	lock := locksutil.LockForKey(ts.mappingLocks, tokenMapping.ID)
-	lock.Lock()
-	defer lock.Unlock()
 
 	// Delete the mapping in MemDB
 	err = ts.MemDBDeleteTokenMappingByTokenIDInTxn(txn, tokenID)

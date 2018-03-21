@@ -130,7 +130,6 @@ type TokenStore struct {
 	// related to a token.
 	db *memdb.MemDB
 
-	mappingLocks  []*locksutil.LockEntry
 	mappingPacker *storagepacker.StoragePackerV2
 }
 
