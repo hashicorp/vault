@@ -17,6 +17,12 @@ message BucketWrapper {
 	int64 size = 2;
 }
 
+// BucketV2 is a construct to hold multiple items within itself. This
+// abstraction contains multiple buckets of the same kind within itself and
+// shares amont them the items that get inserted. When the bucket as a whole
+// gets too big to hold more items, the contained buckets gets pushed out only
+// to become independent buckets. Hence, this can grow infinitely in terms of
+// storage space for items that get inserted.
 message BucketV2{
 	// Key is the storage path where the bucket gets stored
 	string key = 1;
@@ -32,12 +38,7 @@ message BucketV2{
 	int64 size = 7;
 }
 
-// Bucket is the entity that holds the packed items. It can
-// contain multiple buckets within itself that gets sharded out
-// when the bucket becomes big enough to not contain them all.
 message Bucket {
-	// Key is the storage path where the bucket gets stored
 	string key = 1;
-	// For backwards compatibility
 	repeated Item items = 2;
 }

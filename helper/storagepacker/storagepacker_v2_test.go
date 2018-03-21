@@ -109,7 +109,11 @@ func TestStoragePackerV2_PutGetDeleteInmem(t *testing.T) {
 
 	entity := &identity.Entity{
 		Metadata: map[string]string{
-			"samplekey": "samplevalue",
+			"samplekey1": "samplevalue1",
+			"samplekey2": "samplevalue2",
+			"samplekey3": "samplevalue3",
+			"samplekey4": "samplevalue4",
+			"samplekey5": "samplevalue5",
 		},
 	}
 	count := 1000
@@ -139,7 +143,7 @@ func TestStoragePackerV2_PutGetDelete_File(t *testing.T) {
 
 	sp, err := NewStoragePackerV2(&Config{
 		View:             storage,
-		Logger:           log.New("storagepackertest"),
+		Logger:           logger,
 		BucketCount:      256,
 		BucketShardCount: 32,
 		BucketMaxSize:    256 * 1024,
@@ -148,7 +152,7 @@ func TestStoragePackerV2_PutGetDelete_File(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	count := 100
+	count := 1000
 	entity := &identity.Entity{
 		Metadata: map[string]string{
 			"samplekey1": "samplevalue1",
