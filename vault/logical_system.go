@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
@@ -266,6 +267,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
 					},
+					"options": &framework.FieldSchema{
+						Type:        framework.TypeKVPairs,
+						Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
+					},
 					"listing_visibility": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
@@ -306,6 +311,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"audit_non_hmac_response_keys": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
 						Description: strings.TrimSpace(sysHelp["tune_audit_non_hmac_response_keys"][0]),
+					},
+					"options": &framework.FieldSchema{
+						Type:        framework.TypeKVPairs,
+						Description: strings.TrimSpace(sysHelp["tune_mount_options"][0]),
 					},
 					"listing_visibility": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -355,6 +364,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"plugin_name": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["mount_plugin_name"][0]),
+					},
+					"options": &framework.FieldSchema{
+						Type:        framework.TypeKVPairs,
+						Description: strings.TrimSpace(sysHelp["mount_options"][0]),
 					},
 				},
 
@@ -576,6 +589,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
 					},
+					"options": &framework.FieldSchema{
+						Type:        framework.TypeKVPairs,
+						Description: strings.TrimSpace(sysHelp["auth_options"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -727,7 +744,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Description: strings.TrimSpace(sysHelp["audit_desc"][0]),
 					},
 					"options": &framework.FieldSchema{
-						Type:        framework.TypeMap,
+						Type:        framework.TypeKVPairs,
 						Description: strings.TrimSpace(sysHelp["audit_opts"][0]),
 					},
 					"local": &framework.FieldSchema{
@@ -1462,6 +1479,7 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 			"accessor":    entry.Accessor,
 			"local":       entry.Local,
 			"seal_wrap":   entry.SealWrap,
+			"options":     entry.Options,
 		}
 		entryConfig := map[string]interface{}{
 			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -1504,6 +1522,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
+	options := data.Get("options").(map[string]string)
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1603,6 +1622,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Config:      config,
 		Local:       local,
 		SealWrap:    sealWrap,
+		Options:     options,
 	}
 
 	// Attempt mount
@@ -1760,6 +1780,10 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 
 	if len(mountEntry.Config.ListingVisibility) > 0 {
 		resp.Data["listing_visibility"] = mountEntry.Config.ListingVisibility
+	}
+
+	if len(mountEntry.Options) > 0 {
+		resp.Data["options"] = mountEntry.Options
 	}
 
 	return resp, nil
@@ -1976,7 +2000,57 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	return nil, nil
+	var resp *logical.Response
+	if optionsRaw, ok := data.GetOk("options"); ok {
+		b.Core.logger.Info("core: mount tuning of options", "path", path)
+		options := optionsRaw.(map[string]string)
+
+		b.Core.logger.Info("core: mount tuning of options", "path", path, "options", options)
+		// Special case to make sure we can not disable versioning once it's
+		// enabeled. If the vkv backend suports downgrading this can be removed.
+		meVersioned, err := parseutil.ParseBool(mountEntry.Options["versioned"])
+		if err != nil {
+			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
+		}
+		optVersioned, err := parseutil.ParseBool(options["versioned"])
+		if err != nil {
+			return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
+		}
+		if meVersioned && !optVersioned {
+			return logical.ErrorResponse("cannot disable versioning once it's enabled"), logical.ErrInvalidRequest
+		}
+
+		oldVal := mountEntry.Options
+		mountEntry.Options = options
+		// Update the mount table
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Options = oldVal
+			return handleError(err)
+		}
+
+		// Another special case to trigger the upgrade path if we are enabling
+		// versioning for the first time.
+		oldVersioned, err := parseutil.ParseBool(oldVal["versioned"])
+		if err != nil {
+			return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
+		}
+		if !oldVersioned && optVersioned {
+			resp = &logical.Response{}
+			resp.AddWarning("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly.")
+			mountEntry.Options["upgrade"] = "true"
+		}
+
+		b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
+
+		delete(mountEntry.Options, "upgrade")
+	}
+	return resp, nil
 }
 
 // handleLease is use to view the metadata for a given LeaseID
@@ -2122,6 +2196,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			"accessor":    entry.Accessor,
 			"local":       entry.Local,
 			"seal_wrap":   entry.SealWrap,
+			"options":     entry.Options,
 		}
 		entryConfig := map[string]interface{}{
 			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -2160,6 +2235,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	description := data.Get("description").(string)
 	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
+	options := data.Get("options").(map[string]string)
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -2254,6 +2330,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Config:      config,
 		Local:       local,
 		SealWrap:    sealWrap,
+		Options:     options,
 	}
 
 	// Attempt enabling
@@ -2528,17 +2605,7 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	path := data.Get("path").(string)
 	backendType := data.Get("type").(string)
 	description := data.Get("description").(string)
-	options := data.Get("options").(map[string]interface{})
-
-	optionMap := make(map[string]string)
-	for k, v := range options {
-		vStr, ok := v.(string)
-		if !ok {
-			return logical.ErrorResponse("options must be string valued"),
-				logical.ErrInvalidRequest
-		}
-		optionMap[k] = vStr
-	}
+	options := data.Get("options").(map[string]string)
 
 	// Create the mount entry
 	me := &MountEntry{
@@ -2546,7 +2613,7 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 		Path:        path,
 		Type:        backendType,
 		Description: description,
-		Options:     optionMap,
+		Options:     options,
 		Local:       local,
 	}
 
@@ -3326,6 +3393,10 @@ and is unaffected by replication.`,
 in the plugin catalog.`,
 	},
 
+	"mount_options": {
+		`The options to pass into the backend. Should be a json object with string keys and values.`,
+	},
+
 	"seal_wrap": {
 		`Whether to turn on seal wrapping for the mount.`,
 	},
@@ -3344,6 +3415,10 @@ in the plugin catalog.`,
 
 	"tune_audit_non_hmac_response_keys": {
 		`The list of keys in the response data object that will not be HMAC'ed by audit devices.`,
+	},
+
+	"tune_mount_options": {
+		`The options to pass into the backend. Should be a json object with string keys and values.`,
 	},
 
 	"remount": {
@@ -3481,6 +3556,10 @@ Example: you might have an OAuth backend for GitHub, and one for Google Apps.
 	"auth_plugin": {
 		`Name of the auth plugin to use based from the name in the plugin catalog.`,
 		"",
+	},
+
+	"auth_options": {
+		`The options to pass into the backend. Should be a json object with string keys and values.`,
 	},
 
 	"policy-list": {
