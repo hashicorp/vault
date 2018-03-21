@@ -12,11 +12,6 @@ message Item {
 	google.protobuf.Any message = 2;
 }
 
-message BucketWrapper {
-	bytes data = 1;
-	int64 size = 2;
-}
-
 // BucketV2 is a construct to hold multiple items within itself. This
 // abstraction contains multiple buckets of the same kind within itself and
 // shares amont them the items that get inserted. When the bucket as a whole

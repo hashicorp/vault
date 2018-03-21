@@ -104,7 +104,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 		// Read the primary bucket
 		bucket, lock, err = s.GetBucket(primaryKey, exclusive)
 		if err != nil {
-			s.unlockBucket(lock, exclusive)
+			s.UnlockBucket(lock, exclusive)
 			return "", err
 		}
 
@@ -114,7 +114,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 			lockRaw, ok := s.bucketLocksCache.Load(primaryKey)
 			if !ok {
 				// For safety
-				s.unlockBucket(lock, exclusive)
+				s.UnlockBucket(lock, exclusive)
 				return "", fmt.Errorf("unable to acquire lock for key %q", primaryKey)
 			}
 
@@ -125,7 +125,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 
 	// For sanity
 	if bucket == nil {
-		s.unlockBucket(lock, exclusive)
+		s.UnlockBucket(lock, exclusive)
 		return "", fmt.Errorf("bucket is nil")
 	}
 
@@ -147,7 +147,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 	// Compute the shard index to which the item belongs
 	shardIndex, err := shardBucketIndex(item.ID, int(bucket.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
 	if err != nil {
-		s.unlockBucket(lock, exclusive)
+		s.UnlockBucket(lock, exclusive)
 		return "", errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
@@ -168,7 +168,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 
 	// For safety
 	if bucketShard == nil {
-		s.unlockBucket(lock, exclusive)
+		s.UnlockBucket(lock, exclusive)
 		return "", fmt.Errorf("bucket shard is nil")
 	}
 
@@ -179,7 +179,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 
 		// By now, the lock on the external bucket will be held. Release the
 		// lock on the current bucket.
-		s.unlockBucket(lock, exclusive)
+		s.UnlockBucket(lock, exclusive)
 
 		if err != nil {
 			return "", err
@@ -203,7 +203,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 	// Essentially, we can defer the lock release.
 
 	// Ensure that the lock on the current bucket eventually gets released
-	defer s.unlockBucket(lock, exclusive)
+	defer s.UnlockBucket(lock, exclusive)
 
 	// Update the item in the bucket shard
 	bucketShard.Items[item.ID] = item
@@ -309,24 +309,18 @@ func (s *StoragePackerV2) GetBucket(key string, lockType bool) (*BucketV2, *sync
 		s.bucketLocksCache.Delete(key)
 
 		// Release the lock
-		s.unlockBucket(lock, lockType)
+		s.UnlockBucket(lock, lockType)
 		return nil, nil, nil
 	}
 
-	var bucketWrapper BucketWrapper
-	err = proto.Unmarshal(entry.Value, &bucketWrapper)
+	var bucket BucketV2
+	err = proto.Unmarshal(entry.Value, &bucket)
 	if err != nil {
 		return nil, lock, errwrap.Wrapf("failed to decode bucket wrapper: {{err}}", err)
 	}
 
-	var bucket BucketV2
-	err = proto.Unmarshal(bucketWrapper.Data, &bucket)
-	if err != nil {
-		return nil, lock, errwrap.Wrapf("failed to decode bucket: {{err}}", err)
-	}
-
 	// Set the size of the bucket within itself
-	bucket.Size = bucketWrapper.Size
+	bucket.Size = int64(len(entry.Value))
 
 	return &bucket, lock, nil
 }
@@ -351,21 +345,10 @@ func (s *StoragePackerV2) PutBucket(bucket *BucketV2) error {
 		return err
 	}
 
-	// Store the marshaled bucket and its size in the wrapper
-	bucketWrapper := &BucketWrapper{
-		Data: marshaledBucket,
-		Size: int64(len(marshaledBucket)),
-	}
-
-	marshaledWrapper, err := proto.Marshal(bucketWrapper)
-	if err != nil {
-		return err
-	}
-
-	// Persist the bucket wrapper
+	// Persist the bucket
 	return s.config.View.Put(context.Background(), &logical.StorageEntry{
 		Key:   bucket.Key,
-		Value: marshaledWrapper,
+		Value: marshaledBucket,
 	})
 }
 
@@ -381,13 +364,13 @@ func (s *StoragePackerV2) getItemFromBucket(bucket *BucketV2, itemID string) (*I
 
 		bucket, lock, err = s.GetBucket(s.config.ViewPrefix+primaryIndex, shared)
 		if err != nil {
-			s.unlockBucket(lock, shared)
+			s.UnlockBucket(lock, shared)
 			return nil, errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
 		}
 	}
 
 	if bucket == nil {
-		s.unlockBucket(lock, shared)
+		s.UnlockBucket(lock, shared)
 		return nil, nil
 	}
 
@@ -401,13 +384,13 @@ func (s *StoragePackerV2) getItemFromBucket(bucket *BucketV2, itemID string) (*I
 
 	shardIndex, err := shardBucketIndex(itemID, int(bucket.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
 	if err != nil {
-		s.unlockBucket(lock, shared)
+		s.UnlockBucket(lock, shared)
 		return nil, errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
 	bucketShard, ok := bucket.Buckets[shardIndex]
 	if !ok {
-		s.unlockBucket(lock, shared)
+		s.UnlockBucket(lock, shared)
 		return nil, nil
 	}
 
@@ -418,7 +401,7 @@ func (s *StoragePackerV2) getItemFromBucket(bucket *BucketV2, itemID string) (*I
 
 		// By now, the lock on the external bucket will be held. Release the
 		// lock on the current bucket.
-		s.unlockBucket(lock, shared)
+		s.UnlockBucket(lock, shared)
 
 		if err != nil {
 			return nil, err
@@ -435,7 +418,7 @@ func (s *StoragePackerV2) getItemFromBucket(bucket *BucketV2, itemID string) (*I
 	// doesn't exist.
 
 	// Ensure that the lock on the current bucket eventually gets released
-	defer s.unlockBucket(lock, shared)
+	defer s.UnlockBucket(lock, shared)
 
 	return bucketShard.Items[itemID], nil
 }
@@ -452,14 +435,14 @@ func (s *StoragePackerV2) deleteItemFromBucket(bucket *BucketV2, itemID string) 
 
 		bucket, lock, err = s.GetBucket(s.config.ViewPrefix+primaryIndex, exclusive)
 		if err != nil {
-			s.unlockBucket(lock, exclusive)
+			s.UnlockBucket(lock, exclusive)
 			return errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
 		}
 	}
 
 	if bucket == nil {
 		// For safety
-		s.unlockBucket(lock, exclusive)
+		s.UnlockBucket(lock, exclusive)
 		return nil
 	}
 
@@ -473,13 +456,13 @@ func (s *StoragePackerV2) deleteItemFromBucket(bucket *BucketV2, itemID string) 
 
 	shardIndex, err := shardBucketIndex(itemID, int(bucket.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
 	if err != nil {
-		s.unlockBucket(lock, exclusive)
+		s.UnlockBucket(lock, exclusive)
 		return errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
 	bucketShard, ok := bucket.Buckets[shardIndex]
 	if !ok {
-		s.unlockBucket(lock, exclusive)
+		s.UnlockBucket(lock, exclusive)
 		return nil
 	}
 
@@ -490,7 +473,7 @@ func (s *StoragePackerV2) deleteItemFromBucket(bucket *BucketV2, itemID string) 
 
 		// By now, the lock on the external bucket will be held. Release the
 		// lock on the current bucket.
-		s.unlockBucket(lock, exclusive)
+		s.UnlockBucket(lock, exclusive)
 
 		if err != nil {
 			return err
@@ -504,7 +487,7 @@ func (s *StoragePackerV2) deleteItemFromBucket(bucket *BucketV2, itemID string) 
 	}
 
 	// Ensure that the lock on the current bucket eventually gets released
-	defer s.unlockBucket(lock, exclusive)
+	defer s.UnlockBucket(lock, exclusive)
 
 	// Delete the item from the respective shard
 	delete(bucketShard.Items, itemID)
@@ -684,7 +667,7 @@ func NewStoragePackerV2(config *Config) (*StoragePackerV2, error) {
 	return packer, nil
 }
 
-func (s *StoragePackerV2) unlockBucket(lock *sync.RWMutex, lockType bool) {
+func (s *StoragePackerV2) UnlockBucket(lock *sync.RWMutex, lockType bool) {
 	if lock == nil {
 		return
 	}
