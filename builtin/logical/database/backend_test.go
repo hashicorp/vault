@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -27,6 +28,7 @@ var (
 )
 
 func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cleanup func(), retURL string) {
+	t.Helper()
 	if os.Getenv("PG_URL") != "" {
 		return func() {}, os.Getenv("PG_URL")
 	}
@@ -64,7 +66,7 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 		})
 		if err != nil || (resp != nil && resp.IsError()) {
 			// It's likely not up and running yet, so return error and try again
-			return fmt.Errorf("err:%s resp:%#v\n", err, resp)
+			return fmt.Errorf("err:%#v resp:%#v", err, resp)
 		}
 		if resp == nil {
 			t.Fatal("expected warning")
@@ -123,13 +125,18 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	backend := &databaseBackend{}
 
-	roleEnt := &roleEntry{
+	roleExpected := &roleEntry{
 		Statements: dbplugin.Statements{
 			CreationStatements: "test",
+			Creation:           []string{"test"},
 		},
 	}
 
-	entry, err := logical.StorageEntryJSON("role/test", roleEnt)
+	entry, err := logical.StorageEntryJSON("role/test", &roleEntry{
+		Statements: dbplugin.Statements{
+			CreationStatements: "test",
+		},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,8 +149,8 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(role, roleEnt) {
-		t.Fatalf("bad role %#v", role)
+	if !reflect.DeepEqual(role, roleExpected) {
+		t.Fatalf("bad role %#v, %#v", role, roleExpected)
 	}
 
 	// Upgrade case
@@ -161,8 +168,8 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(role, roleEnt) {
-		t.Fatalf("bad role %#v", role)
+	if !reflect.DeepEqual(role, roleExpected) {
+		t.Fatalf("bad role %#v, %#v", role, roleExpected)
 	}
 
 }
@@ -206,7 +213,8 @@ func TestBackend_config_connection(t *testing.T) {
 		"connection_details": map[string]interface{}{
 			"connection_url": "sample_connection_url",
 		},
-		"allowed_roles": []string{"*"},
+		"allowed_roles":                      []string{"*"},
+		"root_credentials_rotate_statements": []string{},
 	}
 	configReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), configReq)
@@ -231,6 +239,55 @@ func TestBackend_config_connection(t *testing.T) {
 	if key != "plugin-test" {
 		t.Fatalf("bad key: %q", key)
 	}
+}
+
+func TestBackend_BadConnectionString(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	cleanup, _ := preparePostgresTestContainer(t, config.StorageView, b)
+	defer cleanup()
+
+	respCheck := func(req *logical.Request) {
+		t.Helper()
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp == nil || !resp.IsError() {
+			t.Fatalf("expected error, resp:%#v", resp)
+		}
+		err = resp.Error()
+		if strings.Contains(err.Error(), "localhost") {
+			t.Fatalf("error should not contain connection info")
+		}
+	}
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url": "postgresql://:pw@[localhost",
+		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	respCheck(req)
+
+	time.Sleep(1 * time.Second)
 }
 
 func TestBackend_basic(t *testing.T) {
@@ -388,7 +445,6 @@ func TestBackend_basic(t *testing.T) {
 	if testCredsExist(t, credsResp, connURL) {
 		t.Fatalf("Creds should not exist")
 	}
-
 }
 
 func TestBackend_connectionCrud(t *testing.T) {
@@ -467,7 +523,8 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"connection_details": map[string]interface{}{
 			"connection_url": connURL,
 		},
-		"allowed_roles": []string{"plugin-role-test"},
+		"allowed_roles":                      []string{"plugin-role-test"},
+		"root_credentials_rotate_statements": []string{},
 	}
 	req.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), req)
@@ -602,15 +659,15 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 
 	expected := dbplugin.Statements{
-		CreationStatements:   testRole,
-		RevocationStatements: defaultRevocationSQL,
+		Creation:   []string{strings.TrimSpace(testRole)},
+		Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
 	}
 
 	actual := dbplugin.Statements{
-		CreationStatements:   resp.Data["creation_statements"].(string),
-		RevocationStatements: resp.Data["revocation_statements"].(string),
-		RollbackStatements:   resp.Data["rollback_statements"].(string),
-		RenewStatements:      resp.Data["renew_statements"].(string),
+		Creation:   resp.Data["creation_statements"].([]string),
+		Revocation: resp.Data["revocation_statements"].([]string),
+		Rollback:   resp.Data["rollback_statements"].([]string),
+		Renewal:    resp.Data["renew_statements"].([]string),
 	}
 
 	if !reflect.DeepEqual(expected, actual) {
