@@ -10,6 +10,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
@@ -51,6 +52,7 @@ type routeEntry struct {
 	storagePrefix string
 	rootPaths     atomic.Value
 	loginPaths    atomic.Value
+	l             sync.RWMutex
 }
 
 type validateMountResponse struct {
@@ -100,7 +102,6 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 
 	// Build the paths
-	var localView logical.Storage = storageView
 	paths := new(logical.Paths)
 	if backend != nil {
 		specialPaths := backend.SpecialPaths()
@@ -115,7 +116,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		backend:       backend,
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.prefix,
-		storageView:   localView,
+		storageView:   storageView,
 	}
 	re.rootPaths.Store(pathsToRadix(paths.Root))
 	re.loginPaths.Store(pathsToRadix(paths.Unauthenticated))
@@ -405,6 +406,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		strings.Replace(mount, "/", "-", -1)}, time.Now())
 	re := raw.(*routeEntry)
 
+	// Grab a read lock on the route entry, this protects against the backend
+	// being reloaded during a request.
+	re.l.RLock()
+	defer re.l.RUnlock()
+
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
@@ -480,6 +486,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		passthroughRequestHeaders = rawVal.([]string)
 	}
 	req.Headers = filteredPassthroughHeaders(headers, passthroughRequestHeaders)
+
+	// Whitelist the X-Vault-Kv-Client header for use in the kv backend.
+	if val, ok := headers[consts.VaultKVCLIClientHeader]; ok {
+		req.Headers = map[string][]string{
+			consts.VaultKVCLIClientHeader: val,
+		}
+	}
 
 	// Cache the wrap info of the request
 	var wrapInfo *logical.RequestWrapInfo

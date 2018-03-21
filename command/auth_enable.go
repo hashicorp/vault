@@ -26,6 +26,7 @@ type AuthEnableCommand struct {
 	flagListingVisibility         string
 	flagPassthroughRequestHeaders []string
 	flagPluginName                string
+	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
 }
@@ -136,6 +137,14 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 			"exist in the Vault server's plugin catalog.",
 	})
 
+	f.StringMapVar(&StringMapVar{
+		Name:       "options",
+		Target:     &c.flagOptions,
+		Completion: complete.PredictAnything,
+		Usage: "Key-value pair provided as key=value for the mount options. " +
+			"This can be specified multiple times",
+	})
+
 	f.BoolVar(&BoolVar{
 		Name:    "local",
 		Target:  &c.flagLocal,
@@ -212,6 +221,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
 			PluginName:      c.flagPluginName,
 		},
+		Options: c.flagOptions,
 	}
 
 	// Set these values only if they are provided in the CLI

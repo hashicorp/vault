@@ -14,7 +14,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
 
 	"gopkg.in/mgo.v2"
@@ -25,27 +27,42 @@ import (
 type mongoDBConnectionProducer struct {
 	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
 	WriteConcern  string `json:"write_concern" structs:"write_concern" mapstructure:"write_concern"`
+	Username      string `json:"username" structs:"username" mapstructure:"username"`
+	Password      string `json:"password" structs:"password" mapstructure:"password"`
 
 	Initialized bool
+	RawConfig   map[string]interface{}
 	Type        string
 	session     *mgo.Session
 	safe        *mgo.Safe
 	sync.Mutex
 }
 
-// Initialize parses connection configuration.
 func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
+	_, err := c.Init(ctx, conf, verifyConnection)
+	return err
+}
+
+// Initialize parses connection configuration.
+func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
 	c.Lock()
 	defer c.Unlock()
 
+	c.RawConfig = conf
+
 	err := mapstructure.WeakDecode(conf, c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(c.ConnectionURL) == 0 {
-		return fmt.Errorf("connection_url cannot be empty")
+		return nil, fmt.Errorf("connection_url cannot be empty")
 	}
+
+	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
+		"username": c.Username,
+		"password": c.Password,
+	})
 
 	if c.WriteConcern != "" {
 		input := c.WriteConcern
@@ -60,13 +77,13 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 		concern := &mgo.Safe{}
 		err = json.Unmarshal([]byte(input), concern)
 		if err != nil {
-			return fmt.Errorf("error mashalling write_concern: %s", err)
+			return nil, errwrap.Wrapf("error mashalling write_concern: {{err}}", err)
 		}
 
 		// Guard against empty, non-nil mgo.Safe object; we don't want to pass that
 		// into mgo.SetSafe in Connection().
 		if (mgo.Safe{} == *concern) {
-			return fmt.Errorf("provided write_concern values did not map to any mgo.Safe fields")
+			return nil, fmt.Errorf("provided write_concern values did not map to any mgo.Safe fields")
 		}
 		c.safe = concern
 	}
@@ -77,18 +94,18 @@ func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[str
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return fmt.Errorf("error verifying connection: %s", err)
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 
 		if err := c.session.Ping(); err != nil {
-			return fmt.Errorf("error verifying connection: %s", err)
+			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
 	}
 
-	return nil
+	return conf, nil
 }
 
-// Connection creates or returns an exisitng a database connection. If the session fails
+// Connection creates or returns an existing a database connection. If the session fails
 // on a ping check, the session will be closed and then re-created.
 func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, error) {
 	if !c.Initialized {
@@ -202,4 +219,10 @@ func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {
 	}
 
 	return &info, nil
+}
+
+func (c *mongoDBConnectionProducer) secretValues() map[string]interface{} {
+	return map[string]interface{}{
+		c.Password: "[password]",
+	}
 }

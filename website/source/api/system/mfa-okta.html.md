@@ -24,7 +24,7 @@ This endpoint defines a MFA method of type Okta.
   - alias.name: The name returned by the mount configured via the `mount_accessor` parameter
   - entity.name: The name configured for the Entity
   - alias.metadata.`<key>`: The value of the Alias's metadata parameter
-  - entity.metadata.`<key>`: The value of the Entity's metadata paramater
+  - entity.metadata.`<key>`: The value of the Entity's metadata parameter
 
 - `org_name` `(string)` - Name of the organization to be used in the Okta API.
 

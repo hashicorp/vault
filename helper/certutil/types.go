@@ -211,7 +211,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 			result.CAChain = append(result.CAChain, certBlock)
 		}
 
-	// For backwards compabitibility
+	// For backwards compatibility
 	case len(c.IssuingCA) > 0:
 		pemBlock, _ = pem.Decode([]byte(c.IssuingCA))
 		if pemBlock == nil {
@@ -523,7 +523,7 @@ func (p *ParsedCSRBundle) SetParsedPrivateKey(privateKey crypto.Signer, privateK
 }
 
 // GetTLSConfig returns a TLS config generally suitable for client
-// authentiation. The returned TLS config can be modified slightly
+// authentication. The returned TLS config can be modified slightly
 // to be made suitable for a server requiring client authentication;
 // specifically, you should set the value of ClientAuth in the returned
 // config to match your needs.

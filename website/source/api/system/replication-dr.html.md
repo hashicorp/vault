@@ -266,7 +266,7 @@ secondaries, and there should never be more than one primary at a time.
 If the DR secondary's primary cluster is also in a performance replication set,
 the DR secondary will be promoted into that replication set. Care should be
 taken when promoting to ensure multiple performance primary clusters are not
-activate at the same time. 
+activate at the same time.
 
 If the DR secondary's primary cluster is a performance secondary, the promoted
 cluster will attempt to connect to the performance primary cluster using the
@@ -373,7 +373,7 @@ docs](/api/system/replication-dr.html#generate-disaster-recovery-operation-token
   "dr_operation_token": "...",
   "token": "..."
 }
-``` 
+```
 
 ### Sample Request
 
@@ -385,7 +385,7 @@ $ curl \
     https://vault.rocks/v1/sys/replication/dr/secondary/update-primary
 ```
 
-# Generate Disaster Recovery Operation Token
+## Generate Disaster Recovery Operation Token
 
 The `/sys/replication/dr/secondary/generate-operation-token` endpoint is used to create a new Disaster
 Recovery operation token for a DR secondary. These tokens are used to authorize
@@ -550,9 +550,8 @@ status, and the encoded token, if the attempt is complete.
 }
 ```
 
-
 ## Delete DR Operation Token
- 
+
 This endpoint revokes the DR Operation Token. This token does not have a TTL
 and therefore should be deleted when it is no longer needed.
 

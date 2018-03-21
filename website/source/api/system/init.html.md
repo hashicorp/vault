@@ -68,10 +68,10 @@ Additionally, the following options are only supported on Vault Pro/Enterprise:
   should be encrypted by the HSM and stored for auto-unsealing. Currently must
   be the same as `secret_shares`.
 
-- `recovery_shares` `(int: <required>)` – Specifies rhe number of shares to
+- `recovery_shares` `(int: <required>)` – Specifies the number of shares to
   split the recovery key into.
 
-- `recovery_threshold` `(int: <required>)` – Specifies rhe number of shares
+- `recovery_threshold` `(int: <required>)` – Specifies the number of shares
   required to reconstruct the recovery key. This must be less than or equal to
   `recovery_shares`.
 

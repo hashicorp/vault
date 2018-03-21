@@ -2,8 +2,10 @@ package dbplugin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/rpc"
+	"strings"
 	"time"
 )
 
@@ -37,8 +39,28 @@ func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequestRPC, _ *str
 	return err
 }
 
+func (ds *databasePluginRPCServer) RotateRootCredentials(args *RotateRootCredentialsRequestRPC, resp *RotateRootCredentialsResponse) error {
+	config, err := ds.impl.RotateRootCredentials(context.Background(), args.Statements)
+	if err != nil {
+		return err
+	}
+	resp.Config, err = json.Marshal(config)
+	return err
+}
+
 func (ds *databasePluginRPCServer) Initialize(args *InitializeRequestRPC, _ *struct{}) error {
-	err := ds.impl.Initialize(context.Background(), args.Config, args.VerifyConnection)
+	return ds.Init(&InitRequestRPC{
+		Config:           args.Config,
+		VerifyConnection: args.VerifyConnection,
+	}, &InitResponse{})
+}
+
+func (ds *databasePluginRPCServer) Init(args *InitRequestRPC, resp *InitResponse) error {
+	config, err := ds.impl.Init(context.Background(), args.Config, args.VerifyConnection)
+	if err != nil {
+		return err
+	}
+	resp.Config, err = json.Marshal(config)
 	return err
 }
 
@@ -81,9 +103,7 @@ func (dr *databasePluginRPCClient) RenewUser(_ context.Context, statements State
 		Expiration: expiration,
 	}
 
-	err := dr.client.Call("Plugin.RenewUser", req, &struct{}{})
-
-	return err
+	return dr.client.Call("Plugin.RenewUser", req, &struct{}{})
 }
 
 func (dr *databasePluginRPCClient) RevokeUser(_ context.Context, statements Statements, username string) error {
@@ -92,31 +112,65 @@ func (dr *databasePluginRPCClient) RevokeUser(_ context.Context, statements Stat
 		Username:   username,
 	}
 
-	err := dr.client.Call("Plugin.RevokeUser", req, &struct{}{})
+	return dr.client.Call("Plugin.RevokeUser", req, &struct{}{})
+}
 
-	return err
+func (dr *databasePluginRPCClient) RotateRootCredentials(_ context.Context, statements []string) (saveConf map[string]interface{}, err error) {
+	req := RotateRootCredentialsRequestRPC{
+		Statements: statements,
+	}
+
+	var resp RotateRootCredentialsResponse
+	err = dr.client.Call("Plugin.RotateRootCredentials", req, &resp)
+
+	err = json.Unmarshal(resp.Config, &saveConf)
+	return saveConf, err
 }
 
 func (dr *databasePluginRPCClient) Initialize(_ context.Context, conf map[string]interface{}, verifyConnection bool) error {
-	req := InitializeRequestRPC{
+	_, err := dr.Init(nil, conf, verifyConnection)
+	return err
+}
+
+func (dr *databasePluginRPCClient) Init(_ context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
+	req := InitRequestRPC{
 		Config:           conf,
 		VerifyConnection: verifyConnection,
 	}
 
-	err := dr.client.Call("Plugin.Initialize", req, &struct{}{})
+	var resp InitResponse
+	err = dr.client.Call("Plugin.Init", req, &resp)
+	if err != nil {
+		if strings.Contains(err.Error(), "can't find method Plugin.Init") {
+			req := InitializeRequestRPC{
+				Config:           conf,
+				VerifyConnection: verifyConnection,
+			}
 
-	return err
+			err = dr.client.Call("Plugin.Initialize", req, &struct{}{})
+			if err == nil {
+				return conf, nil
+			}
+		}
+		return nil, err
+	}
+
+	err = json.Unmarshal(resp.Config, &saveConf)
+	return saveConf, err
 }
 
 func (dr *databasePluginRPCClient) Close() error {
-	err := dr.client.Call("Plugin.Close", struct{}{}, &struct{}{})
-
-	return err
+	return dr.client.Call("Plugin.Close", struct{}{}, &struct{}{})
 }
 
 // ---- RPC Request Args Domain ----
 
 type InitializeRequestRPC struct {
+	Config           map[string]interface{}
+	VerifyConnection bool
+}
+
+type InitRequestRPC struct {
 	Config           map[string]interface{}
 	VerifyConnection bool
 }
@@ -136,4 +190,8 @@ type RenewUserRequestRPC struct {
 type RevokeUserRequestRPC struct {
 	Statements Statements
 	Username   string
+}
+
+type RotateRootCredentialsRequestRPC struct {
+	Statements []string
 }

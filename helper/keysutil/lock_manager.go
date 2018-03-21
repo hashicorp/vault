@@ -162,7 +162,7 @@ func (lm *LockManager) GetPolicyShared(ctx context.Context, storage logical.Stor
 		return p, lock, err
 	}
 
-	// Try again while asking for an exlusive lock
+	// Try again while asking for an exclusive lock
 	p, lock, _, err = lm.getPolicyCommon(ctx, PolicyRequest{
 		Storage: storage,
 		Name:    name,
@@ -201,7 +201,7 @@ func (lm *LockManager) GetPolicyUpsert(ctx context.Context, req PolicyRequest) (
 		return p, lock, false, err
 	}
 
-	// Try again while asking for an exlusive lock
+	// Try again while asking for an exclusive lock
 	p, lock, upserted, err := lm.getPolicyCommon(ctx, req, exclusive)
 	if err != nil || p == nil || lock == nil {
 		return p, lock, upserted, err

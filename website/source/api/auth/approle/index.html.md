@@ -512,7 +512,7 @@ Assigns a "custom" SecretID against an existing AppRole. This is used in the
   metadata will be set on tokens issued with this SecretID, and is logged in
   audit logs _in plaintext_.
 - `cidr_list` `(array: [])` - Comma separated string or list of CIDR blocks
-  enforcing secret IDs to be used from ppecific set of IP addresses. If
+  enforcing secret IDs to be used from specific set of IP addresses. If
   `bound_cidr_list` is set on the role, then the list of CIDR blocks listed
   here should be a subset of the CIDR blocks listed on the role.
 

@@ -78,16 +78,17 @@ func (c *Sys) DisableAuth(path string) error {
 }
 
 // Structures for the requests/resposne are all down here. They aren't
-// individually documentd because the map almost directly to the raw HTTP API
+// individually documented because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 
 type EnableAuthOptions struct {
-	Type        string          `json:"type" structs:"type"`
-	Description string          `json:"description" structs:"description"`
-	Config      AuthConfigInput `json:"config" structs:"config"`
-	Local       bool            `json:"local" structs:"local"`
-	PluginName  string          `json:"plugin_name,omitempty" structs:"plugin_name,omitempty"`
-	SealWrap    bool            `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Type        string            `json:"type" structs:"type"`
+	Description string            `json:"description" structs:"description"`
+	Config      AuthConfigInput   `json:"config" structs:"config"`
+	Local       bool              `json:"local" structs:"local"`
+	PluginName  string            `json:"plugin_name,omitempty" structs:"plugin_name,omitempty"`
+	SealWrap    bool              `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Options     map[string]string `json:"options" structs:"options" mapstructure:"options"`
 }
 
 type AuthConfigInput struct {
@@ -101,12 +102,13 @@ type AuthConfigInput struct {
 }
 
 type AuthMount struct {
-	Type        string           `json:"type" structs:"type" mapstructure:"type"`
-	Description string           `json:"description" structs:"description" mapstructure:"description"`
-	Accessor    string           `json:"accessor" structs:"accessor" mapstructure:"accessor"`
-	Config      AuthConfigOutput `json:"config" structs:"config" mapstructure:"config"`
-	Local       bool             `json:"local" structs:"local" mapstructure:"local"`
-	SealWrap    bool             `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Type        string            `json:"type" structs:"type" mapstructure:"type"`
+	Description string            `json:"description" structs:"description" mapstructure:"description"`
+	Accessor    string            `json:"accessor" structs:"accessor" mapstructure:"accessor"`
+	Config      AuthConfigOutput  `json:"config" structs:"config" mapstructure:"config"`
+	Local       bool              `json:"local" structs:"local" mapstructure:"local"`
+	SealWrap    bool              `json:"seal_wrap" structs:"seal_wrap" mapstructure:"seal_wrap"`
+	Options     map[string]string `json:"options" structs:"options" mapstructure:"options"`
 }
 
 type AuthConfigOutput struct {

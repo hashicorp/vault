@@ -3,11 +3,13 @@ package mssql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -23,11 +25,19 @@ var _ dbplugin.Database = &MSSQL{}
 
 // MSSQL is an implementation of Database interface
 type MSSQL struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
 func New() (interface{}, error) {
+	db := new()
+	// Wrap the plugin with middleware to sanitize errors
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+
+	return dbType, nil
+}
+
+func new() *MSSQL {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = msSQLTypeName
 
@@ -38,12 +48,10 @@ func New() (interface{}, error) {
 		Separator:      "-",
 	}
 
-	dbType := &MSSQL{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+	return &MSSQL{
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
-
-	return dbType, nil
 }
 
 // Run instantiates a MSSQL object, and runs the RPC server for the plugin
@@ -53,7 +61,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*MSSQL), apiTLSConfig)
+	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
 
 	return nil
 }
@@ -79,13 +87,15 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	m.Lock()
 	defer m.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// Get the connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
 
-	if statements.CreationStatements == "" {
+	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -112,23 +122,25 @@ func (m *MSSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
+	for _, stmt := range statements.Creation {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name":       username,
-			"password":   password,
-			"expiration": expirationStr,
-		}))
-		if err != nil {
-			return "", "", err
-		}
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return "", "", err
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"name":       username,
+				"password":   password,
+				"expiration": expirationStr,
+			}))
+			if err != nil {
+				return "", "", err
+			}
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return "", "", err
+			}
 		}
 	}
 
@@ -150,7 +162,9 @@ func (m *MSSQL) RenewUser(ctx context.Context, statements dbplugin.Statements, u
 // then kill pending connections from that user, and finally drop the user and login from the
 // database instance.
 func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	if statements.RevocationStatements == "" {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
+	if len(statements.Revocation) == 0 {
 		return m.revokeUserDefault(ctx, username)
 	}
 
@@ -168,21 +182,23 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(statements.RevocationStatements, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
+	for _, stmt := range statements.Revocation {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name": username,
-		}))
-		if err != nil {
-			return err
-		}
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return err
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"name": username,
+			}))
+			if err != nil {
+				return err
+			}
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -283,10 +299,10 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return fmt.Errorf("cound not generate sql statements for all rows: %s", rows.Err())
+		return errwrap.Wrapf("could not generate sql statements for all rows: {{err}}", rows.Err())
 	}
 	if lastStmtError != nil {
-		return fmt.Errorf("could not perform all sql statements: %s", lastStmtError)
+		return errwrap.Wrapf("could not perform all sql statements: {{err}}", lastStmtError)
 	}
 
 	// Drop this login
@@ -300,6 +316,70 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	}
 
 	return nil
+}
+
+func (m *MSSQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+	m.Lock()
+	defer m.Unlock()
+
+	if len(m.Username) == 0 || len(m.Password) == 0 {
+		return nil, errors.New("username and password are required to rotate")
+	}
+
+	rotateStatents := statements
+	if len(rotateStatents) == 0 {
+		rotateStatents = []string{rotateRootCredentialsSQL}
+	}
+
+	db, err := m.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		tx.Rollback()
+	}()
+
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, stmt := range rotateStatents {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"username": m.Username,
+				"password": password,
+			}))
+			if err != nil {
+				return nil, err
+			}
+
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	if err := db.Close(); err != nil {
+		return nil, err
+	}
+
+	m.RawConfig["password"] = password
+	return m.RawConfig, nil
 }
 
 const dropUserSQL = `
@@ -321,4 +401,8 @@ IF EXISTS
 BEGIN
   DROP LOGIN [%s]
 END
+`
+
+const rotateRootCredentialsSQL = `
+ALTER LOGIN [%s] WITH PASSWORD = '%s' 
 `

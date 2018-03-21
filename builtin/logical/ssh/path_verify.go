@@ -95,7 +95,7 @@ Validate the OTP provided by Vault SSH Agent.
 `
 
 const pathVerifyHelpDesc = `
-This path will be used by Vault SSH Agent runnin in the remote hosts. The OTP
+This path will be used by Vault SSH Agent running in the remote hosts. The OTP
 provided by the client is sent to Vault for validation by the agent. If Vault
 finds an entry for the OTP, it responds with the username and IP it is associated
 with. Agent uses this information to authenticate the client. Vault deletes the

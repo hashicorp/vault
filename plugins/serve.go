@@ -10,7 +10,7 @@ import (
 
 // Serve is used to start a plugin's RPC server. It takes an interface that must
 // implement a known plugin interface to vault and an optional api.TLSConfig for
-// use during the inital unwrap request to vault. The api config is particulary
+// use during the inital unwrap request to vault. The api config is particularly
 // useful when vault is setup to require client cert checking.
 func Serve(plugin interface{}, tlsConfig *api.TLSConfig) {
 	tlsProvider := pluginutil.VaultPluginTLSProvider(tlsConfig)

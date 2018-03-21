@@ -264,7 +264,7 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 }
 
 // Establish a TLS connection with a given CA certificate
-// Register a tsl.Config associted with the same key as the dns param from sql.Open
+// Register a tsl.Config associated with the same key as the dns param from sql.Open
 // foo:bar@tcp(127.0.0.1:3306)/dbname?tls=default
 func setupMySQLTLSConfig(tlsCaFile string) error {
 	rootCertPool := x509.NewCertPool()

@@ -151,14 +151,14 @@ func parseArgsDataString(stdin io.Reader, args []string) (map[string]string, err
 	return result, nil
 }
 
-// truncateToSeconds truncates the given duaration to the number of seconds. If
+// truncateToSeconds truncates the given duration to the number of seconds. If
 // the duration is less than 1s, it is returned as 0. The integer represents
 // the whole number unit of seconds for the duration.
 func truncateToSeconds(d time.Duration) int {
 	d = d.Truncate(1 * time.Second)
 
 	// Handle the case where someone requested a ridiculously short increment -
-	// incremenents must be larger than a second.
+	// increments must be larger than a second.
 	if d < 1*time.Second {
 		return 0
 	}

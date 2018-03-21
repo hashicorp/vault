@@ -171,17 +171,18 @@ func (t *MountTable) sortEntriesByPath() *MountTable {
 
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
-	Table       string            `json:"table"`             // The table it belongs to
-	Path        string            `json:"path"`              // Mount Path
-	Type        string            `json:"type"`              // Logical backend Type
-	Description string            `json:"description"`       // User-provided description
-	UUID        string            `json:"uuid"`              // Barrier view UUID
-	Accessor    string            `json:"accessor"`          // Unique but more human-friendly ID. Does not change, not used for any sensitive things (like as a salt, which the UUID sometimes is).
-	Config      MountConfig       `json:"config"`            // Configuration related to this mount (but not backend-derived)
-	Options     map[string]string `json:"options"`           // Backend options
-	Local       bool              `json:"local"`             // Local mounts are not replicated or affected by replication
-	SealWrap    bool              `json:"seal_wrap"`         // Whether to wrap CSPs
-	Tainted     bool              `json:"tainted,omitempty"` // Set as a Write-Ahead flag for unmount/remount
+	Table            string            `json:"table"`              // The table it belongs to
+	Path             string            `json:"path"`               // Mount Path
+	Type             string            `json:"type"`               // Logical backend Type
+	Description      string            `json:"description"`        // User-provided description
+	UUID             string            `json:"uuid"`               // Barrier view UUID
+	BackendAwareUUID string            `json:"backend_aware_uuid"` // UUID that can be used by the backend as a helper when a consistent value is needed outside of storage.
+	Accessor         string            `json:"accessor"`           // Unique but more human-friendly ID. Does not change, not used for any sensitive things (like as a salt, which the UUID sometimes is).
+	Config           MountConfig       `json:"config"`             // Configuration related to this mount (but not backend-derived)
+	Options          map[string]string `json:"options"`            // Backend options
+	Local            bool              `json:"local"`              // Local mounts are not replicated or affected by replication
+	SealWrap         bool              `json:"seal_wrap"`          // Whether to wrap CSPs
+	Tainted          bool              `json:"tainted,omitempty"`  // Set as a Write-Ahead flag for unmount/remount
 
 	// synthesizedConfigCache is used to cache configuration values. These
 	// particular values are cached since we want to get them at a point-in-time
@@ -286,6 +287,13 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 		}
 		entry.UUID = entryUUID
 	}
+	if entry.BackendAwareUUID == "" {
+		bUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
+		}
+		entry.BackendAwareUUID = bUUID
+	}
 	if entry.Accessor == "" {
 		accessor, err := c.generateMountAccessor(entry.Type)
 		if err != nil {
@@ -308,13 +316,9 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry) error {
 	var backend logical.Backend
 	var err error
 	sysView := c.mountEntrySysView(entry)
-	conf := make(map[string]string)
-	if entry.Config.PluginName != "" {
-		conf["plugin_name"] = entry.Config.PluginName
-	}
 
 	// Consider having plugin name under entry.Options
-	backend, err = c.newLogicalBackend(ctx, entry.Type, sysView, view, conf)
+	backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
 	}
@@ -687,6 +691,14 @@ func (c *Core) loadMounts(ctx context.Context) error {
 			entry.Accessor = accessor
 			needPersist = true
 		}
+		if entry.BackendAwareUUID == "" {
+			bUUID, err := uuid.GenerateUUID()
+			if err != nil {
+				return err
+			}
+			entry.BackendAwareUUID = bUUID
+			needPersist = true
+		}
 
 		// Sync values to the cache
 		entry.SyncCache()
@@ -804,13 +816,9 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		var backend logical.Backend
 		var err error
 		sysView := c.mountEntrySysView(entry)
-		// Set up conf to pass in plugin_name
-		conf := make(map[string]string)
-		if entry.Config.PluginName != "" {
-			conf["plugin_name"] = entry.Config.PluginName
-		}
+
 		// Create the new backend
-		backend, err = c.newLogicalBackend(ctx, entry.Type, sysView, view, conf)
+		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
 			if entry.Type == "plugin" {
@@ -877,7 +885,8 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 }
 
 // newLogicalBackend is used to create and configure a new logical backend by name
-func (c *Core) newLogicalBackend(ctx context.Context, t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, error) {
+	t := entry.Type
 	if alias, ok := mountAliases[t]; ok {
 		t = alias
 	}
@@ -886,11 +895,21 @@ func (c *Core) newLogicalBackend(ctx context.Context, t string, sysView logical.
 		return nil, fmt.Errorf("unknown backend type: %s", t)
 	}
 
+	// Set up conf to pass in plugin_name
+	conf := make(map[string]string, len(entry.Options)+1)
+	for k, v := range entry.Options {
+		conf[k] = v
+	}
+	if entry.Config.PluginName != "" {
+		conf["plugin_name"] = entry.Config.PluginName
+	}
+
 	config := &logical.BackendConfig{
 		StorageView: view,
 		Logger:      c.logger,
 		Config:      conf,
 		System:      sysView,
+		BackendUUID: entry.BackendAwareUUID,
 	}
 
 	b, err := f(ctx, config)
@@ -926,13 +945,22 @@ func (c *Core) defaultMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
 	}
+	bUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
+	}
+
 	kvMount := &MountEntry{
-		Table:       mountTableType,
-		Path:        "secret/",
-		Type:        "kv",
-		Description: "key/value secret storage",
-		UUID:        mountUUID,
-		Accessor:    mountAccessor,
+		Table:            mountTableType,
+		Path:             "secret/",
+		Type:             "kv",
+		Description:      "key/value secret storage",
+		UUID:             mountUUID,
+		Accessor:         mountAccessor,
+		BackendAwareUUID: bUUID,
+		Options: map[string]string{
+			"versioned": "true",
+		},
 	}
 	table.Entries = append(table.Entries, kvMount)
 	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
@@ -953,14 +981,19 @@ func (c *Core) requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate cubbyhole accessor: %v", err))
 	}
+	cubbyholeBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create cubbyhole backend UUID: %v", err))
+	}
 	cubbyholeMount := &MountEntry{
-		Table:       mountTableType,
-		Path:        "cubbyhole/",
-		Type:        "cubbyhole",
-		Description: "per-token private secret storage",
-		UUID:        cubbyholeUUID,
-		Accessor:    cubbyholeAccessor,
-		Local:       true,
+		Table:            mountTableType,
+		Path:             "cubbyhole/",
+		Type:             "cubbyhole",
+		Description:      "per-token private secret storage",
+		UUID:             cubbyholeUUID,
+		Accessor:         cubbyholeAccessor,
+		Local:            true,
+		BackendAwareUUID: cubbyholeBackendUUID,
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -971,13 +1004,18 @@ func (c *Core) requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate sys accessor: %v", err))
 	}
+	sysBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create sys backend UUID: %v", err))
+	}
 	sysMount := &MountEntry{
-		Table:       mountTableType,
-		Path:        "sys/",
-		Type:        "system",
-		Description: "system endpoints used for control, policy and debugging",
-		UUID:        sysUUID,
-		Accessor:    sysAccessor,
+		Table:            mountTableType,
+		Path:             "sys/",
+		Type:             "system",
+		Description:      "system endpoints used for control, policy and debugging",
+		UUID:             sysUUID,
+		Accessor:         sysAccessor,
+		BackendAwareUUID: sysBackendUUID,
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -988,14 +1026,18 @@ func (c *Core) requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate identity accessor: %v", err))
 	}
-
+	identityBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity backend UUID: %v", err))
+	}
 	identityMount := &MountEntry{
-		Table:       mountTableType,
-		Path:        "identity/",
-		Type:        "identity",
-		Description: "identity store",
-		UUID:        identityUUID,
-		Accessor:    identityAccessor,
+		Table:            mountTableType,
+		Path:             "identity/",
+		Type:             "identity",
+		Description:      "identity store",
+		UUID:             identityUUID,
+		Accessor:         identityAccessor,
+		BackendAwareUUID: identityBackendUUID,
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

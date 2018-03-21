@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"gopkg.in/mgo.v2"
@@ -24,7 +24,7 @@ const mongoDBTypeName = "mongodb"
 
 // MongoDB is an implementation of Database interface
 type MongoDB struct {
-	connutil.ConnectionProducer
+	*mongoDBConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -32,6 +32,12 @@ var _ dbplugin.Database = &MongoDB{}
 
 // New returns a new MongoDB instance
 func New() (interface{}, error) {
+	db := new()
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+	return dbType, nil
+}
+
+func new() *MongoDB {
 	connProducer := &mongoDBConnectionProducer{}
 	connProducer.Type = mongoDBTypeName
 
@@ -42,11 +48,10 @@ func New() (interface{}, error) {
 		Separator:      "-",
 	}
 
-	dbType := &MongoDB{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+	return &MongoDB{
+		mongoDBConnectionProducer: connProducer,
+		CredentialsProducer:       credsProducer,
 	}
-	return dbType, nil
 }
 
 // Run instantiates a MongoDB object, and runs the RPC server for the plugin
@@ -88,7 +93,9 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	m.Lock()
 	defer m.Unlock()
 
-	if statements.CreationStatements == "" {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
+	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -109,7 +116,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 
 	// Unmarshal statements.CreationStatements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(statements.CreationStatements), &mongoCS)
+	err = json.Unmarshal([]byte(statements.Creation[0]), &mongoCS)
 	if err != nil {
 		return "", "", err
 	}
@@ -155,18 +162,25 @@ func (m *MongoDB) RenewUser(ctx context.Context, statements dbplugin.Statements,
 	return nil
 }
 
-// RevokeUser drops the specified user from the authentication databse. If none is provided
+// RevokeUser drops the specified user from the authentication database. If none is provided
 // in the revocation statement, the default "admin" authentication database will be assumed.
 func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	session, err := m.getConnection(ctx)
 	if err != nil {
 		return err
 	}
 
 	// If no revocation statements provided, pass in empty JSON
-	revocationStatement := statements.RevocationStatements
-	if revocationStatement == "" {
+	var revocationStatement string
+	switch len(statements.Revocation) {
+	case 0:
 		revocationStatement = `{}`
+	case 1:
+		revocationStatement = statements.Revocation[0]
+	default:
+		return fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(statements.Revocation))
 	}
 
 	// Unmarshal revocation statements into mongodbRoles
@@ -186,7 +200,7 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	switch {
 	case err == nil, err == mgo.ErrNotFound:
 	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		if err := m.ConnectionProducer.Close(); err != nil {
+		if err := m.Close(); err != nil {
 			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
 		session, err := m.getConnection(ctx)
@@ -202,4 +216,9 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	}
 
 	return nil
+}
+
+// RotateRootCredentials is not currently supported on MongoDB
+func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
 }

@@ -1173,7 +1173,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Attempt to re-login with the identity signture
+	// Attempt to re-login with the identity signature
 	delete(loginInput, "pkcs7")
 	loginInput["identity"] = identityDoc
 	loginInput["signature"] = identityDocSig

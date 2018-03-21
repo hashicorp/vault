@@ -479,7 +479,7 @@ $ curl \
     https://vault.rocks/v1/auth/aws/config/tidy/roletag-blacklist
 ```
 
-## Read Role Tag Blackist Tidy Settings
+## Read Role Tag Blacklist Tidy Settings
 
 Returns the previously configured periodic blacklist tidying settings.
 
@@ -506,7 +506,7 @@ $ curl \
 }
 ```
 
-## Delete Role Tag Blackist Tidy Settings
+## Delete Role Tag Blacklist Tidy Settings
 
 Deletes the previously configured periodic blacklist tidying settings.
 
@@ -527,7 +527,7 @@ $ curl \
 
 Registers a role in the method. Only those instances or principals which
 are using the role registered using this endpoint, will be able to perform
-the login operation. Contraints can be specified on the role, that are
+the login operation. Constraints can be specified on the role, that are
 applied on the instances or principals attempting to login. At least one
 constraint must be specified on the role. The available constraints you
 can choose are dependent on the `auth_type` of the role and, if the
@@ -605,7 +605,7 @@ list in order to satisfy that constraint.
   end of the ARN, e.g., "arn:aws:iam::123456789012:\*" will match any IAM
   principal in the AWS account 123456789012. When `resolve_aws_unique_ids` is
   `false` and you are binding to IAM roles (as opposed to users) and you are not
-  using a wildcard at the end, then you must specify the ARN by ommitting any
+  using a wildcard at the end, then you must specify the ARN by omitting any
   path component; see the documentation for `resolve_aws_unique_ids` below.
   This constraint is only checked by
   the iam auth method. Wildcards are supported at the end of the ARN, e.g.,

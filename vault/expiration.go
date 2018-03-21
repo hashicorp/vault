@@ -521,6 +521,11 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 		delete(m.pending, leaseID)
 	}
 	m.pendingLock.Unlock()
+
+	if m.logger.IsInfo() {
+		m.logger.Info("expiration: revoked lease", "lease_id", leaseID)
+	}
+
 	return nil
 }
 
@@ -1026,9 +1031,6 @@ func (m *ExpirationManager) expireID(leaseID string) {
 
 		err := m.Revoke(leaseID)
 		if err == nil {
-			if m.logger.IsInfo() {
-				m.logger.Info("expiration: revoked lease", "lease_id", leaseID)
-			}
 			m.coreStateLock.RUnlock()
 			return
 		}

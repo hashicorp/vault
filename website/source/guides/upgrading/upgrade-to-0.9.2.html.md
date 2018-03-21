@@ -16,7 +16,7 @@ for Vault 0.9.2 compared to 0.9.1. Please read it carefully.
 
 This upgrade guide is typically reserved for breaking changes, however it
 is worth calling out that the CLI interface to Vault has been completely
-revamped while maintaining backwards compatbitility. This could lead to
+revamped while maintaining backwards compatibility. This could lead to
 potential confusion  while browsing the latest version of the Vault
 documentation on vaultproject.io.
 

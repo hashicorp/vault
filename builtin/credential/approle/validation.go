@@ -235,7 +235,7 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 	}
 
 	// If there exists a single use left, delete the SecretID entry from
-	// the storage but do not fail the validation request. Subsequest
+	// the storage but do not fail the validation request. Subsequent
 	// requests to use the same SecretID will fail.
 	if result.SecretIDNumUses == 1 {
 		// Delete the secret IDs accessor first

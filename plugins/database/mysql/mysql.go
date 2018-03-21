@@ -3,6 +3,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
 
@@ -21,6 +22,11 @@ const (
 		REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
 		DROP USER '{{name}}'@'%'
 	`
+
+	defaultMySQLRotateRootCredentialsSQL = `
+		ALTER USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+	`
+
 	mySQLTypeName = "mysql"
 )
 
@@ -34,29 +40,35 @@ var (
 var _ dbplugin.Database = &MySQL{}
 
 type MySQL struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
 // New implements builtinplugins.BuiltinFactory
 func New(displayNameLen, roleNameLen, usernameLen int) func() (interface{}, error) {
 	return func() (interface{}, error) {
-		connProducer := &connutil.SQLConnectionProducer{}
-		connProducer.Type = mySQLTypeName
-
-		credsProducer := &credsutil.SQLCredentialsProducer{
-			DisplayNameLen: displayNameLen,
-			RoleNameLen:    roleNameLen,
-			UsernameLen:    usernameLen,
-			Separator:      "-",
-		}
-
-		dbType := &MySQL{
-			ConnectionProducer:  connProducer,
-			CredentialsProducer: credsProducer,
-		}
+		db := new(displayNameLen, roleNameLen, usernameLen)
+		// Wrap the plugin with middleware to sanitize errors
+		dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
 
 		return dbType, nil
+	}
+}
+
+func new(displayNameLen, roleNameLen, usernameLen int) *MySQL {
+	connProducer := &connutil.SQLConnectionProducer{}
+	connProducer.Type = mySQLTypeName
+
+	credsProducer := &credsutil.SQLCredentialsProducer{
+		DisplayNameLen: displayNameLen,
+		RoleNameLen:    roleNameLen,
+		UsernameLen:    usernameLen,
+		Separator:      "-",
+	}
+
+	return &MySQL{
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
 }
 
@@ -82,7 +94,7 @@ func runCommon(legacy bool, apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*MySQL), apiTLSConfig)
+	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
 
 	return nil
 }
@@ -105,13 +117,15 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	m.Lock()
 	defer m.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// Get the connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
 
-	if statements.CreationStatements == "" {
+	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -138,38 +152,40 @@ func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, 
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
-		query = dbutil.QueryHelper(query, map[string]string{
-			"name":       username,
-			"password":   password,
-			"expiration": expirationStr,
-		})
-
-		stmt, err := tx.PrepareContext(ctx, query)
-		if err != nil {
-			// If the error code we get back is Error 1295: This command is not
-			// supported in the prepared statement protocol yet, we will execute
-			// the statement without preparing it. This allows the caller to
-			// manually prepare statements, as well as run other not yet
-			// prepare supported commands. If there is no error when running we
-			// will continue to the next statement.
-			if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
-				_, err = tx.ExecContext(ctx, query)
-				if err != nil {
-					return "", "", err
-				}
+	for _, stmt := range statements.Creation {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
 				continue
 			}
+			query = dbutil.QueryHelper(query, map[string]string{
+				"name":       username,
+				"password":   password,
+				"expiration": expirationStr,
+			})
 
-			return "", "", err
-		}
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return "", "", err
+			stmt, err := tx.PrepareContext(ctx, query)
+			if err != nil {
+				// If the error code we get back is Error 1295: This command is not
+				// supported in the prepared statement protocol yet, we will execute
+				// the statement without preparing it. This allows the caller to
+				// manually prepare statements, as well as run other not yet
+				// prepare supported commands. If there is no error when running we
+				// will continue to the next statement.
+				if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+					_, err = tx.ExecContext(ctx, query)
+					if err != nil {
+						return "", "", err
+					}
+					continue
+				}
+
+				return "", "", err
+			}
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return "", "", err
+			}
 		}
 	}
 
@@ -191,16 +207,18 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	m.Lock()
 	defer m.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// Get the connection
 	db, err := m.getConnection(ctx)
 	if err != nil {
 		return err
 	}
 
-	revocationStmts := statements.RevocationStatements
+	revocationStmts := statements.Revocation
 	// Use a default SQL statement for revocation if one cannot be fetched from the role
-	if revocationStmts == "" {
-		revocationStmts = defaultMysqlRevocationStmts
+	if len(revocationStmts) == 0 {
+		revocationStmts = []string{defaultMysqlRevocationStmts}
 	}
 
 	// Start a transaction
@@ -210,21 +228,22 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	}
 	defer tx.Rollback()
 
-	for _, query := range strutil.ParseArbitraryStringSlice(revocationStmts, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
+	for _, stmt := range revocationStmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		// This is not a prepared statement because not all commands are supported
-		// 1295: This command is not supported in the prepared statement protocol yet
-		// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
-		query = strings.Replace(query, "{{name}}", username, -1)
-		_, err = tx.ExecContext(ctx, query)
-		if err != nil {
-			return err
+			// This is not a prepared statement because not all commands are supported
+			// 1295: This command is not supported in the prepared statement protocol yet
+			// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
+			query = strings.Replace(query, "{{name}}", username, -1)
+			_, err = tx.ExecContext(ctx, query)
+			if err != nil {
+				return err
+			}
 		}
-
 	}
 
 	// Commit the transaction
@@ -233,4 +252,68 @@ func (m *MySQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 	}
 
 	return nil
+}
+
+func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+	m.Lock()
+	defer m.Unlock()
+
+	if len(m.Username) == 0 || len(m.Password) == 0 {
+		return nil, errors.New("username and password are required to rotate")
+	}
+
+	rotateStatents := statements
+	if len(rotateStatents) == 0 {
+		rotateStatents = []string{defaultMySQLRotateRootCredentialsSQL}
+	}
+
+	db, err := m.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		tx.Rollback()
+	}()
+
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, stmt := range rotateStatents {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"username": m.Username,
+				"password": password,
+			}))
+			if err != nil {
+				return nil, err
+			}
+
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	if err := db.Close(); err != nil {
+		return nil, err
+	}
+
+	m.RawConfig["password"] = password
+	return m.RawConfig, nil
 }
