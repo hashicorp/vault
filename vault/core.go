@@ -190,10 +190,12 @@ type Core struct {
 	stateLock sync.RWMutex
 	sealed    bool
 
-	standby          bool
-	standbyDoneCh    chan struct{}
-	standbyStopCh    chan struct{}
-	manualStepDownCh chan struct{}
+	standby              bool
+	standbyDoneCh        chan struct{}
+	standbyStopCh        chan struct{}
+	manualStepDownCh     chan struct{}
+	keepHALockOnStepDown uint32
+	heldHALock           physical.Lock
 
 	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
 	unlockInfo *unlockInformation
@@ -626,6 +628,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 // problem. It is only used to gracefully quit in the case of HA so that failover
 // happens as quickly as possible.
 func (c *Core) Shutdown() error {
+	c.logger.Trace("core: shutdown called")
 	c.stateLock.RLock()
 	// Tell any requests that know about this to stop
 	if c.activeContextCancelFunc != nil {
@@ -633,15 +636,13 @@ func (c *Core) Shutdown() error {
 	}
 	c.stateLock.RUnlock()
 
+	c.logger.Trace("core: shutdown initiating internal seal")
 	// Seal the Vault, causes a leader stepdown
-	retChan := make(chan error)
-	go func() {
-		c.stateLock.Lock()
-		defer c.stateLock.Unlock()
-		retChan <- c.sealInternal()
-	}()
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
 
-	return <-retChan
+	c.logger.Trace("core: shutdown running internal seal")
+	return c.sealInternal(false)
 }
 
 // CORSConfig returns the current CORS configuration
@@ -829,7 +830,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 		switch {
 		case checkExists == false:
-			// No existence check, so always treate it as an update operation, which is how it is pre 0.5
+			// No existence check, so always treat it as an update operation, which is how it is pre 0.5
 			req.Operation = logical.UpdateOperation
 		case resourceExists == true:
 			// It exists, so force an update operation
@@ -1176,7 +1177,7 @@ func (c *Core) unsealPart(ctx context.Context, config *SealConfig, key []byte, u
 		// Get stored keys and shamir combine into single master key. Unsealing with
 		// recovery keys currently does not support: 1) mixed stored and non-stored
 		// keys setup, nor 2) seals that support recovery keys but not stored keys.
-		// If insuffiencient shares are provided, shamir.Combine will error, and if
+		// If insufficient shares are provided, shamir.Combine will error, and if
 		// no stored keys are found it will return masterKey as nil.
 		var masterKey []byte
 		if c.seal.StoredKeysSupported() {
@@ -1237,9 +1238,9 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 	} else {
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
-		c.standbyStopCh = make(chan struct{})
 		c.manualStepDownCh = make(chan struct{})
-		go c.runStandby(c.standbyDoneCh, c.standbyStopCh, c.manualStepDownCh)
+		c.standbyStopCh = make(chan struct{})
+		go c.runStandby(c.standbyDoneCh, c.manualStepDownCh, c.standbyStopCh)
 	}
 
 	// Success!
@@ -1406,19 +1407,15 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	c.stateLock.RUnlock()
 
 	//Seal the Vault
-	retChan := make(chan error)
-	go func() {
-		c.stateLock.Lock()
-		defer c.stateLock.Unlock()
-		retChan <- c.sealInternal()
-	}()
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+	sealErr := c.sealInternal(false)
 
-	funcErr := <-retChan
-	if funcErr != nil {
-		retErr = multierror.Append(retErr, funcErr)
+	if sealErr != nil {
+		retErr = multierror.Append(retErr, sealErr)
 	}
 
-	return retErr
+	return
 }
 
 // StepDown is used to step down from leadership
@@ -1515,7 +1512,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 
 // sealInternal is an internal method used to seal the vault.  It does not do
 // any authorization checking. The stateLock must be held prior to calling.
-func (c *Core) sealInternal() error {
+func (c *Core) sealInternal(keepLock bool) error {
 	if c.sealed {
 		return nil
 	}
@@ -1539,13 +1536,21 @@ func (c *Core) sealInternal() error {
 			return fmt.Errorf("internal error")
 		}
 	} else {
-		// Signal the standby goroutine to shutdown, wait for completion
+		if keepLock {
+			atomic.StoreUint32(&c.keepHALockOnStepDown, 1)
+		}
+		// If we are trying to acquire the lock, force it to return with nil so
+		// runStandby will exit
+		// If we are active, signal the standby goroutine to shut down and wait
+		// for completion. We have the state lock here so nothing else should
+		// be toggling standby status.
 		close(c.standbyStopCh)
+		c.logger.Trace("core: finished triggering standbyStopCh for runStandby")
 
-		// Release the lock while we wait to avoid deadlocking
-		c.stateLock.Unlock()
+		// Wait for runStandby to stop
 		<-c.standbyDoneCh
-		c.stateLock.Lock()
+		atomic.StoreUint32(&c.keepHALockOnStepDown, 0)
+		c.logger.Trace("core: runStandby done")
 	}
 
 	c.logger.Debug("core: sealing barrier")
@@ -1744,7 +1749,7 @@ func stopReplicationImpl(c *Core) error {
 // runStandby is a long running routine that is used when an HA backend
 // is enabled. It waits until we are leader and switches this Vault to
 // active.
-func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
+func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
 	c.logger.Info("core: entering standby mode")
@@ -1758,18 +1763,29 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	checkLeaderStop := make(chan struct{})
 	go c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
 	defer func() {
+		c.logger.Trace("core: closed periodic key rotation checker stop channel")
 		close(keyRotateStop)
 		<-keyRotateDone
 		close(checkLeaderStop)
+		c.logger.Trace("core: closed periodic leader refresh stop channel")
 		<-checkLeaderDone
+		c.logger.Trace("core: periodic leader refresh returned")
 	}()
 
+	var manualStepDown bool
 	for {
 		// Check for a shutdown
 		select {
 		case <-stopCh:
+			c.logger.Trace("core: stop channel triggered in runStandby")
 			return
 		default:
+			// If we've just down, we could instantly grab the lock again. Give
+			// the other nodes a chance.
+			if manualStepDown {
+				time.Sleep(manualStepDownSleepPeriod)
+				manualStepDown = false
+			}
 		}
 
 		// Create a lock
@@ -1799,7 +1815,42 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 
 		// Grab the lock as we need it for cluster setup, which needs to happen
 		// before advertising;
-		c.stateLock.Lock()
+
+		lockGrabbedCh := make(chan struct{})
+		go func() {
+			// Grab the lock
+			c.stateLock.Lock()
+			// If stopCh has been closed, which only happens while the
+			// stateLock is held, we have actually terminated, so we just
+			// instantly give up the lock, otherwise we notify that it's ready
+			// for consumption
+			select {
+			case <-stopCh:
+				c.stateLock.Unlock()
+			default:
+				close(lockGrabbedCh)
+			}
+		}()
+
+		select {
+		case <-stopCh:
+			lock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+			return
+		case <-lockGrabbedCh:
+			// We now have the lock and can use it
+		}
+
+		if c.sealed {
+			c.logger.Warn("core: grabbed HA lock but already sealed, exiting")
+			lock.Unlock()
+			c.stateLock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+			return
+		}
+
+		// Store the lock so that we can manually clear it later if needed
+		c.heldHALock = lock
 
 		// We haven't run postUnseal yet so we have nothing meaningful to use here
 		ctx := context.Background()
@@ -1818,10 +1869,11 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 				// statelock and have this shut us down; sealInternal has a
 				// workflow where it watches for the stopCh to close so we want
 				// to return from here
-				go c.Shutdown()
 				c.logger.Error("core: error performing key upgrades", "error", err)
-				c.stateLock.Unlock()
+				go c.Shutdown()
+				c.heldHALock = nil
 				lock.Unlock()
+				c.stateLock.Unlock()
 				metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 				return
 			}
@@ -1834,18 +1886,20 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
 
 		if err := c.setupCluster(ctx); err != nil {
+			c.heldHALock = nil
+			lock.Unlock()
 			c.stateLock.Unlock()
 			c.logger.Error("core: cluster setup failed", "error", err)
-			lock.Unlock()
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
 		}
 
 		// Advertise as leader
 		if err := c.advertiseLeader(ctx, uuid, leaderLostCh); err != nil {
+			c.heldHALock = nil
+			lock.Unlock()
 			c.stateLock.Unlock()
 			c.logger.Error("core: leader advertisement setup failed", "error", err)
-			lock.Unlock()
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
 		}
@@ -1855,6 +1909,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		if err == nil {
 			c.standby = false
 		}
+
 		c.stateLock.Unlock()
 
 		// Handle a failure to unseal
@@ -1866,12 +1921,18 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		}
 
 		// Monitor a loss of leadership
-		var manualStepDown bool
+		releaseHALock := true
+		grabStateLock := true
 		select {
 		case <-leaderLostCh:
 			c.logger.Warn("core: leadership lost, stopping active operation")
 		case <-stopCh:
-			c.logger.Warn("core: stopping active operation")
+			// This case comes from sealInternal; we will already be having the
+			// state lock held so we do toggle grabStateLock to false
+			if atomic.LoadUint32(&c.keepHALockOnStepDown) == 1 {
+				releaseHALock = false
+			}
+			grabStateLock = false
 		case <-manualStepDownCh:
 			c.logger.Warn("core: stepping down from active operation to standby")
 			manualStepDown = true
@@ -1879,34 +1940,32 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 
 		metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
 
-		// Clear ourself as leader
-		if err := c.clearLeader(uuid); err != nil {
-			c.logger.Error("core: clearing leader advertisement failed", "error", err)
-		}
-
 		// Tell any requests that know about this to stop
 		if c.activeContextCancelFunc != nil {
 			c.activeContextCancelFunc()
 		}
 
 		// Attempt the pre-seal process
-		c.stateLock.Lock()
+		if grabStateLock {
+			c.stateLock.Lock()
+		}
 		c.standby = true
 		preSealErr := c.preSeal()
-		c.stateLock.Unlock()
+		if grabStateLock {
+			c.stateLock.Unlock()
+		}
 
-		// Give up leadership
-		lock.Unlock()
+		if releaseHALock {
+			if err := c.clearLeader(uuid); err != nil {
+				c.logger.Error("core: clearing leader advertisement failed", "error", err)
+			}
+			c.heldHALock.Unlock()
+			c.heldHALock = nil
+		}
 
 		// Check for a failure to prepare to seal
 		if preSealErr != nil {
 			c.logger.Error("core: pre-seal teardown failed", "error", err)
-		}
-
-		// If we've merely stepped down, we could instantly grab the lock
-		// again. Give the other nodes a chance.
-		if manualStepDown {
-			time.Sleep(manualStepDownSleepPeriod)
 		}
 	}
 }
@@ -1917,10 +1976,23 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 // the result.
 func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
+	var opCount int32
 	for {
 		select {
 		case <-time.After(leaderCheckInterval):
-			c.Leader()
+			count := atomic.AddInt32(&opCount, 1)
+			if count > 1 {
+				atomic.AddInt32(&opCount, -1)
+				continue
+			}
+			// We do this in a goroutine because otherwise if this refresh is
+			// called while we're shutting down the call to Leader() can
+			// deadlock, which then means stopCh can never been seen and we can
+			// block shutdown
+			go func() {
+				defer atomic.AddInt32(&opCount, -1)
+				c.Leader()
+			}()
 		case <-stopCh:
 			return
 		}
@@ -1930,30 +2002,40 @@ func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
 func (c *Core) periodicCheckKeyUpgrade(ctx context.Context, doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
+	var opCount int32
 	for {
 		select {
 		case <-time.After(keyRotateCheckInterval):
-			// Only check if we are a standby
-			c.stateLock.RLock()
-			standby := c.standby
-			c.stateLock.RUnlock()
-			if !standby {
+			count := atomic.AddInt32(&opCount, 1)
+			if count > 1 {
+				atomic.AddInt32(&opCount, -1)
 				continue
 			}
 
-			// Check for a poison pill. If we can read it, it means we have stale
-			// keys (e.g. from replication being activated) and we need to seal to
-			// be unsealed again.
-			entry, _ := c.barrier.Get(ctx, poisonPillPath)
-			if entry != nil && len(entry.Value) > 0 {
-				c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
-				go c.Shutdown()
-				continue
-			}
+			go func() {
+				defer atomic.AddInt32(&opCount, -1)
+				// Only check if we are a standby
+				c.stateLock.RLock()
+				standby := c.standby
+				c.stateLock.RUnlock()
+				if !standby {
+					return
+				}
 
-			if err := c.checkKeyUpgrades(ctx); err != nil {
-				c.logger.Error("core: key rotation periodic upgrade check failed", "error", err)
-			}
+				// Check for a poison pill. If we can read it, it means we have stale
+				// keys (e.g. from replication being activated) and we need to seal to
+				// be unsealed again.
+				entry, _ := c.barrier.Get(ctx, poisonPillPath)
+				if entry != nil && len(entry.Value) > 0 {
+					c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
+					go c.Shutdown()
+					return
+				}
+
+				if err := c.checkKeyUpgrades(ctx); err != nil {
+					c.logger.Error("core: key rotation periodic upgrade check failed", "error", err)
+				}
+			}()
 		case <-stopCh:
 			return
 		}
@@ -2145,7 +2227,7 @@ func (c *Core) clearLeader(uuid string) error {
 	return err
 }
 
-// emitMetrics is used to periodically expose metrics while runnig
+// emitMetrics is used to periodically expose metrics while running
 func (c *Core) emitMetrics(stopCh chan struct{}) {
 	for {
 		select {

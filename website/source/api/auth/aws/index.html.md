@@ -479,7 +479,7 @@ $ curl \
     https://vault.rocks/v1/auth/aws/config/tidy/roletag-blacklist
 ```
 
-## Read Role Tag Blackist Tidy Settings
+## Read Role Tag Blacklist Tidy Settings
 
 Returns the previously configured periodic blacklist tidying settings.
 
@@ -506,7 +506,7 @@ $ curl \
 }
 ```
 
-## Delete Role Tag Blackist Tidy Settings
+## Delete Role Tag Blacklist Tidy Settings
 
 Deletes the previously configured periodic blacklist tidying settings.
 
@@ -527,7 +527,7 @@ $ curl \
 
 Registers a role in the method. Only those instances or principals which
 are using the role registered using this endpoint, will be able to perform
-the login operation. Contraints can be specified on the role, that are
+the login operation. Constraints can be specified on the role, that are
 applied on the instances or principals attempting to login. At least one
 constraint must be specified on the role. The available constraints you
 can choose are dependent on the `auth_type` of the role and, if the
@@ -576,18 +576,22 @@ list in order to satisfy that constraint.
   comma-separated string or a JSON array.
 - `bound_iam_role_arn` `(list: [])` - If set, defines a constraint on the
   authenticating EC2 instance that it must match one of the IAM role ARNs specified by
-  this parameter.  The value is refix-matched (as though it were a glob ending
-  in `*`).  The configured IAM user or EC2 instance role must be allowed to
+  this parameter.  Wildcards are supported at the end of the ARN to allow for
+  prefix matching. The configured IAM user or EC2 instance role must be allowed to
   execute the `iam:GetInstanceProfile` action if this is specified. This
   constraint is checked by the ec2 auth method as well as the iam auth method
   only when inferring an EC2 instance. This is a comma-separated string or a
   JSON array.
 - `bound_iam_instance_profile_arn` `(list: [])` - If set, defines a constraint
-  on the EC2 instances to be associated with an IAM instance profile ARN which
-  has a prefix that matches one of the values specified by this parameter. The value is
-  prefix-matched (as though it were a glob ending in `*`). This constraint is
+  on the EC2 instances to be associated with an IAM instance profile ARN.
+  Wildcards are supported at the end of the ARN to allow for prefix matching.
+  This constraint is
   checked by the ec2 auth method as well as the iam auth method only when
   inferring an ec2 instance. This is a comma-separated string or a JSON array.
+- `bound_ec2_instance_id` `(list: [])` - If set, defines a constraint on the
+  EC2 instances to have one of these instance IDs. This constraint is checked by
+  the ec2 auth method as well as the iam auth method only when inferring an ec2
+  instance. This is a comma-separated string or a JSON array.
 - `role_tag` `(string: "")` - If set, enables the role tags for this role. The
   value set for this field should be the 'key' of the tag on the EC2 instance.
   The 'value' of the tag should be generated using `role/<role>/tag` endpoint.
@@ -601,7 +605,7 @@ list in order to satisfy that constraint.
   end of the ARN, e.g., "arn:aws:iam::123456789012:\*" will match any IAM
   principal in the AWS account 123456789012. When `resolve_aws_unique_ids` is
   `false` and you are binding to IAM roles (as opposed to users) and you are not
-  using a wildcard at the end, then you must specify the ARN by ommitting any
+  using a wildcard at the end, then you must specify the ARN by omitting any
   path component; see the documentation for `resolve_aws_unique_ids` below.
   This constraint is only checked by
   the iam auth method. Wildcards are supported at the end of the ARN, e.g.,
@@ -681,6 +685,7 @@ list in order to satisfy that constraint.
 ```json
 {
   "bound_ami_id": ["ami-fce36987"],
+  "bound_ec2_instance_id": ["i-12345678901234567"],
   "role_tag": "",
   "policies": [
     "default",

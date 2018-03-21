@@ -2025,7 +2025,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Verify our token is still valid (e.g. we did not get invalided by the revoke)
+	// Verify our token is still valid (e.g. we did not get invalidated by the revoke)
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/lookup")
 	req.Data = map[string]interface{}{
 		"token": newClient,

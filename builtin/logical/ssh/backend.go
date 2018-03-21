@@ -75,7 +75,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 	return &b, nil
 }
 
-func (b *backend) Salt() (*salt.Salt, error) {
+func (b *backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	b.saltMutex.RLock()
 	if b.salt != nil {
 		defer b.saltMutex.RUnlock()
@@ -87,7 +87,7 @@ func (b *backend) Salt() (*salt.Salt, error) {
 	if b.salt != nil {
 		return b.salt, nil
 	}
-	salt, err := salt.NewSalt(b.view, &salt.Config{
+	salt, err := salt.NewSalt(ctx, b.view, &salt.Config{
 		HashFunc: salt.SHA256Hash,
 		Location: salt.DefaultLocation,
 	})

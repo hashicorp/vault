@@ -471,6 +471,7 @@ func Test_BadUpgrade(t *testing.T) {
 	k.CreationTime = o.CreationTime
 	k.HMACKey = o.HMACKey
 	p.Keys["1"] = k
+	p.versionPrefixCache = nil
 
 	if !reflect.DeepEqual(orig, p) {
 		t.Fatalf("not equal:\n%#v\n%#v", orig, p)

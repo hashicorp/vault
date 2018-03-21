@@ -242,7 +242,7 @@ func (e *EtcdBackend) HAEnabled() bool {
 	return e.haEnabled
 }
 
-// EtcdLock emplements a lock using and etcd backend.
+// EtcdLock implements a lock using and etcd backend.
 type EtcdLock struct {
 	lock sync.Mutex
 	held bool

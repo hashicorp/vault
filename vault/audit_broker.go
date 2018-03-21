@@ -60,7 +60,7 @@ func (a *AuditBroker) IsRegistered(name string) bool {
 }
 
 // GetHash returns a hash using the salt of the given backend
-func (a *AuditBroker) GetHash(name string, input string) (string, error) {
+func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (string, error) {
 	a.RLock()
 	defer a.RUnlock()
 	be, ok := a.backends[name]
@@ -68,7 +68,7 @@ func (a *AuditBroker) GetHash(name string, input string) (string, error) {
 		return "", fmt.Errorf("unknown audit backend %s", name)
 	}
 
-	return be.backend.GetHash(input)
+	return be.backend.GetHash(ctx, input)
 }
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
@@ -110,7 +110,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *audit.LogInput, header
 	anyLogged := false
 	for name, be := range a.backends {
 		in.Request.Headers = nil
-		transHeaders, thErr := headersConfig.ApplyConfig(headers, be.backend.GetHash)
+		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
 		if thErr != nil {
 			a.logger.Error("audit: backend failed to include headers", "backend", name, "error", thErr)
 			continue
@@ -166,7 +166,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *audit.LogInput, heade
 	anyLogged := false
 	for name, be := range a.backends {
 		in.Request.Headers = nil
-		transHeaders, thErr := headersConfig.ApplyConfig(headers, be.backend.GetHash)
+		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
 		if thErr != nil {
 			a.logger.Error("audit: backend failed to include headers", "backend", name, "error", thErr)
 			continue

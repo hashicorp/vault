@@ -390,7 +390,7 @@ func createRoleTagNonce() (string, error) {
 	}
 }
 
-// Struct roleTag represents a role tag in a struc form.
+// Struct roleTag represents a role tag in a struct form.
 type roleTag struct {
 	Version                  string        `json:"version"`
 	InstanceID               string        `json:"instance_id"`

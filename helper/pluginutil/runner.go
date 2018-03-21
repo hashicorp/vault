@@ -17,15 +17,15 @@ import (
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
-// for availible plugins and returns a PluginRunner
+// for available plugins and returns a PluginRunner
 type Looker interface {
 	LookupPlugin(context.Context, string) (*PluginRunner, error)
 }
 
 // Wrapper interface defines the functions needed by the runner to wrap the
 // metadata needed to run a plugin process. This includes looking up Mlock
-// configuration and wrapping data in a respose wrapped token.
-// logical.SystemView implementataions satisfy this interface.
+// configuration and wrapping data in a response wrapped token.
+// logical.SystemView implementations satisfy this interface.
 type RunnerUtil interface {
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
@@ -48,7 +48,7 @@ type PluginRunner struct {
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 }
 
-// Run takes a wrapper RunnerUtil instance along with the go-plugin paramaters and
+// Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and
 // returns a configured plugin.Client with TLS Configured and a wrapping token set
 // on PluginUnwrapTokenEnv for plugin process consumption.
 func (r *PluginRunner) Run(ctx context.Context, wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
@@ -56,7 +56,7 @@ func (r *PluginRunner) Run(ctx context.Context, wrapper RunnerUtil, pluginMap ma
 }
 
 // RunMetadataMode returns a configured plugin.Client that will dispense a plugin
-// in metadata mode. The PluginMetadaModeEnv is passed in as part of the Cmd to
+// in metadata mode. The PluginMetadataModeEnv is passed in as part of the Cmd to
 // plugin.Client, and consumed by the plugin process on pluginutil.VaultPluginTLSProvider.
 func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
 	return r.runCommon(ctx, wrapper, pluginMap, hs, env, logger, true)
@@ -82,7 +82,7 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 	var clientTLSConfig *tls.Config
 	if !isMetadataMode {
 		// Add the metadata mode ENV and set it to false
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "false"))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadataModeEnv, "false"))
 
 		// Get a CA TLS Certificate
 		certBytes, key, err := generateCert()
@@ -107,7 +107,7 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
 	} else {
 		namedLogger = clogger.ResetNamed("plugin.metadata")
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadaModeEnv, "true"))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadataModeEnv, "true"))
 	}
 
 	secureConfig := &plugin.SecureConfig{

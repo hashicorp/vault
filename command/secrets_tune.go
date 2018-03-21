@@ -1,6 +1,7 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"strings"
 	"time"
@@ -16,8 +17,12 @@ var _ cli.CommandAutocomplete = (*SecretsTuneCommand)(nil)
 type SecretsTuneCommand struct {
 	*BaseCommand
 
-	flagDefaultLeaseTTL time.Duration
-	flagMaxLeaseTTL     time.Duration
+	flagOptions                  map[string]string
+	flagDefaultLeaseTTL          time.Duration
+	flagMaxLeaseTTL              time.Duration
+	flagAuditNonHMACRequestKeys  []string
+	flagAuditNonHMACResponseKeys []string
+	flagListingVisibility        string
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -46,6 +51,14 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 
 	f := set.NewFlagSet("Command Options")
 
+	f.StringMapVar(&StringMapVar{
+		Name:       "options",
+		Target:     &c.flagOptions,
+		Completion: complete.PredictAnything,
+		Usage: "Key-value pair provided as key=value for the mount options." +
+			"This can be specified multiple times",
+	})
+
 	f.DurationVar(&DurationVar{
 		Name:       "default-lease-ttl",
 		Target:     &c.flagDefaultLeaseTTL,
@@ -66,6 +79,26 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 		Usage: "The maximum lease TTL for this secrets engine. If unspecified, " +
 			"this defaults to the Vault server's globally configured maximum lease " +
 			"TTL, or a previously configured value for the secrets engine.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAuditNonHMACRequestKeys,
+		Target: &c.flagAuditNonHMACRequestKeys,
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+			"devices in the request data object.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAuditNonHMACResponseKeys,
+		Target: &c.flagAuditNonHMACResponseKeys,
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+			"devices in the response data object.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   flagNameListingVisibility,
+		Target: &c.flagListingVisibility,
+		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
 	})
 
 	return set
@@ -106,10 +139,28 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 	// Append a trailing slash to indicate it's a path in output
 	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
 
-	if err := client.Sys().TuneMount(mountPath, api.MountConfigInput{
+	mountConfigInput := api.MountConfigInput{
+		Options:         c.flagOptions,
 		DefaultLeaseTTL: ttlToAPI(c.flagDefaultLeaseTTL),
 		MaxLeaseTTL:     ttlToAPI(c.flagMaxLeaseTTL),
-	}); err != nil {
+	}
+
+	// Set these values only if they are provided in the CLI
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == flagNameAuditNonHMACRequestKeys {
+			mountConfigInput.AuditNonHMACRequestKeys = c.flagAuditNonHMACRequestKeys
+		}
+
+		if fl.Name == flagNameAuditNonHMACResponseKeys {
+			mountConfigInput.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
+		}
+
+		if fl.Name == flagNameListingVisibility {
+			mountConfigInput.ListingVisibility = c.flagListingVisibility
+		}
+	})
+
+	if err := client.Sys().TuneMount(mountPath, mountConfigInput); err != nil {
 		c.UI.Error(fmt.Sprintf("Error tuning secrets engine %s: %s", mountPath, err))
 		return 2
 	}

@@ -1070,6 +1070,11 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		"nonce": "vault-client-nonce",
 	}
 
+	parsedIdentityDoc, err := b.parseIdentityDocument(context.Background(), storage, pkcs7)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Perform the login operation with a AMI ID that is not matching
 	// the bound on the role.
 	loginRequest := &logical.Request{
@@ -1079,14 +1084,15 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		Data:      loginInput,
 	}
 
-	// Place the wrong AMI ID in the role data.
+	// Baseline role data that should succeed permit login
 	data := map[string]interface{}{
-		"auth_type":          "ec2",
-		"policies":           "root",
-		"max_ttl":            "120s",
-		"bound_ami_id":       []string{"wrong_ami_id", "wrong_ami_id2"},
-		"bound_account_id":   accountID,
-		"bound_iam_role_arn": iamARN,
+		"auth_type":             "ec2",
+		"policies":              "root",
+		"max_ttl":               "120s",
+		"bound_ami_id":          []string{"wrong_ami_id", amiID, "wrong_ami_id2"},
+		"bound_account_id":      accountID,
+		"bound_iam_role_arn":    iamARN,
+		"bound_ec2_instance_id": []string{parsedIdentityDoc.InstanceID, "i-1234567"},
 	}
 
 	roleReq := &logical.Request{
@@ -1096,50 +1102,64 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		Data:      data,
 	}
 
-	// Save the role with wrong AMI ID
-	resp, err := b.HandleRequest(context.Background(), roleReq)
-	if err != nil && (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
+	updateRoleExpectLoginFail := func(roleRequest, loginRequest *logical.Request) error {
+		resp, err := b.HandleRequest(context.Background(), roleRequest)
+		if err != nil || (resp != nil && resp.IsError()) {
+			return fmt.Errorf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+		}
+		resp, err = b.HandleRequest(context.Background(), loginRequest)
+		if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
+			return fmt.Errorf("bad: expected login failure: resp:%#v\nerr:%v", resp, err)
+		}
+		return nil
 	}
 
-	// Expect failure when tried to login with wrong AMI ID
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
-		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
+	// Test a role with the wrong AMI ID
+	data["bound_ami_id"] = []string{"ami-1234567", "ami-7654321"}
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
 	}
 
-	// Place the correct AMI ID in one of the values, but make the AccountID wrong
 	roleReq.Operation = logical.UpdateOperation
+	// Place the correct AMI ID in one of the values, but make the AccountID wrong
 	data["bound_ami_id"] = []string{"wrong_ami_id_1", amiID, "wrong_ami_id_2"}
 	data["bound_account_id"] = []string{"wrong-account-id", "wrong-account-id-2"}
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
-	}
-
-	// Expect failure when tried to login with incorrect AccountID
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
-		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
 	}
 
 	// Place the correct AccountID in one of the values, but make the wrong IAMRoleARN
 	data["bound_account_id"] = []string{"wrong-account-id-1", accountID, "wrong-account-id-2"}
 	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", "wrong_iam_role_arn_2"}
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
 	}
 
-	// Attempt to login and expect a fail because IAM Role ARN is wrong
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
-	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
-		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
-	}
-
-	// place a correct IAM role ARN
+	// Place correct IAM role ARN, but incorrect instance ID
 	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", iamARN, "wrong_iam_role_arn_2"}
-	resp, err = b.HandleRequest(context.Background(), roleReq)
+	data["bound_ec2_instance_id"] = "i-1234567"
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
+	}
+
+	// Place correct instance ID, but substring of the IAM role ARN
+	data["bound_ec2_instance_id"] = []string{parsedIdentityDoc.InstanceID, "i-1234567"}
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", iamARN[:len(iamARN)-2], "wrong_iam_role_arn_2"}
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
+	}
+
+	// place a wildcard in the middle of the role ARN
+	// The :31 gets arn:aws:iam::123456789012:role/
+	// This test relies on the role name having at least two characters
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn", fmt.Sprintf("%s*%s", iamARN[:31], iamARN[32:])}
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
+	}
+
+	// globbed IAM role ARN
+	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", fmt.Sprintf("%s*", iamARN[:len(iamARN)-2]), "wrong_iam_role_arn_2"}
+	resp, err := b.HandleRequest(context.Background(), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1153,7 +1173,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Attempt to re-login with the identity signture
+	// Attempt to re-login with the identity signature
 	delete(loginInput, "pkcs7")
 	loginInput["identity"] = identityDoc
 	loginInput["signature"] = identityDocSig
@@ -1169,6 +1189,9 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	instanceID := resp.Auth.Metadata["instance_id"]
 	if instanceID == "" {
 		t.Fatalf("instance ID not present in the response object")
+	}
+	if instanceID != parsedIdentityDoc.InstanceID {
+		t.Fatalf("instance ID in response (%q) did not match instance ID from identity document (%q)", instanceID, parsedIdentityDoc.InstanceID)
 	}
 
 	_, ok := resp.Auth.Metadata["nonce"]

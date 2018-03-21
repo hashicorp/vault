@@ -157,7 +157,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 		RoleName:    "test-long-rolename",
 	}
 
-	// Test with no configured Creation Statememt
+	// Test with no configured Creation Statement
 	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
 	if err == nil {
 		t.Fatal("Expected error when no creation statement is provided")
@@ -186,7 +186,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	// Test with a manualy prepare statement
+	// Test with a manually prepare statement
 	statements.CreationStatements = testMySQLRolePreparedStmt
 
 	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
@@ -222,7 +222,7 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 		RoleName:    "test-long-rolename",
 	}
 
-	// Test with no configured Creation Statememt
+	// Test with no configured Creation Statement
 	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
 	if err == nil {
 		t.Fatal("Expected error when no creation statement is provided")
@@ -287,7 +287,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	// Test default revoke statememts
+	// Test default revoke statements
 	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)

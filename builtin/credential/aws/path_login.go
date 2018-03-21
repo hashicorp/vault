@@ -384,6 +384,11 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		return nil, fmt.Errorf("nil identityDoc")
 	}
 
+	// Verify that the instance ID matches one of the ones set by the role
+	if len(roleEntry.BoundEc2InstanceIDs) > 0 && !strutil.StrListContains(roleEntry.BoundEc2InstanceIDs, *instance.InstanceId) {
+		return fmt.Errorf("instance ID %q does not belong to the role %q", *instance.InstanceId, roleName), nil
+	}
+
 	// Verify that the AccountID of the instance trying to login matches the
 	// AccountID specified as a constraint on role
 	if len(roleEntry.BoundAccountIDs) > 0 && !strutil.StrListContains(roleEntry.BoundAccountIDs, identityDoc.AccountID) {
@@ -440,8 +445,24 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		}
 		iamInstanceProfileARN := *instance.IamInstanceProfile.Arn
 		matchesInstanceProfile := false
+		// NOTE: Can't use strutil.StrListContainsGlob. A * is a perfectly valid character in the "path" component
+		// of an ARN. See, e.g., https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateInstanceProfile.html :
+		// The path allows strings "containing any ASCII character from the ! (\u0021) thru the DEL character
+		// (\u007F), including most punctuation characters, digits, and upper and lowercased letters."
+		// So, e.g., arn:aws:iam::123456789012:instance-profile/Some*Path/MyProfileName is a perfectly valid instance
+		// profile ARN, and it wouldn't be correct to expand the * in the middle as a wildcard.
+		// If a user wants to match an IAM instance profile arn beginning with arn:aws:iam::123456789012:instance-profile/foo*
+		// then bound_iam_instance_profile_arn would need to be arn:aws:iam::123456789012:instance-profile/foo**
+		// Wanting to exactly match an ARN that has a * at the end is not a valid use case. The * is only valid in the
+		// path; it's not valid in the name. That means no valid ARN can ever end with a *. For example,
+		// arn:aws:iam::123456789012:instance-profile/Foo* is NOT valid as an instance profile ARN, so no valid instance
+		// profile ARN could ever equal that value.
 		for _, boundInstanceProfileARN := range roleEntry.BoundIamInstanceProfileARNs {
-			if strings.HasPrefix(iamInstanceProfileARN, boundInstanceProfileARN) {
+			switch {
+			case strings.HasSuffix(boundInstanceProfileARN, "*") && strings.HasPrefix(iamInstanceProfileARN, boundInstanceProfileARN[:len(boundInstanceProfileARN)-1]):
+				matchesInstanceProfile = true
+				break
+			case iamInstanceProfileARN == boundInstanceProfileARN:
 				matchesInstanceProfile = true
 				break
 			}
@@ -493,7 +514,12 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 
 		matchesInstanceRoleARN := false
 		for _, boundIamRoleARN := range roleEntry.BoundIamRoleARNs {
-			if strings.HasPrefix(iamRoleARN, boundIamRoleARN) {
+			switch {
+			// as with boundInstanceProfileARN, can't use strutil.StrListContainsGlob because * can validly exist in the middle of an ARN
+			case strings.HasSuffix(boundIamRoleARN, "*") && strings.HasPrefix(iamRoleARN, boundIamRoleARN[:len(boundIamRoleARN)-1]):
+				matchesInstanceRoleARN = true
+				break
+			case iamRoleARN == boundIamRoleARN:
 				matchesInstanceRoleARN = true
 				break
 			}
@@ -800,12 +826,14 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		resp.Auth.Metadata["nonce"] = clientNonce
 	}
 
-	if roleEntry.MaxTTL > time.Duration(0) {
-		// Cap TTL to shortestMaxTTL
-		if resp.Auth.TTL > shortestMaxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (shortestMaxTTL / time.Second)))
-			resp.Auth.TTL = shortestMaxTTL
-		}
+	// In this case no role value was set so pull in what will be assigned by
+	// Core for comparison
+	if resp.Auth.TTL == 0 {
+		resp.Auth.TTL = b.System().DefaultLeaseTTL()
+	}
+	if resp.Auth.TTL > shortestMaxTTL {
+		resp.Auth.TTL = shortestMaxTTL
+		resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, shortestMaxTTL))
 	}
 
 	return resp, nil
@@ -813,7 +841,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 
 // handleRoleTagLogin is used to fetch the role tag of the instance and
 // verifies it to be correct.  Then the policies for the login request will be
-// set off of the role tag, if certain creteria satisfies.
+// set off of the role tag, if certain criteria satisfies.
 func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry, instance *ec2.Instance) (*roleTagLoginResponse, error) {
 	if roleEntry == nil {
 		return nil, fmt.Errorf("nil role entry")
@@ -1308,6 +1336,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		},
 	}
 
+	if resp.Auth.TTL == 0 {
+		resp.Auth.TTL = b.System().DefaultLeaseTTL()
+	}
 	if roleEntry.MaxTTL > time.Duration(0) {
 		// Cap maxTTL to the sysview's max TTL
 		maxTTL := roleEntry.MaxTTL
@@ -1317,7 +1348,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 		// Cap TTL to MaxTTL
 		if resp.Auth.TTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, maxTTL))
 			resp.Auth.TTL = maxTTL
 		}
 	}
@@ -1436,7 +1467,7 @@ func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, 
 	// The use cases we want to support, in order of increasing complexity, are:
 	// 1. All defaults (client assumes sts.amazonaws.com and server has no override)
 	// 2. Alternate STS regions: client wants to go to a specific region, in which case
-	//    Vault must be confiugred with that endpoint as well. The client's signed request
+	//    Vault must be configured with that endpoint as well. The client's signed request
 	//    will include a signature over what the client expects the Host header to be,
 	//    so we cannot change that and must match.
 	// 3. Alternate STS regions with a proxy that is transparent to Vault's clients.
@@ -1446,14 +1477,14 @@ func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, 
 	// It's also annoying because:
 	// 1. The AWS Sigv4 algorithm requires the Host header to be defined
 	// 2. Some of the official SDKs (at least botocore and aws-sdk-go) don't actually
-	//    incude an explicit Host header in the HTTP requests they generate, relying on
+	//    include an explicit Host header in the HTTP requests they generate, relying on
 	//    the underlying HTTP library to do that for them.
 	// 3. To get a validly signed request, the SDKs check if a Host header has been set
 	//    and, if not, add an inferred host header (based on the URI) to the internal
 	//    data structure used for calculating the signature, but never actually expose
 	//    that to clients. So then they just "hope" that the underlying library actually
 	//    adds the right Host header which was included in the signature calculation.
-	// We could either explicity require all Vault clients to explicitly add the Host header
+	// We could either explicitly require all Vault clients to explicitly add the Host header
 	// in the encoded request, or we could also implicitly infer it from the URI.
 	// We choose to support both -- allow you to explicitly set a Host header, but if not,
 	// infer one from the URI.
@@ -1675,7 +1706,7 @@ implemented based on that inferred type.
 
 An EC2 instance is authenticated using the PKCS#7 signature of the instance identity
 document and a client created nonce. This nonce should be unique and should be used by
-the instance for all future logins, unless 'disallow_reauthenitcation' option on the
+the instance for all future logins, unless 'disallow_reauthentication' option on the
 registered role is enabled, in which case client nonce is optional.
 
 First login attempt, creates a whitelist entry in Vault associating the instance to the nonce

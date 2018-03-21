@@ -43,7 +43,7 @@ type BatchResponseItem struct {
 	// request item
 	Ciphertext string `json:"ciphertext,omitempty" structs:"ciphertext" mapstructure:"ciphertext"`
 
-	// Plaintext for the ciphertext present in the corresponsding batch
+	// Plaintext for the ciphertext present in the corresponding batch
 	// request item
 	Plaintext string `json:"plaintext,omitempty" structs:"plaintext" mapstructure:"plaintext"`
 

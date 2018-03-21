@@ -246,7 +246,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 	}
 	organization := resp.Data["organization"].([]string)
 	if len(organization) != 2 {
-		t.Fatalf("organziation should have 2 values")
+		t.Fatalf("organization should have 2 values")
 	}
 
 	// Check that old key usage value is nil

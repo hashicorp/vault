@@ -115,7 +115,7 @@ method and associated with a specific authentication type that cannot be
 changed once the role has been created. Roles can also be associated with
 various optional restrictions, such as the set of allowed policies and max TTLs
 on the generated tokens. Each role can be specified with the constraints that
-are to be met during the login. Many of these contraints accept lists of
+are to be met during the login. Many of these constraints accept lists of
 required values. For any constraint which accepts a list of values, that
 constraint will be considered satisfied if any one of the values is matched
 during the login process. For example, one such constraint that is
@@ -304,7 +304,7 @@ method.
       "Effect": "Allow",
       "Action": ["sts:AssumeRole"],
       "Resource": [
-        "arn:aws:iam:<AccountId>:role/<VaultRole>"
+        "arn:aws:iam::<AccountId>:role/<VaultRole>"
       ]
     }
   ]

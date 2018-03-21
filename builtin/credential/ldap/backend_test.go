@@ -449,7 +449,7 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 		},
 		Unauthenticated: true,
 
-		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientiests)
+		// Verifies user tesla maps to groups via local group (engineers) as well as remote group (Scientists)
 		Check: logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
 	}
 }
@@ -463,7 +463,7 @@ func testAccStepLoginNoGroupDN(t *testing.T, user string, pass string) logicalte
 		},
 		Unauthenticated: true,
 
-		// Verifies a search without defined GroupDN returns a warnting rather than failing
+		// Verifies a search without defined GroupDN returns a warning rather than failing
 		Check: func(resp *logical.Response) error {
 			if len(resp.Warnings) != 1 {
 				return fmt.Errorf("expected a warning due to no group dn, got: %#v", resp.Warnings)

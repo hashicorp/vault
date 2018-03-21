@@ -167,9 +167,9 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 		"Content-Type":   []string{"json"},
 	}
 
-	hashFunc := func(s string) (string, error) { return "hashed", nil }
+	hashFunc := func(ctx context.Context, s string) (string, error) { return "hashed", nil }
 
-	result, err := conf.ApplyConfig(reqHeaders, hashFunc)
+	result, err := conf.ApplyConfig(context.Background(), reqHeaders, hashFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,16 +213,16 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 		"Content-Type":   []string{"json"},
 	}
 
-	salter, err := salt.NewSalt(nil, nil)
+	salter, err := salt.NewSalt(context.Background(), nil, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	hashFunc := func(s string) (string, error) { return salter.GetIdentifiedHMAC(s), nil }
+	hashFunc := func(ctx context.Context, s string) (string, error) { return salter.GetIdentifiedHMAC(s), nil }
 
 	// Reset the timer since we did a lot above
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		conf.ApplyConfig(reqHeaders, hashFunc)
+		conf.ApplyConfig(context.Background(), reqHeaders, hashFunc)
 	}
 }

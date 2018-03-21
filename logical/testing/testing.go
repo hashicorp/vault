@@ -83,7 +83,7 @@ type TestStep struct {
 	// RemoteAddr, if set, will set the remote addr on the request.
 	RemoteAddr string
 
-	// ConnState, if set, will set the tls conneciton state
+	// ConnState, if set, will set the tls connection state
 	ConnState *tls.ConnectionState
 }
 

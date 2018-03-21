@@ -164,7 +164,7 @@ seconds or a string duration like "72h".
 All certificates and/or revocation information currently stored in the backend
 will be checked when this endpoint is hit. The expiration of the
 certificate/revocation information of each certificate being held in
-certificate storage or in revocation infomation will then be checked. If the
+certificate storage or in revocation information will then be checked. If the
 current time, minus the value of 'safety_buffer', is greater than the
 expiration, it will be removed.
 `

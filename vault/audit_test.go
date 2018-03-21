@@ -66,7 +66,7 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *audit.LogInput) error {
 	return n.RespErr
 }
 
-func (n *NoopAudit) Salt() (*salt.Salt, error) {
+func (n *NoopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	n.saltMutex.RLock()
 	if n.salt != nil {
 		defer n.saltMutex.RUnlock()
@@ -78,7 +78,7 @@ func (n *NoopAudit) Salt() (*salt.Salt, error) {
 	if n.salt != nil {
 		return n.salt, nil
 	}
-	salt, err := salt.NewSalt(n.Config.SaltView, n.Config.SaltConfig)
+	salt, err := salt.NewSalt(ctx, n.Config.SaltView, n.Config.SaltConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +86,8 @@ func (n *NoopAudit) Salt() (*salt.Salt, error) {
 	return salt, nil
 }
 
-func (n *NoopAudit) GetHash(data string) (string, error) {
-	salt, err := n.Salt()
+func (n *NoopAudit) GetHash(ctx context.Context, data string) (string, error) {
+	salt, err := n.Salt(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -551,7 +551,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	}
 	respErr := fmt.Errorf("permission denied")
 
-	// Copy so we can verify nothing canged
+	// Copy so we can verify nothing changed
 	authCopyRaw, err := copystructure.Copy(auth)
 	if err != nil {
 		t.Fatal(err)
@@ -650,7 +650,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	}
 	respErr := fmt.Errorf("permission denied")
 
-	// Copy so we can verify nothing canged
+	// Copy so we can verify nothing changed
 	reqCopyRaw, err := copystructure.Copy(req)
 	if err != nil {
 		t.Fatal(err)

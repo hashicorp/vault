@@ -39,6 +39,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 		Logger:      b.logger,
 		System:      sysView,
 		Config:      args.Config,
+		BackendUUID: args.BackendUUID,
 	}
 
 	// Call the underlying backend factory after shims have been created

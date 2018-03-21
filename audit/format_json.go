@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 // a JSON format.
 type JSONFormatWriter struct {
 	Prefix   string
-	SaltFunc func() (*salt.Salt, error)
+	SaltFunc func(context.Context) (*salt.Salt, error)
 }
 
 func (f *JSONFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
@@ -47,6 +48,6 @@ func (f *JSONFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) 
 	return enc.Encode(resp)
 }
 
-func (f *JSONFormatWriter) Salt() (*salt.Salt, error) {
-	return f.SaltFunc()
+func (f *JSONFormatWriter) Salt(ctx context.Context) (*salt.Salt, error) {
+	return f.SaltFunc(ctx)
 }

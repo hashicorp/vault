@@ -59,7 +59,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	// Create the salt of OTP because entry would have been create with the
 	// salt and not directly of the OTP. Salt will yield the same value which
 	// because the seed is the same, the backend salt.
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ Validate the OTP provided by Vault SSH Agent.
 `
 
 const pathVerifyHelpDesc = `
-This path will be used by Vault SSH Agent runnin in the remote hosts. The OTP
+This path will be used by Vault SSH Agent running in the remote hosts. The OTP
 provided by the client is sent to Vault for validation by the agent. If Vault
 finds an entry for the OTP, it responds with the username and IP it is associated
 with. Agent uses this information to authenticate the client. Vault deletes the

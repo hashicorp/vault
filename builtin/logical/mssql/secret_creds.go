@@ -141,7 +141,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return nil, fmt.Errorf("cound not generate sql statements for all rows: %s", rows.Err())
+		return nil, fmt.Errorf("could not generate sql statements for all rows: %s", rows.Err())
 	}
 	if lastStmtError != nil {
 		return nil, fmt.Errorf("could not perform all sql statements: %s", lastStmtError)

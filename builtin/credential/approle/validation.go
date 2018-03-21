@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -143,13 +142,13 @@ func (b *backend) validateCredentials(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	if role.BoundCIDRList != "" {
+	if len(role.BoundCIDRList) != 0 {
 		// If 'bound_cidr_list' was set, verify the CIDR restrictions
 		if req.Connection == nil || req.Connection.RemoteAddr == "" {
 			return nil, "", metadata, "", fmt.Errorf("failed to get connection information"), nil
 		}
 
-		belongs, err := cidrutil.IPBelongsToCIDRBlocksString(req.Connection.RemoteAddr, role.BoundCIDRList, ",")
+		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.BoundCIDRList)
 		if err != nil {
 			return nil, "", metadata, "", nil, errwrap.Wrapf("failed to verify the CIDR restrictions set on the role: {{err}}", err)
 		}
@@ -163,7 +162,7 @@ func (b *backend) validateCredentials(ctx context.Context, req *logical.Request,
 
 // validateBindSecretID is used to determine if the given SecretID is a valid one.
 func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request, roleName, secretID,
-	hmacKey, roleBoundCIDRList string) (bool, map[string]string, error) {
+	hmacKey string, roleBoundCIDRList []string) (bool, map[string]string, error) {
 	secretIDHMAC, err := createHMAC(hmacKey, secretID)
 	if err != nil {
 		return false, nil, fmt.Errorf("failed to create HMAC of secret_id: %v", err)
@@ -236,7 +235,7 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 	}
 
 	// If there exists a single use left, delete the SecretID entry from
-	// the storage but do not fail the validation request. Subsequest
+	// the storage but do not fail the validation request. Subsequent
 	// requests to use the same SecretID will fail.
 	if result.SecretIDNumUses == 1 {
 		// Delete the secret IDs accessor first
@@ -281,17 +280,14 @@ func (b *backend) validateBindSecretID(ctx context.Context, req *logical.Request
 
 // verifyCIDRRoleSecretIDSubset checks if the CIDR blocks set on the secret ID
 // are a subset of CIDR blocks set on the role
-func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList string) error {
+func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList []string) error {
 	if len(secretIDCIDRs) != 0 {
-		// Parse the CIDRs on role as a slice
-		roleCIDRs := strutil.ParseDedupLowercaseAndSortStrings(roleBoundCIDRList, ",")
-
 		// If there are no CIDR blocks on the role, then the subset
 		// requirement would be satisfied
-		if len(roleCIDRs) != 0 {
-			subset, err := cidrutil.SubsetBlocks(roleCIDRs, secretIDCIDRs)
+		if len(roleBoundCIDRList) != 0 {
+			subset, err := cidrutil.SubsetBlocks(roleBoundCIDRList, secretIDCIDRs)
 			if !subset || err != nil {
-				return fmt.Errorf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: %v", roleCIDRs, secretIDCIDRs, err)
+				return fmt.Errorf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: %v", roleBoundCIDRList, secretIDCIDRs, err)
 			}
 		}
 	}
@@ -480,7 +476,7 @@ func (b *backend) secretIDAccessorEntry(ctx context.Context, s logical.Storage, 
 	var result secretIDAccessorStorageEntry
 
 	// Create index entry, mapping the accessor to the token ID
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -513,7 +509,7 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 	entry.SecretIDAccessor = accessorUUID
 
 	// Create index entry, mapping the accessor to the token ID
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return err
 	}
@@ -536,7 +532,7 @@ func (b *backend) createSecretIDAccessorEntry(ctx context.Context, s logical.Sto
 
 // deleteSecretIDAccessorEntry deletes the storage index mapping the accessor to a SecretID.
 func (b *backend) deleteSecretIDAccessorEntry(ctx context.Context, s logical.Storage, secretIDAccessor string) error {
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return err
 	}

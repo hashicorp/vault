@@ -211,7 +211,7 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 			result.CAChain = append(result.CAChain, certBlock)
 		}
 
-	// For backwards compabitibility
+	// For backwards compatibility
 	case len(c.IssuingCA) > 0:
 		pemBlock, _ = pem.Decode([]byte(c.IssuingCA))
 		if pemBlock == nil {
@@ -254,12 +254,12 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 
 	if p.CertificateBytes != nil && len(p.CertificateBytes) > 0 {
 		block.Bytes = p.CertificateBytes
-		result.Certificate = string(pem.EncodeToMemory(&block))
+		result.Certificate = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 	}
 
 	for _, caCert := range p.CAChain {
 		block.Bytes = caCert.Bytes
-		certificate := string(pem.EncodeToMemory(&block))
+		certificate := strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 
 		result.CAChain = append(result.CAChain, certificate)
 	}
@@ -279,7 +279,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 			}
 		}
 
-		result.PrivateKey = string(pem.EncodeToMemory(&block))
+		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 	}
 
 	return result, nil
@@ -463,7 +463,7 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 
 	if p.CSRBytes != nil && len(p.CSRBytes) > 0 {
 		block.Bytes = p.CSRBytes
-		result.CSR = string(pem.EncodeToMemory(&block))
+		result.CSR = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 	}
 
 	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
@@ -478,7 +478,7 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 		default:
 			return nil, errutil.InternalError{Err: "Could not determine private key type when creating block"}
 		}
-		result.PrivateKey = string(pem.EncodeToMemory(&block))
+		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 	}
 
 	return result, nil
@@ -523,7 +523,7 @@ func (p *ParsedCSRBundle) SetParsedPrivateKey(privateKey crypto.Signer, privateK
 }
 
 // GetTLSConfig returns a TLS config generally suitable for client
-// authentiation. The returned TLS config can be modified slightly
+// authentication. The returned TLS config can be modified slightly
 // to be made suitable for a server requiring client authentication;
 // specifically, you should set the value of ClientAuth in the returned
 // config to match your needs.

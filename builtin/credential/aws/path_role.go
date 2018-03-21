@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	currentRoleStorageVersion = 1
+	currentRoleStorageVersion = 2
 )
 
 func pathRole(b *backend) *framework.Path {
@@ -71,6 +71,13 @@ with an IAM instance profile ARN which has a prefix that matches
 one of the values specified by this parameter. The value is prefix-matched
 (as though it were a glob ending in '*'). This is only applicable when
 auth_type is ec2 or inferred_entity_type is ec2_instance.`,
+			},
+			"bound_ec2_instance_id": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `If set, defines a constraint on the EC2 instances to have one of the
+given instance IDs. Can be a list or comma-separated string of EC2 instance
+IDs. This is only applicable when auth_type is ec2 or inferred_entity_type is
+ec2_instance.`,
 			},
 			"resolve_aws_unique_ids": {
 				Type:    framework.TypeBool,
@@ -313,7 +320,7 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 	if roleEntry == nil {
 		return false, fmt.Errorf("received nil roleEntry")
 	}
-	var upgraded bool
+	upgraded := roleEntry.Version < currentRoleStorageVersion
 	switch roleEntry.Version {
 	case 0:
 		// Check if the value held by role ARN field is actually an instance profile ARN
@@ -323,15 +330,12 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 
 			// Reset the old field
 			roleEntry.BoundIamRoleARN = ""
-
-			upgraded = true
 		}
 
 		// Check if there was no pre-existing AuthType set (from older versions)
 		if roleEntry.AuthType == "" {
 			// then default to the original behavior of ec2
 			roleEntry.AuthType = ec2AuthType
-			upgraded = true
 		}
 
 		// Check if we need to resolve the unique ID on the role
@@ -347,56 +351,56 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 			roleEntry.BoundIamPrincipalID = principalId
 			// Not setting roleEntry.BoundIamPrincipalARN to "" here so that clients can see the original
 			// ARN that the role was bound to
-			upgraded = true
 		}
 
 		// Check if we need to convert individual string values to lists
 		if roleEntry.BoundAmiID != "" {
 			roleEntry.BoundAmiIDs = []string{roleEntry.BoundAmiID}
 			roleEntry.BoundAmiID = ""
-			upgraded = true
 		}
 		if roleEntry.BoundAccountID != "" {
 			roleEntry.BoundAccountIDs = []string{roleEntry.BoundAccountID}
 			roleEntry.BoundAccountID = ""
-			upgraded = true
 		}
 		if roleEntry.BoundIamPrincipalARN != "" {
 			roleEntry.BoundIamPrincipalARNs = []string{roleEntry.BoundIamPrincipalARN}
 			roleEntry.BoundIamPrincipalARN = ""
-			upgraded = true
 		}
 		if roleEntry.BoundIamPrincipalID != "" {
 			roleEntry.BoundIamPrincipalIDs = []string{roleEntry.BoundIamPrincipalID}
 			roleEntry.BoundIamPrincipalID = ""
-			upgraded = true
 		}
 		if roleEntry.BoundIamRoleARN != "" {
 			roleEntry.BoundIamRoleARNs = []string{roleEntry.BoundIamRoleARN}
 			roleEntry.BoundIamRoleARN = ""
-			upgraded = true
 		}
 		if roleEntry.BoundIamInstanceProfileARN != "" {
 			roleEntry.BoundIamInstanceProfileARNs = []string{roleEntry.BoundIamInstanceProfileARN}
 			roleEntry.BoundIamInstanceProfileARN = ""
-			upgraded = true
 		}
 		if roleEntry.BoundRegion != "" {
 			roleEntry.BoundRegions = []string{roleEntry.BoundRegion}
 			roleEntry.BoundRegion = ""
-			upgraded = true
 		}
 		if roleEntry.BoundSubnetID != "" {
 			roleEntry.BoundSubnetIDs = []string{roleEntry.BoundSubnetID}
 			roleEntry.BoundSubnetID = ""
-			upgraded = true
 		}
 		if roleEntry.BoundVpcID != "" {
 			roleEntry.BoundVpcIDs = []string{roleEntry.BoundVpcID}
 			roleEntry.BoundVpcID = ""
-			upgraded = true
 		}
 		roleEntry.Version = 1
+		fallthrough
+	case 1:
+		// Make BoundIamRoleARNs and BoundIamInstanceProfileARNs explicitly prefix-matched
+		for i, arn := range roleEntry.BoundIamRoleARNs {
+			roleEntry.BoundIamRoleARNs[i] = fmt.Sprintf("%s*", arn)
+		}
+		for i, arn := range roleEntry.BoundIamInstanceProfileARNs {
+			roleEntry.BoundIamInstanceProfileARNs[i] = fmt.Sprintf("%s*", arn)
+		}
+		roleEntry.Version = 2
 		fallthrough
 	case currentRoleStorageVersion:
 	default:
@@ -548,6 +552,10 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		roleEntry.BoundIamInstanceProfileARNs = boundIamInstanceProfileARNRaw.([]string)
 	}
 
+	if boundEc2InstanceIDRaw, ok := data.GetOk("bound_ec2_instance_id"); ok {
+		roleEntry.BoundEc2InstanceIDs = boundEc2InstanceIDRaw.([]string)
+	}
+
 	if boundIamPrincipalARNRaw, ok := data.GetOk("bound_iam_principal_arn"); ok {
 		principalARNs := boundIamPrincipalARNRaw.([]string)
 		roleEntry.BoundIamPrincipalARNs = principalARNs
@@ -621,56 +629,63 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 	if len(roleEntry.BoundAccountIDs) > 0 {
 		if !allowEc2Binds {
-			return logical.ErrorResponse(fmt.Sprintf("specified bound_account_id but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_account_id but not specifying ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
 
 	if len(roleEntry.BoundRegions) > 0 {
 		if roleEntry.AuthType != ec2AuthType {
-			return logical.ErrorResponse("specified bound_region but not allowing ec2 auth_type"), nil
+			return logical.ErrorResponse("specified bound_region but not specifying ec2 auth_type"), nil
 		}
 		numBinds++
 	}
 
 	if len(roleEntry.BoundAmiIDs) > 0 {
 		if !allowEc2Binds {
-			return logical.ErrorResponse(fmt.Sprintf("specified bound_ami_id but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_ami_id but not specifying ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
 
 	if len(roleEntry.BoundIamInstanceProfileARNs) > 0 {
 		if !allowEc2Binds {
-			return logical.ErrorResponse(fmt.Sprintf("specified bound_iam_instance_profile_arn but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_iam_instance_profile_arn but not specifying ec2 auth_type or inferring %s", ec2EntityType)), nil
+		}
+		numBinds++
+	}
+
+	if len(roleEntry.BoundEc2InstanceIDs) > 0 {
+		if !allowEc2Binds {
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_ec2_instance_id but not specifying ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
 
 	if len(roleEntry.BoundIamRoleARNs) > 0 {
 		if !allowEc2Binds {
-			return logical.ErrorResponse(fmt.Sprintf("specified bound_iam_role_arn but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_iam_role_arn but not specifying ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
 
 	if len(roleEntry.BoundIamPrincipalARNs) > 0 {
 		if roleEntry.AuthType != iamAuthType {
-			return logical.ErrorResponse("specified bound_iam_principal_arn but not allowing iam auth_type"), nil
+			return logical.ErrorResponse("specified bound_iam_principal_arn but not specifying iam auth_type"), nil
 		}
 		numBinds++
 	}
 
 	if len(roleEntry.BoundVpcIDs) > 0 {
 		if !allowEc2Binds {
-			return logical.ErrorResponse(fmt.Sprintf("specified bound_vpc_id but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_vpc_id but not specifying ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
 
 	if len(roleEntry.BoundSubnetIDs) > 0 {
 		if !allowEc2Binds {
-			return logical.ErrorResponse(fmt.Sprintf("specified bound_subnet_id but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_subnet_id but not specifying ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
@@ -794,6 +809,7 @@ type awsRoleEntry struct {
 	AuthType                    string        `json:"auth_type" `
 	BoundAmiIDs                 []string      `json:"bound_ami_id_list"`
 	BoundAccountIDs             []string      `json:"bound_account_id_list"`
+	BoundEc2InstanceIDs         []string      `json:"bound_ec2_instance_id_list"`
 	BoundIamPrincipalARNs       []string      `json:"bound_iam_principal_arn_list"`
 	BoundIamPrincipalIDs        []string      `json:"bound_iam_principal_id_list"`
 	BoundIamRoleARNs            []string      `json:"bound_iam_role_arn_list"`
@@ -830,6 +846,7 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"auth_type":                      r.AuthType,
 		"bound_ami_id":                   r.BoundAmiIDs,
 		"bound_account_id":               r.BoundAccountIDs,
+		"bound_ec2_instance_id":          r.BoundEc2InstanceIDs,
 		"bound_iam_principal_arn":        r.BoundIamPrincipalARNs,
 		"bound_iam_principal_id":         r.BoundIamPrincipalIDs,
 		"bound_iam_role_arn":             r.BoundIamRoleARNs,

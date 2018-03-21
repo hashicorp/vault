@@ -77,7 +77,20 @@ For example, enable the "foo" auth method will make it accessible at
 - `config` `(map<string|string>: nil)` – Specifies configuration options for
   this auth method. These are the possible values:
 
-    - `plugin_name`
+  - `default_lease_ttl` `(string: "")` - The default lease duration, specified
+     as a string duration like "5s" or "30m".
+
+  - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
+     string duration like "5s" or "30m".
+
+  - `plugin_name` `(string: "")` - The name of the plugin in the plugin catalog
+     to use.
+
+  - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
+     that will not be HMAC'd by audit devices in the request data object.
+
+  - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
+     that will not be HMAC'd by audit devices in the response data object.
 
     The plugin_name can be provided in the config map or as a top-level option,
     with the former taking precedence.
