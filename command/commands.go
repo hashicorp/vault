@@ -32,6 +32,7 @@ import (
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
+	credAzure "github.com/hashicorp/vault-plugin-auth-azure/plugin"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
@@ -91,6 +92,7 @@ var (
 		"app-id":     credAppId.Factory,
 		"approle":    credAppRole.Factory,
 		"aws":        credAws.Factory,
+		"azure":      credAzure.Factory,
 		"centrify":   credCentrify.Factory,
 		"cert":       credCert.Factory,
 		"gcp":        credGcp.Factory,
