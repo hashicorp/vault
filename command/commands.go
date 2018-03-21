@@ -613,8 +613,8 @@ func initCommands(ui, serverCmdUi cli.Ui) {
 				},
 			}, nil
 		},
-		"kv enable-versions": func() (cli.Command, error) {
-			return &KVEnableVersionsCommand{
+		"kv enable-versioning": func() (cli.Command, error) {
+			return &KVEnableVersioningCommand{
 				BaseCommand: &BaseCommand{
 					UI: ui,
 				},
