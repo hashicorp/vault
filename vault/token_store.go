@@ -164,7 +164,6 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 		tokenLocks:         locksutil.CreateLocks(),
 		saltLock:           sync.RWMutex{},
 		db:                 db,
-		mappingLocks:       locksutil.CreateLocks(),
 		mappingPacker:      mappingPacker,
 	}
 
@@ -1370,7 +1369,6 @@ func (ts *TokenStore) handleCreateAgainstRole(ctx context.Context, req *logical.
 	return ts.handleCreateCommon(ctx, req, d, false, roleEntry)
 }
 
-// This is only here for backwards compatibility
 func (ts *TokenStore) lookupByAccessor(ctx context.Context, accessor string, tainted bool) (string, error) {
 	tokenMapping, err := ts.MemDBTokenMappingByAccessor(accessor)
 	if err != nil {
