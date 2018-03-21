@@ -17,6 +17,7 @@ import (
 var (
 	whitelistedHeaders = []string{
 		"X-Vault-Kv-Client",
+		"x-vault-kv-client",
 	}
 )
 
