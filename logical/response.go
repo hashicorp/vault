@@ -89,11 +89,12 @@ func (r *Response) Error() error {
 }
 
 // HelpResponse is used to format a help response
-func HelpResponse(text string, seeAlso []string) *Response {
+func HelpResponse(text string, seeAlso []string, spec interface{}) *Response {
 	return &Response{
 		Data: map[string]interface{}{
 			"help":     text,
 			"see_also": seeAlso,
+			"oas2":     spec,
 		},
 	}
 }

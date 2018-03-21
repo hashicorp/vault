@@ -84,7 +84,7 @@ type Path struct {
 	HelpDescription string
 }
 
-func (p *Path) helpCallback() OperationFunc {
+func (p *Path) helpCallback(b *Backend) OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
 		var tplData pathTemplateData
 		tplData.Request = req.Path
@@ -126,8 +126,16 @@ func (p *Path) helpCallback() OperationFunc {
 			return nil, errwrap.Wrapf("error executing template: {{err}}", err)
 		}
 
-		return logical.HelpResponse(help, nil), nil
+		s := oas(p, b.SpecialPaths().Root)
+
+		return logical.HelpResponse(help, nil, s), nil
 	}
+}
+
+func oas(p *Path, rootPaths []string) Top {
+	top := NewTop()
+	procFrameworkPath(p, rootPaths, &top)
+	return top //string(s)
 }
 
 type pathTemplateData struct {
