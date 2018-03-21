@@ -1998,8 +1998,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	if rawVal, ok := data.GetOk("passthrough_request_headers"); ok {
 		headers := rawVal.([]string)
 
-		fmt.Println(headers)
-
 		oldVal := mountEntry.Config.PassthroughRequestHeaders
 		mountEntry.Config.PassthroughRequestHeaders = headers
 
