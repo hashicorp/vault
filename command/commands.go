@@ -675,6 +675,90 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				},
 			}, nil
 		},
+		"kv": func() (cli.Command, error) {
+			return &KVCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv put": func() (cli.Command, error) {
+			return &KVPutCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv get": func() (cli.Command, error) {
+			return &KVGetCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv delete": func() (cli.Command, error) {
+			return &KVDeleteCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv list": func() (cli.Command, error) {
+			return &KVListCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv destroy": func() (cli.Command, error) {
+			return &KVDestroyCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv undelete": func() (cli.Command, error) {
+			return &KVUndeleteCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv enable-versioning": func() (cli.Command, error) {
+			return &KVEnableVersioningCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata": func() (cli.Command, error) {
+			return &KVMetadataCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata put": func() (cli.Command, error) {
+			return &KVMetadataPutCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata get": func() (cli.Command, error) {
+			return &KVMetadataGetCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata delete": func() (cli.Command, error) {
+			return &KVMetadataDeleteCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
 	}
 
 	// Deprecated commands
