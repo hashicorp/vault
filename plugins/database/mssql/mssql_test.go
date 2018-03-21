@@ -80,7 +80,7 @@ func TestMSSQL_CreateUser(t *testing.T) {
 		RoleName:    "test",
 	}
 
-	// Test with no configured Creation Statememt
+	// Test with no configured Creation Statement
 	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Minute))
 	if err == nil {
 		t.Fatal("Expected error when no creation statement is provided")
@@ -135,7 +135,7 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	// Test default revoke statememts
+	// Test default revoke statements
 	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -154,7 +154,7 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	// Test custom revoke statememt
+	// Test custom revoke statement
 	statements.RevocationStatements = testMSSQLDrop
 	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {

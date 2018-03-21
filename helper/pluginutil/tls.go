@@ -31,9 +31,9 @@ var (
 	// string. Used for testing.
 	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
 
-	// PluginMetadaModeEnv is an ENV name used to disable TLS communication
+	// PluginMetadataModeEnv is an ENV name used to disable TLS communication
 	// to bootstrap mounting plugins.
-	PluginMetadaModeEnv = "VAULT_PLUGIN_METADATA_MODE"
+	PluginMetadataModeEnv = "VAULT_PLUGIN_METADATA_MODE"
 )
 
 // generateCert is used internally to create certificates for the plugin
@@ -128,10 +128,10 @@ func wrapServerConfig(ctx context.Context, sys RunnerUtil, certBytes []byte, key
 	return wrapInfo.Token, nil
 }
 
-// VaultPluginTLSProvider is run inside a plugin and retrives the response
+// VaultPluginTLSProvider is run inside a plugin and retrieves the response
 // wrapped TLS certificate from vault. It returns a configured TLS Config.
 func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, error) {
-	if os.Getenv(PluginMetadaModeEnv) == "true" {
+	if os.Getenv(PluginMetadataModeEnv) == "true" {
 		return nil
 	}
 

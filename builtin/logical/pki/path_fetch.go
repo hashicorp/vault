@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/pem"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
@@ -174,7 +175,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 				Type:  "CERTIFICATE",
 				Bytes: ca.Bytes,
 			}
-			certStr = certStr + string(pem.EncodeToMemory(&block))
+			certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 		}
 		certificate = []byte(certStr)
 		goto reply
@@ -203,7 +204,9 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			Type:  pemType,
 			Bytes: certEntry.Value,
 		}
-		certificate = pem.EncodeToMemory(&block)
+		// This is convoluted on purpose to ensure that we don't have trailing
+		// newlines via various paths
+		certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
 	}
 
 	revokedEntry, funcErr = fetchCertBySerial(ctx, req, "revoked/", serial)

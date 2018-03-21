@@ -167,7 +167,7 @@ func TestPluginCatalog_List(t *testing.T) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", plugins[0], "aaaaaaa")
 	}
 
-	// verify the builtin pluings are correct
+	// verify the builtin plugins are correct
 	for i, p := range builtinKeys {
 		if !reflect.DeepEqual(plugins[i+1], p) {
 			t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", plugins[i+1], p)

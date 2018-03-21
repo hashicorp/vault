@@ -73,7 +73,7 @@ To better reflect its actual use, the `generic` backend is now `kv`. Using
 
 ### HSM Users Need to Specify New Config Options (In 0.9)
 
-When using Vault with an HSM, a new paramter is required: `hmac_key_label`.
+When using Vault with an HSM, a new parameter is required: `hmac_key_label`.
 This performs a similar function to `key_label` but for the HMAC key Vault will
 use. Vault will generate a suitable key if this value is specified and
 `generate_key` is set true. See [the seal configuration page][pkcs11-seal] for

@@ -38,7 +38,7 @@ func CubbyholeBackendFactory(ctx context.Context, conf *logical.BackendConfig) (
 	}
 
 	if conf == nil {
-		return nil, fmt.Errorf("Configuation passed into backend is nil")
+		return nil, fmt.Errorf("Configuration passed into backend is nil")
 	}
 	b.Backend.Setup(ctx, conf)
 

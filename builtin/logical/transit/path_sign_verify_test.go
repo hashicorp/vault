@@ -158,11 +158,11 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	verifyRequest(req, false, "/sha2-224", sig)
 
 	// Reset and test algorithm selection in the data
-	req.Data["algorithm"] = "sha2-224"
+	req.Data["hash_algorithm"] = "sha2-224"
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
 
-	req.Data["algorithm"] = "sha2-384"
+	req.Data["hash_algorithm"] = "sha2-384"
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
 
@@ -173,18 +173,18 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 
 	// Test 512 and save sig for later to ensure we can't validate once min
 	// decryption version is set
-	req.Data["algorithm"] = "sha2-512"
+	req.Data["hash_algorithm"] = "sha2-512"
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
 
 	v1sig := sig
 
 	// Test bad algorithm
-	req.Data["algorithm"] = "foobar"
+	req.Data["hash_algorithm"] = "foobar"
 	signRequest(req, true, "")
 
 	// Test bad input
-	req.Data["algorithm"] = "sha2-256"
+	req.Data["hash_algorithm"] = "sha2-256"
 	req.Data["input"] = "foobar"
 	signRequest(req, true, "")
 
@@ -204,7 +204,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	}
 
 	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
-	req.Data["algorithm"] = "sha2-256"
+	req.Data["hash_algorithm"] = "sha2-256"
 	// Make sure signing still works fine
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)

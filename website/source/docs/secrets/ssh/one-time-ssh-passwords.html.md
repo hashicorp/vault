@@ -42,7 +42,7 @@ this secrets engine may allow for extra security on top of what TLS provides.
 ### Mount the secrets engine
 
 ```text
-$ vault mount ssh
+$ vault secrets enable ssh
 Successfully mounted 'ssh' at 'ssh'!
 ```
 

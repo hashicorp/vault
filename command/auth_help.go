@@ -104,18 +104,16 @@ func (c *AuthHelpCommand) Run(args []string) int {
 		authPath := ensureTrailingSlash(sanitizePath(args[0]))
 		auth, ok := auths[authPath]
 		if !ok {
-			c.UI.Error(fmt.Sprintf(
-				"Error retrieving help: unknown auth method: %s", authType))
+			c.UI.Warn(fmt.Sprintf(
+				"No auth method available on the server at %q", authPath))
 			return 1
 		}
 
 		authHandler, ok = c.Handlers[auth.Type]
 		if !ok {
-			c.UI.Error(wrapAtLength(fmt.Sprintf(
-				"INTERNAL ERROR! Found an auth method enabled at %s, but "+
-					"its type %q is not registered in Vault. This is a bug and should "+
-					"be reported. Please open an issue at github.com/hashicorp/vault.",
-				authPath, authType)))
+			c.UI.Warn(wrapAtLength(fmt.Sprintf(
+				"No method-specific CLI handler available for auth method %q",
+				authType)))
 			return 2
 		}
 	}

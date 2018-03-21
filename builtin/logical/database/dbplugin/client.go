@@ -67,7 +67,7 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		return nil, errors.New("unsupported client type")
 	}
 
-	// Wrap RPC implimentation in DatabasePluginClient
+	// Wrap RPC implementation in DatabasePluginClient
 	return &DatabasePluginClient{
 		client:   client,
 		Database: db,

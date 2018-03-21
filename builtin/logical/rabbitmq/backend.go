@@ -89,7 +89,7 @@ func (b *backend) Client(ctx context.Context, s logical.Storage) (*rabbithole.Cl
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// If the client was creted during the lock switch, return it
+	// If the client was created during the lock switch, return it
 	if b.client != nil {
 		return b.client, nil
 	}

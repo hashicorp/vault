@@ -46,7 +46,7 @@ type backend struct {
 	// tidy the blacklist and whitelist entries.
 	tidyCooldownPeriod time.Duration
 
-	// nextTidyTime holds the time at which the periodic func should initiatite
+	// nextTidyTime holds the time at which the periodic func should initiate
 	// the tidy operations. This is set by the periodicFunc based on the value
 	// of tidyCooldownPeriod.
 	nextTidyTime time.Time

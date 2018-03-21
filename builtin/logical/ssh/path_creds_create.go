@@ -194,7 +194,7 @@ func (b *backend) GenerateDynamicCredential(ctx context.Context, req *logical.Re
 	}
 
 	// Add the public key to authorized_keys file in target machine
-	err = b.installPublicKeyInTarget(role.AdminUser, username, ip, role.Port, hostKey.Key, dynamicPublicKey, role.InstallScript, true)
+	err = b.installPublicKeyInTarget(ctx, role.AdminUser, username, ip, role.Port, hostKey.Key, dynamicPublicKey, role.InstallScript, true)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to add public key to authorized_keys file in target: %v", err)
 	}
@@ -202,12 +202,12 @@ func (b *backend) GenerateDynamicCredential(ctx context.Context, req *logical.Re
 }
 
 // Generates a UUID OTP and its salted value based on the salt of the backend.
-func (b *backend) GenerateSaltedOTP() (string, string, error) {
+func (b *backend) GenerateSaltedOTP(ctx context.Context) (string, string, error) {
 	str, err := uuid.GenerateUUID()
 	if err != nil {
 		return "", "", err
 	}
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -217,7 +217,7 @@ func (b *backend) GenerateSaltedOTP() (string, string, error) {
 
 // Generates an UUID OTP and creates an entry for the same in storage backend with its salted string.
 func (b *backend) GenerateOTPCredential(ctx context.Context, req *logical.Request, sshOTPEntry *sshOTP) (string, error) {
-	otp, otpSalted, err := b.GenerateSaltedOTP()
+	otp, otpSalted, err := b.GenerateSaltedOTP(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -230,7 +230,7 @@ func (b *backend) GenerateOTPCredential(ctx context.Context, req *logical.Reques
 	// OTP is generated. It is very unlikely that this is the case and this
 	// code is just for safety.
 	for err == nil && entry != nil {
-		otp, otpSalted, err = b.GenerateSaltedOTP()
+		otp, otpSalted, err = b.GenerateSaltedOTP(ctx)
 		if err != nil {
 			return "", err
 		}

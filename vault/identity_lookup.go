@@ -29,7 +29,7 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 				},
 				"alias_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the alias. This should be supplied in conjuction with 'alias_mount_accessor'.",
+					Description: "Name of the alias. This should be supplied in conjunction with 'alias_mount_accessor'.",
 				},
 				"alias_mount_accessor": {
 					Type:        framework.TypeString,
@@ -60,7 +60,7 @@ func lookupPaths(i *IdentityStore) []*framework.Path {
 				},
 				"alias_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the alias. This should be supplied in conjuction with 'alias_mount_accessor'.",
+					Description: "Name of the alias. This should be supplied in conjunction with 'alias_mount_accessor'.",
 				},
 				"alias_mount_accessor": {
 					Type:        framework.TypeString,

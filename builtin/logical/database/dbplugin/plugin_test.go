@@ -258,7 +258,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Test default revoke statememts
+	// Test default revoke statements
 	err = db.RevokeUser(context.Background(), dbplugin.Statements{}, us)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -398,7 +398,7 @@ func TestPlugin_NetRPC_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Test default revoke statememts
+	// Test default revoke statements
 	err = db.RevokeUser(context.Background(), dbplugin.Statements{}, us)
 	if err != nil {
 		t.Fatalf("err: %s", err)

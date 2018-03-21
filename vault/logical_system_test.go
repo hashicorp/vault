@@ -337,9 +337,159 @@ path "foo/bar*" {
 path "sys/capabilities*" {
 	capabilities = ["update"]
 }
+path "bar/baz" {
+	capabilities = ["read", "update"]
+}
+path "bar/baz" {
+	capabilities = ["delete"]
+}
 `
 
-func TestSystemBackend_Capabilities(t *testing.T) {
+func TestSystemBackend_PathCapabilities(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	core, b, rootToken := testCoreSystemBackend(t)
+
+	policy, _ := ParseACLPolicy(capabilitiesPolicy)
+	err = core.policyStore.SetPolicy(context.Background(), policy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	path1 := "foo/bar"
+	path2 := "foo/bar/sample"
+	path3 := "sys/capabilities"
+	path4 := "bar/baz"
+
+	rootCheckFunc := func(t *testing.T, resp *logical.Response) {
+		// All the paths should have "root" as the capability
+		expectedRoot := []string{"root"}
+		if !reflect.DeepEqual(resp.Data[path1], expectedRoot) ||
+			!reflect.DeepEqual(resp.Data[path2], expectedRoot) ||
+			!reflect.DeepEqual(resp.Data[path3], expectedRoot) ||
+			!reflect.DeepEqual(resp.Data[path4], expectedRoot) {
+			t.Fatalf("bad: capabilities; expected: %#v, actual: %#v", expectedRoot, resp.Data)
+		}
+	}
+
+	// Check the capabilities using the root token
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "capabilities",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"paths": []string{path1, path2, path3, path4},
+			"token": rootToken,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	rootCheckFunc(t, resp)
+
+	// Check the capabilities using capabilities-self
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		ClientToken: rootToken,
+		Path:        "capabilities-self",
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"paths": []string{path1, path2, path3, path4},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	rootCheckFunc(t, resp)
+
+	// Lookup the accessor of the root token
+	te, err := core.tokenStore.Lookup(context.Background(), rootToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check the capabilities using capabilities-accessor endpoint
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "capabilities-accessor",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"paths":    []string{path1, path2, path3, path4},
+			"accessor": te.Accessor,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	rootCheckFunc(t, resp)
+
+	// Create a non-root token
+	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
+
+	nonRootCheckFunc := func(t *testing.T, resp *logical.Response) {
+		expected1 := []string{"create", "sudo", "update"}
+		expected2 := expected1
+		expected3 := []string{"update"}
+		expected4 := []string{"delete", "read", "update"}
+
+		if !reflect.DeepEqual(resp.Data[path1], expected1) ||
+			!reflect.DeepEqual(resp.Data[path2], expected2) ||
+			!reflect.DeepEqual(resp.Data[path3], expected3) ||
+			!reflect.DeepEqual(resp.Data[path4], expected4) {
+			t.Fatalf("bad: capabilities; actual: %#v", resp.Data)
+		}
+	}
+
+	// Check the capabilities using a non-root token
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "capabilities",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"paths": []string{path1, path2, path3, path4},
+			"token": "tokenid",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	nonRootCheckFunc(t, resp)
+
+	// Check the capabilities of a non-root token using capabilities-self
+	// endpoint
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		ClientToken: "tokenid",
+		Path:        "capabilities-self",
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"paths": []string{path1, path2, path3, path4},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	nonRootCheckFunc(t, resp)
+
+	// Lookup the accessor of the non-root token
+	te, err = core.tokenStore.Lookup(context.Background(), "tokenid")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check the capabilities using a non-root token using
+	// capabilities-accessor endpoint
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "capabilities-accessor",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"paths":    []string{path1, path2, path3, path4},
+			"accessor": te.Accessor,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	nonRootCheckFunc(t, resp)
+}
+
+func TestSystemBackend_Capabilities_BC(t *testing.T) {
 	testCapabilities(t, "capabilities")
 	testCapabilities(t, "capabilities-self")
 }
@@ -347,7 +497,11 @@ func TestSystemBackend_Capabilities(t *testing.T) {
 func testCapabilities(t *testing.T, endpoint string) {
 	core, b, rootToken := testCoreSystemBackend(t)
 	req := logical.TestRequest(t, logical.UpdateOperation, endpoint)
-	req.Data["token"] = rootToken
+	if endpoint == "capabilities-self" {
+		req.ClientToken = rootToken
+	} else {
+		req.Data["token"] = rootToken
+	}
 	req.Data["path"] = "any_path"
 
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -372,7 +526,11 @@ func testCapabilities(t *testing.T, endpoint string) {
 
 	testMakeToken(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
 	req = logical.TestRequest(t, logical.UpdateOperation, endpoint)
-	req.Data["token"] = "tokenid"
+	if endpoint == "capabilities-self" {
+		req.ClientToken = "tokenid"
+	} else {
+		req.Data["token"] = "tokenid"
+	}
 	req.Data["path"] = "foo/bar"
 
 	resp, err = b.HandleRequest(context.Background(), req)
@@ -390,7 +548,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 	}
 }
 
-func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
+func TestSystemBackend_CapabilitiesAccessor_BC(t *testing.T) {
 	core, b, rootToken := testCoreSystemBackend(t)
 	te, err := core.tokenStore.Lookup(context.Background(), rootToken)
 	if err != nil {
@@ -1230,6 +1388,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
+				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -1280,6 +1439,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(2100),
 				"max_lease_ttl":     int64(2700),
+				"plugin_name":       "",
 			},
 			"local":     true,
 			"seal_wrap": true,
@@ -1291,6 +1451,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
+				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -1747,22 +1908,22 @@ func TestSystemBackend_rotate(t *testing.T) {
 
 func testSystemBackend(t *testing.T) logical.Backend {
 	c, _, _ := TestCoreUnsealed(t)
-	return testSystemBackendInternal(t, c)
+	return c.systemBackend
 }
 
 func testSystemBackendRaw(t *testing.T) logical.Backend {
 	c, _, _ := TestCoreUnsealedRaw(t)
-	return testSystemBackendInternal(t, c)
+	return c.systemBackend
 }
 
 func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 	c, _, root := TestCoreUnsealed(t)
-	return c, testSystemBackendInternal(t, c), root
+	return c, c.systemBackend, root
 }
 
 func testCoreSystemBackendRaw(t *testing.T) (*Core, logical.Backend, string) {
 	c, _, root := TestCoreUnsealedRaw(t)
-	return c, testSystemBackendInternal(t, c), root
+	return c, c.systemBackend, root
 }
 
 func testSystemBackendInternal(t *testing.T, c *Core) logical.Backend {
@@ -1837,7 +1998,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Error().Error() != "must not speficy args in command and args field" {
+	if resp.Error().Error() != "must not specify args in command and args field" {
 		t.Fatalf("err: %v", resp.Error())
 	}
 
@@ -2008,7 +2169,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 		}
 		rand2 := getResponse()
 		if len(rand1) != numBytes || len(rand2) != numBytes {
-			t.Fatal("length of output random bytes not what is exepcted")
+			t.Fatal("length of output random bytes not what is expected")
 		}
 		if reflect.DeepEqual(rand1, rand2) {
 			t.Fatal("found identical ouputs")
@@ -2031,4 +2192,57 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	req.Data["format"] = "hex"
 	req.Data["bytes"] = -1
 	doRequest(req, true, "", 0)
+}
+
+func TestSystemBackend_InternalUIMounts(t *testing.T) {
+	b := testSystemBackend(t)
+
+	// Ensure no entries are in the endpoint as a starting point
+	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp := map[string]interface{}{
+		"secret": map[string]interface{}{},
+		"auth":   map[string]interface{}{},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// Mount-tune an auth mount
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
+	req.Data["listing_visibility"] = "unauth"
+	b.HandleRequest(context.Background(), req)
+
+	// Mount-tune a secret mount
+	req = logical.TestRequest(t, logical.UpdateOperation, "mounts/secret/tune")
+	req.Data["listing_visibility"] = "unauth"
+	b.HandleRequest(context.Background(), req)
+
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"secret": map[string]interface{}{
+			"secret/": map[string]interface{}{
+				"type":        "kv",
+				"description": "key/value secret storage",
+			},
+		},
+		"auth": map[string]interface{}{
+			"token/": map[string]interface{}{
+				"type":        "token",
+				"description": "token based credentials",
+			},
+		},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
 }

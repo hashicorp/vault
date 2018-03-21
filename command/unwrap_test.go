@@ -139,7 +139,7 @@ func TestUnwrapCommand_Run(t *testing.T) {
 		cmd.client = client
 		cmd.client.SetToken(wrappedToken)
 
-		// Intentionally don't pass the token here - it shoudl use the local token
+		// Intentionally don't pass the token here - it should use the local token
 		code := cmd.Run([]string{})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)

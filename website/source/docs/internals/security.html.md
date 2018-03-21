@@ -64,29 +64,35 @@ The following are not parts of the Vault threat model:
 
 # External Threat Overview
 
-Given the architecture of Vault, there are 3 distinct systems we are concerned with
-for Vault. There is the client, which is speaking to Vault over an API. There is Vault
-or the server more accurately, which is providing an API and serving requests. Lastly,
-there is the storage backend, which the server is utilizing to read and write data.
+Given the architecture of Vault, there are 3 distinct systems we are concerned
+with for Vault. There is the client, which is speaking to Vault over an API.
+There is Vault or the server more accurately, which is providing an API and
+serving requests. Lastly, there is the storage backend, which the server is
+utilizing to read and write data.
 
 There is no mutual trust between the Vault client and server. Clients use
-[TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) to verify the identity
-of the server and to establish a secure communication channel. Servers require that
-a client provides a client token for every request which is used to identify the client.
-A client that does not provide their token is only permitted to make login requests.
+[TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) to verify the
+identity of the server and to establish a secure communication channel. Servers
+require that a client provides a client token for every request which is used
+to identify the client.  A client that does not provide their token is only
+permitted to make login requests.
 
-The storage backends used by Vault are also untrusted by design. Vault uses a security
-barrier for all requests made to the backend. The security barrier automatically encrypts
-all data leaving Vault using the [Advanced Encryption Standard (AES)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard)
-cipher in the [Galois Counter Mode (GCM)](https://en.wikipedia.org/wiki/Galois/Counter_Mode).
-The nonce is randomly generated for every encrypted object. When data is read from the
-security barrier the GCM authentication tag is verified during the decryption process to detect
-any tampering.
+The storage backends used by Vault are also untrusted by design. Vault uses a
+security barrier for all requests made to the backend. The security barrier
+automatically encrypts all data leaving Vault using a 256-bit [Advanced
+Encryption Standard
+(AES)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) cipher in
+the [Galois Counter Mode
+(GCM)](https://en.wikipedia.org/wiki/Galois/Counter_Mode) with 96-bit nonces.
+The nonce is randomly generated for every encrypted object. When data is read
+from the security barrier the GCM authentication tag is verified during the
+decryption process to detect any tampering.
 
 Depending on the backend used, Vault may communicate with the backend over TLS
-to provide an added layer of security. In some cases, such as a file backend this
-is not applicable. Because storage backends are untrusted, an eavesdropper would
-only gain access to encrypted data even if communication with the backend was intercepted.
+to provide an added layer of security. In some cases, such as a file backend
+this is not applicable. Because storage backends are untrusted, an eavesdropper
+would only gain access to encrypted data even if communication with the backend
+was intercepted.
 
 # Internal Threat Overview
 

@@ -222,7 +222,7 @@ func (c *LoginCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
-	// If the user provided a token, pass it along to the auth provier.
+	// If the user provided a token, pass it along to the auth provider.
 	if authMethod == "token" && len(args) > 0 && !strings.Contains(args[0], "=") {
 		args = append([]string{"token=" + args[0]}, args[1:]...)
 	}
@@ -321,7 +321,8 @@ func (c *LoginCommand) Run(args []string) int {
 				"use the value set by this command, unset the VAULT_TOKEN environment "+
 				"variable or set it to the token displayed below.") + "\n")
 		}
-	} else {
+	} else if !c.flagTokenOnly {
+		// If token-only the user knows it won't be stored, so don't warn
 		c.UI.Warn(wrapAtLength(
 			"The token was not stored in token helper. Set the VAULT_TOKEN "+
 				"environment variable or pass the token below with each request to "+
@@ -348,7 +349,7 @@ func (c *LoginCommand) Run(args []string) int {
 
 // extractToken extracts the token from the given secret, automatically
 // unwrapping responses and handling error conditions if unwrap is true. The
-// result also returns whether it was a wrapped resonse that was not unwrapped.
+// result also returns whether it was a wrapped response that was not unwrapped.
 func (c *LoginCommand) extractToken(client *api.Client, secret *api.Secret, unwrap bool) (*api.Secret, bool, error) {
 	switch {
 	case secret == nil:

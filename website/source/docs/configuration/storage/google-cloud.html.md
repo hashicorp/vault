@@ -42,6 +42,13 @@ storage "gcs" {
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests.
 
+- `chunk_size` `(string: "8192")` – Specifies the maximum kilobytes of each object
+  the gcs writer will attempt to send to the server in a single request.
+  If set to 0, it will attempt to send the whole object at once, but it will
+  not retry any failures either (not recommended). If you are not storing large
+  objects in Vault, it is recommended to set this to a low value (minimum is 256)
+  since it will drastically reduce the amount of memory Vault uses.
+
 ## `gcs` Examples
 
 ### Default Example

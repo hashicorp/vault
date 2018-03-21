@@ -283,7 +283,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return fmt.Errorf("cound not generate sql statements for all rows: %s", rows.Err())
+		return fmt.Errorf("could not generate sql statements for all rows: %s", rows.Err())
 	}
 	if lastStmtError != nil {
 		return fmt.Errorf("could not perform all sql statements: %s", lastStmtError)

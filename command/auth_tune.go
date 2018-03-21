@@ -1,6 +1,7 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"strings"
 	"time"
@@ -16,8 +17,11 @@ var _ cli.CommandAutocomplete = (*AuthTuneCommand)(nil)
 type AuthTuneCommand struct {
 	*BaseCommand
 
-	flagDefaultLeaseTTL time.Duration
-	flagMaxLeaseTTL     time.Duration
+	flagDefaultLeaseTTL          time.Duration
+	flagMaxLeaseTTL              time.Duration
+	flagAuditNonHMACRequestKeys  []string
+	flagAuditNonHMACResponseKeys []string
+	flagListingVisibility        string
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -68,6 +72,26 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 			"or a previously configured value for the auth method.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAuditNonHMACRequestKeys,
+		Target: &c.flagAuditNonHMACRequestKeys,
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+			"devices in the request data object.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAuditNonHMACResponseKeys,
+		Target: &c.flagAuditNonHMACResponseKeys,
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+			"devices in the response data object.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   flagNameListingVisibility,
+		Target: &c.flagListingVisibility,
+		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
+	})
+
 	return set
 }
 
@@ -103,14 +127,31 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		return 2
 	}
 
+	mountConfigInput := api.MountConfigInput{
+		DefaultLeaseTTL: ttlToAPI(c.flagDefaultLeaseTTL),
+		MaxLeaseTTL:     ttlToAPI(c.flagMaxLeaseTTL),
+	}
+
+	// Set these values only if they are provided in the CLI
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == flagNameAuditNonHMACRequestKeys {
+			mountConfigInput.AuditNonHMACRequestKeys = c.flagAuditNonHMACRequestKeys
+		}
+
+		if fl.Name == flagNameAuditNonHMACResponseKeys {
+			mountConfigInput.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
+		}
+
+		if fl.Name == flagNameListingVisibility {
+			mountConfigInput.ListingVisibility = c.flagListingVisibility
+		}
+	})
+
 	// Append /auth (since that's where auths live) and a trailing slash to
 	// indicate it's a path in output
 	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
 
-	if err := client.Sys().TuneMount("/auth/"+mountPath, api.MountConfigInput{
-		DefaultLeaseTTL: ttlToAPI(c.flagDefaultLeaseTTL),
-		MaxLeaseTTL:     ttlToAPI(c.flagMaxLeaseTTL),
-	}); err != nil {
+	if err := client.Sys().TuneMount("/auth/"+mountPath, mountConfigInput); err != nil {
 		c.UI.Error(fmt.Sprintf("Error tuning auth method %s: %s", mountPath, err))
 		return 2
 	}

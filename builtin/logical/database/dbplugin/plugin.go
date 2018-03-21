@@ -46,7 +46,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		var ok bool
 		db, ok = dbRaw.(Database)
 		if !ok {
-			return nil, fmt.Errorf("unsuported database type: %s", pluginName)
+			return nil, fmt.Errorf("unsupported database type: %s", pluginName)
 		}
 
 		transport = "builtin"

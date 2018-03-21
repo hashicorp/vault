@@ -1,6 +1,7 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"strings"
 	"time"
@@ -16,13 +17,16 @@ var _ cli.CommandAutocomplete = (*AuthEnableCommand)(nil)
 type AuthEnableCommand struct {
 	*BaseCommand
 
-	flagDescription     string
-	flagPath            string
-	flagDefaultLeaseTTL time.Duration
-	flagMaxLeaseTTL     time.Duration
-	flagPluginName      string
-	flagLocal           bool
-	flagSealWrap        bool
+	flagDescription              string
+	flagPath                     string
+	flagDefaultLeaseTTL          time.Duration
+	flagMaxLeaseTTL              time.Duration
+	flagAuditNonHMACRequestKeys  []string
+	flagAuditNonHMACResponseKeys []string
+	flagListingVisibility        string
+	flagPluginName               string
+	flagLocal                    bool
+	flagSealWrap                 bool
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -94,6 +98,26 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage: "The maximum lease TTL for this auth method. If unspecified, " +
 			"this defaults to the Vault server's globally configured maximum lease " +
 			"TTL.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAuditNonHMACRequestKeys,
+		Target: &c.flagAuditNonHMACRequestKeys,
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+			"devices in the request data object.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAuditNonHMACResponseKeys,
+		Target: &c.flagAuditNonHMACResponseKeys,
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+			"devices in the response data object.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   flagNameListingVisibility,
+		Target: &c.flagListingVisibility,
+		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
 	})
 
 	f.StringVar(&StringVar{
@@ -170,7 +194,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	// Append a trailing slash to indicate it's a path in output
 	authPath = ensureTrailingSlash(authPath)
 
-	if err := client.Sys().EnableAuthWithOptions(authPath, &api.EnableAuthOptions{
+	authOpts := &api.EnableAuthOptions{
 		Type:        authType,
 		Description: c.flagDescription,
 		Local:       c.flagLocal,
@@ -180,7 +204,24 @@ func (c *AuthEnableCommand) Run(args []string) int {
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
 			PluginName:      c.flagPluginName,
 		},
-	}); err != nil {
+	}
+
+	// Set these values only if they are provided in the CLI
+	f.Visit(func(fl *flag.Flag) {
+		if fl.Name == flagNameAuditNonHMACRequestKeys {
+			authOpts.Config.AuditNonHMACRequestKeys = c.flagAuditNonHMACRequestKeys
+		}
+
+		if fl.Name == flagNameAuditNonHMACResponseKeys {
+			authOpts.Config.AuditNonHMACResponseKeys = c.flagAuditNonHMACResponseKeys
+		}
+
+		if fl.Name == flagNameListingVisibility {
+			authOpts.Config.ListingVisibility = c.flagListingVisibility
+		}
+	})
+
+	if err := client.Sys().EnableAuthWithOptions(authPath, authOpts); err != nil {
 		c.UI.Error(fmt.Sprintf("Error enabling %s auth: %s", authType, err))
 		return 2
 	}

@@ -357,7 +357,7 @@ CHECK:
 		}
 
 		for parameter, value := range req.Data {
-			// Check if parameter has been explictly denied
+			// Check if parameter has been explicitly denied
 			if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
 				// If the value exists in denied values slice, deny
 				if valueInParameterList(value, valueSlice) {

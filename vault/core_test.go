@@ -807,6 +807,106 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	}
 }
 
+func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
+	// Create a noop audit backend
+	var noop *NoopAudit
+	c, _, root := TestCoreUnsealed(t)
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+		noop = &NoopAudit{
+			Config: config,
+		}
+		return noop, nil
+	}
+
+	// Specify some keys to not HMAC
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/secret/tune")
+	req.Data["audit_non_hmac_request_keys"] = "foo"
+	req.ClientToken = root
+	resp, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/secret/tune")
+	req.Data["audit_non_hmac_response_keys"] = "baz"
+	req.ClientToken = root
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Enable the audit backend
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/audit/noop")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	resp, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Make a request
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo": "bar",
+		},
+		ClientToken: root,
+	}
+	req.ClientToken = root
+	if _, err := c.HandleRequest(req); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check the audit trail on request and response
+	if len(noop.ReqAuth) != 1 {
+		t.Fatalf("bad: %#v", noop)
+	}
+	auth := noop.ReqAuth[0]
+	if auth.ClientToken != root {
+		t.Fatalf("bad client token: %#v", auth)
+	}
+	if len(auth.Policies) != 1 || auth.Policies[0] != "root" {
+		t.Fatalf("bad: %#v", auth)
+	}
+	if len(noop.Req) != 1 || !reflect.DeepEqual(noop.Req[0], req) {
+		t.Fatalf("Bad: %#v", noop.Req[0])
+	}
+	if len(noop.ReqNonHMACKeys) != 1 || noop.ReqNonHMACKeys[0] != "foo" {
+		t.Fatalf("Bad: %#v", noop.ReqNonHMACKeys)
+	}
+	if len(noop.RespAuth) != 2 {
+		t.Fatalf("bad: %#v", noop)
+	}
+	if !reflect.DeepEqual(noop.RespAuth[1], auth) {
+		t.Fatalf("bad: %#v", auth)
+	}
+	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], req) {
+		t.Fatalf("Bad: %#v", noop.RespReq[1])
+	}
+	if len(noop.Resp) != 2 || !reflect.DeepEqual(noop.Resp[1], resp) {
+		t.Fatalf("Bad: %#v", noop.Resp[1])
+	}
+
+	// Test for response keys
+	// Make a request
+	req = &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "secret/test",
+		ClientToken: root,
+	}
+	req.ClientToken = root
+	if _, err := c.HandleRequest(req); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(noop.RespNonHMACKeys) != 1 || noop.RespNonHMACKeys[0] != "baz" {
+		t.Fatalf("Bad: %#v", noop.RespNonHMACKeys)
+	}
+	if len(noop.RespReqNonHMACKeys) != 1 || noop.RespReqNonHMACKeys[0] != "foo" {
+		t.Fatalf("Bad: %#v", noop.RespReqNonHMACKeys)
+	}
+}
+
 // Ensure we get a client token
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
@@ -1925,7 +2025,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Verify our token is still valid (e.g. we did not get invalided by the revoke)
+	// Verify our token is still valid (e.g. we did not get invalidated by the revoke)
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/lookup")
 	req.Data = map[string]interface{}{
 		"token": newClient,

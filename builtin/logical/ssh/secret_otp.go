@@ -34,7 +34,7 @@ func (b *backend) secretOTPRevoke(ctx context.Context, req *logical.Request, d *
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
 
-	salt, err := b.Salt()
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return nil, err
 	}

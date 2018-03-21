@@ -58,7 +58,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	saltedId, err := ts.SaltID(entry.ID)
+	saltedId, err := ts.SaltID(context.Background(), entry.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -304,7 +304,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 
 	// Revoke root to make the number of accessors match
-	salted, err := ts.SaltID(root)
+	salted, err := ts.SaltID(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +339,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 		if aEntry.TokenID == "" || aEntry.AccessorID == "" {
 			t.Fatalf("error, accessor entry looked up is empty, but no error thrown")
 		}
-		salted, err := ts.SaltID(accessor)
+		salted, err := ts.SaltID(context.Background(), accessor)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -522,7 +522,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	}
 
 	// Replace the lease with a lease with an expire time in the past
-	saltedID, err := ts.SaltID(ent.ID)
+	saltedID, err := ts.SaltID(context.Background(), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -604,7 +604,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 		t.Fatalf("bad: ent:%#v ent2:%#v", ent, ent2)
 	}
 
-	// Create a retstricted token
+	// Create a restricted token
 	ent = &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}, NumUses: 2}
 	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
@@ -3254,7 +3254,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	tut := resp.Auth.ClientToken
-	saltTut, err := ts.SaltID(tut)
+	saltTut, err := ts.SaltID(context.Background(), tut)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3452,7 +3452,7 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		// cubbyhole and by not deleting its secondary index, its accessor and
 		// associated leases.
 
-		saltedTut, err := ts.SaltID(tut)
+		saltedTut, err := ts.SaltID(context.Background(), tut)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3594,7 +3594,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Now, delete the token entry. The leases should still exist.
-	saltedTut, err := ts.SaltID(tut)
+	saltedTut, err := ts.SaltID(context.Background(), tut)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -56,7 +56,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	// Generate a name for the token
 	tokenName := fmt.Sprintf("vault-%s-%s-%d", name, req.DisplayName, time.Now().UnixNano())
 
-	// Handling nomad maximum token lenght
+	// Handling nomad maximum token length
 	// https://github.com/hashicorp/nomad/blob/d9276e22b3b74674996fb548cdb6bc4c70d5b0e4/nomad/structs/structs.go#L115
 	if len(tokenName) > 64 {
 		tokenName = tokenName[0:63]

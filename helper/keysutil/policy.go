@@ -20,8 +20,10 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/chacha20poly1305"
@@ -52,7 +54,14 @@ const (
 	KeyType_ChaCha20_Poly1305
 )
 
-const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
+const (
+	// ErrTooOld is returned whtn the ciphertext or signatures's key version is
+	// too old.
+	ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
+
+	// DefaultVersionTemplate is used when no version template is provided.
+	DefaultVersionTemplate = "vault:v{{version}}:"
+)
 
 type RestoreInfo struct {
 	Time    time.Time `json:"time"`
@@ -176,7 +185,7 @@ func (kem deprecatedKeyEntryMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&intermediate)
 }
 
-// MarshalJSON implements JSON unmarshaling
+// MarshalJSON implements JSON unmarshalling
 func (kem deprecatedKeyEntryMap) UnmarshalJSON(data []byte) error {
 	intermediate := map[string]KeyEntry{}
 	if err := jsonutil.DecodeJSON(data, &intermediate); err != nil {
@@ -195,6 +204,85 @@ func (kem deprecatedKeyEntryMap) UnmarshalJSON(data []byte) error {
 
 // keyEntryMap is used to allow JSON marshal/unmarshal
 type keyEntryMap map[string]KeyEntry
+
+// PolicyConfig is used to create a new policy
+type PolicyConfig struct {
+	// The name of the policy
+	Name string `json:"name"`
+
+	// The type of key
+	Type KeyType
+
+	// Derived keys MUST provide a context and the master underlying key is
+	// never used. If convergent encryption is true, the context will be used
+	// as the nonce as well.
+	Derived              bool
+	KDF                  int
+	ConvergentEncryption bool
+
+	// Whether the key is exportable
+	Exportable bool
+
+	// Whether the key is allowed to be deleted
+	DeletionAllowed bool
+
+	// AllowPlaintextBackup allows taking backup of the policy in plaintext
+	AllowPlaintextBackup bool
+
+	// VersionTemplate is used to prefix the ciphertext with information about
+	// the key version. It must inclide {{version}} and a delimiter between the
+	// version prefix and the ciphertext.
+	VersionTemplate string
+
+	// StoragePrefix is used to add a prefix when storing and retrieving the
+	// policy object.
+	StoragePrefix string
+}
+
+// NewPolicy takes a policy config and returns a Policy with those settings.
+func NewPolicy(config PolicyConfig) *Policy {
+	var convergentVersion int
+	if config.ConvergentEncryption {
+		convergentVersion = 2
+	}
+
+	return &Policy{
+		Name:                 config.Name,
+		Type:                 config.Type,
+		Derived:              config.Derived,
+		KDF:                  config.KDF,
+		ConvergentEncryption: config.ConvergentEncryption,
+		ConvergentVersion:    convergentVersion,
+		Exportable:           config.Exportable,
+		DeletionAllowed:      config.DeletionAllowed,
+		AllowPlaintextBackup: config.AllowPlaintextBackup,
+		VersionTemplate:      config.VersionTemplate,
+		StoragePrefix:        config.StoragePrefix,
+		versionPrefixCache:   &sync.Map{},
+	}
+}
+
+// LoadPolicy will load a policy from the provided storage path and set the
+// necessary un-exported variables. It is particularly useful when accessing a
+// policy without the lock manager.
+func LoadPolicy(ctx context.Context, s logical.Storage, path string) (*Policy, error) {
+	raw, err := s.Get(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	if raw == nil {
+		return nil, nil
+	}
+
+	var policy Policy
+	err = jsonutil.DecodeJSON(raw.Value, &policy)
+	if err != nil {
+		return nil, err
+	}
+
+	policy.versionPrefixCache = &sync.Map{}
+	return &policy, nil
+}
 
 // Policy is the struct used to store metadata
 type Policy struct {
@@ -244,6 +332,19 @@ type Policy struct {
 
 	// AllowPlaintextBackup allows taking backup of the policy in plaintext
 	AllowPlaintextBackup bool `json:"allow_plaintext_backup"`
+
+	// VersionTemplate is used to prefix the ciphertext with information about
+	// the key version. It must inclide {{version}} and a delimiter between the
+	// version prefix and the ciphertext.
+	VersionTemplate string `json:"version_template"`
+
+	// StoragePrefix is used to add a prefix when storing and retrieving the
+	// policy object.
+	StoragePrefix string `json:"storage_prefix"`
+
+	// versionPrefixCache stores caches of verison prefix strings and the split
+	// version template.
+	versionPrefixCache *sync.Map
 }
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
@@ -255,7 +356,7 @@ type archivedKeys struct {
 func (p *Policy) LoadArchive(ctx context.Context, storage logical.Storage) (*archivedKeys, error) {
 	archive := &archivedKeys{}
 
-	raw, err := storage.Get(ctx, "archive/"+p.Name)
+	raw, err := storage.Get(ctx, path.Join(p.StoragePrefix, "archive", p.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +381,7 @@ func (p *Policy) storeArchive(ctx context.Context, storage logical.Storage, arch
 
 	// Write the policy into storage
 	err = storage.Put(ctx, &logical.StorageEntry{
-		Key:   "archive/" + p.Name,
+		Key:   path.Join(p.StoragePrefix, "archive", p.Name),
 		Value: buf,
 	})
 	if err != nil {
@@ -405,7 +506,7 @@ func (p *Policy) Persist(ctx context.Context, storage logical.Storage) (retErr e
 
 	// Write the policy into storage
 	err = storage.Put(ctx, &logical.StorageEntry{
-		Key:   "policy/" + p.Name,
+		Key:   path.Join(p.StoragePrefix, "policy", p.Name),
 		Value: buf,
 	})
 	if err != nil {
@@ -703,7 +804,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 	encoded := base64.StdEncoding.EncodeToString(ciphertext)
 
 	// Prepend some information
-	encoded = "vault:v" + strconv.Itoa(ver) + ":" + encoded
+	encoded = p.getVersionPrefix(ver) + encoded
 
 	return encoded, nil
 }
@@ -713,8 +814,13 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
 
+	tplParts, err := p.getTemplateParts()
+	if err != nil {
+		return "", err
+	}
+
 	// Verify the prefix
-	if !strings.HasPrefix(value, "vault:v") {
+	if !strings.HasPrefix(value, tplParts[0]) {
 		return "", errutil.UserError{Err: "invalid ciphertext: no prefix"}
 	}
 
@@ -722,7 +828,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: "invalid convergent nonce supplied"}
 	}
 
-	splitVerCiphertext := strings.SplitN(strings.TrimPrefix(value, "vault:v"), ":", 2)
+	splitVerCiphertext := strings.SplitN(strings.TrimPrefix(value, tplParts[0]), tplParts[1], 2)
 	if len(splitVerCiphertext) != 2 {
 		return "", errutil.UserError{Err: "invalid ciphertext: wrong number of fields"}
 	}
@@ -836,7 +942,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[strconv.Itoa(version)].HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorithm string) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -905,7 +1011,7 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 
 		var algo crypto.Hash
-		switch algorithm {
+		switch hashAlgorithm {
 		case "sha2-224":
 			algo = crypto.SHA224
 		case "sha2-256":
@@ -915,12 +1021,26 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 		case "sha2-512":
 			algo = crypto.SHA512
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)}
 		}
 
-		sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
-		if err != nil {
-			return nil, err
+		if sigAlgorithm == "" {
+			sigAlgorithm = "pss"
+		}
+
+		switch sigAlgorithm {
+		case "pss":
+			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
+			if err != nil {
+				return nil, err
+			}
+		case "pkcs1v15":
+			sig, err = rsa.SignPKCS1v15(rand.Reader, key, algo, input)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
 
 	default:
@@ -929,26 +1049,30 @@ func (p *Policy) Sign(ver int, context, input []byte, algorithm string) (*Signin
 
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(sig)
-
 	res := &SigningResult{
-		Signature: "vault:v" + strconv.Itoa(ver) + ":" + encoded,
+		Signature: p.getVersionPrefix(ver) + encoded,
 		PublicKey: pubKey,
 	}
 
 	return res, nil
 }
 
-func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (bool, error) {
+func (p *Policy) VerifySignature(context, input []byte, sig, hashAlgorithm string, sigAlgorithm string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
 
+	tplParts, err := p.getTemplateParts()
+	if err != nil {
+		return false, err
+	}
+
 	// Verify the prefix
-	if !strings.HasPrefix(sig, "vault:v") {
+	if !strings.HasPrefix(sig, tplParts[0]) {
 		return false, errutil.UserError{Err: "invalid signature: no prefix"}
 	}
 
-	splitVerSig := strings.SplitN(strings.TrimPrefix(sig, "vault:v"), ":", 2)
+	splitVerSig := strings.SplitN(strings.TrimPrefix(sig, tplParts[0]), tplParts[1], 2)
 	if len(splitVerSig) != 2 {
 		return false, errutil.UserError{Err: "invalid signature: wrong number of fields"}
 	}
@@ -1011,7 +1135,7 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 		key := p.Keys[strconv.Itoa(ver)].RSAKey
 
 		var algo crypto.Hash
-		switch algorithm {
+		switch hashAlgorithm {
 		case "sha2-224":
 			algo = crypto.SHA224
 		case "sha2-256":
@@ -1021,10 +1145,21 @@ func (p *Policy) VerifySignature(context, input []byte, sig, algorithm string) (
 		case "sha2-512":
 			algo = crypto.SHA512
 		default:
-			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported algorithm %s", algorithm)}
+			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)}
 		}
 
-		err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, nil)
+		if sigAlgorithm == "" {
+			sigAlgorithm = "pss"
+		}
+
+		switch sigAlgorithm {
+		case "pss":
+			err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, nil)
+		case "pkcs1v15":
+			err = rsa.VerifyPKCS1v15(&key.PublicKey, algo, input, sigBytes)
+		default:
+			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
+		}
 
 		return err == nil, nil
 
@@ -1194,4 +1329,41 @@ func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (out strin
 	}
 
 	return base64.StdEncoding.EncodeToString(encodedBackup), nil
+}
+
+func (p *Policy) getTemplateParts() ([]string, error) {
+	partsRaw, ok := p.versionPrefixCache.Load("template-parts")
+	if ok {
+		return partsRaw.([]string), nil
+	}
+
+	template := p.VersionTemplate
+	if template == "" {
+		template = DefaultVersionTemplate
+	}
+
+	tplParts := strings.Split(template, "{{version}}")
+	if len(tplParts) != 2 {
+		return nil, errutil.InternalError{Err: "error parsing version template"}
+	}
+
+	p.versionPrefixCache.Store("template-parts", tplParts)
+	return tplParts, nil
+}
+
+func (p *Policy) getVersionPrefix(ver int) string {
+	prefixRaw, ok := p.versionPrefixCache.Load(ver)
+	if ok {
+		return prefixRaw.(string)
+	}
+
+	template := p.VersionTemplate
+	if template == "" {
+		template = DefaultVersionTemplate
+	}
+
+	prefix := strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
+	p.versionPrefixCache.Store(ver, prefix)
+
+	return prefix
 }

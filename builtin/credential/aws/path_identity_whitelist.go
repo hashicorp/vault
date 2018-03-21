@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -109,25 +108,28 @@ func (b *backend) pathIdentityWhitelistRead(ctx context.Context, req *logical.Re
 		return nil, nil
 	}
 
-	resp := &logical.Response{
-		Data: structs.New(entry).Map(),
-	}
-	resp.Data["creation_time"] = entry.CreationTime.Format(time.RFC3339Nano)
-	resp.Data["expiration_time"] = entry.ExpirationTime.Format(time.RFC3339Nano)
-	resp.Data["last_updated_time"] = entry.LastUpdatedTime.Format(time.RFC3339Nano)
-
-	return resp, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"role":                      entry.Role,
+			"client_nonce":              entry.ClientNonce,
+			"creation_time":             entry.CreationTime.Format(time.RFC3339Nano),
+			"disallow_reauthentication": entry.DisallowReauthentication,
+			"pending_time":              entry.PendingTime,
+			"expiration_time":           entry.ExpirationTime.Format(time.RFC3339Nano),
+			"last_updated_time":         entry.LastUpdatedTime.Format(time.RFC3339Nano),
+		},
+	}, nil
 }
 
 // Struct to represent each item in the identity whitelist.
 type whitelistIdentity struct {
-	Role                     string    `json:"role" structs:"role" mapstructure:"role"`
-	ClientNonce              string    `json:"client_nonce" structs:"client_nonce" mapstructure:"client_nonce"`
-	CreationTime             time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
-	DisallowReauthentication bool      `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	PendingTime              string    `json:"pending_time" structs:"pending_time" mapstructure:"pending_time"`
-	ExpirationTime           time.Time `json:"expiration_time" structs:"expiration_time" mapstructure:"expiration_time"`
-	LastUpdatedTime          time.Time `json:"last_updated_time" structs:"last_updated_time" mapstructure:"last_updated_time"`
+	Role                     string    `json:"role"`
+	ClientNonce              string    `json:"client_nonce"`
+	CreationTime             time.Time `json:"creation_time"`
+	DisallowReauthentication bool      `json:"disallow_reauthentication"`
+	PendingTime              string    `json:"pending_time"`
+	ExpirationTime           time.Time `json:"expiration_time"`
+	LastUpdatedTime          time.Time `json:"last_updated_time"`
 }
 
 const pathIdentityWhitelistSyn = `

@@ -115,12 +115,16 @@ method and associated with a specific authentication type that cannot be
 changed once the role has been created. Roles can also be associated with
 various optional restrictions, such as the set of allowed policies and max TTLs
 on the generated tokens. Each role can be specified with the constraints that
-are to be met during the login. For example, one such constraint that is
-supported is to bind against AMI ID. A role which is bound to a specific AMI,
-can only be used for login by EC2 instances that are deployed on the same AMI.
+are to be met during the login. Many of these constraints accept lists of
+required values. For any constraint which accepts a list of values, that
+constraint will be considered satisfied if any one of the values is matched
+during the login process. For example, one such constraint that is
+supported is to bind against a list of AMI IDs. A role which is bound to a
+specific list of AMIs can only be used for login by EC2 instances that are
+deployed to one of the AMIs that the role is bound to.
 
-The iam auth method allows you to specify a bound IAM principal ARN.
-Clients authenticating to Vault must have an ARN that matches the ARN bound to
+The iam auth method allows you to specify bound IAM principal ARNs.
+Clients authenticating to Vault must have an ARN that matches one of the ARNs bound to
 the role they are attempting to login to. The bound ARN allows specifying a
 wildcard at the end of the bound ARN. For example, if the bound ARN were
 `arn:aws:iam::123456789012:*` it would allow any principal in AWS account
@@ -300,7 +304,7 @@ method.
       "Effect": "Allow",
       "Action": ["sts:AssumeRole"],
       "Resource": [
-        "arn:aws:iam:<AccountId>:role/<VaultRole>"
+        "arn:aws:iam::<AccountId>:role/<VaultRole>"
       ]
     }
   ]
@@ -510,7 +514,7 @@ time which is dynamically determined by three factors: `max_ttl` set on the role
 least of these three dictates the maximum TTL of the issued token, and
 correspondingly will be set as the expiration times of these entries.
 
-The endpoints `aws/auth/tidy/identity-whitelist` and `aws/auth/tidy/roletag-blacklist` are
+The endpoints `auth/aws/tidy/identity-whitelist` and `auth/aws/tidy/roletag-blacklist` are
 provided to clean up the entries present in these lists. These endpoints allow
 defining a safety buffer, such that an entry must not only be expired, but be
 past expiration by the amount of time dictated by the safety buffer in order

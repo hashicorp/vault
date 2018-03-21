@@ -177,7 +177,9 @@ PASSPHRASECORRECT:
 		if disableClientCerts && requireVerifyCerts {
 			return nil, nil, nil, fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
 		}
-		tlsConf.ClientAuth = tls.NoClientCert
+		if disableClientCerts {
+			tlsConf.ClientAuth = tls.NoClientCert
+		}
 	}
 
 	ln = tls.NewListener(ln, tlsConf)

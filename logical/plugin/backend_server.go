@@ -28,7 +28,7 @@ type backendPluginServer struct {
 }
 
 func inMetadataMode() bool {
-	return os.Getenv(pluginutil.PluginMetadaModeEnv) == "true"
+	return os.Getenv(pluginutil.PluginMetadataModeEnv) == "true"
 }
 
 func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *HandleRequestReply) error {

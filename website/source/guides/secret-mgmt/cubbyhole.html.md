@@ -194,7 +194,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PAYLOAD>` includes policy name and
-stringfied policy.
+stringified policy.
 
 **Example:**
 
