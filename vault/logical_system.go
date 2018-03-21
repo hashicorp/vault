@@ -1782,6 +1782,10 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 		resp.Data["listing_visibility"] = mountEntry.Config.ListingVisibility
 	}
 
+	if len(mountEntry.Options) > 0 {
+		resp.Data["options"] = mountEntry.Options
+	}
+
 	return resp, nil
 }
 
