@@ -469,7 +469,6 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// Cache the headers and clear req.Headers
 	headers := req.Headers
-	req.Headers = make(map[string][]string)
 
 	// Add passthrough headers to the backend
 	var passthroughRequestHeaders []string
