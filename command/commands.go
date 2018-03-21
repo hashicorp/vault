@@ -79,6 +79,8 @@ const (
 	flagNameAuditNonHMACResponseKeys = "audit-non-hmac-response-keys"
 	// flagListingVisibility is the flag to toggle whether to show the mount in the UI-specific listing endpoint
 	flagNameListingVisibility = "listing-visibility"
+	// flagNamePassthroughRequestHeaders is the flag name used to set passthrough request headers to the backend
+	flagNamePassthroughRequestHeaders = "passthrough-request-headers"
 )
 
 var (

@@ -1287,6 +1287,7 @@ func TestSysTuneMount_nonHMACKeys(t *testing.T) {
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
 		"audit_non_hmac_response_keys": "",
 	})
+	testResponseStatus(t, resp, 204)
 
 	// Check results
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
@@ -1318,7 +1319,7 @@ func TestSysTuneMount_nonHMACKeys(t *testing.T) {
 	}
 }
 
-func TestSysTuneMount_showUIMount(t *testing.T) {
+func TestSysTuneMount_listingVisibility(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -1383,6 +1384,81 @@ func TestSysTuneMount_showUIMount(t *testing.T) {
 		"force_no_cache":     false,
 		"listing_visibility": "unauth",
 		"options":            map[string]interface{}{"versioned": "true"},
+	}
+	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+}
+
+func TestSysTuneMount_passthroughRequestHeaders(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	// Mount-tune the audit_non_hmac_request_keys
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
+		"passthrough_request_headers": "X-Vault-Foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// Check results
+	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
+	testResponseStatus(t, resp, 200)
+
+	actual := map[string]interface{}{}
+	expected := map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"default_lease_ttl":           json.Number("2764800"),
+			"max_lease_ttl":               json.Number("2764800"),
+			"force_no_cache":              false,
+			"passthrough_request_headers": []interface{}{"X-Vault-Foo"},
+		},
+		"default_lease_ttl":           json.Number("2764800"),
+		"max_lease_ttl":               json.Number("2764800"),
+		"force_no_cache":              false,
+		"passthrough_request_headers": []interface{}{"X-Vault-Foo"},
+	}
+	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+
+	// Unset the mount tune value
+	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
+		"passthrough_request_headers": "",
+	})
+	testResponseStatus(t, resp, 204)
+
+	// Check results
+	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
+	testResponseStatus(t, resp, 200)
+
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"default_lease_ttl": json.Number("2764800"),
+			"max_lease_ttl":     json.Number("2764800"),
+			"force_no_cache":    false,
+		},
+		"default_lease_ttl": json.Number("2764800"),
+		"max_lease_ttl":     json.Number("2764800"),
+		"force_no_cache":    false,
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]

@@ -275,6 +275,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
 					},
+					"passthrough_request_headers": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
+					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleAuthTuneRead,
@@ -319,6 +323,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 					"listing_visibility": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["listing_visibility"][0]),
+					},
+					"passthrough_request_headers": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
 					},
 				},
 
@@ -1498,6 +1506,10 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		if len(entry.Config.ListingVisibility) > 0 {
 			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
 		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
+			entryConfig["passthrough_request_headers"] = rawVal.([]string)
+		}
+
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
 	}
@@ -1611,6 +1623,9 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
 		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
+	}
+	if len(apiConfig.PassthroughRequestHeaders) > 0 {
+		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
 	}
 
 	// Create the mount entry
@@ -1780,6 +1795,10 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 
 	if len(mountEntry.Config.ListingVisibility) > 0 {
 		resp.Data["listing_visibility"] = mountEntry.Config.ListingVisibility
+	}
+
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
+		resp.Data["passthrough_request_headers"] = rawVal.([]string)
 	}
 
 	if len(mountEntry.Options) > 0 {
@@ -2000,6 +2019,32 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	if rawVal, ok := data.GetOk("passthrough_request_headers"); ok {
+		headers := rawVal.([]string)
+
+		oldVal := mountEntry.Config.PassthroughRequestHeaders
+		mountEntry.Config.PassthroughRequestHeaders = headers
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.PassthroughRequestHeaders = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("core: mount tuning of passthrough_request_headers successful", "path", path)
+		}
+	}
+
 	var resp *logical.Response
 	if optionsRaw, ok := data.GetOk("options"); ok {
 		b.Core.logger.Info("core: mount tuning of options", "path", path)
@@ -2050,6 +2095,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		delete(mountEntry.Options, "upgrade")
 	}
+
 	return resp, nil
 }
 
@@ -2214,6 +2260,10 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 		if len(entry.Config.ListingVisibility) > 0 {
 			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
 		}
+		if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
+			entryConfig["passthrough_request_headers"] = rawVal.([]string)
+		}
+
 		info["config"] = entryConfig
 		resp.Data[entry.Path] = info
 	}
@@ -2319,6 +2369,9 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 	if len(apiConfig.AuditNonHMACResponseKeys) > 0 {
 		config.AuditNonHMACResponseKeys = apiConfig.AuditNonHMACResponseKeys
+	}
+	if len(apiConfig.PassthroughRequestHeaders) > 0 {
+		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
 	}
 
 	// Create the mount entry
@@ -3819,5 +3872,8 @@ This path responds to the following HTTP methods.
 	},
 	"listing_visibility": {
 		"Determines the visibility of the mount in the UI-specific listing endpoint.",
+	},
+	"passthrough_request_headers": {
+		"A list of headers to whitelist and pass from the request to the backend.",
 	},
 }

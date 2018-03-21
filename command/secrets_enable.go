@@ -17,18 +17,19 @@ var _ cli.CommandAutocomplete = (*SecretsEnableCommand)(nil)
 type SecretsEnableCommand struct {
 	*BaseCommand
 
-	flagDescription              string
-	flagPath                     string
-	flagDefaultLeaseTTL          time.Duration
-	flagMaxLeaseTTL              time.Duration
-	flagAuditNonHMACRequestKeys  []string
-	flagAuditNonHMACResponseKeys []string
-	flagListingVisibility        string
-	flagForceNoCache             bool
-	flagPluginName               string
-	flagOptions                  map[string]string
-	flagLocal                    bool
-	flagSealWrap                 bool
+	flagDescription               string
+	flagPath                      string
+	flagDefaultLeaseTTL           time.Duration
+	flagMaxLeaseTTL               time.Duration
+	flagAuditNonHMACRequestKeys   []string
+	flagAuditNonHMACResponseKeys  []string
+	flagListingVisibility         string
+	flagPassthroughRequestHeaders []string
+	flagForceNoCache              bool
+	flagPluginName                string
+	flagOptions                   map[string]string
+	flagLocal                     bool
+	flagSealWrap                  bool
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -127,6 +128,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Name:   flagNameListingVisibility,
 		Target: &c.flagListingVisibility,
 		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNamePassthroughRequestHeaders,
+		Target: &c.flagPassthroughRequestHeaders,
+		Usage: "Comma-separated string or list of request header values that " +
+			"will be sent to the backend",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -248,6 +256,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameListingVisibility {
 			mountInput.Config.ListingVisibility = c.flagListingVisibility
+		}
+
+		if fl.Name == flagNamePassthroughRequestHeaders {
+			mountInput.Config.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
 		}
 	})
 

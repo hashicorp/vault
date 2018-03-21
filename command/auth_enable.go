@@ -17,17 +17,18 @@ var _ cli.CommandAutocomplete = (*AuthEnableCommand)(nil)
 type AuthEnableCommand struct {
 	*BaseCommand
 
-	flagDescription              string
-	flagPath                     string
-	flagDefaultLeaseTTL          time.Duration
-	flagMaxLeaseTTL              time.Duration
-	flagAuditNonHMACRequestKeys  []string
-	flagAuditNonHMACResponseKeys []string
-	flagListingVisibility        string
-	flagPluginName               string
-	flagOptions                  map[string]string
-	flagLocal                    bool
-	flagSealWrap                 bool
+	flagDescription               string
+	flagPath                      string
+	flagDefaultLeaseTTL           time.Duration
+	flagMaxLeaseTTL               time.Duration
+	flagAuditNonHMACRequestKeys   []string
+	flagAuditNonHMACResponseKeys  []string
+	flagListingVisibility         string
+	flagPassthroughRequestHeaders []string
+	flagPluginName                string
+	flagOptions                   map[string]string
+	flagLocal                     bool
+	flagSealWrap                  bool
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -119,6 +120,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Name:   flagNameListingVisibility,
 		Target: &c.flagListingVisibility,
 		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNamePassthroughRequestHeaders,
+		Target: &c.flagPassthroughRequestHeaders,
+		Usage: "Comma-separated string or list of request header values that " +
+			"will be sent to the backend",
 	})
 
 	f.StringVar(&StringVar{
@@ -228,6 +236,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameListingVisibility {
 			authOpts.Config.ListingVisibility = c.flagListingVisibility
+		}
+
+		if fl.Name == flagNamePassthroughRequestHeaders {
+			authOpts.Config.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
 		}
 	})
 
