@@ -111,13 +111,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 		// If the primary bucket does not exist, create one
 		if bucket == nil {
 			bucket = s.newBucket(primaryKey, 0)
-			lockRaw, ok := s.bucketLocksCache.Load(primaryKey)
-			if !ok {
-				// For safety
-				s.UnlockBucket(lock, exclusive)
-				return "", fmt.Errorf("unable to acquire lock for key %q", primaryKey)
-			}
-
+			lockRaw, _ := s.bucketLocksCache.LoadOrStore(primaryKey, &sync.RWMutex{})
 			lock = lockRaw.(*sync.RWMutex)
 			lock.Lock()
 		}
@@ -130,10 +124,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 	}
 
 	if lock == nil {
-		lockRaw, ok := s.bucketLocksCache.Load(bucket.Key)
-		if !ok {
-			return "", fmt.Errorf("unable to acquire lock for key %q", bucket.Key)
-		}
+		lockRaw, _ := s.bucketLocksCache.LoadOrStore(bucket.Key, &sync.RWMutex{})
 		lock = lockRaw.(*sync.RWMutex)
 	}
 
@@ -205,6 +196,10 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 	// Ensure that the lock on the current bucket eventually gets released
 	defer s.UnlockBucket(lock, exclusive)
 
+	if bucketShard.Items == nil {
+		bucketShard.Items = make(map[string]*Item)
+	}
+
 	// Update the item in the bucket shard
 	bucketShard.Items[item.ID] = item
 
@@ -244,10 +239,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 		return "", err
 	}
 
-	lockRaw, ok := s.bucketLocksCache.Load(externalBucket.Key)
-	if !ok {
-		return "", fmt.Errorf("failed to acquire lock for external bucket key %q", externalBucket.Key)
-	}
+	lockRaw, _ := s.bucketLocksCache.LoadOrStore(externalBucket.Key, &sync.RWMutex{})
 	externalBucketLock := lockRaw.(*sync.RWMutex)
 	externalBucketLock.Lock()
 
@@ -275,20 +267,7 @@ func (s *StoragePackerV2) GetBucket(key string, lockType bool) (*BucketV2, *sync
 	}
 
 	// Check if there exists a lock for the bucket key
-	_, ok := s.bucketLocksCache.Load(key)
-
-	// If not, create one
-	if !ok {
-		s.bucketLocksCache.Store(key, &sync.RWMutex{})
-	}
-
-	// Fetch the lock for the key
-	lockRaw, ok := s.bucketLocksCache.Load(key)
-	// A lock should have been created. If not, error out.
-	if !ok {
-		return nil, nil, fmt.Errorf("failed to acquire lock for bucket key %q", key)
-	}
-
+	lockRaw, _ := s.bucketLocksCache.LoadOrStore(key, &sync.RWMutex{})
 	lock := lockRaw.(*sync.RWMutex)
 
 	// Acquire the lock on the bucket key
@@ -375,10 +354,7 @@ func (s *StoragePackerV2) getItemFromBucket(bucket *BucketV2, itemID string) (*I
 	}
 
 	if lock == nil {
-		lockRaw, ok := s.bucketLocksCache.Load(bucket.Key)
-		if !ok {
-			return nil, fmt.Errorf("unable to acquire lock for key %q", bucket.Key)
-		}
+		lockRaw, _ := s.bucketLocksCache.LoadOrStore(bucket.Key, &sync.RWMutex{})
 		lock = lockRaw.(*sync.RWMutex)
 	}
 
@@ -447,10 +423,7 @@ func (s *StoragePackerV2) deleteItemFromBucket(bucket *BucketV2, itemID string) 
 	}
 
 	if lock == nil {
-		lockRaw, ok := s.bucketLocksCache.Load(bucket.Key)
-		if !ok {
-			return fmt.Errorf("unable to acquire lock for key %q", bucket.Key)
-		}
+		lockRaw, _ := s.bucketLocksCache.LoadOrStore(bucket.Key, &sync.RWMutex{})
 		lock = lockRaw.(*sync.RWMutex)
 	}
 
@@ -625,10 +598,6 @@ func (s *StoragePackerV2) newBucket(key string, depth int32) *BucketV2 {
 		Items:   make(map[string]*Item),
 		Depth:   depth,
 	}
-
-	// Create a new lock to operate on the bucket key
-	s.bucketLocksCache.Store(key, &sync.RWMutex{})
-
 	return bucket
 }
 
