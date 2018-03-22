@@ -113,6 +113,7 @@ var (
 		"cassandra":  cassandra.Factory,
 		"consul":     consul.Factory,
 		"database":   database.Factory,
+		"kv":         kv.Factory,
 		"mongodb":    mongodb.Factory,
 		"mssql":      mssql.Factory,
 		"mysql":      mysql.Factory,
@@ -124,7 +125,6 @@ var (
 		"ssh":        ssh.Factory,
 		"totp":       totp.Factory,
 		"transit":    transit.Factory,
-		"kv":         kv.Factory,
 	}
 
 	physicalBackends = map[string]physical.Factory{
