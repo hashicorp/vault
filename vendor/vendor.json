@@ -1303,6 +1303,12 @@
 			"revisionTime": "2018-03-20T18:05:36Z"
 		},
 		{
+			"checksumSHA1": "j3fIbBNDLAjg8pH3FnmbcqGcCVo=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
+			"revision": "d56826f0e6c085b99e83d984e7bb69b2f6655a45",
+			"revisionTime": "2018-03-22T01:57:02Z"
+		},
+		{
 			"checksumSHA1": "vTfeYxi0Z1y176bjQaYh1/FpQ9s=",
 			"path": "github.com/hashicorp/yamux",
 			"revision": "683f49123a33db61abfb241b7ac5e4af4dc54d55",
