@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -19,7 +20,7 @@ type Router struct {
 	root               *radix.Tree
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
-	tokenStoreSaltFunc func() (*salt.Salt, error)
+	tokenStoreSaltFunc func(context.Context) (*salt.Salt, error)
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
@@ -44,8 +45,8 @@ type routeEntry struct {
 	mountEntry    *MountEntry
 	storageView   logical.Storage
 	storagePrefix string
-	rootPaths     *radix.Tree
-	loginPaths    *radix.Tree
+	rootPaths     atomic.Value
+	loginPaths    atomic.Value
 }
 
 type validateMountResponse struct {
@@ -95,7 +96,6 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 
 	// Build the paths
-	var localView logical.Storage = storageView
 	paths := new(logical.Paths)
 	if backend != nil {
 		specialPaths := backend.SpecialPaths()
@@ -110,10 +110,10 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		backend:       backend,
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.prefix,
-		storageView:   localView,
-		rootPaths:     pathsToRadix(paths.Root),
-		loginPaths:    pathsToRadix(paths.Unauthenticated),
+		storageView:   storageView,
 	}
+	re.rootPaths.Store(pathsToRadix(paths.Root))
+	re.loginPaths.Store(pathsToRadix(paths.Unauthenticated))
 
 	switch {
 	case prefix == "":
@@ -447,7 +447,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	case strings.HasPrefix(originalPath, "cubbyhole/"):
 		// In order for the token store to revoke later, we need to have the same
 		// salted ID, so we double-salt what's going to the cubbyhole backend
-		salt, err := r.tokenStoreSaltFunc()
+		salt, err := r.tokenStoreSaltFunc(ctx)
 		if err != nil {
 			return nil, false, false, err
 		}
@@ -548,7 +548,8 @@ func (r *Router) RootPath(path string) bool {
 	remain := strings.TrimPrefix(path, mount)
 
 	// Check the rootPaths of this backend
-	match, raw, ok := re.rootPaths.LongestPrefix(remain)
+	rootPaths := re.rootPaths.Load().(*radix.Tree)
+	match, raw, ok := rootPaths.LongestPrefix(remain)
 	if !ok {
 		return false
 	}
@@ -577,7 +578,8 @@ func (r *Router) LoginPath(path string) bool {
 	remain := strings.TrimPrefix(path, mount)
 
 	// Check the loginPaths of this backend
-	match, raw, ok := re.loginPaths.LongestPrefix(remain)
+	loginPaths := re.loginPaths.Load().(*radix.Tree)
+	match, raw, ok := loginPaths.LongestPrefix(remain)
 	if !ok {
 		return false
 	}

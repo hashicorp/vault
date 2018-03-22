@@ -82,3 +82,7 @@ ui/testem.log
 # used for JS acceptance tests
 ui/tests/helpers/vault-keys.js
 ui/vault-ui-integration-server.pid
+
+# for building static assets
+node_modules
+package-lock.json

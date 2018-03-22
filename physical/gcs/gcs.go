@@ -21,9 +21,6 @@ import (
 	"google.golang.org/api/option"
 )
 
-// Verify GCSBackend satisfies the correct interfaces
-var _ physical.Backend = (*GCSBackend)(nil)
-
 // GCSBackend is a physical backend that stores data
 // within an Google Cloud Storage bucket.
 type GCSBackend struct {
@@ -32,6 +29,15 @@ type GCSBackend struct {
 	permitPool *physical.PermitPool
 	logger     log.Logger
 }
+
+var (
+	// Verify GCSBackend satisfies the correct interfaces
+	_ physical.Backend = (*GCSBackend)(nil)
+
+	// Number of bytes the writer will attempt to write in a single request.
+	// Defaults to 8Mb, as defined in the gcs library
+	chunkSize = 8 * 1024 * 1024
+)
 
 // NewGCSBackend constructs a Google Cloud Storage backend using a pre-existing
 // bucket. Credentials can be provided to the backend, sourced
@@ -49,7 +55,7 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 	ctx := context.Background()
 	client, err := newGCSClient(ctx, conf, logger)
 	if err != nil {
-		return nil, errwrap.Wrapf("error establishing strorage client: {{err}}", err)
+		return nil, errwrap.Wrapf("error establishing storage client: {{err}}", err)
 	}
 
 	// check client connectivity by getting bucket attributes
@@ -67,6 +73,18 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		}
 		if logger.IsDebug() {
 			logger.Debug("physical/gcs: max_parallel set", "max_parallel", maxParInt)
+		}
+	}
+
+	chunkSizeStr, ok := conf["chunk_size"]
+	if ok {
+		chunkSize, err = strconv.Atoi(chunkSizeStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing chunk_size parameter: {{err}}", err)
+		}
+		chunkSize *= 1024
+		if logger.IsDebug() {
+			logger.Debug("physical/gcs: chunk_size set", "chunk_size", chunkSize)
 		}
 	}
 
@@ -111,6 +129,7 @@ func (g *GCSBackend) Put(ctx context.Context, entry *physical.Entry) error {
 
 	bucket := g.client.Bucket(g.bucketName)
 	writer := bucket.Object(entry.Key).NewWriter(context.Background())
+	writer.ChunkSize = chunkSize
 
 	g.permitPool.Acquire()
 	defer g.permitPool.Release()

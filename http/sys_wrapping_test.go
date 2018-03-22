@@ -119,10 +119,10 @@ func TestHTTP_Wrapping(t *testing.T) {
 		}
 		creationTTL, _ := secret.Data["creation_ttl"].(json.Number).Int64()
 		if int(creationTTL) != wrapInfo.TTL {
-			t.Fatalf("mistmatched ttls: %d vs %d", creationTTL, wrapInfo.TTL)
+			t.Fatalf("mismatched ttls: %d vs %d", creationTTL, wrapInfo.TTL)
 		}
 		if secret.Data["creation_time"].(string) != wrapInfo.CreationTime.Format(time.RFC3339Nano) {
-			t.Fatalf("mistmatched creation times: %q vs %q", secret.Data["creation_time"].(string), wrapInfo.CreationTime.Format(time.RFC3339Nano))
+			t.Fatalf("mismatched creation times: %q vs %q", secret.Data["creation_time"].(string), wrapInfo.CreationTime.Format(time.RFC3339Nano))
 		}
 	}
 

@@ -178,8 +178,8 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 
 	signReq.Data = map[string]interface{}{
-		"input":     plaintext,
-		"algorithm": "invalid",
+		"input":          plaintext,
+		"hash_algorithm": "invalid",
 	}
 	resp, err = b.HandleRequest(context.Background(), signReq)
 	if err != nil {
@@ -190,8 +190,8 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 
 	signReq.Data = map[string]interface{}{
-		"input":     plaintext,
-		"algorithm": "sha2-512",
+		"input":          plaintext,
+		"hash_algorithm": "sha2-512",
 	}
 	resp, err = b.HandleRequest(context.Background(), signReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -212,9 +212,9 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 
 	verifyReq.Data = map[string]interface{}{
-		"input":     plaintext,
-		"signature": signature,
-		"algorithm": "sha2-512",
+		"input":          plaintext,
+		"signature":      signature,
+		"hash_algorithm": "sha2-512",
 	}
 	resp, err = b.HandleRequest(context.Background(), verifyReq)
 	if err != nil || (resp != nil && resp.IsError()) {

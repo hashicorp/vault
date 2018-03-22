@@ -16,12 +16,12 @@ import (
 )
 
 const (
-	// coreUnsealKeysBackupPath is the path used to back upencrypted unseal
+	// coreUnsealKeysBackupPath is the path used to backup encrypted unseal
 	// keys if specified during a rekey operation. This is outside of the
 	// barrier.
 	coreBarrierUnsealKeysBackupPath = "core/unseal-keys-backup"
 
-	// coreRecoveryUnsealKeysBackupPath is the path used to back upencrypted
+	// coreRecoveryUnsealKeysBackupPath is the path used to backup encrypted
 	// recovery keys if specified during a rekey operation. This is outside of
 	// the barrier.
 	coreRecoveryUnsealKeysBackupPath = "core/recovery-keys-backup"

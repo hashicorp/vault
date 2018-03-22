@@ -180,5 +180,5 @@ const pathConfigHelpSyn = `Configure a named encryption key`
 const pathConfigHelpDesc = `
 This path is used to configure the named key. Currently, this
 supports adjusting the minimum version of the key allowed to
-be used for decryption via the min_decryption_version paramter.
+be used for decryption via the min_decryption_version parameter.
 `

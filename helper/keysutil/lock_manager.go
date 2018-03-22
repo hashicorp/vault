@@ -162,7 +162,7 @@ func (lm *LockManager) GetPolicyShared(ctx context.Context, storage logical.Stor
 		return p, lock, err
 	}
 
-	// Try again while asking for an exlusive lock
+	// Try again while asking for an exclusive lock
 	p, lock, _, err = lm.getPolicyCommon(ctx, PolicyRequest{
 		Storage: storage,
 		Name:    name,
@@ -201,7 +201,7 @@ func (lm *LockManager) GetPolicyUpsert(ctx context.Context, req PolicyRequest) (
 		return p, lock, false, err
 	}
 
-	// Try again while asking for an exlusive lock
+	// Try again while asking for an exclusive lock
 	p, lock, upserted, err := lm.getPolicyCommon(ctx, req, exclusive)
 	if err != nil || p == nil || lock == nil {
 		return p, lock, upserted, err
@@ -238,6 +238,9 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	}
 
 	name = keyData.Policy.Name
+
+	// set the policy version cache
+	keyData.Policy.versionPrefixCache = &sync.Map{}
 
 	lockType := exclusive
 	lock := lm.policyLock(name, lockType)
@@ -387,6 +390,7 @@ func (lm *LockManager) getPolicyCommon(ctx context.Context, req PolicyRequest, l
 			Derived:              req.Derived,
 			Exportable:           req.Exportable,
 			AllowPlaintextBackup: req.AllowPlaintextBackup,
+			versionPrefixCache:   &sync.Map{},
 		}
 		if req.Derived {
 			p.KDF = Kdf_hkdf_sha256
@@ -496,21 +500,5 @@ func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage
 }
 
 func (lm *LockManager) getStoredPolicy(ctx context.Context, storage logical.Storage, name string) (*Policy, error) {
-	// Check if the policy already exists
-	raw, err := storage.Get(ctx, "policy/"+name)
-	if err != nil {
-		return nil, err
-	}
-	if raw == nil {
-		return nil, nil
-	}
-
-	// Decode the policy
-	var policy Policy
-	err = jsonutil.DecodeJSON(raw.Value, &policy)
-	if err != nil {
-		return nil, err
-	}
-
-	return &policy, nil
+	return LoadPolicy(ctx, storage, "policy/"+name)
 }

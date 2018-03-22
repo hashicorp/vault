@@ -96,6 +96,21 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		},
 	}
 
+	if resp.Auth.TTL == 0 {
+		resp.Auth.TTL = b.System().DefaultLeaseTTL()
+	}
+	if cfg.MaxTTL > 0 {
+		maxTTL := cfg.MaxTTL
+		if maxTTL > b.System().MaxLeaseTTL() {
+			maxTTL = b.System().MaxLeaseTTL()
+		}
+
+		if resp.Auth.TTL > maxTTL {
+			resp.Auth.TTL = maxTTL
+			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", resp.Auth.TTL, maxTTL))
+		}
+	}
+
 	for _, groupName := range groupNames {
 		if groupName == "" {
 			continue

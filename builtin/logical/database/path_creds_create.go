@@ -70,13 +70,20 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			db, err = b.createDBObj(ctx, req.Storage, role.DBName)
 			if err != nil {
 				unlockFunc()
-				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+				return nil, fmt.Errorf("could not retrieve db with name: %s, got error: %s", role.DBName, err)
 			}
 		}
 
-		ttl := role.DefaultTTL
-		if ttl == 0 || (role.MaxTTL > 0 && ttl > role.MaxTTL) {
-			ttl = role.MaxTTL
+		ttl := b.System().DefaultLeaseTTL()
+		if role.DefaultTTL != 0 {
+			ttl = role.DefaultTTL
+		}
+		maxTTL := b.System().MaxLeaseTTL()
+		if role.MaxTTL != 0 && role.MaxTTL < maxTTL {
+			maxTTL = role.MaxTTL
+		}
+		if ttl > maxTTL {
+			ttl = maxTTL
 		}
 
 		expiration := time.Now().Add(ttl)

@@ -66,7 +66,7 @@ func TestHANA_CreateUser(t *testing.T) {
 		RoleName:    "test-test",
 	}
 
-	// Test with no configured Creation Statememt
+	// Test with no configured Creation Statement
 	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Hour))
 	if err == nil {
 		t.Fatal("Expected error when no creation statement is provided")
@@ -113,7 +113,7 @@ func TestHANA_RevokeUser(t *testing.T) {
 		RoleName:    "test-test",
 	}
 
-	// Test default revoke statememts
+	// Test default revoke statements
 	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Hour))
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -130,7 +130,7 @@ func TestHANA_RevokeUser(t *testing.T) {
 		t.Fatal("Credentials were not revoked")
 	}
 
-	// Test custom revoke statememt
+	// Test custom revoke statement
 	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Hour))
 	if err != nil {
 		t.Fatalf("err: %s", err)

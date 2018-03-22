@@ -143,7 +143,7 @@ func TestPathMap_routes(t *testing.T) {
 func TestPathMap_Salted(t *testing.T) {
 	storage := new(logical.InmemStorage)
 
-	salt, err := saltpkg.NewSalt(storage, &saltpkg.Config{
+	salt, err := saltpkg.NewSalt(context.Background(), storage, &saltpkg.Config{
 		HashFunc: saltpkg.SHA1Hash,
 	})
 	if err != nil {
@@ -335,14 +335,14 @@ func testSalting(t *testing.T, ctx context.Context, storage logical.Storage, sal
 func TestPathMap_SaltFunc(t *testing.T) {
 	storage := new(logical.InmemStorage)
 
-	salt, err := saltpkg.NewSalt(storage, &saltpkg.Config{
+	salt, err := saltpkg.NewSalt(context.Background(), storage, &saltpkg.Config{
 		HashFunc: saltpkg.SHA1Hash,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	saltFunc := func() (*saltpkg.Salt, error) {
+	saltFunc := func(context.Context) (*saltpkg.Salt, error) {
 		return salt, nil
 	}
 

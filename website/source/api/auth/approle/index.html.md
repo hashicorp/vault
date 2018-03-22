@@ -69,8 +69,9 @@ enabled while creating or updating a role.
 - `role_name` `(string: <required>)` - Name of the AppRole.
 - `bind_secret_id` `(bool: true)` - Require `secret_id` to be presented when
   logging in using this AppRole.
-- `bound_cidr_list` `(array: [])` - Comma-separated list of CIDR blocks; if set,
-  specifies blocks of IP addresses which can perform the login operation.
+- `bound_cidr_list` `(array: [])` - Comma-separated string or list of CIDR
+  blocks; if set, specifies blocks of IP addresses which can perform the login
+  operation.
 - `policies` `(array: [])` - Comma-separated list of policies set on tokens
   issued via this AppRole.
 - `secret_id_num_uses` `(integer: 0)` - Number of times any particular SecretID
@@ -155,7 +156,7 @@ $ curl \
     ],
     "period": 0,
     "bind_secret_id": true,
-    "bound_cidr_list": ""
+    "bound_cidr_list": []
   },
   "lease_duration": 0,
   "renewable": false,
@@ -285,10 +286,10 @@ itself, and also to delete the SecretID from the AppRole.
   a JSON-formatted string containing the metadata in key-value pairs. This
   metadata will be set on tokens issued with this SecretID, and is logged in
   audit logs _in plaintext_.
-- `cidr_list` `(string: "")` -  Comma separated list of CIDR blocks enforcing
-  secret IDs to be used from specific set of IP addresses. If 'bound_cidr_list'
-  is set on the role, then the list of CIDR blocks listed here should be a
-  subset of the CIDR blocks listed on the role.
+- `cidr_list` `(array: [])` -  Comma separated string or list of CIDR blocks
+  enforcing secret IDs to be used from specific set of IP addresses. If
+  `bound_cidr_list` is set on the role, then the list of CIDR blocks listed
+  here should be a subset of the CIDR blocks listed on the role.
 
 ### Sample Payload
 
@@ -510,10 +511,10 @@ Assigns a "custom" SecretID against an existing AppRole. This is used in the
   a JSON-formatted string containing the metadata in key-value pairs. This
   metadata will be set on tokens issued with this SecretID, and is logged in
   audit logs _in plaintext_.
-- `cidr_list` `(string: "")` -  Comma separated list of CIDR blocks enforcing
-  secret IDs to be used from ppecific set of IP addresses. If 'bound_cidr_list'
-  is set on the role, then the list of CIDR blocks listed here should be a
-  subset of the CIDR blocks listed on the role.
+- `cidr_list` `(array: [])` - Comma separated string or list of CIDR blocks
+  enforcing secret IDs to be used from specific set of IP addresses. If
+  `bound_cidr_list` is set on the role, then the list of CIDR blocks listed
+  here should be a subset of the CIDR blocks listed on the role.
 
 ### Sample Payload
 

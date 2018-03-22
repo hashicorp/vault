@@ -121,17 +121,19 @@ type Backend struct {
 	saltView   logical.Storage
 }
 
-func (b *Backend) GetHash(data string) (string, error) {
-	salt, err := b.Salt()
+var _ audit.Backend = (*Backend)(nil)
+
+func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
+	salt, err := b.Salt(ctx)
 	if err != nil {
 		return "", err
 	}
 	return audit.HashString(salt, data), nil
 }
 
-func (b *Backend) LogRequest(ctx context.Context, auth *logical.Auth, req *logical.Request, outerErr error) error {
+func (b *Backend) LogRequest(ctx context.Context, in *audit.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatRequest(&buf, b.formatConfig, auth, req, outerErr); err != nil {
+	if err := b.formatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
 		return err
 	}
 
@@ -152,10 +154,9 @@ func (b *Backend) LogRequest(ctx context.Context, auth *logical.Auth, req *logic
 	return err
 }
 
-func (b *Backend) LogResponse(ctx context.Context, auth *logical.Auth, req *logical.Request,
-	resp *logical.Response, outerErr error) error {
+func (b *Backend) LogResponse(ctx context.Context, in *audit.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatResponse(&buf, b.formatConfig, auth, req, resp, outerErr); err != nil {
+	if err := b.formatter.FormatResponse(ctx, &buf, b.formatConfig, in); err != nil {
 		return err
 	}
 
@@ -222,7 +223,7 @@ func (b *Backend) Reload(ctx context.Context) error {
 	return err
 }
 
-func (b *Backend) Salt() (*salt.Salt, error) {
+func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	b.saltMutex.RLock()
 	if b.salt != nil {
 		defer b.saltMutex.RUnlock()
@@ -234,7 +235,7 @@ func (b *Backend) Salt() (*salt.Salt, error) {
 	if b.salt != nil {
 		return b.salt, nil
 	}
-	salt, err := salt.NewSalt(b.saltView, b.saltConfig)
+	salt, err := salt.NewSalt(ctx, b.saltView, b.saltConfig)
 	if err != nil {
 		return nil, err
 	}

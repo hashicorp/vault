@@ -46,7 +46,9 @@ the IAM credentials:
     on IAM credentials. Since Vault uses the official AWS SDK, it will use the
     specified credentials. You can also specify the credentials via the standard
     AWS environment credentials, shared file credentials, or IAM role/ECS task
-    credentials.
+    credentials.  (Note that you can't authorize vault with IAM role credentials if you plan
+    on using STS Federation Tokens, since the temporary security credentials
+    associated with the role are not authorized to use GetFederationToken.)
 
     ~> **Notice:** Even though the path above is `aws/config/root`, do not use
     your AWS root account credentials. Instead generate a dedicated user or

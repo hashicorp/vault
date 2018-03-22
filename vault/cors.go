@@ -85,7 +85,7 @@ func (c *Core) loadCORSConfig(ctx context.Context) error {
 	return nil
 }
 
-// Enable takes either a '*' or a comma-seprated list of URLs that can make
+// Enable takes either a '*' or a comma-separated list of URLs that can make
 // cross-origin requests to Vault.
 func (c *CORSConfig) Enable(ctx context.Context, urls []string, headers []string) error {
 	if len(urls) == 0 {

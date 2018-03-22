@@ -79,7 +79,7 @@ func NewBackend(ctx context.Context, pluginName string, sys pluginutil.LookRunne
 		var ok bool
 		backend, ok = backendRaw.(logical.Backend)
 		if !ok {
-			return nil, fmt.Errorf("unsuported backend type: %s", pluginName)
+			return nil, fmt.Errorf("unsupported backend type: %s", pluginName)
 		}
 
 	} else {

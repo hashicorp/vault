@@ -2,6 +2,7 @@ package audit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -10,17 +11,18 @@ import (
 	"errors"
 
 	"fmt"
+
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
 
 func TestFormatJSON_formatRequest(t *testing.T) {
-	salter, err := salt.NewSalt(nil, nil)
+	salter, err := salt.NewSalt(context.Background(), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	saltFunc := func() (*salt.Salt, error) {
+	saltFunc := func(context.Context) (*salt.Salt, error) {
 		return salter, nil
 	}
 
@@ -84,7 +86,12 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		config := FormatterConfig{
 			HMACAccessor: false,
 		}
-		if err := formatter.FormatRequest(&buf, config, tc.Auth, tc.Req, tc.Err); err != nil {
+		in := &LogInput{
+			Auth:     tc.Auth,
+			Request:  tc.Req,
+			OuterErr: tc.Err,
+		}
+		if err := formatter.FormatRequest(context.Background(), &buf, config, in); err != nil {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
 

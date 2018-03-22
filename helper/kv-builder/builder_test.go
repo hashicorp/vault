@@ -119,7 +119,7 @@ func TestBuilder_sameKeyMultipleTimes(t *testing.T) {
 	}
 }
 
-func TestBuilder_specialCharacteresInKey(t *testing.T) {
+func TestBuilder_specialCharactersInKey(t *testing.T) {
 	var b Builder
 	b.Stdin = bytes.NewBufferString("{\"foo\": \"bay\"}")
 	err := b.Add("@foo=bar", "-foo=baz", "-")

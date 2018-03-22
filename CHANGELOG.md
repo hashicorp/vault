@@ -1,9 +1,77 @@
-## 0.9.6 (Unreleased)
+## 0.9.6 (March 20th, 2018)
+
+DEPRECATIONS/CHANGES:
+
+ * The AWS authentication backend now allows binds for inputs as either a
+   comma-delimited string or a string array. However, to keep consistency with
+   input and output, when reading a role the binds will now be returned as
+   string arrays rather than strings.
+ * In order to prefix-match IAM role and instance profile ARNs in AWS auth
+   backend, you now must explicitly opt-in by adding a `*` to the end of the
+   ARN. Existing configurations will be upgraded automatically, but when
+   writing a new role configuration the updated behavior will be used.
+
+FEATURES:
+
+ * Replication Activation Enhancements: When activating a replication
+   secondary, a public key can now be fetched first from the target cluster.
+   This public key can be provided to the primary when requesting the
+   activation token. If provided, the public key will be used to perform a
+   Diffie-Hellman key exchange resulting in a shared key that encrypts the
+   contents of the activation token. The purpose is to protect against
+   accidental disclosure of the contents of the token if unwrapped by the wrong
+   party, given that the contents of the token are highly sensitive. If
+   accidentally unwrapped, the contents of the token are not usable by the
+   unwrapping party. It is important to note that just as a malicious operator
+   could unwrap the contents of the token, a malicious operator can pretend to
+   be a secondary and complete the Diffie-Hellman exchange on their own; this
+   feature provides defense in depth but still requires due diligence around
+   replication activation, including multiple eyes on the commands/tokens and
+   proper auditing.
 
 IMPROVEMENTS:
 
+ * api: Update renewer grace period logic. It no longer is static, but rather
+   dynamically calculates one based on the current lease duration after each
+   renew. [GH-4090]
+ * auth/approle: Allow array input for bound_cidr_list [4078]
+ * auth/aws: Allow using lists in role bind parameters [GH-3907]
+ * auth/aws: Allow binding by EC2 instance IDs [GH-3816]
+ * auth/aws: Allow non-prefix-matched IAM role and instance profile ARNs
+   [GH-4071]
+ * auth/ldap: Set a very large size limit on queries [GH-4169]
+ * core: Log info notifications of revoked leases for all leases/reasons, not
+   just expirations [GH-4164]
+ * physical/couchdb: Removed limit on the listing of items [GH-4149]
+ * secret/pki: Support certificate policies [GH-4125]
+ * secret/pki: Add ability to have CA:true encoded into intermediate CSRs, to
+   improve compatibility with some ADFS scenarios [GH-3883]
+ * secret/transit: Allow selecting signature algorithm as well as hash
+   algorithm when signing/verifying [GH-4018]
  * server: Make sure `tls_disable_client_cert` is actually a true value rather
    than just set [GH-4049]
+ * storage/dynamodb: Allow specifying max retries for dynamo client [GH-4115]
+ * storage/gcs: Allow specifying chunk size for transfers, which can reduce
+   memory utilization [GH-4060]
+ * sys/capabilities: Add the ability to use multiple paths for capability
+   checking [GH-3663]
+
+BUG FIXES:
+
+ * auth/aws: Fix honoring `max_ttl` when a corresponding role `ttl` is not also
+   set [GH-4107]
+ * auth/okta: Fix honoring configured `max_ttl` value [GH-4110]
+ * auth/token: If a periodic token being issued has a period greater than the
+   max_lease_ttl configured on the token store mount, truncate it. This matches
+   renewal behavior; before it was inconsistent between issuance and renewal.
+   [GH-4112]
+ * cli: Improve error messages around `vault auth help` when there is no CLI
+   helper for a particular method [GH-4056]
+ * cli: Fix autocomplete installation when using Fish as the shell [GH-4094]
+ * secret/database: Properly honor mount-tuned max TTL [GH-4051]
+ * secret/ssh: Return `key_bits` value when reading a role [GH-4098]
+ * sys: When writing policies on a performance replication secondary, properly
+   forward requests to the primary [GH-4129]
 
 ## 0.9.5 (February 26th, 2018)
 
@@ -350,7 +418,7 @@ BUG FIXES:
 DEPRECATIONS/CHANGES:
 
  * HSM config parameter requirements: When using Vault with an HSM, a new
-   paramter is required: `hmac_key_label`.  This performs a similar function to
+   parameter is required: `hmac_key_label`.  This performs a similar function to
    `key_label` but for the HMAC key Vault will use. Vault will generate a
    suitable key if this value is specified and `generate_key` is set true.
  * API HTTP client behavior: When calling `NewClient` the API no longer
@@ -627,7 +695,7 @@ FEATURES:
  * **GCP IAM Auth Backend**: There is now an authentication backend that allows
    using GCP IAM credentials to retrieve Vault tokens. This is available as
    both a plugin and built-in to Vault.
- * **PingID Push Support for Path-Baased MFA (Enterprise)**: PingID Push can
+ * **PingID Push Support for Path-Based MFA (Enterprise)**: PingID Push can
    now be used for MFA with the new path-based MFA introduced in Vault
    Enterprise 0.8.
  * **Permitted DNS Domains Support in PKI**: The `pki` backend now supports
@@ -753,7 +821,7 @@ IMPROVEMENTS:
    client certificate verification when `tls_require_and_verify_client_cert` is
    enabled [GH-3034]
  * storage/cockroachdb: Add CockroachDB storage backend [GH-2713]
- * storage/couchdb: Add CouchhDB storage backend [GH-2880]
+ * storage/couchdb: Add CouchDB storage backend [GH-2880]
  * storage/mssql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Improve listing speed [GH-2945]
