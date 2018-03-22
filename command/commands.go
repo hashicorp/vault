@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
@@ -113,6 +114,7 @@ var (
 		"cassandra":  cassandra.Factory,
 		"consul":     consul.Factory,
 		"database":   database.Factory,
+		"gcp":        gcp.Factory,
 		"kv":         kv.Factory,
 		"mongodb":    mongodb.Factory,
 		"mssql":      mssql.Factory,

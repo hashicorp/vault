@@ -1081,6 +1081,12 @@
 			"revisionTime": "2017-12-18T14:54:08Z"
 		},
 		{
+			"checksumSHA1": "mxGkRISfv2EldeYihuciIYrKNjI=",
+			"path": "github.com/hashicorp/go-gcp-common/gcputil",
+			"revision": "4b38f46ac60aebc9c67f2548aec1ff5bc1e9a4eb",
+			"revisionTime": "2018-02-23T19:15:17Z"
+		},
+		{
 			"checksumSHA1": "xTdKLI1gAJOTqswvr15a/fI8ucA=",
 			"path": "github.com/hashicorp/go-hclog",
 			"revision": "5bcb0f17e36442247290887cc914a6e507afa5c4",
@@ -1303,7 +1309,25 @@
 			"revisionTime": "2018-03-20T18:05:36Z"
 		},
 		{
-			"checksumSHA1": "vPEvY3KGn4jnMcFSW6fcTf79xsA=",
+			"checksumSHA1": "w+bhfXfIBMWNMuH2SJqw6Y5c6mk=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
+			"revision": "7633b05ac6d9a8f77f9255ef5aea09f35a145b0b",
+			"revisionTime": "2018-03-22T03:06:48Z"
+		},
+		{
+			"checksumSHA1": "0bNwTVNqwHHUJ+r1usgdtGsiSJs=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
+			"revision": "69b9785fc3a7b4e7ca40c13f1d5b6284d43bf273",
+			"revisionTime": "2018-03-21T19:18:39Z"
+		},
+		{
+			"checksumSHA1": "qF5wbamqBc44thWKDSmF8ayi6nI=",
+			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
+			"revision": "69b9785fc3a7b4e7ca40c13f1d5b6284d43bf273",
+			"revisionTime": "2018-03-21T19:18:39Z"
+		},
+		{
+			"checksumSHA1": "ZYuIUFGjAZ2rgy/zwdjfANFZc/U=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
 			"revision": "76db4647de517c512e7f87b78c1afc84acf97918",
 			"revisionTime": "2018-03-22T02:53:20Z"
