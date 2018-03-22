@@ -49,8 +49,23 @@ version matches the version specified in the cas parameter.`,
 			logical.DeleteOperation: b.upgradeCheck(b.pathDataDelete()),
 		},
 
+		ExistenceCheck: b.dataExistenceCheck(),
+
 		HelpSynopsis:    dataHelpSyn,
 		HelpDescription: dataHelpDesc,
+	}
+}
+
+func (b *versionedKVBackend) dataExistenceCheck() framework.ExistenceFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+		key := strings.TrimPrefix(req.Path, "data/")
+
+		meta, err := b.getKeyMetadata(ctx, req.Storage, key)
+		if err != nil {
+			return false, err
+		}
+
+		return meta != nil, nil
 	}
 }
 
