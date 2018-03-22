@@ -142,7 +142,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Target:     &c.flagOptions,
 		Completion: complete.PredictAnything,
 		Usage: "Key-value pair provided as key=value for the mount options. " +
-			"This can be specified multiple times",
+			"This can be specified multiple times.",
 	})
 
 	f.BoolVar(&BoolVar{

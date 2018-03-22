@@ -55,8 +55,8 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Name:       "options",
 		Target:     &c.flagOptions,
 		Completion: complete.PredictAnything,
-		Usage: "Key-value pair provided as key=value for the mount options." +
-			"This can be specified multiple times",
+		Usage: "Key-value pair provided as key=value for the mount options. " +
+			"This can be specified multiple times.",
 	})
 
 	f.DurationVar(&DurationVar{
