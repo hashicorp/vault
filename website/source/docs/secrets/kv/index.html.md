@@ -45,14 +45,14 @@ allows for writing keys with arbitrary values.
 1. Write arbitrary data:
 
     ```text
-    $ vault write secret/my-secret my-value=s3cr3t
+    $ vault kv put secret/my-secret my-value=s3cr3t
     Success! Data written to: secret/my-secret
     ```
 
 1. Read arbitrary data:
 
     ```text
-    $ vault read secret/my-secret
+    $ vault kv get secret/my-secret
     Key                 Value
     ---                 -----
     refresh_interval    768h
@@ -70,7 +70,7 @@ If provided a key of `ttl`, the KV secrets engine will utilize this value
 as the lease duration:
 
 ```text
-$ vault write secret/my-secret ttl=30m my-value=s3cr3t
+$ vault kv put secret/my-secret ttl=30m my-value=s3cr3t
 Success! Data written to: secret/my-secret
 ```
 
@@ -81,7 +81,7 @@ When reading a value with a `ttl`, both the `ttl` key _and_ the refresh interval
 will reflect the value:
 
 ```text
-$ vault read secret/my-secret
+$ vault kv get secret/my-secret
 Key                 Value
 ---                 -----
 refresh_interval    30m

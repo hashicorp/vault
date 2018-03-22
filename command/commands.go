@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -123,6 +124,7 @@ var (
 		"ssh":        ssh.Factory,
 		"totp":       totp.Factory,
 		"transit":    transit.Factory,
+		"kv":         kv.Factory,
 	}
 
 	physicalBackends = map[string]physical.Factory{
