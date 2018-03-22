@@ -32,6 +32,10 @@ FEATURES:
    through to backends on a per-mount basis. This is useful in various cases
    when plugins are interacting with external services.
 
+BUG FIXES:
+
+ * replication: Fix a panic on some non-64-bit platforms
+
 ## 0.9.6 (March 20th, 2018)
 
 DEPRECATIONS/CHANGES:
