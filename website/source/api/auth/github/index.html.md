@@ -50,7 +50,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/github/config
+    http://127.0.0.1:8200/v1/auth/github/config
 ```
 
 ## Read Configuration
@@ -66,7 +66,7 @@ Reads the GitHub configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/github/config
+    http://127.0.0.1:8200/v1/auth/github/config
 ```
 
 ### Sample Response
@@ -112,7 +112,7 @@ Login using GitHub access token.
 ```
 $ curl \
     --request POST \
-    https://vault.rocks/v1/auth/github/login
+    http://127.0.0.1:8200/v1/auth/github/login
 ```
 
 ### Sample Response

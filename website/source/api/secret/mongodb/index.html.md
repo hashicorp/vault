@@ -54,7 +54,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/mongodb/config/connection
+    http://127.0.0.1:8200/v1/mongodb/config/connection
 ```
 
 ### Sample Response
@@ -88,7 +88,7 @@ including passwords, if any.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/mongodb/config/connection
+    http://127.0.0.1:8200/v1/mongodb/config/connection
 ```
 
 ### Sample Response
@@ -141,7 +141,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/mongodb/config/lease
+    http://127.0.0.1:8200/v1/mongodb/config/lease
 ```
 
 ## Read Lease
@@ -157,7 +157,7 @@ This endpoint queries the lease configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/mongodb/config/lease
+    http://127.0.0.1:8200/v1/mongodb/config/lease
 ```
 
 ### Sample Response
@@ -209,7 +209,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/mongodb/roles/my-role
+    http://127.0.0.1:8200/v1/mongodb/roles/my-role
 ```
 
 ## Read Role
@@ -230,7 +230,7 @@ This endpoint queries the role definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/mongodb/roles/my-role
+    http://127.0.0.1:8200/v1/mongodb/roles/my-role
 ```
 
 ### Sample Response
@@ -265,7 +265,7 @@ returned, not any values.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/mongodb/roles
+    http://127.0.0.1:8200/v1/mongodb/roles
 ```
 
 ### Sample Response
@@ -306,7 +306,7 @@ This endpoint deletes the role definition.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/mongodb/roles/my-role
+    http://127.0.0.1:8200/v1/mongodb/roles/my-role
 ```
 
 ## Generate Credentials
@@ -328,7 +328,7 @@ role.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/mongodb/creds/my-role
+    http://127.0.0.1:8200/v1/mongodb/creds/my-role
 ```
 
 ### Sample Response

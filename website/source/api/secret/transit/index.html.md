@@ -77,7 +77,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/keys/my-key
+    http://127.0.0.1:8200/v1/transit/keys/my-key
 ```
 
 ## Read Key
@@ -102,7 +102,7 @@ type.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/transit/keys/my-key
+    http://127.0.0.1:8200/v1/transit/keys/my-key
 ```
 
 ### Sample Response
@@ -144,7 +144,7 @@ actual keys themselves).
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/transit/keys
+    http://127.0.0.1:8200/v1/transit/keys
 ```
 
 ### Sample Response
@@ -182,7 +182,7 @@ catastrophic operation, the `deletion_allowed` tunable must be set in the key's
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/transit/keys/my-key
+    http://127.0.0.1:8200/v1/transit/keys/my-key
 ```
 
 ## Update Key Configuration
@@ -233,7 +233,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/keys/my-key/config
+    http://127.0.0.1:8200/v1/transit/keys/my-key/config
 ```
 
 ## Rotate Key
@@ -254,7 +254,7 @@ decryption operations.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/transit/keys/my-key/rotate
+    http://127.0.0.1:8200/v1/transit/keys/my-key/rotate
 ```
 
 ## Export Key
@@ -291,7 +291,7 @@ be valid.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/transit/export/encryption-key/my-key/1
+    http://127.0.0.1:8200/v1/transit/export/encryption-key/my-key/1
 ```
 
 ### Sample Response
@@ -391,7 +391,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/encrypt/my-key
+    http://127.0.0.1:8200/v1/transit/encrypt/my-key
 ```
 
 ### Sample Response
@@ -460,7 +460,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/decrypt/my-key
+    http://127.0.0.1:8200/v1/transit/decrypt/my-key
 ```
 
 ### Sample Response
@@ -535,7 +535,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/rewrap/my-key
+    http://127.0.0.1:8200/v1/transit/rewrap/my-key
 ```
 
 ### Sample Response
@@ -599,7 +599,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/datakey/plaintext/my-key
+    http://127.0.0.1:8200/v1/transit/datakey/plaintext/my-key
 ```
 
 ### Sample Response
@@ -644,7 +644,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/random/164
+    http://127.0.0.1:8200/v1/transit/random/164
 ```
 
 ### Sample Response
@@ -696,7 +696,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/hash/sha2-512
+    http://127.0.0.1:8200/v1/transit/hash/sha2-512
 ```
 
 ### Sample Response
@@ -755,7 +755,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/hmac/my-key/sha2-512
+    http://127.0.0.1:8200/v1/transit/hmac/my-key/sha2-512
 ```
 
 ### Sample Response
@@ -829,7 +829,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/sign/my-key/sha2-512
+    http://127.0.0.1:8200/v1/transit/sign/my-key/sha2-512
 ```
 
 ### Sample Response
@@ -905,7 +905,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/verify/my-key/sha2-512
+    http://127.0.0.1:8200/v1/transit/verify/my-key/sha2-512
 ```
 
 ### Sample Response
@@ -938,7 +938,7 @@ restore the key.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/transit/backup/aes
+    http://127.0.0.1:8200/v1/transit/backup/aes
 ```
 
 ### Sample Response
@@ -982,5 +982,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/transit/restore
+    http://127.0.0.1:8200/v1/transit/restore
 ```

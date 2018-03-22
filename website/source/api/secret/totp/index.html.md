@@ -67,7 +67,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/totp/keys/my-key
+    http://127.0.0.1:8200/v1/totp/keys/my-key
 ```
 
 ### Sample Payload
@@ -87,7 +87,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/totp/keys/my-key
+    http://127.0.0.1:8200/v1/totp/keys/my-key
 ```
 
 ### Sample Response
@@ -124,7 +124,7 @@ This endpoint queries the key definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/totp/keys/my-key
+    http://127.0.0.1:8200/v1/totp/keys/my-key
 ```
 
 ### Sample Response
@@ -156,7 +156,7 @@ returned, not any values.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/totp/keys
+    http://127.0.0.1:8200/v1/totp/keys
 ```
 
 ### Sample Response
@@ -192,7 +192,7 @@ This endpoint deletes the key definition.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/totp/keys/my-key
+    http://127.0.0.1:8200/v1/totp/keys/my-key
 ```
 
 ## Generate Code
@@ -214,7 +214,7 @@ key.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/totp/code/my-key
+    http://127.0.0.1:8200/v1/totp/code/my-key
 ```
 
 ### Sample Response
@@ -257,7 +257,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/totp/code/my-key
+    http://127.0.0.1:8200/v1/totp/code/my-key
 ```
 
 ### Sample Response

@@ -30,7 +30,7 @@ This endpoint returns a list the existing AppRoles in the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/approle/role
+    http://127.0.0.1:8200/v1/auth/approle/role
 ```
 
 ### Sample Response
@@ -116,7 +116,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/approle/role/application1
+    http://127.0.0.1:8200/v1/auth/approle/role/application1
 ```
 
 ## Read AppRole
@@ -136,7 +136,7 @@ Reads the properties of an existing AppRole.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/approle/role/application1
+    http://127.0.0.1:8200/v1/auth/approle/role/application1
 ```
 
 ### Sample Response
@@ -182,7 +182,7 @@ Deletes an existing AppRole from the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/approle/role/application1
+    http://127.0.0.1:8200/v1/auth/approle/role/application1
 ```
 
 ## Read AppRole Role ID
@@ -202,7 +202,7 @@ Reads the RoleID of an existing AppRole.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/approle/role/application1/role-id
+    http://127.0.0.1:8200/v1/auth/approle/role/application1/role-id
 ```
 
 ### Sample Response
@@ -249,7 +249,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/approle/role/application1/role-id
+    http://127.0.0.1:8200/v1/auth/approle/role/application1/role-id
 ```
 
 ### Sample Response
@@ -306,7 +306,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/approle/role/application1/secret-id
+    http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id
 ```
 
 ### Sample Response
@@ -345,7 +345,7 @@ This includes the accessors for "custom" SecretIDs as well.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/approle/role/application1/secret-id
+    http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id
 ```
 
 ### Sample Response
@@ -398,7 +398,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --payload @payload.json \
-    https://vault.rocks/v1/auth/approle/role/application1/secret-id/lookup
+    http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id/lookup
 ```
 
 ## Destroy AppRole Secret ID
@@ -429,7 +429,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --payload @payload.json \
-    https://vault.rocks/v1/auth/approle/role/application1/secret-id/destroy
+    http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id/destroy
 ```
 
 ## Read AppRole Secret ID Accessor
@@ -460,7 +460,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --payload @payload.json \
-    https://vault.rocks/v1/auth/approle/role/application1/secret-id-accessor/lookup
+    http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id-accessor/lookup
 ```
 
 ## Destroy AppRole Secret ID Accessor
@@ -491,7 +491,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --payload @payload.json \
-    https://vault.rocks/v1/auth/approle/role/application1/secret-id-accessor/destroy
+    http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id-accessor/destroy
 ```
 
 ## Create Custom AppRole Secret ID
@@ -531,7 +531,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/approle/role/application1/custom-secret-id
+    http://127.0.0.1:8200/v1/auth/approle/role/application1/custom-secret-id
 ```
 
 ### Sample Response
@@ -582,7 +582,7 @@ AppRole (such as client IP CIDR) are also evaluated.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/approle/login
+    http://127.0.0.1:8200/v1/auth/approle/login
 ```
 
 ### Sample Response

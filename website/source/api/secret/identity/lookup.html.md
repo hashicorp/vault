@@ -46,7 +46,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/identity/lookup/entity
+    http://127.0.0.1:8200/v1/identity/lookup/entity
 ```
 
 ### Sample Response
@@ -108,7 +108,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/identity/lookup/group
+    http://127.0.0.1:8200/v1/identity/lookup/group
 ```
 
 ### Sample Response

@@ -29,7 +29,7 @@ available audit devices).
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/audit
+    http://127.0.0.1:8200/v1/sys/audit
 ```
 
 ### Sample Response
@@ -95,7 +95,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/audit/example-audit
+    http://127.0.0.1:8200/v1/sys/audit/example-audit
 ```
 
 ## Disable Audit Device
@@ -120,5 +120,5 @@ This endpoint disables the audit device at the given path.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/audit/example-audit
+    http://127.0.0.1:8200/v1/sys/audit/example-audit
 ```

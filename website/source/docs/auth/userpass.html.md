@@ -34,7 +34,7 @@ $ vault login -method=userpass \
 $ curl \
     --request POST \
     --data '{"password": "foo"}' \
-    https://vault.rocks/v1/auth/userpass/login/mitchellh
+    http://127.0.0.1:8200/v1/auth/userpass/login/mitchellh
 ```
 
 The response will contain the token at `auth.client_token`:

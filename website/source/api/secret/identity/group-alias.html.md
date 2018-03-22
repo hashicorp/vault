@@ -44,7 +44,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/identity/group-alias
+    http://127.0.0.1:8200/v1/identity/group-alias
 ```
 
 ### Sample Response
@@ -75,7 +75,7 @@ This endpoint queries the group alias by its identifier.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/identity/group-alias/id/ca726050-d8ac-6f1f-4210-3b5c5b613824
+    http://127.0.0.1:8200/v1/identity/group-alias/id/ca726050-d8ac-6f1f-4210-3b5c5b613824
 ```
 
 ### Sample Response
@@ -115,7 +115,7 @@ This endpoint deletes a group alias.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/identity/group-alias/id/ca726050-d8ac-6f1f-4210-3b5c5b613824
+    http://127.0.0.1:8200/v1/identity/group-alias/id/ca726050-d8ac-6f1f-4210-3b5c5b613824
 ```
 
 ## List Entities by ID
@@ -133,7 +133,7 @@ This endpoint returns a list of available group aliases by their identifiers.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/identity/group-alias/id
+    http://127.0.0.1:8200/v1/identity/group-alias/id
 ```
 
 ### Sample Response
