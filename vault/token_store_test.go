@@ -3658,9 +3658,30 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 
 	// The number of accessors should be equal to number of valid child tokens
 	// (100) + the root token (1)
-	numberOfAccessors = len(resp.Data["keys"].([]string))
+	keys := resp.Data["keys"].([]string)
+	numberOfAccessors = len(keys)
 	if numberOfAccessors != 101 {
 		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "lookup-accessor")
+
+	for _, accessor := range keys {
+		req.Data = map[string]interface{}{
+			"accessor": accessor,
+		}
+
+		resp, err := ts.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if resp.Data == nil {
+			t.Fatalf("response should contain data")
+		}
+		// These tokens should now be orphaned
+		if resp.Data["orphan"] != true {
+			t.Fatalf("token should be orphan")
+		}
 	}
 }
 
