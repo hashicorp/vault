@@ -199,32 +199,32 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 
 	// Ensure the principal id for the VM matches the verified token OID
 	if vm.Identity == nil {
-		return fmt.Errorf("vm client did not return identity information")
+		return errors.New("vm client did not return identity information")
 	}
 	if vm.Identity.PrincipalID == nil {
-		return fmt.Errorf("vm principal id is empty")
+		return errors.New("vm principal id is empty")
 	}
 	if to.String(vm.Identity.PrincipalID) != claims.ObjectID {
-		return fmt.Errorf("token object id does not match virtual machine principal id")
+		return errors.New("token object id does not match virtual machine principal id")
 	}
 
 	// Check bound subsriptions
 	if len(role.BoundSubscriptionsIDs) > 0 && !strutil.StrListContains(role.BoundSubscriptionsIDs, subscriptionID) {
-		return fmt.Errorf("subscription not authoirzed")
+		return errors.New("subscription not authorized")
 	}
 
 	// Check bound resource groups
 	if len(role.BoundResourceGroups) > 0 && !strutil.StrListContains(role.BoundResourceGroups, resourceGroupName) {
-		return fmt.Errorf("resource group not authoirzed")
+		return errors.New("resource group not authorized")
 	}
 
 	// Check bound locations
 	if len(role.BoundLocations) > 0 {
 		if vm.Location == nil {
-			return fmt.Errorf("vm location is empty")
+			return errors.New("vm location is empty")
 		}
 		if !strutil.StrListContains(role.BoundLocations, to.String(vm.Location)) {
-			return fmt.Errorf("token object id does not match virtual machine principal id")
+			return errors.New("location not authorized")
 		}
 	}
 
@@ -234,13 +234,13 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 func (b *azureAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := req.Auth.InternalData["role"].(string)
 	if roleName == "" {
-		return nil, fmt.Errorf("failed to fetch role_name during renewal")
+		return nil, errors.New("failed to fetch role_name during renewal")
 	}
 
 	// Ensure that the Role still exists.
 	role, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate role %s during renewal:%s", roleName, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to validate role %s during renewal: {{err}}", roleName), err)
 	}
 	if role == nil {
 		return nil, fmt.Errorf("role %s does not exist during renewal", roleName)

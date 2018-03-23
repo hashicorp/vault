@@ -643,10 +643,10 @@
 			"revisionTime": "2018-02-10T00:12:50Z"
 		},
 		{
-			"checksumSHA1": "8o2JlMI+LchFOAR1uGZ3u6cROkY=",
+			"checksumSHA1": "b6LGjzkSCWdrqH6dnS/Bf+BfdPU=",
 			"path": "github.com/coreos/go-oidc",
-			"revision": "a93f71fdfe73d2c0f5413c0565eea0af6523a6df",
-			"revisionTime": "2017-10-02T15:50:02Z"
+			"revision": "065b426bd41667456c1a924468f507673629c46b",
+			"revisionTime": "2018-01-17T17:01:38Z"
 		},
 		{
 			"checksumSHA1": "97BsbXOiZ8+Kr+LIuZkQFtSj7H4=",
@@ -1279,10 +1279,10 @@
 			"revisionTime": "2018-02-03T00:31:27Z"
 		},
 		{
-			"checksumSHA1": "LmozvTcHq18DkRN7aloRXug7Yqg=",
+			"checksumSHA1": "C6sgT2K7ZAv4y/MFMWppVs7oqTM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure/plugin",
-			"revision": "ba506e5d0aae1d115c2b5ad4ea8d3f06be77b45a",
-			"revisionTime": "2018-03-21T20:06:11Z"
+			"revision": "29767bb64e3fd21c7661a5008aa62a2eda1aebb8",
+			"revisionTime": "2018-03-23T20:42:11Z"
 		},
 		{
 			"checksumSHA1": "xApm6AbAzE3wMLMaozaZ53pb7AU=",
