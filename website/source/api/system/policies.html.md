@@ -26,7 +26,7 @@ This endpoint lists all configured ACL policies.
 ```
 $ curl \
     -X LIST --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policies/acl
+    http://127.0.0.1:8200/v1/sys/policies/acl
 ```
 
 ### Sample Response
@@ -55,7 +55,7 @@ This endpoint retrieves information about the named ACL policy.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policies/acl/my-policy
+    http://127.0.0.1:8200/v1/sys/policies/acl/my-policy
 ```
 
 ### Sample Response
@@ -99,7 +99,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/policies/acl/my-policy
+    http://127.0.0.1:8200/v1/sys/policies/acl/my-policy
 ```
 
 ## Delete ACL Policy
@@ -123,7 +123,7 @@ acts as an empty policy.)
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/policies/acl/my-policy
+    http://127.0.0.1:8200/v1/sys/policies/acl/my-policy
 ```
 
 ## List RGP Policies
@@ -139,7 +139,7 @@ This endpoint lists all configured RGP policies.
 ```
 $ curl \
     -X LIST --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policies/rgp
+    http://127.0.0.1:8200/v1/sys/policies/rgp
 ```
 
 ### Sample Response
@@ -168,7 +168,7 @@ This endpoint retrieves information about the named RGP policy.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policies/rgp/webapp
+    http://127.0.0.1:8200/v1/sys/policies/rgp/webapp
 ```
 
 ### Sample Response
@@ -218,7 +218,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/policies/rgp/webapp
+    http://127.0.0.1:8200/v1/sys/policies/rgp/webapp
 ```
 
 ## Delete RGP Policy
@@ -242,7 +242,7 @@ acts as an empty policy.)
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/policies/rgp/webapp
+    http://127.0.0.1:8200/v1/sys/policies/rgp/webapp
 ```
 
 ## List EGP Policies
@@ -264,7 +264,7 @@ path, this endpoint returns two identifiers:
 ```
 $ curl \
     -X LIST --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policies/egp
+    http://127.0.0.1:8200/v1/sys/policies/egp
 ```
 
 ### Sample Response
@@ -293,7 +293,7 @@ This endpoint retrieves information about the named EGP policy.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/policies/egp/breakglass
+    http://127.0.0.1:8200/v1/sys/policies/egp/breakglass
 ```
 
 ### Sample Response
@@ -350,7 +350,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/policies/egp/breakglass
+    http://127.0.0.1:8200/v1/sys/policies/egp/breakglass
 ```
 
 ## Delete EGP Policy
@@ -372,5 +372,5 @@ This endpoint deletes the EGP policy with the given name from all paths on which
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/policies/egp/breakglass
+    http://127.0.0.1:8200/v1/sys/policies/egp/breakglass
 ```

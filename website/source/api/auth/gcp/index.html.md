@@ -60,7 +60,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/gcp/config
+    http://127.0.0.1:8200/v1/auth/gcp/config
 ```
 
 ## Read Config
@@ -76,7 +76,7 @@ Returns the previously configured config, including credentials.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/gcp/config
+    http://127.0.0.1:8200/v1/auth/gcp/config
 ```
 
 ### Sample Response
@@ -110,7 +110,7 @@ Deletes the previously configured GCP config and credentials.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/gcp/config
+    http://127.0.0.1:8200/v1/auth/gcp/config
 ```
 
 ## Create Role
@@ -226,7 +226,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
 ```
 
 ## Edit Service Accounts For IAM Role
@@ -268,7 +268,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
 ```
 
 ## Edit Labels For GCE Role
@@ -308,7 +308,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
 ```
 
 ## Read Role
@@ -328,7 +328,7 @@ Returns the previously registered role configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
 ```
 
 ### Sample Response
@@ -372,7 +372,7 @@ Lists all the roles that are registered with the plugin.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/gcp/roles
+    http://127.0.0.1:8200/v1/auth/gcp/roles
 ```
 
 ### Sample Response
@@ -407,7 +407,7 @@ Deletes the previously registered role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/gcp/role/dev-role
+    http://127.0.0.1:8200/v1/auth/gcp/role/dev-role
 ```
 
 ## Login
@@ -445,7 +445,7 @@ entity and then authorizes the entity for the given role.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/gcp/login
+    http://127.0.0.1:8200/v1/auth/gcp/login
 ```
 
 ### Sample Response

@@ -35,7 +35,7 @@ This endpoint retrieves the secret at the specified location.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/cubbyhole/my-secret
+    http://127.0.0.1:8200/v1/cubbyhole/my-secret
 ```
 
 ### Sample Response
@@ -73,7 +73,7 @@ not return a value. The values themselves are not accessible via this command.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/cubbyhole/my-secret
+    http://127.0.0.1:8200/v1/cubbyhole/my-secret
 ```
 
 ### Sample Response
@@ -129,7 +129,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/cubbyhole/my-secret
+    http://127.0.0.1:8200/v1/cubbyhole/my-secret
 ```
 
 ## Delete Secret
@@ -151,5 +151,5 @@ This endpoint deletes the secret at the specified location.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/cubbyhole/my-secret
+    http://127.0.0.1:8200/v1/cubbyhole/my-secret
 ```

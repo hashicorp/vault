@@ -53,7 +53,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/identity/group
+    http://127.0.0.1:8200/v1/identity/group
 ```
 
 ### Sample Response
@@ -84,7 +84,7 @@ This endpoint queries the group by its identifier.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/identity/group/id/363926d8-dd8b-c9f0-21f8-7b248be80ce1
+    http://127.0.0.1:8200/v1/identity/group/id/363926d8-dd8b-c9f0-21f8-7b248be80ce1
 ```
 
 ### Sample Response
@@ -159,7 +159,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/identity/group/id/363926d8-dd8b-c9f0-21f8-7b248be80ce1
+    http://127.0.0.1:8200/v1/identity/group/id/363926d8-dd8b-c9f0-21f8-7b248be80ce1
 ```
 
 ### Sample Response
@@ -191,7 +191,7 @@ This endpoint deletes a group.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/identity/group/id/363926d8-dd8b-c9f0-21f8-7b248be80ce1
+    http://127.0.0.1:8200/v1/identity/group/id/363926d8-dd8b-c9f0-21f8-7b248be80ce1
 ```
 
 ## List Groups by ID
@@ -209,7 +209,7 @@ This endpoint returns a list of available groups by their identifiers.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/identity/group/id
+    http://127.0.0.1:8200/v1/identity/group/id
 ```
 
 ### Sample Response

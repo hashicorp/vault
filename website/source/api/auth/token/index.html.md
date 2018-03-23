@@ -28,7 +28,7 @@ large numbers of tokens and their associated leases at once.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/token/accessors
+    http://127.0.0.1:8200/v1/auth/token/accessors
 ```
 
 ### Sample Response
@@ -123,7 +123,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/token/create
+    http://127.0.0.1:8200/v1/auth/token/create
 ```
 
 ### Sample Response
@@ -172,7 +172,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/token/lookup
+    http://127.0.0.1:8200/v1/auth/token/lookup
 ```
 
 ### Sample Response
@@ -209,7 +209,7 @@ Returns information about the current client token.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/token/lookup-self
+    http://127.0.0.1:8200/v1/auth/token/lookup-self
 ```
 
 ### Sample Response
@@ -260,7 +260,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/token/lookup-accessor
+    http://127.0.0.1:8200/v1/auth/token/lookup-accessor
 ```
 
 ### Sample Response
@@ -321,7 +321,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/token/renew
+    http://127.0.0.1:8200/v1/auth/token/renew
 ```
 
 ### Sample Response
@@ -373,7 +373,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/token/renew-self
+    http://127.0.0.1:8200/v1/auth/token/renew-self
 ```
 
 ### Sample Response
@@ -423,7 +423,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/token/revoke
+    http://127.0.0.1:8200/v1/auth/token/revoke
 ```
 
 ## Revoke a Token (Self)
@@ -441,7 +441,7 @@ revoked, all dynamic secrets generated with it are also revoked.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/auth/token/revoke-self
+    http://127.0.0.1:8200/v1/auth/token/revoke-self
 ```
 
 ## Revoke a Token Accessor
@@ -473,7 +473,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/token/revoke-accessor
+    http://127.0.0.1:8200/v1/auth/token/revoke-accessor
 ```
 
 ## Revoke Token and Orphan Children
@@ -507,7 +507,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/token/revoke-orphan
+    http://127.0.0.1:8200/v1/auth/token/revoke-orphan
 ```
 
 ## Read Token Role
@@ -527,7 +527,7 @@ Fetches the named role configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/token/roles/nomad
+    http://127.0.0.1:8200/v1/auth/token/roles/nomad
 ```
 
 ### Sample Response
@@ -568,7 +568,7 @@ List available token roles.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST
-    https://vault.rocks/v1/auth/token/roles
+    http://127.0.0.1:8200/v1/auth/token/roles
 ```
 
 ### Sample Response
@@ -653,7 +653,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST
     --data @payload.json
-    https://vault.rocks/v1/auth/token/roles/nomad
+    http://127.0.0.1:8200/v1/auth/token/roles/nomad
 ```
 
 ## Delete Token Role
@@ -674,7 +674,7 @@ This endpoint deletes the named token role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/token/roles/admins
+    http://127.0.0.1:8200/v1/auth/token/roles/admins
 ```
 
 ## Tidy Tokens
@@ -694,5 +694,5 @@ storage method so should be used sparingly.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/auth/token/tidy
+    http://127.0.0.1:8200/v1/auth/token/tidy
 ```

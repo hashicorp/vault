@@ -26,7 +26,7 @@ This endpoint returns the current Control Group configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/config/control-group
+    http://127.0.0.1:8200/v1/sys/config/control-group
 ```
 
 ### Sample Response
@@ -64,7 +64,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/config/control-group
+    http://127.0.0.1:8200/v1/sys/config/control-group
 ```
 
 ## Delete Control Group Settings
@@ -81,5 +81,5 @@ This endpoint removes any control group configuration.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/config/control-group
+    http://127.0.0.1:8200/v1/sys/config/control-group
 ```

@@ -25,7 +25,7 @@ example: an error has caused replication to stop syncing.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/sys/replication/recover
+    http://127.0.0.1:8200/v1/sys/replication/recover
 ```
 
 ### Sample Response
@@ -51,7 +51,7 @@ depending on the number and size of objects in the data store.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/sys/replication/reindex
+    http://127.0.0.1:8200/v1/sys/replication/reindex
 ```
 
 ### Sample Response
@@ -77,7 +77,7 @@ This is an authenticated endpoint.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/replication/status
+    http://127.0.0.1:8200/v1/sys/replication/status
 ```
 
 ### Sample Response
