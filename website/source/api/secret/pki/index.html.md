@@ -62,7 +62,7 @@ This is an unauthenticated endpoint.
 
 ```
 $ curl \
-    https://vault.rocks/v1/pki/ca/pem
+    http://127.0.0.1:8200/v1/pki/ca/pem
 ```
 
 ### Sample Response
@@ -87,7 +87,7 @@ This is an unauthenticated endpoint.
 
 ```
 $ curl \
-    https://vault.rocks/v1/pki/ca_chain
+    http://127.0.0.1:8200/v1/pki/ca_chain
 ```
 
 ### Sample Response
@@ -121,7 +121,7 @@ This is an unauthenticated endpoint.
 
 ```
 $ curl \
-    https://vault.rocks/v1/pki/cert/crl
+    http://127.0.0.1:8200/v1/pki/cert/crl
 ```
 
 ### Sample Response
@@ -148,7 +148,7 @@ This endpoint returns a list of the current certificates by serial number only.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/pki/certs
+    http://127.0.0.1:8200/v1/pki/certs
 ```
 
 ### Sample Response
@@ -225,7 +225,7 @@ marked valid.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/pki/config/crl
+    http://127.0.0.1:8200/v1/pki/config/crl
 ```
 
 ### Sample Response
@@ -270,7 +270,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/config/crl
+    http://127.0.0.1:8200/v1/pki/config/crl
 ```
 
 ## Read URLs
@@ -286,7 +286,7 @@ This endpoint fetches the URLs to be encoded in generated certificates.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/pki/config/urls
+    http://127.0.0.1:8200/v1/pki/config/urls
 ```
 
 ### Sample Response
@@ -345,7 +345,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/config/urls
+    http://127.0.0.1:8200/v1/pki/config/urls
 ```
 
 ## Read CRL
@@ -366,7 +366,7 @@ This is an unauthenticated endpoint.
 
 ```
 $ curl \
-    https://vault.rocks/v1/pki/crl/pem
+    http://127.0.0.1:8200/v1/pki/crl/pem
 ```
 
 ### Sample Response
@@ -391,7 +391,7 @@ certificates being revoked.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/pki/crl/rotate
+    http://127.0.0.1:8200/v1/pki/crl/rotate
 ```
 
 ### Sample Response
@@ -505,7 +505,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/intermediate/generate/internal
+    http://127.0.0.1:8200/v1/pki/intermediate/generate/internal
 ```
 
 ```json
@@ -556,7 +556,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/intermediate/set-signed
+    http://127.0.0.1:8200/v1/pki/intermediate/set-signed
 ```
 
 ## Generate Certificate
@@ -632,7 +632,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/issue/my-role
+    http://127.0.0.1:8200/v1/pki/issue/my-role
 ```
 
 ### Sample Response
@@ -685,7 +685,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/revoke
+    http://127.0.0.1:8200/v1/pki/revoke
 ```
 
 ### Sample Response
@@ -867,7 +867,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/roles/my-role
+    http://127.0.0.1:8200/v1/pki/roles/my-role
 ```
 
 ## Read Role
@@ -888,7 +888,7 @@ This endpoint queries the role definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/pki/roles/my-role
+    http://127.0.0.1:8200/v1/pki/roles/my-role
 ```
 
 ### Sample Response
@@ -927,7 +927,7 @@ returned, not any values.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/pki/roles
+    http://127.0.0.1:8200/v1/pki/roles
 ```
 
 ### Sample Response
@@ -964,7 +964,7 @@ revoke certificates previously issued under this role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/pki/roles/my-role
+    http://127.0.0.1:8200/v1/pki/roles/my-role
 ```
 
 ## Generate Root
@@ -1091,7 +1091,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/root/generate/internal
+    http://127.0.0.1:8200/v1/pki/root/generate/internal
 ```
 
 ### Sample Response
@@ -1127,7 +1127,7 @@ _This endpoint requires sudo/root privileges._
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/pki/root
+    http://127.0.0.1:8200/v1/pki/root
 ```
 
 ## Sign Intermediate
@@ -1243,7 +1243,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/root/sign-intermediate
+    http://127.0.0.1:8200/v1/pki/root/sign-intermediate
 ```
 
 ### Sample Response
@@ -1303,7 +1303,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/root/sign-self-issued
+    http://127.0.0.1:8200/v1/pki/root/sign-self-issued
 ```
 
 ### Sample Response
@@ -1444,7 +1444,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/sign-verbatim
+    http://127.0.0.1:8200/v1/pki/sign-verbatim
 ```
 
 ### Sample Response
@@ -1505,5 +1505,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/pki/tidy
+    http://127.0.0.1:8200/v1/pki/tidy
 ```

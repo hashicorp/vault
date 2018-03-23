@@ -60,7 +60,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/database/config/mysql
+    http://127.0.0.1:8200/v1/database/config/mysql
 ```
 
 ## Read Connection
@@ -82,7 +82,7 @@ This endpoint returns the configuration settings for a connection.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/database/config/mysql
+    http://127.0.0.1:8200/v1/database/config/mysql
 ```
 
 ### Sample Response
@@ -116,7 +116,7 @@ are returned, not any values.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/database/config
+    http://127.0.0.1:8200/v1/database/config
 ```
 
 ### Sample Response
@@ -148,7 +148,7 @@ This endpoint deletes a connection.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/database/config/mysql
+    http://127.0.0.1:8200/v1/database/config/mysql
 ```
 
 ## Reset Connection
@@ -171,7 +171,7 @@ with the configuration stored in the barrier.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/database/reset/mysql
+    http://127.0.0.1:8200/v1/database/reset/mysql
 ```
 
 ## Create Role
@@ -236,7 +236,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/database/roles/my-role
+    http://127.0.0.1:8200/v1/database/roles/my-role
 ```
 
 ## Read Role
@@ -257,7 +257,7 @@ This endpoint queries the role definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/database/roles/my-role
+    http://127.0.0.1:8200/v1/database/roles/my-role
 ```
 
 ### Sample Response
@@ -291,7 +291,7 @@ returned, not any values.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/database/roles
+    http://127.0.0.1:8200/v1/database/roles
 ```
 
 ### Sample Response
@@ -327,7 +327,7 @@ This endpoint deletes the role definition.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/database/roles/my-role
+    http://127.0.0.1:8200/v1/database/roles/my-role
 ```
 
 ## Generate Credentials
@@ -349,7 +349,7 @@ role.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/database/creds/my-role
+    http://127.0.0.1:8200/v1/database/creds/my-role
 ```
 
 ### Sample Response

@@ -25,7 +25,7 @@ This endpoint reads the configuration and progress of the current rekey attempt.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/rekey-recovery-key/init
+    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/init
 ```
 
 ### Sample Response
@@ -97,7 +97,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/rekey-recovery-key/init
+    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/init
 ```
 
 ## Cancel Rekey
@@ -116,7 +116,7 @@ rekey.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/rekey-recovery-key/init
+    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/init
 ```
 
 ## Read Backup Key
@@ -134,7 +134,7 @@ fingerprint to hex-encoded PGP-encrypted key.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/rekey-recovery-key/backup
+    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/backup
 ```
 
 ### Sample Response
@@ -162,7 +162,7 @@ This endpoint deletes the backup copy of PGP-encrypted recovery key shares.
 $ curl \
     --header "X-Vault-Token" \
     --request DELETE \
-    https://vault.rocks/v1/sys/rekey-recovery-key/backup
+    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/backup
 ```
 
 ## Submit Key
@@ -199,7 +199,7 @@ $ curl \
     --header "X-Vault-Token" \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/rekey-recovery-key/update
+    http://127.0.0.1:8200/v1/sys/rekey-recovery-key/update
 ```
 
 ### Sample Response

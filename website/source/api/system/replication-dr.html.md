@@ -25,7 +25,7 @@ This is an authenticated endpoint.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/replication/dr/status
+    http://127.0.0.1:8200/v1/sys/replication/dr/status
 ```
 
 ### Sample Response
@@ -87,7 +87,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/dr/primary/enable
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/enable
 ```
 
 ## Demote DR Primary
@@ -107,7 +107,7 @@ DR replication set without wiping local storage.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/sys/replication/dr/primary/demote
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/demote
 ```
 
 ## Disable DR Primary
@@ -129,7 +129,7 @@ will require a wipe of the underlying storage.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/sys/replication/dr/primary/disable
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/disable
 ```
 
 ## Generate DR Secondary Token
@@ -156,7 +156,7 @@ identifier can later be used to revoke a DR secondary's access.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/replication/dr/primary/secondary-token?id=us-east-1
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/secondary-token?id=us-east-1
 ```
 
 ### Sample Response
@@ -207,7 +207,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/dr/primary/revoke-secondary
+    http://127.0.0.1:8200/v1/sys/replication/dr/primary/revoke-secondary
 ```
 
 ## Enable DR Secondary
@@ -254,7 +254,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/dr/secondary/enable
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/enable
 ```
 
 ## Promote DR Secondary
@@ -306,7 +306,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/dr/secondary/promote
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/promote
 ```
 
 ### Sample Response
@@ -382,7 +382,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/dr/secondary/update-primary
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/update-primary
 ```
 
 ## Generate Disaster Recovery Operation Token
@@ -405,7 +405,7 @@ attempt.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/replication/dr/secondary/generate-operation-token/attempt
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
 ```
 
 ### Sample Response
@@ -463,7 +463,7 @@ generation attempt can take place at a time. One (and only one) of `otp` or
 $ curl \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/dr/secondary/generate-operation-token/attempt
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
 ```
 
 ### Sample Response
@@ -494,7 +494,7 @@ progress made. This must be called to change the OTP or PGP key being used.
 ```
 $ curl \
     --request DELETE \
-    https://vault.rocks/v1/sys/replication/dr/secondary/generate-operation-token/attempt
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
 ```
 
 ## Provide Key Share to Generate Token
@@ -530,7 +530,7 @@ nonce must be provided with each call.
 $ curl \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/dr/secondary/generate-operation-token/update
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/update
 ```
 
 ### Sample Response
@@ -579,5 +579,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/dr/secondary/operation-token/delete
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/operation-token/delete
 ```

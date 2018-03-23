@@ -25,7 +25,7 @@ This is an authenticated endpoint.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/replication/performance/status
+    http://127.0.0.1:8200/v1/sys/replication/performance/status
 ```
 
 ### Sample Response
@@ -91,7 +91,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/performance/primary/enable
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/enable
 ```
 
 ## Demote Performance Primary
@@ -111,7 +111,7 @@ replication set without wiping local storage.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/sys/replication/performance/primary/demote
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/demote
 ```
 
 ## Disable Performance Primary
@@ -134,7 +134,7 @@ they have connected before) will require a wipe of the underlying storage.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/sys/replication/performance/primary/disable
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/disable
 ```
 
 ## Generate Performance Secondary Token
@@ -171,7 +171,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/performance/primary/secondary-token
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/secondary-token
 ```
 
 ### Sample Response
@@ -222,7 +222,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/performance/primary/revoke-secondary
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/revoke-secondary
 ```
 
 ## Create Mounts Filter
@@ -261,7 +261,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/performance/primary/mount-filter/us-east-1
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/mount-filter/us-east-1
 ```
 
 ## Read Mounts Filter
@@ -282,7 +282,7 @@ for a secondary.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/replication/performance/primary/mount-filter/us-east-1
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/mount-filter/us-east-1
 ```
 
 ### Sample Response
@@ -312,7 +312,7 @@ This endpoint is used to delete the mount filters for a secondary.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/replication/performance/primary/mount-filter/us-east-1
+    http://127.0.0.1:8200/v1/sys/replication/performance/primary/mount-filter/us-east-1
 ```
 
 ## Enable Performance Secondary
@@ -359,7 +359,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/performance/secondary/enable
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/enable
 ```
 
 ## Promote Performance Secondary
@@ -393,7 +393,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/performance/secondary/promote
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/promote
 ```
 
 ## Disable Performance Secondary
@@ -418,7 +418,7 @@ underlying storage.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/sys/replication/performance/secondary/disable
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/disable
 ```
 
 ## Update Performance Secondary's Primary
@@ -465,5 +465,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/performance/secondary/update-primary
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/update-primary
 ```

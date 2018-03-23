@@ -48,7 +48,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/mfa/method/totp/my_totp
+    http://127.0.0.1:8200/v1/sys/mfa/method/totp/my_totp
 ```
 
 ## Read TOTP MFA Method
@@ -70,7 +70,7 @@ name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/sys/mfa/method/totp/my_totp
+    http://127.0.0.1:8200/v1/sys/mfa/method/totp/my_totp
 
 ```
 
@@ -112,7 +112,7 @@ This endpoint deletes a TOTP MFA method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/mfa/method/totp/my_totp
+    http://127.0.0.1:8200/v1/sys/mfa/method/totp/my_totp
 
 ```
 
@@ -136,7 +136,7 @@ method name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/sys/mfa/method/totp/my_totp/generate
+    http://127.0.0.1:8200/v1/sys/mfa/method/totp/my_totp/generate
 ```
 
 ### Sample Response
@@ -182,7 +182,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json
-    https://vault.rocks/v1/sys/mfa/method/totp/my_totp/admin-generate
+    http://127.0.0.1:8200/v1/sys/mfa/method/totp/my_totp/admin-generate
 ```
 
 ### Sample Response
@@ -231,5 +231,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json
-    https://vault.rocks/v1/sys/mfa/method/totp/my_totp/admin-destroy
+    http://127.0.0.1:8200/v1/sys/mfa/method/totp/my_totp/admin-destroy
 ```

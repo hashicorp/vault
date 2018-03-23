@@ -105,7 +105,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/cassandra/config/connection
+    http://127.0.0.1:8200/v1/cassandra/config/connection
 ```
 
 ## Create Role
@@ -156,7 +156,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/cassandra/roles/my-role
+    http://127.0.0.1:8200/v1/cassandra/roles/my-role
 ```
 
 ## Read Role
@@ -177,7 +177,7 @@ This endpoint queries the role definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/cassandra/roles/my-role
+    http://127.0.0.1:8200/v1/cassandra/roles/my-role
 ```
 
 ### Sample Response
@@ -212,7 +212,7 @@ This endpoint deletes the role definition.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/cassandra/roles/my-role
+    http://127.0.0.1:8200/v1/cassandra/roles/my-role
 ```
 
 ## Generate Credentials
@@ -234,7 +234,7 @@ role.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/cassandra/creds/my-role
+    http://127.0.0.1:8200/v1/cassandra/creds/my-role
 ```
 
 ### Sample Response

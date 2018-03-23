@@ -25,7 +25,7 @@ of Vault.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/leader
+    http://127.0.0.1:8200/v1/sys/leader
 ```
 
 ### Sample Response

@@ -210,7 +210,7 @@ Where `<TOKEN>` is your valid token with read permission on the
 
 ```shell
 $ curl --header "X-Vault-Token: ..." --request GET \
-      https://vault.rocks/v1/sys/auth/token/tune | jq
+      http://127.0.0.1:8200/v1/sys/auth/token/tune | jq
 {
   "default_lease_ttl": 2764800,
   "max_lease_ttl": 2764800,
@@ -321,7 +321,7 @@ The following example sets the `ttl` parameter.
 # Create a new token with TTl of 30 seconds
 $ curl --header "X-Vault-Token: ..." --request POST \
      --data '{"ttl": "30s"}' \
-     https://vault.rocks/v1/auth/token/create | jq
+     http://127.0.0.1:8200/v1/auth/token/create | jq
 {
   ...
  "auth": {
@@ -339,7 +339,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 # Pass the returned token (`client_token`) in the `X-Vault-Token` header to test
 $ curl --header "X-Vault-Token: f7d88963-1aba-64d7-11a0-9282ae7681d0" \
      --request GET \
-     https://vault.rocks/v1/auth/token/lookup-self | jq
+     http://127.0.0.1:8200/v1/auth/token/lookup-self | jq
 {
   ...
  "data": {
@@ -363,12 +363,12 @@ token usage.
 
 ```shell
 $ curl --header "X-Vault-Token: ..." --request POST \
-       https://vault.rocks/v1/auth/token/renew/<TOKEN> | jq
+       http://127.0.0.1:8200/v1/auth/token/renew/<TOKEN> | jq
 
 # Renew token with 1 hour extension
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data '{"increment": "3600"}' \
-       https://vault.rocks/v1/auth/token/renew/<TOKEN> | jq
+       http://127.0.0.1:8200/v1/auth/token/renew/<TOKEN> | jq
 ```
 
 -> **NOTE:** Tokens can be renewed as long as its life hasn't reached its max
@@ -459,7 +459,7 @@ Set the `num_uses` property in the request payload.
 ```shell
 $ curl --header "X-Vault-Token: ..." --request POST  \
        --data '{ "policies": ["default"], "num_uses":2 }' \
-       https://vault.rocks/v1/auth/token/create | jq
+       http://127.0.0.1:8200/v1/auth/token/create | jq
 {
   "request_id": "0e98ff80-2825-7f50-6522-b6f95d596ef4",
   "lease_id": "",
@@ -488,7 +488,7 @@ This creates a token with the _default_ policy and a use limit of 2.
 ```text
 $ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
        --request GET \
-       https://vault.rocks/v1/auth/token/lookup-self | jq
+       http://127.0.0.1:8200/v1/auth/token/lookup-self | jq
 {
   "request_id": "77be1321-c0ca-e099-6f92-4ad87133b044",
   "lease_id": "",
@@ -511,12 +511,12 @@ $ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
 $ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
        --request POST \
        --data '{ "value": "d9c2f2e5-6b8a-4021-476c-ebd3f166d668" }' \
-       https://vault.rocks/v1/cubbyhole/token
+       http://127.0.0.1:8200/v1/cubbyhole/token
 
 
 $ curl --header "X-Vault-Token: d9c2f2e5-6b8a-4021-476c-ebd3f166d668" \
        --request GET \
-       https://vault.rocks/v1/cubbyhole/token | jq
+       http://127.0.0.1:8200/v1/cubbyhole/token | jq
 {
   "errors": [
     "permission denied"
@@ -581,7 +581,7 @@ token renewal period. This value can be an integer value in seconds (e.g.
 ```shell
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data @payload.json \
-       https://vault.rocks/v1/auth/token/roles/zabbix
+       http://127.0.0.1:8200/v1/auth/token/roles/zabbix
 
 $ cat payload.json
 {
@@ -599,7 +599,7 @@ Now, generate a token:
 
 ```plaintext
 $ curl --header "X-Vault-Token: ..." --request POST \
-     https://vault.rocks/v1/auth/token/create/zabbix | jq
+     http://127.0.0.1:8200/v1/auth/token/create/zabbix | jq
 {
   ...
   "auth": {
@@ -643,7 +643,7 @@ Or
 ```plaintext
 $ curl --header "X-Vault-Token:..." --request POST \
        --data @payload.json \
-       https://vault.rocks/v1/auth/approle/role/jenkins
+       http://127.0.0.1:8200/v1/auth/approle/role/jenkins
 
 $ cat payload.json
 {
@@ -676,7 +676,7 @@ $ vault token create -orphan
 ```shell
 $ curl --header "X-Vault-Token:..." --request POST \
        --data '{ "no_parent": true }' \
-       https://vault.rocks/v1/auth/token/create-orphan | jq
+       http://127.0.0.1:8200/v1/auth/token/create-orphan | jq
 ```
 
 
@@ -723,15 +723,15 @@ To revoke a specific token, call `/auth/token/revoke` endpoint.  If you want to 
 # Revoke a specific token
 $ curl --header "X-Vault-Token:..." --request POST \
        --data '{ "token": "eeaf890e-4b0f-a687-4190-c75b1d6d70bc" }' \
-       https://vault.rocks/v1/auth/token/revoke
+       http://127.0.0.1:8200/v1/auth/token/revoke
 
 # Revoke all secrets for database auth method
 $ curl --header "X-Vault-Token:..." --request POST \
-       https://vault.rocks/v1/sys/leases/revoke-prefix/database/creds
+       http://127.0.0.1:8200/v1/sys/leases/revoke-prefix/database/creds
 
 # Revoke all tokens
 $ curl --header "X-Vault-Token:..." --request POST \
-       https://vault.rocks/v1/sys/leases/revoke-prefix/auth/token/create
+       http://127.0.0.1:8200/v1/sys/leases/revoke-prefix/auth/token/create
 ```
 
 
@@ -776,7 +776,7 @@ Or
 ```shell
 $ curl --header "X-Vault-Token:..." --request POST \
        --data '{ "max_lease_ttl": 129600}' \
-       https://vault.rocks/v1/sys/mounts/database/tune
+       http://127.0.0.1:8200/v1/sys/mounts/database/tune
 ```
 
 

@@ -180,7 +180,7 @@ secrets, and `secret/<PATH>` is the path to your secrets.
 ```shell
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data '{"key": "AAaaBBccDDeeOTXzSMT1234BB_Z8JzG7JkSVxI"}' \
-       https://vault.rocks/v1/secret/eng/apikey/Google
+       http://127.0.0.1:8200/v1/secret/eng/apikey/Google
 ```
 
 The secret key is "key" and its value is
@@ -254,7 +254,7 @@ To perform the same task using the Vault API, pass the token in the request head
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data @cert.pem \
-       https://vault.rocks/v1/secret/prod/cert/mysql
+       http://127.0.0.1:8200/v1/secret/prod/cert/mysql
 ```
 > **NOTE:** Any value begins with "@" is loaded from a file.
 
@@ -321,12 +321,12 @@ $ cat payload.json
 # Create "apps" policy
 $ curl --header "X-Vault-Token: ..." --request PUT \
        --data @payload.json \
-       https://vault.rocks/v1/sys/policy/apps
+       http://127.0.0.1:8200/v1/sys/policy/apps
 
 # Generate a new token with apps policy
 $ curl --header "X-Vault-Token: ..." --request POST \
        --data '{"policies": ["apps"]}' \
-       https://vault.rocks/v1/auth/token/create | jq
+       http://127.0.0.1:8200/v1/auth/token/create | jq
 {
  "request_id": "e1737bc8-7e51-3943-42a0-2dbd6cb40e3e",
  "lease_id": "",
@@ -431,7 +431,7 @@ Read the Google API key.
 ```shell
 $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
        --request GET \
-       https://vault.rocks/v1/secret/eng/apikey/Google | jq
+       http://127.0.0.1:8200/v1/secret/eng/apikey/Google | jq
 {
 "request_id": "5a2005ac-1149-2275-cab3-76cee71bf524",
 "lease_id": "",
@@ -453,7 +453,7 @@ Retrieve the key value with `jq`:
 ```shell
 $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
        --request GET \
-       https://vault.rocks/v1/secret/eng/apikey/Google | jq ".data.key"
+       http://127.0.0.1:8200/v1/secret/eng/apikey/Google | jq ".data.key"
 ```
 
 #### Root certificate example:
@@ -461,7 +461,7 @@ $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
 ```shell
 $ curl --header "X-Vault-Token: 1c97b03a-6098-31cf-9d8b-b404e52dcb4a" \
        --request GET \
-       https://vault.rocks/v1/secret/prod/cert/mysql | jq ".data.cert"
+       http://127.0.0.1:8200/v1/secret/prod/cert/mysql | jq ".data.cert"
 ```
 
 ## Additional Discussion
