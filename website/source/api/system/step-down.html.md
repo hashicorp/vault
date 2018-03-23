@@ -29,5 +29,5 @@ the path.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
-    https://vault.rocks/v1/sys/step-down
+    http://127.0.0.1:8200/v1/sys/step-down
 ```

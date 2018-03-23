@@ -56,7 +56,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/kubernetes/config
+    http://127.0.0.1:8200/v1/auth/kubernetes/config
 ```
 
 ## Read Config
@@ -72,7 +72,7 @@ Returns the previously configured config, including credentials.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/kubernetes/config
+    http://127.0.0.1:8200/v1/auth/kubernetes/config
 ```
 
 ### Sample Response
@@ -138,7 +138,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/kubernetes/role/dev-role
+    http://127.0.0.1:8200/v1/auth/kubernetes/role/dev-role
 ```
 ## Read Role
 
@@ -157,7 +157,7 @@ Returns the previously registered role configuration.
 ```text
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/kubernetes/role/dev-role
+    http://127.0.0.1:8200/v1/auth/kubernetes/role/dev-role
 ```
 
 ### Sample Response
@@ -193,7 +193,7 @@ Lists all the roles that are registered with the auth method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/kubernetes/role
+    http://127.0.0.1:8200/v1/auth/kubernetes/role
 ```
 
 ### Sample Response
@@ -227,7 +227,7 @@ Deletes the previously registered role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/kubernetes/role/dev-role
+    http://127.0.0.1:8200/v1/auth/kubernetes/role/dev-role
 ```
 
 ## Login
@@ -263,7 +263,7 @@ entity and then authorizes the entity for the given role.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/kubernetes/login
+    http://127.0.0.1:8200/v1/auth/kubernetes/login
 ```
 
 ### Sample Response

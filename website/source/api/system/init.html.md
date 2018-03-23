@@ -22,7 +22,7 @@ This endpoint returns the initialization status of Vault.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/init
+    http://127.0.0.1:8200/v1/sys/init
 ```
 
 ### Sample Response
@@ -95,7 +95,7 @@ Additionally, the following options are only supported on Vault Pro/Enterprise:
 $ curl \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/init
+    http://127.0.0.1:8200/v1/sys/init
 ```
 
 ### Sample Response

@@ -88,7 +88,7 @@ $ curl \
     --cert cert.pem \
     --key key.pem \
     --data '{"name": "web"}' \
-    https://vault.rocks/v1/auth/cert/login
+    http://127.0.0.1:8200/v1/auth/cert/login
 ```
 
 ## Configuration

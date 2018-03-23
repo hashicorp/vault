@@ -71,7 +71,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json
-    https://vault.rocks/v1/auth/cert/certs/test-ca
+    http://127.0.0.1:8200/v1/auth/cert/certs/test-ca
 ```
 
 ## Read CA Certificate Role
@@ -91,7 +91,7 @@ Gets information associated with the named role.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/cert/certs/test-ca
+    http://127.0.0.1:8200/v1/auth/cert/certs/test-ca
 ```
 
 ### Sample Response
@@ -130,7 +130,7 @@ Lists configured certificate names.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/cert/certs
+    http://127.0.0.1:8200/v1/auth/cert/certs
 
 ### Sample Response
 
@@ -169,7 +169,7 @@ Deletes the named role and CA cert from the method mount.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/cert/certs/cert1
+    http://127.0.0.1:8200/v1/auth/cert/certs/cert1
 ```
 
 ## Create CRL
@@ -201,7 +201,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --date @payload.json \
-    https://vault.rocks/v1/auth/cert/crls/custom-crl
+    http://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
 ```
 
 ## Read CRL
@@ -223,7 +223,7 @@ arbitrary size, these are returned as strings.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/cert/crls/custom-crl
+    http://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
 ```
 
 ### Sample Response
@@ -261,7 +261,7 @@ Deletes the named CRL from the auth method mount.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/cert/crls/cert1
+    http://127.0.0.1:8200/v1/auth/cert/crls/cert1
 ```
 
 ## Configure TLS Certificate Method
@@ -293,7 +293,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --date @payload.json \
-    https://vault.rocks/v1/auth/cert/certs/cert1
+    http://127.0.0.1:8200/v1/auth/cert/certs/cert1
 ```
 
 ## Login with TLS Certificate Method
@@ -329,7 +329,7 @@ https://tools.ietf.org/html/rfc6125#section-2.3)
 $ curl \
     --request POST \
     --date @payload.json \
-    https://vault.rocks/v1/auth/cert/login
+    http://127.0.0.1:8200/v1/auth/cert/login
 ```
 
 ### Sample Response

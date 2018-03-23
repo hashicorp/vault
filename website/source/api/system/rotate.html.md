@@ -27,5 +27,5 @@ the new key, while old values are decrypted with previous encryption keys.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
-    https://vault.rocks/v1/sys/rotate
+    http://127.0.0.1:8200/v1/sys/rotate
 ```

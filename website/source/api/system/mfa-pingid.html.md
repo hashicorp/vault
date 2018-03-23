@@ -44,7 +44,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/mfa/method/pingid/ping
+    http://127.0.0.1:8200/v1/sys/mfa/method/pingid/ping
 ```
 
 ## Read PingiD MFA Method
@@ -66,7 +66,7 @@ name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/sys/mfa/method/pingid/ping
+    http://127.0.0.1:8200/v1/sys/mfa/method/pingid/ping
 
 ```
 
@@ -106,6 +106,6 @@ This endpoint deletes a PingID MFA method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/mfa/method/pingid/ping
+    http://127.0.0.1:8200/v1/sys/mfa/method/pingid/ping
 
 ```
