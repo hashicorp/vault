@@ -35,6 +35,7 @@ FEATURES:
 BUG FIXES:
 
  * replication: Fix a panic on some non-64-bit platforms
+ * replication: Fix invalidation of policies on performance secondaries
 
 ## 0.9.6 (March 20th, 2018)
 
