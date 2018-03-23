@@ -2,8 +2,11 @@ package command
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -79,7 +82,11 @@ type ServerCommand struct {
 	flagDevRootTokenID string
 	flagDevListenAddr  string
 
+	flagDevPluginArgs    string
+	flagDevPluginCommand string
 	flagDevPluginDir     string
+	flagDevPluginPath    string
+	flagDevPluginName    string
 	flagDevHA            bool
 	flagDevLatency       int
 	flagDevLatencyJitter int
@@ -184,11 +191,40 @@ func (c *ServerCommand) Flags() *FlagSets {
 	// developing against Vault, you should not need any of these flags.
 
 	f.StringVar(&StringVar{
+		Name:    "dev-plugin-args",
+		Target:  &c.flagDevPluginArgs,
+		Default: "",
+		Hidden:  true,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-plugin-command",
+		Target:  &c.flagDevPluginCommand,
+		Default: "",
+		Hidden:  true,
+	})
+
+	f.StringVar(&StringVar{
 		Name:       "dev-plugin-dir",
 		Target:     &c.flagDevPluginDir,
 		Default:    "",
 		Completion: complete.PredictDirs("*"),
 		Hidden:     true,
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "dev-plugin-path",
+		Target:     &c.flagDevPluginPath,
+		Default:    "",
+		Completion: complete.PredictFiles("*"),
+		Hidden:     true,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-plugin-name",
+		Target:  &c.flagDevPluginName,
+		Default: "",
+		Hidden:  true,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -454,6 +490,9 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 		if c.flagDevPluginDir != "" {
 			coreConfig.PluginDirectory = c.flagDevPluginDir
+		}
+		if c.flagDevPluginPath != "" {
+			coreConfig.PluginDirectory = filepath.Dir(c.flagDevPluginPath)
 		}
 		if c.flagDevLatency > 0 {
 			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
@@ -807,6 +846,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			return 1
 		}
 
+		if c.flagDevPluginPath != "" {
+			if err := c.addPlugin(init.RootToken, core); err != nil {
+				c.UI.Error(fmt.Sprintf("Error enabling plugin: %s", err))
+				return 1
+			}
+		}
+
 		export := "export"
 		quote := "'"
 		if runtime.GOOS == "windows" {
@@ -846,6 +892,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
+
+		if c.flagDevPluginPath != "" {
+			c.UI.Warn("")
+			c.UI.Warn(wrapAtLength(fmt.Sprintf(
+				"The following plugins are in the catalog: %s", c.flagDevPluginName)))
+		}
 
 		c.UI.Warn("")
 		c.UI.Warn(wrapAtLength(
@@ -1221,6 +1273,57 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	}
 
 	return 0
+}
+
+// addPlugin adds any plugins to the catalog
+func (c *ServerCommand) addPlugin(token string, core *vault.Core) error {
+	// Get the sha256 of the file at the given path.
+	pluginSum := func(p string) (string, error) {
+		hasher := sha256.New()
+		f, err := os.Open(p)
+		if err != nil {
+			return "", err
+		}
+		defer f.Close()
+		if _, err := io.Copy(hasher, f); err != nil {
+			return "", err
+		}
+		return hex.EncodeToString(hasher.Sum(nil)), nil
+	}
+
+	// Mount any test plugins. We do this explicitly before we inform tests of
+	// a completely booted server intentionally.
+	sha256sum, err := pluginSum(c.flagDevPluginPath)
+	if err != nil {
+		return err
+	}
+
+	// Default the name to the basename of the binary
+	if c.flagDevPluginName == "" {
+		c.flagDevPluginName = filepath.Base(c.flagDevPluginPath)
+	}
+
+	// Default the command to the basename of the binary
+	if c.flagDevPluginCommand == "" {
+		c.flagDevPluginCommand = c.flagDevPluginName
+	}
+
+	// File a request against core to enable the plugin
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: token,
+		Path:        "sys/plugins/catalog/" + c.flagDevPluginName,
+		Data: map[string]interface{}{
+			"sha256":  sha256sum,
+			"command": c.flagDevPluginCommand,
+			"args":    c.flagDevPluginArgs,
+		},
+	}
+	if _, err := core.HandleRequest(req); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // detectRedirect is used to attempt redirect address detection
