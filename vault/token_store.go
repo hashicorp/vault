@@ -1169,7 +1169,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 		}
 	}
 
-	// Clear the parent index
+	// Clear the parent entry
 	parentPath := parentPrefix + saltedId + "/"
 	if err = logical.ClearView(ctx, ts.view.SubView(parentPath)); err != nil {
 		return fmt.Errorf("failed to delete entry: %v", err)
@@ -1342,8 +1342,9 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			continue
 		}
 
-		// First check if the salt ID of the parent exists, and if not delete this
-		// entry and continue to the next one.
+		// First check if the salt ID of the parent exists, and if not mark this so
+		// that deletion of children later with this loop below applies to all
+		// children
 		originalChildrenCount := int64(len(children))
 		exists, _ := ts.lookupSalted(ctx, strings.TrimSuffix(parent, "/"), true)
 		if exists == nil {
@@ -1473,8 +1474,8 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		}
 	}
 
-	ts.logger.Debug("token: number of entries scanned in parent index", "count", countParentEntries)
-	ts.logger.Debug("token: number of entries deleted in parent index", "count", deletedCountParentEntries)
+	ts.logger.Debug("token: number of entries scanned in parent prefix", "count", countParentEntries)
+	ts.logger.Debug("token: number of entries deleted in parent prefix", "count", deletedCountParentEntries)
 	ts.logger.Debug("token: number of tokens scanned in parent index list", "count", countParentList)
 	ts.logger.Debug("token: number of tokens revoked in parent index list", "count", deletedCountParentList)
 	ts.logger.Debug("token: number of accessors scanned", "count", countAccessorList)
