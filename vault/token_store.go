@@ -1169,6 +1169,12 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 		}
 	}
 
+	// Clear the parent index
+	parentPath := parentPrefix + saltedId + "/"
+	if err = logical.ClearView(ctx, ts.view.SubView(parentPath)); err != nil {
+		return fmt.Errorf("failed to delete entry: %v", err)
+	}
+
 	// Now that the entry is not usable for any revocation tasks, nuke it
 	path := lookupPrefix + saltedId
 	if err = ts.view.Delete(ctx, path); err != nil {
@@ -1322,14 +1328,31 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
 	}
 
-	var countParentList, deletedCountParentList int64
+	var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
 
 	// Scan through the secondary index entries; if there is an entry
 	// with the token's salt ID at the end, remove it
 	for _, parent := range parentList {
+		// Get the children
 		children, err := ts.view.List(ctx, parentPrefix+parent)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read secondary index: %v", err))
+			continue
+		}
+
+		// First check if the salt ID of the parent exists, and if not delete this
+		// entry and continue to the next one.
+		countParentEntries++
+		if exists, _ := ts.lookupSalted(ctx, strings.TrimSuffix(parent, "/"), true); exists == nil {
+			index := parentPrefix + parent
+			ts.logger.Trace("token: deleting invalid parent index", "index", index)
+			if err = logical.ClearView(ctx, ts.view.SubView(index)); err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete parent index: %v", err))
+				continue
+			}
+			deletedCountParentEntries++
+			// Include the number of deleted children
+			deletedCountParentList += int64(len(children))
 			continue
 		}
 
@@ -1349,6 +1372,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				err = ts.view.Delete(ctx, index)
 				if err != nil {
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index: %v", err))
+					continue
 				}
 				deletedCountParentList++
 			}
@@ -1447,6 +1471,8 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		}
 	}
 
+	ts.logger.Debug("token: number of entries scanned in parent index", "count", countParentEntries)
+	ts.logger.Debug("token: number of entries deleted in parent index", "count", deletedCountParentEntries)
 	ts.logger.Debug("token: number of tokens scanned in parent index list", "count", countParentList)
 	ts.logger.Debug("token: number of tokens revoked in parent index list", "count", deletedCountParentList)
 	ts.logger.Debug("token: number of accessors scanned", "count", countAccessorList)
