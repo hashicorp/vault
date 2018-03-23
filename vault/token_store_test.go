@@ -1417,6 +1417,19 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
+	// Check that the parent entry is properly cleaned up
+	saltedID, err := ts.SaltID(context.Background(), "child")
+	if err != nil {
+		t.Fatal(err)
+	}
+	children, err := ts.view.List(context.Background(), parentPrefix+saltedID+"/")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(children) != 0 {
+		t.Fatalf("bad: %v", children)
+	}
+
 	// Sub-child should exist!
 	out, err = ts.Lookup(context.Background(), "sub-child")
 	if err != nil {
@@ -3510,6 +3523,143 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 
 	numberOfAccessors = len(resp.Data["keys"].([]string))
 	if numberOfAccessors != 1 {
+		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+}
+
+// Create a token, delete the token entry while leaking accessors, invoke tidy
+// and check if the dangling accessor entry is getting removed
+func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	// List the number of accessors. Since there is only root token
+	// present, the list operation should return only one key.
+	accessorListReq := &logical.Request{
+		Operation:   logical.ListOperation,
+		Path:        "accessors",
+		ClientToken: root,
+	}
+	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	numberOfAccessors := len(resp.Data["keys"].([]string))
+	if numberOfAccessors != 1 {
+		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+
+	for i := 1; i <= 100; i++ {
+		// Create a token
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+			Data: map[string]interface{}{
+				"policies": []string{"policy1"},
+			},
+		}
+		resp, err = ts.HandleRequest(context.Background(), tokenReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
+		tut := resp.Auth.ClientToken
+
+		// Create a child token
+		tokenReq = &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: tut,
+			Data: map[string]interface{}{
+				"policies": []string{"policy1"},
+			},
+		}
+		resp, err = ts.HandleRequest(context.Background(), tokenReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
+
+		// Creation of another token should end up with incrementing the number of
+		// accessors the storage
+		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
+
+		numberOfAccessors = len(resp.Data["keys"].([]string))
+		if numberOfAccessors != (i*2)+1 {
+			t.Fatalf("bad: number of accessors. Expected: %d, Actual: %d", i+1, numberOfAccessors)
+		}
+
+		// Revoke the token while leaking other items associated with the
+		// token. Do this by doing what revokeSalted used to do before it was
+		// fixed, i.e., by deleting the storage entry for token and its
+		// cubbyhole and by not deleting its secondary index, its accessor and
+		// associated leases.
+
+		saltedTut, err := ts.SaltID(context.Background(), tut)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = ts.lookupSalted(context.Background(), saltedTut, true)
+		if err != nil {
+			t.Fatalf("failed to lookup token: %v", err)
+		}
+
+		// Destroy the token index
+		path := lookupPrefix + saltedTut
+		if ts.view.Delete(context.Background(), path); err != nil {
+			t.Fatalf("failed to delete token entry: %v", err)
+		}
+
+		// Destroy the cubby space
+		err = ts.destroyCubbyhole(context.Background(), saltedTut)
+		if err != nil {
+			t.Fatalf("failed to destroyCubbyhole: %v", err)
+		}
+
+		// Leaking of accessor should have resulted in no change to the number
+		// of accessors
+		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
+
+		numberOfAccessors = len(resp.Data["keys"].([]string))
+		if numberOfAccessors != (i*2)+1 {
+			t.Fatalf("bad: number of accessors. Expected: %d, Actual: %d", (i*2)+1, numberOfAccessors)
+		}
+	}
+
+	tidyReq := &logical.Request{
+		Path:        "tidy",
+		Operation:   logical.UpdateOperation,
+		ClientToken: root,
+	}
+	resp, err = ts.HandleRequest(context.Background(), tidyReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("resp: %#v", resp)
+	}
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	// Tidy should have removed all the dangling accessor entries
+	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	// The number of accessors should be equal to number of valid child tokens
+	// (100) + the root token (1)
+	numberOfAccessors = len(resp.Data["keys"].([]string))
+	if numberOfAccessors != 101 {
 		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
 	}
 }

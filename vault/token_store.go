@@ -1169,8 +1169,29 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 		}
 	}
 
-	// Clear the parent entry
+	// Mark all children token as orphan by removing
+	// their parent index, and clear the parent entry
 	parentPath := parentPrefix + saltedId + "/"
+	children, err := ts.view.List(ctx, parentPath)
+	if err != nil {
+		return fmt.Errorf("failed to scan for children: %v", err)
+	}
+	for _, child := range children {
+		entry, err := ts.lookupSalted(ctx, child, true)
+		if err != nil {
+			return fmt.Errorf("failed to get child token: %v", err)
+		}
+		lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
+		lock.Lock()
+
+		entry.Parent = ""
+		err = ts.store(ctx, entry)
+		if err != nil {
+			lock.Unlock()
+			return fmt.Errorf("failed to update child token: %v", err)
+		}
+		lock.Unlock()
+	}
 	if err = logical.ClearView(ctx, ts.view.SubView(parentPath)); err != nil {
 		return fmt.Errorf("failed to delete entry: %v", err)
 	}
@@ -1363,6 +1384,22 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// since appropriate locks cannot be held with salted token IDs.
 			// Also perform deletion if the parent doesn't exist any more.
 			te, _ := ts.lookupSalted(ctx, child, true)
+			// If the child entry is not nil, but the parent doesn't exist, then turn
+			// that child token into an orphan token. Theres no deletion in this case.
+			if te != nil && exists == nil {
+				lock := locksutil.LockForKey(ts.tokenLocks, te.ID)
+				lock.Lock()
+
+				te.Parent = ""
+				err = ts.store(ctx, te)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to convert child token into an orphan token: %v", err))
+				}
+				lock.Unlock()
+				continue
+			}
+			// Otherwise, if the entry doesn't exist, or if the parent doesn't exit go
+			// on with the delete onthe secondary index
 			if te == nil || exists == nil {
 				index := parentPrefix + parent + child
 				ts.logger.Trace("token: deleting invalid secondary index", "index", index)
