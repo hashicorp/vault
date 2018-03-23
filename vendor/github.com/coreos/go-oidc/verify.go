@@ -19,17 +19,52 @@ const (
 	issuerGoogleAccountsNoScheme = "accounts.google.com"
 )
 
-// keySet is an interface that lets us stub out verification policies for
-// testing. Outside of testing, it's always backed by a remoteKeySet.
-type keySet interface {
-	verify(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error)
+// KeySet is a set of publc JSON Web Keys that can be used to validate the signature
+// of JSON web tokens. This is expected to be backed by a remote key set through
+// provider metadata discovery or an in-memory set of keys delivered out-of-band.
+type KeySet interface {
+	// VerifySignature parses the JSON web token, verifies the signature, and returns
+	// the raw payload. Header and claim fields are validated by other parts of the
+	// package. For example, the KeySet does not need to check values such as signature
+	// algorithm, issuer, and audience since the IDTokenVerifier validates these values
+	// independently.
+	//
+	// If VerifySignature makes HTTP requests to verify the token, it's expected to
+	// use any HTTP client associated with the context through ClientContext.
+	VerifySignature(ctx context.Context, jwt string) (payload []byte, err error)
 }
 
 // IDTokenVerifier provides verification for ID Tokens.
 type IDTokenVerifier struct {
-	keySet keySet
+	keySet KeySet
 	config *Config
 	issuer string
+}
+
+// NewVerifier returns a verifier manually constructed from a key set and issuer URL.
+//
+// It's easier to use provider discovery to construct an IDTokenVerifier than creating
+// one directly. This method is intended to be used with provider that don't support
+// metadata discovery, or avoiding round trips when the key set URL is already known.
+//
+// This constructor can be used to create a verifier directly using the issuer URL and
+// JSON Web Key Set URL without using discovery:
+//
+//		keySet := oidc.NewRemoteKeySet(ctx, "https://www.googleapis.com/oauth2/v3/certs")
+//		verifier := oidc.NewVerifier("https://accounts.google.com", keySet, config)
+//
+// Since KeySet is an interface, this constructor can also be used to supply custom
+// public key sources. For example, if a user wanted to supply public keys out-of-band
+// and hold them statically in-memory:
+//
+//		// Custom KeySet implementation.
+//		keySet := newStatisKeySet(publicKeys...)
+//
+//		// Verifier uses the custom KeySet implementation.
+//		verifier := oidc.NewVerifier("https://auth.example.com", keySet, config)
+//
+func NewVerifier(issuerURL string, keySet KeySet, config *Config) *IDTokenVerifier {
+	return &IDTokenVerifier{keySet: keySet, config: config, issuer: issuerURL}
 }
 
 // Config is the configuration for an IDTokenVerifier.
@@ -59,21 +94,7 @@ type Config struct {
 // The returned IDTokenVerifier is tied to the Provider's context and its behavior is
 // undefined once the Provider's context is canceled.
 func (p *Provider) Verifier(config *Config) *IDTokenVerifier {
-
-	return newVerifier(p.remoteKeySet, config, p.issuer)
-}
-
-func newVerifier(keySet keySet, config *Config, issuer string) *IDTokenVerifier {
-	// If SupportedSigningAlgs is empty defaults to only support RS256.
-	if len(config.SupportedSigningAlgs) == 0 {
-		config.SupportedSigningAlgs = []string{RS256}
-	}
-
-	return &IDTokenVerifier{
-		keySet: keySet,
-		config: config,
-		issuer: issuer,
-	}
+	return NewVerifier(p.issuer, p.remoteKeySet, config)
 }
 
 func parseJWT(p string) ([]byte, error) {
@@ -135,13 +156,14 @@ func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*IDTok
 	}
 
 	t := &IDToken{
-		Issuer:   token.Issuer,
-		Subject:  token.Subject,
-		Audience: []string(token.Audience),
-		Expiry:   time.Time(token.Expiry),
-		IssuedAt: time.Time(token.IssuedAt),
-		Nonce:    token.Nonce,
-		claims:   payload,
+		Issuer:          token.Issuer,
+		Subject:         token.Subject,
+		Audience:        []string(token.Audience),
+		Expiry:          time.Time(token.Expiry),
+		IssuedAt:        time.Time(token.IssuedAt),
+		Nonce:           token.Nonce,
+		AccessTokenHash: token.AtHash,
+		claims:          payload,
 	}
 
 	// Check issuer.
@@ -165,7 +187,7 @@ func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*IDTok
 				return nil, fmt.Errorf("oidc: expected audience %q got %q", v.config.ClientID, t.Audience)
 			}
 		} else {
-			return nil, fmt.Errorf("oidc: Invalid configuration. ClientID must be provided or SkipClientIDCheck must be set.")
+			return nil, fmt.Errorf("oidc: invalid configuration, clientID must be provided or SkipClientIDCheck must be set")
 		}
 	}
 
@@ -190,11 +212,18 @@ func (v *IDTokenVerifier) Verify(ctx context.Context, rawIDToken string) (*IDTok
 	}
 
 	sig := jws.Signatures[0]
-	if len(v.config.SupportedSigningAlgs) != 0 && !contains(v.config.SupportedSigningAlgs, sig.Header.Algorithm) {
-		return nil, fmt.Errorf("oidc: id token signed with unsupported algorithm, expected %q got %q", v.config.SupportedSigningAlgs, sig.Header.Algorithm)
+	supportedSigAlgs := v.config.SupportedSigningAlgs
+	if len(supportedSigAlgs) == 0 {
+		supportedSigAlgs = []string{RS256}
 	}
 
-	gotPayload, err := v.keySet.verify(ctx, jws)
+	if !contains(supportedSigAlgs, sig.Header.Algorithm) {
+		return nil, fmt.Errorf("oidc: id token signed with unsupported algorithm, expected %q got %q", supportedSigAlgs, sig.Header.Algorithm)
+	}
+
+	t.sigAlgorithm = sig.Header.Algorithm
+
+	gotPayload, err := v.keySet.VerifySignature(ctx, rawIDToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify signature: %v", err)
 	}

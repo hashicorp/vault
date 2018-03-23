@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -57,24 +58,29 @@ duration specified by this value. At each renewal, the token's
 TTL will be set to the value of this parameter.`,
 				},
 				"bound_subscription_ids": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: ``,
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of subscription ids that login 
+is restricted to.`,
 				},
 				"bound_resource_groups": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: ``,
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of resource groups that login 
+is restricted to.`,
 				},
 				"bound_group_ids": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: ``,
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of group ids that login 
+is restricted to.`,
 				},
 				"bound_service_principal_ids": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: ``,
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of service principal ids that login 
+is restricted to.`,
 				},
 				"bound_locations": &framework.FieldSchema{
-					Type:        framework.TypeCommaStringSlice,
-					Description: ``,
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma-separated list of locations that login 
+is restricted to.`,
 				},
 			},
 			ExistenceCheck: b.pathRoleExistenceCheck,
@@ -226,7 +232,7 @@ func (b *azureAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logica
 	// Create a new entry object if this is a CreateOperation
 	if role == nil {
 		if req.Operation == logical.UpdateOperation {
-			return nil, fmt.Errorf("role entry not found during update operation")
+			return nil, errors.New("role entry not found during update operation")
 		}
 		role = new(azureRole)
 	}

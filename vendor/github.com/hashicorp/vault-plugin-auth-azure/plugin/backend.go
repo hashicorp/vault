@@ -2,10 +2,8 @@ package plugin
 
 import (
 	"context"
-	"net/http"
 	"sync"
 
-	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -23,8 +21,7 @@ type azureAuthBackend struct {
 
 	l sync.RWMutex
 
-	provider   provider
-	httpClient *http.Client
+	provider provider
 }
 
 func Backend(c *logical.BackendConfig) *azureAuthBackend {
@@ -51,7 +48,6 @@ func Backend(c *logical.BackendConfig) *azureAuthBackend {
 			pathsRole(b),
 		),
 	}
-	b.httpClient = cleanhttp.DefaultClient()
 
 	return b
 }
@@ -81,7 +77,7 @@ func (b *azureAuthBackend) getProvider(config *azureConfig) (provider, error) {
 		return b.provider, nil
 	}
 
-	provider, err := NewAzureProvider(config)
+	provider, err := newAzureProvider(config)
 	if err != nil {
 		return nil, err
 	}

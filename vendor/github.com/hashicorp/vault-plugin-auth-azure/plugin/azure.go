@@ -2,8 +2,11 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
@@ -11,10 +14,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	oidc "github.com/coreos/go-oidc"
-)
-
-const (
-	issuerBaseURI = "https://sts.windows.net"
+	"github.com/hashicorp/errwrap"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"golang.org/x/oauth2"
 )
 
 type computeClient interface {
@@ -30,39 +32,66 @@ type provider interface {
 	ComputeClient(subscriptionID string) computeClient
 }
 
-var _ provider = &azureProvider{}
-
 type azureProvider struct {
-	settings     *azureSettings
-	oidcProvider *oidc.Provider
+	oidcVerifier *oidc.IDTokenVerifier
 	authorizer   autorest.Authorizer
+	httpClient   *http.Client
 }
 
-func NewAzureProvider(config *azureConfig) (*azureProvider, error) {
+type oidcDiscoveryInfo struct {
+	Issuer  string `json:"issuer"`
+	JWKSURL string `json:"jwks_uri"`
+}
+
+func newAzureProvider(config *azureConfig) (*azureProvider, error) {
+	httpClient := cleanhttp.DefaultClient()
 	settings, err := getAzureSettings(config)
 	if err != nil {
 		return nil, err
 	}
 
-	issuer := fmt.Sprintf("%s/%s/", issuerBaseURI, settings.TenantID)
-	oidcProvider, err := oidc.NewProvider(context.Background(), issuer)
+	// In many OIDC providers, the discovery endpoint matches the issuer. For Azure AD, the discovery
+	// endpoint is the AD endpoint which does not match the issuer defined in the discovery payload. This
+	// makes a request to the discovery URL to determine the issuer and key set information to configure
+	// the OIDC verifier
+	discoveryURL := fmt.Sprintf("%s%s/.well-known/openid-configuration", settings.Environment.ActiveDirectoryEndpoint, settings.TenantID)
+	resp, err := httpClient.Get(discoveryURL)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
-	provider := &azureProvider{
-		settings:     settings,
-		oidcProvider: oidcProvider,
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errwrap.Wrapf("unable to read response body: {{err}}", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: %s", resp.Status, body)
+	}
+	var discoveryInfo oidcDiscoveryInfo
+	if err := json.Unmarshal(body, &discoveryInfo); err != nil {
+		return nil, errwrap.Wrapf("unable to unmarshal discovery url: {{err}}", err)
 	}
 
-	// OAuth2 client for querying VM data
+	// Create a remote key set from the discovery endpoint
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
+	remoteKeySet := oidc.NewRemoteKeySet(ctx, discoveryInfo.JWKSURL)
+
+	verifierConfig := &oidc.Config{
+		ClientID:             settings.Resource,
+		SupportedSigningAlgs: []string{oidc.RS256},
+	}
+	oidcVerifier := oidc.NewVerifier(discoveryInfo.Issuer, remoteKeySet, verifierConfig)
+
+	// Create an OAuth2 client for retrieving VM data
+	var authorizer autorest.Authorizer
 	switch {
 	// Use environment/config first
 	case settings.ClientSecret != "":
 		config := auth.NewClientCredentialsConfig(settings.ClientID, settings.ClientSecret, settings.TenantID)
 		config.AADEndpoint = settings.Environment.ActiveDirectoryEndpoint
 		config.Resource = settings.Environment.ResourceManagerEndpoint
-		provider.authorizer, err = config.Authorizer()
+		authorizer, err = config.Authorizer()
 		if err != nil {
 			return nil, err
 		}
@@ -70,25 +99,27 @@ func NewAzureProvider(config *azureConfig) (*azureProvider, error) {
 	default:
 		config := auth.NewMSIConfig()
 		config.Resource = settings.Environment.ResourceManagerEndpoint
-		provider.authorizer, err = config.Authorizer()
+		authorizer, err = config.Authorizer()
 		if err != nil {
 			return nil, err
 		}
 	}
-	return provider, nil
+
+	return &azureProvider{
+		authorizer:   authorizer,
+		oidcVerifier: oidcVerifier,
+		httpClient:   httpClient,
+	}, nil
 }
 
 func (p *azureProvider) Verifier() tokenVerifier {
-	verifierConfig := &oidc.Config{
-		ClientID:             p.settings.Resource,
-		SupportedSigningAlgs: []string{oidc.RS256},
-	}
-	return p.oidcProvider.Verifier(verifierConfig)
+	return p.oidcVerifier
 }
 
 func (p *azureProvider) ComputeClient(subscriptionID string) computeClient {
 	client := compute.NewVirtualMachinesClient(subscriptionID)
 	client.Authorizer = p.authorizer
+	client.Sender = p.httpClient
 	return client
 }
 

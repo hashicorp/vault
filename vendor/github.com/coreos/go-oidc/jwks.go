@@ -23,6 +23,20 @@ import (
 // updated.
 const keysExpiryDelta = 30 * time.Second
 
+// NewRemoteKeySet returns a KeySet that can validate JSON web tokens by using HTTP
+// GETs to fetch JSON web token sets hosted at a remote URL. This is automatically
+// used by NewProvider using the URLs returned by OpenID Connect discovery, but is
+// exposed for providers that don't support discovery or to prevent round trips to the
+// discovery URL.
+//
+// The returned KeySet is a long lived verifier that caches keys based on cache-control
+// headers. Reuse a common remote key set instead of creating new ones as needed.
+//
+// The behavior of the returned KeySet is undefined once the context is canceled.
+func NewRemoteKeySet(ctx context.Context, jwksURL string) KeySet {
+	return newRemoteKeySet(ctx, jwksURL, time.Now)
+}
+
 func newRemoteKeySet(ctx context.Context, jwksURL string, now func() time.Time) *remoteKeySet {
 	if now == nil {
 		now = time.Now
@@ -77,6 +91,14 @@ func (i *inflight) done(keys []jose.JSONWebKey, err error) {
 // result cannot be called until the wait() channel has returned a value.
 func (i *inflight) result() ([]jose.JSONWebKey, error) {
 	return i.keys, i.err
+}
+
+func (r *remoteKeySet) VerifySignature(ctx context.Context, jwt string) ([]byte, error) {
+	jws, err := jose.ParseSigned(jwt)
+	if err != nil {
+		return nil, fmt.Errorf("oidc: malformed jwt: %v", err)
+	}
+	return r.verify(ctx, jws)
 }
 
 func (r *remoteKeySet) verify(ctx context.Context, jws *jose.JSONWebSignature) ([]byte, error) {
