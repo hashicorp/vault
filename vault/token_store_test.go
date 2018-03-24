@@ -3527,8 +3527,10 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 	}
 }
 
-// Create a token, delete the token entry while leaking accessors, invoke tidy
-// and check if the dangling accessor entry is getting removed
+// Create a set of tokens along with a child token for each of them, delete the
+// token entry while leaking accessors, invoke tidy and check if the dangling
+// accessor entry is getting removed and check if child tokens are still present
+// and turned into orphan tokens.
 func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 	var resp *logical.Response
 	var err error
