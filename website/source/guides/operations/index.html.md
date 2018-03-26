@@ -19,9 +19,9 @@ through use of a reference architecture. This example is to convey a general
 architecture, which is likely to be adapted to accommodate the specific needs of
 each implementation.
 
-- [Vault HA with Consul](/guides/operations/vault-ha-consul.html) is an
-introductory guide which demonstrates a simple Vault HA cluster implementation
-which is backed by [HashiCorp Consul](https://www.consul.io/intro/index.html).
+- [Vault HA with Consul](/guides/operations/vault-ha-consul.html) guide
+walks you through a simple Vault HA cluster implementation which is backed by
+[HashiCorp Consul](https://www.consul.io/intro/index.html).
 
 - [Production Hardening](/guides/operations/production.html) guide provides
 guidance on best practices for a production hardened deployment of Vault.
