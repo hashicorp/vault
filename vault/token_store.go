@@ -1369,7 +1369,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		originalChildrenCount := int64(len(children))
 		exists, _ := ts.lookupSalted(ctx, strings.TrimSuffix(parent, "/"), true)
 		if exists == nil {
-			ts.logger.Trace("token: deleting invalid parent entry", "index", parentPrefix+parent)
+			ts.logger.Trace("token: deleting invalid parent prefix entry", "index", parentPrefix+parent)
 		}
 
 		var deletedChildrenCount int64
@@ -1398,8 +1398,8 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				lock.Unlock()
 				continue
 			}
-			// Otherwise, if the entry doesn't exist, or if the parent doesn't exit go
-			// on with the delete onthe secondary index
+			// Otherwise, if the entry doesn't exist, or if the parent doesn't exist go
+			// on with the delete on the secondary index
 			if te == nil || exists == nil {
 				index := parentPrefix + parent + child
 				ts.logger.Trace("token: deleting invalid secondary index", "index", index)
@@ -1415,6 +1415,15 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		deletedCountParentList += deletedChildrenCount
 		// If we deleted all the children, then add that to our deleted parent entries count
 		if originalChildrenCount == deletedChildrenCount {
+			// Make sure that we only delete if parent doesn't exist.
+			// N.B.: This is a no-op for the consul storage backend since the delete doesn't support
+			// recursive deletes, and delete on a path is a no-op.
+			if exists == nil {
+				err := ts.view.Delete(ctx, parentPrefix+parent)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete parent prefix entry: %v", err))
+				}
+			}
 			deletedCountParentEntries++
 		}
 	}
