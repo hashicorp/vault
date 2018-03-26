@@ -188,7 +188,7 @@ path, and passed the secret engine type ("database") in the request payload.
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"type":"database"}' \
-       https://$ vault.rocks/v1/sys/mounts/database
+       https://127.0.0.1:8200/v1/sys/mounts/database
 ```
 
 **NOTE:** It is possible to mount your database secret engines at any location.

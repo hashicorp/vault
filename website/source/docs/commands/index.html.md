@@ -160,7 +160,7 @@ concepts](/docs/concepts/tokens.html) page.
 ### `VAULT_ADDR`
 
 Address of the Vault server expressed as a URL and port, for example:
-`https://vault.rocks:8200/`.
+`https://127.0.0.1:8200/`.
 
 ### `VAULT_CACERT`
 
