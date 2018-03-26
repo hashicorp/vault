@@ -329,10 +329,11 @@ func (p *Predict) plugins() []string {
 		return nil
 	}
 
-	plugins, err := client.Sys().ListPlugins(nil)
+	result, err := client.Sys().ListPlugins(nil)
 	if err != nil {
 		return nil
 	}
+	plugins := result.Names
 	sort.Strings(plugins)
 	return plugins
 }

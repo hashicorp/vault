@@ -8,9 +8,15 @@ import (
 // ListPluginsInput is used as input to the ListPlugins function.
 type ListPluginsInput struct{}
 
+// ListPluginsResponse is the response from the ListPlugins call.
+type ListPluginsResponse struct {
+	// Names is the list of names of the plugins.
+	Names []string
+}
+
 // ListPlugins lists all plugins in the catalog and returns their names as a
 // list of strings.
-func (c *Sys) ListPlugins(i *ListPluginsInput) ([]string, error) {
+func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	path := "/v1/sys/plugins/catalog"
 	req := c.c.NewRequest("LIST", path)
 	resp, err := c.c.RawRequest(req)
@@ -28,7 +34,7 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) ([]string, error) {
 		return nil, err
 	}
 
-	return result.Data.Keys, nil
+	return &ListPluginsResponse{Names: result.Data.Keys}, nil
 }
 
 // GetPluginInput is used as input to the GetPlugin function.
