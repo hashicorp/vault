@@ -3545,7 +3545,7 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 	// present, the list operation should return only one key.
 	accessorListReq := &logical.Request{
 		Operation:   logical.ListOperation,
-		Path:        "accessors",
+		Path:        "accessors/",
 		ClientToken: root,
 	}
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
