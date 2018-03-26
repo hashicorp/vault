@@ -1413,17 +1413,10 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		}
 		// Add current children deleted count to the total count
 		deletedCountParentList += deletedChildrenCount
-		// If we deleted all the children, then add that to our deleted parent entries count
+		// N.B.: We don't call delete on the parent prefix since physical.Backend.Delete
+		// implementations should be in charge of deleting empty prefixes.
+		// If we deleted all the children, then add that to our deleted parent entries count.
 		if originalChildrenCount == deletedChildrenCount {
-			// Make sure that we only delete if parent doesn't exist.
-			// N.B.: This is a no-op for the consul storage backend since the delete doesn't support
-			// recursive deletes, and delete on a path is a no-op.
-			if exists == nil {
-				err := ts.view.Delete(ctx, parentPrefix+parent)
-				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete parent prefix entry: %v", err))
-				}
-			}
 			deletedCountParentEntries++
 		}
 	}
