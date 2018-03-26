@@ -9,7 +9,7 @@ description: |-
   enough to inform your own production setup.
 ---
 
-# Vault Haigh Availability (HA)
+# Vault High Availability (HA)
 
 Vault can run in a high availability (HA) mode to protest against  outages by
 running multiple Vault servers. Vault is typically bound by the IO limits of the
@@ -76,7 +76,7 @@ With that in mind, here is a basic Consul server configuration starting point:
 ```plaintext
 {
   "server": true,
-  "node_id": "$NODE_ID",
+  "node_name": "$NODE_NAME",
   "datacenter": "dc1",
   "data_dir": "$CONSUL_DATA_PATH",
   "bind_addr": "0.0.0.0",
@@ -105,7 +105,7 @@ each instance of the configuration file, or `10.1.42.101`,` 10.1.42.102`, and
 - `JOIN1**`, `**JOIN2`, `$JOIN3`: This example uses the `retry_join`
 method of joining the server agents to form a cluster; as such, the values for
 this guide would be `10.1.42.101`, `10.1.42.102`, and `10.1.42.103` respectively.
-- `$NODE_ID` this is a unique label for the node; in our case, this will be
+- `$NODE_NAME` this is a unique label for the node; in our case, this will be
 `consul_s1`, `consul_s2`, and `consul_s3` respectively.
 
 You’ll note also that the web user interface is enabled, and Consul will be
@@ -123,7 +123,7 @@ named for example, `/usr/local/etc/consul/server_agent.json`:
 
     {
       "server": true,
-      "node_id": "consul_s1",
+      "node_name": "consul_s1",
       "datacenter": "dc1",
       "data_dir": "/var/consul/data",
       "bind_addr": "0.0.0.0",
@@ -141,7 +141,7 @@ named for example, `/usr/local/etc/consul/server_agent.json`:
 
     {
       "server": true,
-      "node_id": "consul_s2",
+      "node_name": "consul_s2",
       "datacenter": "dc1",
       "data_dir": "/var/consul/data",
       "bind_addr": "0.0.0.0",
@@ -159,7 +159,7 @@ named for example, `/usr/local/etc/consul/server_agent.json`:
 
     {
       "server": true,
-      "node_id": "consul_s3",
+      "node_name": "consul_s3",
       "datacenter": "dc1",
       "data_dir": "/var/consul/data",
       "bind_addr": "0.0.0.0",
