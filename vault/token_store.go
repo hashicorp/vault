@@ -1170,7 +1170,13 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 	}
 
 	// Mark all children token as orphan by removing
-	// their parent index, and clear the parent entry
+	// their parent index, and clear the parent entry.
+	//
+	// Marking the token as orphan is the correct behavior in here since
+	// revokeTreeSalted will ensure that they are deleted anyways if it's not an
+	// explicit call to orphan the child tokens (the delete occurs at the leaf
+	// node and uses parent prefix, not entry.Parent, to build the tree for
+	// traversal).
 	parentPath := parentPrefix + saltedId + "/"
 	children, err := ts.view.List(ctx, parentPath)
 	if err != nil {
