@@ -310,7 +310,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 	ts.revokeSalted(context.Background(), salted)
 
-	req := logical.TestRequest(t, logical.ListOperation, "accessors")
+	req := logical.TestRequest(t, logical.ListOperation, "accessors/")
 
 	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != nil {
@@ -3404,7 +3404,7 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 	// present, the list operation should return only one key.
 	accessorListReq := &logical.Request{
 		Operation:   logical.ListOperation,
-		Path:        "accessors",
+		Path:        "accessors/",
 		ClientToken: root,
 	}
 	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
