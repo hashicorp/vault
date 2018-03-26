@@ -54,8 +54,8 @@ This diagram lays out the simple architecture details for reference:
 
 ![Reference Architecture](/assets/images/vault-ha-consul.png)
 
-We’ll use the open source software editions of Vault and Consul in this guide,
-but the setup is the same for Enterprise editions.
+For the purpose of this guide, we will use the open source software editions of
+Vault and Consul; however, the setup is the same for Enterprise editions.
 
 ### Consul Server Cluster
 
@@ -66,8 +66,9 @@ referenced by a label:
 - **`consul_s2: 10.1.42.102`**
 - **`consul_s3: 10.1.42.103`**
 
-The consul binary is presumed to be located in /usr/local/bin/consul, but if
-your case differs, you can adjust the path references accordingly.
+The [Consul binary](https://www.consul.io/downloads.html) is presumed to be
+located in `/usr/local/bin/consul`, but if your case differs, you can adjust the
+path references accordingly.
 
 With that in mind, here is a basic Consul server configuration starting point:
 
@@ -95,17 +96,17 @@ Note that some values contain variable placeholders while the rest have
 reasonable defaults. You should change the following in your own Consul server
 configuration based on the example:
 
-- `$CONSUL_DATA_PATH`: absolute path to Consul data directory; ensure that
+- **$CONSUL_DATA_PATH**: absolute path to Consul data directory; ensure that
 this directory is writable by the Consul process user.
-- `$ADVERTISE_ADDR`: this should be set to address that you prefer the Consul
+- **$ADVERTISE_ADDR**: this should be set to address that you prefer the Consul
 servers advertise to the other servers in the cluster and should not be set to
 `0.0.0.0`; for this guide, it should be set to the Consul server’s IP address in
 each instance of the configuration file, or `10.1.42.101`,` 10.1.42.102`, and
 `10.1.42.103` respectively.
-- `JOIN1**`, `**JOIN2`, `$JOIN3`: This example uses the `retry_join`
+- **JOIN1\*\***, **\*\*JOIN2**, **$JOIN3**: This example uses the `retry_join`
 method of joining the server agents to form a cluster; as such, the values for
 this guide would be `10.1.42.101`, `10.1.42.102`, and `10.1.42.103` respectively.
-- `$NODE_NAME` this is a unique label for the node; in our case, this will be
+- **$NODE_NAME** this is a unique label for the node; in our case, this will be
 `consul_s1`, `consul_s2`, and `consul_s3` respectively.
 
 You’ll note also that the web user interface is enabled, and Consul will be
@@ -311,17 +312,17 @@ Note that some values contain variable placeholders while the rest have
 reasonable defaults. You should change the following in your own Consul client
 agent configuration based on the example:
 
-- `$CONSUL_DATA_PATH`: absolute path to Consul data directory; ensure that this
+- **$CONSUL_DATA_PATH**: absolute path to Consul data directory; ensure that this
 directory is writable by the Consul process user.
-- `$BIND_ADDR`: this should be set
+- **$BIND_ADDR**: this should be set
 to address that you prefer the Consul servers advertise to the other servers in
 the cluster and should not be set to `0.0.0.0`; for this guide, it should be set
 to the Vault server’s IP address in each instance of the configuration file, or
 `10.1.42.201` and `10.1.42.202` respectively.
-- `JOIN1**`, `**JOIN2`, `$JOIN3`: This example uses the `retry_join` method of
+- **JOIN1\*\***, **\*\*JOIN2**, **$JOIN3**: This example uses the `retry_join` method of
 joining the server agents to form a cluster; as such, the values for this guide
 would be `10.1.42.101`, `10.1.42.102`, and `10.1.42.103` respectively.
-- `$NODE_ID` this is a unique label for the node; in
+- **$NODE_ID** this is a unique label for the node; in
 our case, this will be `consul_c_v1` and `consul_c_v2` respectively.
 
 Prepare one of these configuration files for each Vault server in for example,
@@ -468,11 +469,11 @@ Note that some values contain variable placeholders while the rest have
 reasonable defaults. You should change the following in your own Vault server
 configuration based on the example:
 
-- `$CLUSTER_ADDRESS`: this should be set to address that you prefer the Vault
+- **$CLUSTER_ADDRESS**: this should be set to address that you prefer the Vault
 servers perform intra-server communications on; this needs to be routable
 between Vault servers and in our example will be `10.1.42.201:8201` and
 `10.1.42.202:8201` respectively
-- `$CLUSTER_ADDR`: Not to be confused with the `CLUSTER_ADDRESS` option, this
+- **$CLUSTER_ADDR**: Not to be confused with the **CLUSTER_ADDRESS** option, this
 option is specifically for HA request forwarding between Vault servers and needs
 to be a address routable between all Vault servers in a full URL format with
 port. In this case it will be `https://10.1.42.201:8200` and
