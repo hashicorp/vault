@@ -89,7 +89,7 @@ $ curl \
 
 ## Map GitHub Teams
 
-Map a list of policies to a team exists in the configured GitHub organization.
+Map a list of policies to a team that exists in the configured GitHub organization.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -115,7 +115,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/github/map/teams/dev
+    http://127.0.0.1:8200/v1/auth/github/map/teams/dev
 ```
 
 
@@ -132,7 +132,7 @@ Reads the GitHub team policy mapping.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/github/map/teams/dev
+    http://127.0.0.1:8200/v1/auth/github/map/teams/dev
 ```
 
 ### Sample Response
@@ -182,7 +182,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/github/map/users/sethvargo
+    http://127.0.0.1:8200/v1/auth/github/map/users/sethvargo
 ```
 
 The user with username `sethvargo` will be assigned the `sethvargo-policy`
@@ -201,7 +201,7 @@ Reads the GitHub user policy mapping.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/github/map/users/sethvargo
+    http://127.0.0.1:8200/v1/auth/github/map/users/sethvargo
 ```
 
 ### Sample Response
