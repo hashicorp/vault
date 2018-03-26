@@ -159,7 +159,7 @@ func NewTokenStore(ctx context.Context, c *Core, config *logical.BackendConfig) 
 			},
 
 			&framework.Path{
-				Pattern: "accessors/?$",
+				Pattern: "accessors/$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ListOperation: t.tokenStoreAccessorList,
