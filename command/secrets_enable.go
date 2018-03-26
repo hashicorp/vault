@@ -140,7 +140,7 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: complete.PredictAnything,
+		Completion: c.PredictVaultPlugins(),
 		Usage: "Name of the secrets engine plugin. This plugin name must already " +
 			"exist in Vault's plugin catalog.",
 	})
