@@ -758,6 +758,10 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// Unset the expected token parent's ID
+	ent2.Parent = ""
+
 	if !reflect.DeepEqual(out, ent2) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", ent2, out)
 	}
