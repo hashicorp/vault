@@ -3,15 +3,15 @@ layout: "guides"
 page_title: "Vault HA with Consul - Guides"
 sidebar_current: "guides-operations-vault-ha"
 description: |-
-  This guide This guide will walk you through a simple Vault Highly Available
-  (HA) cluster implementation. While this is not an exhaustive or prescriptive
-  guide that can be used as a drop-in production example, it covers the basics
-  enough to inform your own production setup.
+  This guide will walk you through a simple Vault Highly Available (HA) cluster
+  implementation. While this is not an exhaustive or prescriptive guide that
+  can be used as a drop-in production example, it covers the basics enough to
+  inform your own production setup.
 ---
 
 # Vault High Availability (HA)
 
-Vault can run in a high availability (HA) mode to protest against  outages by
+Vault can run in a high availability (HA) mode to protect against  outages by
 running multiple Vault servers. Vault is typically bound by the IO limits of the
 storage backend rather than the compute requirements. Certain storage backends,
 such as Consul, provide additional coordination functions that enable Vault to
