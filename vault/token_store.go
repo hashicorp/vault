@@ -766,11 +766,11 @@ func (ts *TokenStore) create(ctx context.Context, entry *TokenEntry) error {
 		entry.ID = entryUUID
 	}
 
-	saltedId, err := ts.SaltID(ctx, entry.ID)
+	saltedID, err := ts.SaltID(ctx, entry.ID)
 	if err != nil {
 		return err
 	}
-	exist, _ := ts.lookupSalted(ctx, saltedId, true)
+	exist, _ := ts.lookupSalted(ctx, saltedID, true)
 	if exist != nil {
 		return fmt.Errorf("cannot create a token with a duplicate ID")
 	}
@@ -795,7 +795,7 @@ func (ts *TokenStore) store(ctx context.Context, entry *TokenEntry) error {
 // storeCommon handles the actual storage of an entry, possibly generating
 // secondary indexes
 func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeSecondary bool) error {
-	saltedId, err := ts.SaltID(ctx, entry.ID)
+	saltedID, err := ts.SaltID(ctx, entry.ID)
 	if err != nil {
 		return err
 	}
@@ -826,7 +826,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeS
 			if err != nil {
 				return err
 			}
-			path := parentPrefix + parentSaltedID + "/" + saltedId
+			path := parentPrefix + parentSaltedID + "/" + saltedID
 			le := &logical.StorageEntry{Key: path}
 			if err := ts.view.Put(ctx, le); err != nil {
 				return fmt.Errorf("failed to persist entry: %v", err)
@@ -835,7 +835,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *TokenEntry, writeS
 	}
 
 	// Write the primary ID
-	path := lookupPrefix + saltedId
+	path := lookupPrefix + saltedID
 	le := &logical.StorageEntry{Key: path, Value: enc}
 	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
 		le.SealWrap = true
@@ -1060,11 +1060,11 @@ func (ts *TokenStore) Revoke(ctx context.Context, id string) error {
 
 // revokeSalted is used to invalidate a given salted token,
 // any child tokens will be orphaned.
-func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret error) {
+func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret error) {
 	// Protect the entry lookup/writing with locks. The rub here is that we
 	// don't know the ID until we look it up once, so first we look it up, then
 	// do a locked lookup.
-	entry, err := ts.lookupSalted(ctx, saltedId, true)
+	entry, err := ts.lookupSalted(ctx, saltedID, true)
 	if err != nil {
 		return err
 	}
@@ -1076,7 +1076,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 	lock.Lock()
 
 	// Lookup the token first
-	entry, err = ts.lookupSalted(ctx, saltedId, true)
+	entry, err = ts.lookupSalted(ctx, saltedID, true)
 	if err != nil {
 		lock.Unlock()
 		return err
@@ -1116,7 +1116,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 
 			// Lookup the token again to make sure something else didn't
 			// revoke in the interim
-			entry, err := ts.lookupSalted(ctx, saltedId, true)
+			entry, err := ts.lookupSalted(ctx, saltedID, true)
 			if err != nil {
 				return
 			}
@@ -1132,7 +1132,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 
 	// Destroy the token's cubby. This should go first as it's a
 	// security-sensitive item.
-	err = ts.cubbyholeDestroyer(ctx, ts, saltedId)
+	err = ts.cubbyholeDestroyer(ctx, ts, saltedID)
 	if err != nil {
 		return err
 	}
@@ -1150,7 +1150,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 			return err
 		}
 
-		path := parentPrefix + parentSaltedID + "/" + saltedId
+		path := parentPrefix + parentSaltedID + "/" + saltedID
 		if err = ts.view.Delete(ctx, path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
@@ -1170,7 +1170,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 	}
 
 	// Now that the entry is not usable for any revocation tasks, nuke it
-	path := lookupPrefix + saltedId
+	path := lookupPrefix + saltedID
 	if err = ts.view.Delete(ctx, path); err != nil {
 		return fmt.Errorf("failed to delete entry: %v", err)
 	}
@@ -1188,25 +1188,22 @@ func (ts *TokenStore) RevokeTree(ctx context.Context, id string) error {
 	}
 
 	// Get the salted ID
-	saltedId, err := ts.SaltID(ctx, id)
+	saltedID, err := ts.SaltID(ctx, id)
 	if err != nil {
 		return err
 	}
 
 	// Nuke the entire tree recursively
-	if err := ts.revokeTreeSalted(ctx, saltedId); err != nil {
-		return err
-	}
-	return nil
+	return ts.revokeTreeSalted(ctx, saltedID)
 }
 
 // revokeTreeSalted is used to invalidate a given token and all
 // child tokens using a saltedID.
 // Updated to be non-recursive and revoke child tokens
 // before parent tokens(DFS).
-func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedId string) error {
+func (ts *TokenStore) revokeTreeSalted(ctx context.Context, saltedID string) error {
 	var dfs []string
-	dfs = append(dfs, saltedId)
+	dfs = append(dfs, saltedID)
 
 	for l := len(dfs); l > 0; l = len(dfs) {
 		id := dfs[0]
@@ -1395,13 +1392,13 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 		// Look up tainted variants so we only find entries that truly don't
 		// exist
-		saltedId, err := ts.SaltID(ctx, accessorEntry.TokenID)
+		saltedID, err := ts.SaltID(ctx, accessorEntry.TokenID)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read salt id: %v", err))
 			lock.RUnlock()
 			continue
 		}
-		te, err := ts.lookupSalted(ctx, saltedId, true)
+		te, err := ts.lookupSalted(ctx, saltedID, true)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup tainted ID: %v", err))
 			lock.RUnlock()
@@ -1414,7 +1411,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		// more and conclude that accessor, leases, and secondary index entries
 		// for this token should not exist as well.
 		if te == nil {
-			ts.logger.Info("token: deleting token with nil entry", "salted_token", saltedId)
+			ts.logger.Info("token: deleting token with nil entry", "salted_token", saltedID)
 
 			// RevokeByToken expects a '*TokenEntry'. For the
 			// purposes of tidying, it is sufficient if the token
@@ -2092,11 +2089,11 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	defer lock.RUnlock()
 
 	// Lookup the token
-	saltedId, err := ts.SaltID(ctx, id)
+	saltedID, err := ts.SaltID(ctx, id)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	out, err := ts.lookupSalted(ctx, saltedId, true)
+	out, err := ts.lookupSalted(ctx, saltedID, true)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -2246,15 +2243,14 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 			if te.ExplicitMaxTTL == 0 {
 				req.Auth.TTL = te.Period
 				return &logical.Response{Auth: req.Auth}, nil
-			} else {
-				maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
-				if time.Now().Add(te.Period).After(maxTime) {
-					req.Auth.TTL = maxTime.Sub(time.Now())
-				} else {
-					req.Auth.TTL = te.Period
-				}
-				return &logical.Response{Auth: req.Auth}, nil
 			}
+			maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
+			if time.Now().Add(te.Period).After(maxTime) {
+				req.Auth.TTL = maxTime.Sub(time.Now())
+			} else {
+				req.Auth.TTL = te.Period
+			}
+			return &logical.Response{Auth: req.Auth}, nil
 		}
 		return f(ctx, req, d)
 	}
@@ -2277,15 +2273,14 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 		if te.ExplicitMaxTTL == 0 {
 			req.Auth.TTL = periodToUse
 			return &logical.Response{Auth: req.Auth}, nil
-		} else {
-			maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
-			if time.Now().Add(periodToUse).After(maxTime) {
-				req.Auth.TTL = maxTime.Sub(time.Now())
-			} else {
-				req.Auth.TTL = periodToUse
-			}
-			return &logical.Response{Auth: req.Auth}, nil
 		}
+		maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
+		if time.Now().Add(periodToUse).After(maxTime) {
+			req.Auth.TTL = maxTime.Sub(time.Now())
+		} else {
+			req.Auth.TTL = periodToUse
+		}
+		return &logical.Response{Auth: req.Auth}, nil
 	}
 
 	return f(ctx, req, d)
