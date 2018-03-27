@@ -5,6 +5,13 @@ IMPROVEMENTS:
  * secret/cassandra: Update Cassandra storage delete function to not use batch
    operations [GH-4054]
 
+BUG FIXES:
+
+ * auth/token: Revoke-orphan and tidy operations now correctly cleans up the
+   parent prefix entry in the underlying storage backend. These operations also
+   mark corresponding child tokens as orphans by removing the parent/secondary
+   index from the entries. [GH-4193]
+
 ## 0.9.6 (March 20th, 2018)
 
 DEPRECATIONS/CHANGES:
