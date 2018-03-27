@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -77,6 +78,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"rotate",
 				"config/cors",
 				"config/auditing/*",
+				"config/ui/headers/*",
 				"plugins/catalog/*",
 				"revoke-prefix/*",
 				"revoke-force/*",
@@ -146,6 +148,41 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 				HelpDescription: strings.TrimSpace(sysHelp["config/cors"][0]),
 				HelpSynopsis:    strings.TrimSpace(sysHelp["config/cors"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
+
+				Fields: map[string]*framework.FieldSchema{
+					"header": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The name of the header.",
+					},
+					"values": &framework.FieldSchema{
+						Type:        framework.TypeStringSlice,
+						Description: "The values to set the header.",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handleConfigUIHeadersRead,
+					logical.UpdateOperation: b.handleConfigUIHeadersUpdate,
+					logical.DeleteOperation: b.handleConfigUIHeadersDelete,
+				},
+
+				HelpDescription: strings.TrimSpace(sysHelp["config/ui/headers"][0]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["config/ui/headers"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "config/ui/headers/$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: b.handleConfigUIHeadersList,
+				},
+
+				HelpDescription: strings.TrimSpace(sysHelp["config/ui/headers"][0]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["config/ui/headers"][1]),
 			},
 
 			&framework.Path{
@@ -2699,6 +2736,68 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 	return nil, nil
 }
 
+func (b *SystemBackend) handleConfigUIHeadersRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	header := data.Get("header").(string)
+
+	value, err := b.Core.uiConfig.GetHeader(ctx, header)
+	if err != nil {
+		return nil, err
+	}
+	if value == "" {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"value": value,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handleConfigUIHeadersList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	headers, err := b.Core.uiConfig.HeaderKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(headers) == 0 {
+		return nil, nil
+	}
+
+	return logical.ListResponse(headers), nil
+}
+
+func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	header := data.Get("header").(string)
+	values := data.Get("values").([]string)
+	if header == "" || len(values) == 0 {
+		return logical.ErrorResponse("header and values must be specified"), logical.ErrInvalidRequest
+	}
+
+	if strings.HasPrefix(strings.ToLower(header), "x-vault-") {
+		return logical.ErrorResponse("X-Vault headers cannot be set"), logical.ErrInvalidRequest
+	}
+
+	// Translate the list of values to the valid header string
+	value := http.Header{
+		header: values,
+	}
+	err := b.Core.uiConfig.SetHeader(ctx, header, value.Get(header))
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleConfigUIHeadersDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	header := data.Get("header").(string)
+	err := b.Core.uiConfig.DeleteHeader(ctx, header)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
 // handleRawRead is used to read directly from the barrier
 func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
@@ -3331,6 +3430,21 @@ This path responds to the following HTTP methods.
     DELETE /
         Clears the CORS configuration and disables acceptance of CORS requests.
 		`,
+	},
+	"config/ui/headers": {
+		"Configures response headers that should be returned from the UI.",
+		`
+This path responds to the following HTTP methods.
+    GET /<header>
+        Returns the header value.
+    POST /<header>
+        Sets the header value for the UI.
+    DELETE /<header>
+        Clears the header value for UI.
+        
+    LIST /
+        List the headers configured for the UI.
+        `,
 	},
 	"init": {
 		"Initializes or returns the initialization status of the Vault.",
