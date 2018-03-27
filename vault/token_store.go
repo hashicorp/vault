@@ -1169,6 +1169,39 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedId string) (ret er
 		}
 	}
 
+	// Mark all children token as orphan by removing
+	// their parent index, and clear the parent entry.
+	//
+	// Marking the token as orphan is the correct behavior in here since
+	// revokeTreeSalted will ensure that they are deleted anyways if it's not an
+	// explicit call to orphan the child tokens (the delete occurs at the leaf
+	// node and uses parent prefix, not entry.Parent, to build the tree for
+	// traversal).
+	parentPath := parentPrefix + saltedId + "/"
+	children, err := ts.view.List(ctx, parentPath)
+	if err != nil {
+		return fmt.Errorf("failed to scan for children: %v", err)
+	}
+	for _, child := range children {
+		entry, err := ts.lookupSalted(ctx, child, true)
+		if err != nil {
+			return fmt.Errorf("failed to get child token: %v", err)
+		}
+		lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
+		lock.Lock()
+
+		entry.Parent = ""
+		err = ts.store(ctx, entry)
+		if err != nil {
+			lock.Unlock()
+			return fmt.Errorf("failed to update child token: %v", err)
+		}
+		lock.Unlock()
+	}
+	if err = logical.ClearView(ctx, ts.view.SubView(parentPath)); err != nil {
+		return fmt.Errorf("failed to delete entry: %v", err)
+	}
+
 	// Now that the entry is not usable for any revocation tasks, nuke it
 	path := lookupPrefix + saltedId
 	if err = ts.view.Delete(ctx, path); err != nil {
@@ -1322,17 +1355,30 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
 	}
 
-	var countParentList, deletedCountParentList int64
+	var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
 
 	// Scan through the secondary index entries; if there is an entry
 	// with the token's salt ID at the end, remove it
 	for _, parent := range parentList {
+		countParentEntries++
+
+		// Get the children
 		children, err := ts.view.List(ctx, parentPrefix+parent)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read secondary index: %v", err))
 			continue
 		}
 
+		// First check if the salt ID of the parent exists, and if not mark this so
+		// that deletion of children later with this loop below applies to all
+		// children
+		originalChildrenCount := int64(len(children))
+		exists, _ := ts.lookupSalted(ctx, strings.TrimSuffix(parent, "/"), true)
+		if exists == nil {
+			ts.logger.Trace("token: deleting invalid parent prefix entry", "index", parentPrefix+parent)
+		}
+
+		var deletedChildrenCount int64
 		for _, child := range children {
 			countParentList++
 			if countParentList%500 == 0 {
@@ -1342,16 +1388,42 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// Look up tainted entries so we can be sure that if this isn't
 			// found, it doesn't exist. Doing the following without locking
 			// since appropriate locks cannot be held with salted token IDs.
+			// Also perform deletion if the parent doesn't exist any more.
 			te, _ := ts.lookupSalted(ctx, child, true)
-			if te == nil {
+			// If the child entry is not nil, but the parent doesn't exist, then turn
+			// that child token into an orphan token. Theres no deletion in this case.
+			if te != nil && exists == nil {
+				lock := locksutil.LockForKey(ts.tokenLocks, te.ID)
+				lock.Lock()
+
+				te.Parent = ""
+				err = ts.store(ctx, te)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to convert child token into an orphan token: %v", err))
+				}
+				lock.Unlock()
+				continue
+			}
+			// Otherwise, if the entry doesn't exist, or if the parent doesn't exist go
+			// on with the delete on the secondary index
+			if te == nil || exists == nil {
 				index := parentPrefix + parent + child
 				ts.logger.Trace("token: deleting invalid secondary index", "index", index)
 				err = ts.view.Delete(ctx, index)
 				if err != nil {
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index: %v", err))
+					continue
 				}
-				deletedCountParentList++
+				deletedChildrenCount++
 			}
+		}
+		// Add current children deleted count to the total count
+		deletedCountParentList += deletedChildrenCount
+		// N.B.: We don't call delete on the parent prefix since physical.Backend.Delete
+		// implementations should be in charge of deleting empty prefixes.
+		// If we deleted all the children, then add that to our deleted parent entries count.
+		if originalChildrenCount == deletedChildrenCount {
+			deletedCountParentEntries++
 		}
 	}
 
@@ -1447,6 +1519,8 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		}
 	}
 
+	ts.logger.Debug("token: number of entries scanned in parent prefix", "count", countParentEntries)
+	ts.logger.Debug("token: number of entries deleted in parent prefix", "count", deletedCountParentEntries)
 	ts.logger.Debug("token: number of tokens scanned in parent index list", "count", countParentList)
 	ts.logger.Debug("token: number of tokens revoked in parent index list", "count", deletedCountParentList)
 	ts.logger.Debug("token: number of accessors scanned", "count", countAccessorList)
