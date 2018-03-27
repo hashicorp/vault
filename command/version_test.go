@@ -26,7 +26,12 @@ func TestVersionCommand_Run(t *testing.T) {
 	t.Run("output", func(t *testing.T) {
 		t.Parallel()
 
+		client, closer := testVaultServer(t)
+		defer closer()
+
 		ui, cmd := testVersionCommand(t)
+		cmd.client = client
+
 		code := cmd.Run(nil)
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
