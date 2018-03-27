@@ -13,6 +13,7 @@ BUG FIXES:
    index from the entries. [GH-4193]
  * core: Fix issue occurring from mounting two auth backends with the same path
    with one mount having `auth/` in front [GH-4206]
+ * mfa: Invalidation of MFA configurations (Enterprise)
 
 ## 0.9.6 (March 20th, 2018)
 
