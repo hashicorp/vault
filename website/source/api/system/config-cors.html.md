@@ -26,7 +26,7 @@ This endpoint returns the current CORS configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/config/cors
+    http://127.0.0.1:8200/v1/sys/config/cors
 ```
 
 ### Sample Response
@@ -78,7 +78,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/config/cors
+    http://127.0.0.1:8200/v1/sys/config/cors
 ```
 
 ## Delete CORS Settings
@@ -95,5 +95,5 @@ This endpoint removes any CORS configuration.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/config/cors
+    http://127.0.0.1:8200/v1/sys/config/cors
 ```

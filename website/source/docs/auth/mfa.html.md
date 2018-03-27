@@ -52,7 +52,7 @@ MFA information should be sent in the POST body encoded as JSON.
 $ curl \
     --request POST \
     --data '{"password": "test", "passcode": "111111"}' \
-    https://vault.rocks/v1/auth/userpass/login/my-username
+    http://127.0.0.1:8200/v1/auth/userpass/login/my-username
 ```
 
 The response is the same as for the original method.

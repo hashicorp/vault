@@ -45,8 +45,8 @@ from the [EC2 Metadata Service][aws-ec2-mds]. In addition to data itself, AWS
 also provides the PKCS#7 signature of the data, and publishes the public keys
 (by region) which can be used to verify the signature.
 
-1. The AWS EC2 instance makes a request to Vault with the Instance Identity
-Document and the PKCS#7 signature of the document.
+1. The AWS EC2 instance makes a request to Vault with the PKCS#7 signature.
+The PKCS#7 signature contains the Instance Identity Document within itself.
 
 1. Vault verifies the signature on the PKCS#7 document, ensuring the information
 is certified accurate by AWS. This process validates both the validity and

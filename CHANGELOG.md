@@ -32,8 +32,17 @@ FEATURES:
    through to backends on a per-mount basis. This is useful in various cases
    when plugins are interacting with external services.
 
+IMPROVEMENTS:
+
+ * secret/cassandra: Update Cassandra storage delete function to not use batch
+   operations [GH-4054]
+
 BUG FIXES:
 
+ * auth/token: Revoke-orphan and tidy operations now correctly cleans up the
+   parent prefix entry in the underlying storage backend. These operations also
+   mark corresponding child tokens as orphans by removing the parent/secondary
+   index from the entries. [GH-4193]
  * replication: Fix a panic on some non-64-bit platforms
  * replication: Fix invalidation of policies on performance secondaries
 
@@ -139,7 +148,7 @@ BUG FIXES:
    automatically connect to a performance primary after that performance
    primary has been promoted to a DR primary from a DR secondary
  * ui: Fix behavior when a value contains a `.`
- 
+
 ## 0.9.4 (February 20th, 2018)
 
 SECURITY:
@@ -214,7 +223,7 @@ BUG FIXES:
  * command/status: Fix panic when status returns 500 from leadership lookup
    [GH-3998]
  * identity: Fix race when creating entities [GH-3932]
- * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
+ * plugin/gRPC: Fixed an issue with list requests and raw responses coming from
    plugins using gRPC transport [GH-3881]
  * plugin/gRPC: Fix panic when special paths are not set [GH-3946]
  * secret/pki: Verify a name is a valid hostname before adding to DNS SANs
@@ -273,24 +282,24 @@ DEPRECATIONS/CHANGES:
    disabled or the state is still being discovered. As a result, an LB check
    can positively verify that the node is both not `disabled` and is not a DR
    secondary, and avoid sending traffic to it if either is true.
- * PKI Secret Backend Roles parameter types: For `ou` and `organization` 
-   in role definitions in the PKI secret backend, input can now be a 
-   comma-separated string or an array of strings. Reading a role will 
+ * PKI Secret Backend Roles parameter types: For `ou` and `organization`
+   in role definitions in the PKI secret backend, input can now be a
+   comma-separated string or an array of strings. Reading a role will
    now return arrays for these parameters.
  * Plugin API Changes: The plugin API has been updated to utilize golang's
    context.Context package. Many function signatures now accept a context
    object as the first parameter. Existing plugins will need to pull in the
-   latest Vault code and update their function signatures to begin using 
+   latest Vault code and update their function signatures to begin using
    context and the new gRPC transport.
 
 FEATURES:
 
- * **gRPC Backend Plugins**: Backend plugins now use gRPC for transport, 
+ * **gRPC Backend Plugins**: Backend plugins now use gRPC for transport,
    allowing them to be written in other languages.
  * **Brand New CLI**: Vault has a brand new CLI interface that is significantly
    streamlined, supports autocomplete, and is almost entirely backwards
    compatible.
- * **UI: PKI Secret Backend (Enterprise)**: Configure PKI secret backends, 
+ * **UI: PKI Secret Backend (Enterprise)**: Configure PKI secret backends,
    create and browse roles and certificates, and issue and sign certificates via
    the listed roles.
 
@@ -299,7 +308,7 @@ IMPROVEMENTS:
  * auth/aws: Handle IAM headers produced by clients that formulate numbers as
    ints rather than strings [GH-3763]
  * auth/okta: Support JSON lists when specifying groups and policies [GH-3801]
- * autoseal/hsm: Attempt reconnecting to the HSM on certain kinds of issues, 
+ * autoseal/hsm: Attempt reconnecting to the HSM on certain kinds of issues,
    including HA scenarios for some Gemalto HSMs.
    (Enterprise)
  * cli: Output password prompts to stderr to make it easier to pipe an output
@@ -333,8 +342,8 @@ BUG FIXES:
    be capped by the local max TTL [GH-3814]
  * secret/database: Fix an issue where plugins were not closed properly if they
    failed to initialize [GH-3768]
- * ui: mounting a secret backend will now properly set `max_lease_ttl` and 
-   `default_lease_ttl` when specified - previously both fields set 
+ * ui: mounting a secret backend will now properly set `max_lease_ttl` and
+   `default_lease_ttl` when specified - previously both fields set
    `default_lease_ttl`.
 
 ## 0.9.1 (December 21st, 2017)
@@ -491,7 +500,7 @@ DEPRECATIONS/CHANGES:
    optional and enables configuration of the seal type to use for additional
    data protection, such as using HSM or Cloud KMS solutions to encrypt and
    decrypt data.
- 
+
 FEATURES:
 
  * **RSA Support for Transit Backend**: Transit backend can now generate RSA

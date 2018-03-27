@@ -27,7 +27,7 @@ This endpoint returns information about the currently installed license.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/license
+    http://127.0.0.1:8200/v1/sys/license
 ```
 
 ### Sample Response
@@ -83,5 +83,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/license
+    http://127.0.0.1:8200/v1/sys/license
 ```

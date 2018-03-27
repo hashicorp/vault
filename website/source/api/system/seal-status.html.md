@@ -23,7 +23,7 @@ endpoint.
 
 ```
 $ curl \
-    https://vault.rocks/v1/sys/seal-status
+    http://127.0.0.1:8200/v1/sys/seal-status
 ```
 
 ### Sample Response

@@ -42,7 +42,7 @@ at a different path, use that value instead of `github`.
 $ curl \
     --request POST \
     --data '{"token": "MY_TOKEN"}' \
-    https://vault.rocks/v1/auth/github/login
+    http://127.0.0.1:8200/v1/auth/github/login
 ```
 
 The response will contain a token at `auth.client_token`:

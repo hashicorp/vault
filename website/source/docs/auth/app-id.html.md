@@ -76,7 +76,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --method POST \
     --data '{"user_id": ":user_id"}' \
-    https://vault.rocks/v1/auth/app-id/login/:app_id
+    http://127.0.0.1:8200/v1/auth/app-id/login/:app_id
 ```
 
 ## Configuration

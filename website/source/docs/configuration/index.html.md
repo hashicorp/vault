@@ -136,7 +136,8 @@ The following parameters are used on backends that support [high availability][h
 - `api_addr` `(string: "")` - Specifies the address (full URL) to advertise to
   other Vault servers in the cluster for client redirection. This value is also
   used for [plugin backends][plugins]. This can also be provided via the
-  environment variable `VAULT_API_ADDR`.
+  environment variable `VAULT_API_ADDR`. In general this should be set as a full
+  URL that points to the value of the [`listener`](#listener) address.
 
 - `cluster_addr` `(string: "")` -  – Specifies the address to advertise to other
   Vault servers in the cluster for request forwarding. This can also be provided

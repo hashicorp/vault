@@ -25,7 +25,7 @@ This endpoint lists all enabled auth methods.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/auth
+    http://127.0.0.1:8200/v1/sys/auth
 ```
 
 ### Sample Response
@@ -127,7 +127,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/auth/my-auth
+    http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
 ## Disable Auth Method
@@ -152,7 +152,7 @@ This endpoint disables the auth method at the given auth path.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/auth/my-auth
+    http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
 ## Read Auth Method Tuning
@@ -177,7 +177,7 @@ without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/auth/my-auth/tune
+    http://127.0.0.1:8200/v1/sys/auth/my-auth/tune
 ```
 
 ### Sample Response
@@ -243,5 +243,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/auth/my-auth/tune
+    http://127.0.0.1:8200/v1/sys/auth/my-auth/tune
 ```

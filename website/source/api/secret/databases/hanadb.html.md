@@ -55,7 +55,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/database/config/hana
+    http://127.0.0.1:8200/v1/database/config/hana
 ```
 
 ## Statements

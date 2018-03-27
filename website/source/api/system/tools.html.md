@@ -41,7 +41,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/tools/random/164
+    http://127.0.0.1:8200/v1/sys/tools/random/164
 ```
 
 ### Sample Response
@@ -93,7 +93,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/tools/hash/sha2-512
+    http://127.0.0.1:8200/v1/sys/tools/hash/sha2-512
 ```
 
 ### Sample Response

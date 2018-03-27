@@ -26,7 +26,7 @@ This endpoint lists the request headers that are configured to be audited.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/config/auditing/request-headers
+    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers
 ```
 
 ### Sample Response
@@ -62,7 +62,7 @@ This endpoint lists the information for the given request header.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/config/auditing/request-headers/my-header
+    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/my-header
 ```
 
 ### Sample Response
@@ -106,7 +106,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/config/auditing/request-headers/my-header
+    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/my-header
 ```
 
 ## Delete Audit Request Header
@@ -126,5 +126,5 @@ This endpoint disables auditing of the given request header.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/config/auditing/request-headers/my-header
+    http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/my-header
 ```

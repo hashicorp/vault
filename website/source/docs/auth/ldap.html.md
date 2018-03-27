@@ -58,7 +58,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data '{"password": "foo"}' \
-    https://vault.rocks/v1/auth/ldap/login/mitchellh=
+    http://127.0.0.1:8200/v1/auth/ldap/login/mitchellh=
 ```
 
 The response will be in JSON. For example:

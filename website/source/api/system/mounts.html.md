@@ -23,7 +23,7 @@ This endpoints lists all the mounted secrets engines.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/mounts
+    http://127.0.0.1:8200/v1/sys/mounts
 ```
 
 ### Sample Response
@@ -145,7 +145,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/mounts/my-mount
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
 ## Disable Secrets Engine
@@ -162,7 +162,7 @@ This endpoint disables the mount point specified in the URL.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/mounts/my-mount
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
 ## Read Mount Configuration
@@ -180,7 +180,7 @@ be the system default or a mount-specific value.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/mounts/my-mount/tune
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
 ```
 
 ### Sample Response
@@ -244,5 +244,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/mounts/my-mount/tune
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
 ```

@@ -72,7 +72,7 @@ optional.
 $ curl \
     --header "X-Vault-Token: ..." \
     --header "X-Vault-MFA:my_totp:695452" \
-    https://vault.rocks/v1/secret/foo
+    http://127.0.0.1:8200/v1/secret/foo
 ```
 
 ### API
