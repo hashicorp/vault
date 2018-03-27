@@ -14,11 +14,15 @@ func init() {
 	// Ensure our special envvars are not present
 	os.Setenv("VAULT_ADDR", "")
 	os.Setenv("VAULT_TOKEN", "")
+	os.Setenv("VAULT_CLIENT_DEBUG", "")
 }
 
 func TestDefaultConfig_envvar(t *testing.T) {
 	os.Setenv("VAULT_ADDR", "https://vault.mycompany.com")
 	defer os.Setenv("VAULT_ADDR", "")
+
+	os.Setenv("VAULT_CLIENT_DEBUG", "true")
+	defer os.Setenv("VAULT_CLIENT_TOKEN", "")
 
 	config := DefaultConfig()
 	if config.Address != "https://vault.mycompany.com" {
@@ -33,6 +37,9 @@ func TestDefaultConfig_envvar(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	if debug := client.config.Debug; debug != true {
+		t.Fatalf("bad: %t", debug)
+	}
 	if token := client.Token(); token != "testing" {
 		t.Fatalf("bad: %s", token)
 	}

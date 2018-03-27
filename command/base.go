@@ -38,6 +38,7 @@ type BaseCommand struct {
 	flagClientKey     string
 	flagTLSServerName string
 	flagTLSSkipVerify bool
+	flagDebug         bool
 	flagWrapTTL       time.Duration
 
 	flagFormat string
@@ -79,6 +80,8 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		}
 		config.ConfigureTLS(t)
 	}
+
+	config.Debug = c.flagDebug
 
 	// Build the client
 	client, err := api.NewClient(config)
@@ -256,6 +259,14 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					"TTL. The response is available via the \"vault unwrap\" command. " +
 					"The TTL is specified as a numeric string with suffix like \"30s\" " +
 					"or \"5m\".",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    "debug",
+				Target:  &c.flagDebug,
+				Default: false,
+				EnvVar:  "VAULT_CLIENT_DEBUG",
+				Usage:   "Debug HTTP requests made to Vault API.",
 			})
 		}
 
