@@ -18,7 +18,6 @@ import (
 	"time"
 
 	colorable "github.com/mattn/go-colorable"
-	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
@@ -63,7 +62,7 @@ type ServerCommand struct {
 	WaitGroup *sync.WaitGroup
 
 	logGate *gatedwriter.Writer
-	logger  log.Logger
+	logger  *logbridge.Logger
 
 	cleanupGuard sync.Once
 
@@ -277,21 +276,19 @@ func (c *ServerCommand) Run(args []string) int {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
-	var level int
+	var level hclog.Level
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
 	case "trace":
-		level = log.LevelTrace
+		level = hclog.Trace
 	case "debug":
-		level = log.LevelDebug
+		level = hclog.Debug
 	case "info", "":
-		level = log.LevelInfo
-	case "notice":
-		level = log.LevelNotice
+		level = hclog.Info
 	case "warn", "warning":
-		level = log.LevelWarn
+		level = hclog.Warn
 	case "err", "error":
-		level = log.LevelError
+		level = hclog.Error
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
 		return 1
@@ -308,13 +305,12 @@ func (c *ServerCommand) Run(args []string) int {
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
 				Level:  hclog.Trace,
-			})).LogxiLogger()
+			}))
 		} else {
-			c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
+			c.logger = logformat.NewVaultLogbridgeLogger(c.logGate, level)
 		}
 	default:
-		c.logger = log.NewLogger(c.logGate, "vault")
-		c.logger.SetLevel(level)
+		c.logger = logformat.NewVaultLogbridgeLogger(c.logGate, level)
 	}
 	grpclog.SetLogger(&grpclogFaker{
 		logger: c.logger,
@@ -349,7 +345,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 	for _, path := range c.flagConfigs {
-		current, err := server.LoadConfig(path, c.logger)
+		current, err := server.LoadConfig(path, c.logger.LogxiLogger())
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
 			return 1
@@ -401,7 +397,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	backend, err := factory(config.Storage.Config, c.logger)
+	backend, err := factory(config.Storage.Config, c.logger.LogxiLogger())
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
 		return 1
@@ -437,7 +433,7 @@ func (c *ServerCommand) Run(args []string) int {
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
-		Logger:             c.logger,
+		Logger:             c.logger.LogxiLogger(),
 		DisableCache:       config.DisableCache,
 		DisableMlock:       config.DisableMlock,
 		MaxLeaseTTL:        config.MaxLeaseTTL,
@@ -458,9 +454,9 @@ func (c *ServerCommand) Run(args []string) int {
 		if c.flagDevLatency > 0 {
 			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
 			if _, txnOK := backend.(physical.Transactional); txnOK {
-				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
+				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger.LogxiLogger())
 			} else {
-				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
+				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger.LogxiLogger())
 			}
 		}
 	}
@@ -480,7 +476,7 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 
 		}
-		habackend, err := factory(config.HAStorage.Config, c.logger)
+		habackend, err := factory(config.HAStorage.Config, c.logger.LogxiLogger())
 		if err != nil {
 			c.UI.Error(fmt.Sprintf(
 				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err))
@@ -1048,8 +1044,8 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
-		RawLogger:         c.logger,
-		TempDir:           tempDir,
+		//RawLogger:         c.logger,
+		TempDir: tempDir,
 	})
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
 
@@ -1467,7 +1463,7 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 }
 
 type grpclogFaker struct {
-	logger log.Logger
+	logger *logbridge.Logger
 	log    bool
 }
 

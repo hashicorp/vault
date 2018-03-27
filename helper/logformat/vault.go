@@ -3,6 +3,8 @@ package logformat
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logbridge"
 	"io"
 	"os"
 	"strings"
@@ -15,7 +17,22 @@ import (
 const (
 	styledefault = iota
 	stylejson
+
+	timeFormat = "2006/01/02 15:04:05.000000"
 )
+
+func NewVaultLogbridgeLogger(w io.Writer, level hclog.Level) *logbridge.Logger {
+	opts := &hclog.LoggerOptions{
+		Level:      level,
+		Output:     w,
+		TimeFormat: timeFormat,
+	}
+	if useJson() {
+		opts.JSONFormat = true
+	}
+	hcLogger := hclog.New(opts)
+	return logbridge.NewLogger(hcLogger)
+}
 
 // NewVaultLogger creates a new logger with the specified level and a Vault
 // formatter
@@ -43,14 +60,9 @@ func createVaultFormatter() log.Formatter {
 	ret := &vaultFormatter{
 		Mutex: &sync.Mutex{},
 	}
-	logFormat := os.Getenv("VAULT_LOG_FORMAT")
-	if logFormat == "" {
-		logFormat = os.Getenv("LOGXI_FORMAT")
-	}
-	switch strings.ToLower(logFormat) {
-	case "json", "vault_json", "vault-json", "vaultjson":
+	if useJson() {
 		ret.style = stylejson
-	default:
+	} else {
 		ret.style = styledefault
 	}
 	return ret
@@ -121,6 +133,19 @@ func (v *vaultFormatter) formatDefault(writer io.Writer, currTime time.Time, lev
 			}
 			writer.Write([]byte(fmt.Sprintf(" %s=%s%v%s", args[i], quote, args[i+1], quote)))
 		}
+	}
+}
+
+func useJson() bool {
+	logFormat := os.Getenv("VAULT_LOG_FORMAT")
+	if logFormat == "" {
+		logFormat = os.Getenv("LOGXI_FORMAT")
+	}
+	switch strings.ToLower(logFormat) {
+	case "json", "vault_json", "vault-json", "vaultjson":
+		return true
+	default:
+		return false
 	}
 }
 
