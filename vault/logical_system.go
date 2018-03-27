@@ -66,6 +66,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"auth/*",
+				"available/*",
 				"remount",
 				"audit",
 				"audit/*",
@@ -85,6 +86,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			Unauthenticated: []string{
+				"available/*",
 				"wrapping/lookup",
 				"wrapping/pubkey",
 				"replication/status",
@@ -93,6 +95,25 @@ func NewSystemBackend(core *Core) *SystemBackend {
 		},
 
 		Paths: []*framework.Path{
+			&framework.Path{
+				Pattern: "available/(?P<type>.+?)?",
+
+				Fields: map[string]*framework.FieldSchema{
+					"type": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "TODO",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleAvailableList,
+					logical.ListOperation: b.handleAvailableList,
+				},
+
+				HelpSynopsis:    strings.TrimSpace("TODO"),
+				HelpDescription: strings.TrimSpace("TODO"),
+			},
+
 			&framework.Path{
 				Pattern: "capabilities-accessor$",
 
@@ -1307,6 +1328,21 @@ func (b *SystemBackend) handleAuditedHeadersRead(ctx context.Context, req *logic
 			"headers": headerConfig.Headers,
 		},
 	}, nil
+}
+
+// handleAvailableList returns the available mounts for the given type.
+func (b *SystemBackend) handleAvailableList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	typ := d.Get("type").(string)
+	if typ == "" {
+		return logical.ErrorResponse("missing type"), nil
+	}
+
+	names, err := b.Core.listAvailable(ctx, typ)
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(names), nil
 }
 
 // handleCapabilitiesAccessor returns the ACL capabilities of the
