@@ -448,11 +448,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 	for _, entry := range c.auth.Entries {
 		var backend logical.Backend
-		// Work around some problematic code that existed in master for a while
-		if strings.HasPrefix(entry.Path, credentialRoutePrefix) {
-			entry.Path = strings.TrimPrefix(entry.Path, credentialRoutePrefix)
-			persistNeeded = true
-		}
 
 		// Create a barrier view using the UUID
 		viewPath := credentialBarrierPrefix + entry.UUID + "/"
