@@ -52,7 +52,11 @@ func TestPolicyFmtCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
+				client, closer := testVaultServer(t)
+				defer closer()
+
 				ui, cmd := testPolicyFmtCommand(t)
+				cmd.client = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -87,7 +91,11 @@ path "secret" {
 		}
 		f.Close()
 
+		client, closer := testVaultServer(t)
+		defer closer()
+
 		_, cmd := testPolicyFmtCommand(t)
+		cmd.client = client
 
 		code := cmd.Run([]string{
 			f.Name(),
@@ -126,7 +134,11 @@ path "secret" {
 		}
 		f.Close()
 
+		client, closer := testVaultServer(t)
+		defer closer()
+
 		ui, cmd := testPolicyFmtCommand(t)
+		cmd.client = client
 
 		code := cmd.Run([]string{
 			f.Name(),
@@ -157,7 +169,11 @@ path "secret" {
 		}
 		f.Close()
 
+		client, closer := testVaultServer(t)
+		defer closer()
+
 		ui, cmd := testPolicyFmtCommand(t)
+		cmd.client = client
 
 		code := cmd.Run([]string{
 			f.Name(),
@@ -188,7 +204,11 @@ path "secret" {
 		}
 		f.Close()
 
+		client, closer := testVaultServer(t)
+		defer closer()
+
 		ui, cmd := testPolicyFmtCommand(t)
+		cmd.client = client
 
 		code := cmd.Run([]string{
 			f.Name(),

@@ -91,7 +91,11 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
+				client, closer := testVaultServer(t)
+				defer closer()
+
 				ui, cmd := testOperatorGenerateRootCommand(t)
+				cmd.client = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -109,7 +113,11 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 	t.Run("generate_otp", func(t *testing.T) {
 		t.Parallel()
 
+		client, closer := testVaultServer(t)
+		defer closer()
+
 		ui, cmd := testOperatorGenerateRootCommand(t)
+		cmd.client = client
 
 		code := cmd.Run([]string{
 			"-generate-otp",
@@ -130,7 +138,11 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		encoded := "L9MaZ/4mQanpOV6QeWd84g=="
 		otp := "dIeeezkjpDUv3fy7MYPOLQ=="
 
+		client, closer := testVaultServer(t)
+		defer closer()
+
 		ui, cmd := testOperatorGenerateRootCommand(t)
+		cmd.client = client
 
 		// Simulate piped output to print raw output
 		old := os.Stdout

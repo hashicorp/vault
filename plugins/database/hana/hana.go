@@ -3,6 +3,7 @@ package hana
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -23,7 +24,7 @@ const (
 
 // HANA is an implementation of Database interface
 type HANA struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -31,6 +32,14 @@ var _ dbplugin.Database = &HANA{}
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
+	db := new()
+	// Wrap the plugin with middleware to sanitize errors
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+
+	return dbType, nil
+}
+
+func new() *HANA {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = hanaTypeName
 
@@ -41,12 +50,10 @@ func New() (interface{}, error) {
 		Separator:      "_",
 	}
 
-	dbType := &HANA{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+	return &HANA{
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
-
-	return dbType, nil
 }
 
 // Run instantiates a HANA object, and runs the RPC server for the plugin
@@ -56,7 +63,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*HANA), apiTLSConfig)
+	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
 
 	return nil
 }
@@ -82,13 +89,15 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 	h.Lock()
 	defer h.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// Get the connection
 	db, err := h.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
 
-	if statements.CreationStatements == "" {
+	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -127,23 +136,25 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
+	for _, stmt := range statements.Creation {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name":       username,
-			"password":   password,
-			"expiration": expirationStr,
-		}))
-		if err != nil {
-			return "", "", err
-		}
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return "", "", err
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"name":       username,
+				"password":   password,
+				"expiration": expirationStr,
+			}))
+			if err != nil {
+				return "", "", err
+			}
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return "", "", err
+			}
 		}
 	}
 
@@ -157,6 +168,8 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 
 // Renewing hana user just means altering user's valid until property
 func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// Get connection
 	db, err := h.getConnection(ctx)
 	if err != nil {
@@ -197,8 +210,10 @@ func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, us
 
 // Revoking hana user will deactivate user and try to perform a soft drop
 func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// default revoke will be a soft drop on user
-	if statements.RevocationStatements == "" {
+	if len(statements.Revocation) == 0 {
 		return h.revokeUserDefault(ctx, username)
 	}
 
@@ -216,30 +231,27 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(statements.RevocationStatements, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
+	for _, stmt := range statements.Revocation {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name": username,
-		}))
-		if err != nil {
-			return err
-		}
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return err
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"name": username,
+			}))
+			if err != nil {
+				return err
+			}
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return err
+			}
 		}
 	}
 
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
@@ -283,4 +295,9 @@ func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
 	}
 
 	return nil
+}
+
+// RotateRootCredentials is not currently supported on HANA
+func (h *HANA) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
 }

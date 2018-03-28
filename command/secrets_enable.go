@@ -17,17 +17,19 @@ var _ cli.CommandAutocomplete = (*SecretsEnableCommand)(nil)
 type SecretsEnableCommand struct {
 	*BaseCommand
 
-	flagDescription              string
-	flagPath                     string
-	flagDefaultLeaseTTL          time.Duration
-	flagMaxLeaseTTL              time.Duration
-	flagAuditNonHMACRequestKeys  []string
-	flagAuditNonHMACResponseKeys []string
-	flagListingVisibility        string
-	flagForceNoCache             bool
-	flagPluginName               string
-	flagLocal                    bool
-	flagSealWrap                 bool
+	flagDescription               string
+	flagPath                      string
+	flagDefaultLeaseTTL           time.Duration
+	flagMaxLeaseTTL               time.Duration
+	flagAuditNonHMACRequestKeys   []string
+	flagAuditNonHMACResponseKeys  []string
+	flagListingVisibility         string
+	flagPassthroughRequestHeaders []string
+	flagForceNoCache              bool
+	flagPluginName                string
+	flagOptions                   map[string]string
+	flagLocal                     bool
+	flagSealWrap                  bool
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -128,6 +130,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNamePassthroughRequestHeaders,
+		Target: &c.flagPassthroughRequestHeaders,
+		Usage: "Comma-separated string or list of request header values that " +
+			"will be sent to the backend",
+	})
+
 	f.BoolVar(&BoolVar{
 		Name:    "force-no-cache",
 		Target:  &c.flagForceNoCache,
@@ -143,6 +152,14 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Completion: c.PredictVaultPlugins(),
 		Usage: "Name of the secrets engine plugin. This plugin name must already " +
 			"exist in Vault's plugin catalog.",
+	})
+
+	f.StringMapVar(&StringMapVar{
+		Name:       "options",
+		Target:     &c.flagOptions,
+		Completion: complete.PredictAnything,
+		Usage: "Key-value pair provided as key=value for the mount options. " +
+			"This can be specified multiple times.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -224,6 +241,7 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 			ForceNoCache:    c.flagForceNoCache,
 			PluginName:      c.flagPluginName,
 		},
+		Options: c.flagOptions,
 	}
 
 	// Set these values only if they are provided in the CLI
@@ -238,6 +256,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameListingVisibility {
 			mountInput.Config.ListingVisibility = c.flagListingVisibility
+		}
+
+		if fl.Name == flagNamePassthroughRequestHeaders {
+			mountInput.Config.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
 		}
 	})
 

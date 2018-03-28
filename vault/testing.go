@@ -322,7 +322,7 @@ func testTokenStore(t testing.T, c *Core) *TokenStore {
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+me.UUID+"/")
 	sysView := c.mountEntrySysView(me)
 
-	tokenstore, _ := c.newCredentialBackend(context.Background(), "token", sysView, view, nil)
+	tokenstore, _ := c.newCredentialBackend(context.Background(), me, sysView, view)
 	ts := tokenstore.(*TokenStore)
 
 	err = c.router.Unmount(context.Background(), "auth/token/")
@@ -764,6 +764,53 @@ func (c *TestCluster) Start() {
 			for _, ln := range core.Listeners {
 				go core.Server.Serve(ln)
 			}
+		}
+	}
+}
+
+// UnsealCores uses the cluster barrier keys to unseal the test cluster cores
+func (c *TestCluster) UnsealCores(t testing.T) {
+	numCores := len(c.Cores)
+
+	// Unseal first core
+	for _, key := range c.BarrierKeys {
+		if _, err := c.Cores[0].Unseal(TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+
+	// Verify unsealed
+	sealed, err := c.Cores[0].Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	TestWaitActive(t, c.Cores[0].Core)
+
+	// Unseal other cores
+	for i := 1; i < numCores; i++ {
+		for _, key := range c.BarrierKeys {
+			if _, err := c.Cores[i].Core.Unseal(TestKeyCopy(key)); err != nil {
+				t.Fatalf("unseal err: %s", err)
+			}
+		}
+	}
+
+	// Let them come fully up to standby
+	time.Sleep(2 * time.Second)
+
+	// Ensure cluster connection info is populated.
+	// Other cores should not come up as leaders.
+	for i := 1; i < numCores; i++ {
+		isLeader, _, _, err := c.Cores[i].Leader()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if isLeader {
+			t.Fatalf("core[%d] should not be leader", i)
 		}
 	}
 }

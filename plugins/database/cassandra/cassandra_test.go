@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/gocql/gocql"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
@@ -60,7 +61,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 
 		session, err := clusterConfig.CreateSession()
 		if err != nil {
-			return fmt.Errorf("error creating session: %s", err)
+			return errwrap.Wrapf("error creating session: {{err}}", err)
 		}
 		defer session.Close()
 		return nil
@@ -86,16 +87,13 @@ func TestCassandra_Initialize(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*Cassandra)
-	connProducer := db.ConnectionProducer.(*cassandraConnectionProducer)
-
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initalized")
 	}
 
@@ -113,7 +111,7 @@ func TestCassandra_Initialize(t *testing.T) {
 		"protocol_version": "4",
 	}
 
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -134,15 +132,14 @@ func TestCassandra_CreateUser(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*Cassandra)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testCassandraRole,
+		Creation: []string{testCassandraRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -175,15 +172,14 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*Cassandra)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testCassandraRole,
+		Creation: []string{testCassandraRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -221,15 +217,14 @@ func TestCassandra_RevokeUser(t *testing.T) {
 		"protocol_version": 4,
 	}
 
-	dbRaw, _ := New()
-	db := dbRaw.(*Cassandra)
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testCassandraRole,
+		Creation: []string{testCassandraRole},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -268,7 +263,7 @@ func testCredsExist(t testing.TB, address string, port int, username, password s
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
-		return fmt.Errorf("error creating session: %s", err)
+		return errwrap.Wrapf("error creating session: {{err}}", err)
 	}
 	defer session.Close()
 	return nil
