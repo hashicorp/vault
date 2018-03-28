@@ -173,6 +173,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
+	cfg.BindPassword = ""
+
 	resp := &logical.Response{
 		Data: structs.New(cfg).Map(),
 	}
@@ -319,7 +321,7 @@ type ConfigEntry struct {
 	InsecureTLS   bool   `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
 	StartTLS      bool   `json:"starttls" structs:"starttls" mapstructure:"starttls"`
 	BindDN        string `json:"binddn" structs:"binddn" mapstructure:"binddn"`
-	BindPassword  string `json:"bindpass" structs:"bindpass" mapstructure:"bindpass"`
+	BindPassword  string `json:"bindpass" structs:"bindpass,omitempty" mapstructure:"bindpass"`
 	DenyNullBind  bool   `json:"deny_null_bind" structs:"deny_null_bind" mapstructure:"deny_null_bind"`
 	DiscoverDN    bool   `json:"discoverdn" structs:"discoverdn" mapstructure:"discoverdn"`
 	TLSMinVersion string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`

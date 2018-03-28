@@ -47,6 +47,8 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, err
 	}
+	config.URI = ""
+
 	return &logical.Response{
 		Data: structs.New(config).Map(),
 	}, nil

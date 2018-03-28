@@ -103,6 +103,8 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
+	cfg.Secret = ""
+
 	resp := &logical.Response{
 		Data: structs.New(cfg).Map(),
 	}
@@ -199,7 +201,7 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 type ConfigEntry struct {
 	Host                     string   `json:"host" structs:"host" mapstructure:"host"`
 	Port                     int      `json:"port" structs:"port" mapstructure:"port"`
-	Secret                   string   `json:"secret" structs:"secret" mapstructure:"secret"`
+	Secret                   string   `json:"secret" structs:"secret,omitempty" mapstructure:"secret"`
 	UnregisteredUserPolicies []string `json:"unregistered_user_policies" structs:"unregistered_user_policies" mapstructure:"unregistered_user_policies"`
 	DialTimeout              int      `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
 	ReadTimeout              int      `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`

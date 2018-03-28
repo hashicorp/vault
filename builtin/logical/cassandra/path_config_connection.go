@@ -100,10 +100,8 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 
-	config.Password = "**********"
-	if len(config.PrivateKey) > 0 {
-		config.PrivateKey = "**********"
-	}
+	config.Password = ""
+	config.PrivateKey = ""
 
 	return &logical.Response{
 		Data: structs.New(config).Map(),
