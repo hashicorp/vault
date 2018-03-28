@@ -1,6 +1,7 @@
 package storagepacker
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -16,11 +17,9 @@ import (
 func testPutItem(t *testing.T, sp *StoragePackerV2, count int, entity *identity.Entity) {
 	t.Helper()
 	for i := 1; i <= count; i++ {
-		/*
-			if i%500 == 0 {
-				fmt.Printf("put item iteration: %d\n", i)
-			}
-		*/
+		if i%500 == 0 {
+			fmt.Printf("put item iteration: %d\n", i)
+		}
 		id := strconv.Itoa(i)
 		entity.ID = id
 
@@ -47,11 +46,9 @@ func testPutItem(t *testing.T, sp *StoragePackerV2, count int, entity *identity.
 func testGetItem(t *testing.T, sp *StoragePackerV2, count int, expectNil bool) {
 	t.Helper()
 	for i := 1; i <= count; i++ {
-		/*
-			if i%500 == 0 {
-				fmt.Printf("get item iteration: %d\n", i)
-			}
-		*/
+		if i%500 == 0 {
+			fmt.Printf("get item iteration: %d\n", i)
+		}
 		id := strconv.Itoa(i)
 
 		itemFetched, err := sp.GetItem(id)
@@ -85,11 +82,9 @@ func testGetItem(t *testing.T, sp *StoragePackerV2, count int, expectNil bool) {
 func testDeleteItem(t *testing.T, sp *StoragePackerV2, count int) {
 	t.Helper()
 	for i := 1; i <= count; i++ {
-		/*
-			if i%500 == 0 {
-				fmt.Printf("delete item iteration: %d\n", i)
-			}
-		*/
+		if i%500 == 0 {
+			fmt.Printf("delete item iteration: %d\n", i)
+		}
 		id := strconv.Itoa(i)
 		err := sp.DeleteItem(id)
 		if err != nil {
@@ -98,7 +93,7 @@ func testDeleteItem(t *testing.T, sp *StoragePackerV2, count int) {
 	}
 }
 
-func TestStoragePackerV2_PutGetDeleteInmem(t *testing.T) {
+func TestStoragePackerV2_Inmem(t *testing.T) {
 	sp, err := NewStoragePackerV2(&Config{
 		View:   &logical.InmemStorage{},
 		Logger: log.New("storagepackertest"),
@@ -116,14 +111,14 @@ func TestStoragePackerV2_PutGetDeleteInmem(t *testing.T) {
 			"samplekey5": "samplevalue5",
 		},
 	}
-	count := 100
+	count := 1000000
 	testPutItem(t, sp, count, entity)
 	testGetItem(t, sp, count, false)
 	testDeleteItem(t, sp, count)
 	testGetItem(t, sp, count, true)
 }
 
-func TestStoragePackerV2_PutGetDelete_File(t *testing.T) {
+func TestStoragePackerV2_File(t *testing.T) {
 	filePath, err := ioutil.TempDir(".", "vault")
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -149,7 +144,7 @@ func TestStoragePackerV2_PutGetDelete_File(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	count := 100
+	count := 10000
 	entity := &identity.Entity{
 		Metadata: map[string]string{
 			"samplekey1": "samplevalue1",

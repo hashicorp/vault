@@ -113,17 +113,13 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *PackedBucket, item *Item) (s
 		return "", fmt.Errorf("bucket is nil")
 	}
 
-	// Serializing and deserializing a proto message with empty map translates
-	// to a nil. Ensure that the required fields are initialized properly.
-	if bucket.Data.Buckets == nil {
-		bucket.Data.Buckets = make(map[string]*BucketV2)
-	}
-
 	// Compute the shard index to which the item belongs
 	shardIndex, err := shardBucketIndex(item.ID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
 	if err != nil {
 		return "", errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
+
+	bucket.Lock()
 
 	// Check if the bucket shard to hold the item already exists
 	bucketShard, ok := bucket.Data.Buckets[shardIndex]
@@ -141,14 +137,15 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *PackedBucket, item *Item) (s
 	}
 
 	if bucketShard == nil {
+		bucket.Unlock()
 		return "", fmt.Errorf("bucket shard is nil")
 	}
 
 	// If the bucket shard is already pushed out, continue the operation in the
 	// external bucket
 	if bucketShard.External {
+		bucket.Unlock()
 		externalBucket, err := s.GetBucket(bucketShard.Key)
-
 		if err != nil {
 			return "", err
 		}
@@ -163,6 +160,7 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *PackedBucket, item *Item) (s
 	//
 	// Bucket shard is local to the parent bucket
 	//
+	defer bucket.Unlock()
 
 	// Update the item in the bucket shard
 	bucketShard.Items[item.ID] = item
@@ -245,6 +243,15 @@ func (s *StoragePackerV2) GetBucket(key string) (*PackedBucket, error) {
 		return nil, errwrap.Wrapf("failed to decode bucket: {{err}}", err)
 	}
 
+	// Serializing and deserializing a proto message with empty map translates
+	// to a nil. Ensure that the required fields are initialized properly.
+	if bucket.Buckets == nil {
+		bucket.Buckets = make(map[string]*BucketV2)
+	}
+	if bucket.Items == nil {
+		bucket.Items = make(map[string]*Item)
+	}
+
 	bucket.Size = int64(len(entry.Value))
 
 	return s.UpdateBucketCache(&PackedBucket{Data: &bucket}), nil
@@ -319,16 +326,19 @@ func (s *StoragePackerV2) getItemFromBucket(bucket *PackedBucket, itemID string)
 		return nil, errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
+	bucket.RLock()
+
 	bucketShard, ok := bucket.Data.Buckets[shardIndex]
 	if !ok {
+		bucket.RUnlock()
 		return nil, nil
 	}
 
 	// If the bucket shard is already pushed out, continue the operation in the
 	// external bucket
 	if bucketShard.External {
+		bucket.RUnlock()
 		externalBucket, err := s.GetBucket(bucketShard.Key)
-
 		if err != nil {
 			return nil, err
 		}
@@ -339,6 +349,8 @@ func (s *StoragePackerV2) getItemFromBucket(bucket *PackedBucket, itemID string)
 
 		return s.getItemFromBucket(externalBucket, itemID)
 	}
+
+	defer bucket.RUnlock()
 
 	return bucketShard.Items[itemID], nil
 }
@@ -367,14 +379,18 @@ func (s *StoragePackerV2) deleteItemFromBucket(bucket *PackedBucket, itemID stri
 		return errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
+	bucket.Lock()
+
 	bucketShard, ok := bucket.Data.Buckets[shardIndex]
 	if !ok {
+		bucket.Unlock()
 		return nil
 	}
 
 	// If the bucket shard is already pushed out, continue the operation in the
 	// pushed out bucket
 	if bucketShard.External {
+		bucket.Unlock()
 		externalBucket, err := s.GetBucket(bucketShard.Key)
 
 		if err != nil {
@@ -387,6 +403,8 @@ func (s *StoragePackerV2) deleteItemFromBucket(bucket *PackedBucket, itemID stri
 
 		return s.deleteItemFromBucket(externalBucket, itemID)
 	}
+
+	defer bucket.Unlock()
 
 	// Delete the item from the respective shard
 	delete(bucketShard.Items, itemID)
@@ -448,10 +466,6 @@ func (s *StoragePackerV2) bucketExceedsSizeLimit(bucket *PackedBucket, item *Ite
 // splitItemsInBucket breaks the list of items in the bucket and divides them
 // such that they belong to their respective bucket shards
 func (s *StoragePackerV2) splitItemsInBucket(bucket *PackedBucket) error {
-	if bucket.Data.Buckets == nil {
-		bucket.Data.Buckets = make(map[string]*BucketV2)
-	}
-
 	for itemID, item := range bucket.Data.Items {
 		shardIndex, err := shardBucketIndex(itemID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
 		if err != nil {
