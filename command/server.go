@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	colorable "github.com/mattn/go-colorable"
-	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
@@ -34,7 +34,6 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/gated-writer"
-	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -277,21 +276,21 @@ func (c *ServerCommand) Run(args []string) int {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
-	var level int
+	var level log.Level
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
 	case "trace":
-		level = log.LevelTrace
+		level = log.Trace
 	case "debug":
-		level = log.LevelDebug
+		level = log.Debug
 	case "info", "":
-		level = log.LevelInfo
+		level = log.Info
 	case "notice":
-		level = log.LevelNotice
+		level = log.Info // TODO verify
 	case "warn", "warning":
-		level = log.LevelWarn
+		level = log.Warn
 	case "err", "error":
-		level = log.LevelError
+		level = log.Error
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
 		return 1
@@ -304,17 +303,18 @@ func (c *ServerCommand) Run(args []string) int {
 	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
 		if c.flagDevThreeNode || c.flagDevFourCluster {
-			c.logger = logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+			c.logger = log.New(&hclog.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
-				Level:  hclog.Trace,
-			})).LogxiLogger()
+				Level:  log.Trace,
+			})
 		} else {
 			c.logger = logformat.NewVaultLoggerWithWriter(c.logGate, level)
 		}
 	default:
-		c.logger = log.NewLogger(c.logGate, "vault")
-		c.logger.SetLevel(level)
+		opts := log.LoggerOptions{Output: c.logGate, Name: "vault"}
+		c.logger = log.New(&opts)
+		//c.logger.SetLevel(level)
 	}
 	grpclog.SetLogger(&grpclogFaker{
 		logger: c.logger,

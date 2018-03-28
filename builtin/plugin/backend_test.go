@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -13,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/logical/plugin"
 	"github.com/hashicorp/vault/logical/plugin/mock"
 	"github.com/hashicorp/vault/vault"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func TestBackend_impl(t *testing.T) {

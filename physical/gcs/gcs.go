@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 
 	"cloud.google.com/go/storage"
 	"github.com/armon/go-metrics"

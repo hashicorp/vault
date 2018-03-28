@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"

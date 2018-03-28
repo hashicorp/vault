@@ -10,8 +10,8 @@ import (
 
 	"github.com/coreos/etcd/client"
 	"github.com/coreos/go-semver/semver"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 var (

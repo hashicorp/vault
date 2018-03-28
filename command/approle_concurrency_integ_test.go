@@ -4,12 +4,12 @@ import (
 	"sync"
 	"testing"
 
+	logxi "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
-	logxi "github.com/mgutz/logxi/v1"
 )
 
 func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {

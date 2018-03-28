@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync/atomic"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/locksutil"
-	log "github.com/mgutz/logxi/v1"
 )
 
 const (

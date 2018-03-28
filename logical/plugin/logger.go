@@ -3,7 +3,9 @@ package plugin
 import (
 	"net/rpc"
 
-	log "github.com/mgutz/logxi/v1"
+	log_std "log"
+
+	log "github.com/hashicorp/go-hclog"
 )
 
 type LoggerClient struct {
@@ -33,37 +35,40 @@ func (l *LoggerClient) Info(msg string, args ...interface{}) {
 	}
 	l.client.Call("Plugin.Info", cArgs, &struct{}{})
 }
-func (l *LoggerClient) Warn(msg string, args ...interface{}) error {
+func (l *LoggerClient) Warn(msg string, args ...interface{}) {
 	var reply LoggerReply
 	cArgs := &LoggerArgs{
 		Msg:  msg,
 		Args: args,
 	}
 	err := l.client.Call("Plugin.Warn", cArgs, &reply)
-	if err != nil {
-		return err
-	}
-	if reply.Error != nil {
-		return reply.Error
-	}
+	_ = err
 
-	return nil
+	//if err != nil {
+	//	return err
+	//}
+	//if reply.Error != nil {
+	//	return reply.Error
+	//}
+	//
+	//return nil
 }
-func (l *LoggerClient) Error(msg string, args ...interface{}) error {
+func (l *LoggerClient) Error(msg string, args ...interface{}) {
 	var reply LoggerReply
 	cArgs := &LoggerArgs{
 		Msg:  msg,
 		Args: args,
 	}
 	err := l.client.Call("Plugin.Error", cArgs, &reply)
-	if err != nil {
-		return err
-	}
-	if reply.Error != nil {
-		return reply.Error
-	}
-
-	return nil
+	_ = err
+	//if err != nil {
+	//	return err
+	//}
+	//if reply.Error != nil {
+	//	return reply.Error
+	//}
+	//
+	//return nil
 }
 
 func (l *LoggerClient) Fatal(msg string, args ...interface{}) {
@@ -107,6 +112,45 @@ func (l *LoggerClient) IsWarn() bool {
 	return reply.IsTrue
 }
 
+func (l *LoggerClient) IsError() bool {
+	//var reply LoggerReply
+	//l.client.Call("Plugin.IsError", new(interface{}), &reply)
+	//return reply.IsTrue
+	return false
+}
+
+// TODO: fix
+func (l *LoggerClient) Named(s string) log.Logger {
+	//var reply LoggerReply
+	//l.client.Call("Plugin.IsError", new(interface{}), &reply)
+	//return reply.IsTrue
+	return log.Default()
+}
+
+// TODO: fix
+func (l *LoggerClient) ResetNamed(s string) log.Logger {
+	//var reply LoggerReply
+	//l.client.Call("Plugin.IsError", new(interface{}), &reply)
+	//return reply.IsTrue
+	return log.Default()
+}
+
+// TODO: fix
+func (l *LoggerClient) With(args ...interface{}) log.Logger {
+	//var reply LoggerReply
+	//l.client.Call("Plugin.IsError", new(interface{}), &reply)
+	//return reply.IsTrue
+	return log.Default()
+}
+
+// TODO: fix
+func (l *LoggerClient) StandardLogger(opts *log.StandardLoggerOptions) *log_std.Logger {
+	//var reply LoggerReply
+	//l.client.Call("Plugin.IsError", new(interface{}), &reply)
+	//return reply.IsTrue
+	return &log_std.Logger{}
+}
+
 type LoggerServer struct {
 	logger log.Logger
 }
@@ -127,34 +171,37 @@ func (l *LoggerServer) Info(args *LoggerArgs, _ *struct{}) error {
 }
 
 func (l *LoggerServer) Warn(args *LoggerArgs, reply *LoggerReply) error {
-	err := l.logger.Warn(args.Msg, args.Args...)
-	if err != nil {
-		*reply = LoggerReply{
-			Error: wrapError(err),
-		}
-		return nil
-	}
+	//err := l.logger.Warn(args.Msg, args.Args...)
+	l.logger.Warn(args.Msg, args.Args...)
+	//if err != nil {
+	//	*reply = LoggerReply{
+	//		Error: wrapError(err),
+	//	}
+	//	return nil
+	//}
 	return nil
 }
 
 func (l *LoggerServer) Error(args *LoggerArgs, reply *LoggerReply) error {
-	err := l.logger.Error(args.Msg, args.Args...)
-	if err != nil {
-		*reply = LoggerReply{
-			Error: wrapError(err),
-		}
-		return nil
-	}
+	l.logger.Error(args.Msg, args.Args...)
+	//if err != nil {
+	//	*reply = LoggerReply{
+	//		Error: wrapError(err),
+	//	}
+	//	return nil
+	//}
 	return nil
 }
 
 func (l *LoggerServer) Log(args *LoggerArgs, _ *struct{}) error {
-	l.logger.Log(args.Level, args.Msg, args.Args)
+	// TODO: FIX
+	//l.logger.Log(args.Level, args.Msg, args.Args)
 	return nil
 }
 
 func (l *LoggerServer) SetLevel(args int, _ *struct{}) error {
-	l.logger.SetLevel(args)
+	// TODO: FIX
+	//l.logger.SetLevel(args)
 	return nil
 }
 

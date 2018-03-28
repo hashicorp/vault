@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 
 	_ "github.com/denisenkom/go-mssqldb"
 )

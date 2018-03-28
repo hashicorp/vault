@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"google.golang.org/grpc"
 
@@ -471,7 +471,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Make a default logger if not provided
 	if conf.Logger == nil {
-		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
+		conf.Logger = logformat.NewVaultLogger(log.Trace)
 	}
 
 	// Setup the core

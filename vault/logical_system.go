@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
@@ -23,7 +24,6 @@ import (
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/mapstructure"
 )
 

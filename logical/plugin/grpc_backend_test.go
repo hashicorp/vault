@@ -7,11 +7,11 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	gplugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/mock"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func TestGRPCBackendPlugin_impl(t *testing.T) {

@@ -3,12 +3,12 @@ package command
 import (
 	"testing"
 
+	logxi "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
-	logxi "github.com/mgutz/logxi/v1"
 )
 
 func TestIdentityStore_Integ_GroupAliases(t *testing.T) {

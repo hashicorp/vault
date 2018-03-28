@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 
 	proto "github.com/golang/protobuf/proto"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // NewSealUnwrapper creates a new seal unwrapper

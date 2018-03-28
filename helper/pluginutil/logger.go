@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	hclog "github.com/hashicorp/go-hclog"
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 )
 
 // pluginLogFaker is a wrapper on logxi.Logger that

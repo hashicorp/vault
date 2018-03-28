@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	radix "github.com/armon/go-radix"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 type faultyPseudo struct {

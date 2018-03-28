@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	logxi "github.com/mgutz/logxi/v1"
+	logxi "github.com/hashicorp/go-hclog"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"

@@ -9,11 +9,11 @@ import (
 	"os/exec"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/version"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog

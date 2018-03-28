@@ -10,10 +10,10 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"

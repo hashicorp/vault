@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func TestPhysicalView_impl(t *testing.T) {

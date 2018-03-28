@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/ptypes"
+	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func BenchmarkStoragePacker(b *testing.B) {

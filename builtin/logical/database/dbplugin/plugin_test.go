@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/vault"
-	log "github.com/mgutz/logxi/v1"
 )
 
 type mockPlugin struct {

@@ -8,9 +8,9 @@ import (
 
 	"google.golang.org/grpc"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // Database is the interface that all database objects must implement.

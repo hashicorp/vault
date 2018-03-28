@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ssh"
@@ -35,7 +35,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
@@ -106,7 +105,7 @@ func TestCoreNewSeal(t testing.T) *Core {
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
 func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -274,7 +273,7 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
 
@@ -677,7 +676,7 @@ func (n *rawHTTP) System() logical.SystemView {
 }
 
 func (n *rawHTTP) Logger() log.Logger {
-	return logformat.NewVaultLogger(log.LevelTrace)
+	return logformat.NewVaultLogger(log.Trace)
 }
 
 func (n *rawHTTP) Cleanup(ctx context.Context) {
@@ -1107,7 +1106,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	//
 	// Listener setup
 	//
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 	ports := make([]int, numCores)
 	if baseAddr != nil {
 		for i := 0; i < numCores; i++ {
@@ -1275,10 +1274,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		if opts != nil && opts.RawLogger != nil {
 			switch opts.RawLogger.(type) {
-			case *logbridge.Logger:
-				coreConfig.Logger = opts.RawLogger.(*logbridge.Logger).Named(fmt.Sprintf("core%d", i)).LogxiLogger()
-			case *logbridge.LogxiLogger:
-				coreConfig.Logger = opts.RawLogger.(*logbridge.LogxiLogger).Named(fmt.Sprintf("core%d", i))
+			// TODO: What is going on here?
+			//case *logbridge.Logger:
+			//	coreConfig.Logger = opts.RawLogger.(*logbridge.Logger).Named(fmt.Sprintf("core%d", i)).LogxiLogger()
+			//case *logbridge.LogxiLogger:
+			//	coreConfig.Logger = opts.RawLogger.(*logbridge.LogxiLogger).Named(fmt.Sprintf("core%d", i))
 			}
 		}
 

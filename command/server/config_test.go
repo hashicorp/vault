@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/logformat"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func TestLoadConfigFile(t *testing.T) {

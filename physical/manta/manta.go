@@ -14,12 +14,12 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
 	"github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
 	"github.com/joyent/triton-go/errors"
 	"github.com/joyent/triton-go/storage"
-	log "github.com/mgutz/logxi/v1"
 )
 
 const mantaDefaultRootStore = "/stor"

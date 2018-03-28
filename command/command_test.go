@@ -19,10 +19,10 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 
+	logxi "github.com/hashicorp/go-hclog"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
-	logxi "github.com/mgutz/logxi/v1"
 )
 
 var (

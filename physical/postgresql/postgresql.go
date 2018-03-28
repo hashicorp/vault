@@ -10,7 +10,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
+	//log "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/lib/pq"
