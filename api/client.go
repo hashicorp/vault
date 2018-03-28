@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
@@ -28,6 +29,7 @@ const EnvVaultCAPath = "VAULT_CAPATH"
 const EnvVaultClientCert = "VAULT_CLIENT_CERT"
 const EnvVaultClientKey = "VAULT_CLIENT_KEY"
 const EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
+const EnvVaultClientDebug = "VAULT_CLIENT_DEBUG"
 const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
@@ -69,6 +71,9 @@ type Config struct {
 	// If there is an error when creating the configuration, this will be the
 	// error
 	Error error
+
+	//Debug HTTP Request to stdout
+	Debug bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -203,6 +208,7 @@ func (c *Config) ReadEnvironment() error {
 	var envClientKey string
 	var envClientTimeout time.Duration
 	var envInsecure bool
+	var envDebug bool
 	var envTLSServerName string
 	var envMaxRetries *uint64
 
@@ -243,6 +249,14 @@ func (c *Config) ReadEnvironment() error {
 			return fmt.Errorf("Could not parse VAULT_SKIP_VERIFY")
 		}
 	}
+	if v := os.Getenv(EnvVaultClientDebug); v != "" {
+		var err error
+		envDebug, err = strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("Could not parse VAULT_CLIENT_DEBUG")
+		}
+	}
+
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
 		envTLSServerName = v
 	}
@@ -255,6 +269,10 @@ func (c *Config) ReadEnvironment() error {
 		ClientKey:     envClientKey,
 		TLSServerName: envTLSServerName,
 		Insecure:      envInsecure,
+	}
+
+	if envDebug != false {
+		c.Debug = envDebug
 	}
 
 	c.modifyLock.Lock()
@@ -549,6 +567,13 @@ START:
 		return nil, err
 	}
 
+	if c.config.Debug {
+		requestOut, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			fmt.Printf("%s\n", requestOut)
+		}
+	}
+
 	client := pester.NewExtendedClient(c.config.HttpClient)
 	client.Backoff = pester.LinearJitterBackoff
 	client.MaxRetries = c.config.MaxRetries
@@ -573,6 +598,13 @@ START:
 				err)
 		}
 		return result, err
+	}
+
+	if c.config.Debug {
+		responseOut, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			fmt.Printf("%s\n", responseOut)
+		}
 	}
 
 	// Check for a redirect, only allowing for a single redirect
