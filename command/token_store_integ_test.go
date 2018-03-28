@@ -1,8 +1,8 @@
 package command
 
 import (
+	"fmt"
 	"io/ioutil"
-	"os"
 	"strconv"
 	"testing"
 
@@ -26,7 +26,8 @@ func TestTokenStore_Integ_TokenCreation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	defer os.RemoveAll(filePath)
+	fmt.Printf("filePath: %q\n", filePath)
+	// defer os.RemoveAll(filePath)
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
@@ -61,8 +62,12 @@ func TestTokenStore_Integ_TokenCreation(t *testing.T) {
 
 	client.SetToken(cluster.RootToken)
 
-	count := 1000
+	count := 100000
 	for i := 1; i <= count; i++ {
+		if i%500 == 0 {
+			fmt.Printf("iteration: %d\n", i)
+		}
+
 		id := strconv.Itoa(i)
 		tcr := &api.TokenCreateRequest{
 			ID:          id,

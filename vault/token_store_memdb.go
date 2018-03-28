@@ -102,13 +102,7 @@ func (ts *TokenStore) loadTokenMappings(ctx context.Context) error {
 	ts.logger.Debug("token: token mappings collected", "num_existing", len(existing))
 
 	for _, key := range existing {
-		bucket, lock, err := ts.mappingPacker.GetBucket(tokenMappingBucketsPrefix+key, false)
-
-		// Locking really isn't necessary at this point. Release the lock soon.
-		// Also, holding this lock here will potentially dead lock when the
-		// below code tries to persist the item into this bucket.
-		ts.mappingPacker.UnlockBucket(lock, false)
-
+		bucket, err := ts.mappingPacker.GetBucket(tokenMappingBucketsPrefix + key)
 		if err != nil {
 			return err
 		}
@@ -117,7 +111,7 @@ func (ts *TokenStore) loadTokenMappings(ctx context.Context) error {
 			continue
 		}
 
-		for _, bucketShard := range bucket.Buckets {
+		for _, bucketShard := range bucket.Data.Buckets {
 			if bucketShard.External {
 				continue
 			}

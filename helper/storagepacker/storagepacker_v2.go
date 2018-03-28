@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	radix "github.com/armon/go-radix"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -20,11 +21,6 @@ const (
 	defaultBucketCount      = 256
 	defaultBucketShardCount = 32
 	defaultBucketMaxSize    = 256 * 1024
-)
-
-const (
-	shared    = false
-	exclusive = true
 )
 
 type Config struct {
@@ -56,8 +52,13 @@ type Config struct {
 // indefinitely expanding the capacity of the storage by sharding the buckets
 // when they exceed the imposed limit.
 type StoragePackerV2 struct {
-	config           *Config
-	bucketLocksCache *sync.Map
+	config       *Config
+	bucketsCache *radix.Tree
+}
+
+type PackedBucket struct {
+	sync.RWMutex
+	Data *BucketV2
 }
 
 // Clone creates a replica of the bucket
@@ -81,16 +82,8 @@ func (b *BucketV2) Clone() (*BucketV2, error) {
 }
 
 // putItemIntoBucket is a recursive function that finds the appropriate bucket
-// to store the item based on the storage space available in the buckets. This
-// method avoids race conditions by acquiring locks on each bucket key. Note
-// that this function is optimized for a write-heavy workload. Locks are
-// directly held for writing. Acquiring the lock for reading first and then
-// switching the locks for writing provides less value as the readers are
-// scarce. Acquiring a read lock first and then switching to a write lock would
-// mean that the code gets complex and that the bucket gets deserialized twice
-// adversely affecting the performance.
-func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (string, error) {
-	var lock *sync.RWMutex
+// to store the item based on the storage space available in the buckets.
+func (s *StoragePackerV2) putItemIntoBucket(bucket *PackedBucket, item *Item) (string, error) {
 	if bucket == nil {
 		// Compute the index at which the primary bucket should reside
 		primaryIndex, err := s.primaryBucketIndex(item.ID)
@@ -98,79 +91,63 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 			return "", err
 		}
 
-		// Prepend the index by the prefix
+		// Prepend the index with the prefix
 		primaryKey := s.config.ViewPrefix + primaryIndex
 
-		// Read the primary bucket
-		bucket, lock, err = s.GetBucket(primaryKey, exclusive)
+		// Check if the primary bucket exists
+		bucket, err = s.GetBucket(primaryKey)
 		if err != nil {
-			s.UnlockBucket(lock, exclusive)
 			return "", err
 		}
 
 		// If the primary bucket does not exist, create one
 		if bucket == nil {
-			bucket = s.newBucket(primaryKey, 0)
-			lockRaw, _ := s.bucketLocksCache.LoadOrStore(primaryKey, &sync.RWMutex{})
-			lock = lockRaw.(*sync.RWMutex)
-			lock.Lock()
+			bucket = &PackedBucket{
+				Data: s.newBucket(primaryKey, 0),
+			}
 		}
 	}
 
 	// For sanity
 	if bucket == nil {
-		s.UnlockBucket(lock, exclusive)
 		return "", fmt.Errorf("bucket is nil")
 	}
 
-	if lock == nil {
-		lockRaw, _ := s.bucketLocksCache.LoadOrStore(bucket.Key, &sync.RWMutex{})
-		lock = lockRaw.(*sync.RWMutex)
-	}
-
 	// Serializing and deserializing a proto message with empty map translates
-	// to a nil. Hence, an already initialized field can potentially be nil
-	// when its read from storage.
-	if bucket.Buckets == nil {
-		bucket.Buckets = make(map[string]*BucketV2)
+	// to a nil. Ensure that the required fields are initialized properly.
+	if bucket.Data.Buckets == nil {
+		bucket.Data.Buckets = make(map[string]*BucketV2)
 	}
 
 	// Compute the shard index to which the item belongs
-	shardIndex, err := shardBucketIndex(item.ID, int(bucket.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+	shardIndex, err := shardBucketIndex(item.ID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
 	if err != nil {
-		s.UnlockBucket(lock, exclusive)
 		return "", errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
 	// Check if the bucket shard to hold the item already exists
-	bucketShard, ok := bucket.Buckets[shardIndex]
+	bucketShard, ok := bucket.Data.Buckets[shardIndex]
 
 	// If the bucket shard is not present, create one
 	if !ok {
 		// The key to the bucket shard relative to its parent bucket
-		shardKey := bucket.Key + "/" + shardIndex
+		shardKey := bucket.Data.Key + "/" + shardIndex
 
 		// Create the bucket shard to hold the item with an incremented depth
-		bucketShard = s.newBucket(shardKey, bucket.Depth+1)
+		bucketShard = s.newBucket(shardKey, bucket.Data.Depth+1)
 
 		// Add the newly created bucket shard to the parent bucket
-		bucket.Buckets[shardIndex] = bucketShard
+		bucket.Data.Buckets[shardIndex] = bucketShard
 	}
 
-	// For safety
 	if bucketShard == nil {
-		s.UnlockBucket(lock, exclusive)
 		return "", fmt.Errorf("bucket shard is nil")
 	}
 
 	// If the bucket shard is already pushed out, continue the operation in the
 	// external bucket
 	if bucketShard.External {
-		externalBucket, _, err := s.GetBucket(bucketShard.Key, exclusive)
-
-		// By now, the lock on the external bucket will be held. Release the
-		// lock on the current bucket.
-		s.UnlockBucket(lock, exclusive)
+		externalBucket, err := s.GetBucket(bucketShard.Key)
 
 		if err != nil {
 			return "", err
@@ -187,61 +164,48 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 	// Bucket shard is local to the parent bucket
 	//
 
-	// At this point only 2 things can happen. The current bucket accommodates
-	// the item or the respective bucket shard gets pushed out as an
-	// independent bucket to hold the item. In both the cases the lock on the
-	// current bucket should be held until the operation completes.
-	// Essentially, we can defer the lock release.
-
-	// Ensure that the lock on the current bucket eventually gets released
-	defer s.UnlockBucket(lock, exclusive)
-
-	if bucketShard.Items == nil {
-		bucketShard.Items = make(map[string]*Item)
-	}
-
 	// Update the item in the bucket shard
 	bucketShard.Items[item.ID] = item
 
-	// Check if the bucket exceeds the size limit after the item addition
+	// Check if the bucket exceeds the size limit after the addition
 	limitExceeded, err := s.bucketExceedsSizeLimit(bucket, item)
 	if err != nil {
 		return "", err
 	}
 
-	// If the bucket size is within the limit, persist the bucket and return
+	// If the bucket size is within the limit, return the updated bucket
 	if !limitExceeded {
 		return bucketShard.Key, s.PutBucket(bucket)
 	}
 
 	//
-	// The bucket size has exceeded the limit, push the bucket shard out as an
-	// independent bucket and insert the item in the pushed out bucket.
+	// If the bucket size has exceeded the limit, push the bucket shard out as
+	// an independent bucket and insert the item in the pushed out bucket.
 	//
 
 	// Mark the bucket shard as external, indicating that it doesn't
 	// reside in its parent bucket
 	bucketShard.External = true
 
-	// Clone the bucket shard and use the clone as the pushed out bucket
-	externalBucket, err := bucketShard.Clone()
+	// Clone the bucket and use the clone as the pushed out bucket
+	clone, err := bucketShard.Clone()
 	if err != nil {
 		return "", err
 	}
 
-	// Clear the items in the bucket shard
+	externalBucket := &PackedBucket{
+		Data: clone,
+	}
+
+	// Clear the items in the pushed out bucket shard
 	bucketShard.Items = nil
 
-	// Split the items in the external bucket, among their respective bucket
-	// shards
+	// Split the items in the bucket that gets pushed out, among their
+	// respective bucket shards
 	err = s.splitItemsInBucket(externalBucket)
 	if err != nil {
 		return "", err
 	}
-
-	lockRaw, _ := s.bucketLocksCache.LoadOrStore(externalBucket.Key, &sync.RWMutex{})
-	externalBucketLock := lockRaw.(*sync.RWMutex)
-	externalBucketLock.Lock()
 
 	// Insert the item in the bucket that got pushed out. Note that the lock on
 	// the current bucket is still not released. When a bucket is getting
@@ -252,132 +216,118 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *BucketV2, item *Item) (strin
 		return "", err
 	}
 
-	// By now the item is already persisted in the external bucket, all the
-	// while lock on its parent bucket was held. The parent bucket now needs to
-	// persist the fact that a shard got moved out, thus reducing its size; and
-	// release the lock.
 	return bucketKey, s.PutBucket(bucket)
 }
 
-// Get reads a bucket from the storage while holding the respective lock on the
-// bucket key
-func (s *StoragePackerV2) GetBucket(key string, lockType bool) (*BucketV2, *sync.RWMutex, error) {
+// Get reads a bucket from the storage
+func (s *StoragePackerV2) GetBucket(key string) (*PackedBucket, error) {
 	if key == "" {
-		return nil, nil, fmt.Errorf("missing bucket key")
+		return nil, fmt.Errorf("missing bucket key")
 	}
 
-	// Check if there exists a lock for the bucket key
-	lockRaw, _ := s.bucketLocksCache.LoadOrStore(key, &sync.RWMutex{})
-	lock := lockRaw.(*sync.RWMutex)
-
-	// Acquire the lock on the bucket key
-	if lockType == exclusive {
-		lock.Lock()
-	} else {
-		lock.RLock()
+	_, raw, exists := s.bucketsCache.LongestPrefix(key)
+	if exists {
+		return raw.(*PackedBucket), nil
 	}
 
-	// Read the bucket from the underlying view
+	// Read from the underlying view
 	entry, err := s.config.View.Get(context.Background(), key)
 	if err != nil {
-		return nil, lock, errwrap.Wrapf("failed to read bucket: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to read bucket: {{err}}", err)
 	}
 	if entry == nil {
-		// If the bucket key is invalid, there shouldn't be a corresponding
-		// lock for it.
-		s.bucketLocksCache.Delete(key)
-
-		// Release the lock
-		s.UnlockBucket(lock, lockType)
-		return nil, nil, nil
+		return nil, nil
 	}
 
 	var bucket BucketV2
 	err = proto.Unmarshal(entry.Value, &bucket)
 	if err != nil {
-		return nil, lock, errwrap.Wrapf("failed to decode bucket wrapper: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to decode bucket: {{err}}", err)
 	}
 
-	// Set the size of the bucket within itself
 	bucket.Size = int64(len(entry.Value))
 
-	return &bucket, lock, nil
+	return s.UpdateBucketCache(&PackedBucket{Data: &bucket}), nil
 }
 
-// Put stores a bucket in storage. A write lock on the bucket key should be
-// held by the caller of this function.
-func (s *StoragePackerV2) PutBucket(bucket *BucketV2) error {
+func (s *StoragePackerV2) UpdateBucketCache(bucket *PackedBucket) *PackedBucket {
+	var packedBucket *PackedBucket
+	_, raw, exists := s.bucketsCache.LongestPrefix(bucket.Data.Key)
+	if exists {
+		packedBucket = raw.(*PackedBucket)
+	}
+	if packedBucket == nil {
+		packedBucket = bucket
+	}
+	s.bucketsCache.Insert(packedBucket.Data.Key, packedBucket)
+	return packedBucket
+}
+
+// Put stores a bucket in storage
+func (s *StoragePackerV2) PutBucket(bucket *PackedBucket) error {
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
 
-	if bucket.Key == "" {
+	if bucket.Data.Key == "" {
 		return fmt.Errorf("missing bucket key")
 	}
 
-	if !strings.HasPrefix(bucket.Key, s.config.ViewPrefix) {
+	if !strings.HasPrefix(bucket.Data.Key, s.config.ViewPrefix) {
 		return fmt.Errorf("bucket entry key should have %q prefix", s.config.ViewPrefix)
 	}
 
-	marshaledBucket, err := proto.Marshal(bucket)
+	marshaledBucket, err := proto.Marshal(bucket.Data)
 	if err != nil {
 		return err
 	}
 
-	// Persist the bucket
-	return s.config.View.Put(context.Background(), &logical.StorageEntry{
-		Key:   bucket.Key,
+	err = s.config.View.Put(context.Background(), &logical.StorageEntry{
+		Key:   bucket.Data.Key,
 		Value: marshaledBucket,
 	})
+	if err != nil {
+		return err
+	}
+
+	s.UpdateBucketCache(bucket)
+
+	return nil
 }
 
 // getItemFromBucket is a recursive function that fetches the given item ID in
 // the bucket hierarchy
-func (s *StoragePackerV2) getItemFromBucket(bucket *BucketV2, itemID string) (*Item, error) {
-	var lock *sync.RWMutex
+func (s *StoragePackerV2) getItemFromBucket(bucket *PackedBucket, itemID string) (*Item, error) {
 	if bucket == nil {
 		primaryIndex, err := s.primaryBucketIndex(itemID)
 		if err != nil {
 			return nil, err
 		}
 
-		bucket, lock, err = s.GetBucket(s.config.ViewPrefix+primaryIndex, shared)
+		bucket, err = s.GetBucket(s.config.ViewPrefix + primaryIndex)
 		if err != nil {
-			s.UnlockBucket(lock, shared)
 			return nil, errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
 		}
 	}
 
 	if bucket == nil {
-		s.UnlockBucket(lock, shared)
 		return nil, nil
 	}
 
-	if lock == nil {
-		lockRaw, _ := s.bucketLocksCache.LoadOrStore(bucket.Key, &sync.RWMutex{})
-		lock = lockRaw.(*sync.RWMutex)
-	}
-
-	shardIndex, err := shardBucketIndex(itemID, int(bucket.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+	shardIndex, err := shardBucketIndex(itemID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
 	if err != nil {
-		s.UnlockBucket(lock, shared)
 		return nil, errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
-	bucketShard, ok := bucket.Buckets[shardIndex]
+	bucketShard, ok := bucket.Data.Buckets[shardIndex]
 	if !ok {
-		s.UnlockBucket(lock, shared)
 		return nil, nil
 	}
 
 	// If the bucket shard is already pushed out, continue the operation in the
 	// external bucket
 	if bucketShard.External {
-		externalBucket, _, err := s.GetBucket(bucketShard.Key, shared)
-
-		// By now, the lock on the external bucket will be held. Release the
-		// lock on the current bucket.
-		s.UnlockBucket(lock, shared)
+		externalBucket, err := s.GetBucket(bucketShard.Key)
 
 		if err != nil {
 			return nil, err
@@ -390,63 +340,42 @@ func (s *StoragePackerV2) getItemFromBucket(bucket *BucketV2, itemID string) (*I
 		return s.getItemFromBucket(externalBucket, itemID)
 	}
 
-	// At this point the item either has to be local to the bucket or it
-	// doesn't exist.
-
-	// Ensure that the lock on the current bucket eventually gets released
-	defer s.UnlockBucket(lock, shared)
-
 	return bucketShard.Items[itemID], nil
 }
 
 // deleteItemFromBucket is a recursive function that finds the bucket holding
-// the item corresponding to the given item ID, and removes the item from it.
-func (s *StoragePackerV2) deleteItemFromBucket(bucket *BucketV2, itemID string) error {
-	var lock *sync.RWMutex
+// the item and removes the item from it
+func (s *StoragePackerV2) deleteItemFromBucket(bucket *PackedBucket, itemID string) error {
 	if bucket == nil {
 		primaryIndex, err := s.primaryBucketIndex(itemID)
 		if err != nil {
 			return err
 		}
 
-		bucket, lock, err = s.GetBucket(s.config.ViewPrefix+primaryIndex, exclusive)
+		bucket, err = s.GetBucket(s.config.ViewPrefix + primaryIndex)
 		if err != nil {
-			s.UnlockBucket(lock, exclusive)
 			return errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
 		}
 	}
 
 	if bucket == nil {
-		// For safety
-		s.UnlockBucket(lock, exclusive)
 		return nil
 	}
 
-	if lock == nil {
-		lockRaw, _ := s.bucketLocksCache.LoadOrStore(bucket.Key, &sync.RWMutex{})
-		lock = lockRaw.(*sync.RWMutex)
-	}
-
-	shardIndex, err := shardBucketIndex(itemID, int(bucket.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+	shardIndex, err := shardBucketIndex(itemID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
 	if err != nil {
-		s.UnlockBucket(lock, exclusive)
 		return errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
-	bucketShard, ok := bucket.Buckets[shardIndex]
+	bucketShard, ok := bucket.Data.Buckets[shardIndex]
 	if !ok {
-		s.UnlockBucket(lock, exclusive)
 		return nil
 	}
 
 	// If the bucket shard is already pushed out, continue the operation in the
 	// pushed out bucket
 	if bucketShard.External {
-		externalBucket, _, err := s.GetBucket(bucketShard.Key, exclusive)
-
-		// By now, the lock on the external bucket will be held. Release the
-		// lock on the current bucket.
-		s.UnlockBucket(lock, exclusive)
+		externalBucket, err := s.GetBucket(bucketShard.Key)
 
 		if err != nil {
 			return err
@@ -458,9 +387,6 @@ func (s *StoragePackerV2) deleteItemFromBucket(bucket *BucketV2, itemID string) 
 
 		return s.deleteItemFromBucket(externalBucket, itemID)
 	}
-
-	// Ensure that the lock on the current bucket eventually gets released
-	defer s.UnlockBucket(lock, exclusive)
 
 	// Delete the item from the respective shard
 	delete(bucketShard.Items, itemID)
@@ -502,47 +428,45 @@ func (s *StoragePackerV2) DeleteItem(itemID string) error {
 
 // bucketExceedsSizeLimit indicates if the given bucket is exceeding the
 // configured size limit on the storage packer
-func (s *StoragePackerV2) bucketExceedsSizeLimit(bucket *BucketV2, item *Item) (bool, error) {
+func (s *StoragePackerV2) bucketExceedsSizeLimit(bucket *PackedBucket, item *Item) (bool, error) {
 	marshaledItem, err := proto.Marshal(item)
 	if err != nil {
 		return false, fmt.Errorf("failed to marshal item: %v", err)
 	}
 
-	size := bucket.Size + int64(len(marshaledItem))
+	size := bucket.Data.Size + int64(len(marshaledItem))
 
 	// Sharding of buckets begins when the size of the bucket reaches 90% of
 	// the maximum allowed size. Hopefully, this compensates for data structure
 	// adjustment costs and also avoids edge cases with respect to the limit
 	// imposed by the underlying physical backend.
-	max := math.Ceil(float64(s.config.BucketMaxSize) * 0.9)
+	max := math.Ceil((float64(s.config.BucketMaxSize) * float64(90)) / float64(100))
 
 	return float64(size) > max, nil
 }
 
 // splitItemsInBucket breaks the list of items in the bucket and divides them
 // such that they belong to their respective bucket shards
-func (s *StoragePackerV2) splitItemsInBucket(bucket *BucketV2) error {
-	if bucket.Buckets == nil {
-		bucket.Buckets = make(map[string]*BucketV2)
+func (s *StoragePackerV2) splitItemsInBucket(bucket *PackedBucket) error {
+	if bucket.Data.Buckets == nil {
+		bucket.Data.Buckets = make(map[string]*BucketV2)
 	}
 
-	for itemID, item := range bucket.Items {
-		shardIndex, err := shardBucketIndex(itemID, int(bucket.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+	for itemID, item := range bucket.Data.Items {
+		shardIndex, err := shardBucketIndex(itemID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
 		if err != nil {
 			return err
 		}
-		bucketShard, ok := bucket.Buckets[shardIndex]
+		bucketShard, ok := bucket.Data.Buckets[shardIndex]
 		if !ok {
-			shardKey := bucket.Key + "/" + shardIndex
-			bucketShard = s.newBucket(shardKey, bucket.Depth+1)
-			bucket.Buckets[shardIndex] = bucketShard
+			shardKey := bucket.Data.Key + "/" + shardIndex
+			bucketShard = s.newBucket(shardKey, bucket.Data.Depth+1)
+			bucket.Data.Buckets[shardIndex] = bucketShard
 		}
 		bucketShard.Items[itemID] = item
 	}
 
-	// All the items are moved into their respective bucket shards. Clear out
-	// the outer items.
-	bucket.Items = nil
+	bucket.Data.Items = nil
 
 	return nil
 }
@@ -598,6 +522,7 @@ func (s *StoragePackerV2) newBucket(key string, depth int32) *BucketV2 {
 		Items:   make(map[string]*Item),
 		Depth:   depth,
 	}
+
 	return bucket
 }
 
@@ -629,21 +554,9 @@ func NewStoragePackerV2(config *Config) (*StoragePackerV2, error) {
 
 	// Create a new packer object for the given view
 	packer := &StoragePackerV2{
-		config:           config,
-		bucketLocksCache: &sync.Map{},
+		config:       config,
+		bucketsCache: radix.New(),
 	}
 
 	return packer, nil
-}
-
-func (s *StoragePackerV2) UnlockBucket(lock *sync.RWMutex, lockType bool) {
-	if lock == nil {
-		return
-	}
-
-	if lockType == exclusive {
-		lock.Unlock()
-	} else {
-		lock.RUnlock()
-	}
 }
