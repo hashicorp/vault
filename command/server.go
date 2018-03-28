@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/hashicorp/vault/helper/logbridge"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -307,10 +306,10 @@ func (c *ServerCommand) Run(args []string) int {
 				Level:  hclog.Trace,
 			})
 		} else {
-			c.logger = logformat.NewVaultLogbridgeLogger(c.logGate, level)
+			c.logger = logformat.NewVaultHCLogger(c.logGate, level)
 		}
 	default:
-		c.logger = logformat.NewVaultLogbridgeLogger(c.logGate, level)
+		c.logger = logformat.NewVaultHCLogger(c.logGate, level)
 	}
 	grpclog.SetLogger(&grpclogFaker{
 		logger: c.logger,
@@ -1463,7 +1462,7 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 }
 
 type grpclogFaker struct {
-	logger *logbridge.Logger
+	logger hclog.Logger
 	log    bool
 }
 

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"

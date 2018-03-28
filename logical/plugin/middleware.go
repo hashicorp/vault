@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // backendPluginClient implements logical.Backend and is the

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/logformat"
@@ -38,7 +38,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 		return mounts.Entries
 	}
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	rb := NewRollbackManager(logger, mountsFunc, router, context.Background())
 	rb.period = 10 * time.Millisecond

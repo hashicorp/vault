@@ -7,9 +7,9 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
-	log "github.com/mgutz/logxi/v1"
 )
 
 type backendEntry struct {

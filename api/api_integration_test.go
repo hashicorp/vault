@@ -18,10 +18,10 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 
+	logxi "github.com/hashicorp/go-hclog"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
-	logxi "github.com/mgutz/logxi/v1"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 

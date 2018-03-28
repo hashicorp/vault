@@ -12,9 +12,9 @@ import (
 	"github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // Verify MSSQLBackend satisfies the correct interfaces

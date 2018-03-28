@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"cloud.google.com/go/storage"
 	"github.com/hashicorp/vault/helper/logformat"

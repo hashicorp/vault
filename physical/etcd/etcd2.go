@@ -14,8 +14,8 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/coreos/etcd/client"
 	"github.com/coreos/etcd/pkg/transport"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 const (

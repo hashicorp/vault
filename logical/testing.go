@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logformat"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // TestRequest is a helper to create a purely in-memory Request struct.
@@ -76,10 +76,10 @@ func TestSystemView() *StaticSystemView {
 
 func TestBackendConfig() *BackendConfig {
 	bc := &BackendConfig{
-		Logger: logformat.NewVaultLogger(log.LevelTrace),
+		Logger: logformat.NewVaultLogger(log.Trace),
 		System: TestSystemView(),
 	}
-	bc.Logger.SetLevel(log.LevelTrace)
+	//bc.Logger.SetLevel(log.Trace)
 
 	return bc
 }

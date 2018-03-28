@@ -5,9 +5,9 @@ import (
 	"errors"
 	"sync"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // DatabasePluginClient embeds a databasePluginRPCClient and wraps it's Close

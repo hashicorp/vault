@@ -3,7 +3,7 @@ package logical
 import (
 	"context"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 )
 
 // BackendType is the type of backend that is being implemented

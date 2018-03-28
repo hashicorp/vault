@@ -9,7 +9,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/helper/logbridge"
+	//"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
 )
@@ -37,7 +37,8 @@ func (b BackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) err
 		factory: b.Factory,
 		// We pass the logger down into the backend so go-plugin will forward
 		// logs for us.
-		logger: logbridge.NewLogger(b.Logger).LogxiLogger(),
+		//logger: logbridge.NewLogger(b.Logger).LogxiLogger(),
+		logger: b.Logger,
 	})
 	return nil
 }

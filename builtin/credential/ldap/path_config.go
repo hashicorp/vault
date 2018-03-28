@@ -13,11 +13,11 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-ldap/ldap"
+	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func pathConfig(b *backend) *framework.Path {

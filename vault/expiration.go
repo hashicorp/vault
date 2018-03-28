@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
@@ -101,7 +101,8 @@ func NewExpirationManager(c *Core, view *BarrierView) *ExpirationManager {
 	}
 
 	if exp.logger == nil {
-		exp.logger = log.New("expiration_manager")
+		opts := log.LoggerOptions{Name: "expiration_manager"}
+		exp.logger = log.New(&opts)
 	}
 
 	return exp

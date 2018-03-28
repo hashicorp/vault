@@ -17,7 +17,7 @@ import (
 
 	"golang.org/x/net/http2"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"crypto/tls"
 	"crypto/x509"
