@@ -71,6 +71,30 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 	dbTable := database + "." + table
 
+       maxIdleConnStr, ok := conf["max_idle_connections"]
+	var maxIdleConnInt int = nil
+	if ok {
+		maxParmaxIdleConnInt, err = strconv.Atoi(maxIdleConnStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_idle_connections parameter: {{err}}", err)
+		}
+		if logger.IsDebug() {
+			logger.Debug("mysql: max_idle_connections set", "max_idle_connections", maxIdleConnInt)
+		}
+	}
+
+       maxConnLifeStr, ok := conf["max_connection_lifetime"]
+	var maxConnLifeInt int = nil
+	if ok {
+		maxConnLifeInt, err = strconv.Atoi(maxConnLifeStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_connection_lifetime parameter: {{err}}", err)
+		}
+		if logger.IsDebug() {
+			logger.Debug("mysql: max_connection_lifetime set", "max_connection_lifetime", maxConnLifeInt)
+		}
+	}
+
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
 	if ok {
@@ -101,9 +125,13 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to mysql: %v", err)
 	}
-
 	db.SetMaxOpenConns(maxParInt)
-
+	if maxIdleConnInt != nil {
+		db.SetMaxIdleConns(maxIdleConnInt)
+	}
+	if maxConnLifeInt != nil {
+		db.SetConnMaxLifetime(time.Second * maxConnLifeInt)
+	}
 	// Check schema exists
 	var schemaExist bool
 	schemaRows, err := db.Query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?", database)
