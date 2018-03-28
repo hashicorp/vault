@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/hashicorp/vault/helper/logbridge"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -33,7 +34,6 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/gated-writer"
-	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -62,7 +62,7 @@ type ServerCommand struct {
 	WaitGroup *sync.WaitGroup
 
 	logGate *gatedwriter.Writer
-	logger  *logbridge.Logger
+	logger  hclog.Logger
 
 	cleanupGuard sync.Once
 
@@ -301,11 +301,11 @@ func (c *ServerCommand) Run(args []string) int {
 	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
 		if c.flagDevThreeNode || c.flagDevFourCluster {
-			c.logger = logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+			c.logger = hclog.New(&hclog.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
 				Level:  hclog.Trace,
-			}))
+			})
 		} else {
 			c.logger = logformat.NewVaultLogbridgeLogger(c.logGate, level)
 		}
@@ -345,7 +345,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 	for _, path := range c.flagConfigs {
-		current, err := server.LoadConfig(path, c.logger.LogxiLogger())
+		current, err := server.LoadConfig(path, c.logger)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error loading configuration from %s: %s", path, err))
 			return 1
@@ -397,7 +397,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	backend, err := factory(config.Storage.Config, c.logger.LogxiLogger())
+	backend, err := factory(config.Storage.Config, c.logger)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
 		return 1
@@ -433,7 +433,7 @@ func (c *ServerCommand) Run(args []string) int {
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
-		Logger:             c.logger.LogxiLogger(),
+		Logger:             c.logger,
 		DisableCache:       config.DisableCache,
 		DisableMlock:       config.DisableMlock,
 		MaxLeaseTTL:        config.MaxLeaseTTL,
@@ -454,9 +454,9 @@ func (c *ServerCommand) Run(args []string) int {
 		if c.flagDevLatency > 0 {
 			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
 			if _, txnOK := backend.(physical.Transactional); txnOK {
-				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger.LogxiLogger())
+				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
 			} else {
-				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger.LogxiLogger())
+				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
 			}
 		}
 	}
@@ -476,7 +476,7 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 
 		}
-		habackend, err := factory(config.HAStorage.Config, c.logger.LogxiLogger())
+		habackend, err := factory(config.HAStorage.Config, c.logger)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf(
 				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err))

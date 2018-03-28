@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logbridge"
 	"io"
 	"os"
 	"strings"
@@ -21,7 +20,7 @@ const (
 	timeFormat = "2006/01/02 15:04:05.000000"
 )
 
-func NewVaultLogbridgeLogger(w io.Writer, level hclog.Level) *logbridge.Logger {
+func NewVaultLogbridgeLogger(w io.Writer, level hclog.Level) hclog.Logger {
 	opts := &hclog.LoggerOptions{
 		Level:      level,
 		Output:     w,
@@ -30,8 +29,7 @@ func NewVaultLogbridgeLogger(w io.Writer, level hclog.Level) *logbridge.Logger {
 	if useJson() {
 		opts.JSONFormat = true
 	}
-	hcLogger := hclog.New(opts)
-	return logbridge.NewLogger(hcLogger)
+	return hclog.New(opts)
 }
 
 // NewVaultLogger creates a new logger with the specified level and a Vault
