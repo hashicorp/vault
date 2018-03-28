@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	log "github.com/mgutz/logxi/v1"
@@ -20,8 +21,13 @@ type Database interface {
 	RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error
 	RevokeUser(ctx context.Context, statements Statements, username string) error
 
-	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) error
+	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
+
+	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
 	Close() error
+
+	// DEPRECATED, will be removed in 0.12
+	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)
 }
 
 // PluginFactory is used to build plugin database types. It wraps the database
@@ -40,7 +46,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		// from the pluginRunner. Then cast it to a Database.
 		dbRaw, err := pluginRunner.BuiltinFactory()
 		if err != nil {
-			return nil, fmt.Errorf("error getting plugin type: %s", err)
+			return nil, errwrap.Wrapf("error initializing plugin: {{err}}", err)
 		}
 
 		var ok bool
@@ -71,7 +77,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 
 	typeStr, err := db.Type()
 	if err != nil {
-		return nil, fmt.Errorf("error getting plugin type: %s", err)
+		return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
 	}
 
 	// Wrap with metrics middleware
@@ -113,7 +119,11 @@ type DatabasePlugin struct {
 }
 
 func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	return &databasePluginRPCServer{impl: d.impl}, nil
+	impl := &DatabaseErrorSanitizerMiddleware{
+		next: d.impl,
+	}
+
+	return &databasePluginRPCServer{impl: impl}, nil
 }
 
 func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
@@ -121,7 +131,11 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 }
 
 func (d DatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
-	RegisterDatabaseServer(s, &gRPCServer{impl: d.impl})
+	impl := &DatabaseErrorSanitizerMiddleware{
+		next: d.impl,
+	}
+
+	RegisterDatabaseServer(s, &gRPCServer{impl: impl})
 	return nil
 }
 

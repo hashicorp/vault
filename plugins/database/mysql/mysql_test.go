@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
+
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
@@ -104,17 +104,13 @@ func TestMySQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(MetadataLen, MetadataLen, UsernameLen)
-	dbRaw, _ := f()
-	db := dbRaw.(*MySQL)
-	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
-
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new(MetadataLen, MetadataLen, UsernameLen)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	if !connProducer.Initialized {
+	if !db.Initialized {
 		t.Fatal("Database should be initalized")
 	}
 
@@ -129,7 +125,7 @@ func TestMySQL_Initialize(t *testing.T) {
 		"max_open_connections": "5",
 	}
 
-	err = db.Initialize(context.Background(), connectionDetails, true)
+	_, err = db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -143,11 +139,8 @@ func TestMySQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(MetadataLen, MetadataLen, UsernameLen)
-	dbRaw, _ := f()
-	db := dbRaw.(*MySQL)
-
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new(MetadataLen, MetadataLen, UsernameLen)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -164,7 +157,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testMySQLRoleWildCard,
+		Creation: []string{testMySQLRoleWildCard},
 	}
 
 	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
@@ -187,7 +180,7 @@ func TestMySQL_CreateUser(t *testing.T) {
 	}
 
 	// Test with a manually prepare statement
-	statements.CreationStatements = testMySQLRolePreparedStmt
+	statements.Creation = []string{testMySQLRolePreparedStmt}
 
 	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
@@ -208,11 +201,8 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
-	dbRaw, _ := f()
-	db := dbRaw.(*MySQL)
-
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new(credsutil.NoneLength, LegacyMetadataLen, LegacyUsernameLen)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -229,7 +219,7 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testMySQLRoleWildCard,
+		Creation: []string{testMySQLRoleWildCard},
 	}
 
 	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
@@ -252,6 +242,42 @@ func TestMySQL_CreateUser_Legacy(t *testing.T) {
 	}
 }
 
+func TestMySQL_RotateRootCredentials(t *testing.T) {
+	cleanup, connURL := prepareMySQLTestContainer(t)
+	defer cleanup()
+
+	connURL = strings.Replace(connURL, "root:secret", `{{username}}:{{password}}`, -1)
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+		"username":       "root",
+		"password":       "secret",
+	}
+
+	db := new(MetadataLen, MetadataLen, UsernameLen)
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if !db.Initialized {
+		t.Fatal("Database should be initalized")
+	}
+
+	newConf, err := db.RotateRootCredentials(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if newConf["password"] == "secret" {
+		t.Fatal("password was not updated")
+	}
+
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
 func TestMySQL_RevokeUser(t *testing.T) {
 	cleanup, connURL := prepareMySQLTestContainer(t)
 	defer cleanup()
@@ -260,17 +286,14 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	f := New(MetadataLen, MetadataLen, UsernameLen)
-	dbRaw, _ := f()
-	db := dbRaw.(*MySQL)
-
-	err := db.Initialize(context.Background(), connectionDetails, true)
+	db := new(MetadataLen, MetadataLen, UsernameLen)
+	_, err := db.Init(context.Background(), connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	statements := dbplugin.Statements{
-		CreationStatements: testMySQLRoleWildCard,
+		Creation: []string{testMySQLRoleWildCard},
 	}
 
 	usernameConfig := dbplugin.UsernameConfig{
@@ -297,7 +320,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		t.Fatal("Credentials were not revoked")
 	}
 
-	statements.CreationStatements = testMySQLRoleWildCard
+	statements.Creation = []string{testMySQLRoleWildCard}
 	username, password, err = db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -308,7 +331,7 @@ func TestMySQL_RevokeUser(t *testing.T) {
 	}
 
 	// Test custom revoke statements
-	statements.RevocationStatements = testMySQLRevocationSQL
+	statements.Revocation = []string{testMySQLRevocationSQL}
 	err = db.RevokeUser(context.Background(), statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)

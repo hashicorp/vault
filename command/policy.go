@@ -21,7 +21,7 @@ func (c *PolicyCommand) Help() string {
 	helpText := `
 Usage: vault policy <subcommand> [options] [args]
 
-  This command groups subcommands for interacting with policies. Users can
+  This command groups subcommands for interacting with policies.
   Users can write, read, and list policies in Vault.
 
   List all enabled policies:

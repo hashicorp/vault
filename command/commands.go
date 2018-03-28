@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -32,6 +34,7 @@ import (
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
+	credAzure "github.com/hashicorp/vault-plugin-auth-azure/plugin"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
@@ -78,6 +81,8 @@ const (
 	flagNameAuditNonHMACResponseKeys = "audit-non-hmac-response-keys"
 	// flagListingVisibility is the flag to toggle whether to show the mount in the UI-specific listing endpoint
 	flagNameListingVisibility = "listing-visibility"
+	// flagNamePassthroughRequestHeaders is the flag name used to set passthrough request headers to the backend
+	flagNamePassthroughRequestHeaders = "passthrough-request-headers"
 )
 
 var (
@@ -91,6 +96,7 @@ var (
 		"app-id":     credAppId.Factory,
 		"approle":    credAppRole.Factory,
 		"aws":        credAws.Factory,
+		"azure":      credAzure.Factory,
 		"centrify":   credCentrify.Factory,
 		"cert":       credCert.Factory,
 		"gcp":        credGcp.Factory,
@@ -108,6 +114,8 @@ var (
 		"cassandra":  cassandra.Factory,
 		"consul":     consul.Factory,
 		"database":   database.Factory,
+		"gcp":        gcp.Factory,
+		"kv":         kv.Factory,
 		"mongodb":    mongodb.Factory,
 		"mssql":      mssql.Factory,
 		"mysql":      mysql.Factory,
@@ -670,6 +678,90 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 					UI:          ui,
 					tokenHelper: runOpts.TokenHelper,
 					flagAddress: runOpts.Address,
+				},
+			}, nil
+		},
+		"kv": func() (cli.Command, error) {
+			return &KVCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv put": func() (cli.Command, error) {
+			return &KVPutCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv get": func() (cli.Command, error) {
+			return &KVGetCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv delete": func() (cli.Command, error) {
+			return &KVDeleteCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv list": func() (cli.Command, error) {
+			return &KVListCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv destroy": func() (cli.Command, error) {
+			return &KVDestroyCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv undelete": func() (cli.Command, error) {
+			return &KVUndeleteCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv enable-versioning": func() (cli.Command, error) {
+			return &KVEnableVersioningCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata": func() (cli.Command, error) {
+			return &KVMetadataCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata put": func() (cli.Command, error) {
+			return &KVMetadataPutCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata get": func() (cli.Command, error) {
+			return &KVMetadataGetCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
+				},
+			}, nil
+		},
+		"kv metadata delete": func() (cli.Command, error) {
+			return &KVMetadataDeleteCommand{
+				BaseCommand: &BaseCommand{
+					UI: ui,
 				},
 			}, nil
 		},

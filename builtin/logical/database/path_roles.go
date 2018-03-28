@@ -36,26 +36,26 @@ func pathRoles(b *databaseBackend) *framework.Path {
 				Description: "Name of the database this role acts on.",
 			},
 			"creation_statements": {
-				Type: framework.TypeString,
+				Type: framework.TypeStringSlice,
 				Description: `Specifies the database statements executed to
 				create and configure a user. See the plugin's API page for more
 				information on support and formatting for this parameter.`,
 			},
 			"revocation_statements": {
-				Type: framework.TypeString,
+				Type: framework.TypeStringSlice,
 				Description: `Specifies the database statements to be executed
 				to revoke a user. See the plugin's API page for more information
 				on support and formatting for this parameter.`,
 			},
 			"renew_statements": {
-				Type: framework.TypeString,
+				Type: framework.TypeStringSlice,
 				Description: `Specifies the database statements to be executed
 				to renew a user. Not every plugin type will support this
 				functionality. See the plugin's API page for more information on
 				support and formatting for this parameter. `,
 			},
 			"rollback_statements": {
-				Type: framework.TypeString,
+				Type: framework.TypeStringSlice,
 				Description: `Specifies the database statements to be executed
 				rollback a create operation in the event of an error. Not every
 				plugin type will support this functionality. See the plugin's
@@ -109,10 +109,10 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"db_name":               role.DBName,
-				"creation_statements":   role.Statements.CreationStatements,
-				"revocation_statements": role.Statements.RevocationStatements,
-				"rollback_statements":   role.Statements.RollbackStatements,
-				"renew_statements":      role.Statements.RenewStatements,
+				"creation_statements":   role.Statements.Creation,
+				"revocation_statements": role.Statements.Revocation,
+				"rollback_statements":   role.Statements.Rollback,
+				"renew_statements":      role.Statements.Renewal,
 				"default_ttl":           role.DefaultTTL.Seconds(),
 				"max_ttl":               role.MaxTTL.Seconds(),
 			},
@@ -144,10 +144,10 @@ func (b *databaseBackend) pathRoleCreate() framework.OperationFunc {
 		}
 
 		// Get statements
-		creationStmts := data.Get("creation_statements").(string)
-		revocationStmts := data.Get("revocation_statements").(string)
-		rollbackStmts := data.Get("rollback_statements").(string)
-		renewStmts := data.Get("renew_statements").(string)
+		creationStmts := data.Get("creation_statements").([]string)
+		revocationStmts := data.Get("revocation_statements").([]string)
+		rollbackStmts := data.Get("rollback_statements").([]string)
+		renewStmts := data.Get("renew_statements").([]string)
 
 		// Get TTLs
 		defaultTTLRaw := data.Get("default_ttl").(int)
@@ -156,10 +156,10 @@ func (b *databaseBackend) pathRoleCreate() framework.OperationFunc {
 		maxTTL := time.Duration(maxTTLRaw) * time.Second
 
 		statements := dbplugin.Statements{
-			CreationStatements:   creationStmts,
-			RevocationStatements: revocationStmts,
-			RollbackStatements:   rollbackStmts,
-			RenewStatements:      renewStmts,
+			Creation:   creationStmts,
+			Revocation: revocationStmts,
+			Rollback:   rollbackStmts,
+			Renewal:    renewStmts,
 		}
 
 		// Store it
@@ -181,10 +181,10 @@ func (b *databaseBackend) pathRoleCreate() framework.OperationFunc {
 }
 
 type roleEntry struct {
-	DBName     string              `json:"db_name" mapstructure:"db_name" structs:"db_name"`
-	Statements dbplugin.Statements `json:"statements" mapstructure:"statements" structs:"statements"`
-	DefaultTTL time.Duration       `json:"default_ttl" mapstructure:"default_ttl" structs:"default_ttl"`
-	MaxTTL     time.Duration       `json:"max_ttl" mapstructure:"max_ttl" structs:"max_ttl"`
+	DBName     string              `json:"db_name"`
+	Statements dbplugin.Statements `json:"statements"`
+	DefaultTTL time.Duration       `json:"default_ttl"`
+	MaxTTL     time.Duration       `json:"max_ttl"`
 }
 
 const pathRoleHelpSyn = `
