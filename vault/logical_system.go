@@ -2773,20 +2773,28 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 		return logical.ErrorResponse("header and values must be specified"), logical.ErrInvalidRequest
 	}
 
-	if strings.HasPrefix(strings.ToLower(header), "x-vault-") {
+	lowerHeader := strings.ToLower(header)
+	if strings.HasPrefix(lowerHeader, "x-vault-") {
 		return logical.ErrorResponse("X-Vault headers cannot be set"), logical.ErrInvalidRequest
 	}
 
 	// Translate the list of values to the valid header string
-	value := http.Header{
-		header: values,
+	value := http.Header{}
+	for _, v := range values {
+		value.Add(header, v)
 	}
 	err := b.Core.uiConfig.SetHeader(ctx, header, value.Get(header))
 	if err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	// Warn when overriding the CSP
+	resp := &logical.Response{}
+	if lowerHeader == "content-security-policy" {
+		resp.AddWarning("overriding default Content-Security-Policy which is secure by default, proceed with caution")
+	}
+
+	return resp, nil
 }
 
 func (b *SystemBackend) handleConfigUIHeadersDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -18,14 +17,6 @@ const (
 	uiConfigPlaintextKey = "config_plaintext"
 )
 
-var (
-	staticHeaders = http.Header{
-		"Content-Security-Policy": {
-			"default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action 'none'; frame-ancestors 'none'",
-		},
-	}
-)
-
 // UIConfig contains UI configuration. This takes both a physical view and a barrier view
 // because it is stored in both plaintext and encrypted to allow for getting the header
 // values before the barrier is unsealed
@@ -34,15 +25,20 @@ type UIConfig struct {
 	physicalStorage physical.Backend
 	barrierStorage  logical.Storage
 
-	enabled bool
+	enabled        bool
+	defaultHeaders http.Header
 }
 
 // NewUIConfig creates a new UI config
 func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
+	defaultHeaders := http.Header{}
+	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action 'none'; frame-ancestors 'none'")
+
 	return &UIConfig{
 		physicalStorage: physicalStorage,
 		barrierStorage:  barrierStorage,
 		enabled:         enabled,
+		defaultHeaders:  defaultHeaders,
 	}
 }
 
@@ -67,9 +63,11 @@ func (c *UIConfig) Headers(ctx context.Context) (http.Header, error) {
 		headers = config.Headers
 	}
 
-	for k := range staticHeaders {
-		v := staticHeaders.Get(k)
-		headers.Set(k, v)
+	for k := range c.defaultHeaders {
+		if headers.Get(k) == "" {
+			v := c.defaultHeaders.Get(k)
+			headers.Set(k, v)
+		}
 	}
 	return headers, nil
 }
@@ -112,10 +110,6 @@ func (c *UIConfig) GetHeader(ctx context.Context, header string) (string, error)
 
 // SetHeader sets the value for the given header
 func (c *UIConfig) SetHeader(ctx context.Context, header, value string) error {
-	if val := staticHeaders.Get(header); val != "" {
-		return fmt.Errorf("the header %s is not settable", header)
-	}
-
 	c.l.Lock()
 	defer c.l.Unlock()
 
@@ -125,13 +119,10 @@ func (c *UIConfig) SetHeader(ctx context.Context, header, value string) error {
 	}
 	if config == nil {
 		config = &uiConfigEntry{
-			Headers: http.Header{
-				header: {value},
-			},
+			Headers: http.Header{},
 		}
-	} else {
-		config.Headers.Set(header, value)
 	}
+	config.Headers.Set(header, value)
 	return c.save(ctx, config)
 }
 
