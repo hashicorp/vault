@@ -919,7 +919,7 @@ type TestClusterOptions struct {
 	BaseListenAddress  string
 	NumCores           int
 	SealFunc           func() Seal
-	RawLogger          interface{}
+	Logger             log.Logger
 	TempDir            string
 	CACert             []byte
 	CAKey              *ecdsa.PrivateKey
@@ -1272,14 +1272,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			coreConfig.Seal = opts.SealFunc()
 		}
 
-		if opts != nil && opts.RawLogger != nil {
-			switch opts.RawLogger.(type) {
-			// TODO: What is going on here?
-			//case *logbridge.Logger:
-			//	coreConfig.Logger = opts.RawLogger.(*logbridge.Logger).Named(fmt.Sprintf("core%d", i)).LogxiLogger()
-			//case *logbridge.LogxiLogger:
-			//	coreConfig.Logger = opts.RawLogger.(*logbridge.LogxiLogger).Named(fmt.Sprintf("core%d", i))
-			}
+		if opts != nil && opts.Logger != nil {
+			coreConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
 		}
 
 		c, err := NewCore(coreConfig)

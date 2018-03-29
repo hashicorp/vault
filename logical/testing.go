@@ -79,7 +79,6 @@ func TestBackendConfig() *BackendConfig {
 		Logger: logformat.NewVaultLogger(log.Trace),
 		System: TestSystemView(),
 	}
-	//bc.Logger.SetLevel(log.Trace)
 
 	return bc
 }

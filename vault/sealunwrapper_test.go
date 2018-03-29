@@ -43,7 +43,7 @@ func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Lo
 		Physical: phys,
 	}
 	cluster := NewTestCluster(t, base, &TestClusterOptions{
-		RawLogger: logger,
+		Logger: logger,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
