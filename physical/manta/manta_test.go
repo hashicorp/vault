@@ -49,7 +49,7 @@ func TestMantaBackend(t *testing.T) {
 		t.Fatalf("failed initialising Storage client: %s", err.Error())
 	}
 
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 	mb := &MantaBackend{
 		client:     client,
 		directory:  testHarnessBucket,

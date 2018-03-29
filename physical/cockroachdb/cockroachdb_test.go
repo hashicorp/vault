@@ -72,7 +72,7 @@ func TestCockroachDBBackend(t *testing.T) {
 	defer cleanup()
 
 	// Run vault tests
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	b, err := NewCockroachDBBackend(map[string]string{
 		"connection_url": connURL,

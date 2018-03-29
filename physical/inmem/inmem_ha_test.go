@@ -9,7 +9,7 @@ import (
 )
 
 func TestInmemHA(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	inm, err := NewInmemHA(nil, logger)
 	if err != nil {

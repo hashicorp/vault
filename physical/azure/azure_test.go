@@ -29,7 +29,7 @@ func TestAzureBackend(t *testing.T) {
 	cleanupClient, _ := storage.NewBasicClient(accountName, accountKey)
 	cleanupClient.HTTPClient = cleanhttp.DefaultPooledClient()
 
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	backend, err := NewAzureBackend(map[string]string{
 		"container":   name,

@@ -48,7 +48,7 @@ func TestDynamoDBBackend(t *testing.T) {
 		})
 	}()
 
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	b, err := NewDynamoDBBackend(map[string]string{
 		"access_key":    creds.AccessKeyID,
@@ -95,7 +95,7 @@ func TestDynamoDBHABackend(t *testing.T) {
 		})
 	}()
 
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 	b, err := NewDynamoDBBackend(map[string]string{
 		"access_key":    creds.AccessKeyID,
 		"secret_key":    creds.SecretAccessKey,

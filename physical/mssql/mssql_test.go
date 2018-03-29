@@ -31,7 +31,7 @@ func TestMSSQLBackend(t *testing.T) {
 	password := os.Getenv("MSSQL_PASSWORD")
 
 	// Run vault tests
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	b, err := NewMSSQLBackend(map[string]string{
 		"server":   server,

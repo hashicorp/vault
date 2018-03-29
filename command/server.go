@@ -290,7 +290,7 @@ func (c *ServerCommand) Run(args []string) int {
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
 	case "trace":
-		level = log.Trace
+		level = log.Debug
 	case "debug":
 		level = log.Debug
 	case "info", "":
@@ -314,7 +314,7 @@ func (c *ServerCommand) Run(args []string) int {
 			c.logger = log.New(&log.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
-				Level:  log.Trace,
+				Level:  log.Debug,
 			})
 		} else {
 			c.logger = logformat.NewVaultHCLogger(c.logGate, level)
@@ -713,8 +713,8 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 	c.reloadFuncsLock.Unlock()
 	if !disableClustering {
-		if c.logger.IsTrace() {
-			c.logger.Trace("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
+		if c.logger.IsDebug() {
+			c.logger.Debug("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
 		}
 	}
 
@@ -1572,19 +1572,19 @@ func (g *grpclogFaker) Fatalln(args ...interface{}) {
 }
 
 func (g *grpclogFaker) Print(args ...interface{}) {
-	if g.log && g.logger.IsTrace() {
-		g.logger.Trace(fmt.Sprint(args...))
+	if g.log && g.logger.IsDebug() {
+		g.logger.Debug(fmt.Sprint(args...))
 	}
 }
 
 func (g *grpclogFaker) Printf(format string, args ...interface{}) {
-	if g.log && g.logger.IsTrace() {
-		g.logger.Trace(fmt.Sprintf(format, args...))
+	if g.log && g.logger.IsDebug() {
+		g.logger.Debug(fmt.Sprintf(format, args...))
 	}
 }
 
 func (g *grpclogFaker) Println(args ...interface{}) {
-	if g.log && g.logger.IsTrace() {
-		g.logger.Trace(fmt.Sprintln(args...))
+	if g.log && g.logger.IsDebug() {
+		g.logger.Debug(fmt.Sprintln(args...))
 	}
 }

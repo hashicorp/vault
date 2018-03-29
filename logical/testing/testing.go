@@ -135,7 +135,7 @@ func Test(tt TestT, c TestCase) {
 	}
 
 	// Create an in-memory Vault core
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	phys, err := inmem.NewInmem(nil, logger)
 	if err != nil {

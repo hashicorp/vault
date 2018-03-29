@@ -71,7 +71,7 @@ func TestGCSBackend(t *testing.T) {
 		}
 	}()
 
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	b, err := NewGCSBackend(map[string]string{
 		"bucket":           bucketName,

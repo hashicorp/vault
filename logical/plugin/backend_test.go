@@ -156,7 +156,7 @@ func testBackend(t *testing.T) (logical.Backend, func()) {
 	b := raw.(logical.Backend)
 
 	err = b.Setup(context.Background(), &logical.BackendConfig{
-		Logger: logformat.NewVaultLogger(log.Trace),
+		Logger: logformat.NewVaultLogger(log.Debug),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 300 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,

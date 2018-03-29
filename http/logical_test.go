@@ -85,7 +85,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	defer ln2.Close()
 
 	// Create an HA Vault
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -137,9 +137,9 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	resp := testHttpPutDisableRedirect(t, root, addr2+"/v1/secret/foo", map[string]interface{}{
 		"data": "bar",
 	})
-	logger.Trace("307 test one starting")
+	logger.Debug("307 test one starting")
 	testResponseStatus(t, resp, 307)
-	logger.Trace("307 test one stopping")
+	logger.Debug("307 test one stopping")
 
 	//// READ to standby
 	resp = testHttpGet(t, root, addr2+"/v1/auth/token/lookup-self")
@@ -181,9 +181,9 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 
 	//// DELETE to standby
 	resp = testHttpDeleteDisableRedirect(t, root, addr2+"/v1/secret/foo")
-	logger.Trace("307 test two starting")
+	logger.Debug("307 test two starting")
 	testResponseStatus(t, resp, 307)
-	logger.Trace("307 test two stopping")
+	logger.Debug("307 test two stopping")
 }
 
 func TestLogical_CreateToken(t *testing.T) {

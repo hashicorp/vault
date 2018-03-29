@@ -28,7 +28,7 @@ func Serve(opts *ServeOpts) error {
 	logger := opts.Logger
 	if logger == nil {
 		logger = log.New(&log.LoggerOptions{
-			Level:      log.Trace,
+			Level:      log.Debug,
 			Output:     os.Stderr,
 			JSONFormat: true,
 		})

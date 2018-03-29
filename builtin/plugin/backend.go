@@ -86,7 +86,7 @@ type backend struct {
 }
 
 func (b *backend) reloadBackend(ctx context.Context) error {
-	b.Logger().Trace("plugin: reloading plugin backend", "plugin", b.config.Config["plugin_name"])
+	b.Logger().Debug("plugin: reloading plugin backend", "plugin", b.config.Config["plugin_name"])
 	return b.startBackend(ctx)
 }
 

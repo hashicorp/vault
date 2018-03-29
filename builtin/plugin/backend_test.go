@@ -80,7 +80,7 @@ func testConfig(t *testing.T) (*logical.BackendConfig, func()) {
 	sys := vault.TestDynamicSystemView(core.Core)
 
 	config := &logical.BackendConfig{
-		Logger: logformat.NewVaultLogger(log.Trace),
+		Logger: logformat.NewVaultLogger(log.Debug),
 		System: sys,
 		Config: map[string]string{
 			"plugin_name": "mock-plugin",

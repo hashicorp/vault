@@ -65,7 +65,7 @@ func TestSwiftBackend(t *testing.T) {
 		}
 	}()
 
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	b, err := NewSwiftBackend(map[string]string{
 		"username":       username,

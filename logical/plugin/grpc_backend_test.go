@@ -143,7 +143,7 @@ func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 		"backend": &BackendPlugin{
 			Factory: mock.Factory,
 			Logger: log.New(&log.LoggerOptions{
-				Level:      log.Trace,
+				Level:      log.Debug,
 				Output:     os.Stderr,
 				JSONFormat: true,
 			}),
@@ -162,7 +162,7 @@ func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 	b := raw.(logical.Backend)
 
 	err = b.Setup(context.Background(), &logical.BackendConfig{
-		Logger: logformat.NewVaultLogger(log.Trace),
+		Logger: logformat.NewVaultLogger(log.Debug),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 300 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,

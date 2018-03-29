@@ -17,7 +17,7 @@ func TestEtcd3Backend(t *testing.T) {
 		t.Skipf("Skipped. No etcd3 server found")
 	}
 
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	b, err := NewEtcdBackend(map[string]string{
 		"path":     fmt.Sprintf("/vault-%d", time.Now().Unix()),

@@ -87,7 +87,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 	}
 
 	// Wrap with tracing middleware
-	if logger.IsTrace() {
+	if logger.IsDebug() {
 		db = &databaseTracingMiddleware{
 			transport: transport,
 			next:      db,

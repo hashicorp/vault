@@ -51,7 +51,7 @@ func TestEtcdBackend(t *testing.T) {
 
 	// Generate new etcd backend. The etcd address is read from ETCD_ADDR. No
 	// need to provide it explicitly.
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logformat.NewVaultLogger(log.Debug)
 
 	b, err := NewEtcdBackend(map[string]string{
 		"path": randPath,
