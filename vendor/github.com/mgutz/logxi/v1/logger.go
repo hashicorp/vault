@@ -84,7 +84,7 @@ const (
 	// LevelDebug is debug level
 	LevelDebug = 7
 
-	// Trace is trace level and displays file and line in terminal
+	// LevelTrace is trace level and displays file and line in terminal
 	LevelTrace = 10
 
 	// LevelAll is all levels

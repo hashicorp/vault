@@ -36,7 +36,6 @@ func (b BackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) err
 		factory: b.Factory,
 		// We pass the logger down into the backend so go-plugin will forward
 		// logs for us.
-		//logger: logbridge.NewLogger(b.Logger).LogxiLogger(),
 		logger: b.Logger,
 	})
 	return nil
