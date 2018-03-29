@@ -129,7 +129,7 @@ environment variable. Chef pulls the `SecretID` from Vault.
 Provisioning for this demo happens in 2 phases:
 
 - [Phase 1 - Provision our Vault plus Chef Server](#phase1)
-    - [Step 1: Provision the Vault and Chef Server](#step-1-provision-the-vault--chef-server)
+    - [Step 1: Provision the Vault and Chef Server](#step-1-provision-the-vault-and-chef-server)
     - [Step 2: Initialize and Unseal Vault](#step-2-initialize-and-unseal-vault)
     - [Step 3: AppRole Setup](#step-3-approle-setup)
     - [Step 4: Configure Tokens for Terraform and Chef](#step-4-configure-tokens-for-terraform-and-chef)
