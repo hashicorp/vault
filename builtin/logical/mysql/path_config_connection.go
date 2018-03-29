@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/fatih/structs"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -63,10 +62,12 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, err
 	}
-	config.ConnectionURL = ""
 
 	return &logical.Response{
-		Data: structs.New(config).Map(),
+		Data: map[string]interface{}{
+			"max_open_connections": config.MaxOpenConnections,
+			"max_idle_connections": config.MaxIdleConnections,
+		},
 	}, nil
 }
 
@@ -134,7 +135,7 @@ func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request,
 }
 
 type connectionConfig struct {
-	ConnectionURL string `json:"connection_url" structs:"connection_url,omitempty" mapstructure:"connection_url"`
+	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
 	// Deprecate "value" in coming releases
 	ConnectionString   string `json:"value" structs:"value" mapstructure:"value"`
 	MaxOpenConnections int    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`

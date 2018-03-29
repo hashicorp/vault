@@ -11,7 +11,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/fatih/structs"
 	"github.com/go-ldap/ldap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/tlsutil"
@@ -173,12 +172,25 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	cfg.BindPassword = ""
-
 	resp := &logical.Response{
-		Data: structs.New(cfg).Map(),
+		Data: map[string]interface{}{
+			"url":             cfg.Url,
+			"userdn":          cfg.UserDN,
+			"groupdn":         cfg.GroupDN,
+			"groupfilter":     cfg.GroupFilter,
+			"groupattr":       cfg.GroupAttr,
+			"upndomain":       cfg.UPNDomain,
+			"userattr":        cfg.UserAttr,
+			"certificate":     cfg.Certificate,
+			"insecure_tls":    cfg.InsecureTLS,
+			"starttls":        cfg.StartTLS,
+			"binddn":          cfg.BindDN,
+			"deny_null_bind":  cfg.DenyNullBind,
+			"discoverdn":      cfg.DiscoverDN,
+			"tls_min_version": cfg.TLSMinVersion,
+			"tls_max_version": cfg.TLSMaxVersion,
+		},
 	}
-	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any passwords.")
 	return resp, nil
 }
 
@@ -321,7 +333,7 @@ type ConfigEntry struct {
 	InsecureTLS   bool   `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
 	StartTLS      bool   `json:"starttls" structs:"starttls" mapstructure:"starttls"`
 	BindDN        string `json:"binddn" structs:"binddn" mapstructure:"binddn"`
-	BindPassword  string `json:"bindpass" structs:"bindpass,omitempty" mapstructure:"bindpass"`
+	BindPassword  string `json:"bindpass" structs:"bindpass" mapstructure:"bindpass"`
 	DenyNullBind  bool   `json:"deny_null_bind" structs:"deny_null_bind" mapstructure:"deny_null_bind"`
 	DiscoverDN    bool   `json:"discoverdn" structs:"discoverdn" mapstructure:"discoverdn"`
 	TLSMinVersion string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`

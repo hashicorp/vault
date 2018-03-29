@@ -66,11 +66,11 @@ type backend struct {
 type sessionConfig struct {
 	Hosts           string `json:"hosts" structs:"hosts" mapstructure:"hosts"`
 	Username        string `json:"username" structs:"username" mapstructure:"username"`
-	Password        string `json:"password" structs:"password,omitempty" mapstructure:"password"`
+	Password        string `json:"password" structs:"password" mapstructure:"password"`
 	TLS             bool   `json:"tls" structs:"tls" mapstructure:"tls"`
 	InsecureTLS     bool   `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
 	Certificate     string `json:"certificate" structs:"certificate" mapstructure:"certificate"`
-	PrivateKey      string `json:"private_key" structs:"private_key,omitempty" mapstructure:"private_key"`
+	PrivateKey      string `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 	IssuingCA       string `json:"issuing_ca" structs:"issuing_ca" mapstructure:"issuing_ca"`
 	ProtocolVersion int    `json:"protocol_version" structs:"protocol_version" mapstructure:"protocol_version"`
 	ConnectTimeout  int    `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`

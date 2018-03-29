@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -53,10 +52,11 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, err
 	}
-	config.ConnectionString = ""
 
 	return &logical.Response{
-		Data: structs.New(config).Map(),
+		Data: map[string]interface{}{
+			"max_open_connections": config.MaxOpenConnections,
+		},
 	}, nil
 }
 
@@ -108,7 +108,7 @@ func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request,
 }
 
 type connectionConfig struct {
-	ConnectionString   string `json:"connection_string" structs:"connection_string,omitempty" mapstructure:"connection_string"`
+	ConnectionString   string `json:"connection_string" structs:"connection_string" mapstructure:"connection_string"`
 	MaxOpenConnections int    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -103,12 +102,16 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	cfg.Secret = ""
-
 	resp := &logical.Response{
-		Data: structs.New(cfg).Map(),
+		Data: map[string]interface{}{
+			"host": cfg.Host,
+			"port": cfg.Port,
+			"unregistered_user_policies": cfg.UnregisteredUserPolicies,
+			"dial_timeout":               cfg.DialTimeout,
+			"read_timeout":               cfg.ReadTimeout,
+			"nas_port":                   cfg.NasPort,
+		},
 	}
-	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any secrets.")
 	return resp, nil
 }
 
@@ -201,7 +204,7 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 type ConfigEntry struct {
 	Host                     string   `json:"host" structs:"host" mapstructure:"host"`
 	Port                     int      `json:"port" structs:"port" mapstructure:"port"`
-	Secret                   string   `json:"secret" structs:"secret,omitempty" mapstructure:"secret"`
+	Secret                   string   `json:"secret" structs:"secret" mapstructure:"secret"`
 	UnregisteredUserPolicies []string `json:"unregistered_user_policies" structs:"unregistered_user_policies" mapstructure:"unregistered_user_policies"`
 	DialTimeout              int      `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
 	ReadTimeout              int      `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
