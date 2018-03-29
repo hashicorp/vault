@@ -38,8 +38,8 @@ func (l *LoggerServer) Log(args *LoggerArgs, _ *struct{}) error {
 
 	switch translateLevel(args.Level) {
 
-	case hclog.Debug:
-		l.logger.Debug(args.Msg, args.Args...)
+	case hclog.Trace:
+		l.logger.Trace(args.Msg, args.Args...)
 
 	case hclog.Debug:
 		l.logger.Debug(args.Msg, args.Args...)
@@ -64,8 +64,8 @@ func (l *LoggerServer) SetLevel(args int, _ *struct{}) error {
 	return nil
 }
 
-func (l *LoggerServer) IsDebug(args interface{}, reply *LoggerReply) error {
-	result := l.logger.IsDebug()
+func (l *LoggerServer) IsTrace(args interface{}, reply *LoggerReply) error {
+	result := l.logger.IsTrace()
 	*reply = LoggerReply{
 		IsTrue: result,
 	}

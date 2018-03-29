@@ -1090,7 +1090,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
-		RawLogger:         c.logger,
+		Logger:            c.logger,
 		TempDir:           tempDir,
 	})
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
