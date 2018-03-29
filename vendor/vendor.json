@@ -1171,12 +1171,6 @@
 			"revisionTime": "2018-02-01T23:52:37Z"
 		},
 		{
-			"checksumSHA1": "lRuxdDhw4Qt9aKXpHzdRInP+jVg=",
-			"path": "github.com/hashicorp/golang-math-big/big",
-			"revision": "561262b71329a2a771294d66accacab6b598b37b",
-			"revisionTime": "2018-03-16T14:22:57Z"
-		},
-		{
 			"checksumSHA1": "HtpYAWHvd9mq+mHkpo7z8PGzMik=",
 			"path": "github.com/hashicorp/hcl",
 			"revision": "f40e974e75af4e271d97ce0fc917af5898ae7bda",
