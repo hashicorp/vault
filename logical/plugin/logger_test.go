@@ -3,16 +3,19 @@ package plugin
 import (
 	"bufio"
 	"bytes"
+	"github.com/hashicorp/go-hclog"
 	"io/ioutil"
+	"net/rpc"
 	"strings"
 	"testing"
 
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/logformat"
 	log "github.com/mgutz/logxi/v1"
 )
 
 func TestLogger_impl(t *testing.T) {
-	var _ log.Logger = new(LoggerClient)
+	var _ log.Logger = new(deprecatedLoggerClient)
 }
 
 func TestLogger_levels(t *testing.T) {
@@ -22,15 +25,14 @@ func TestLogger_levels(t *testing.T) {
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)
 
-	l := log.NewLogger(writer, "test")
-	l.SetLevel(log.LevelTrace)
+	l := logformat.NewVaultLoggerWithWriter(writer, hclog.Trace)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
 	})
 
 	expected := "foobar"
-	testLogger := &LoggerClient{client: client}
+	testLogger := &deprecatedLoggerClient{client: client}
 
 	// Test trace
 	testLogger.Trace(expected)
@@ -103,14 +105,13 @@ func TestLogger_isLevels(t *testing.T) {
 	client, server := plugin.TestRPCConn(t)
 	defer client.Close()
 
-	l := log.New("test")
-	l.SetLevel(log.LevelAll)
+	l := logformat.NewVaultLoggerWithWriter(ioutil.Discard, hclog.Trace)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
 	})
 
-	testLogger := &LoggerClient{client: client}
+	testLogger := &deprecatedLoggerClient{client: client}
 
 	if !testLogger.IsDebug() || !testLogger.IsInfo() || !testLogger.IsTrace() || !testLogger.IsWarn() {
 		t.Fatal("expected logger to return true for all logger level checks")
@@ -124,15 +125,14 @@ func TestLogger_log(t *testing.T) {
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)
 
-	l := log.NewLogger(writer, "test")
-	l.SetLevel(log.LevelTrace)
+	l := logformat.NewVaultLoggerWithWriter(writer, hclog.Trace)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
 	})
 
 	expected := "foobar"
-	testLogger := &LoggerClient{client: client}
+	testLogger := &deprecatedLoggerClient{client: client}
 
 	// Test trace
 	testLogger.Log(log.LevelInfo, expected, nil)
@@ -150,16 +150,117 @@ func TestLogger_setLevel(t *testing.T) {
 	client, server := plugin.TestRPCConn(t)
 	defer client.Close()
 
-	l := log.NewLogger(ioutil.Discard, "test-logger")
+	l := hclog.New(&hclog.LoggerOptions{Output: ioutil.Discard})
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
 	})
 
-	testLogger := &LoggerClient{client: client}
+	testLogger := &deprecatedLoggerClient{client: client}
 	testLogger.SetLevel(log.LevelWarn)
 
 	if !testLogger.IsWarn() {
 		t.Fatal("expected logger to support warn level")
 	}
+}
+
+type deprecatedLoggerClient struct {
+	client *rpc.Client
+}
+
+func (l *deprecatedLoggerClient) Trace(msg string, args ...interface{}) {
+	cArgs := &LoggerArgs{
+		Msg:  msg,
+		Args: args,
+	}
+	l.client.Call("Plugin.Trace", cArgs, &struct{}{})
+}
+
+func (l *deprecatedLoggerClient) Debug(msg string, args ...interface{}) {
+	cArgs := &LoggerArgs{
+		Msg:  msg,
+		Args: args,
+	}
+	l.client.Call("Plugin.Debug", cArgs, &struct{}{})
+}
+
+func (l *deprecatedLoggerClient) Info(msg string, args ...interface{}) {
+	cArgs := &LoggerArgs{
+		Msg:  msg,
+		Args: args,
+	}
+	l.client.Call("Plugin.Info", cArgs, &struct{}{})
+}
+func (l *deprecatedLoggerClient) Warn(msg string, args ...interface{}) error {
+	var reply LoggerReply
+	cArgs := &LoggerArgs{
+		Msg:  msg,
+		Args: args,
+	}
+	err := l.client.Call("Plugin.Warn", cArgs, &reply)
+	if err != nil {
+		return err
+	}
+	if reply.Error != nil {
+		return reply.Error
+	}
+
+	return nil
+}
+func (l *deprecatedLoggerClient) Error(msg string, args ...interface{}) error {
+	var reply LoggerReply
+	cArgs := &LoggerArgs{
+		Msg:  msg,
+		Args: args,
+	}
+	err := l.client.Call("Plugin.Error", cArgs, &reply)
+	if err != nil {
+		return err
+	}
+	if reply.Error != nil {
+		return reply.Error
+	}
+
+	return nil
+}
+
+func (l *deprecatedLoggerClient) Fatal(msg string, args ...interface{}) {
+	// NOOP since it's not actually used within vault
+	return
+}
+
+func (l *deprecatedLoggerClient) Log(level int, msg string, args []interface{}) {
+	cArgs := &LoggerArgs{
+		Level: level,
+		Msg:   msg,
+		Args:  args,
+	}
+	l.client.Call("Plugin.Log", cArgs, &struct{}{})
+}
+
+func (l *deprecatedLoggerClient) SetLevel(level int) {
+	l.client.Call("Plugin.SetLevel", level, &struct{}{})
+}
+
+func (l *deprecatedLoggerClient) IsTrace() bool {
+	var reply LoggerReply
+	l.client.Call("Plugin.IsTrace", new(interface{}), &reply)
+	return reply.IsTrue
+}
+func (l *deprecatedLoggerClient) IsDebug() bool {
+	var reply LoggerReply
+	l.client.Call("Plugin.IsDebug", new(interface{}), &reply)
+	return reply.IsTrue
+}
+
+func (l *deprecatedLoggerClient) IsInfo() bool {
+	var reply LoggerReply
+	l.client.Call("Plugin.IsInfo", new(interface{}), &reply)
+	return reply.IsTrue
+}
+
+func (l *deprecatedLoggerClient) IsWarn() bool {
+	var reply LoggerReply
+	l.client.Call("Plugin.IsWarn", new(interface{}), &reply)
+	return reply.IsTrue
 }

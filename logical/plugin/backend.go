@@ -22,7 +22,7 @@ type BackendPlugin struct {
 
 // Server gets called when on plugin.Serve()
 func (b *BackendPlugin) Server(broker *plugin.MuxBroker) (interface{}, error) {
-	return &backendPluginServer{factory: b.Factory, broker: broker}, nil
+	return &backendPluginServer{factory: b.Factory, broker: broker, logger: b.Logger}, nil
 }
 
 // Client gets called on plugin.NewClient()

@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"errors"
+	"github.com/hashicorp/go-hclog"
 	"net/rpc"
 	"os"
 
@@ -22,6 +23,7 @@ type backendPluginServer struct {
 	backend logical.Backend
 	factory logical.Factory
 
+	logger        hclog.Logger
 	loggerClient  *rpc.Client
 	sysViewClient *rpc.Client
 	storageClient *rpc.Client
@@ -120,8 +122,6 @@ func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 	rawLoggerClient := rpc.NewClient(loggerConn)
 	b.loggerClient = rawLoggerClient
 
-	logger := &LoggerClient{client: rawLoggerClient}
-
 	// Dial for sys view
 	sysViewConn, err := b.broker.Dial(args.SysViewID)
 	if err != nil {
@@ -137,7 +137,7 @@ func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 
 	config := &logical.BackendConfig{
 		StorageView: storage,
-		Logger:      logger,
+		Logger:      b.logger,
 		System:      sysView,
 		Config:      args.Config,
 	}
