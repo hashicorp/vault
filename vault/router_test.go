@@ -3,17 +3,16 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/helper/logging"
-	"io/ioutil"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/logging"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 )
 
