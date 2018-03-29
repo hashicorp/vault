@@ -77,7 +77,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		BackendType: logical.TypeLogical,
 	}
 
-	b.logger = conf.Logger
+	b.logger = conf.Logger.Named("databaseBackend")
 	b.connections = make(map[string]*dbPluginInstance)
 	return &b
 }

@@ -61,7 +61,7 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	case *gRPCClient:
 		db = raw.(*gRPCClient)
 	case *databasePluginRPCClient:
-		logger.Warn("database: plugin is using deprecated net RPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
+		logger.Warn("plugin is using deprecated net RPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
 		db = raw.(*databasePluginRPCClient)
 	default:
 		return nil, errors.New("unsupported client type")
