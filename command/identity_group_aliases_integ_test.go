@@ -1,9 +1,9 @@
 package command
 
 import (
+	"github.com/hashicorp/vault/helper/logging"
 	"testing"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/ldap"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -16,7 +16,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       hclog.NullLog,
+		Logger:       logging.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": ldap.Factory,
 		},

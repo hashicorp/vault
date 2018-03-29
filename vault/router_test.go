@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/helper/logging"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -84,7 +85,7 @@ func (n *NoopBackend) Setup(ctx context.Context, config *logical.BackendConfig) 
 }
 
 func (n *NoopBackend) Logger() log.Logger {
-	return logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.LevelOff)
+	return logging.NewNullLogger()
 }
 
 func (n *NoopBackend) Initialize(ctx context.Context) error {

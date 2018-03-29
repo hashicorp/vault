@@ -13,32 +13,31 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
 )
 
 func TestSealUnwrapper(t *testing.T) {
-	logger := logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+	logger := hclog.New(&hclog.LoggerOptions{
 		Mutex: &sync.Mutex{},
-	}))
+	})
 
 	// Test without transactions
-	phys, err := inmem.NewInmemHA(nil, logger.LogxiLogger())
+	phys, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 	performTestSealUnwrapper(t, phys, logger)
 
 	// Test with transactions
-	tPhys, err := inmem.NewTransactionalInmemHA(nil, logger.LogxiLogger())
+	tPhys, err := inmem.NewTransactionalInmemHA(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 	performTestSealUnwrapper(t, tPhys, logger)
 }
 
-func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger *logbridge.Logger) {
+func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger hclog.Logger) {
 	ctx := context.Background()
 	base := &CoreConfig{
 		Physical: phys,

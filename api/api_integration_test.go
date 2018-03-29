@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+	"github.com/hashicorp/vault/helper/logging"
 	"net"
 	"net/http"
 	"testing"
@@ -18,7 +19,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 
-	hclog "github.com/hashicorp/go-hclog"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -42,7 +42,7 @@ func testVaultServerUnseal(t testing.TB) (*api.Client, []string, func()) {
 	return testVaultServerCoreConfig(t, &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       hclog.NullLog,
+		Logger:       logging.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},

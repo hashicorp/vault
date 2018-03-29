@@ -3,6 +3,7 @@ package cert
 import (
 	"context"
 	"crypto/rand"
+	"github.com/hashicorp/vault/helper/logging"
 	"net/http"
 
 	"golang.org/x/net/http2"
@@ -20,8 +21,6 @@ import (
 	"reflect"
 	"testing"
 	"time"
-
-	hclog "github.com/hashicorp/go-hclog"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
@@ -159,7 +158,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       hclog.NullLog,
+		Logger:       logging.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cert": Factory,
 		},

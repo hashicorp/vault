@@ -210,8 +210,8 @@ func Test(tt TestT, c TestCase) {
 	// Make requests
 	var revoke []*logical.Request
 	for i, s := range c.Steps {
-		if log.IsWarn() {
-			log.Warn("Executing test step", "step_number", i+1)
+		if logger.IsWarn() {
+			logger.Warn("Executing test step", "step_number", i+1)
 		}
 
 		// Create the request
@@ -294,8 +294,8 @@ func Test(tt TestT, c TestCase) {
 	// Revoke any secrets we might have.
 	var failedRevokes []*logical.Secret
 	for _, req := range revoke {
-		if log.IsWarn() {
-			log.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", req))
+		if logger.IsWarn() {
+			logger.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", req))
 		}
 		req.ClientToken = client.Token()
 		resp, err := core.HandleRequest(req)
@@ -311,7 +311,7 @@ func Test(tt TestT, c TestCase) {
 	// Perform any rollbacks. This should no-op if there aren't any.
 	// We set the "immediate" flag here that any backend can pick up on
 	// to do all rollbacks immediately even if the WAL entries are new.
-	log.Warn("Requesting RollbackOperation")
+	logger.Warn("Requesting RollbackOperation")
 	req := logical.RollbackRequest(prefix + "/")
 	req.Data["immediate"] = true
 	req.ClientToken = client.Token()
