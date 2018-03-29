@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -19,7 +20,7 @@ import (
 
 const (
 	defaultBucketCount      = 256
-	defaultBucketShardCount = 32
+	defaultBucketShardCount = 16
 	defaultBucketMaxSize    = 256 * 1024
 )
 
@@ -81,9 +82,9 @@ func (b *BucketV2) Clone() (*BucketV2, error) {
 	return &clonedBucket, nil
 }
 
-// putItemIntoBucket is a recursive function that finds the appropriate bucket
+// putItem is a recursive function that finds the appropriate bucket
 // to store the item based on the storage space available in the buckets.
-func (s *StoragePackerV2) putItemIntoBucket(bucket *PackedBucket, item *Item) (string, error) {
+func (s *StoragePackerV2) putItem(bucket *PackedBucket, item *Item) (string, error) {
 	if bucket == nil {
 		// Compute the index at which the primary bucket should reside
 		primaryIndex, err := s.primaryBucketIndex(item.ID)
@@ -118,21 +119,24 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *PackedBucket, item *Item) (s
 	if err != nil {
 		return "", errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
+	shardKey := bucket.Data.Key + "/" + shardIndex
 
 	bucket.Lock()
 
-	// Check if the bucket shard to hold the item already exists
+	if bucket.Data.Sharded {
+		bucket.Unlock()
+		bucketShard, err := s.GetBucket(shardKey)
+		if err != nil {
+			return "", err
+		}
+		return s.putItem(bucketShard, item)
+	}
+
+	defer bucket.Unlock()
+
 	bucketShard, ok := bucket.Data.Buckets[shardIndex]
-
-	// If the bucket shard is not present, create one
 	if !ok {
-		// The key to the bucket shard relative to its parent bucket
-		shardKey := bucket.Data.Key + "/" + shardIndex
-
-		// Create the bucket shard to hold the item with an incremented depth
 		bucketShard = s.newBucket(shardKey, bucket.Data.Depth+1)
-
-		// Add the newly created bucket shard to the parent bucket
 		bucket.Data.Buckets[shardIndex] = bucketShard
 	}
 
@@ -141,31 +145,6 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *PackedBucket, item *Item) (s
 		return "", fmt.Errorf("bucket shard is nil")
 	}
 
-	// If the bucket shard is already pushed out, continue the operation in the
-	// external bucket
-	if bucketShard.External {
-		bucket.Unlock()
-		externalBucket, err := s.GetBucket(bucketShard.Key)
-		if err != nil {
-			return "", err
-		}
-
-		if externalBucket == nil {
-			return "", fmt.Errorf("failed to read the pushed out bucket shard: %q\n", bucketShard.Key)
-		}
-
-		return s.putItemIntoBucket(externalBucket, item)
-	}
-
-	//
-	// Bucket shard is local to the parent bucket
-	//
-	defer bucket.Unlock()
-
-	// Update the item in the bucket shard
-	bucketShard.Items[item.ID] = item
-
-	// Check if the bucket exceeds the size limit after the addition
 	limitExceeded, err := s.bucketExceedsSizeLimit(bucket, item)
 	if err != nil {
 		return "", err
@@ -173,43 +152,21 @@ func (s *StoragePackerV2) putItemIntoBucket(bucket *PackedBucket, item *Item) (s
 
 	// If the bucket size is within the limit, return the updated bucket
 	if !limitExceeded {
+		bucketShard.Items[item.ID] = item
 		return bucketShard.Key, s.PutBucket(bucket)
 	}
 
-	//
-	// If the bucket size has exceeded the limit, push the bucket shard out as
-	// an independent bucket and insert the item in the pushed out bucket.
-	//
-
-	// Mark the bucket shard as external, indicating that it doesn't
-	// reside in its parent bucket
-	bucketShard.External = true
-
-	// Clone the bucket and use the clone as the pushed out bucket
-	clone, err := bucketShard.Clone()
+	err = s.splitBucket(bucket)
 	if err != nil {
 		return "", err
 	}
 
-	externalBucket := &PackedBucket{
-		Data: clone,
-	}
-
-	// Clear the items in the pushed out bucket shard
-	bucketShard.Items = nil
-
-	// Split the items in the bucket that gets pushed out, among their
-	// respective bucket shards
-	err = s.splitItemsInBucket(externalBucket)
+	shardedBucket, err := s.GetBucket(bucketShard.Key)
 	if err != nil {
 		return "", err
 	}
 
-	// Insert the item in the bucket that got pushed out. Note that the lock on
-	// the current bucket is still not released. When a bucket is getting
-	// pushed out, holding the lock on the parent bucket ensures safety during
-	// the externalization of a bucket shard.
-	bucketKey, err := s.putItemIntoBucket(externalBucket, item)
+	bucketKey, err := s.putItem(shardedBucket, item)
 	if err != nil {
 		return "", err
 	}
@@ -223,7 +180,7 @@ func (s *StoragePackerV2) GetBucket(key string) (*PackedBucket, error) {
 		return nil, fmt.Errorf("missing bucket key")
 	}
 
-	_, raw, exists := s.bucketsCache.LongestPrefix(key)
+	raw, exists := s.bucketsCache.Get(key)
 	if exists {
 		return raw.(*PackedBucket), nil
 	}
@@ -259,7 +216,7 @@ func (s *StoragePackerV2) GetBucket(key string) (*PackedBucket, error) {
 
 func (s *StoragePackerV2) UpdateBucketCache(bucket *PackedBucket) *PackedBucket {
 	var packedBucket *PackedBucket
-	_, raw, exists := s.bucketsCache.LongestPrefix(bucket.Data.Key)
+	raw, exists := s.bucketsCache.Get(bucket.Data.Key)
 	if exists {
 		packedBucket = raw.(*PackedBucket)
 	}
@@ -297,14 +254,16 @@ func (s *StoragePackerV2) PutBucket(bucket *PackedBucket) error {
 		return err
 	}
 
+	bucket.Data.Size = int64(len(marshaledBucket))
+
 	s.UpdateBucketCache(bucket)
 
 	return nil
 }
 
-// getItemFromBucket is a recursive function that fetches the given item ID in
+// getItem is a recursive function that fetches the given item ID in
 // the bucket hierarchy
-func (s *StoragePackerV2) getItemFromBucket(bucket *PackedBucket, itemID string) (*Item, error) {
+func (s *StoragePackerV2) getItem(bucket *PackedBucket, itemID string) (*Item, error) {
 	if bucket == nil {
 		primaryIndex, err := s.primaryBucketIndex(itemID)
 		if err != nil {
@@ -326,38 +285,32 @@ func (s *StoragePackerV2) getItemFromBucket(bucket *PackedBucket, itemID string)
 		return nil, errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
+	shardKey := bucket.Data.Key + "/" + shardIndex
+
 	bucket.RLock()
 
-	bucketShard, ok := bucket.Data.Buckets[shardIndex]
-	if !ok {
+	if bucket.Data.Sharded {
 		bucket.RUnlock()
-		return nil, nil
-	}
-
-	// If the bucket shard is already pushed out, continue the operation in the
-	// external bucket
-	if bucketShard.External {
-		bucket.RUnlock()
-		externalBucket, err := s.GetBucket(bucketShard.Key)
+		bucketShard, err := s.GetBucket(shardKey)
 		if err != nil {
 			return nil, err
 		}
-
-		if externalBucket == nil {
-			return nil, fmt.Errorf("failed to read external bucket: %q\n", bucketShard.Key)
-		}
-
-		return s.getItemFromBucket(externalBucket, itemID)
+		return s.getItem(bucketShard, itemID)
 	}
 
 	defer bucket.RUnlock()
 
+	bucketShard, ok := bucket.Data.Buckets[shardIndex]
+	if !ok {
+		return nil, nil
+	}
+
 	return bucketShard.Items[itemID], nil
 }
 
-// deleteItemFromBucket is a recursive function that finds the bucket holding
+// deleteItem is a recursive function that finds the bucket holding
 // the item and removes the item from it
-func (s *StoragePackerV2) deleteItemFromBucket(bucket *PackedBucket, itemID string) error {
+func (s *StoragePackerV2) deleteItem(bucket *PackedBucket, itemID string) error {
 	if bucket == nil {
 		primaryIndex, err := s.primaryBucketIndex(itemID)
 		if err != nil {
@@ -379,37 +332,28 @@ func (s *StoragePackerV2) deleteItemFromBucket(bucket *PackedBucket, itemID stri
 		return errwrap.Wrapf("failed to compute the bucket shard index: {{err}}", err)
 	}
 
+	shardKey := bucket.Data.Key + "/" + shardIndex
+
 	bucket.Lock()
 
-	bucketShard, ok := bucket.Data.Buckets[shardIndex]
-	if !ok {
+	if bucket.Data.Sharded {
 		bucket.Unlock()
-		return nil
-	}
-
-	// If the bucket shard is already pushed out, continue the operation in the
-	// pushed out bucket
-	if bucketShard.External {
-		bucket.Unlock()
-		externalBucket, err := s.GetBucket(bucketShard.Key)
-
+		bucketShard, err := s.GetBucket(shardKey)
 		if err != nil {
 			return err
 		}
-
-		if externalBucket == nil {
-			return fmt.Errorf("failed to read external bucket: %q\n", bucketShard.Key)
-		}
-
-		return s.deleteItemFromBucket(externalBucket, itemID)
+		return s.deleteItem(bucketShard, itemID)
 	}
 
 	defer bucket.Unlock()
 
-	// Delete the item from the respective shard
+	bucketShard, ok := bucket.Data.Buckets[shardIndex]
+	if !ok {
+		return nil
+	}
+
 	delete(bucketShard.Items, itemID)
 
-	// Persist the change
 	return s.PutBucket(bucket)
 }
 
@@ -419,7 +363,7 @@ func (s *StoragePackerV2) GetItem(itemID string) (*Item, error) {
 		return nil, fmt.Errorf("empty item ID")
 	}
 
-	return s.getItemFromBucket(nil, itemID)
+	return s.getItem(nil, itemID)
 }
 
 // PutItem persists the given item
@@ -432,7 +376,7 @@ func (s *StoragePackerV2) PutItem(item *Item) (string, error) {
 		return "", fmt.Errorf("missing ID in item")
 	}
 
-	return s.putItemIntoBucket(nil, item)
+	return s.putItem(nil, item)
 }
 
 // DeleteItem removes the item using the given item identifier
@@ -441,7 +385,7 @@ func (s *StoragePackerV2) DeleteItem(itemID string) error {
 		return fmt.Errorf("empty item ID")
 	}
 
-	return s.deleteItemFromBucket(nil, itemID)
+	return s.deleteItem(nil, itemID)
 }
 
 // bucketExceedsSizeLimit indicates if the given bucket is exceeding the
@@ -454,34 +398,79 @@ func (s *StoragePackerV2) bucketExceedsSizeLimit(bucket *PackedBucket, item *Ite
 
 	size := bucket.Data.Size + int64(len(marshaledItem))
 
-	// Sharding of buckets begins when the size of the bucket reaches 90% of
-	// the maximum allowed size. Hopefully, this compensates for data structure
-	// adjustment costs and also avoids edge cases with respect to the limit
-	// imposed by the underlying physical backend.
-	max := math.Ceil((float64(s.config.BucketMaxSize) * float64(90)) / float64(100))
+	max := math.Ceil((float64(s.config.BucketMaxSize) * float64(60)) / float64(100))
+
+	/*
+		limitExceeded := float64(size) > max
+		if limitExceeded {
+			fmt.Printf("bucket %q exceeded size limit: max: %v; bucketSize: %v\n", bucket.Data.Key, max, size)
+		}
+	*/
 
 	return float64(size) > max, nil
 }
 
-// splitItemsInBucket breaks the list of items in the bucket and divides them
-// such that they belong to their respective bucket shards
-func (s *StoragePackerV2) splitItemsInBucket(bucket *PackedBucket) error {
-	for itemID, item := range bucket.Data.Items {
-		shardIndex, err := shardBucketIndex(itemID, int(bucket.Data.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+type BucketWalkFunc func(item *Item) error
+
+func (s *StoragePackerV2) BucketWalk(key string, fn BucketWalkFunc) error {
+	bucket, err := s.GetBucket(key)
+	if err != nil {
+		return err
+	}
+	if bucket == nil {
+		return nil
+	}
+
+	if !bucket.Data.Sharded {
+		for _, bucket := range bucket.Data.Buckets {
+			for _, item := range bucket.Items {
+				err := fn(item)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+
+	for i := 0; i < s.config.BucketShardCount; i++ {
+		shardKey := bucket.Data.Key + "/" + strconv.FormatInt(int64(i), 16)
+		err = s.BucketWalk(shardKey, fn)
 		if err != nil {
 			return err
 		}
-		bucketShard, ok := bucket.Data.Buckets[shardIndex]
-		if !ok {
-			shardKey := bucket.Data.Key + "/" + shardIndex
-			bucketShard = s.newBucket(shardKey, bucket.Data.Depth+1)
-			bucket.Data.Buckets[shardIndex] = bucketShard
-		}
-		bucketShard.Items[itemID] = item
 	}
 
-	bucket.Data.Items = nil
+	return nil
+}
 
+func (s *StoragePackerV2) splitBucket(bucket *PackedBucket) error {
+	for _, shard := range bucket.Data.Buckets {
+		for itemID, item := range shard.Items {
+			if shard.Buckets == nil {
+				shard.Buckets = make(map[string]*BucketV2)
+			}
+			subShardIndex, err := shardBucketIndex(itemID, int(shard.Depth), int(s.config.BucketCount), int(s.config.BucketShardCount))
+			if err != nil {
+				return err
+			}
+			subShard, ok := shard.Buckets[subShardIndex]
+			if !ok {
+				subShardKey := shard.Key + "/" + subShardIndex
+				subShard = s.newBucket(subShardKey, shard.Depth+1)
+				shard.Buckets[subShardIndex] = subShard
+			}
+			subShard.Items[itemID] = item
+		}
+
+		shard.Items = nil
+		err := s.PutBucket(&PackedBucket{Data: shard})
+		if err != nil {
+			return err
+		}
+	}
+	bucket.Data.Buckets = nil
+	bucket.Data.Sharded = true
 	return nil
 }
 

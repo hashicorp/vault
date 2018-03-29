@@ -36,7 +36,7 @@ test: prep
 	VAULT_TOKEN= \
 	VAULT_DEV_ROOT_TOKEN_ID= \
 	VAULT_ACC= \
-	go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=20m -parallel=20
+	go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=200m -parallel=20
 
 testcompile: prep
 	@for pkg in $(TEST) ; do \

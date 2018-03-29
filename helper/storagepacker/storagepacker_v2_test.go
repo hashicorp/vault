@@ -3,7 +3,6 @@ package storagepacker
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strconv"
 	"testing"
 
@@ -119,11 +118,12 @@ func TestStoragePackerV2_Inmem(t *testing.T) {
 }
 
 func TestStoragePackerV2_File(t *testing.T) {
-	filePath, err := ioutil.TempDir(".", "vault")
+	filePath, err := ioutil.TempDir("", "vault")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	defer os.RemoveAll(filePath)
+	fmt.Printf("filePath: %q\n", filePath)
+	//defer os.RemoveAll(filePath)
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
@@ -144,7 +144,7 @@ func TestStoragePackerV2_File(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	count := 10000
+	count := 1000000
 	entity := &identity.Entity{
 		Metadata: map[string]string{
 			"samplekey1": "samplevalue1",
@@ -156,7 +156,7 @@ func TestStoragePackerV2_File(t *testing.T) {
 	}
 
 	testPutItem(t, sp, count, entity)
-	testGetItem(t, sp, count, false)
-	testDeleteItem(t, sp, count)
-	testGetItem(t, sp, count, true)
+	//testGetItem(t, sp, count, false)
+	//testDeleteItem(t, sp, count)
+	//testGetItem(t, sp, count, true)
 }

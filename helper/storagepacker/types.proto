@@ -23,13 +23,14 @@ message BucketV2{
 	string key = 1;
 	// Buckets are the buckets contained within this bucket
 	map <string, BucketV2> buckets = 3;
-	// ItemsMap holds the items contained within this bucket
+	// Items holds the items contained within this bucket
 	map <string, Item> items = 4;
-	// IsShard indicates if the bucket is pushed out of its parent bucket
-	bool external = 5;
-	// Depth indicates the hierarchical positioning of the bucket
+	// Sharded indicates if the buckets contained in this bucket are pushed out
+	// or not
+	bool sharded = 5;
+	// Depth indicates the hierarchical positioning of this bucket
 	int32 depth = 6;
-	// Size of the bucket in number of bytes
+	// Size of this bucket in number of bytes
 	int64 size = 7;
 }
 

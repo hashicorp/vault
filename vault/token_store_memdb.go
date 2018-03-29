@@ -101,44 +101,32 @@ func (ts *TokenStore) loadTokenMappings(ctx context.Context) error {
 	}
 	ts.logger.Debug("token: token mappings collected", "num_existing", len(existing))
 
-	for _, key := range existing {
-		bucket, err := ts.mappingPacker.GetBucket(tokenMappingBucketsPrefix + key)
+	bucketWalkFunc := func(item *storagepacker.Item) error {
+		tokenMapping, err := ts.parseTokenMappingFromBucketItem(item)
 		if err != nil {
 			return err
 		}
-
-		if bucket == nil {
-			continue
+		if tokenMapping == nil {
+			return nil
 		}
 
-		for _, bucketShard := range bucket.Data.Buckets {
-			if bucketShard.External {
-				continue
-			}
-			for _, item := range bucketShard.Items {
-				tokenMapping, err := ts.parseTokenMappingFromBucketItem(item)
-				if err != nil {
-					return err
-				}
-				if tokenMapping == nil {
-					continue
-				}
+		err = ts.UpsertTokenMapping(tokenMapping)
+		if err != nil {
+			return fmt.Errorf("failed to update token mapping in memdb: %v", err)
+		}
 
-				txn := ts.db.Txn(true)
+		return nil
+	}
 
-				err = ts.UpsertTokenMappingInTxn(txn, tokenMapping)
-				if err != nil {
-					txn.Abort()
-					return fmt.Errorf("failed to update token mapping in memdb: %v", err)
-				}
-
-				txn.Commit()
-			}
+	for _, key := range existing {
+		err = ts.mappingPacker.BucketWalk(tokenMappingBucketsPrefix+key, bucketWalkFunc)
+		if err != nil {
+			return err
 		}
 	}
 
 	if ts.logger.IsInfo() {
-		ts.logger.Info("token: groups restored")
+		ts.logger.Info("token: token mappings restored")
 	}
 
 	return nil
@@ -190,7 +178,6 @@ func (ts *TokenStore) UpsertTokenMapping(tokenMapping *token.TokenMapping) error
 	}
 
 	txn.Commit()
-
 	return nil
 }
 

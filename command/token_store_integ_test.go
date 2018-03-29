@@ -62,7 +62,7 @@ func TestTokenStore_Integ_TokenCreation(t *testing.T) {
 
 	client.SetToken(cluster.RootToken)
 
-	count := 100000
+	count := 50000
 	for i := 1; i <= count; i++ {
 		if i%500 == 0 {
 			fmt.Printf("iteration: %d\n", i)
@@ -72,7 +72,7 @@ func TestTokenStore_Integ_TokenCreation(t *testing.T) {
 		tcr := &api.TokenCreateRequest{
 			ID:          id,
 			Policies:    []string{"default"},
-			TTL:         "1m",
+			TTL:         "48h",
 			DisplayName: "test-" + id,
 		}
 
