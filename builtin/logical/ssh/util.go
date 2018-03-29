@@ -185,7 +185,7 @@ func createSSHComm(logger log.Logger, username, ip string, port int, hostkey str
 		Connection:   connfunc,
 		Pty:          false,
 		DisableAgent: true,
-		Logger:       logger,
+		Logger:       logger.Named("sshCommConfig"),
 	}
 
 	return SSHCommNew(fmt.Sprintf("%s:%d", ip, port), config)
