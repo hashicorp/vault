@@ -206,8 +206,9 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 	go b.broker.AcceptAndServe(brokerID, serverFunc)
 
 	args := &pb.SetupArgs{
-		BrokerID: brokerID,
-		Config:   config.Config,
+		BrokerID:    brokerID,
+		Config:      config.Config,
+		BackendUUID: config.BackendUUID,
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

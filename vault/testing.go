@@ -321,7 +321,7 @@ func testTokenStore(t testing.T, c *Core) *TokenStore {
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+me.UUID+"/")
 	sysView := c.mountEntrySysView(me)
 
-	tokenstore, _ := c.newCredentialBackend(context.Background(), "token", sysView, view, nil)
+	tokenstore, _ := c.newCredentialBackend(context.Background(), me, sysView, view)
 	ts := tokenstore.(*TokenStore)
 
 	err = c.router.Unmount(context.Background(), "auth/token/")

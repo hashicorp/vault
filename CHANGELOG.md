@@ -1,9 +1,43 @@
-## Next
+## 0.10.0 (Unreleased)
+
+FEATURES:
+
+ * Versioned K/V: The `kv` backend has been completely revamped, featuring
+   flexible versioning of values, check-and-set protections, and more. A new
+   `vault kv` subcommand allows friendly interactions with it. Existing mounts
+   of the `kv` backend can be upgraded to the new versioned mode (downgrades
+   are not currently supported). The old "passthrough" mode is still the
+   default for new mounts; versioning can be turned on by setting the
+   `-options` flag for the `vault secrets enable` command to specify
+   `versioned=true`. This may become the default between the beta and final
+   release.
+ * Database Root Credential Rotation: Database configurations can now rotate
+   their own configured admin/root credentials, allowing configured credentials
+   for a database connection to be rotated immediately after sending them into
+   Vault, invalidating the old credentials and ensuring only Vault knows the
+   actual valid values.
+ * Azure Authentication Plugin: There is now a plugin (pulled in to Vault) that
+   allows authenticating Azure machines to Vault using their Azure-provided
+   credentials. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-auth-azure) for more
+   information.
+ * GCP Secrets Plugin: There is now a plugin (pulled in to Vault) that allows
+   generating secrets to allow access to GCP. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-secrets-gcp) for more
+   information.
+ * Selective Audit HMACing of Request and Response Data Keys: HMACing in audit
+   logs can be turned off for specific keys in the request input map and
+   response `data` map on a per-mount basis.
+ * Passthrough Request Headers: Request headers can now be selectively passed
+   through to backends on a per-mount basis. This is useful in various cases
+   when plugins are interacting with external services.
 
 IMPROVEMENTS:
 
  * secret/cassandra: Update Cassandra storage delete function to not use batch
    operations [GH-4054]
+ * storage/mysql: Allow setting max idle connections and connection lifetime
+   [GH-4211]
 
 BUG FIXES:
 
@@ -14,6 +48,10 @@ BUG FIXES:
  * core: Fix issue occurring from mounting two auth backends with the same path
    with one mount having `auth/` in front [GH-4206]
  * mfa: Invalidation of MFA configurations (Enterprise)
+ * replication: Fix a panic on some non-64-bit platforms
+ * replication: Fix invalidation of policies on performance secondaries
+ * secret/pki: When tidying if a value is unexpectedly nil, delete it and move
+   on [GH-4214]
 
 ## 0.9.6 (March 20th, 2018)
 

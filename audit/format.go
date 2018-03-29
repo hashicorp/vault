@@ -303,7 +303,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			TTL:             int(resp.WrapInfo.TTL / time.Second),
 			Token:           token,
 			Accessor:        resp.WrapInfo.Accessor,
-			CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
+			CreationTime:    resp.WrapInfo.CreationTime.UTC().Format(time.RFC3339Nano),
 			CreationPath:    resp.WrapInfo.CreationPath,
 			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
 		}
