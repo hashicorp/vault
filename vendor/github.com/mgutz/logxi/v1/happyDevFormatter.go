@@ -191,7 +191,7 @@ func (hd *HappyDevFormatter) getContext(color string) string {
 func (hd *HappyDevFormatter) getLevelContext(level int, entry map[string]interface{}) (message string, context string, color string) {
 
 	switch level {
-	case Trace:
+	case LevelTrace:
 		color = theme.Trace
 		context = hd.getContext(color)
 		context += "\n"
@@ -348,7 +348,7 @@ func (hd *HappyDevFormatter) Format(writer io.Writer, level int, msg string, arg
 
 	if context != "" {
 		// warnings and traces are single line, space can be optimized
-		if level == Trace || (level == LevelWarn && !hasCallStack) {
+		if level == LevelTrace || (level == LevelWarn && !hasCallStack) {
 			// gets rid of "in "
 			idx := strings.IndexRune(context, 'n')
 			hd.set(buf, "in", context[idx+2:], color)

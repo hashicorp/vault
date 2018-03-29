@@ -7,9 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func TestLogger_impl(t *testing.T) {
@@ -23,7 +22,8 @@ func TestLogger_levels(t *testing.T) {
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)
 
-	l := logformat.NewVaultLoggerWithWriter(writer, log.Trace)
+	l := log.NewLogger(writer, "test")
+	l.SetLevel(log.LevelTrace)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
@@ -103,7 +103,8 @@ func TestLogger_isLevels(t *testing.T) {
 	client, server := plugin.TestRPCConn(t)
 	defer client.Close()
 
-	l := logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.LevelAll)
+	l := log.New("test")
+	l.SetLevel(log.LevelAll)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
@@ -123,7 +124,8 @@ func TestLogger_log(t *testing.T) {
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)
 
-	l := logformat.NewVaultLoggerWithWriter(writer, log.Trace)
+	l := log.NewLogger(writer, "test")
+	l.SetLevel(log.LevelTrace)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
@@ -133,7 +135,7 @@ func TestLogger_log(t *testing.T) {
 	testLogger := &LoggerClient{client: client}
 
 	// Test trace
-	testLogger.Log(log.Info, expected, nil)
+	testLogger.Log(log.LevelInfo, expected, nil)
 	if err := writer.Flush(); err != nil {
 		t.Fatal(err)
 	}

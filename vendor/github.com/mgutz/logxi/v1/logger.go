@@ -85,7 +85,7 @@ const (
 	LevelDebug = 7
 
 	// Trace is trace level and displays file and line in terminal
-	Trace = 10
+	LevelTrace = 10
 
 	// LevelAll is all levels
 	LevelAll = 1000
@@ -110,7 +110,7 @@ var LevelMap = map[int]string{
 	LevelWarn:  "WRN",
 	LevelInfo:  "INF",
 	LevelDebug: "DBG",
-	Trace: "TRC",
+	LevelTrace: "TRC",
 }
 
 // LevelMap maps int enums to string level.
@@ -121,7 +121,7 @@ var LevelAtoi = map[string]int{
 	"WRN": LevelWarn,
 	"INF": LevelInfo,
 	"DBG": LevelDebug,
-	"TRC": Trace,
+	"TRC": LevelTrace,
 	"ALL": LevelAll,
 
 	"off":   LevelOff,
@@ -130,7 +130,7 @@ var LevelAtoi = map[string]int{
 	"warn":  LevelWarn,
 	"info":  LevelInfo,
 	"debug": LevelDebug,
-	"trace": Trace,
+	"trace": LevelTrace,
 	"all":   LevelAll,
 }
 
