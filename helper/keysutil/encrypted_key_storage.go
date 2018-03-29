@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"math/big"
 	paths "path"
 	"strings"
-
-	big "github.com/hashicorp/golang-math-big/big"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/logical"
