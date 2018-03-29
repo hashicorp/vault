@@ -160,7 +160,91 @@ func TestEncrytedKeysStorage_BadPolicy(t *testing.T) {
 	}
 }
 
-func TestEncrytedKeysStorage_CRUD(t *testing.T) {
+func TestEncryptedKeysStorage_List(t *testing.T) {
+	s := &logical.InmemStorage{}
+	policy := &Policy{
+		Name:                 "metadata",
+		Type:                 KeyType_AES256_GCM96,
+		Derived:              true,
+		KDF:                  Kdf_hkdf_sha256,
+		ConvergentEncryption: true,
+		ConvergentVersion:    2,
+		VersionTemplate:      EncryptedKeyPolicyVersionTpl,
+		versionPrefixCache:   &sync.Map{},
+	}
+
+	ctx := context.Background()
+
+	err := policy.Rotate(ctx, s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	es, err := NewEncryptedKeyStorageWrapper(EncryptedKeyStorageConfig{
+		Policy: policy,
+		Prefix: "prefix",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = es.Wrap(s).Put(ctx, &logical.StorageEntry{
+		Key:   "test",
+		Value: []byte("test"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = es.Wrap(s).Put(ctx, &logical.StorageEntry{
+		Key:   "test/foo",
+		Value: []byte("test"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = es.Wrap(s).Put(ctx, &logical.StorageEntry{
+		Key:   "test/foo1/test",
+		Value: []byte("test"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keys, err := es.Wrap(s).List(ctx, "test/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test prefixed with "/"
+	keys, err = es.Wrap(s).List(ctx, "/test/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(keys) != 2 || keys[0] != "foo1/" || keys[1] != "foo" {
+		t.Fatalf("bad keys: %#v", keys)
+	}
+
+	keys, err = es.Wrap(s).List(ctx, "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) != 2 || keys[0] != "test" || keys[1] != "test/" {
+		t.Fatalf("bad keys: %#v", keys)
+	}
+
+	keys, err = es.Wrap(s).List(ctx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) != 2 || keys[0] != "test" || keys[1] != "test/" {
+		t.Fatalf("bad keys: %#v", keys)
+	}
+}
+
+func TestEncryptedKeysStorage_CRUD(t *testing.T) {
 	s := &logical.InmemStorage{}
 	policy := &Policy{
 		Name:                 "metadata",

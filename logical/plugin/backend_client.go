@@ -63,10 +63,11 @@ type HandleExistenceCheckReply struct {
 
 // SetupArgs is the args for Setup method.
 type SetupArgs struct {
-	StorageID uint32
-	LoggerID  uint32
-	SysViewID uint32
-	Config    map[string]string
+	StorageID   uint32
+	LoggerID    uint32
+	SysViewID   uint32
+	Config      map[string]string
+	BackendUUID string
 }
 
 // SetupReply is the reply for Setup method.
@@ -224,10 +225,11 @@ func (b *backendPluginClient) Setup(ctx context.Context, config *logical.Backend
 	})
 
 	args := &SetupArgs{
-		StorageID: storageID,
-		LoggerID:  loggerID,
-		SysViewID: sysViewID,
-		Config:    config.Config,
+		StorageID:   storageID,
+		LoggerID:    loggerID,
+		SysViewID:   sysViewID,
+		Config:      config.Config,
+		BackendUUID: config.BackendUUID,
 	}
 	var reply SetupReply
 
