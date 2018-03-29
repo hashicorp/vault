@@ -44,7 +44,7 @@ func TestZooKeeperBackend(t *testing.T) {
 		client.Close()
 	}()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewZooKeeperBackend(map[string]string{
 		"address": addr + "," + addr,
@@ -84,7 +84,7 @@ func TestZooKeeperHABackend(t *testing.T) {
 		client.Close()
 	}()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewZooKeeperBackend(map[string]string{
 		"address": addr + "," + addr,

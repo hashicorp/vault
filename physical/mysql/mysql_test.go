@@ -31,7 +31,7 @@ func TestMySQLBackend(t *testing.T) {
 	password := os.Getenv("MYSQL_PASSWORD")
 
 	// Run vault tests
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewMySQLBackend(map[string]string{
 		"address":  address,

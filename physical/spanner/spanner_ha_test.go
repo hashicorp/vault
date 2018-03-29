@@ -43,7 +43,7 @@ func TestHABackend(t *testing.T) {
 		"table":      table,
 		"ha_table":   haTable,
 		"ha_enabled": "true",
-	}, logformat.NewVaultLogger(log.LevelTrace))
+	}, logformat.NewVaultLogger(log.Trace))
 	if err != nil {
 		t.Fatal(err)
 	}

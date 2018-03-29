@@ -21,7 +21,7 @@ func TestFileBackend_Base64URLEncoding(t *testing.T) {
 	}
 	defer os.RemoveAll(backendPath)
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewFileBackend(map[string]string{
 		"path": backendPath,
@@ -140,7 +140,7 @@ func TestFileBackend_ValidatePath(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewFileBackend(map[string]string{
 		"path": dir,
@@ -164,7 +164,7 @@ func TestFileBackend(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewFileBackend(map[string]string{
 		"path": dir,

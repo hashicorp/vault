@@ -79,7 +79,7 @@ func TestS3Backend(t *testing.T) {
 		}
 	}()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	// This uses the same logic to find the AWS credentials as we did at the beginning of the test
 	b, err := NewS3Backend(map[string]string{

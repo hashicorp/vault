@@ -23,7 +23,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 
 	// Run vault tests
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewPostgreSQLBackend(map[string]string{
 		"connection_url": connURL,

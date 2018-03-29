@@ -46,7 +46,7 @@ func TestBackend(t *testing.T) {
 		"database":   database,
 		"table":      table,
 		"ha_enabled": "false",
-	}, logformat.NewVaultLogger(log.LevelTrace))
+	}, logformat.NewVaultLogger(log.Trace))
 	if err != nil {
 		t.Fatal(err)
 	}

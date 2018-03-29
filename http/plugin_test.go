@@ -11,7 +11,6 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	bplugin "github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin"
@@ -20,8 +19,8 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func getPluginClusterAndCore(t testing.TB, logger *logbridge.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
-	inmha, err := inmem.NewInmemHA(nil, logger.LogxiLogger())
+func getPluginClusterAndCore(t testing.TB, logger hclog.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
+	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,9 +90,9 @@ func TestPlugin_PluginMain(t *testing.T) {
 }
 
 func TestPlugin_MockList(t *testing.T) {
-	logger := logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+	logger := hclog.New(&hclog.LoggerOptions{
 		Mutex: &sync.Mutex{},
-	}))
+	})
 	cluster, core := getPluginClusterAndCore(t, logger)
 	defer cluster.Cleanup()
 
@@ -129,9 +128,9 @@ func TestPlugin_MockList(t *testing.T) {
 }
 
 func TestPlugin_MockRawResponse(t *testing.T) {
-	logger := logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+	logger := hclog.New(&hclog.LoggerOptions{
 		Mutex: &sync.Mutex{},
-	}))
+	})
 	cluster, core := getPluginClusterAndCore(t, logger)
 	defer cluster.Cleanup()
 
@@ -155,9 +154,9 @@ func TestPlugin_MockRawResponse(t *testing.T) {
 }
 
 func TestPlugin_GetParams(t *testing.T) {
-	logger := logbridge.NewLogger(hclog.New(&hclog.LoggerOptions{
+	logger := hclog.New(&hclog.LoggerOptions{
 		Mutex: &sync.Mutex{},
-	}))
+	})
 	cluster, core := getPluginClusterAndCore(t, logger)
 	defer cluster.Cleanup()
 

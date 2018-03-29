@@ -57,7 +57,7 @@ func New(name string) Logger {
 
 // Trace logs a debug entry.
 func (l *DefaultLogger) Trace(msg string, args ...interface{}) {
-	l.Log(LevelTrace, msg, args)
+	l.Log(Trace, msg, args)
 }
 
 // Debug logs a debug entry.
@@ -120,7 +120,7 @@ func (l *DefaultLogger) Log(level int, msg string, args []interface{}) {
 // IsTrace determines if this logger logs a debug statement.
 func (l *DefaultLogger) IsTrace() bool {
 	// DEBUG(7) >= TRACE(10)
-	return l.level >= LevelTrace
+	return l.level >= Trace
 }
 
 // IsDebug determines if this logger logs a debug statement.

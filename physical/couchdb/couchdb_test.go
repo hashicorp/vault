@@ -19,7 +19,7 @@ func TestCouchDBBackend(t *testing.T) {
 	cleanup, endpoint, username, password := prepareCouchdbDBTestContainer(t)
 	defer cleanup()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewCouchDBBackend(map[string]string{
 		"endpoint": endpoint,
@@ -38,7 +38,7 @@ func TestTransactionalCouchDBBackend(t *testing.T) {
 	cleanup, endpoint, username, password := prepareCouchdbDBTestContainer(t)
 	defer cleanup()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewTransactionalCouchDBBackend(map[string]string{
 		"endpoint": endpoint,

@@ -24,7 +24,7 @@ func TestCassandraBackend(t *testing.T) {
 	defer cleanup()
 
 	// Run vault tests
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 	b, err := NewCassandraBackend(map[string]string{
 		"hosts":            hosts,
 		"protocol_version": "3",

@@ -14,7 +14,7 @@ func TestPhysicalView_impl(t *testing.T) {
 }
 
 func newInmemTestBackend() (physical.Backend, error) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 	return NewInmem(nil, logger)
 }
 

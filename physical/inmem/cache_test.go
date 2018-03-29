@@ -10,7 +10,7 @@ import (
 )
 
 func TestCache(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	inm, err := NewInmem(nil, logger)
 	if err != nil {
@@ -22,7 +22,7 @@ func TestCache(t *testing.T) {
 }
 
 func TestCache_Purge(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	inm, err := NewInmem(nil, logger)
 	if err != nil {
@@ -69,7 +69,7 @@ func TestCache_Purge(t *testing.T) {
 }
 
 func TestCache_Disable(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	inm, err := NewInmem(nil, logger)
 	if err != nil {

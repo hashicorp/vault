@@ -36,7 +36,7 @@ func testConsulBackend(t *testing.T) *ConsulBackend {
 }
 
 func testConsulBackendConfig(t *testing.T, conf *consulConf) *ConsulBackend {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	be, err := NewConsulBackend(*conf, logger)
 	if err != nil {
@@ -93,7 +93,7 @@ func TestConsul_ServiceTags(t *testing.T) {
 		"max_parallel":         "4",
 		"disable_registration": "false",
 	}
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	be, err := NewConsulBackend(consulConfig, logger)
 	if err != nil {
@@ -138,7 +138,7 @@ func TestConsul_ServiceAddress(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		logger := logformat.NewVaultLogger(log.LevelTrace)
+		logger := logformat.NewVaultLogger(log.Trace)
 
 		be, err := NewConsulBackend(test.consulConfig, logger)
 		if err != nil {
@@ -226,7 +226,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		logger := logformat.NewVaultLogger(log.LevelTrace)
+		logger := logformat.NewVaultLogger(log.Trace)
 
 		be, err := NewConsulBackend(test.consulConfig, logger)
 		if test.fail {
@@ -425,7 +425,7 @@ func TestConsul_serviceID(t *testing.T) {
 		},
 	}
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	for _, test := range tests {
 		be, err := NewConsulBackend(consulConf{
@@ -482,7 +482,7 @@ func TestConsulBackend(t *testing.T) {
 		client.KV().DeleteTree(randPath, nil)
 	}()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewConsulBackend(map[string]string{
 		"address":      conf.Address,
@@ -523,7 +523,7 @@ func TestConsulHABackend(t *testing.T) {
 		client.KV().DeleteTree(randPath, nil)
 	}()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logformat.NewVaultLogger(log.Trace)
 
 	b, err := NewConsulBackend(map[string]string{
 		"address":      conf.Address,
