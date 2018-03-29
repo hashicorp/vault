@@ -3,7 +3,7 @@ package command
 import (
 	"testing"
 
-	logxi "github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
@@ -17,7 +17,7 @@ func TestPathMap_Upgrade_API(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       logxi.NullLog,
+		Logger:       hclog.NullLog,
 		CredentialBackends: map[string]logical.Factory{
 			"app-id": credAppId.Factory,
 		},

@@ -19,14 +19,14 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 
-	logxi "github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
 )
 
 var (
-	defaultVaultLogger = logxi.NullLog
+	defaultVaultLogger = hclog.NullLog
 
 	defaultVaultCredentialBackends = map[string]logical.Factory{
 		"userpass": credUserpass.Factory,

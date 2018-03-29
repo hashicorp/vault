@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	logxi "github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -17,7 +17,7 @@ func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       logxi.NullLog,
+		Logger:       hclog.NullLog,
 		CredentialBackends: map[string]logical.Factory{
 			"approle": credAppRole.Factory,
 		},

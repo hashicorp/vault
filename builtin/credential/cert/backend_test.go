@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	logxi "github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
@@ -159,7 +159,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       logxi.NullLog,
+		Logger:       hclog.NullLog,
 		CredentialBackends: map[string]logical.Factory{
 			"cert": Factory,
 		},
