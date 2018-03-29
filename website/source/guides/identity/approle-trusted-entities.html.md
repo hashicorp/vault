@@ -54,7 +54,7 @@ secure introduction of secrets to target systems (servers, applications,
 containers, etc.).
 
 The question becomes what systems within our environment do we trust to handle
-or deliver the `Role ID` and `Secret ID` to our target systems.
+or deliver the `RoleID` and `SecretID` to our target systems.
 
 
 ## Solution
@@ -117,13 +117,13 @@ appropriate mounts and policies in Vault for this demo.
 ## Steps
 
 The scenario in this guide uses Terraform and Chef as trusted entities to
-deliver `Role ID` and `Secret ID`.
+deliver `RoleID` and `SecretID`.
 
 ![AppRole auth method workflow](/assets/images/vault-approle-tf-chef.png)
 
 For the simplicity of the demonstration, both Vault and Chef are installed on
-the same node. Terraform provisions the node which contains the `Role ID` as an
-environment variable. Chef pulls the `Secret ID` from Vault.
+the same node. Terraform provisions the node which contains the `RoleID` as an
+environment variable. Chef pulls the `SecretID` from Vault.
 
 
 Provisioning for this demo happens in 2 phases:
@@ -133,7 +133,7 @@ Provisioning for this demo happens in 2 phases:
     - [Step 2: Initialize and Unseal Vault](#step-2-initialize-and-unseal-vault)
     - [Step 3: AppRole Setup](#step-3-approle-setup)
     - [Step 4: Configure Tokens for Terraform and Chef](#step-4-configure-tokens-for-terraform-and-chef)
-    - [Step 5: Put the SecretID Token Into a Chef Data Bag](#step-5-put-the-secretid-token-into-a-chef-data-bag)
+    - [Step 5: Save the Token in a Chef Data Bag](#step-5-save-the-token-in-a-chef-data-bag)
     - [Step 6: Write Secrets](#step-6-write-secrets)
 - [Phase 2 - Provision our Chef Node to Show AppRole Login](#phase2)
 
@@ -352,6 +352,7 @@ Now, you are going to create an AppRole role named, **app-1**.
 
 ```bash
 # Payload containing AppRole auth method configuration
+# TTL is set to 10 minutes, and Max TTL to be 30 minutes
 $ tee app-1-approle-role.json <<EOF
 {
     "role_name": "app-1",
@@ -383,6 +384,8 @@ interact with Vault. Remember, the point here is that you are giving each system
 a _limited_ token that is only able to pull either the `RoleID` or `SecretID`,
 _but not both_.
 
+![AppRole auth method workflow](/assets/images/vault-approle-tf-chef-2.png)
+
 #### Task 1: Create a policy and token for Terraform
 Create a token with appropriate policies allowing Terraform to pull
 the `RoleID` from Vault:
@@ -403,7 +406,7 @@ $ curl --silent \
 
 # For Terraform
 # See: https://www.terraform.io/docs/providers/vault/index.html#token
-# Policy granting to create tokens
+# Policy granting to create tokens required by Terraform
 $ tee terraform-token-create.hcl <<EOF
 {"policy":"path \"/auth/token/create\" {capabilities = [\"update\"]}"}
 EOF
@@ -416,7 +419,7 @@ $ curl --silent \
        --data @terraform-token-create.hcl \
        $VAULT_ADDR/v1/sys/policy/terraform-token-create
 
-# Payload to configure token for RoleID
+# Payload to configure token for Terraform to pull RoleID
 $ tee roleid-token-config.json <<EOF
 {
   "policies": [
@@ -488,7 +491,7 @@ $ curl --silent \
     --data @app-1-approle-secretid-create.hcl \
     $VAULT_ADDR/v1/sys/policy/app-1-approle-secretid-create
 
-# Payload to invoke auth/token/create endpoint for SecretID
+# Payload to invoke auth/token/create endpoint
 $ tee secretid-token-config.json <<EOF
 {
   "policies": [
@@ -502,7 +505,7 @@ $ tee secretid-token-config.json <<EOF
 }
 EOF
 
-# Get token
+# Get token for Chef to get SecretID from Vault and store it in secretid-token.json
 $ curl --silent \
        --location \
        --header "X-Vault-Token: $VAULT_TOKEN" \
@@ -538,15 +541,18 @@ $ cat secretid-token.json | jq
 }
 ```
 
-### Step 5: Put the SecretID Token Into a Chef Data Bag
+
+### Step 5: Save the Token in a Chef Data Bag
 
 At this point, you have a client token generated for Terraform and another for
-Chef server. For the sake of simplicity, you can put it in a Data Bag and this
-is OK because this token can ***only*** retrieve `SecretID` from Vault which is
-not much of a use without a corresponding `RoleID`.
+Chef server to log into Vault. For the sake of simplicity, you can put the
+Chef's client token (`secretid-token.json`) in a [Data
+Bag](https://docs.chef.io/data_bags.html) which is fine because this token can
+***only*** retrieve `SecretID` from Vault which is not much of a use without a
+corresponding `RoleID`.
 
-Now, create a Chef Data Bag and put the `SecretID` token along with the rest of
-the metadata.
+Now, create a Chef Data Bag and put the `SecretID` token (`secretid-token.json`)
+along with the rest of its metadata.
 
 ```bash
 $ cd /home/ubuntu/vault-chef-approle-demo/chef/
@@ -653,7 +659,6 @@ would typically be done by a Vault administrator.
 To complete the demo, run the `chef-node` Terraform configuration to see how
 everything talks to each other.
 
-
 #### Task 1: Change the working directory
 
 Open another terminal on your host machine (**not** the `mgmt-node`)
@@ -667,13 +672,21 @@ $ cd identity/vault-chef-approle/terraform-aws/chef-node
 #### Task 2: Update terraform.tfvars.example
 
 Replace the variable values in `terraform.tfvars.example` to match your
-environment and save it as `terraform.tfvars`:
+environment and save it as `terraform.tfvars` like you have done at [Step 1]((#step-1-provision-the-vault--chef-server)).
+
+Note the following:
 
 * Update the **`vault_address`** and **`chef_server_address`** variables with
 the IP address of our `mgmt-node` from above.
 * Update the **`vault_token`** variable with the `RoleID` token from **Task 1**
-in [Step 4](#step-4-configure-tokens-for-terraform-and-chef).  (In this example,
-  the token was `6a7ad093-42ab-885e-3d67-6d51a5583da6`.)
+in [Step 4](#step-4-configure-tokens-for-terraform-and-chef).  
+  - If you ran the `demo-setup.sh` script (_Option 1_), retrieve the
+  `client_token` in the `/home/ubuntu/vault-chef-approle-demo/roleid-token.json`
+  file:
+
+  ```shell
+  $ cat ~/vault-chef-approle-demo/roleid-token.json | jq ".auth.client_token"
+  ```
 
 
 #### Task 3: Run Terraform
@@ -694,8 +707,32 @@ At this point, Terraform will perform the following actions:
 - Run our Chef recipe which will install NGINX, perform our AppRole login, get
 our secrets, and output them to our `index.html` file
 
-#### Task 4: Verify
-Once Terraform completes the `apply`, it will output the public IP
+![AppRole auth method workflow](/assets/images/vault-approle-tf-chef-3.png)
+
+The Chef recipe can be found at
+`identity/vault-chef-approle/chef/cookbooks/vault_chef_approle_demo/recipes/default.rb`.
+
+```shell
+...
+# Configure address for Vault Gem
+Vault.address = ENV['VAULT_ADDR']
+
+# Get AppRole RoleID from our environment variables (delivered via Terraform)
+var_role_id = ENV['APPROLE_ROLEID']
+
+# Get Vault token from data bag (used to retrieve the SecretID)
+vault_token_data = data_bag_item('secretid-token', 'approle-secretid-token')
+
+# Set Vault token (used to retrieve the SecretID)
+Vault.token = vault_token_data['auth']['client_token']
+
+# Get AppRole SecretID from Vault
+var_secret_id = Vault.approle.create_secret_id('app-1').data[:secret_id]
+...
+```
+
+#### Task 4: Verification
+Once Terraform completes the `apply` operation, it will output the public IP
 address of our new server. You can plug that IP address into a browser to see
 the output. It should look similar to the following:
 
