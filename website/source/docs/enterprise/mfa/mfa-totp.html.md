@@ -65,7 +65,7 @@ authenticate against it:
     ```text
     $ vault write auth/userpass/users/testuser \
         password=testpassword \
-        policies=duo-policy
+        policies=totp-policy
     ```
 
 1. Create a login token:
@@ -80,7 +80,7 @@ authenticate against it:
     token_accessor         a91d97f4-1c7d-6af3-e4bf-971f74f9fab9
     token_duration         768h
     token_renewable        true
-    token_policies         [default duo-policy]
+    token_policies         [default totp-policy]
     token_meta_username    "testuser"
     ```
 
@@ -109,7 +109,7 @@ authenticate against it:
     num_uses            0
     orphan              true
     path                auth/userpass/login/testuser
-    policies            [default duo-policy]
+    policies            [default totp-policy]
     renewable           true
     ttl                 2764623
     ```
