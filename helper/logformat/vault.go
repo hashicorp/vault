@@ -8,15 +8,10 @@ import (
 	log "github.com/hashicorp/go-hclog"
 )
 
-const (
-	timeFormat = "2006/01/02 15:04:05.000000"
-)
-
 func NewVaultHCLogger(w io.Writer, level log.Level) log.Logger {
 	opts := &log.LoggerOptions{
-		Level:      level,
-		Output:     w,
-		TimeFormat: timeFormat,
+		Level:  level,
+		Output: w,
 	}
 	if useJson() {
 		opts.JSONFormat = true

@@ -322,8 +322,9 @@ func (c *ServerCommand) Run(args []string) int {
 	default:
 		c.logger = logformat.NewVaultHCLogger(c.logGate, level)
 	}
+	c.logger.Named("serverCommand")
 	grpclog.SetLogger(&grpclogFaker{
-		logger: c.logger,
+		logger: c.logger.Named("grpclogFaker"),
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
 	})
 

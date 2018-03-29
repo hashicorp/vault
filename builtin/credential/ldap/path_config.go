@@ -413,7 +413,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 		if err == nil {
 			if retErr != nil {
 				if c.logger.IsDebug() {
-					c.logger.Debug("ldap: errors connecting to some hosts: %s", retErr.Error())
+					c.logger.Debug("errors connecting to some hosts: %s", retErr.Error())
 				}
 			}
 			retErr = nil
