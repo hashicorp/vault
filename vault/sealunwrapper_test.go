@@ -12,13 +12,13 @@ import (
 	"testing"
 
 	proto "github.com/golang/protobuf/proto"
-	hclog "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
 )
 
 func TestSealUnwrapper(t *testing.T) {
-	logger := hclog.New(&hclog.LoggerOptions{
+	logger := log.New(&log.LoggerOptions{
 		Mutex: &sync.Mutex{},
 	})
 
@@ -37,7 +37,7 @@ func TestSealUnwrapper(t *testing.T) {
 	performTestSealUnwrapper(t, tPhys, logger)
 }
 
-func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger hclog.Logger) {
+func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Logger) {
 	ctx := context.Background()
 	base := &CoreConfig{
 		Physical: phys,

@@ -6,7 +6,6 @@ import (
 	stdlog "log"
 	"strings"
 
-	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 )
 
@@ -73,13 +72,13 @@ func (f *hclogFaker) IsError() bool {
 	return !f.logger.IsTrace() && !f.logger.IsDebug() && !f.logger.IsInfo() && !f.IsWarn()
 }
 
-func (f *hclogFaker) With(args ...interface{}) hclog.Logger {
+func (f *hclogFaker) With(args ...interface{}) log.Logger {
 	var nf = *f
 	nf.implied = append(nf.implied, args...)
 	return f
 }
 
-func (f *hclogFaker) Named(name string) hclog.Logger {
+func (f *hclogFaker) Named(name string) log.Logger {
 	var nf = *f
 	if nf.name != "" {
 		nf.name = nf.name + "." + name
@@ -87,15 +86,15 @@ func (f *hclogFaker) Named(name string) hclog.Logger {
 	return &nf
 }
 
-func (f *hclogFaker) ResetNamed(name string) hclog.Logger {
+func (f *hclogFaker) ResetNamed(name string) log.Logger {
 	var nf = *f
 	nf.name = name
 	return &nf
 }
 
-func (f *hclogFaker) StandardLogger(opts *hclog.StandardLoggerOptions) *stdlog.Logger {
+func (f *hclogFaker) StandardLogger(opts *log.StandardLoggerOptions) *stdlog.Logger {
 	if opts == nil {
-		opts = &hclog.StandardLoggerOptions{}
+		opts = &log.StandardLoggerOptions{}
 	}
 
 	return stdlog.New(&stdlogAdapter{f, opts.InferLevels}, "", 0)
@@ -105,7 +104,7 @@ func (f *hclogFaker) StandardLogger(opts *hclog.StandardLoggerOptions) *stdlog.L
 // and back into our Logger. This is basically the only way to
 // build upon *log.Logger.
 type stdlogAdapter struct {
-	hl          hclog.Logger
+	hl          log.Logger
 	inferLevels bool
 }
 
@@ -117,15 +116,15 @@ func (s *stdlogAdapter) Write(data []byte) (int, error) {
 	if s.inferLevels {
 		level, str := s.pickLevel(str)
 		switch level {
-		case hclog.Trace:
+		case log.Trace:
 			s.hl.Trace(str)
-		case hclog.Debug:
+		case log.Debug:
 			s.hl.Debug(str)
-		case hclog.Info:
+		case log.Info:
 			s.hl.Info(str)
-		case hclog.Warn:
+		case log.Warn:
 			s.hl.Warn(str)
-		case hclog.Error:
+		case log.Error:
 			s.hl.Error(str)
 		default:
 			s.hl.Info(str)
@@ -138,21 +137,21 @@ func (s *stdlogAdapter) Write(data []byte) (int, error) {
 }
 
 // Detect, based on conventions, what log level this is
-func (s *stdlogAdapter) pickLevel(str string) (hclog.Level, string) {
+func (s *stdlogAdapter) pickLevel(str string) (log.Level, string) {
 	switch {
 	case strings.HasPrefix(str, "[DEBUG]"):
-		return hclog.Debug, strings.TrimSpace(str[7:])
+		return log.Debug, strings.TrimSpace(str[7:])
 	case strings.HasPrefix(str, "[TRACE]"):
-		return hclog.Trace, strings.TrimSpace(str[7:])
+		return log.Trace, strings.TrimSpace(str[7:])
 	case strings.HasPrefix(str, "[INFO]"):
-		return hclog.Info, strings.TrimSpace(str[6:])
+		return log.Info, strings.TrimSpace(str[6:])
 	case strings.HasPrefix(str, "[WARN]"):
-		return hclog.Warn, strings.TrimSpace(str[7:])
+		return log.Warn, strings.TrimSpace(str[7:])
 	case strings.HasPrefix(str, "[ERROR]"):
-		return hclog.Error, strings.TrimSpace(str[7:])
+		return log.Error, strings.TrimSpace(str[7:])
 	case strings.HasPrefix(str, "[ERR]"):
-		return hclog.Error, strings.TrimSpace(str[5:])
+		return log.Error, strings.TrimSpace(str[5:])
 	default:
-		return hclog.Info, str
+		return log.Info, str
 	}
 }

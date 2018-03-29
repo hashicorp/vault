@@ -28,7 +28,7 @@ import (
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/hashicorp/errwrap"
-	hclog "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -61,7 +61,7 @@ type ServerCommand struct {
 	WaitGroup *sync.WaitGroup
 
 	logGate *gatedwriter.Writer
-	logger  hclog.Logger
+	logger  log.Logger
 
 	cleanupGuard sync.Once
 
@@ -275,19 +275,19 @@ func (c *ServerCommand) Run(args []string) int {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
-	var level hclog.Level
+	var level log.Level
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
 	case "trace":
-		level = hclog.Trace
+		level = log.Trace
 	case "debug":
-		level = hclog.Debug
+		level = log.Debug
 	case "info", "":
-		level = hclog.Info
+		level = log.Info
 	case "warn", "warning":
-		level = hclog.Warn
+		level = log.Warn
 	case "err", "error":
-		level = hclog.Error
+		level = log.Error
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown log level: %s", c.flagLogLevel))
 		return 1
@@ -300,10 +300,10 @@ func (c *ServerCommand) Run(args []string) int {
 	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
 		if c.flagDevThreeNode || c.flagDevFourCluster {
-			c.logger = hclog.New(&hclog.LoggerOptions{
+			c.logger = log.New(&log.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
-				Level:  hclog.Trace,
+				Level:  log.Trace,
 			})
 		} else {
 			c.logger = logformat.NewVaultHCLogger(c.logGate, level)
@@ -1462,7 +1462,7 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 }
 
 type grpclogFaker struct {
-	logger hclog.Logger
+	logger log.Logger
 	log    bool
 }
 

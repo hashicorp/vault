@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	hclog "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	bplugin "github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func getPluginClusterAndCore(t testing.TB, logger hclog.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
+func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
 	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -90,7 +90,7 @@ func TestPlugin_PluginMain(t *testing.T) {
 }
 
 func TestPlugin_MockList(t *testing.T) {
-	logger := hclog.New(&hclog.LoggerOptions{
+	logger := log.New(&log.LoggerOptions{
 		Mutex: &sync.Mutex{},
 	})
 	cluster, core := getPluginClusterAndCore(t, logger)
@@ -128,7 +128,7 @@ func TestPlugin_MockList(t *testing.T) {
 }
 
 func TestPlugin_MockRawResponse(t *testing.T) {
-	logger := hclog.New(&hclog.LoggerOptions{
+	logger := log.New(&log.LoggerOptions{
 		Mutex: &sync.Mutex{},
 	})
 	cluster, core := getPluginClusterAndCore(t, logger)
@@ -154,7 +154,7 @@ func TestPlugin_MockRawResponse(t *testing.T) {
 }
 
 func TestPlugin_GetParams(t *testing.T) {
-	logger := hclog.New(&hclog.LoggerOptions{
+	logger := log.New(&log.LoggerOptions{
 		Mutex: &sync.Mutex{},
 	})
 	cluster, core := getPluginClusterAndCore(t, logger)

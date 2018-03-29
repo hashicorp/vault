@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	gplugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/logformat"
@@ -143,8 +142,8 @@ func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 	pluginMap := map[string]gplugin.Plugin{
 		"backend": &BackendPlugin{
 			Factory: mock.Factory,
-			Logger: hclog.New(&hclog.LoggerOptions{
-				Level:      hclog.Trace,
+			Logger: log.New(&log.LoggerOptions{
+				Level:      log.Trace,
 				Output:     os.Stderr,
 				JSONFormat: true,
 			}),

@@ -1,18 +1,19 @@
 package logformat
 
 import (
-	hclog "github.com/hashicorp/go-hclog"
 	"io"
 	"os"
 	"strings"
+
+	log "github.com/hashicorp/go-hclog"
 )
 
 const (
 	timeFormat = "2006/01/02 15:04:05.000000"
 )
 
-func NewVaultHCLogger(w io.Writer, level hclog.Level) hclog.Logger {
-	opts := &hclog.LoggerOptions{
+func NewVaultHCLogger(w io.Writer, level log.Level) log.Logger {
+	opts := &log.LoggerOptions{
 		Level:      level,
 		Output:     w,
 		TimeFormat: timeFormat,
@@ -20,18 +21,18 @@ func NewVaultHCLogger(w io.Writer, level hclog.Level) hclog.Logger {
 	if useJson() {
 		opts.JSONFormat = true
 	}
-	return hclog.New(opts)
+	return log.New(opts)
 }
 
 // NewVaultLogger creates a new logger with the specified level and a Vault
 // formatter
-func NewVaultLogger(level hclog.Level) hclog.Logger {
-	return NewVaultLoggerWithWriter(hclog.DefaultOutput, level)
+func NewVaultLogger(level log.Level) log.Logger {
+	return NewVaultLoggerWithWriter(log.DefaultOutput, level)
 }
 
 // NewVaultLoggerWithWriter creates a new logger with the specified level and
 // writer and a Vault formatter
-func NewVaultLoggerWithWriter(w io.Writer, level hclog.Level) hclog.Logger {
+func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 	return NewVaultHCLogger(w, level)
 }
 

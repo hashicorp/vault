@@ -7,9 +7,8 @@ import (
 
 	"google.golang.org/grpc"
 
-	hclog "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	//"github.com/hashicorp/vault/helper/logbridge"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
 )
@@ -18,7 +17,7 @@ import (
 type BackendPlugin struct {
 	Factory      logical.Factory
 	metadataMode bool
-	Logger       hclog.Logger
+	Logger       log.Logger
 }
 
 // Server gets called when on plugin.Serve()
