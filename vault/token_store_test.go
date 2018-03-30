@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
@@ -451,7 +452,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(context.Background(), c, getBackendConfig(c))
+	ts2, err := NewTokenStore(context.Background(), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -494,7 +495,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(context.Background(), c, getBackendConfig(c))
+	ts2, err := NewTokenStore(context.Background(), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
