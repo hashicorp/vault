@@ -73,12 +73,6 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))
 
-	// Create logger for the plugin client
-	clogger := &hclogFaker{
-		logger: logger,
-	}
-	namedLogger := clogger.ResetNamed("plugin")
-
 	var clientTLSConfig *tls.Config
 	if !isMetadataMode {
 		// Add the metadata mode ENV and set it to false
@@ -106,7 +100,7 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 		// Add the response wrap token to the ENV of the plugin
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
 	} else {
-		namedLogger = clogger.ResetNamed("plugin.metadata")
+		logger = logger.With("metadata", "true")
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMetadataModeEnv, "true"))
 	}
 
@@ -121,7 +115,7 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 		Cmd:             cmd,
 		SecureConfig:    secureConfig,
 		TLSConfig:       clientTLSConfig,
-		Logger:          namedLogger.Named("ClientConfig"),
+		Logger:          logger,
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC,
 			plugin.ProtocolGRPC,
