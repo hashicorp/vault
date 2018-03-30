@@ -175,6 +175,9 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
 	if awsErr, ok := err.(awserr.RequestFailure); ok {
 		// Return nil on 404s, error on anything else
 		if awsErr.StatusCode() == 404 {
@@ -188,7 +191,6 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 	if resp == nil {
 		return nil, fmt.Errorf("got nil response from S3 but no error")
 	}
-	defer resp.Body.Close()
 
 	data := bytes.NewBuffer(nil)
 	if resp.ContentLength != nil {
