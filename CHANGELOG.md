@@ -71,6 +71,7 @@ BUG FIXES:
  * replication: Fix invalidation of policies on performance secondaries
  * secret/pki: When tidying if a value is unexpectedly nil, delete it and move
    on [GH-4214]
+ * storage/s3: Fix panic if S3 returns no Content-Length header [GH-4222]
 
 ## 0.9.6 (March 20th, 2018)
 
