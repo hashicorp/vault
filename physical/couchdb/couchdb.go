@@ -188,7 +188,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			password: password,
 			Client:   cleanhttp.DefaultPooledClient(),
 		},
-		logger:     logger.Named("storage.couchdbbackend"),
+		logger:     logger.ResetNamed("storage.couchdb"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}, nil
 }

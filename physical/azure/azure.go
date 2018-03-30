@@ -92,7 +92,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	a := &AzureBackend{
 		container:  container,
-		logger:     logger.Named("storage.azurebackend"),
+		logger:     logger.ResetNamed("storage.azure"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 	return a, nil

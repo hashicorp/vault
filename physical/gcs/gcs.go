@@ -92,7 +92,7 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		bucketName: bucketName,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParInt),
-		logger:     logger.Named("storage.gcsbackend"),
+		logger:     logger.ResetNamed("storage.gcs"),
 	}
 
 	return &g, nil

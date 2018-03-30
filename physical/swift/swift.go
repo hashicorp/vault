@@ -120,7 +120,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	s := &SwiftBackend{
 		client:     &c,
 		container:  container,
-		logger:     logger.Named("storage.swiftbackend"),
+		logger:     logger.ResetNamed("storage.swift"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 	return s, nil

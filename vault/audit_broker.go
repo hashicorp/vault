@@ -29,7 +29,7 @@ type AuditBroker struct {
 func NewAuditBroker(log log.Logger) *AuditBroker {
 	b := &AuditBroker{
 		backends: make(map[string]backendEntry),
-		logger:   log.Named("auditbroker"),
+		logger:   log,
 	}
 	return b
 }

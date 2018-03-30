@@ -138,7 +138,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	s := &S3Backend{
 		client:     s3conn,
 		bucket:     bucket,
-		logger:     logger.Named("storage.s3backend"),
+		logger:     logger.ResetNamed("storage.s3"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 	return s, nil

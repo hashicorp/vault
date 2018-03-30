@@ -92,7 +92,7 @@ func NewMantaBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	return &MantaBackend{
 		client:     client,
 		directory:  conf["directory"],
-		logger:     logger.Named("storage.mantabackend"),
+		logger:     logger.ResetNamed("storage.manta"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}, nil
 }

@@ -117,7 +117,7 @@ func newEtcd2Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		path:       path,
 		kAPI:       kAPI,
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
-		logger:     logger.Named("etcd2backend"),
+		logger:     logger.ResetNamed("stroage.etcd2"),
 		haEnabled:  haEnabledBool,
 	}, nil
 }

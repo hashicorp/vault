@@ -172,7 +172,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		dbTable:    dbTable,
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
-		logger:     logger.Named("storage.mysqlbackend"),
+		logger:     logger.ResetNamed("storage.mysql"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 
