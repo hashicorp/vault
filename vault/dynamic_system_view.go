@@ -220,15 +220,14 @@ func (d dynamicSystemView) CalculateTTL(increment, period, backendMaxTTL, explic
 		}
 
 		// We are proposing a time of the current time plus the increment
-		proposedExpiration := now.Add(increment)
+		proposedExpiration := now.Add(ttl)
 
 		// If the proposed expiration is after the maximum TTL of the lease,
 		// cap the increment to whatever is left
 		if maxValidTime.Before(proposedExpiration) {
-			increment = maxValidTime.Sub(now)
+			ttl = maxValidTime.Sub(now)
 			warnings = append(warnings,
 				fmt.Sprintf("TTL of %q exceeded the explicit max_ttl of %q; TTL value is capped accordingly", ttl, explicitMaxTTL))
-			ttl = increment
 		}
 	}
 
