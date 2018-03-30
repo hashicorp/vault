@@ -290,7 +290,7 @@ func (c *ServerCommand) Run(args []string) int {
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
 	case "trace":
-		level = log.Debug
+		level = log.Trace
 	case "debug":
 		level = log.Debug
 	case "info", "":
@@ -314,7 +314,7 @@ func (c *ServerCommand) Run(args []string) int {
 			c.logger = log.New(&log.LoggerOptions{
 				Mutex:  &sync.Mutex{},
 				Output: c.logGate,
-				Level:  log.Debug,
+				Level:  log.Trace,
 			})
 		} else {
 			c.logger = logformat.NewVaultHCLogger(c.logGate, level)

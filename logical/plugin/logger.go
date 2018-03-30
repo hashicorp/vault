@@ -114,7 +114,7 @@ func translateLevel(logxiLevel int) hclog.Level {
 	switch logxiLevel {
 
 	case logxi.LevelAll, logxi.LevelTrace:
-		return hclog.Debug
+		return hclog.Trace
 
 	case logxi.LevelDebug:
 		return hclog.Debug
