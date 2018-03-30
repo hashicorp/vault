@@ -142,10 +142,8 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// Wrap the backend in a tracing middleware
 	if logger.IsDebug() {
 		backend = &backendTracingMiddleware{
-			logger:    logger.Named("backendTracingMiddleware"),
-			transport: transport,
-			typeStr:   pluginRunner.Name,
-			next:      backend,
+			logger: logger.With("plugin_type", pluginRunner.Name, "transport", transport),
+			next:   backend,
 		}
 	}
 

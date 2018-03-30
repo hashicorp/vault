@@ -3,9 +3,10 @@ package plugin
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/go-hclog"
 	"net/rpc"
 	"os"
+
+	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -24,7 +25,6 @@ type backendPluginServer struct {
 	factory logical.Factory
 
 	logger        hclog.Logger
-	loggerClient  *rpc.Client
 	sysViewClient *rpc.Client
 	storageClient *rpc.Client
 }
@@ -79,7 +79,6 @@ func (b *backendPluginServer) Cleanup(_ interface{}, _ *struct{}) error {
 	b.backend.Cleanup(context.Background())
 
 	// Close rpc clients
-	b.loggerClient.Close()
 	b.sysViewClient.Close()
 	b.storageClient.Close()
 	return nil
@@ -111,17 +110,6 @@ func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 
 	storage := &StorageClient{client: rawStorageClient}
 
-	// Dial for logger
-	loggerConn, err := b.broker.Dial(args.LoggerID)
-	if err != nil {
-		*reply = SetupReply{
-			Error: wrapError(err),
-		}
-		return nil
-	}
-	rawLoggerClient := rpc.NewClient(loggerConn)
-	b.loggerClient = rawLoggerClient
-
 	// Dial for sys view
 	sysViewConn, err := b.broker.Dial(args.SysViewID)
 	if err != nil {
@@ -137,7 +125,7 @@ func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 
 	config := &logical.BackendConfig{
 		StorageView: storage,
-		Logger:      b.logger.Named("BackendConfig"),
+		Logger:      b.logger,
 		System:      sysView,
 		Config:      args.Config,
 		BackendUUID: args.BackendUUID,

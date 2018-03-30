@@ -204,16 +204,6 @@ func (b *backendPluginClient) Setup(ctx context.Context, config *logical.Backend
 		impl: storageImpl,
 	})
 
-	// Shim log.Logger
-	loggerImpl := config.Logger
-	if b.metadataMode {
-		loggerImpl = log.Default()
-	}
-	loggerID := b.broker.NextId()
-	go b.broker.AcceptAndServe(loggerID, &LoggerServer{
-		logger: loggerImpl,
-	})
-
 	// Shim logical.SystemView
 	sysViewImpl := config.System
 	if b.metadataMode {
@@ -226,7 +216,6 @@ func (b *backendPluginClient) Setup(ctx context.Context, config *logical.Backend
 
 	args := &SetupArgs{
 		StorageID:   storageID,
-		LoggerID:    loggerID,
 		SysViewID:   sysViewID,
 		Config:      config.Config,
 		BackendUUID: config.BackendUUID,
@@ -243,7 +232,7 @@ func (b *backendPluginClient) Setup(ctx context.Context, config *logical.Backend
 
 	// Set system and logger for getter methods
 	b.system = config.System
-	b.logger = config.Logger.Named("backendPluginClient")
+	b.logger = config.Logger
 
 	return nil
 }
