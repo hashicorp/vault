@@ -544,7 +544,7 @@ func (c *ConsulBackend) NotifyActiveStateChange() error {
 	default:
 		// NOTE: If this occurs Vault's active status could be out of
 		// sync with Consul until reconcileTimer expires.
-		c.logger.Warn("Concurrent state change notify dropped")
+		c.logger.Warn("concurrent state change notify dropped")
 	}
 
 	return nil
@@ -556,7 +556,7 @@ func (c *ConsulBackend) NotifySealedStateChange() error {
 	default:
 		// NOTE: If this occurs Vault's sealed status could be out of
 		// sync with Consul until checkTimer expires.
-		c.logger.Warn("Concurrent sealed state change notify dropped")
+		c.logger.Warn("concurrent sealed state change notify dropped")
 	}
 
 	return nil
@@ -665,7 +665,7 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 				}()
 			}
 		case <-shutdownCh:
-			c.logger.Info("Shutting down consul backend")
+			c.logger.Info("shutting down consul backend")
 			shutdown = true
 		}
 	}

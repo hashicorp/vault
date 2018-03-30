@@ -10,11 +10,9 @@ import (
 
 func NewVaultHCLogger(w io.Writer, level log.Level) log.Logger {
 	opts := &log.LoggerOptions{
-		Level:  level,
-		Output: w,
-	}
-	if useJson() {
-		opts.JSONFormat = true
+		Level:      level,
+		Output:     w,
+		JSONFormat: useJson(),
 	}
 	return log.New(opts)
 }
