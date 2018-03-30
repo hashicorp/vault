@@ -31,7 +31,7 @@ func NewInmemHA(_ map[string]string, logger log.Logger) (physical.Backend, error
 	in := &InmemHABackend{
 		Backend: be,
 		locks:   make(map[string]string),
-		logger:  logger,
+		logger:  logger.Named("inmemhabackend"),
 		l:       new(sync.Mutex),
 	}
 	in.cond = sync.NewCond(in.l)
@@ -46,7 +46,7 @@ func NewTransactionalInmemHA(_ map[string]string, logger log.Logger) (physical.B
 	inmemHA := InmemHABackend{
 		Backend: transInmem,
 		locks:   make(map[string]string),
-		logger:  logger,
+		logger:  logger.Named("inmemhabackend"),
 		l:       new(sync.Mutex),
 	}
 

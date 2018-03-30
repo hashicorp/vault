@@ -58,7 +58,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("cockroachdb: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
@@ -88,7 +88,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 			"list":   "SELECT path FROM " + dbTable + " WHERE path LIKE $1",
 		},
 		statements: make(map[string]*sql.Stmt),
-		logger:     logger,
+		logger:     logger.Named("cockroachdbbackend"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 

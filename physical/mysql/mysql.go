@@ -79,7 +79,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, errwrap.Wrapf("failed parsing max_idle_connections parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("mysql: max_idle_connections set", "max_idle_connections", maxIdleConnInt)
+			logger.Debug("max_idle_connections set", "max_idle_connections", maxIdleConnInt)
 		}
 	}
 
@@ -91,7 +91,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, errwrap.Wrapf("failed parsing max_connection_lifetime parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("mysql: max_connection_lifetime set", "max_connection_lifetime", maxConnLifeInt)
+			logger.Debug("max_connection_lifetime set", "max_connection_lifetime", maxConnLifeInt)
 		}
 	}
 
@@ -103,7 +103,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("mysql: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	} else {
 		maxParInt = physical.DefaultParallelOperations
@@ -172,7 +172,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		dbTable:    dbTable,
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
-		logger:     logger,
+		logger:     logger.Named("mysqlbackend"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 

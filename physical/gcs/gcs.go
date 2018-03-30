@@ -72,7 +72,7 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("physical/gcs: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
@@ -84,7 +84,7 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		}
 		chunkSize *= 1024
 		if logger.IsDebug() {
-			logger.Debug("physical/gcs: chunk_size set", "chunk_size", chunkSize)
+			logger.Debug("chunk_size set", "chunk_size", chunkSize)
 		}
 	}
 
@@ -92,7 +92,7 @@ func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		bucketName: bucketName,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParInt),
-		logger:     logger,
+		logger:     logger.Named("gcsbackend"),
 	}
 
 	return &g, nil

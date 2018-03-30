@@ -86,13 +86,13 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("azure: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
 	a := &AzureBackend{
 		container:  container,
-		logger:     logger,
+		logger:     logger.Named("azurebackend"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 	return a, nil

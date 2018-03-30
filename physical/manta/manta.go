@@ -74,7 +74,7 @@ func NewMantaBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("manta: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
@@ -92,7 +92,7 @@ func NewMantaBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	return &MantaBackend{
 		client:     client,
 		directory:  conf["directory"],
-		logger:     logger,
+		logger:     logger.Named("mantabackend"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}, nil
 }

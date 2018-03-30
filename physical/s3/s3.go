@@ -131,14 +131,14 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("s3: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
 	s := &S3Backend{
 		client:     s3conn,
 		bucket:     bucket,
-		logger:     logger,
+		logger:     logger.Named("s3backend"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 	return s, nil

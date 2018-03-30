@@ -53,7 +53,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("mysql: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	} else {
 		maxParInt = physical.DefaultParallelOperations
@@ -140,7 +140,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		dbTable:    dbTable,
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
-		logger:     logger,
+		logger:     logger.Named("mssqlbackend"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 

@@ -113,14 +113,14 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("swift: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
 	s := &SwiftBackend{
 		client:     &c,
 		container:  container,
-		logger:     logger,
+		logger:     logger.Named("swiftbackend"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 	return s, nil

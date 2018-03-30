@@ -177,7 +177,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("couchdb: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
@@ -188,7 +188,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			password: password,
 			Client:   cleanhttp.DefaultPooledClient(),
 		},
-		logger:     logger,
+		logger:     logger.Named("couchdbbackend"),
 		permitPool: physical.NewPermitPool(maxParInt),
 	}, nil
 }

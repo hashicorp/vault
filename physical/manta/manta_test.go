@@ -53,7 +53,7 @@ func TestMantaBackend(t *testing.T) {
 	mb := &MantaBackend{
 		client:     client,
 		directory:  testHarnessBucket,
-		logger:     logger,
+		logger:     logger.Named("mantabackend"),
 		permitPool: physical.NewPermitPool(128),
 	}
 

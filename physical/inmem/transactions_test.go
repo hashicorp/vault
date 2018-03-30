@@ -70,7 +70,7 @@ func newFaultyPseudo(logger log.Logger, faultyPaths []string) *faultyPseudo {
 		underlying: InmemBackend{
 			root:       radix.New(),
 			permitPool: physical.NewPermitPool(1),
-			logger:     logger,
+			logger:     logger.Named("inmembackend"),
 		},
 		faultyPaths: make(map[string]struct{}, len(faultyPaths)),
 	}
