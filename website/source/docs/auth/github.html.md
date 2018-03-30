@@ -78,8 +78,7 @@ management tool.
     $ vault auth enable github
     ```
 
-1. Use the `/config` endpoint to configure Vault to talk to GitHub. For the list
-   of available configuration options, please see the API documentation.
+1. Use the `/config` endpoint to configure Vault to talk to GitHub.
 
     ```text
     $ vault write auth/github/config organization=hashicorp

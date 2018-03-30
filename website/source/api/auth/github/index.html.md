@@ -87,6 +87,142 @@ $ curl \
 }
 ```
 
+## Map GitHub Teams
+
+Map a list of policies to a team that exists in the configured GitHub organization.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/auth/github/map/teams/:team_name`   | `204 (empty body)`     |
+
+### Parameters
+
+- `key` `(string)` - GitHub team name in "slugified" format
+- `value` `(string)` - Comma separated list of policies to assign
+
+### Sample Payload
+
+```json
+{
+  "value": "dev-policy"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/github/map/teams/dev
+```
+
+
+## Read Team Mapping
+
+Reads the GitHub team policy mapping.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`    | `/auth/github/map/teams:team_name`        | `200 application/json` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/github/map/teams/dev
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "812229d7-a82e-0b20-c35b-81ce8c1b9fa6",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "key": "dev",
+    "value": "dev-policy"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Map GitHub Users
+
+Map a list of policies to a specific GitHub user exists in the configured
+organization.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/auth/github/map/users/:user_name`     | `204 (empty body)`     |
+
+### Parameters
+
+- `key` `(string)` - GitHub user name
+- `value` `(string)` - Comma separated list of policies to assign
+
+### Sample Payload
+
+```json
+{
+  "value": "sethvargo-policy"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/github/map/users/sethvargo
+```
+
+The user with username `sethvargo` will be assigned the `sethvargo-policy`
+policy **in addition to** any team policies.
+
+## Read User Mapping
+
+Reads the GitHub user policy mapping.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`    | `/auth/github/map/users:user_name`        | `200 application/json` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/github/map/users/sethvargo
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "764b6f88-efba-51bd-ed62-cf1c9e80e37a",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "key": "sethvargo",
+    "value": "sethvargo-policy"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+
 ## Login
 
 Login using GitHub access token.

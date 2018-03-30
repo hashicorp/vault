@@ -27,7 +27,11 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 	t.Run("error_non_terminal", func(t *testing.T) {
 		t.Parallel()
 
+		client, closer := testVaultServer(t)
+		defer closer()
+
 		ui, cmd := testOperatorUnsealCommand(t)
+		cmd.client = client
 		cmd.testOutput = ioutil.Discard
 
 		code := cmd.Run(nil)

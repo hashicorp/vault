@@ -11,27 +11,34 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 )
 
 const (
-	defaultUserCreationCQL = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;`
-	defaultUserDeletionCQL = `DROP USER '{{username}}';`
-	cassandraTypeName      = "cassandra"
+	defaultUserCreationCQL           = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;`
+	defaultUserDeletionCQL           = `DROP USER '{{username}}';`
+	defaultRootCredentialRotationCQL = `ALTER USER {{username}} WITH PASSWORD '{{password}}';`
+	cassandraTypeName                = "cassandra"
 )
 
 var _ dbplugin.Database = &Cassandra{}
 
 // Cassandra is an implementation of Database interface
 type Cassandra struct {
-	connutil.ConnectionProducer
+	*cassandraConnectionProducer
 	credsutil.CredentialsProducer
 }
 
 // New returns a new Cassandra instance
 func New() (interface{}, error) {
+	db := new()
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
+
+	return dbType, nil
+}
+
+func new() *Cassandra {
 	connProducer := &cassandraConnectionProducer{}
 	connProducer.Type = cassandraTypeName
 
@@ -42,12 +49,10 @@ func New() (interface{}, error) {
 		Separator:      "_",
 	}
 
-	dbType := &Cassandra{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+	return &Cassandra{
+		cassandraConnectionProducer: connProducer,
+		CredentialsProducer:         credsProducer,
 	}
-
-	return dbType, nil
 }
 
 // Run instantiates a Cassandra object, and runs the RPC server for the plugin
@@ -57,7 +62,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*Cassandra), apiTLSConfig)
+	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
 
 	return nil
 }
@@ -83,19 +88,22 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 	c.Lock()
 	defer c.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	// Get the connection
 	session, err := c.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
 
-	creationCQL := statements.CreationStatements
-	if creationCQL == "" {
-		creationCQL = defaultUserCreationCQL
+	creationCQL := statements.Creation
+	if len(creationCQL) == 0 {
+		creationCQL = []string{defaultUserCreationCQL}
 	}
-	rollbackCQL := statements.RollbackStatements
-	if rollbackCQL == "" {
-		rollbackCQL = defaultUserDeletionCQL
+
+	rollbackCQL := statements.Rollback
+	if len(rollbackCQL) == 0 {
+		rollbackCQL = []string{defaultUserDeletionCQL}
 	}
 
 	username, err = c.GenerateUsername(usernameConfig)
@@ -112,28 +120,32 @@ func (c *Cassandra) CreateUser(ctx context.Context, statements dbplugin.Statemen
 	}
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(creationCQL, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
-
-		err = session.Query(dbutil.QueryHelper(query, map[string]string{
-			"username": username,
-			"password": password,
-		})).Exec()
-		if err != nil {
-			for _, query := range strutil.ParseArbitraryStringSlice(rollbackCQL, ";") {
-				query = strings.TrimSpace(query)
-				if len(query) == 0 {
-					continue
-				}
-
-				session.Query(dbutil.QueryHelper(query, map[string]string{
-					"username": username,
-				})).Exec()
+	for _, stmt := range creationCQL {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
 			}
-			return "", "", err
+
+			err = session.Query(dbutil.QueryHelper(query, map[string]string{
+				"username": username,
+				"password": password,
+			})).Exec()
+			if err != nil {
+				for _, stmt := range rollbackCQL {
+					for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+						query = strings.TrimSpace(query)
+						if len(query) == 0 {
+							continue
+						}
+
+						session.Query(dbutil.QueryHelper(query, map[string]string{
+							"username": username,
+						})).Exec()
+					}
+				}
+				return "", "", err
+			}
 		}
 	}
 
@@ -152,29 +164,79 @@ func (c *Cassandra) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 	c.Lock()
 	defer c.Unlock()
 
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
 	session, err := c.getConnection(ctx)
 	if err != nil {
 		return err
 	}
 
-	revocationCQL := statements.RevocationStatements
-	if revocationCQL == "" {
-		revocationCQL = defaultUserDeletionCQL
+	revocationCQL := statements.Revocation
+	if len(revocationCQL) == 0 {
+		revocationCQL = []string{defaultUserDeletionCQL}
 	}
 
 	var result *multierror.Error
-	for _, query := range strutil.ParseArbitraryStringSlice(revocationCQL, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
+	for _, stmt := range revocationCQL {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			err := session.Query(dbutil.QueryHelper(query, map[string]string{
+				"username": username,
+			})).Exec()
+
+			result = multierror.Append(result, err)
 		}
-
-		err := session.Query(dbutil.QueryHelper(query, map[string]string{
-			"username": username,
-		})).Exec()
-
-		result = multierror.Append(result, err)
 	}
 
 	return result.ErrorOrNil()
+}
+
+func (c *Cassandra) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+	// Grab the lock
+	c.Lock()
+	defer c.Unlock()
+
+	session, err := c.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rotateCQL := statements
+	if len(rotateCQL) == 0 {
+		rotateCQL = []string{defaultRootCredentialRotationCQL}
+	}
+
+	password, err := c.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	var result *multierror.Error
+	for _, stmt := range rotateCQL {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			err := session.Query(dbutil.QueryHelper(query, map[string]string{
+				"username": c.Username,
+				"password": password,
+			})).Exec()
+
+			result = multierror.Append(result, err)
+		}
+	}
+
+	err = result.ErrorOrNil()
+	if err != nil {
+		return nil, err
+	}
+
+	c.rawConfig["password"] = password
+	return c.rawConfig, nil
 }

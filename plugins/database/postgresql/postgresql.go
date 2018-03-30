@@ -3,10 +3,12 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -15,13 +17,15 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/lib/pq"
-	_ "github.com/lib/pq"
 )
 
 const (
-	postgreSQLTypeName      string = "postgres"
-	defaultPostgresRenewSQL        = `
+	postgreSQLTypeName      = "postgres"
+	defaultPostgresRenewSQL = `
 ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
+`
+	defaultPostgresRotateRootCredentialsSQL = `
+ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
 )
 
@@ -29,6 +33,13 @@ var _ dbplugin.Database = &PostgreSQL{}
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
+	db := new()
+	// Wrap the plugin with middleware to sanitize errors
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+	return dbType, nil
+}
+
+func new() *PostgreSQL {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = postgreSQLTypeName
 
@@ -39,12 +50,12 @@ func New() (interface{}, error) {
 		Separator:      "-",
 	}
 
-	dbType := &PostgreSQL{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
+	db := &PostgreSQL{
+		SQLConnectionProducer: connProducer,
+		CredentialsProducer:   credsProducer,
 	}
 
-	return dbType, nil
+	return db
 }
 
 // Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
@@ -54,13 +65,13 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*PostgreSQL), apiTLSConfig)
+	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
 
 	return nil
 }
 
 type PostgreSQL struct {
-	connutil.ConnectionProducer
+	*connutil.SQLConnectionProducer
 	credsutil.CredentialsProducer
 }
 
@@ -78,7 +89,9 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 }
 
 func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	if statements.CreationStatements == "" {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
+	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
@@ -105,7 +118,6 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	db, err := p.getConnection(ctx)
 	if err != nil {
 		return "", "", err
-
 	}
 
 	// Start a transaction
@@ -120,25 +132,25 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	// Return the secret
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
+	for _, stmt := range statements.Creation {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name":       username,
-			"password":   password,
-			"expiration": expirationStr,
-		}))
-		if err != nil {
-			return "", "", err
-
-		}
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return "", "", err
-
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"name":       username,
+				"password":   password,
+				"expiration": expirationStr,
+			}))
+			if err != nil {
+				return "", "", err
+			}
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return "", "", err
+			}
 		}
 	}
 
@@ -155,9 +167,11 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 	p.Lock()
 	defer p.Unlock()
 
-	renewStmts := statements.RenewStatements
-	if renewStmts == "" {
-		renewStmts = defaultPostgresRenewSQL
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
+	renewStmts := statements.Renewal
+	if len(renewStmts) == 0 {
+		renewStmts = []string{defaultPostgresRenewSQL}
 	}
 
 	db, err := p.getConnection(ctx)
@@ -178,30 +192,28 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 		return err
 	}
 
-	for _, query := range strutil.ParseArbitraryStringSlice(renewStmts, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
-		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name":       username,
-			"expiration": expirationStr,
-		}))
-		if err != nil {
-			return err
-		}
+	for _, stmt := range renewStmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"name":       username,
+				"expiration": expirationStr,
+			}))
+			if err != nil {
+				return err
+			}
 
-		defer stmt.Close()
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return err
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return err
+			}
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
@@ -209,14 +221,16 @@ func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Stateme
 	p.Lock()
 	defer p.Unlock()
 
-	if statements.RevocationStatements == "" {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
+	if len(statements.Revocation) == 0 {
 		return p.defaultRevokeUser(ctx, username)
 	}
 
-	return p.customRevokeUser(ctx, username, statements.RevocationStatements)
+	return p.customRevokeUser(ctx, username, statements.Revocation)
 }
 
-func (p *PostgreSQL) customRevokeUser(ctx context.Context, username, revocationStmts string) error {
+func (p *PostgreSQL) customRevokeUser(ctx context.Context, username string, revocationStmts []string) error {
 	db, err := p.getConnection(ctx)
 	if err != nil {
 		return err
@@ -230,30 +244,28 @@ func (p *PostgreSQL) customRevokeUser(ctx context.Context, username, revocationS
 		tx.Rollback()
 	}()
 
-	for _, query := range strutil.ParseArbitraryStringSlice(revocationStmts, ";") {
-		query = strings.TrimSpace(query)
-		if len(query) == 0 {
-			continue
-		}
+	for _, stmt := range revocationStmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
-			"name": username,
-		}))
-		if err != nil {
-			return err
-		}
-		defer stmt.Close()
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"name": username,
+			}))
+			if err != nil {
+				return err
+			}
+			defer stmt.Close()
 
-		if _, err := stmt.ExecContext(ctx); err != nil {
-			return err
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return err
+			}
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
 
 func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) error {
@@ -354,10 +366,10 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 
 	// can't drop if not all privileges are revoked
 	if rows.Err() != nil {
-		return fmt.Errorf("could not generate revocation statements for all rows: %s", rows.Err())
+		return errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
 	}
 	if lastStmtError != nil {
-		return fmt.Errorf("could not perform all revocation statements: %s", lastStmtError)
+		return errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
 	}
 
 	// Drop this user
@@ -372,4 +384,69 @@ func (p *PostgreSQL) defaultRevokeUser(ctx context.Context, username string) err
 	}
 
 	return nil
+}
+
+func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
+	p.Lock()
+	defer p.Unlock()
+
+	if len(p.Username) == 0 || len(p.Password) == 0 {
+		return nil, errors.New("username and password are required to rotate")
+	}
+
+	rotateStatents := statements
+	if len(rotateStatents) == 0 {
+		rotateStatents = []string{defaultPostgresRotateRootCredentialsSQL}
+	}
+
+	db, err := p.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		tx.Rollback()
+	}()
+
+	password, err := p.GeneratePassword()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, stmt := range rotateStatents {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+			stmt, err := tx.PrepareContext(ctx, dbutil.QueryHelper(query, map[string]string{
+				"username": p.Username,
+				"password": password,
+			}))
+			if err != nil {
+				return nil, err
+			}
+
+			defer stmt.Close()
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	// Close the database connection to ensure no new connections come in
+	if err := db.Close(); err != nil {
+		return nil, err
+	}
+
+	p.RawConfig["password"] = password
+	return p.RawConfig, nil
 }

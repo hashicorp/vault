@@ -312,14 +312,39 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// KV mounts should return the TTL but not register
 		// for a lease as this provides a massive slowdown
 		registerLease := true
-		matchingBackend := c.router.MatchingBackend(req.Path)
-		if matchingBackend == nil {
-			c.logger.Error("core: unable to retrieve kv backend from router")
+
+		matchingMountEntry := c.router.MatchingMountEntry(req.Path)
+		if matchingMountEntry == nil {
+			c.logger.Error("core: unable to retrieve kv mount entry from router")
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
-		if ptbe, ok := matchingBackend.(*PassthroughBackend); ok {
-			if !ptbe.GeneratesLeases() {
+
+		switch matchingMountEntry.Type {
+		case "kv", "generic":
+			// If we are kv type, first see if we are an older passthrough
+			// backend, and otherwise check the mount entry options.
+			matchingBackend := c.router.MatchingBackend(req.Path)
+			if matchingBackend == nil {
+				c.logger.Error("core: unable to retrieve kv backend from router")
+				retErr = multierror.Append(retErr, ErrInternalError)
+				return nil, auth, retErr
+			}
+
+			if ptbe, ok := matchingBackend.(*PassthroughBackend); ok {
+				if !ptbe.GeneratesLeases() {
+					registerLease = false
+					resp.Secret.Renewable = false
+				}
+			} else if matchingMountEntry.Options == nil || matchingMountEntry.Options["leased_passthrough"] != "true" {
+				registerLease = false
+				resp.Secret.Renewable = false
+			}
+
+		case "plugin":
+			// If we are a plugin type and the plugin name is "kv" check the
+			// mount entry options.
+			if matchingMountEntry.Config.PluginName == "kv" && (matchingMountEntry.Options == nil || matchingMountEntry.Options["leased_passthrough"] != "true") {
 				registerLease = false
 				resp.Secret.Renewable = false
 			}
