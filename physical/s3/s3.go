@@ -191,7 +191,10 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 	defer resp.Body.Close()
 
 	data := bytes.NewBuffer(nil)
-	_, err = io.Copy(data, bytes.NewBuffer(resp.Body))
+	if resp.ContentLength != nil {
+		data = bytes.NewBuffer(make([]byte, 0, *resp.ContentLength))
+	}
+	_, err = io.Copy(data, resp.Body)
 	if err != nil {
 		return nil, err
 	}
