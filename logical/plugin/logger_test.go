@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	plugin "github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -25,7 +25,7 @@ func TestLogger_levels(t *testing.T) {
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)
 
-	l := logformat.NewVaultLoggerWithWriter(writer, hclog.Trace)
+	l := logging.NewVaultLoggerWithWriter(writer, hclog.Trace)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
@@ -105,7 +105,7 @@ func TestLogger_isLevels(t *testing.T) {
 	client, server := plugin.TestRPCConn(t)
 	defer client.Close()
 
-	l := logformat.NewVaultLoggerWithWriter(ioutil.Discard, hclog.Trace)
+	l := logging.NewVaultLoggerWithWriter(ioutil.Discard, hclog.Trace)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
@@ -125,7 +125,7 @@ func TestLogger_log(t *testing.T) {
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)
 
-	l := logformat.NewVaultLoggerWithWriter(writer, hclog.Trace)
+	l := logging.NewVaultLoggerWithWriter(writer, hclog.Trace)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,

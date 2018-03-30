@@ -7,13 +7,13 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
 )
 
 var (
-	logger = logformat.NewVaultLogger(log.Trace)
+	logger = logging.NewVaultLogger(log.Trace)
 )
 
 // mockBarrier returns a physical backend, security barrier, and master key

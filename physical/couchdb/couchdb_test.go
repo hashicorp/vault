@@ -10,7 +10,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
@@ -19,7 +19,7 @@ func TestCouchDBBackend(t *testing.T) {
 	cleanup, endpoint, username, password := prepareCouchdbDBTestContainer(t)
 	defer cleanup()
 
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewCouchDBBackend(map[string]string{
 		"endpoint": endpoint,
@@ -38,7 +38,7 @@ func TestTransactionalCouchDBBackend(t *testing.T) {
 	cleanup, endpoint, username, password := prepareCouchdbDBTestContainer(t)
 	defer cleanup()
 
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewTransactionalCouchDBBackend(map[string]string{
 		"endpoint": endpoint,

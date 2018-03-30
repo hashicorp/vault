@@ -36,7 +36,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/gated-writer"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/reload"
@@ -317,10 +317,10 @@ func (c *ServerCommand) Run(args []string) int {
 				Level:  log.Trace,
 			})
 		} else {
-			c.logger = logformat.NewVaultHCLogger(c.logGate, level)
+			c.logger = logging.NewVaultLoggerWithWriter(c.logGate, level)
 		}
 	default:
-		c.logger = logformat.NewVaultHCLogger(c.logGate, level)
+		c.logger = logging.NewVaultLoggerWithWriter(c.logGate, level)
 	}
 
 	grpclog.SetLogger(&grpclogFaker{

@@ -28,7 +28,7 @@ import (
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"
@@ -471,7 +471,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Make a default logger if not provided
 	if conf.Logger == nil {
-		conf.Logger = logformat.NewVaultLogger(log.Trace)
+		conf.Logger = logging.NewVaultLogger(log.Trace)
 	}
 
 	// Setup the core

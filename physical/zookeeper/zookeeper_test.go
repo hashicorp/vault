@@ -7,7 +7,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 
 	"github.com/samuel/go-zookeeper/zk"
@@ -44,7 +44,7 @@ func TestZooKeeperBackend(t *testing.T) {
 		client.Close()
 	}()
 
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewZooKeeperBackend(map[string]string{
 		"address": addr + "," + addr,
@@ -84,7 +84,7 @@ func TestZooKeeperHABackend(t *testing.T) {
 		client.Close()
 	}()
 
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewZooKeeperBackend(map[string]string{
 		"address": addr + "," + addr,

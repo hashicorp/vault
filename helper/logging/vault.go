@@ -1,4 +1,4 @@
-package logformat
+package logging
 
 import (
 	"io"
@@ -7,15 +7,6 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 )
-
-func NewVaultHCLogger(w io.Writer, level log.Level) log.Logger {
-	opts := &log.LoggerOptions{
-		Level:      level,
-		Output:     w,
-		JSONFormat: useJson(),
-	}
-	return log.New(opts)
-}
 
 // NewVaultLogger creates a new logger with the specified level and a Vault
 // formatter
@@ -26,7 +17,12 @@ func NewVaultLogger(level log.Level) log.Logger {
 // NewVaultLoggerWithWriter creates a new logger with the specified level and
 // writer and a Vault formatter
 func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
-	return NewVaultHCLogger(w, level)
+	opts := &log.LoggerOptions{
+		Level:      level,
+		Output:     w,
+		JSONFormat: useJson(),
+	}
+	return log.New(opts)
 }
 
 func useJson() bool {

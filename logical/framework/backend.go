@@ -15,7 +15,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -255,7 +255,7 @@ func (b *Backend) Logger() log.Logger {
 		return b.logger
 	}
 
-	return logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.NoLevel)
+	return logging.NewVaultLoggerWithWriter(ioutil.Discard, log.NoLevel)
 }
 
 // System returns the backend's system view.

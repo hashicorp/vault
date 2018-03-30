@@ -12,7 +12,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
@@ -252,7 +252,7 @@ func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
 	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physEtcd.NewEtcdBackend(map[string]string{
 		"address":      addr,
 		"path":         randPath,
@@ -269,7 +269,7 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physConsul.NewConsulBackend(map[string]string{
 		"address":      addr,
 		"path":         randPath,
@@ -284,7 +284,7 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 */
 
 func BenchmarkExpiration_Restore_InMem(b *testing.B) {
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logging.NewVaultLogger(log.Trace)
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
 		b.Fatal(err)

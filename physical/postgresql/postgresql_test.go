@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 
 	_ "github.com/lib/pq"
@@ -23,7 +23,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 
 	// Run vault tests
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewPostgreSQLBackend(map[string]string{
 		"connection_url": connURL,

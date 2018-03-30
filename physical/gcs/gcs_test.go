@@ -9,7 +9,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 	"golang.org/x/net/context"
 	"google.golang.org/api/googleapi"
@@ -52,7 +52,7 @@ func TestBackend(t *testing.T) {
 	backend, err := NewBackend(map[string]string{
 		"bucket":     bucket,
 		"ha_enabled": "false",
-	}, logformat.NewVaultLogger(log.Trace))
+	}, logging.NewVaultLogger(log.Trace))
 	if err != nil {
 		t.Fatal(err)
 	}

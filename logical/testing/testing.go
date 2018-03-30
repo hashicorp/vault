@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical/inmem"
@@ -135,7 +135,7 @@ func Test(tt TestT, c TestCase) {
 	}
 
 	// Create an in-memory Vault core
-	logger := logformat.NewVaultLogger(log.Trace)
+	logger := logging.NewVaultLogger(log.Trace)
 
 	phys, err := inmem.NewInmem(nil, logger)
 	if err != nil {

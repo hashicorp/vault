@@ -6,14 +6,14 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
 )
 
 func mockPolicyStore(t *testing.T) *PolicyStore {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(context.Background(), nil, view, logical.TestSystemView(), logformat.NewVaultLogger(log.Trace))
+	p := NewPolicyStore(context.Background(), nil, view, logical.TestSystemView(), logging.NewVaultLogger(log.Trace))
 	return p
 }
 
@@ -22,7 +22,7 @@ func mockPolicyStoreNoCache(t *testing.T) *PolicyStore {
 	sysView.CachingDisabledVal = true
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
-	p := NewPolicyStore(context.Background(), nil, view, sysView, logformat.NewVaultLogger(log.Trace))
+	p := NewPolicyStore(context.Background(), nil, view, sysView, logging.NewVaultLogger(log.Trace))
 	return p
 }
 
