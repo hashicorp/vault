@@ -47,6 +47,7 @@ FEATURES:
  * Passthrough Request Headers: Request headers can now be selectively passed
    through to backends on a per-mount basis. This is useful in various cases
    when plugins are interacting with external services.
+ * HA for Google Cloud Storage: The GCS storage type now supports HA.
 
 IMPROVEMENTS:
 
@@ -54,6 +55,7 @@ IMPROVEMENTS:
    operations [GH-4054]
  * storage/mysql: Allow setting max idle connections and connection lifetime
    [GH-4211]
+ * storage/gcs: Add HA support [GH-4226]
 
 BUG FIXES:
 
