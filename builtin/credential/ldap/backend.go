@@ -121,7 +121,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/ldap: User BindDN fetched", "username", username, "binddn", userBindDN)
+		b.Logger().Debug("User BindDN fetched", "username", username, "binddn", userBindDN)
 	}
 
 	if cfg.DenyNullBind && len(password) == 0 {
@@ -145,7 +145,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			return nil, logical.ErrorResponse(fmt.Sprintf("Encountered an error while attempting to re-bind with the BindDN User: %s", err.Error())), nil, nil
 		}
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/ldap: Re-Bound to original BindDN")
+			b.Logger().Debug("Re-Bound to original BindDN")
 		}
 	}
 
@@ -159,7 +159,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/ldap: Groups fetched from server", "num_server_groups", len(ldapGroups), "server_groups", ldapGroups)
+		b.Logger().Debug("Groups fetched from server", "num_server_groups", len(ldapGroups), "server_groups", ldapGroups)
 	}
 
 	ldapResponse := &logical.Response{
@@ -177,7 +177,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	user, err := b.User(ctx, req.Storage, username)
 	if err == nil && user != nil && user.Groups != nil {
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/ldap: adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
+			b.Logger().Debug("adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
 		}
 		allGroups = append(allGroups, user.Groups...)
 	}
@@ -260,7 +260,7 @@ func (b *backend) getUserBindDN(cfg *ConfigEntry, c *ldap.Conn, username string)
 
 		filter := fmt.Sprintf("(%s=%s)", cfg.UserAttr, ldap.EscapeFilter(username))
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/ldap: Discovering user", "userdn", cfg.UserDN, "filter", filter)
+			b.Logger().Debug("Discovering user", "userdn", cfg.UserDN, "filter", filter)
 		}
 		result, err := c.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
@@ -295,7 +295,7 @@ func (b *backend) getUserDN(cfg *ConfigEntry, c *ldap.Conn, bindDN string) (stri
 		// Find the distinguished name for the user if userPrincipalName used for login
 		filter := fmt.Sprintf("(userPrincipalName=%s)", ldap.EscapeFilter(bindDN))
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/ldap: Searching UPN", "userdn", cfg.UserDN, "filter", filter)
+			b.Logger().Debug("Searching UPN", "userdn", cfg.UserDN, "filter", filter)
 		}
 		result, err := c.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
@@ -339,19 +339,19 @@ func (b *backend) getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userDN string, u
 	ldapMap := make(map[string]bool)
 
 	if cfg.GroupFilter == "" {
-		b.Logger().Warn("auth/ldap: GroupFilter is empty, will not query server")
+		b.Logger().Warn("GroupFilter is empty, will not query server")
 		return make([]string, 0), nil
 	}
 
 	if cfg.GroupDN == "" {
-		b.Logger().Warn("auth/ldap: GroupDN is empty, will not query server")
+		b.Logger().Warn("GroupDN is empty, will not query server")
 		return make([]string, 0), nil
 	}
 
 	// If groupfilter was defined, resolve it as a Go template and use the query for
 	// returning the user's groups
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/ldap: Compiling group filter", "group_filter", cfg.GroupFilter)
+		b.Logger().Debug("Compiling group filter", "group_filter", cfg.GroupFilter)
 	}
 
 	// Parse the configuration as a template.
@@ -374,7 +374,7 @@ func (b *backend) getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userDN string, u
 	t.Execute(&renderedQuery, context)
 
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/ldap: Searching", "groupdn", cfg.GroupDN, "rendered_query", renderedQuery.String())
+		b.Logger().Debug("Searching", "groupdn", cfg.GroupDN, "rendered_query", renderedQuery.String())
 	}
 
 	result, err := c.Search(&ldap.SearchRequest{
