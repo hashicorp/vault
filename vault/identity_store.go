@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
+	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -23,7 +24,7 @@ func (c *Core) IdentityStore() *IdentityStore {
 }
 
 // NewIdentityStore creates a new identity store
-func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig) (*IdentityStore, error) {
+func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	var err error
 
 	// Create a new in-memory database for the identity store
@@ -36,7 +37,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		view:        config.StorageView,
 		db:          db,
 		entityLocks: locksutil.CreateLocks(),
-		logger:      core.logger,
+		logger:      logger,
 		validateMountAccessorFunc: core.router.validateMountByAccessor,
 	}
 
@@ -76,7 +77,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 // storage entries that get updated. The value needs to be read and MemDB needs
 // to be updated accordingly.
 func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
-	i.logger.Debug("identity: invalidate notification received", "key", key)
+	i.logger.Debug("invalidate notification received", "key", key)
 
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
@@ -326,7 +327,7 @@ func (i *IdentityStore) CreateOrFetchEntity(alias *logical.Alias) (*identity.Ent
 		return entity, nil
 	}
 
-	i.logger.Debug("identity: creating a new entity", "alias", alias)
+	i.logger.Debug("creating a new entity", "alias", alias)
 
 	entity = &identity.Entity{}
 

@@ -592,7 +592,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends["system"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		b := NewSystemBackend(c)
+		b := NewSystemBackend(c, conf.Logger.Named("system"))
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
@@ -600,7 +600,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	logicalBackends["identity"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewIdentityStore(ctx, c, config)
+		return NewIdentityStore(ctx, c, config, conf.Logger.Named("identity"))
 	}
 
 	c.logicalBackends = logicalBackends
