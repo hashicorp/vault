@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -104,9 +103,15 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 	}
 
 	resp := &logical.Response{
-		Data: structs.New(cfg).Map(),
+		Data: map[string]interface{}{
+			"host": cfg.Host,
+			"port": cfg.Port,
+			"unregistered_user_policies": cfg.UnregisteredUserPolicies,
+			"dial_timeout":               cfg.DialTimeout,
+			"read_timeout":               cfg.ReadTimeout,
+			"nas_port":                   cfg.NasPort,
+		},
 	}
-	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any secrets.")
 	return resp, nil
 }
 

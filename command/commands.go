@@ -140,7 +140,7 @@ var (
 		"etcd":                   physEtcd.NewEtcdBackend,
 		"file_transactional":     physFile.NewTransactionalFileBackend,
 		"file":                   physFile.NewFileBackend,
-		"gcs":                    physGCS.NewGCSBackend,
+		"gcs":                    physGCS.NewBackend,
 		"inmem_ha":               physInmem.NewInmemHA,
 		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
 		"inmem_transactional":    physInmem.NewTransactionalInmem,

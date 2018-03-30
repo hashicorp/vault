@@ -11,7 +11,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/fatih/structs"
 	"github.com/go-ldap/ldap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -174,9 +173,24 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 	}
 
 	resp := &logical.Response{
-		Data: structs.New(cfg).Map(),
+		Data: map[string]interface{}{
+			"url":             cfg.Url,
+			"userdn":          cfg.UserDN,
+			"groupdn":         cfg.GroupDN,
+			"groupfilter":     cfg.GroupFilter,
+			"groupattr":       cfg.GroupAttr,
+			"upndomain":       cfg.UPNDomain,
+			"userattr":        cfg.UserAttr,
+			"certificate":     cfg.Certificate,
+			"insecure_tls":    cfg.InsecureTLS,
+			"starttls":        cfg.StartTLS,
+			"binddn":          cfg.BindDN,
+			"deny_null_bind":  cfg.DenyNullBind,
+			"discoverdn":      cfg.DiscoverDN,
+			"tls_min_version": cfg.TLSMinVersion,
+			"tls_max_version": cfg.TLSMaxVersion,
+		},
 	}
-	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any passwords.")
 	return resp, nil
 }
 
