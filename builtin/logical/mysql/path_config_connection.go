@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/fatih/structs"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -63,8 +62,12 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, err
 	}
+
 	return &logical.Response{
-		Data: structs.New(config).Map(),
+		Data: map[string]interface{}{
+			"max_open_connections": config.MaxOpenConnections,
+			"max_idle_connections": config.MaxIdleConnections,
+		},
 	}, nil
 }
 

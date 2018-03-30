@@ -86,7 +86,6 @@ func TestBackend_config_connection(t *testing.T) {
 
 	configData := map[string]interface{}{
 		"connection_url":       "sample_connection_url",
-		"value":                "",
 		"max_open_connections": 9,
 		"max_idle_connections": 7,
 		"verify_connection":    false,
@@ -110,6 +109,7 @@ func TestBackend_config_connection(t *testing.T) {
 	}
 
 	delete(configData, "verify_connection")
+	delete(configData, "connection_url")
 	if !reflect.DeepEqual(configData, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", configData, resp.Data)
 	}
