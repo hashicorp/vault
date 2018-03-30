@@ -1,5 +1,21 @@
 ## 0.10.0 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * Removal of returned secret information: For a long time Vault has returned
+   configuration given to various secret engines and auth methods with secret
+   values (such as secret API keys or passwords) still intact, and with a
+   warning to the user on write that anyone with read access could see the
+   secret. This was mostly done to make it easy for tools like Terraform to
+   judge whether state had drifted. However, it also feels quite un-Vault-y to
+   do this and we've never felt very comfortable doing so. In 0.10 we have gone
+   through and removed this bevhavior from the various backends; fields which
+   contained secret values are simply no longer returned on read. We are
+   working with the Terraform team to make changes to their provider to
+   accommodate this as best as possible, and users of other tools may have to
+   make adjustments, but in the end we felt that the ends did not justify the
+   means and we needed to prioritize security over operational convenience.
+
 FEATURES:
 
  * Versioned K/V: The `kv` backend has been completely revamped, featuring
