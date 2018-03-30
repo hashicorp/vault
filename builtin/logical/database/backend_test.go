@@ -209,10 +209,8 @@ func TestBackend_config_connection(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"plugin_name": "postgresql-database-plugin",
-		"connection_details": map[string]interface{}{
-			"connection_url": "sample_connection_url",
-		},
+		"plugin_name":                        "postgresql-database-plugin",
+		"connection_details":                 map[string]interface{}{},
 		"allowed_roles":                      []string{"*"},
 		"root_credentials_rotate_statements": []string{},
 	}
@@ -519,10 +517,8 @@ func TestBackend_connectionCrud(t *testing.T) {
 
 	// Read connection
 	expected := map[string]interface{}{
-		"plugin_name": "postgresql-database-plugin",
-		"connection_details": map[string]interface{}{
-			"connection_url": connURL,
-		},
+		"plugin_name":                        "postgresql-database-plugin",
+		"connection_details":                 map[string]interface{}{},
 		"allowed_roles":                      []string{"plugin-role-test"},
 		"root_credentials_rotate_statements": []string{},
 	}
