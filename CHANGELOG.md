@@ -482,7 +482,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * Fix an upgrade issue with some physical backends when migrating from legacy
-   HSM stored key support to the new Seal Wrap mechanism
+   HSM stored key support to the new Seal Wrap mechanism (Enterprise)
+ * mfa: Add the 'mfa' flag that was removed by mistake [GH-4223]
 
 ## 0.9.0 (November 14th, 2017)
 
