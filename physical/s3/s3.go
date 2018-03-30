@@ -188,16 +188,20 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 	if resp == nil {
 		return nil, fmt.Errorf("got nil response from S3 but no error")
 	}
+	defer resp.Body.Close()
 
-	data := make([]byte, *resp.ContentLength)
-	_, err = io.ReadFull(resp.Body, data)
+	data := bytes.NewBuffer(nil)
+	if resp.ContentLength != nil {
+		data = bytes.NewBuffer(make([]byte, 0, *resp.ContentLength))
+	}
+	_, err = io.Copy(data, resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	ent := &physical.Entry{
 		Key:   key,
-		Value: data,
+		Value: data.Bytes(),
 	}
 
 	return ent, nil
