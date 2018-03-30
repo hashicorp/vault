@@ -145,7 +145,8 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	impl := &CassandraBackend{
 		sess:   sess,
 		table:  table,
-		logger: logger.ResetNamed("storage.cassandra")}
+		logger: logger,
+	}
 	return impl, nil
 }
 

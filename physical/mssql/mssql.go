@@ -140,7 +140,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		dbTable:    dbTable,
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
-		logger:     logger.ResetNamed("storage.mssql"),
+		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 

@@ -136,7 +136,7 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		path:   path,
 		client: client,
 		acl:    acl,
-		logger: logger.ResetNamed("storage.zookeeper"),
+		logger: logger,
 	}
 	return c, nil
 }

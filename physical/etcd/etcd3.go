@@ -149,7 +149,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		path:       path,
 		etcd:       etcd,
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
-		logger:     logger.ResetNamed("storage.etcd"),
+		logger:     logger,
 		haEnabled:  haEnabledBool,
 	}, nil
 }

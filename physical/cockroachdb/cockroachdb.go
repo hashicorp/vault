@@ -88,7 +88,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 			"list":   "SELECT path FROM " + dbTable + " WHERE path LIKE $1",
 		},
 		statements: make(map[string]*sql.Stmt),
-		logger:     logger.ResetNamed("storage.cockroachdb"),
+		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 

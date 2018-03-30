@@ -98,7 +98,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		list_query: "SELECT key FROM " + quoted_table + " WHERE path = $1" +
 			"UNION SELECT DISTINCT substring(substr(path, length($1)+1) from '^.*?/') FROM " +
 			quoted_table + " WHERE parent_path LIKE $1 || '%'",
-		logger:     logger.ResetNamed("storage.postgresql"),
+		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
 

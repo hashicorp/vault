@@ -322,7 +322,7 @@ func (c *ServerCommand) Run(args []string) int {
 	default:
 		c.logger = logformat.NewVaultHCLogger(c.logGate, level)
 	}
-	c.logger.Named("servercommand")
+
 	grpclog.SetLogger(&grpclogFaker{
 		logger: c.logger.Named("grpclogfaker"),
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
@@ -408,7 +408,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Unknown storage type %s", config.Storage.Type))
 		return 1
 	}
-	backend, err := factory(config.Storage.Config, c.logger)
+	backend, err := factory(config.Storage.Config, c.logger.ResetNamed("storage."+config.Storage.Type))
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing storage of type %s: %s", config.Storage.Type, err))
 		return 1

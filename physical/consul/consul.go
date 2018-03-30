@@ -251,7 +251,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	// Setup the backend
 	c := &ConsulBackend{
 		path:                path,
-		logger:              logger.ResetNamed("storage.consul"),
+		logger:              logger,
 		client:              client,
 		kv:                  client.KV(),
 		permitPool:          physical.NewPermitPool(maxParInt),
