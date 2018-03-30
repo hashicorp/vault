@@ -226,7 +226,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 
 	// Set system and logger for getter methods
 	b.system = config.System
-	b.logger = config.Logger.Named("backendGRPCPluginClient")
+	b.logger = config.Logger
 
 	return nil
 }

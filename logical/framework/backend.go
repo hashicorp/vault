@@ -243,7 +243,7 @@ func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 
 // Setup is used to initialize the backend with the initial backend configuration
 func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
-	b.logger = config.Logger.Named("Backend")
+	b.logger = config.Logger
 	b.system = config.System
 	return nil
 }

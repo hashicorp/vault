@@ -49,7 +49,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		BackendType: logical.TypeLogical,
 	}
 
-	b.logger = conf.Logger.Named("backend")
+	b.logger = conf.Logger
 	return &b
 }
 

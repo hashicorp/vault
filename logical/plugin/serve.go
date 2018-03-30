@@ -38,7 +38,7 @@ func Serve(opts *ServeOpts) error {
 	var pluginMap = map[string]plugin.Plugin{
 		"backend": &BackendPlugin{
 			Factory: opts.BackendFactoryFunc,
-			Logger:  logger.Named("server"),
+			Logger:  logger,
 		},
 	}
 
@@ -51,7 +51,7 @@ func Serve(opts *ServeOpts) error {
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		TLSProvider:     opts.TLSProviderFunc,
-		Logger:          logger.Named("client"),
+		Logger:          logger,
 
 		// A non-nil value here enables gRPC serving for this plugin...
 		GRPCServer: plugin.DefaultGRPCServer,

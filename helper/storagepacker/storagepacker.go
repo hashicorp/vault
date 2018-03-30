@@ -347,7 +347,7 @@ func NewStoragePacker(view logical.Storage, logger log.Logger, viewPrefix string
 	packer := &StoragePacker{
 		view:         view,
 		viewPrefix:   viewPrefix,
-		logger:       logger.Named("StoragePacker"),
+		logger:       logger.Named("storagepacker"),
 		storageLocks: locksutil.CreateLocks(),
 	}
 

@@ -92,7 +92,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 			transport: transport,
 			next:      db,
 			typeStr:   typeStr,
-			logger:    logger.Named("databaseTracingMiddleware"),
+			logger:    logger,
 		}
 	}
 
