@@ -63,6 +63,7 @@ BUG FIXES:
    parent prefix entry in the underlying storage backend. These operations also
    mark corresponding child tokens as orphans by removing the parent/secondary
    index from the entries. [GH-4193]
+ * command: Re-add `-mfa` flag and migrate to OSS binary [GH-4223]
  * core: Fix issue occurring from mounting two auth backends with the same path
    with one mount having `auth/` in front [GH-4206]
  * mfa: Invalidation of MFA configurations (Enterprise)
