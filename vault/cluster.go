@@ -364,8 +364,6 @@ func (c *Core) ClusterTLSConfig(ctx context.Context, repClusters *ReplicatedClus
 			localCert := make([]byte, len(currCert))
 			copy(localCert, currCert)
 
-			//c.logger.Trace("performing cert name lookup", "hello_server_name", clientHello.ServerName, "local_cluster_cert_name", parsedCert.Subject.CommonName)
-
 			return &tls.Certificate{
 				Certificate: [][]byte{localCert},
 				PrivateKey:  c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey),
@@ -375,7 +373,6 @@ func (c *Core) ClusterTLSConfig(ctx context.Context, repClusters *ReplicatedClus
 	}
 
 	clientLookup := func(requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-		//c.logger.Trace("performing client cert lookup")
 
 		if len(requestInfo.AcceptableCAs) != 1 {
 			return nil, fmt.Errorf("expected only a single acceptable CA")
@@ -397,7 +394,7 @@ func (c *Core) ClusterTLSConfig(ctx context.Context, repClusters *ReplicatedClus
 	}
 
 	serverConfigLookup := func(clientHello *tls.ClientHelloInfo) (*tls.Config, error) {
-		//c.logger.Trace("performing server config lookup")
+
 		for _, v := range clientHello.SupportedProtos {
 			switch v {
 			case "h2", requestForwardingALPN:
