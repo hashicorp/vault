@@ -698,6 +698,11 @@ provision the resources.
 The Terraform output will display the public IP address to SSH into your
 server.
 
+> **NOTE:** If the `terraform apply` fails with "`io: read/write on closed pipe`"
+error, this is a [known
+issue](https://github.com/hashicorp/terraform/issues/17638) with Terraform
+0.11.4 and 0.11.5.  Please try again with another Terraform version. 
+
 At this point, Terraform will perform the following actions:
 
 - Pull a `RoleID` from our Vault server
