@@ -14,10 +14,6 @@ type LeaseOptions struct {
 	// MaxTTL is the maximum duration that this secret is valid for.
 	MaxTTL time.Duration `json:"max_ttl"`
 
-	// ExplicitMaxTTL is the maximum total duration that will be allowed for
-	// this secret. This will cap periodic leases.
-	ExplicitMaxTTL time.Duration `json:"explicit_max_ttl"`
-
 	// Renewable, if true, means that this secret can be renewed.
 	Renewable bool `json:"renewable"`
 

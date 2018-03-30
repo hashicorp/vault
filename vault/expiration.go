@@ -650,10 +650,19 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 		return resp, nil
 	}
 
-	// Validate the lease
-	if err := resp.Secret.Validate(); err != nil {
+	sysView := m.router.MatchingSystemView(le.Path)
+	if sysView == nil {
+		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
+	}
+
+	ttl, warnings, err := sysView.CalculateTTL(resp.Secret.TTL, 0, 0, 0, resp.Secret.IssueTime)
+	if err != nil {
 		return nil, err
 	}
+	for _, warning := range warnings {
+		resp.AddWarning(warning)
+	}
+	resp.Secret.TTL = ttl
 
 	// Attach the LeaseID
 	resp.Secret.LeaseID = leaseID
@@ -765,24 +774,21 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
+	ttl, warnings, err := sysView.CalculateTTL(resp.Auth.Increment, resp.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, resp.Auth.IssueTime)
+	if err != nil {
+		return nil, err
+	}
 	retResp := &logical.Response{}
+	for _, warning := range warnings {
+		retResp.AddWarning(warning)
+	}
+
+	resp.Auth.TTL = ttl
 	switch {
-	case resp.Auth.Period > time.Duration(0):
-		// If it resp.Period is non-zero, use that as the TTL and override backend's
-		// call on TTL modification, such as a TTL value determined by
-		// framework.LeaseExtend call against the request. Also, cap period value to
-		// the sys/mount max value.
-		if resp.Auth.Period > sysView.MaxLeaseTTL() {
-			retResp.AddWarning(fmt.Sprintf("Period of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", int64(resp.Auth.TTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
-			resp.Auth.Period = sysView.MaxLeaseTTL()
-		}
-		resp.Auth.TTL = resp.Auth.Period
-	case resp.Auth.TTL > time.Duration(0):
-		// Cap TTL value to the sys/mount max value
-		if resp.Auth.TTL > sysView.MaxLeaseTTL() {
-			retResp.AddWarning(fmt.Sprintf("TTL of %d seconds is greater than current mount/system default of %d seconds, value will be truncated.", int64(resp.Auth.TTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
-			resp.Auth.TTL = sysView.MaxLeaseTTL()
-		}
+	case resp.Auth.Period > 0:
+		resp.Auth.Period = ttl
+	case resp.Auth.TTL > 0:
+		resp.Auth.TTL = ttl
 	}
 
 	// Attach the ClientToken

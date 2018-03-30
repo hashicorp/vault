@@ -132,6 +132,10 @@ func (s *gRPCSystemViewClient) LocalMount() bool {
 	return reply.Local
 }
 
+func (s *gRPCSystemViewClient) CalculateTTL(increment, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (time.Duration, []string, error) {
+	return 0, nil, fmt.Errorf("cannot call CalculateTTL from a plugin backend")
+}
+
 type gRPCSystemViewServer struct {
 	impl logical.SystemView
 }

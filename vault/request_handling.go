@@ -524,52 +524,24 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, ErrInternalError
 		}
 
-		// Start off with the sys default value, and update according to period/TTL
-		// from resp.Auth
-		tokenTTL := sysView.DefaultLeaseTTL()
-
-		switch {
-		case auth.Period > 0:
-			// Cap the period value to the sys max_ttl value. The auth backend should
-			// have checked for it on its login path, but we check here again for
-			// sanity.
-			if auth.Period > sysView.MaxLeaseTTL() {
-				auth.Period = sysView.MaxLeaseTTL()
-				resp.AddWarning(fmt.Sprintf("Period of %q exceeded the effective max_ttl of %q; Period value is capped accordingly", auth.Period, sysView.MaxLeaseTTL()))
-			}
-			tokenTTL = auth.Period
-		case auth.TTL > 0:
-			// Set maxTTL to the shorter of auth and the mount
-			maxTTL := sysView.MaxLeaseTTL()
-			if auth.MaxTTL > 0 && auth.MaxTTL < maxTTL {
-				maxTTL = auth.MaxTTL
-			}
-
-			// Cap the TTL value
-			if auth.TTL > maxTTL {
-				auth.TTL = maxTTL
-				resp.AddWarning(fmt.Sprintf("Effective TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", auth.TTL, maxTTL))
-			}
-			tokenTTL = auth.TTL
+		tokenTTL, warnings, err := sysView.CalculateTTL(auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Now())
+		if err != nil {
+			return nil, nil, err
 		}
-
-		// Cap token TTL to explicit max ttl
-		if auth.ExplicitMaxTTL > 0 && tokenTTL > auth.ExplicitMaxTTL {
-			resp.AddWarning(fmt.Sprintf("TTL of %d seconds higher than explicit max TTL; value being capped to %d seconds", tokenTTL, auth.ExplicitMaxTTL))
-			tokenTTL = auth.ExplicitMaxTTL
+		for _, warning := range warnings {
+			resp.AddWarning(warning)
 		}
 
 		// Generate a token
 		te := TokenEntry{
-			Path:           req.Path,
-			Policies:       auth.Policies,
-			Meta:           auth.Metadata,
-			DisplayName:    auth.DisplayName,
-			CreationTime:   time.Now().Unix(),
-			TTL:            tokenTTL,
-			ExplicitMaxTTL: auth.ExplicitMaxTTL,
-			NumUses:        auth.NumUses,
-			EntityID:       auth.EntityID,
+			Path:         req.Path,
+			Policies:     auth.Policies,
+			Meta:         auth.Metadata,
+			DisplayName:  auth.DisplayName,
+			CreationTime: time.Now().Unix(),
+			TTL:          tokenTTL,
+			NumUses:      auth.NumUses,
+			EntityID:     auth.EntityID,
 		}
 
 		te.Policies = policyutil.SanitizePolicies(te.Policies, true)
