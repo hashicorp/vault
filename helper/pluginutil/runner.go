@@ -121,7 +121,7 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 		Cmd:             cmd,
 		SecureConfig:    secureConfig,
 		TLSConfig:       clientTLSConfig,
-		Logger:          namedLogger,
+		Logger:          namedLogger.Named("ClientConfig"),
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC,
 			plugin.ProtocolGRPC,

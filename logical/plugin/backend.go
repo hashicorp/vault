@@ -22,7 +22,7 @@ type BackendPlugin struct {
 
 // Server gets called when on plugin.Serve()
 func (b *BackendPlugin) Server(broker *plugin.MuxBroker) (interface{}, error) {
-	return &backendPluginServer{factory: b.Factory, broker: broker, logger: b.Logger}, nil
+	return &backendPluginServer{factory: b.Factory, broker: broker, logger: b.Logger.Named("backendPluginServer")}, nil
 }
 
 // Client gets called on plugin.NewClient()
@@ -36,7 +36,7 @@ func (b BackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) err
 		factory: b.Factory,
 		// We pass the logger down into the backend so go-plugin will forward
 		// logs for us.
-		logger: b.Logger,
+		logger: b.Logger.Named("backendGRPCPluginServer"),
 	})
 	return nil
 }

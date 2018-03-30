@@ -137,7 +137,7 @@ func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 
 	config := &logical.BackendConfig{
 		StorageView: storage,
-		Logger:      b.logger,
+		Logger:      b.logger.Named("BackendConfig"),
 		System:      sysView,
 		Config:      args.Config,
 		BackendUUID: args.BackendUUID,

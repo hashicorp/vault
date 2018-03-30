@@ -243,7 +243,7 @@ func (b *backendPluginClient) Setup(ctx context.Context, config *logical.Backend
 
 	// Set system and logger for getter methods
 	b.system = config.System
-	b.logger = config.Logger
+	b.logger = config.Logger.Named("backendPluginClient")
 
 	return nil
 }

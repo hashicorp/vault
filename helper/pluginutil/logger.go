@@ -27,9 +27,9 @@ func (f *hclogFaker) buildLog(msg string, args ...interface{}) (string, []interf
 	return msg, args
 }
 
-func (f *hclogFaker) Trace(msg string, args ...interface{}) {
+func (f *hclogFaker) Debug(msg string, args ...interface{}) {
 	msg, args = f.buildLog(msg, args...)
-	f.logger.Trace(msg, args...)
+	f.logger.Debug(msg, args...)
 }
 
 func (f *hclogFaker) Debug(msg string, args ...interface{}) {
@@ -52,8 +52,8 @@ func (f *hclogFaker) Error(msg string, args ...interface{}) {
 	f.logger.Error(msg, args...)
 }
 
-func (f *hclogFaker) IsTrace() bool {
-	return f.logger.IsTrace()
+func (f *hclogFaker) IsDebug() bool {
+	return f.logger.IsDebug()
 }
 
 func (f *hclogFaker) IsDebug() bool {
@@ -69,7 +69,7 @@ func (f *hclogFaker) IsWarn() bool {
 }
 
 func (f *hclogFaker) IsError() bool {
-	return !f.logger.IsTrace() && !f.logger.IsDebug() && !f.logger.IsInfo() && !f.IsWarn()
+	return !f.logger.IsDebug() && !f.logger.IsDebug() && !f.logger.IsInfo() && !f.IsWarn()
 }
 
 func (f *hclogFaker) With(args ...interface{}) log.Logger {
@@ -116,8 +116,8 @@ func (s *stdlogAdapter) Write(data []byte) (int, error) {
 	if s.inferLevels {
 		level, str := s.pickLevel(str)
 		switch level {
-		case log.Trace:
-			s.hl.Trace(str)
+		case log.Debug:
+			s.hl.Debug(str)
 		case log.Debug:
 			s.hl.Debug(str)
 		case log.Info:
@@ -142,7 +142,7 @@ func (s *stdlogAdapter) pickLevel(str string) (log.Level, string) {
 	case strings.HasPrefix(str, "[DEBUG]"):
 		return log.Debug, strings.TrimSpace(str[7:])
 	case strings.HasPrefix(str, "[TRACE]"):
-		return log.Trace, strings.TrimSpace(str[7:])
+		return log.Debug, strings.TrimSpace(str[7:])
 	case strings.HasPrefix(str, "[INFO]"):
 		return log.Info, strings.TrimSpace(str[6:])
 	case strings.HasPrefix(str, "[WARN]"):
