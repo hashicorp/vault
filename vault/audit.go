@@ -308,7 +308,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 // setupAudit is invoked after we've loaded the audit able to
 // initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
-	broker := NewAuditBroker(c.logger.ResetNamed("audit"))
+	broker := NewAuditBroker(c.logger)
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -377,7 +377,7 @@ func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
 		c.reloadFuncsLock.Lock()
 
 		if c.logger.IsDebug() {
-			c.logger.ResetNamed("audit").Debug("removing reload function", "path", entry.Path)
+			c.logger.Debug("removing reload function", "path", entry.Path)
 		}
 
 		delete(c.reloadFuncs, key)
@@ -410,39 +410,37 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
 	}
 
-	auditLogger := c.logger.ResetNamed("audit")
-
 	switch entry.Type {
 	case "file":
 		key := "audit_file|" + entry.Path
 
 		c.reloadFuncsLock.Lock()
 
-		if auditLogger.IsDebug() {
-			auditLogger.Debug("adding reload function", "path", entry.Path)
+		if c.logger.IsDebug() {
+			c.logger.Debug("adding reload function", "path", entry.Path)
 			if entry.Options != nil {
-				auditLogger.Debug("file backend options", "path", entry.Path, "file_path", entry.Options["file_path"])
+				c.logger.Debug("file backend options", "path", entry.Path, "file_path", entry.Options["file_path"])
 			}
 		}
 
 		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]interface{}) error {
-			if auditLogger.IsInfo() {
-				auditLogger.Info("reloading file audit backend", "path", entry.Path)
+			if c.logger.IsInfo() {
+				c.logger.Info("reloading file audit backend", "path", entry.Path)
 			}
 			return be.Reload(ctx)
 		})
 
 		c.reloadFuncsLock.Unlock()
 	case "socket":
-		if auditLogger.IsDebug() {
+		if c.logger.IsDebug() {
 			if entry.Options != nil {
-				auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
+				c.logger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
 			}
 		}
 	case "syslog":
-		if auditLogger.IsDebug() {
+		if c.logger.IsDebug() {
 			if entry.Options != nil {
-				auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
+				c.logger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
 			}
 		}
 	}

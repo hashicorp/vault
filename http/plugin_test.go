@@ -34,7 +34,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
-		Logger:      logger.Named("TestClusterOptions"),
+		Logger:      logger.Named("testclusteroptions"),
 	})
 	cluster.Start()
 

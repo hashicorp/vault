@@ -246,7 +246,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParInt),
 		haEnabled:  haEnabledBool,
-		logger:     logger.Named("dynamodbbackend"),
+		logger:     logger.Named("storage.dynamodbbackend"),
 	}, nil
 }
 

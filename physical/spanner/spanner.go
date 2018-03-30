@@ -168,7 +168,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
-		logger:     logger.Named("backend"),
+		logger:     logger.Named("storage.backend"),
 	}, nil
 }
 

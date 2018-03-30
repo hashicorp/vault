@@ -53,7 +53,7 @@ func NewFileBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	return &FileBackend{
 		path:       path,
-		logger:     logger.Named("filebackend"),
+		logger:     logger.Named("storage.filebackend"),
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
 	}, nil
 }
@@ -68,7 +68,7 @@ func NewTransactionalFileBackend(conf map[string]string, logger log.Logger) (phy
 	return &TransactionalFileBackend{
 		FileBackend: FileBackend{
 			path:       path,
-			logger:     logger.Named("transactionalfilebackend"),
+			logger:     logger.Named("storage.transactionalfilebackend"),
 			permitPool: physical.NewPermitPool(1),
 		},
 	}, nil

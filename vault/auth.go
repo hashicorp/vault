@@ -569,7 +569,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	config := &logical.BackendConfig{
 		StorageView: view,
-		Logger:      c.logger.ResetNamed(fmt.Sprintf("auth.%s", t)).With("path", entry.Path, "accessor", entry.Accessor),
+		Logger:      c.logger.Named("backendconfig"),
 		Config:      conf,
 		System:      sysView,
 		BackendUUID: entry.BackendAwareUUID,

@@ -51,7 +51,7 @@ func NewInmem(_ map[string]string, logger log.Logger) (physical.Backend, error) 
 	in := &InmemBackend{
 		root:       radix.New(),
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
-		logger:     logger.Named("inmembackend"),
+		logger:     logger.Named("storage.inmembackend"),
 	}
 	return in, nil
 }
@@ -63,7 +63,7 @@ func NewTransactionalInmem(_ map[string]string, logger log.Logger) (physical.Bac
 		InmemBackend: InmemBackend{
 			root:       radix.New(),
 			permitPool: physical.NewPermitPool(1),
-			logger:     logger.Named("transactionalinmembackend"),
+			logger:     logger.Named("storage.transactionalinmembackend"),
 		},
 	}
 	return in, nil
