@@ -610,7 +610,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		credentialBackends[k] = f
 	}
 	credentialBackends["token"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(ctx, c, config)
+		return NewTokenStore(ctx, conf.Logger.Named("token"), c, config)
 	}
 	c.credentialBackends = credentialBackends
 

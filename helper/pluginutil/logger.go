@@ -32,9 +32,9 @@ func (f *hclogFaker) Debug(msg string, args ...interface{}) {
 	f.logger.Debug(msg, args...)
 }
 
-func (f *hclogFaker) Debug(msg string, args ...interface{}) {
+func (f *hclogFaker) Trace(msg string, args ...interface{}) {
 	msg, args = f.buildLog(msg, args...)
-	f.logger.Debug(msg, args...)
+	f.logger.Trace(msg, args...)
 }
 
 func (f *hclogFaker) Info(msg string, args ...interface{}) {
@@ -56,8 +56,8 @@ func (f *hclogFaker) IsDebug() bool {
 	return f.logger.IsDebug()
 }
 
-func (f *hclogFaker) IsDebug() bool {
-	return f.logger.IsDebug()
+func (f *hclogFaker) IsTrace() bool {
+	return f.logger.IsTrace()
 }
 
 func (f *hclogFaker) IsInfo() bool {
@@ -118,7 +118,7 @@ func (s *stdlogAdapter) Write(data []byte) (int, error) {
 		switch level {
 		case log.Debug:
 			s.hl.Debug(str)
-		case log.Debug:
+		case log.Trace:
 			s.hl.Debug(str)
 		case log.Info:
 			s.hl.Info(str)
