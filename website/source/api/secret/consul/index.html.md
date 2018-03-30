@@ -53,7 +53,7 @@ $ curl \
     --request POST \
     --header "X-Vault-Token: ..." \
     --data @payload.json \
-    https://vault.rocks/v1/consul/config/access
+    http://127.0.0.1:8200/v1/consul/config/access
 ```
 
 ## Create/Update Role
@@ -108,7 +108,7 @@ $ curl \
     --request POST \
     --header "X-Vault-Token: ..." \
     --data @payload.json \
-    https://vault.rocks/v1/consul/roles/example-role
+    http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
 ## Read Role
@@ -130,7 +130,7 @@ If no role exists with that name, a 404 is returned.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/consul/roles/example-role
+    http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
 ### Sample Response
@@ -159,7 +159,7 @@ This endpoint lists all existing roles in the secrets engine.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/consul/roles
+    http://127.0.0.1:8200/v1/consul/roles
 ```
 
 ### Sample Response
@@ -194,7 +194,7 @@ not exist, this endpoint will still return a successful response.
 $ curl \
     --request DELETE \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/consul/roles/example-role
+    http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
 ## Generate Credential
@@ -216,7 +216,7 @@ definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/consul/creds/example-role
+    http://127.0.0.1:8200/v1/consul/creds/example-role
 ```
 
 ### Sample Response

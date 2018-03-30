@@ -45,7 +45,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/identity/entity
+    http://127.0.0.1:8200/v1/identity/entity
 ```
 
 ### Sample Response
@@ -76,7 +76,7 @@ This endpoint queries the entity by its identifier.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/identity/entity/id/8d6a45e5-572f-8f13-d226-cd0d1ec57297
+    http://127.0.0.1:8200/v1/identity/entity/id/8d6a45e5-572f-8f13-d226-cd0d1ec57297
 ```
 
 ### Sample Response
@@ -141,7 +141,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/identity/entity/id/8d6a45e5-572f-8f13-d226-cd0d1ec57297
+    http://127.0.0.1:8200/v1/identity/entity/id/8d6a45e5-572f-8f13-d226-cd0d1ec57297
 ```
 
 ### Sample Response
@@ -173,7 +173,7 @@ This endpoint deletes an entity and all its associated aliases.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/identity/entity/id/8d6a45e5-572f-8f13-d226-cd0d1ec57297
+    http://127.0.0.1:8200/v1/identity/entity/id/8d6a45e5-572f-8f13-d226-cd0d1ec57297
 ```
 
 ## List Entities by ID
@@ -191,7 +191,7 @@ This endpoint returns a list of available entities by their identifiers.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/identity/entity/id
+    http://127.0.0.1:8200/v1/identity/entity/id
 ```
 
 ### Sample Response

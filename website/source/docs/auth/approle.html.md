@@ -52,7 +52,7 @@ at a different path, use that value instead of `approle`.
 $ curl \
     --request POST \
     --data '{"role_id":"988a9df-...","secret_id":"37b74931..."}' \
-    https://vault.rocks/v1/auth/approle/login
+    http://127.0.0.1:8200/v1/auth/approle/login
 ```
 
 The response will contain the token at `auth.client_token`:
@@ -126,7 +126,7 @@ management tool.
         --header "X-Vault-Token: ..." \
         --request POST \
         --data '{"type": "approle"}' \
-        https://vault.rocks/v1/sys/auth/approle
+        http://127.0.0.1:8200/v1/sys/auth/approle
     ```
 
 1. Create an AppRole with desired set of policies:
@@ -136,7 +136,7 @@ management tool.
         --header "X-Vault-Token: ..." \
         --request POST \
         --data '{"policies": "dev-policy,test-policy"}' \
-        https://vault.rocks/v1/auth/approle/role/my-role
+        http://127.0.0.1:8200/v1/auth/approle/role/my-role
     ```
 
 1. Fetch the identifier of the role:
@@ -144,7 +144,7 @@ management tool.
     ```sh
     $ curl \
         --header "X-Vault-Token: ..." \
-        https://vault.rocks/v1/auth/approle/role/my-role/role-id
+        http://127.0.0.1:8200/v1/auth/approle/role/my-role/role-id
     ```
 
     The response will look like:
@@ -163,7 +163,7 @@ management tool.
     $ curl \
         --header "X-Vault-Token: ..." \
         --request POST \
-         https://vault.rocks/v1/auth/approle/role/my-role/secret-id
+         http://127.0.0.1:8200/v1/auth/approle/role/my-role/secret-id
     ```
 
     The response will look like:

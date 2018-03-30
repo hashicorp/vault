@@ -121,6 +121,8 @@ This example shows configuring Google Cloud Spanner with high availability
 enabled.
 
 ```hcl
+api_addr = "https://vault-leader.my-company.internal"
+
 storage "spanner" {
   database   = "projects/demo/instances/abc123/databases/vault-data"
   ha_enabled = "true"

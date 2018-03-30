@@ -44,7 +44,7 @@ $ curl \
     --header "X-Vault-Wrap-TTL: 60" \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/wrapping/wrap
+    http://127.0.0.1:8200/v1/sys/wrapping/wrap
 ```
 
 ### Sample Response

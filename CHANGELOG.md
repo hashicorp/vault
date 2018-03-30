@@ -1,3 +1,78 @@
+## 0.10.0 (Unreleased)
+
+DEPRECATIONS/CHANGES:
+
+ * Removal of returned secret information: For a long time Vault has returned
+   configuration given to various secret engines and auth methods with secret
+   values (such as secret API keys or passwords) still intact, and with a
+   warning to the user on write that anyone with read access could see the
+   secret. This was mostly done to make it easy for tools like Terraform to
+   judge whether state had drifted. However, it also feels quite un-Vault-y to
+   do this and we've never felt very comfortable doing so. In 0.10 we have gone
+   through and removed this bevhavior from the various backends; fields which
+   contained secret values are simply no longer returned on read. We are
+   working with the Terraform team to make changes to their provider to
+   accommodate this as best as possible, and users of other tools may have to
+   make adjustments, but in the end we felt that the ends did not justify the
+   means and we needed to prioritize security over operational convenience.
+
+FEATURES:
+
+ * Versioned K/V: The `kv` backend has been completely revamped, featuring
+   flexible versioning of values, check-and-set protections, and more. A new
+   `vault kv` subcommand allows friendly interactions with it. Existing mounts
+   of the `kv` backend can be upgraded to the new versioned mode (downgrades
+   are not currently supported). The old "passthrough" mode is still the
+   default for new mounts; versioning can be turned on by setting the
+   `-options` flag for the `vault secrets enable` command to specify
+   `versioned=true`. This may become the default between the beta and final
+   release.
+ * Database Root Credential Rotation: Database configurations can now rotate
+   their own configured admin/root credentials, allowing configured credentials
+   for a database connection to be rotated immediately after sending them into
+   Vault, invalidating the old credentials and ensuring only Vault knows the
+   actual valid values.
+ * Azure Authentication Plugin: There is now a plugin (pulled in to Vault) that
+   allows authenticating Azure machines to Vault using their Azure-provided
+   credentials. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-auth-azure) for more
+   information.
+ * GCP Secrets Plugin: There is now a plugin (pulled in to Vault) that allows
+   generating secrets to allow access to GCP. See the [plugin
+   repository](https://github.com/hashicorp/vault-plugin-secrets-gcp) for more
+   information.
+ * Selective Audit HMACing of Request and Response Data Keys: HMACing in audit
+   logs can be turned off for specific keys in the request input map and
+   response `data` map on a per-mount basis.
+ * Passthrough Request Headers: Request headers can now be selectively passed
+   through to backends on a per-mount basis. This is useful in various cases
+   when plugins are interacting with external services.
+ * HA for Google Cloud Storage: The GCS storage type now supports HA.
+
+IMPROVEMENTS:
+
+ * secret/cassandra: Update Cassandra storage delete function to not use batch
+   operations [GH-4054]
+ * storage/mysql: Allow setting max idle connections and connection lifetime
+   [GH-4211]
+ * storage/gcs: Add HA support [GH-4226]
+
+BUG FIXES:
+
+ * auth/token: Revoke-orphan and tidy operations now correctly cleans up the
+   parent prefix entry in the underlying storage backend. These operations also
+   mark corresponding child tokens as orphans by removing the parent/secondary
+   index from the entries. [GH-4193]
+ * command: Re-add `-mfa` flag and migrate to OSS binary [GH-4223]
+ * core: Fix issue occurring from mounting two auth backends with the same path
+   with one mount having `auth/` in front [GH-4206]
+ * mfa: Invalidation of MFA configurations (Enterprise)
+ * replication: Fix a panic on some non-64-bit platforms
+ * replication: Fix invalidation of policies on performance secondaries
+ * secret/pki: When tidying if a value is unexpectedly nil, delete it and move
+   on [GH-4214]
+ * storage/s3: Fix panic if S3 returns no Content-Length header [GH-4222]
+
 ## 0.9.6 (March 20th, 2018)
 
 DEPRECATIONS/CHANGES:
@@ -100,7 +175,7 @@ BUG FIXES:
    automatically connect to a performance primary after that performance
    primary has been promoted to a DR primary from a DR secondary
  * ui: Fix behavior when a value contains a `.`
- 
+
 ## 0.9.4 (February 20th, 2018)
 
 SECURITY:
@@ -175,7 +250,7 @@ BUG FIXES:
  * command/status: Fix panic when status returns 500 from leadership lookup
    [GH-3998]
  * identity: Fix race when creating entities [GH-3932]
- * plugin/gRPC: Fixed an issue with list requests and raw responses coming from 
+ * plugin/gRPC: Fixed an issue with list requests and raw responses coming from
    plugins using gRPC transport [GH-3881]
  * plugin/gRPC: Fix panic when special paths are not set [GH-3946]
  * secret/pki: Verify a name is a valid hostname before adding to DNS SANs
@@ -234,24 +309,24 @@ DEPRECATIONS/CHANGES:
    disabled or the state is still being discovered. As a result, an LB check
    can positively verify that the node is both not `disabled` and is not a DR
    secondary, and avoid sending traffic to it if either is true.
- * PKI Secret Backend Roles parameter types: For `ou` and `organization` 
-   in role definitions in the PKI secret backend, input can now be a 
-   comma-separated string or an array of strings. Reading a role will 
+ * PKI Secret Backend Roles parameter types: For `ou` and `organization`
+   in role definitions in the PKI secret backend, input can now be a
+   comma-separated string or an array of strings. Reading a role will
    now return arrays for these parameters.
  * Plugin API Changes: The plugin API has been updated to utilize golang's
    context.Context package. Many function signatures now accept a context
    object as the first parameter. Existing plugins will need to pull in the
-   latest Vault code and update their function signatures to begin using 
+   latest Vault code and update their function signatures to begin using
    context and the new gRPC transport.
 
 FEATURES:
 
- * **gRPC Backend Plugins**: Backend plugins now use gRPC for transport, 
+ * **gRPC Backend Plugins**: Backend plugins now use gRPC for transport,
    allowing them to be written in other languages.
  * **Brand New CLI**: Vault has a brand new CLI interface that is significantly
    streamlined, supports autocomplete, and is almost entirely backwards
    compatible.
- * **UI: PKI Secret Backend (Enterprise)**: Configure PKI secret backends, 
+ * **UI: PKI Secret Backend (Enterprise)**: Configure PKI secret backends,
    create and browse roles and certificates, and issue and sign certificates via
    the listed roles.
 
@@ -260,7 +335,7 @@ IMPROVEMENTS:
  * auth/aws: Handle IAM headers produced by clients that formulate numbers as
    ints rather than strings [GH-3763]
  * auth/okta: Support JSON lists when specifying groups and policies [GH-3801]
- * autoseal/hsm: Attempt reconnecting to the HSM on certain kinds of issues, 
+ * autoseal/hsm: Attempt reconnecting to the HSM on certain kinds of issues,
    including HA scenarios for some Gemalto HSMs.
    (Enterprise)
  * cli: Output password prompts to stderr to make it easier to pipe an output
@@ -294,8 +369,8 @@ BUG FIXES:
    be capped by the local max TTL [GH-3814]
  * secret/database: Fix an issue where plugins were not closed properly if they
    failed to initialize [GH-3768]
- * ui: mounting a secret backend will now properly set `max_lease_ttl` and 
-   `default_lease_ttl` when specified - previously both fields set 
+ * ui: mounting a secret backend will now properly set `max_lease_ttl` and
+   `default_lease_ttl` when specified - previously both fields set
    `default_lease_ttl`.
 
 ## 0.9.1 (December 21st, 2017)
@@ -411,7 +486,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * Fix an upgrade issue with some physical backends when migrating from legacy
-   HSM stored key support to the new Seal Wrap mechanism
+   HSM stored key support to the new Seal Wrap mechanism (Enterprise)
+ * mfa: Add the 'mfa' flag that was removed by mistake [GH-4223]
 
 ## 0.9.0 (November 14th, 2017)
 
@@ -452,7 +528,7 @@ DEPRECATIONS/CHANGES:
    optional and enables configuration of the seal type to use for additional
    data protection, such as using HSM or Cloud KMS solutions to encrypt and
    decrypt data.
- 
+
 FEATURES:
 
  * **RSA Support for Transit Backend**: Transit backend can now generate RSA

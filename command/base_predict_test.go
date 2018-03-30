@@ -299,6 +299,60 @@ func TestPredict_Mounts(t *testing.T) {
 	})
 }
 
+func TestPredict_Plugins(t *testing.T) {
+	t.Parallel()
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	badClient, badCloser := testVaultServerBad(t)
+	defer badCloser()
+
+	cases := []struct {
+		name   string
+		client *api.Client
+		exp    []string
+	}{
+		{
+			"not_connected_client",
+			badClient,
+			nil,
+		},
+		{
+			"good_path",
+			client,
+			[]string{
+				"cassandra-database-plugin",
+				"hana-database-plugin",
+				"mongodb-database-plugin",
+				"mssql-database-plugin",
+				"mysql-aurora-database-plugin",
+				"mysql-database-plugin",
+				"mysql-legacy-database-plugin",
+				"mysql-rds-database-plugin",
+				"postgresql-database-plugin",
+			},
+		},
+	}
+
+	t.Run("group", func(t *testing.T) {
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				p := NewPredict()
+				p.client = tc.client
+
+				act := p.plugins()
+				if !reflect.DeepEqual(act, tc.exp) {
+					t.Errorf("expected %q to be %q", act, tc.exp)
+				}
+			})
+		}
+	})
+}
+
 func TestPredict_Policies(t *testing.T) {
 	t.Parallel()
 

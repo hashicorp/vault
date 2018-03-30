@@ -17,16 +17,18 @@ var _ cli.CommandAutocomplete = (*AuthEnableCommand)(nil)
 type AuthEnableCommand struct {
 	*BaseCommand
 
-	flagDescription              string
-	flagPath                     string
-	flagDefaultLeaseTTL          time.Duration
-	flagMaxLeaseTTL              time.Duration
-	flagAuditNonHMACRequestKeys  []string
-	flagAuditNonHMACResponseKeys []string
-	flagListingVisibility        string
-	flagPluginName               string
-	flagLocal                    bool
-	flagSealWrap                 bool
+	flagDescription               string
+	flagPath                      string
+	flagDefaultLeaseTTL           time.Duration
+	flagMaxLeaseTTL               time.Duration
+	flagAuditNonHMACRequestKeys   []string
+	flagAuditNonHMACResponseKeys  []string
+	flagListingVisibility         string
+	flagPassthroughRequestHeaders []string
+	flagPluginName                string
+	flagOptions                   map[string]string
+	flagLocal                     bool
+	flagSealWrap                  bool
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -120,12 +122,27 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage:  "Determines the visibility of the mount in the UI-specific listing endpoint.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNamePassthroughRequestHeaders,
+		Target: &c.flagPassthroughRequestHeaders,
+		Usage: "Comma-separated string or list of request header values that " +
+			"will be sent to the backend",
+	})
+
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: complete.PredictAnything,
+		Completion: c.PredictVaultPlugins(),
 		Usage: "Name of the auth method plugin. This plugin name must already " +
 			"exist in the Vault server's plugin catalog.",
+	})
+
+	f.StringMapVar(&StringMapVar{
+		Name:       "options",
+		Target:     &c.flagOptions,
+		Completion: complete.PredictAnything,
+		Usage: "Key-value pair provided as key=value for the mount options. " +
+			"This can be specified multiple times.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -204,6 +221,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
 			PluginName:      c.flagPluginName,
 		},
+		Options: c.flagOptions,
 	}
 
 	// Set these values only if they are provided in the CLI
@@ -218,6 +236,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameListingVisibility {
 			authOpts.Config.ListingVisibility = c.flagListingVisibility
+		}
+
+		if fl.Name == flagNamePassthroughRequestHeaders {
+			authOpts.Config.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
 		}
 	})
 

@@ -139,6 +139,11 @@ func (b *BaseCommand) PredictVaultAuths() complete.Predictor {
 	return NewPredict().VaultAuths()
 }
 
+// PredictVaultPlugins returns a predictor for installed plugins.
+func (b *BaseCommand) PredictVaultPlugins() complete.Predictor {
+	return NewPredict().VaultPlugins()
+}
+
 // PredictVaultPolicies returns a predictor for "folders". See PredictVaultFiles
 // for more information and restrictions.
 func (b *BaseCommand) PredictVaultPolicies() complete.Predictor {
@@ -175,6 +180,13 @@ func (p *Predict) VaultAudits() complete.Predictor {
 // consumers, but you probably want BaseCommand.PredictVaultAuths instead.
 func (p *Predict) VaultAuths() complete.Predictor {
 	return p.filterFunc(p.auths)
+}
+
+// VaultPlugins returns a predictor for Vault's plugin catalog. This is a public
+// API for consumers, but you probably want BaseCommand.PredictVaultPlugins
+// instead.
+func (p *Predict) VaultPlugins() complete.Predictor {
+	return p.filterFunc(p.plugins)
 }
 
 // VaultPolicies returns a predictor for Vault "folders". This is a public API for
@@ -308,6 +320,22 @@ func (p *Predict) auths() []string {
 	}
 	sort.Strings(list)
 	return list
+}
+
+// plugins returns a sorted list of the plugins in the catalog.
+func (p *Predict) plugins() []string {
+	client := p.Client()
+	if client == nil {
+		return nil
+	}
+
+	result, err := client.Sys().ListPlugins(nil)
+	if err != nil {
+		return nil
+	}
+	plugins := result.Names
+	sort.Strings(plugins)
+	return plugins
 }
 
 // policies returns a sorted list of the policies stored in this Vault

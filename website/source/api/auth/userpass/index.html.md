@@ -51,7 +51,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/userpass/users/mitchellh
+    http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh
 ```
 
 ## Read User
@@ -67,7 +67,7 @@ Reads the properties of an existing username.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/userpass/users/mitchellh
+    http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh
 ```
 
 ### Sample Response
@@ -105,7 +105,7 @@ This endpoint deletes the user from the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/userpass/users/mitchellh
+    http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh
 ```
 
 ## Update Password on User
@@ -136,7 +136,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/userpass/users/mitchellh/password
+    http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh/password
 ```
 
 ## Update Policies on User
@@ -167,7 +167,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/userpass/users/mitchellh/policies
+    http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh/policies
 ```
 
 ## List Users
@@ -184,7 +184,7 @@ List available userpass users.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST
-    https://vault.rocks/v1/auth/userpass/users
+    http://127.0.0.1:8200/v1/auth/userpass/users
 ```
 
 ### Sample Response
@@ -227,7 +227,7 @@ Login with the username and password.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/userpass/login/mitchellh
+    http://127.0.0.1:8200/v1/auth/userpass/login/mitchellh
 ```
 
 ### Sample Response

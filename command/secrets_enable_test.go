@@ -196,8 +196,8 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, p := range plugins {
-			if p.IsDir() && strings.HasPrefix(p.Name(), "vault-plugin-") && !strings.HasPrefix(p.Name(), "vault-plugin-auth-") {
-				backends = append(backends, strings.TrimPrefix(p.Name(), "vault-plugin-"))
+			if p.IsDir() && strings.HasPrefix(p.Name(), "vault-plugin-secrets-") {
+				backends = append(backends, strings.TrimPrefix(p.Name(), "vault-plugin-secrets-"))
 			}
 		}
 

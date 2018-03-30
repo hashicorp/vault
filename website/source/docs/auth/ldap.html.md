@@ -58,7 +58,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data '{"password": "foo"}' \
-    https://vault.rocks/v1/auth/ldap/login/mitchellh=
+    http://127.0.0.1:8200/v1/auth/ldap/login/mitchellh=
 ```
 
 The response will be in JSON. For example:
@@ -108,7 +108,7 @@ configuration options are categorized and detailed below.
 
 ### Binding parameters
 
-There are two alternate methods of resolving the user object used to authenticate the end user: _Search_ or _User Principal Name_. When using _Search_, the bind can be either anonymous or authenticated. User Principal Name is method of specifying users supported by Active Directory. More information on UPN can be found [here](https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName).
+There are two alternate methods of resolving the user object used to authenticate the end user: _Search_ or _User Principal Name_. When using _Search_, the bind can be either anonymous or authenticated. User Principal Name is a method of specifying users supported by Active Directory. More information on UPN can be found [here](https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName).
 
 #### Binding - Authenticated Search
 

@@ -33,7 +33,7 @@ Force a Vault to resign leadership in a cluster:
 
 ```text
 $ vault operator step-down
-Success! Stepped down: https://vault.rocks
+Success! Stepped down: https://127.0.0.1:8200
 ```
 
 Rotate Vault's underlying encryption key:
