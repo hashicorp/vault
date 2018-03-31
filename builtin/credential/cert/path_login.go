@@ -241,6 +241,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
 	return !b.checkForChainInCRLs(trustedChain) &&
 		b.matchesNames(clientCert, config) &&
+		b.matchesURIs(clientCert, config) &&
 		b.matchesCertificateExtensions(clientCert, config)
 }
 
@@ -269,12 +270,26 @@ func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert)
 			}
 		}
 
+	}
+	return false
+}
+
+// matchesURIs verifies that the certificate matches at least one configured
+// allowed uri
+func (b *backend) matchesURIs(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// Default behavior (no names) is to allow all names
+	if len(config.Entry.AllowedURIs) == 0 {
+		return true
+	}
+	// At least one pattern must match at least one name if any patterns are specified
+	for _, allowedURI := range config.Entry.AllowedURIs {
 		for _, name := range clientCert.URIs {
-			if glob.Glob(allowedName, name.String()) {
+			if glob.Glob(allowedURI, name.String()) {
 				return true
 			}
 		}
 	}
+
 	return false
 }
 

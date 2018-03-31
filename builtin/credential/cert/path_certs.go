@@ -46,6 +46,12 @@ Must be x509 PEM encoded.`,
 At least one must exist in either the Common Name or SANs. Supports globbing.`,
 			},
 
+			"allowed_uris": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of URIs.
+At least one must exist in the SANs. Supports globbing.`,
+			},
+
 			"required_extensions": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or array of extensions
@@ -75,12 +81,14 @@ seconds. Defaults to system/backend default TTL.`,
 				Description: `TTL for tokens issued by this backend.
 Defaults to system/backend default TTL time.`,
 			},
+
 			"max_ttl": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
 				Description: `Duration in either an integer number of seconds (3600) or
 an integer time unit (60m) after which the
 issued token can no longer be renewed.`,
 			},
+
 			"period": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
 				Description: `If set, indicates that the token generated using this role
@@ -144,13 +152,15 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"certificate":   cert.Certificate,
-			"display_name":  cert.DisplayName,
-			"policies":      cert.Policies,
-			"ttl":           cert.TTL / time.Second,
-			"max_ttl":       cert.MaxTTL / time.Second,
-			"period":        cert.Period / time.Second,
-			"allowed_names": cert.AllowedNames,
+			"certificate":         cert.Certificate,
+			"display_name":        cert.DisplayName,
+			"policies":            cert.Policies,
+			"ttl":                 cert.TTL / time.Second,
+			"max_ttl":             cert.MaxTTL / time.Second,
+			"period":              cert.Period / time.Second,
+			"allowed_names":       cert.AllowedNames,
+			"allowed_uris":        cert.AllowedURIs,
+			"required_extensions": cert.RequiredExtensions,
 		},
 	}, nil
 }
@@ -161,6 +171,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	displayName := d.Get("display_name").(string)
 	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
+	allowedURIs := d.Get("allowed_uris").([]string)
 	requiredExtensions := d.Get("required_extensions").([]string)
 
 	var resp logical.Response
@@ -234,6 +245,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		DisplayName:        displayName,
 		Policies:           policies,
 		AllowedNames:       allowedNames,
+		AllowedURIs:        allowedURIs,
 		RequiredExtensions: requiredExtensions,
 		TTL:                ttl,
 		MaxTTL:             maxTTL,
@@ -265,6 +277,7 @@ type CertEntry struct {
 	MaxTTL             time.Duration
 	Period             time.Duration
 	AllowedNames       []string
+	AllowedURIs        []string
 	RequiredExtensions []string
 }
 
