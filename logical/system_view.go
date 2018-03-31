@@ -21,9 +21,6 @@ type SystemView interface {
 	// this value, as Vault will revoke them
 	MaxLeaseTTL() time.Duration
 
-	// CalculateTTL returns the calcuated token TTL based on the backend values
-	CalculateTTL(increment, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, errors error)
-
 	// SudoPrivilege returns true if given path has sudo privileges
 	// for the given client token
 	SudoPrivilege(ctx context.Context, path string, token string) bool
@@ -113,8 +110,4 @@ func (d StaticSystemView) LookupPlugin(_ context.Context, name string) (*pluginu
 
 func (d StaticSystemView) MlockEnabled() bool {
 	return d.EnableMlock
-}
-
-func (d StaticSystemView) CalculateTTL(increment, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (time.Duration, []string, error) {
-	return d.TTLValue, nil, nil
 }

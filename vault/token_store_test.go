@@ -58,11 +58,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	saltedId, err := ts.SaltID(context.Background(), entry.ID)
+	saltedID, err := ts.SaltID(context.Background(), entry.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := lookupPrefix + saltedId
+	path := lookupPrefix + saltedID
 	le := &logical.StorageEntry{
 		Key:   path,
 		Value: enc,
@@ -2380,7 +2380,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl > 8 {
-			t.Fatalf("TTL too large")
+			t.Fatalf("TTL too large: %d", ttl)
 		}
 
 		// Renewing should not have the increment increase since we've hit the

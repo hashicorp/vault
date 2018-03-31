@@ -129,10 +129,6 @@ func (s *SystemViewClient) LocalMount() bool {
 	return reply.Local
 }
 
-func (s *SystemViewClient) CalculateTTL(increment, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (time.Duration, []string, error) {
-	return 0, nil, fmt.Errorf("cannot call CalculateTTL from a plugin backend")
-}
-
 type SystemViewServer struct {
 	impl logical.SystemView
 }

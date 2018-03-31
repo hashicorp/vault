@@ -549,7 +549,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, ErrInternalError
 		}
 
-		tokenTTL, warnings, err := sysView.CalculateTTL(auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Now())
+		tokenTTL, warnings, err := calculateTTL(sysView, auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Now())
 		if err != nil {
 			return nil, nil, err
 		}

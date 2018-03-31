@@ -49,9 +49,8 @@ type Auth struct {
 	// specified by this period.
 	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
 
-	// Period indicates that the token generated using this Auth object
-	// should never expire. The token should be renewed within the duration
-	// specified by this period.
+	// ExplicitMaxTTL is the max TTL that constrains periodic tokens. For normal
+	// tokens, this value is constrained by the configured max ttl.
 	ExplicitMaxTTL time.Duration `json:"-" mapstructure:"-" structs:"-"`
 
 	// Number of allowed uses of the issued token

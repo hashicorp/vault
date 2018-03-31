@@ -1177,7 +1177,7 @@ func (ts *TokenStore) revokeSalted(ctx context.Context, saltedID string) (ret er
 	// explicit call to orphan the child tokens (the delete occurs at the leaf
 	// node and uses parent prefix, not entry.Parent, to build the tree for
 	// traversal).
-	parentPath := parentPrefix + saltedId + "/"
+	parentPath := parentPrefix + saltedID + "/"
 	children, err := ts.view.List(ctx, parentPath)
 	if err != nil {
 		return fmt.Errorf("failed to scan for children: %v", err)
@@ -1964,7 +1964,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	sysView := ts.System()
 
 	if periodToUse > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
-		ttl, warnings, err := sysView.CalculateTTL(te.TTL, periodToUse, 0, te.ExplicitMaxTTL, time.Unix(te.CreationTime, 0))
+		ttl, warnings, err := calculateTTL(sysView, te.TTL, periodToUse, 0, te.ExplicitMaxTTL, time.Unix(te.CreationTime, 0))
 		if err != nil {
 			return nil, err
 		}
