@@ -2621,7 +2621,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl > 8 {
-			t.Fatalf("TTL too big")
+			t.Fatalf("TTL too big: %d", ttl)
 		}
 
 		// Let the TTL go down a bit more to ~5 seconds (6 against explicit max)

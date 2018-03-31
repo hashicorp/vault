@@ -21,6 +21,9 @@ func calculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 	if backendMaxTTL > 0 && backendMaxTTL < maxTTL {
 		maxTTL = backendMaxTTL
 	}
+	if explicitMaxTTL > 0 && explicitMaxTTL < maxTTL {
+		maxTTL = explicitMaxTTL
+	}
 
 	// Should never happen, but guard anyways
 	if maxTTL < 0 {
@@ -64,13 +67,13 @@ func calculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 		}
 
 		// We are proposing a time of the current time plus the increment
-		proposedExpiration := now.Add(increment)
+		proposedExpiration := now.Add(ttl)
 
 		// If the proposed expiration is after the maximum TTL of the lease,
 		// cap the increment to whatever is left
 		if maxValidTime.Before(proposedExpiration) {
 			warnings = append(warnings,
-				fmt.Sprintf("TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", increment, maxTTL))
+				fmt.Sprintf("TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", ttl, maxTTL))
 			ttl = maxValidTime.Sub(now)
 		}
 	}

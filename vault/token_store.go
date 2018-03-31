@@ -1961,7 +1961,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	sysView := ts.System()
 
-	// Only calculate a TTL if you are A) periodic, B) has a TTL, C) do not have a TTL and are not a root token
+	// Only calculate a TTL if you are A) periodic, B) have a TTL, C) do not have a TTL and are not a root token
 	if te.Period > 0 || te.TTL > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
 		ttl, warnings, err := calculateTTL(sysView, 0, te.TTL, te.Period, 0, te.ExplicitMaxTTL, time.Unix(te.CreationTime, 0))
 		if err != nil {

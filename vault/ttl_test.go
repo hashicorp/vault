@@ -115,7 +115,6 @@ func TestCalculateTTL(t *testing.T) {
 	}
 
 	for name, tc := range cases {
-
 		ttl, warnings, err := calculateTTL(testSysView, tc.Increment, tc.BackendDefault, tc.Period, tc.BackendMax, tc.ExplicitMaxTTL, now)
 		if (err != nil) != tc.Error {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
