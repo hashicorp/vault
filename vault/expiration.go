@@ -1064,6 +1064,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 // renewEntry is used to attempt renew of an internal entry
 func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	secret := *le.Secret
+	secret.LeaseID = ""
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
 	resp, err := m.router.Route(m.quitContext, req)
 	if err != nil || (resp != nil && resp.IsError()) {
