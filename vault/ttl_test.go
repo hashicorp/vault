@@ -8,7 +8,6 @@ import (
 )
 
 func TestCalculateTTL(t *testing.T) {
-
 	testSysView := logical.StaticSystemView{
 		DefaultLeaseTTLVal: 5 * time.Hour,
 		MaxLeaseTTLVal:     30 * time.Hour,

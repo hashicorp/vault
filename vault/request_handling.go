@@ -332,6 +332,21 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if registerLease {
+			sysView := c.router.MatchingSystemView(req.Path)
+			if sysView == nil {
+				c.logger.Error("core: unable to look up sys view for login path", "request_path", req.Path)
+				return nil, nil, ErrInternalError
+			}
+
+			ttl, warnings, err := calculateTTL(sysView, 0, resp.Secret.TTL, 0, resp.Secret.MaxTTL, 0, time.Now())
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, warning := range warnings {
+				resp.AddWarning(warning)
+			}
+			resp.Secret.TTL = ttl
+
 			leaseID, err := c.expiration.Register(req, resp)
 			if err != nil {
 				c.logger.Error("core: failed to register lease", "request_path", req.Path, "error", err)

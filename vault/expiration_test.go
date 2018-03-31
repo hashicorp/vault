@@ -796,8 +796,14 @@ func TestExpiration_RenewToken(t *testing.T) {
 
 func TestExpiration_RenewToken_period(t *testing.T) {
 	exp := mockExpiration(t)
-	root, err := exp.tokenStore.rootToken(context.Background())
-	if err != nil {
+	root := &TokenEntry{
+		Policies:     []string{"root"},
+		Path:         "auth/token/root",
+		DisplayName:  "root",
+		CreationTime: time.Now().Unix(),
+		Period:       time.Minute,
+	}
+	if err := exp.tokenStore.create(context.Background(), root); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -810,7 +816,7 @@ func TestExpiration_RenewToken_period(t *testing.T) {
 		},
 		Period: time.Minute,
 	}
-	err = exp.RegisterAuth("auth/token/login", auth)
+	err := exp.RegisterAuth("auth/token/login", auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
