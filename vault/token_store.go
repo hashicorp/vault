@@ -1892,7 +1892,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.ExplicitMaxTTL = dur
 	}
 
-	var periodToUse time.Duration
 	if data.Period != "" {
 		dur, err := parseutil.ParseDurationSecond(data.Period)
 		if err != nil {
@@ -1909,7 +1908,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 					logical.ErrInvalidRequest
 			}
 			te.Period = dur
-			periodToUse = dur
 		}
 	}
 
@@ -1950,22 +1948,22 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 		if role.Period != 0 {
 			switch {
-			case periodToUse == 0:
-				periodToUse = role.Period
+			case te.Period == 0:
+				te.Period = role.Period
 			default:
-				if role.Period < periodToUse {
-					periodToUse = role.Period
+				if role.Period < te.Period {
+					te.Period = role.Period
 				}
-				resp.AddWarning(fmt.Sprintf("Period specified both during creation call and in role; using the lesser value of %d seconds", int64(periodToUse.Seconds())))
+				resp.AddWarning(fmt.Sprintf("Period specified both during creation call and in role; using the lesser value of %d seconds", int64(te.Period.Seconds())))
 			}
 		}
 	}
 
 	sysView := ts.System()
 
-	// Only calculate a TTL if you are A) periodic or B) do not have a TTL and are not a root token
-	if periodToUse > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
-		ttl, warnings, err := calculateTTL(sysView, 0, te.TTL, periodToUse, 0, te.ExplicitMaxTTL, time.Unix(te.CreationTime, 0))
+	// Only calculate a TTL if you are A) periodic, B) has a TTL, C) do not have a TTL and are not a root token
+	if te.Period > 0 || te.TTL > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
+		ttl, warnings, err := calculateTTL(sysView, 0, te.TTL, te.Period, 0, te.ExplicitMaxTTL, time.Unix(te.CreationTime, 0))
 		if err != nil {
 			return nil, err
 		}
@@ -2006,6 +2004,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		ClientToken:    te.ID,
 		Accessor:       te.Accessor,
 		EntityID:       te.EntityID,
+		Period:         te.Period,
 		ExplicitMaxTTL: te.ExplicitMaxTTL,
 	}
 
@@ -2271,23 +2270,8 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 		return nil, fmt.Errorf("no token entry found during lookup")
 	}
 
-	if te.Role == "" {
-		req.Auth.Period = te.Period
-		req.Auth.ExplicitMaxTTL = te.ExplicitMaxTTL
-		return &logical.Response{Auth: req.Auth}, nil
-	}
-
-	role, err := ts.tokenStoreRole(ctx, te.Role)
-	if err != nil {
-		return nil, fmt.Errorf("error looking up role %s: %s", te.Role, err)
-	}
-
-	if role == nil {
-		return nil, fmt.Errorf("original token role (%s) could not be found, not renewing", te.Role)
-	}
-
-	req.Auth.Period = role.Period
-	req.Auth.ExplicitMaxTTL = role.ExplicitMaxTTL
+	req.Auth.Period = te.Period
+	req.Auth.ExplicitMaxTTL = te.ExplicitMaxTTL
 	return &logical.Response{Auth: req.Auth}, nil
 }
 

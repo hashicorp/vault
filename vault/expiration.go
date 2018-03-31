@@ -775,7 +775,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
-	ttl, warnings, err := calculateTTL(sysView, increment, resp.Auth.TTL, le.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, le.IssueTime)
+	ttl, warnings, err := calculateTTL(sysView, increment, resp.Auth.TTL, le.Auth.Period, resp.Auth.MaxTTL, le.Auth.ExplicitMaxTTL, le.IssueTime)
 	if err != nil {
 		return nil, err
 	}

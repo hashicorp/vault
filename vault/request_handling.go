@@ -290,25 +290,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew") &&
 		!strings.HasPrefix(req.Path, "sys/leases/renew") {
-		// Get the SystemView for the mount
-		sysView := c.router.MatchingSystemView(req.Path)
-		if sysView == nil {
-			c.logger.Error("core: unable to retrieve system view from router")
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, auth, retErr
-		}
-
-		// Apply the default lease if none given
-		if resp.Secret.TTL == 0 {
-			resp.Secret.TTL = sysView.DefaultLeaseTTL()
-		}
-
-		// Limit the lease duration
-		maxTTL := sysView.MaxLeaseTTL()
-		if resp.Secret.TTL > maxTTL {
-			resp.Secret.TTL = maxTTL
-		}
-
 		// KV mounts should return the TTL but not register
 		// for a lease as this provides a massive slowdown
 		registerLease := true

@@ -21,6 +21,7 @@ func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.
 			return &logical.Response{Auth: req.Auth}, nil
 		case req.Secret != nil:
 			req.Secret.TTL = backendIncrement
+			req.Secret.MaxTTL = backendMax
 			return &logical.Response{Secret: req.Secret}, nil
 		}
 		return nil, fmt.Errorf("no lease options for request")
