@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func calculateTTL(sysView logical.SystemView, increment, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, errors error) {
+func calculateTTL(sysView logical.SystemView, increment, backendTTL, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, errors error) {
 	now := time.Now()
 
 	// Start off with the sys default value, and update according to period/TTL
@@ -25,6 +25,15 @@ func calculateTTL(sysView logical.SystemView, increment, period, backendMaxTTL, 
 	// Should never happen, but guard anyways
 	if maxTTL < 0 {
 		return 0, nil, fmt.Errorf("max TTL is negative")
+	}
+
+	// Determine the correct increment to use
+	if increment <= 0 {
+		if backendTTL > 0 {
+			increment = backendTTL
+		} else {
+			increment = sysView.DefaultLeaseTTL()
+		}
 	}
 
 	switch {
@@ -61,10 +70,11 @@ func calculateTTL(sysView logical.SystemView, increment, period, backendMaxTTL, 
 		ttl = increment
 	}
 
-	// Run some bounding checks if the explicit max TTL is set; we do not check
-	// period as it's defined to escape the max TTL
+	// Handle explicitMaxTTL which will put an upper limit on periodic tokens
+	// and cannot exceed the maxTTL for regular tokens
 	if explicitMaxTTL > 0 {
-		// Limit the lease duration, except for periodic tokens -- in that case the explicit max limits the period, which itself can escape normal max
+		// Limit the lease duration, except for periodic tokens -- in that case the explicit
+		// max limits the period, which itself can escape normal max
 		if period == 0 && explicitMaxTTL > maxTTL {
 			warnings = append(warnings,
 				fmt.Sprintf("Explicit max TTL of %q is greater than system/mount allowed value; value is being capped to %q", explicitMaxTTL, maxTTL))

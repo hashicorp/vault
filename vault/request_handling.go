@@ -549,7 +549,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, ErrInternalError
 		}
 
-		tokenTTL, warnings, err := calculateTTL(sysView, auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Now())
+		tokenTTL, warnings, err := calculateTTL(sysView, 0, auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Now())
 		if err != nil {
 			return nil, nil, err
 		}
@@ -559,14 +559,16 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// Generate a token
 		te := TokenEntry{
-			Path:         req.Path,
-			Policies:     auth.Policies,
-			Meta:         auth.Metadata,
-			DisplayName:  auth.DisplayName,
-			CreationTime: time.Now().Unix(),
-			TTL:          tokenTTL,
-			NumUses:      auth.NumUses,
-			EntityID:     auth.EntityID,
+			Path:           req.Path,
+			Policies:       auth.Policies,
+			Meta:           auth.Metadata,
+			DisplayName:    auth.DisplayName,
+			CreationTime:   time.Now().Unix(),
+			TTL:            tokenTTL,
+			NumUses:        auth.NumUses,
+			EntityID:       auth.EntityID,
+			Period:         auth.Period,
+			ExplicitMaxTTL: auth.ExplicitMaxTTL,
 		}
 
 		te.Policies = policyutil.SanitizePolicies(te.Policies, true)

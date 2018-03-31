@@ -640,14 +640,20 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	}
 
 	// Attempt to renew the entry
-	resp, err := m.renewEntry(le, increment)
+	resp, err := m.renewEntry(le)
 	if err != nil {
 		return nil, err
 	}
-
-	// Fast-path if there is no lease
-	if resp == nil || resp.Secret == nil || !resp.Secret.LeaseEnabled() {
-		return resp, nil
+	if resp == nil {
+		return nil, nil
+	}
+	if resp.IsError() {
+		return &logical.Response{
+			Data: resp.Data,
+		}, nil
+	}
+	if resp.Secret == nil {
+		return nil, nil
 	}
 
 	sysView := m.router.MatchingSystemView(le.Path)
@@ -655,7 +661,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
-	ttl, warnings, err := calculateTTL(sysView, resp.Secret.TTL, 0, resp.Secret.MaxTTL, 0, resp.Secret.IssueTime)
+	ttl, warnings, err := calculateTTL(sysView, increment, resp.Secret.TTL, 0, resp.Secret.MaxTTL, 0, le.IssueTime)
 	if err != nil {
 		return nil, err
 	}
@@ -748,25 +754,20 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	}
 
 	// Attempt to renew the auth entry
-	resp, err := m.renewAuthEntry(req, le, increment)
+	resp, err := m.renewAuthEntry(req, le)
 	if err != nil {
 		return nil, err
 	}
-
 	if resp == nil {
 		return nil, nil
 	}
-
 	if resp.IsError() {
 		return &logical.Response{
 			Data: resp.Data,
 		}, nil
 	}
-
-	if resp.Auth == nil || !resp.Auth.LeaseEnabled() {
-		return &logical.Response{
-			Auth: resp.Auth,
-		}, nil
+	if resp.Auth == nil {
+		return nil, nil
 	}
 
 	sysView := m.router.MatchingSystemView(le.Path)
@@ -774,7 +775,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
-	ttl, warnings, err := calculateTTL(sysView, resp.Auth.TTL, resp.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, resp.Auth.IssueTime)
+	ttl, warnings, err := calculateTTL(sysView, increment, resp.Auth.TTL, le.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, le.IssueTime)
 	if err != nil {
 		return nil, err
 	}
@@ -786,7 +787,6 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 
 	// Attach the ClientToken
 	resp.Auth.ClientToken = token
-	resp.Auth.Increment = 0
 
 	// Update the lease entry
 	le.Auth = resp.Auth
@@ -1062,7 +1062,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 }
 
 // renewEntry is used to attempt renew of an internal entry
-func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
+func (m *ExpirationManager) renewEntry(le *leaseEntry) (*logical.Response, error) {
 	secret := *le.Secret
 	secret.LeaseID = ""
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
@@ -1070,14 +1070,12 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 	if err != nil || (resp != nil && resp.IsError()) {
 		return nil, fmt.Errorf("failed to renew entry: resp:%#v err:%s", resp, err)
 	}
-	resp.Secret.IssueTime = le.IssueTime
-	resp.Secret.Increment = increment
 	return resp, nil
 }
 
 // renewAuthEntry is used to attempt renew of an auth entry. Only the token
 // store should get the actual token ID intact.
-func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry, increment time.Duration) (*logical.Response, error) {
+func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry) (*logical.Response, error) {
 	auth := *le.Auth
 	if strings.HasPrefix(le.Path, "auth/token/") {
 		auth.ClientToken = le.ClientToken
@@ -1091,9 +1089,6 @@ func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry,
 	if err != nil {
 		return nil, fmt.Errorf("failed to renew entry: %v", err)
 	}
-
-	resp.Auth.IssueTime = le.IssueTime
-	resp.Auth.Increment = increment
 	return resp, nil
 }
 

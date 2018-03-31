@@ -130,27 +130,19 @@ func ProtoLeaseOptionsToLogicalLeaseOptions(l *LeaseOptions) (logical.LeaseOptio
 		return logical.LeaseOptions{}, nil
 	}
 
-	t, err := ptypes.Timestamp(l.IssueTime)
 	return logical.LeaseOptions{
 		TTL:       time.Duration(l.TTL),
+		MaxTTL:    time.Duration(l.MaxTTL),
 		Renewable: l.Renewable,
-		Increment: time.Duration(l.Increment),
-		IssueTime: t,
-	}, err
+	}, nil
 }
 
 func LogicalLeaseOptionsToProtoLeaseOptions(l logical.LeaseOptions) (*LeaseOptions, error) {
-	t, err := ptypes.TimestampProto(l.IssueTime)
-	if err != nil {
-		return nil, err
-	}
-
 	return &LeaseOptions{
 		TTL:       int64(l.TTL),
+		MaxTTL:    int64(l.MaxTTL),
 		Renewable: l.Renewable,
-		Increment: int64(l.Increment),
-		IssueTime: t,
-	}, err
+	}, nil
 }
 
 func ProtoSecretToLogicalSecret(s *Secret) (*logical.Secret, error) {

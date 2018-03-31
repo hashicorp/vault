@@ -16,17 +16,6 @@ type LeaseOptions struct {
 
 	// Renewable, if true, means that this secret can be renewed.
 	Renewable bool `json:"renewable"`
-
-	// Increment will be the lease increment that the user requested.
-	// This is only available on a Renew operation and has no effect
-	// when returning a response.
-	Increment time.Duration `json:"-"`
-
-	// IssueTime is the time of issue for the original lease. This is
-	// only available on a Renew operation and has no effect when returning
-	// a response. It can be used to enforce maximum lease periods by
-	// a logical backend.
-	IssueTime time.Time `json:"-"`
 }
 
 // LeaseEnabled checks if leasing is enabled

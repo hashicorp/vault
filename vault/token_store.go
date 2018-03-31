@@ -1963,8 +1963,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	sysView := ts.System()
 
+	// Only calculate a TTL if you are A) periodic or B) do not have a TTL and are not a root token
 	if periodToUse > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
-		ttl, warnings, err := calculateTTL(sysView, te.TTL, periodToUse, 0, te.ExplicitMaxTTL, time.Unix(te.CreationTime, 0))
+		ttl, warnings, err := calculateTTL(sysView, 0, te.TTL, periodToUse, 0, te.ExplicitMaxTTL, time.Unix(te.CreationTime, 0))
 		if err != nil {
 			return nil, err
 		}
@@ -2002,9 +2003,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			TTL:       te.TTL,
 			Renewable: renewable,
 		},
-		ClientToken: te.ID,
-		Accessor:    te.Accessor,
-		EntityID:    te.EntityID,
+		ClientToken:    te.ID,
+		Accessor:       te.Accessor,
+		EntityID:       te.EntityID,
+		ExplicitMaxTTL: te.ExplicitMaxTTL,
 	}
 
 	if ts.policyLookupFunc != nil {
