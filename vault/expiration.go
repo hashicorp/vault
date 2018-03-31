@@ -655,7 +655,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
-	ttl, warnings, err := calculateTTL(sysView, resp.Secret.TTL, 0, 0, 0, resp.Secret.IssueTime)
+	ttl, warnings, err := calculateTTL(sysView, resp.Secret.TTL, 0, resp.Secret.MaxTTL, 0, resp.Secret.IssueTime)
 	if err != nil {
 		return nil, err
 	}

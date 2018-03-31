@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
@@ -107,17 +106,11 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 		return nil, fmt.Errorf("role %s does not exist during renewal", roleName)
 	}
 
-	// If a period is provided, set that as part of resp.Auth.Period and return a
-	// response immediately. Let expiration manager handle renewal from there on.
-	if role.Period > time.Duration(0) {
-		resp := &logical.Response{
-			Auth: req.Auth,
-		}
-		resp.Auth.Period = role.Period
-		return resp, nil
-	}
-
-	return framework.LeaseExtend(role.TokenTTL, role.TokenMaxTTL, b.System())(ctx, req, data)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.Period = role.Period
+	resp.Auth.TTL = role.TokenTTL
+	resp.Auth.MaxTTL = role.TokenMaxTTL
+	return resp, nil
 }
 
 const pathLoginHelpSys = "Issue a token based on the credentials supplied"
