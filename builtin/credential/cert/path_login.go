@@ -293,6 +293,12 @@ func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert)
 				return true
 			}
 		}
+
+		for _, name := range clientCert.URIs {
+			if glob.Glob(allowedName, name.String()) {
+				return true
+			}
+		}
 	}
 	return false
 }
