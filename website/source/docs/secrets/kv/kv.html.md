@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "KV - Secrets Engines"
-sidebar_current: "docs-secrets-kv"
+sidebar_current: "docs-secrets-kv-nonversioned"
 description: |-
   The KV secrets engine can store arbitrary secrets.
 ---
@@ -28,13 +28,11 @@ secret's path.
 
 ## Setup
 
-Most secrets engines must be configured in advance before they can perform their
-functions. These steps are usually completed by an operator or configuration
-management tool.
+To enable a non-versioned kv store:
 
-The `kv` secrets engine is enabled by default at the path `secret/`. It can
-be disabled, moved, or enabled multiple times at different paths. Each instance
-of the KV secrets engine is isolated and unique.
+```
+vault secrets enable -options="versioned=false" kv
+```
 
 ## Usage
 
