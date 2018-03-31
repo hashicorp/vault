@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/policyutil"
 
 	"time"
@@ -21,7 +21,7 @@ func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 12
 	maxLeaseTTLVal := time.Hour * 24
 	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: logformat.NewVaultLogger(log.Debug),
+		Logger: logging.NewVaultLogger(log.Debug),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
 			MaxLeaseTTLVal:     maxLeaseTTLVal,

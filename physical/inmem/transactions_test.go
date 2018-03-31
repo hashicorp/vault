@@ -9,7 +9,7 @@ import (
 
 	radix "github.com/armon/go-radix"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -81,21 +81,21 @@ func newFaultyPseudo(logger log.Logger, faultyPaths []string) *faultyPseudo {
 }
 
 func TestPseudo_Basic(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 	p := newFaultyPseudo(logger, nil)
 	physical.ExerciseBackend(t, p)
 	physical.ExerciseBackend_ListPrefix(t, p)
 }
 
 func TestPseudo_SuccessfulTransaction(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 	p := newFaultyPseudo(logger, nil)
 
 	physical.ExerciseTransactionalBackend(t, p)
 }
 
 func TestPseudo_FailedTransaction(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 	p := newFaultyPseudo(logger, []string{"zip"})
 
 	txns := physical.SetupTestingTransactions(t, p)

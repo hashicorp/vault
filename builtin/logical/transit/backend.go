@@ -65,7 +65,7 @@ type backend struct {
 
 func (b *backend) invalidate(_ context.Context, key string) {
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("transit: invalidating key", "key", key)
+		b.Logger().Debug("invalidating key", "key", key)
 	}
 	switch {
 	case strings.HasPrefix(key, "policy/"):

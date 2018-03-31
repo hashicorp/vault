@@ -10,7 +10,7 @@ import (
 
 	"github.com/gocql/gocql"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
@@ -24,7 +24,7 @@ func TestCassandraBackend(t *testing.T) {
 	defer cleanup()
 
 	// Run vault tests
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 	b, err := NewCassandraBackend(map[string]string{
 		"hosts":            hosts,
 		"protocol_version": "3",

@@ -15,7 +15,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
@@ -85,7 +85,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	defer ln2.Close()
 
 	// Create an HA Vault
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {

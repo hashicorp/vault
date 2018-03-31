@@ -6,7 +6,7 @@ import (
 
 	"cloud.google.com/go/spanner"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 	"golang.org/x/net/context"
 )
@@ -43,7 +43,7 @@ func TestHABackend(t *testing.T) {
 		"table":      table,
 		"ha_table":   haTable,
 		"ha_enabled": "true",
-	}, logformat.NewVaultLogger(log.Debug))
+	}, logging.NewVaultLogger(log.Debug))
 	if err != nil {
 		t.Fatal(err)
 	}

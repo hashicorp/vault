@@ -126,8 +126,8 @@ func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
 
 // ResetDB forces a connection next time DB() is called.
 func (b *backend) ResetDB(_ context.Context) {
-	b.logger.Debug("postgres/resetdb: enter")
-	defer b.logger.Debug("postgres/resetdb: exit")
+	b.logger.Debug("postgres/db: enter")
+	defer b.logger.Debug("postgres/db: exit")
 
 	b.lock.Lock()
 	defer b.lock.Unlock()

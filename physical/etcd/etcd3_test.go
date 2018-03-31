@@ -7,7 +7,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -17,7 +17,7 @@ func TestEtcd3Backend(t *testing.T) {
 		t.Skipf("Skipped. No etcd3 server found")
 	}
 
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewEtcdBackend(map[string]string{
 		"path":     fmt.Sprintf("/vault-%d", time.Now().Unix()),

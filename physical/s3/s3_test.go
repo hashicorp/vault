@@ -9,7 +9,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -79,7 +79,7 @@ func TestS3Backend(t *testing.T) {
 		}
 	}()
 
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	// This uses the same logic to find the AWS credentials as we did at the beginning of the test
 	b, err := NewS3Backend(map[string]string{

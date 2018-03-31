@@ -9,7 +9,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 
@@ -48,7 +48,7 @@ func TestDynamoDBBackend(t *testing.T) {
 		})
 	}()
 
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	b, err := NewDynamoDBBackend(map[string]string{
 		"access_key":    creds.AccessKeyID,
@@ -95,7 +95,7 @@ func TestDynamoDBHABackend(t *testing.T) {
 		})
 	}()
 
-	logger := logformat.NewVaultLogger(log.Debug)
+	logger := logging.NewVaultLogger(log.Debug)
 	b, err := NewDynamoDBBackend(map[string]string{
 		"access_key":    creds.AccessKeyID,
 		"secret_key":    creds.SecretAccessKey,
