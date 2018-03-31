@@ -62,7 +62,6 @@ type SystemView interface {
 type StaticSystemView struct {
 	DefaultLeaseTTLVal  time.Duration
 	MaxLeaseTTLVal      time.Duration
-	TTLValue            time.Duration
 	SudoPrivilegeVal    bool
 	TaintedVal          bool
 	CachingDisabledVal  bool
