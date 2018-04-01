@@ -108,7 +108,7 @@ This endpoint is used to update an existing entity.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`    | `/identity/entity/id/:id`   | `200 application/json` |
+| `POST`   | `/identity/entity/id/:id`    | `200 application/json` |
 
 ### Parameters
 
@@ -211,3 +211,46 @@ $ curl \
   }
 }
 ```
+
+## Merge Entities
+
+This endpoint merges many entities into one entity.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/identity/entity/merge`     | `204 (empty body)`     |
+
+### Parameters
+
+- `from_entity_ids` `(array: <required>)` - Entity IDs which needs to get
+  merged.
+
+- `to_entity_id` `(string: <required>)` - Entity ID into which all the other
+  entities need to get merged.
+
+- `force` `(bool: false)` - Setting this will follow the 'mine' strategy for
+  merging MFA secrets. If there are secrets of the same type both in entities
+  that are merged from and in entity into which all others are getting merged,
+  secrets in the destination will be unaltered. If not set, this API will throw
+  an error containing all the conflicts.
+
+### Sample Payload
+
+```json
+{
+  "to_entity_id": "f2cdefbe-f510-a226-77fa-989a48ba6abc",
+  "from_entity_ids": ["1ade80ec-ba5c-8eed-91e2-b9dcd41d6fff", "270976d0-9bab-14a5-4b92-3861805ef73d"]
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/identity/entity/id/8d6a45e5-572f-8f13-d226-cd0d1ec57297
+```
+
+
