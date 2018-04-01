@@ -13,8 +13,6 @@ func TestCalculateTTL(t *testing.T) {
 		MaxLeaseTTLVal:     30 * time.Hour,
 	}
 
-	now := time.Now().Round(time.Hour)
-
 	cases := map[string]struct {
 		Increment      time.Duration
 		BackendDefault time.Duration
@@ -114,7 +112,7 @@ func TestCalculateTTL(t *testing.T) {
 	}
 
 	for name, tc := range cases {
-		ttl, warnings, err := calculateTTL(testSysView, tc.Increment, tc.BackendDefault, tc.Period, tc.BackendMax, tc.ExplicitMaxTTL, now)
+		ttl, warnings, err := calculateTTL(testSysView, tc.Increment, tc.BackendDefault, tc.Period, tc.BackendMax, tc.ExplicitMaxTTL, time.Time{})
 		if (err != nil) != tc.Error {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
@@ -123,6 +121,7 @@ func TestCalculateTTL(t *testing.T) {
 		}
 
 		// Round it to the nearest hour
+		now := time.Now().Round(time.Hour)
 		lease := now.Add(ttl).Round(time.Hour).Sub(now)
 		if lease != tc.Result {
 			t.Fatalf("bad: %s\nlease: %s", name, lease)

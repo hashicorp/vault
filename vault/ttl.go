@@ -8,8 +8,10 @@ import (
 )
 
 func calculateTTL(sysView logical.SystemView, increment, backendTTL, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, errors error) {
-	now := time.Now().Round(time.Second)
-	startTime = startTime.Round(time.Second)
+	now := time.Now().Truncate(time.Second)
+	if startTime.IsZero() {
+		startTime = now
+	}
 
 	// Start off with the sys default value, and update according to period/TTL
 	// from resp.Auth
@@ -72,9 +74,9 @@ func calculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 
 		// If the proposed expiration is after the maximum TTL of the lease,
 		// cap the increment to whatever is left, with a tiny buffer due to rounding
-		if maxValidTime.Sub(proposedExpiration) < time.Second {
+		if maxValidTime.Before(proposedExpiration) {
 			warnings = append(warnings,
-				fmt.Sprintf("TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", ttl, maxTTL))
+				fmt.Sprintf("TTL of %q exceeded the effective max_ttl; TTL value is capped accordingly", ttl))
 			ttl = maxValidTime.Sub(now)
 		}
 	}
