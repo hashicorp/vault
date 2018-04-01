@@ -2270,8 +2270,22 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 		return nil, fmt.Errorf("no token entry found during lookup")
 	}
 
-	req.Auth.Period = te.Period
-	req.Auth.ExplicitMaxTTL = te.ExplicitMaxTTL
+	if te.Role == "" {
+		req.Auth.Period = te.Period
+		req.Auth.ExplicitMaxTTL = te.ExplicitMaxTTL
+		return &logical.Response{Auth: req.Auth}, nil
+	}
+
+	role, err := ts.tokenStoreRole(ctx, te.Role)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up role %s: %s", te.Role, err)
+	}
+	if role == nil {
+		return nil, fmt.Errorf("original token role (%s) could not be found, not renewing", te.Role)
+	}
+
+	req.Auth.Period = role.Period
+	req.Auth.ExplicitMaxTTL = role.ExplicitMaxTTL
 	return &logical.Response{Auth: req.Auth}, nil
 }
 
