@@ -18,9 +18,17 @@ such as Consul, provide additional coordination functions that enable Vault to
 run in an HA configuration while others provide a more robust backup and
 restoration process.
 
-This guide will walk you through a simple Vault Highly Available (HA) cluster
+When running in HA mode, Vault servers have two additional states: ***standby***
+and ***active***. Within a Vault cluster, only a single instance will be
+_active_ and handles all requests (reads and writes) and all _standby_ nodes
+redirect requests to the _active_ node.
+
+![Reference Architecture](/assets/images/vault-ha-consul-3.png)
+
+
+~> This guide will walk you through a simple Vault Highly Available (HA) cluster
 implementation. While this is not an exhaustive or prescriptive guide that can
-be used as a drop-in production example, it covers the basics enough to inform
+be used as a drop-in production example, it covers the **basics** enough to inform
 your own production setup.
 
 
@@ -468,11 +476,13 @@ This section presumes the vault binary is located at **`/usr/local/bin/vault`**.
       path    = "vault/"
     }
 
+    api_addr =  "$ACTIVE_NODE_ADDR"
     cluster_addr = "$CLUSTER_ADDR"
+
 
 This configuration allows for listening on all interfaces (such that a vault
 command against the loopback address would succeed for example) but explicitly
-sets an intra-cluster communication address as **`cluster_address`**.
+sets an intra-cluster communication address as [**`cluster_address`**](/docs/configuration/index.html#high-availability-parameters).
 
 Note that some values contain variable placeholders while the rest have
 reasonable defaults. You should replace the following values in your own Vault
@@ -481,12 +491,21 @@ server configuration based on the example:
 - **$CLUSTER_ADDRESS**: this should be set to address that you prefer the Vault
 servers perform intra-server communications on; this needs to be routable
 between Vault servers and in our example will be `10.1.42.201:8201` and
-`10.1.42.202:8201` respectively
-- **$CLUSTER_ADDR**: Not to be confused with the **CLUSTER_ADDRESS** option, this
-option is specifically for HA request forwarding between Vault servers and needs
-to be a address routable between all Vault servers in a full URL format with
-port. In this case it will be `https://10.1.42.201:8200` and
-`https://10.1.42.202:8200` respectively
+`10.1.42.202:8201` respectively.
+
+- **$ACTIVE_NODE_ADDR**: this should be set to the address which client (API)
+requests are to be redirected to. In our example, we want `vault_s1` to be the
+_active_ node, so this will be `http://10.1.42.201:8200`.
+
+- **$CLUSTER_ADDR**: Not to be confused with the **CLUSTER_ADDRESS** parameter,
+this parameter is specifically for HA request forwarding between Vault servers
+and needs to be a address routable between all Vault servers in a full URL
+format with port. In this case it will be `https://10.1.42.201:8200` and
+`https://10.1.42.202:8200` respectively.
+
+> Note that the scheme here (https) is ignored; all cluster members will always
+use TLS with a private key/certificate.
+
 
 #### `vault_s1.hcl` Example
 
@@ -501,7 +520,8 @@ port. In this case it will be `https://10.1.42.201:8200` and
       path    = "vault/"
     }
 
-    cluster_addr = "https://10.1.42.201:8200"
+    api_addr = "http://10.1.42.201:8200"
+    cluster_addr = "https://10.1.42.201:8201"
 
 #### `vault_s2.hcl` Example
 
@@ -516,7 +536,8 @@ port. In this case it will be `https://10.1.42.201:8200` and
       path    = "vault/"
     }
 
-    cluster_addr = "https://10.1.42.202:8200"
+    api_addr = "http://10.1.42.201:8200"
+    cluster_addr = "https://10.1.42.202:8201"
 
 
 #### Vault Server `systemd` Unit file
@@ -618,7 +639,7 @@ The **standby** Vault server:
     HA Enabled              true
     HA Cluster              https://10.1.42.201:8201
     HA Mode                 standby
-    Active Node Address:    http://110.1.42.201:8200
+    Active Node Address:    http://10.1.42.201:8200
 
 
 Vault servers are now operational in HA mode at this point, and you should be
