@@ -41,9 +41,9 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		leaseConfig = &configLease{}
 	}
 
-	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = leaseConfig.TTL
-	resp.Auth.MaxTTL = leaseConfig.MaxTTL
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = leaseConfig.TTL
+	resp.Secret.MaxTTL = leaseConfig.MaxTTL
 	return resp, nil
 }
 
