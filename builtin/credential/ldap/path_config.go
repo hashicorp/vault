@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-ldap/ldap"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -109,10 +110,16 @@ Default: cn`,
 				Default:     "tls12",
 				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
 			},
+
 			"deny_null_bind": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: "Denies an unauthenticated LDAP bind request if the user's password is empty; defaults to true",
+			},
+
+			"case_sensitive_names": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: "If true, case sensitivity will be used when comparing usernames and groups for matching policies.",
 			},
 		},
 
@@ -158,6 +165,24 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ConfigEntr
 		return nil, err
 	}
 
+	var persistNeeded bool
+	if result.CaseSensitiveNames == nil {
+		// Upgrade from before switching to case-insensitive
+		result.CaseSensitiveNames = new(bool)
+		*result.CaseSensitiveNames = true
+		persistNeeded = true
+	}
+
+	if persistNeeded && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		entry, err := logical.StorageEntryJSON("config", result)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+	}
+
 	result.logger = b.Logger()
 
 	return result, nil
@@ -174,21 +199,22 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"url":             cfg.Url,
-			"userdn":          cfg.UserDN,
-			"groupdn":         cfg.GroupDN,
-			"groupfilter":     cfg.GroupFilter,
-			"groupattr":       cfg.GroupAttr,
-			"upndomain":       cfg.UPNDomain,
-			"userattr":        cfg.UserAttr,
-			"certificate":     cfg.Certificate,
-			"insecure_tls":    cfg.InsecureTLS,
-			"starttls":        cfg.StartTLS,
-			"binddn":          cfg.BindDN,
-			"deny_null_bind":  cfg.DenyNullBind,
-			"discoverdn":      cfg.DiscoverDN,
-			"tls_min_version": cfg.TLSMinVersion,
-			"tls_max_version": cfg.TLSMaxVersion,
+			"url":                  cfg.Url,
+			"userdn":               cfg.UserDN,
+			"groupdn":              cfg.GroupDN,
+			"groupfilter":          cfg.GroupFilter,
+			"groupattr":            cfg.GroupAttr,
+			"upndomain":            cfg.UPNDomain,
+			"userattr":             cfg.UserAttr,
+			"certificate":          cfg.Certificate,
+			"insecure_tls":         cfg.InsecureTLS,
+			"starttls":             cfg.StartTLS,
+			"binddn":               cfg.BindDN,
+			"deny_null_bind":       cfg.DenyNullBind,
+			"discoverdn":           cfg.DiscoverDN,
+			"tls_min_version":      cfg.TLSMinVersion,
+			"tls_max_version":      cfg.TLSMaxVersion,
+			"case_sensitive_names": *cfg.CaseSensitiveNames,
 		},
 	}
 	return resp, nil
@@ -282,21 +308,31 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	if startTLS {
 		cfg.StartTLS = startTLS
 	}
+
 	bindDN := d.Get("binddn").(string)
 	if bindDN != "" {
 		cfg.BindDN = bindDN
 	}
+
 	bindPass := d.Get("bindpass").(string)
 	if bindPass != "" {
 		cfg.BindPassword = bindPass
 	}
+
 	denyNullBind := d.Get("deny_null_bind").(bool)
 	if denyNullBind {
 		cfg.DenyNullBind = denyNullBind
 	}
+
 	discoverDN := d.Get("discoverdn").(bool)
 	if discoverDN {
 		cfg.DiscoverDN = discoverDN
+	}
+
+	caseSensitiveNames, ok := d.GetOk("case_sensitive_names")
+	if ok {
+		cfg.CaseSensitiveNames = new(bool)
+		*cfg.CaseSensitiveNames = caseSensitiveNames.(bool)
 	}
 
 	return cfg, nil
@@ -307,6 +343,13 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	cfg, err := b.newConfigEntry(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	// On write, if not specified, use false. We do this here so upgrade logic
+	// works since it calls the same newConfigEntry function
+	if cfg.CaseSensitiveNames == nil {
+		cfg.CaseSensitiveNames = new(bool)
+		*cfg.CaseSensitiveNames = false
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
@@ -321,23 +364,24 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 }
 
 type ConfigEntry struct {
-	logger        log.Logger
-	Url           string `json:"url" structs:"url" mapstructure:"url"`
-	UserDN        string `json:"userdn" structs:"userdn" mapstructure:"userdn"`
-	GroupDN       string `json:"groupdn" structs:"groupdn" mapstructure:"groupdn"`
-	GroupFilter   string `json:"groupfilter" structs:"groupfilter" mapstructure:"groupfilter"`
-	GroupAttr     string `json:"groupattr" structs:"groupattr" mapstructure:"groupattr"`
-	UPNDomain     string `json:"upndomain" structs:"upndomain" mapstructure:"upndomain"`
-	UserAttr      string `json:"userattr" structs:"userattr" mapstructure:"userattr"`
-	Certificate   string `json:"certificate" structs:"certificate" mapstructure:"certificate"`
-	InsecureTLS   bool   `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
-	StartTLS      bool   `json:"starttls" structs:"starttls" mapstructure:"starttls"`
-	BindDN        string `json:"binddn" structs:"binddn" mapstructure:"binddn"`
-	BindPassword  string `json:"bindpass" structs:"bindpass" mapstructure:"bindpass"`
-	DenyNullBind  bool   `json:"deny_null_bind" structs:"deny_null_bind" mapstructure:"deny_null_bind"`
-	DiscoverDN    bool   `json:"discoverdn" structs:"discoverdn" mapstructure:"discoverdn"`
-	TLSMinVersion string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
-	TLSMaxVersion string `json:"tls_max_version" structs:"tls_max_version" mapstructure:"tls_max_version"`
+	logger             log.Logger
+	Url                string `json:"url"`
+	UserDN             string `json:"userdn"`
+	GroupDN            string `json:"groupdn"`
+	GroupFilter        string `json:"groupfilter"`
+	GroupAttr          string `json:"groupattr"`
+	UPNDomain          string `json:"upndomain"`
+	UserAttr           string `json:"userattr"`
+	Certificate        string `json:"certificate"`
+	InsecureTLS        bool   `json:"insecure_tls"`
+	StartTLS           bool   `json:"starttls"`
+	BindDN             string `json:"binddn"`
+	BindPassword       string `json:"bindpass"`
+	DenyNullBind       bool   `json:"deny_null_bind"`
+	DiscoverDN         bool   `json:"discoverdn"`
+	TLSMinVersion      string `json:"tls_min_version"`
+	TLSMaxVersion      string `json:"tls_max_version"`
+	CaseSensitiveNames *bool  `json:"case_sensitive_names,omitempty`
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
