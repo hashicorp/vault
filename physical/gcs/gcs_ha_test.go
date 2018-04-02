@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 	"golang.org/x/net/context"
 )
 
@@ -40,7 +40,7 @@ func TestHABackend(t *testing.T) {
 	backend, err := NewBackend(map[string]string{
 		"bucket":     bucket,
 		"ha_enabled": "true",
-	}, logging.NewVaultLogger(log.LevelTrace))
+	}, logging.NewVaultLogger(log.Trace))
 	if err != nil {
 		t.Fatal(err)
 	}

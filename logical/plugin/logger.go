@@ -1,9 +1,6 @@
 package plugin
 
-import (
-	hclog "github.com/hashicorp/go-hclog"
-	logxi "github.com/mgutz/logxi/v1"
-)
+import hclog "github.com/hashicorp/go-hclog"
 
 type LoggerServer struct {
 	logger hclog.Logger
@@ -113,19 +110,24 @@ func translateLevel(logxiLevel int) hclog.Level {
 
 	switch logxiLevel {
 
-	case logxi.LevelAll, logxi.LevelTrace:
+	case 1000, 10:
+		// logxi.LevelAll, logxi.LevelTrace:
 		return hclog.Trace
 
-	case logxi.LevelDebug:
+	case 7:
+		// logxi.LevelDebug:
 		return hclog.Debug
 
-	case logxi.LevelInfo, logxi.LevelNotice:
+	case 6, 5:
+		// logxi.LevelInfo, logxi.LevelNotice:
 		return hclog.Info
 
-	case logxi.LevelWarn:
+	case 4:
+		// logxi.LevelWarn:
 		return hclog.Warn
 
-	case logxi.LevelError, logxi.LevelFatal, logxi.LevelAlert, logxi.LevelEmergency:
+	case 3, 2, 1, -1:
+		// logxi.LevelError, logxi.LevelFatal, logxi.LevelAlert, logxi.LevelEmergency:
 		return hclog.Error
 	}
 	return hclog.NoLevel

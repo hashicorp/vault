@@ -101,12 +101,14 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		},
 	}
 
+	namedLogger := logger.Named(pluginRunner.Name)
+
 	var client *plugin.Client
 	var err error
 	if isMetadataMode {
-		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginMap, handshakeConfig, []string{}, logger)
+		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginMap, handshakeConfig, []string{}, namedLogger)
 	} else {
-		client, err = pluginRunner.Run(ctx, sys, pluginMap, handshakeConfig, []string{}, logger)
+		client, err = pluginRunner.Run(ctx, sys, pluginMap, handshakeConfig, []string{}, namedLogger)
 	}
 	if err != nil {
 		return nil, err
@@ -140,9 +142,9 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	}
 
 	// Wrap the backend in a tracing middleware
-	if logger.IsTrace() {
+	if namedLogger.IsTrace() {
 		backend = &backendTracingMiddleware{
-			logger: logger.With("plugin_type", pluginRunner.Name, "transport", transport),
+			logger: namedLogger.With("transport", transport),
 			next:   backend,
 		}
 	}

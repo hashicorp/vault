@@ -39,6 +39,8 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		return nil, err
 	}
 
+	namedLogger := logger.Named(pluginName)
+
 	var transport string
 	var db Database
 	if pluginRunner.Builtin {
@@ -59,7 +61,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 
 	} else {
 		// create a DatabasePluginClient instance
-		db, err = newPluginClient(ctx, sys, pluginRunner, logger)
+		db, err = newPluginClient(ctx, sys, pluginRunner, namedLogger)
 		if err != nil {
 			return nil, err
 		}
@@ -87,10 +89,10 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 	}
 
 	// Wrap with tracing middleware
-	if logger.IsTrace() {
+	if namedLogger.IsTrace() {
 		db = &databaseTracingMiddleware{
 			next:   db,
-			logger: logger.With("transport", transport, "type", typeStr),
+			logger: namedLogger.With("transport", transport),
 		}
 	}
 

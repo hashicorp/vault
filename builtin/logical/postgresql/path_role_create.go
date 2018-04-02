@@ -33,13 +33,9 @@ func pathRoleCreate(b *backend) *framework.Path {
 }
 
 func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.logger.Debug("enter")
-	defer b.logger.Debug("exit")
-
 	name := data.Get("name").(string)
 
 	// Get the role
-	b.logger.Debug("getting role")
 	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
@@ -49,7 +45,6 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 	}
 
 	// Determine if we have a lease
-	b.logger.Debug("getting lease")
 	lease, err := b.Lease(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -90,20 +85,17 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 		Format("2006-01-02 15:04:05-0700")
 
 	// Get our handle
-	b.logger.Debug("getting database handle")
 	db, err := b.DB(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Start a transaction
-	b.logger.Debug("starting transaction")
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		b.logger.Debug("rolling back transaction")
 		tx.Rollback()
 	}()
 
@@ -114,7 +106,6 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			continue
 		}
 
-		b.logger.Debug("preparing statement")
 		stmt, err := tx.Prepare(Query(query, map[string]string{
 			"name":       username,
 			"password":   password,
@@ -124,7 +115,6 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			return nil, err
 		}
 		defer stmt.Close()
-		b.logger.Debug("executing statement")
 		if _, err := stmt.Exec(); err != nil {
 			return nil, err
 		}
@@ -132,14 +122,12 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 
 	// Commit the transaction
 
-	b.logger.Debug("committing transaction")
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
 	// Return the secret
 
-	b.logger.Debug("generating secret")
 	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
 		"username": username,
 		"password": password,

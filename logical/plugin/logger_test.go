@@ -3,20 +3,16 @@ package plugin
 import (
 	"bufio"
 	"bytes"
-	"github.com/hashicorp/go-hclog"
 	"io/ioutil"
 	"net/rpc"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/logging"
-	log "github.com/mgutz/logxi/v1"
 )
-
-func TestLogger_impl(t *testing.T) {
-	var _ log.Logger = new(deprecatedLoggerClient)
-}
 
 func TestLogger_levels(t *testing.T) {
 	client, server := plugin.TestRPCConn(t)
@@ -134,8 +130,8 @@ func TestLogger_log(t *testing.T) {
 	expected := "foobar"
 	testLogger := &deprecatedLoggerClient{client: client}
 
-	// Test trace
-	testLogger.Log(log.LevelInfo, expected, nil)
+	// Test trace 6 = logxi.LevelInfo
+	testLogger.Log(6, expected, nil)
 	if err := writer.Flush(); err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +153,7 @@ func TestLogger_setLevel(t *testing.T) {
 	})
 
 	testLogger := &deprecatedLoggerClient{client: client}
-	testLogger.SetLevel(log.LevelWarn)
+	testLogger.SetLevel(4) // 4 == logxi.LevelWarn
 
 	if !testLogger.IsWarn() {
 		t.Fatal("expected logger to support warn level")
