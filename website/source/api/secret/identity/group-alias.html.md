@@ -58,6 +58,56 @@ $ curl \
 }
 ```
 
+## Update Group Alias by ID
+
+This endpoint is used to update an existing group alias.
+
+| Method   | Path                              | Produces               |
+| :------- | :-------------------------------- | :--------------------- |
+| `POST`    | `/identity/group-alias/id/:id`   | `200 application/json` |
+
+### Parameters
+
+- `id` `(string: <optional>)` - ID of the group alias.
+
+- `name` `(string: entity-<UUID>)` – Name of the group alias.
+
+- `mount_accessor` `(string: "")` – Mount accessor to which this alias belongs
+  toMount accessor to which this alias belongs to.
+
+- `canonical_id` `(string: "")` - ID of the group to which this is an alias.
+
+### Sample Payload
+
+```json
+{
+  "canonical_id": "b86920ea-2831-00ff-15c5-a3f923f1ee3b",
+  "mount_accessor": "auth_github_232a90dc",
+  "name": "dev-team"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/identity/group-alias/id/ca726050-d8ac-6f1f-4210-3b5c5b613824
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "canonical_id": "b86920ea-2831-00ff-15c5-a3f923f1ee3b",
+    "id": "ca726050-d8ac-6f1f-4210-3b5c5b613824"
+  }
+}
+```
+
 ## Read Group Alias by ID
 
 This endpoint queries the group alias by its identifier.
