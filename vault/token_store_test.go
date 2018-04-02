@@ -2595,9 +2595,10 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		if ttl > 10 {
 			t.Fatalf("TTL too big")
 		}
+		// explicit max ttl is stored in the role so not returned here
 		maxTTL := resp.Data["explicit_max_ttl"].(int64)
-		if maxTTL != 10 {
-			t.Fatalf("expected 6 for explicit max TTL, got %d", maxTTL)
+		if maxTTL != 0 {
+			t.Fatalf("expected 0 for explicit max TTL, got %d", maxTTL)
 		}
 
 		// Let the TTL go down a bit to ~7 seconds (8 against explicit max)

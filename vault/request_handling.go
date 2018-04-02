@@ -555,16 +555,14 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// Generate a token
 		te := TokenEntry{
-			Path:           req.Path,
-			Policies:       auth.Policies,
-			Meta:           auth.Metadata,
-			DisplayName:    auth.DisplayName,
-			CreationTime:   time.Now().Unix(),
-			TTL:            tokenTTL,
-			NumUses:        auth.NumUses,
-			EntityID:       auth.EntityID,
-			Period:         auth.Period,
-			ExplicitMaxTTL: auth.ExplicitMaxTTL,
+			Path:         req.Path,
+			Policies:     auth.Policies,
+			Meta:         auth.Metadata,
+			DisplayName:  auth.DisplayName,
+			CreationTime: time.Now().Unix(),
+			TTL:          tokenTTL,
+			NumUses:      auth.NumUses,
+			EntityID:     auth.EntityID,
 		}
 
 		te.Policies = policyutil.SanitizePolicies(te.Policies, true)
