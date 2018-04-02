@@ -209,6 +209,10 @@ message LeaseOptions {
 	
 	bool renewable = 2;
 
+	int64 increment = 3 [deprecated=true];
+
+	google.protobuf.Timestamp issue_time = 4 [deprecated=true];
+
 	int64 MaxTTL = 5;
 }
 
