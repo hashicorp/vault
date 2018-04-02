@@ -51,6 +51,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * identity: API to update group-alias by ID [GH-4237]
  * secret/cassandra: Update Cassandra storage delete function to not use batch
    operations [GH-4054]
  * storage/mysql: Allow setting max idle connections and connection lifetime
