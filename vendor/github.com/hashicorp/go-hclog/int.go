@@ -214,6 +214,8 @@ func (z *intLogger) log(t time.Time, level Level, msg string, args ...interface{
 			case CapturedStacktrace:
 				stacktrace = st
 				continue FOR
+			case Format:
+				val = fmt.Sprintf(st[0].(string), st[1:]...)
 			default:
 				val = fmt.Sprintf("%v", st)
 			}
@@ -294,16 +296,20 @@ func (z *intLogger) logJson(t time.Time, level Level, msg string, args ...interf
 				continue
 			}
 			val := args[i+1]
-			// Check if val is of type error. If error type doesn't
-			// implement json.Marshaler or encoding.TextMarshaler
-			// then set val to err.Error() so that it gets marshaled
-			if err, ok := val.(error); ok {
-				switch err.(type) {
+			switch sv := val.(type) {
+			case error:
+				// Check if val is of type error. If error type doesn't
+				// implement json.Marshaler or encoding.TextMarshaler
+				// then set val to err.Error() so that it gets marshaled
+				switch sv.(type) {
 				case json.Marshaler, encoding.TextMarshaler:
 				default:
-					val = err.Error()
+					val = sv.Error()
 				}
+			case Format:
+				val = fmt.Sprintf(sv[0].(string), sv[1:]...)
 			}
+
 			vals[args[i].(string)] = val
 		}
 	}

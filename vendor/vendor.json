@@ -1087,10 +1087,10 @@
 			"revisionTime": "2018-02-23T19:15:17Z"
 		},
 		{
-			"checksumSHA1": "fg18dhgqDts2CI/Dz+6v5jX/xow=",
+			"checksumSHA1": "OEBNuHhYGJwXWNyZ2i+sAiOLtDs=",
 			"path": "github.com/hashicorp/go-hclog",
-			"revision": "9b9aacd44f1c18bbf913afa45ecd1cb8ec515713",
-			"revisionTime": "2018-04-02T16:24:28Z"
+			"revision": "ad26ae78d4726a0d9fd16afcdff629babc1fc661",
+			"revisionTime": "2018-04-02T19:56:19Z"
 		},
 		{
 			"checksumSHA1": "y+AeKVZoX0gB+DZW4Arzkb3tTVc=",
