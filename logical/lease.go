@@ -14,6 +14,11 @@ type LeaseOptions struct {
 	// MaxTTL is the maximum duration that this secret is valid for.
 	MaxTTL time.Duration `json:"max_ttl"`
 
+	// EstimatedTTL is passed to backends to provide an anticipated value
+	// to use for any renewal functions that are required since TTL is not
+	// known at renewal
+	EstimatedTTL time.Duration `json:"-"`
+
 	// Renewable, if true, means that this secret can be renewed.
 	Renewable bool `json:"renewable"`
 }

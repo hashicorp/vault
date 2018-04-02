@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -42,12 +43,6 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, fmt.Errorf("error during renew: could not find role with name %s", req.Secret.InternalData["role"])
 		}
 
-		f := framework.LeaseExtend(role.DefaultTTL, role.MaxTTL, b.System())
-		resp, err := f(ctx, req, data)
-		if err != nil {
-			return nil, err
-		}
-
 		// Get the Database object
 		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
@@ -57,14 +52,28 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		db.RLock()
 		defer db.RUnlock()
 
-		// Make sure we increase the VALID UNTIL endpoint for this user.
-		if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
+		// Make sure we increase the VALID UNTIL endpoint for this user.  This value is estimated and does not
+		// take into account any backend specific values.  These value will be calculated by core and will only
+		// reduce the TTL based on any running max ttl.  Since vault still manages the lease, it will still get
+		// revokes at the lesser time.
+		if req.Secret.EstimatedTTL > 0 {
+			ttl := req.Secret.EstimatedTTL
+			if role.DefaultTTL > 0 && role.DefaultTTL < ttl {
+				ttl = role.DefaultTTL
+			}
+			if role.MaxTTL > 0 && role.MaxTTL < ttl {
+				ttl = role.MaxTTL
+			}
+			expireTime := time.Now().Add(ttl)
 			err := db.RenewUser(ctx, role.Statements, username, expireTime)
 			if err != nil {
 				b.CloseIfShutdown(db, err)
 				return nil, err
 			}
 		}
+		resp := &logical.Response{Secret: req.Secret}
+		resp.Secret.TTL = role.DefaultTTL
+		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil
 	}
 }

@@ -214,6 +214,8 @@ message LeaseOptions {
 	google.protobuf.Timestamp issue_time = 4 [deprecated=true];
 
 	int64 MaxTTL = 5;
+
+	int64 EstimatedTTL = 6;
 }
 
 message Secret {

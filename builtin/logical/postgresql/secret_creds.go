@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -59,14 +60,16 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	resp, err := f(ctx, req, d)
-	if err != nil {
-		return nil, err
-	}
-
 	// Make sure we increase the VALID UNTIL endpoint for this user.
-	if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
+	if req.Secret.EstimatedTTL > 0 {
+		ttl := req.Secret.EstimatedTTL
+		if lease.Lease > 0 && lease.Lease < ttl {
+			ttl = lease.Lease
+		}
+		if lease.LeaseMax > 0 && lease.LeaseMax < ttl {
+			ttl = lease.LeaseMax
+		}
+		expireTime := time.Now().Add(ttl)
 		expiration := expireTime.Format("2006-01-02 15:04:05-0700")
 
 		query := fmt.Sprintf(
@@ -83,6 +86,9 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
 	return resp, nil
 }
 

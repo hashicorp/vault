@@ -131,17 +131,19 @@ func ProtoLeaseOptionsToLogicalLeaseOptions(l *LeaseOptions) (logical.LeaseOptio
 	}
 
 	return logical.LeaseOptions{
-		TTL:       time.Duration(l.TTL),
-		MaxTTL:    time.Duration(l.MaxTTL),
-		Renewable: l.Renewable,
+		TTL:          time.Duration(l.TTL),
+		MaxTTL:       time.Duration(l.MaxTTL),
+		EstimatedTTL: time.Duration(l.EstimatedTTL),
+		Renewable:    l.Renewable,
 	}, nil
 }
 
 func LogicalLeaseOptionsToProtoLeaseOptions(l logical.LeaseOptions) (*LeaseOptions, error) {
 	return &LeaseOptions{
-		TTL:       int64(l.TTL),
-		MaxTTL:    int64(l.MaxTTL),
-		Renewable: l.Renewable,
+		TTL:          int64(l.TTL),
+		MaxTTL:       int64(l.MaxTTL),
+		EstimatedTTL: int64(l.EstimatedTTL),
+		Renewable:    l.Renewable,
 	}, nil
 }
 
