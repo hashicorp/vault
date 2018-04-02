@@ -1,8 +1,8 @@
 package command
 
 import (
-	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"testing"
 
@@ -26,8 +26,8 @@ func TestTokenStore_Integ_TokenCreation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	fmt.Printf("filePath: %q\n", filePath)
-	// defer os.RemoveAll(filePath)
+	//fmt.Printf("filePath: %q\n", filePath)
+	defer os.RemoveAll(filePath)
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
@@ -43,7 +43,7 @@ func TestTokenStore_Integ_TokenCreation(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       log.NullLog,
+		Logger:       logger,
 		Physical:     underlying,
 	}
 
@@ -64,9 +64,11 @@ func TestTokenStore_Integ_TokenCreation(t *testing.T) {
 
 	count := 50000
 	for i := 1; i <= count; i++ {
-		if i%500 == 0 {
-			fmt.Printf("iteration: %d\n", i)
-		}
+		/*
+			if i%500 == 0 {
+				fmt.Printf("iteration: %d\n", i)
+			}
+		*/
 
 		id := strconv.Itoa(i)
 		tcr := &api.TokenCreateRequest{

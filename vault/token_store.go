@@ -789,6 +789,8 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 		}
 	}
 
+	fmt.Printf("\n\nnumber of accessors: %d\n", len(accessors))
+
 	resp.Data = map[string]interface{}{
 		"keys": accessors,
 	}

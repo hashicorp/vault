@@ -21,7 +21,14 @@ import (
 const (
 	defaultBucketCount      = 256
 	defaultBucketShardCount = 16
-	defaultBucketMaxSize    = 256 * 1024
+	// Generally speaking, the larger size of the bucket size adversely affects
+	// the performance of the storage packer. More over some of the backends
+	// impose a maximum size limit on the objects that gets persisted. For
+	// example, Consul imposes 512KB and DynamoDB imposes 400KB. Going forward,
+	// if there exists storage backends that has more constrained limits, this
+	// will have to become more flexible. For now, 256KB seems like a decent
+	// bargain.
+	defaultBucketMaxSize = 256 * 1024
 )
 
 type Config struct {
@@ -398,6 +405,11 @@ func (s *StoragePackerV2) bucketExceedsSizeLimit(bucket *PackedBucket, item *Ite
 
 	size := bucket.Data.Size + int64(len(marshaledItem))
 
+	// The objects that leave storage packer to get persisted get inflated due
+	// to extra bits coming off of encryption. So, we consider the bucket full
+	// much earlier to compensate the overhead. Testing with considering the
+	// 70% of the max size as the limit resulted in object sizes dangerously
+	// close to the actual limit. Hence, setting 60% as the cut-off value.
 	max := math.Ceil((float64(s.config.BucketMaxSize) * float64(60)) / float64(100))
 
 	return float64(size) > max, nil

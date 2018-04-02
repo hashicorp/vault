@@ -22,16 +22,16 @@ message BucketV2{
 	// Key is the storage path where the bucket gets stored
 	string key = 1;
 	// Buckets are the buckets contained within this bucket
-	map <string, BucketV2> buckets = 3;
+	map <string, BucketV2> buckets = 2;
 	// Items holds the items contained within this bucket
-	map <string, Item> items = 4;
+	map <string, Item> items = 3;
 	// Sharded indicates if the buckets contained in this bucket are pushed out
 	// or not
-	bool sharded = 5;
+	bool sharded = 4;
 	// Depth indicates the hierarchical positioning of this bucket
-	int32 depth = 6;
+	int32 depth = 5;
 	// Size of this bucket in number of bytes
-	int64 size = 7;
+	int64 size = 6;
 }
 
 message Bucket {
