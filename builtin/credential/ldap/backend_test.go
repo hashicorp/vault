@@ -454,10 +454,11 @@ func testAccStepConfigUrl(t *testing.T) logicaltest.TestStep {
 		Data: map[string]interface{}{
 			// Online LDAP test server
 			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":      "ldap://ldap.forumsys.com",
-			"userattr": "uid",
-			"userdn":   "dc=example,dc=com",
-			"groupdn":  "dc=example,dc=com",
+			"url":                  "ldap://ldap.forumsys.com",
+			"userattr":             "uid",
+			"userdn":               "dc=example,dc=com",
+			"groupdn":              "dc=example,dc=com",
+			"case_sensitive_names": true,
 		},
 	}
 }
@@ -470,12 +471,13 @@ func testAccStepConfigUrlWithAuthBind(t *testing.T) logicaltest.TestStep {
 			// Online LDAP test server
 			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
 			// In this test we also exercise multiple URL support
-			"url":      "foobar://ldap.example.com,ldap://ldap.forumsys.com",
-			"userattr": "uid",
-			"userdn":   "dc=example,dc=com",
-			"groupdn":  "dc=example,dc=com",
-			"binddn":   "cn=read-only-admin,dc=example,dc=com",
-			"bindpass": "password",
+			"url":                  "foobar://ldap.example.com,ldap://ldap.forumsys.com",
+			"userattr":             "uid",
+			"userdn":               "dc=example,dc=com",
+			"groupdn":              "dc=example,dc=com",
+			"binddn":               "cn=read-only-admin,dc=example,dc=com",
+			"bindpass":             "password",
+			"case_sensitive_names": true,
 		},
 	}
 }
@@ -487,11 +489,12 @@ func testAccStepConfigUrlWithDiscover(t *testing.T) logicaltest.TestStep {
 		Data: map[string]interface{}{
 			// Online LDAP test server
 			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":        "ldap://ldap.forumsys.com",
-			"userattr":   "uid",
-			"userdn":     "dc=example,dc=com",
-			"groupdn":    "dc=example,dc=com",
-			"discoverdn": true,
+			"url":                  "ldap://ldap.forumsys.com",
+			"userattr":             "uid",
+			"userdn":               "dc=example,dc=com",
+			"groupdn":              "dc=example,dc=com",
+			"discoverdn":           true,
+			"case_sensitive_names": true,
 		},
 	}
 }
@@ -503,10 +506,11 @@ func testAccStepConfigUrlNoGroupDN(t *testing.T) logicaltest.TestStep {
 		Data: map[string]interface{}{
 			// Online LDAP test server
 			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
-			"url":        "ldap://ldap.forumsys.com",
-			"userattr":   "uid",
-			"userdn":     "dc=example,dc=com",
-			"discoverdn": true,
+			"url":                  "ldap://ldap.forumsys.com",
+			"userattr":             "uid",
+			"userdn":               "dc=example,dc=com",
+			"discoverdn":           true,
+			"case_sensitive_names": true,
 		},
 	}
 }

@@ -156,6 +156,9 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ConfigEntr
 
 	if storedConfig == nil {
 		// No user overrides, return default configuration
+		result.CaseSensitiveNames = new(bool)
+		*result.CaseSensitiveNames = false
+
 		return result, nil
 	}
 
