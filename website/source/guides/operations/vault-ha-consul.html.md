@@ -476,7 +476,7 @@ This section presumes the vault binary is located at **`/usr/local/bin/vault`**.
       path    = "vault/"
     }
 
-    api_addr =  "$ACTIVE_NODE_ADDR"
+    api_addr =  "$API_ADDR"
     cluster_addr = "$CLUSTER_ADDR"
 
 
@@ -493,7 +493,7 @@ servers perform intra-server communications on; this needs to be routable
 between Vault servers and in our example will be `10.1.42.201:8201` and
 `10.1.42.202:8201` respectively.
 
-- **$ACTIVE_NODE_ADDR**: this should be set to the address which client (API)
+- **$API_ADDR**: this should be set to the address which client (API)
 requests are to be redirected to. In our example, we want `vault_s1` to be the
 _active_ node, so this will be `http://10.1.42.201:8200`.
 
