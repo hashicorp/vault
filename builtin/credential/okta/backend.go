@@ -316,8 +316,8 @@ func (b *backend) getOktaGroups(client *okta.Client, user *okta.User) ([]string,
 
 const backendHelp = `
 The Okta credential provider allows authentication querying,
-checking username and password, and associating policies.  If an api token is configure
-groups are pulled down from Okta.
+checking username and password, and associating policies.  If an api token is
+configured groups are pulled down from Okta.
 
 Configuration of the connection is done through the "config" and "policies"
 endpoints by a user with root access. Authentication is then done
