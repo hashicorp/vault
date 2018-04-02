@@ -8,7 +8,7 @@ import (
 )
 
 func calculateTTL(sysView logical.SystemView, increment, backendTTL, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, errors error) {
-	now := time.Now().Truncate(time.Second)
+	now := time.Now()
 	if startTime.IsZero() {
 		startTime = now
 	}
@@ -63,21 +63,24 @@ func calculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 	}
 
 	if !maxValidTime.IsZero() {
+		// Determine the max valid TTL, set to the next second since
+		// some time has elapsed and we don't want to cap TTL if ttl
+		// equals max_ttl
+		maxValidTTL := maxValidTime.Add(time.Second).Truncate(time.Second).Sub(now)
+
 		// If we are past the max TTL, we shouldn't be in this function...but
 		// fast path out if we are
-		if maxValidTime.Before(now) {
+		if maxValidTTL < 0 {
 			return 0, nil, fmt.Errorf("past the max TTL, cannot renew")
 		}
 
-		// We are proposing a time of the current time plus the increment
-		proposedExpiration := now.Add(ttl)
-
 		// If the proposed expiration is after the maximum TTL of the lease,
-		// cap the increment to whatever is left, with a tiny buffer due to rounding
-		if maxValidTime.Before(proposedExpiration) {
+		// cap the increment to whatever is left, with a small buffer due to
+		// time elapsed
+		if maxValidTTL-ttl < 0 {
 			warnings = append(warnings,
-				fmt.Sprintf("TTL of %q exceeded the effective max_ttl; TTL value is capped accordingly", ttl))
-			ttl = maxValidTime.Sub(now)
+				fmt.Sprintf("TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", ttl, maxValidTTL))
+			ttl = maxValidTTL
 		}
 	}
 
