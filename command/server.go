@@ -293,7 +293,7 @@ func (c *ServerCommand) Run(args []string) int {
 		level = log.Trace
 	case "debug":
 		level = log.Debug
-	case "info", "":
+	case "notice", "info", "":
 		level = log.Info
 	case "warn", "warning":
 		level = log.Warn

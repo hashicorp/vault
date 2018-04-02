@@ -272,10 +272,10 @@ func (m *ExpirationManager) Tidy() error {
 		return err
 	}
 
-	m.logger.Debug("number of leases scanned", "count", countLease)
-	m.logger.Debug("number of leases which had empty tokens", "count", deletedCountEmptyToken)
-	m.logger.Debug("number of leases which had invalid tokens", "count", deletedCountInvalidToken)
-	m.logger.Debug("number of leases successfully revoked", "count", revokedCount)
+	m.logger.Info("number of leases scanned", "count", countLease)
+	m.logger.Info("number of leases which had empty tokens", "count", deletedCountEmptyToken)
+	m.logger.Info("number of leases which had invalid tokens", "count", deletedCountInvalidToken)
+	m.logger.Info("number of leases successfully revoked", "count", revokedCount)
 
 	return tidyErrors.ErrorOrNil()
 }

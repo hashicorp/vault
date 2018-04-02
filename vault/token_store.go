@@ -1519,14 +1519,14 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 		}
 	}
 
-	ts.logger.Debug("number of entries scanned in parent prefix", "count", countParentEntries)
-	ts.logger.Debug("number of entries deleted in parent prefix", "count", deletedCountParentEntries)
-	ts.logger.Debug("number of tokens scanned in parent index list", "count", countParentList)
-	ts.logger.Debug("number of tokens revoked in parent index list", "count", deletedCountParentList)
-	ts.logger.Debug("number of accessors scanned", "count", countAccessorList)
-	ts.logger.Debug("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
-	ts.logger.Debug("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
-	ts.logger.Debug("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
+	ts.logger.Info("number of entries scanned in parent prefix", "count", countParentEntries)
+	ts.logger.Info("number of entries deleted in parent prefix", "count", deletedCountParentEntries)
+	ts.logger.Info("number of tokens scanned in parent index list", "count", countParentList)
+	ts.logger.Info("number of tokens revoked in parent index list", "count", deletedCountParentList)
+	ts.logger.Info("number of accessors scanned", "count", countAccessorList)
+	ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
+	ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
+	ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
 
 	return nil, tidyErrors.ErrorOrNil()
 }

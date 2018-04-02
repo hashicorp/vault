@@ -29,37 +29,37 @@ func (mw *databaseTracingMiddleware) Type() (string, error) {
 
 func (mw *databaseTracingMiddleware) CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	defer func(then time.Time) {
-		mw.logger.Debug("database", "operation", "CreateUser", "status", "finished", "err", err, "took", time.Since(then))
+		mw.logger.Trace("create user", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Debug("database", "operation", "CreateUser", "status", "started")
+	mw.logger.Trace("create user", "status", "started")
 	return mw.next.CreateUser(ctx, statements, usernameConfig, expiration)
 }
 
 func (mw *databaseTracingMiddleware) RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) (err error) {
 	defer func(then time.Time) {
-		mw.logger.Debug("database", "operation", "RenewUser", "status", "finished", "err", err, "took", time.Since(then))
+		mw.logger.Trace("renew user", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Debug("database", "operation", "RenewUser", "status", "started")
+	mw.logger.Trace("renew user", "status", "started")
 	return mw.next.RenewUser(ctx, statements, username, expiration)
 }
 
 func (mw *databaseTracingMiddleware) RevokeUser(ctx context.Context, statements Statements, username string) (err error) {
 	defer func(then time.Time) {
-		mw.logger.Debug("database", "operation", "RevokeUser", "status", "finished", "err", err, "took", time.Since(then))
+		mw.logger.Trace("revoke user", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Debug("database", "operation", "RevokeUser", "status", "started")
+	mw.logger.Trace("revoke user", "status", "started")
 	return mw.next.RevokeUser(ctx, statements, username)
 }
 
 func (mw *databaseTracingMiddleware) RotateRootCredentials(ctx context.Context, statements []string) (conf map[string]interface{}, err error) {
 	defer func(then time.Time) {
-		mw.logger.Debug("database", "operation", "RotateRootCredentials", "status", "finished", "err", err, "took", time.Since(then))
+		mw.logger.Trace("rotate root credentials", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Debug("database", "operation", "RotateRootCredentials", "status", "started")
+	mw.logger.Trace("rotate root credentials", "status", "started")
 	return mw.next.RotateRootCredentials(ctx, statements)
 }
 
@@ -70,19 +70,19 @@ func (mw *databaseTracingMiddleware) Initialize(ctx context.Context, conf map[st
 
 func (mw *databaseTracingMiddleware) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
 	defer func(then time.Time) {
-		mw.logger.Debug("database", "operation", "Initialize", "status", "finished", "verify", verifyConnection, "err", err, "took", time.Since(then))
+		mw.logger.Trace("initialize", "status", "finished", "verify", verifyConnection, "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Debug("database", "operation", "Initialize", "status", "started")
+	mw.logger.Trace("initialize", "status", "started")
 	return mw.next.Init(ctx, conf, verifyConnection)
 }
 
 func (mw *databaseTracingMiddleware) Close() (err error) {
 	defer func(then time.Time) {
-		mw.logger.Debug("database", "operation", "Close", "status", "finished", "err", err, "took", time.Since(then))
+		mw.logger.Trace("close", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	mw.logger.Debug("database", "operation", "Close", "status", "started")
+	mw.logger.Trace("close", "status", "started")
 	return mw.next.Close()
 }
 

@@ -535,7 +535,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if txnOK {
 		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.ResetNamed("storage.cache"))
 	} else {
-		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.Named("physical.cache"))
+		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, conf.Logger.Named("storage.cache"))
 	}
 	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
 

@@ -189,9 +189,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 	}
 
 	if cluster.ID == "" {
-		if c.logger.IsDebug() {
-			c.logger.Debug("cluster ID not found, generating new")
-		}
+		c.logger.Debug("cluster ID not found, generating new")
 		// Generate a clusterID
 		cluster.ID, err = uuid.GenerateUUID()
 		if err != nil {
@@ -220,9 +218,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 
 		// Create a certificate
 		if c.localClusterCert.Load().([]byte) == nil {
-			if c.logger.IsDebug() {
-				c.logger.Debug("generating local cluster certificate")
-			}
+			c.logger.Debug("generating local cluster certificate")
 
 			host, err := uuid.GenerateUUID()
 			if err != nil {
@@ -301,9 +297,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		return fmt.Errorf("cluster addresses not found")
 	}
 
-	if c.logger.IsDebug() {
-		c.logger.Debug("starting cluster listeners")
-	}
+	c.logger.Debug("starting cluster listeners")
 
 	err := c.startForwarding(ctx)
 	if err != nil {
@@ -318,9 +312,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 func (c *Core) stopClusterListener() {
 	if c.clusterAddr == "" {
 
-		if c.logger.IsDebug() {
-			c.logger.Debug("clustering disabled, not stopping listeners")
-		}
+		c.logger.Debug("clustering disabled, not stopping listeners")
 		return
 	}
 
@@ -338,9 +330,7 @@ func (c *Core) stopClusterListener() {
 	// quickly, and if the listeners are not yet closed, we will get socket
 	// bind errors. This ensures proper ordering.
 
-	if c.logger.IsDebug() {
-		c.logger.Debug("waiting for success notification while stopping cluster listeners")
-	}
+	c.logger.Debug("waiting for success notification while stopping cluster listeners")
 	<-c.clusterListenerShutdownSuccessCh
 	c.clusterListenersRunning = false
 
