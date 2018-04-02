@@ -12,7 +12,7 @@ The `/sys/rekey` endpoints are used to rekey the unseal keys for Vault.
 
 On seals that support stored keys (e.g. HSM PKCS11), the recovery key share(s)
 can be provided to rekey the master key since no unseal keys are available. The
-secret shares, secret threshold, and stored shares parameteres must be set to 1.
+secret shares, secret threshold, and stored shares parameters must be set to 1.
 Upon successful rekey, no split unseal key shares are returned.
 
 ## Read Rekey Progress
@@ -28,7 +28,7 @@ This endpoint reads the configuration and progress of the current rekey attempt.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/rekey/init
+    http://127.0.0.1:8200/v1/sys/rekey/init
 ```
 
 ### Sample Response
@@ -99,7 +99,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/rekey/init
+    http://127.0.0.1:8200/v1/sys/rekey/init
 ```
 
 ## Cancel Rekey
@@ -118,7 +118,7 @@ rekey.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/rekey/init
+    http://127.0.0.1:8200/v1/sys/rekey/init
 ```
 
 ## Read Backup Key
@@ -136,7 +136,7 @@ hex-encoded PGP-encrypted key.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/rekey/backup
+    http://127.0.0.1:8200/v1/sys/rekey/backup
 ```
 
 ### Sample Response
@@ -164,7 +164,7 @@ This endpoint deletes the backup copy of PGP-encrypted unseal keys.
 $ curl \
     --header "X-Vault-Token" \
     --request DELETE \
-    https://vault.rocks/v1/sys/rekey/backup
+    http://127.0.0.1:8200/v1/sys/rekey/backup
 ```
 
 ## Submit Key
@@ -201,7 +201,7 @@ $ curl \
     --header "X-Vault-Token" \
     --request PUT \
     --data @payload.json \
-    https://vault.rocks/v1/sys/rekey/update
+    http://127.0.0.1:8200/v1/sys/rekey/update
 ```
 
 ### Sample Response

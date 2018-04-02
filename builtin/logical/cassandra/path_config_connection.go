@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
@@ -100,14 +99,20 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 
-	config.Password = "**********"
-	if len(config.PrivateKey) > 0 {
-		config.PrivateKey = "**********"
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"hosts":            config.Hosts,
+			"username":         config.Username,
+			"tls":              config.TLS,
+			"insecure_tls":     config.InsecureTLS,
+			"certificate":      config.Certificate,
+			"issuing_ca":       config.IssuingCA,
+			"protocol_version": config.ProtocolVersion,
+			"connect_timeout":  config.ConnectTimeout,
+			"tls_min_version":  config.TLSMinVersion,
+		},
 	}
-
-	return &logical.Response{
-		Data: structs.New(config).Map(),
-	}, nil
+	return resp, nil
 }
 
 func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -213,7 +218,7 @@ Configure the connection information to talk to Cassandra.
 const pathConfigConnectionHelpDesc = `
 This path configures the connection information used to connect to Cassandra.
 
-"hosts" is a comma-deliniated list of hostnames in the Cassandra cluster.
+"hosts" is a comma-delimited list of hostnames in the Cassandra cluster.
 
 "username" and "password" are self-explanatory, although the given user
 must have superuser access within Cassandra. Note that since this backend

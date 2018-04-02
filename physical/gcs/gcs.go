@@ -1,6 +1,7 @@
 package gcs
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -21,207 +22,239 @@ import (
 	"google.golang.org/api/option"
 )
 
-// GCSBackend is a physical backend that stores data
-// within an Google Cloud Storage bucket.
-type GCSBackend struct {
-	bucketName string
-	client     *storage.Client
-	permitPool *physical.PermitPool
-	logger     log.Logger
-}
+// Verify Backend satisfies the correct interfaces
+var _ physical.Backend = (*Backend)(nil)
 
-var (
-	// Verify GCSBackend satisfies the correct interfaces
-	_ physical.Backend = (*GCSBackend)(nil)
+const (
+	// envBucket is the name of the environment variable to search for the
+	// storage bucket name.
+	envBucket = "GOOGLE_STORAGE_BUCKET"
 
-	// Number of bytes the writer will attempt to write in a single request.
-	// Defaults to 8Mb, as defined in the gcs library
-	chunkSize = 8 * 1024 * 1024
+	// envChunkSize is the environment variable to serach for the chunk size for
+	// requests.
+	envChunkSize = "GOOGLE_STORAGE_CHUNK_SIZE"
+
+	// envHAEnabled is the name of the environment variable to search for the
+	// boolean indicating if HA is enabled.
+	envHAEnabled = "GOOGLE_STORAGE_HA_ENABLED"
+
+	// defaultChunkSize is the number of bytes the writer will attempt to write in
+	// a single request.
+	defaultChunkSize = "8192"
+
+	// objectDelimiter is the string to use to delimit objects.
+	objectDelimiter = "/"
 )
 
-// NewGCSBackend constructs a Google Cloud Storage backend using a pre-existing
-// bucket. Credentials can be provided to the backend, sourced
-// from environment variables or a service account file
-func NewGCSBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	bucketName := os.Getenv("GOOGLE_STORAGE_BUCKET")
+var (
+	// metricDelete is the key for the metric for measuring a Delete call.
+	metricDelete = []string{"gcs", "delete"}
 
-	if bucketName == "" {
-		bucketName = conf["bucket"]
-		if bucketName == "" {
-			return nil, fmt.Errorf("env var GOOGLE_STORAGE_BUCKET or configuration parameter 'bucket' must be set")
+	// metricGet is the key for the metric for measuring a Get call.
+	metricGet = []string{"gcs", "get"}
+
+	// metricList is the key for the metric for measuring a List call.
+	metricList = []string{"gcs", "list"}
+
+	// metricPut is the key for the metric for measuring a Put call.
+	metricPut = []string{"gcs", "put"}
+)
+
+// Backend implements physical.Backend and describes the steps necessary to
+// persist data in Google Cloud Storage.
+type Backend struct {
+	// bucket is the name of the bucket to use for data storage and retrieval.
+	bucket string
+
+	// chunkSize is the chunk size to use for requests.
+	chunkSize int
+
+	// client is the underlying API client for talking to gcs.
+	client *storage.Client
+
+	// haEnabled indicates if HA is enabled.
+	haEnabled bool
+
+	// logger and permitPool are internal constructs
+	logger     log.Logger
+	permitPool *physical.PermitPool
+}
+
+// NewBackend constructs a Google Cloud Storage backend with the given
+// configuration. This uses the official Golang Cloud SDK and therefore supports
+// specifying credentials via envvars, credential files, etc. from environment
+// variables or a service account file
+func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error) {
+	logger.Debug("physical/gcs: configuring backend")
+
+	// Bucket name
+	bucket := os.Getenv(envBucket)
+	if bucket == "" {
+		bucket = c["bucket"]
+	}
+	if bucket == "" {
+		return nil, errors.New("missing bucket name")
+	}
+
+	// Chunk size
+	chunkSizeStr := os.Getenv(envChunkSize)
+	if chunkSizeStr == "" {
+		chunkSizeStr = c["chunk_size"]
+	}
+	if chunkSizeStr == "" {
+		chunkSizeStr = defaultChunkSize
+	}
+	chunkSize, err := strconv.Atoi(chunkSizeStr)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to parse chunk_size: {{err}}", err)
+	}
+	// Values are specified as kb, but the API expects them as bytes.
+	chunkSize = chunkSize * 1024
+
+	// HA configuration
+	haEnabled := false
+	haEnabledStr := os.Getenv(envHAEnabled)
+	if haEnabledStr == "" {
+		haEnabledStr = c["ha_enabled"]
+	}
+	if haEnabledStr != "" {
+		var err error
+		haEnabled, err = strconv.ParseBool(haEnabledStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
 		}
+	}
+
+	// Max parallel
+	maxParallel, err := extractInt(c["max_parallel"])
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
+	}
+
+	logger.Debug("physical/gcs: configuration",
+		"bucket", bucket,
+		"chunk_size", chunkSize,
+		"ha_enabled", haEnabled,
+		"max_parallel", maxParallel,
+	)
+	logger.Debug("physical/gcs: creating client")
+
+	// Client
+	opts := []option.ClientOption{option.WithUserAgent(useragent.String())}
+	if credentialsFile := c["credentials_file"]; credentialsFile != "" {
+		logger.Warn("physical.gcs: specifying credentials_file as an option is " +
+			"deprecated. Please use the GOOGLE_APPLICATION_CREDENTIALS environment " +
+			"variable or instance credentials instead.")
+		opts = append(opts, option.WithServiceAccountFile(credentialsFile))
 	}
 
 	ctx := context.Background()
-	client, err := newGCSClient(ctx, conf, logger)
+	client, err := storage.NewClient(ctx, opts...)
 	if err != nil {
-		return nil, errwrap.Wrapf("error establishing strorage client: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to create storage client: {{err}}", err)
 	}
 
-	// check client connectivity by getting bucket attributes
-	_, err = client.Bucket(bucketName).Attrs(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to access bucket '%s': '%v'", bucketName, err)
-	}
+	return &Backend{
+		bucket:    bucket,
+		haEnabled: haEnabled,
 
-	maxParStr, ok := conf["max_parallel"]
-	var maxParInt int
-	if ok {
-		maxParInt, err = strconv.Atoi(maxParStr)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
-		}
-		if logger.IsDebug() {
-			logger.Debug("physical/gcs: max_parallel set", "max_parallel", maxParInt)
-		}
-	}
-
-	chunkSizeStr, ok := conf["chunk_size"]
-	if ok {
-		chunkSize, err = strconv.Atoi(chunkSizeStr)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing chunk_size parameter: {{err}}", err)
-		}
-		chunkSize *= 1024
-		if logger.IsDebug() {
-			logger.Debug("physical/gcs: chunk_size set", "chunk_size", chunkSize)
-		}
-	}
-
-	g := GCSBackend{
-		bucketName: bucketName,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: physical.NewPermitPool(maxParallel),
 		logger:     logger,
-	}
-
-	return &g, nil
-}
-
-func newGCSClient(ctx context.Context, conf map[string]string, logger log.Logger) (*storage.Client, error) {
-	// if credentials_file is configured, try to use it
-	// else use application default credentials
-	credentialsFile, ok := conf["credentials_file"]
-	if ok {
-		client, err := storage.NewClient(ctx,
-			option.WithUserAgent(useragent.String()),
-			option.WithServiceAccountFile(credentialsFile),
-		)
-
-		if err != nil {
-			return nil, fmt.Errorf("error with provided credentials: '%v'", err)
-		}
-		return client, nil
-	}
-
-	client, err := storage.NewClient(ctx,
-		option.WithUserAgent(useragent.String()),
-	)
-	if err != nil {
-		return nil, errwrap.Wrapf("error with application default credentials: {{err}}", err)
-	}
-	return client, nil
+	}, nil
 }
 
 // Put is used to insert or update an entry
-func (g *GCSBackend) Put(ctx context.Context, entry *physical.Entry) error {
-	defer metrics.MeasureSince([]string{"gcs", "put"}, time.Now())
+func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
+	defer metrics.MeasureSince(metricPut, time.Now())
 
-	bucket := g.client.Bucket(g.bucketName)
-	writer := bucket.Object(entry.Key).NewWriter(context.Background())
-	writer.ChunkSize = chunkSize
+	// Pooling
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	g.permitPool.Acquire()
-	defer g.permitPool.Release()
+	// Insert
+	w := b.client.Bucket(b.bucket).Object(entry.Key).NewWriter(ctx)
+	w.ChunkSize = b.chunkSize
+	defer w.Close()
 
-	defer writer.Close()
-	_, err := writer.Write(entry.Value)
-
-	return err
+	if _, err := w.Write(entry.Value); err != nil {
+		return errwrap.Wrapf("failed to put data: {{err}}", err)
+	}
+	return nil
 }
 
-// Get is used to fetch an entry
-func (g *GCSBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	defer metrics.MeasureSince([]string{"gcs", "get"}, time.Now())
+// Get fetches an entry. If no entry exists, this function returns nil.
+func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) {
+	defer metrics.MeasureSince(metricGet, time.Now())
 
-	bucket := g.client.Bucket(g.bucketName)
-	reader, err := bucket.Object(key).NewReader(context.Background())
+	// Pooling
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	// return (nil, nil) if object doesn't exist
+	// Read
+	r, err := b.client.Bucket(b.bucket).Object(key).NewReader(ctx)
 	if err == storage.ErrObjectNotExist {
 		return nil, nil
-	} else if err != nil {
-		return nil, fmt.Errorf("error creating bucket reader: '%v'", err)
 	}
-
-	g.permitPool.Acquire()
-	defer g.permitPool.Release()
-
-	defer reader.Close()
-	value, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, fmt.Errorf("error reading object '%v': '%v'", key, err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read value for %q: {{err}}", key), err)
+	}
+	defer r.Close()
+
+	value, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to read value into a string: {{err}}", err)
 	}
 
-	ent := physical.Entry{
+	return &physical.Entry{
 		Key:   key,
 		Value: value,
-	}
-
-	return &ent, nil
+	}, nil
 }
 
-// Delete is used to permanently delete an entry
-func (g *GCSBackend) Delete(ctx context.Context, key string) error {
-	defer metrics.MeasureSince([]string{"gcs", "delete"}, time.Now())
+// Delete deletes an entry with the given key
+func (b *Backend) Delete(ctx context.Context, key string) error {
+	defer metrics.MeasureSince(metricDelete, time.Now())
 
-	bucket := g.client.Bucket(g.bucketName)
+	// Pooling
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	g.permitPool.Acquire()
-	defer g.permitPool.Release()
-
-	err := bucket.Object(key).Delete(context.Background())
-
-	// deletion of non existent object is OK
-	if err == storage.ErrObjectNotExist {
-		return nil
-	} else if err != nil {
-		return fmt.Errorf("error deleting object '%v': '%v'", key, err)
+	// Delete
+	err := b.client.Bucket(b.bucket).Object(key).Delete(ctx)
+	if err != nil && err != storage.ErrObjectNotExist {
+		return errwrap.Wrapf(fmt.Sprintf("failed to delete key %q: {{err}}", key), err)
 	}
-
 	return nil
 }
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (g *GCSBackend) List(ctx context.Context, prefix string) ([]string, error) {
-	defer metrics.MeasureSince([]string{"gcs", "list"}, time.Now())
+func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
+	defer metrics.MeasureSince(metricList, time.Now())
 
-	bucket := g.client.Bucket(g.bucketName)
+	// Pooling
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	objects_it := bucket.Objects(
-		context.Background(),
-		&storage.Query{
-			Prefix:    prefix,
-			Delimiter: "/",
-			Versions:  false,
-		})
+	iter := b.client.Bucket(b.bucket).Objects(ctx, &storage.Query{
+		Prefix:    prefix,
+		Delimiter: objectDelimiter,
+		Versions:  false,
+	})
 
 	keys := []string{}
 
-	g.permitPool.Acquire()
-	defer g.permitPool.Release()
-
 	for {
-		objAttrs, err := objects_it.Next()
+		objAttrs, err := iter.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("error listing bucket '%v': '%v'", g.bucketName, err)
+			return nil, errwrap.Wrapf("failed to read object: {{err}}", err)
 		}
 
-		path := ""
+		var path string
 		if objAttrs.Prefix != "" {
 			// "subdirectory"
 			path = objAttrs.Prefix
@@ -238,4 +271,13 @@ func (g *GCSBackend) List(ctx context.Context, prefix string) ([]string, error) 
 	sort.Strings(keys)
 
 	return keys, nil
+}
+
+// extractInt is a helper function that takes a string and converts that string
+// to an int, but accounts for the empty string.
+func extractInt(s string) (int, error) {
+	if s == "" {
+		return 0, nil
+	}
+	return strconv.Atoi(s)
 }

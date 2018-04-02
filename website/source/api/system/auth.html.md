@@ -25,7 +25,7 @@ This endpoint lists all enabled auth methods.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/auth
+    http://127.0.0.1:8200/v1/sys/auth
 ```
 
 ### Sample Response
@@ -92,6 +92,12 @@ For example, enable the "foo" auth method will make it accessible at
   - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the response data object.
 
+  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+     in the UI-specific listing endpoint.
+
+  - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+     to whitelist and pass from the request to the backend.
+
     The plugin_name can be provided in the config map or as a top-level option,
     with the former taking precedence.
 
@@ -121,7 +127,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/auth/my-auth
+    http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
 ## Disable Auth Method
@@ -146,7 +152,7 @@ This endpoint disables the auth method at the given auth path.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/auth/my-auth
+    http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
 ## Read Auth Method Tuning
@@ -171,7 +177,7 @@ without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/auth/my-auth/tune
+    http://127.0.0.1:8200/v1/sys/auth/my-auth/tune
 ```
 
 ### Sample Response
@@ -215,6 +221,12 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
+- `listing_visibility` `(string: "")` - Speficies whether to show this mount
+    in the UI-specific listing endpoint.
+
+- `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
+    to whitelist and pass from the request to the backend.
+
 ### Sample Payload
 
 ```json
@@ -231,5 +243,5 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/auth/my-auth/tune
+    http://127.0.0.1:8200/v1/sys/auth/my-auth/tune
 ```

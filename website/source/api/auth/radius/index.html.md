@@ -56,7 +56,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/radius/config
+    http://127.0.0.1:8200/v1/auth/radius/config
 ```
 
 ## Register User
@@ -87,7 +87,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/radius/users/test-user
+    http://127.0.0.1:8200/v1/auth/radius/users/test-user
 ```
 
 ## Read User
@@ -107,7 +107,7 @@ Reads the properties of an existing username.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/radius/users/test-user
+    http://127.0.0.1:8200/v1/auth/radius/users/test-user
 ```
 
 ### Sample Response
@@ -143,7 +143,7 @@ Deletes an existing username from the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/radius/users/test-user
+    http://127.0.0.1:8200/v1/auth/radius/users/test-user
 ```
 
 ## List Users
@@ -160,7 +160,7 @@ List the users registered with the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/radius/users
+    http://127.0.0.1:8200/v1/auth/radius/users
 ```
 
 ### Sample Response
@@ -194,7 +194,7 @@ Login with the username and password.
 ### Parameters
 
 - `username` `(string: <required>)` - Username for this user.
-- `password` `(string: <required>)` - Password for the autheticating user.
+- `password` `(string: <required>)` - Password for the authenticating user.
 
 ### Sample Payload
 
@@ -210,7 +210,7 @@ Login with the username and password.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/radius/login/test-user
+    http://127.0.0.1:8200/v1/auth/radius/login/test-user
 ```
 
 ### Sample Response

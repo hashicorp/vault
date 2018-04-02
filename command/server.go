@@ -2,8 +2,11 @@ package command
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -80,6 +83,7 @@ type ServerCommand struct {
 	flagDevListenAddr  string
 
 	flagDevPluginDir     string
+	flagDevPluginInit    bool
 	flagDevHA            bool
 	flagDevLatency       int
 	flagDevLatencyJitter int
@@ -189,6 +193,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default:    "",
 		Completion: complete.PredictDirs("*"),
 		Hidden:     true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "dev-plugin-init",
+		Target:  &c.flagDevPluginInit,
+		Default: true,
+		Hidden:  true,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -807,6 +818,33 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			return 1
 		}
 
+		var plugins []string
+		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
+			f, err := os.Open(c.flagDevPluginDir)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error reading plugin dir: %s", err))
+				return 1
+			}
+
+			list, err := f.Readdirnames(0)
+			f.Close()
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error listing plugins: %s", err))
+				return 1
+			}
+
+			for _, name := range list {
+				path := filepath.Join(f.Name(), name)
+				if err := c.addPlugin(path, init.RootToken, core); err != nil {
+					c.UI.Error(fmt.Sprintf("Error enabling plugin %s: %s", name, err))
+					return 1
+				}
+				plugins = append(plugins, name)
+			}
+
+			sort.Strings(plugins)
+		}
+
 		export := "export"
 		quote := "'"
 		if runtime.GOOS == "windows" {
@@ -846,6 +884,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
+
+		if len(plugins) > 0 {
+			c.UI.Warn("")
+			c.UI.Warn(wrapAtLength(
+				"The following dev plugins are registered in the catalog:"))
+			for _, p := range plugins {
+				c.UI.Warn(fmt.Sprintf("    - %s", p))
+			}
+		}
 
 		c.UI.Warn("")
 		c.UI.Warn(wrapAtLength(
@@ -900,7 +947,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
 
-			// Stop the listners so that we don't process further client requests.
+			// Stop the listeners so that we don't process further client requests.
 			c.cleanupGuard.Do(listenerCloseFunc)
 
 			// Shutdown will wait until after Vault is sealed, which means the
@@ -1196,7 +1243,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
 
-			// Stop the listners so that we don't process further client requests.
+			// Stop the listeners so that we don't process further client requests.
 			c.cleanupGuard.Do(testCluster.Cleanup)
 
 			// Shutdown will wait until after Vault is sealed, which means the
@@ -1221,6 +1268,49 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	}
 
 	return 0
+}
+
+// addPlugin adds any plugins to the catalog
+func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
+	// Get the sha256 of the file at the given path.
+	pluginSum := func(p string) (string, error) {
+		hasher := sha256.New()
+		f, err := os.Open(p)
+		if err != nil {
+			return "", err
+		}
+		defer f.Close()
+		if _, err := io.Copy(hasher, f); err != nil {
+			return "", err
+		}
+		return hex.EncodeToString(hasher.Sum(nil)), nil
+	}
+
+	// Mount any test plugins. We do this explicitly before we inform tests of
+	// a completely booted server intentionally.
+	sha256sum, err := pluginSum(path)
+	if err != nil {
+		return err
+	}
+
+	// Default the name to the basename of the binary
+	name := filepath.Base(path)
+
+	// File a request against core to enable the plugin
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: token,
+		Path:        "sys/plugins/catalog/" + name,
+		Data: map[string]interface{}{
+			"sha256":  sha256sum,
+			"command": name,
+		},
+	}
+	if _, err := core.HandleRequest(req); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // detectRedirect is used to attempt redirect address detection

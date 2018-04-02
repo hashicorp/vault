@@ -161,6 +161,20 @@ policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
 !> The glob character is only supported as the **last character of the path**,
 and **is not a regular expression**!
 
+When providing `list` capability, it is important to note that since listing
+always operates on a prefix, policies must operate on a prefix because Vault
+will sanitize request paths to be prefixes:
+
+```ruby
+path "secret/foo" {
+  capabilities = ["read"]
+}
+
+path "secret/foo/" {
+  capabilities = ["list"]
+}
+```
+
 ### Capabilities
 
 Each path must define one or more capabilities which provide fine-grained

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -54,6 +55,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 
+	var resp *logical.Response
+
 	if tidyCertStore {
 		serials, err := req.Storage.List(ctx, "certs/")
 		if err != nil {
@@ -67,11 +70,23 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 
 			if certEntry == nil {
-				return nil, fmt.Errorf("certificate entry for serial %s is nil", serial)
+				if resp == nil {
+					resp = &logical.Response{}
+				}
+				resp.AddWarning(fmt.Sprintf("Certificate entry for serial %s is nil; tidying up since it is no longer useful for any server operations", serial))
+				if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting nil entry with serial %s: {{err}}", serial), err)
+				}
 			}
 
 			if certEntry.Value == nil || len(certEntry.Value) == 0 {
-				return nil, fmt.Errorf("found entry for serial %s but actual certificate is empty", serial)
+				if resp == nil {
+					resp = &logical.Response{}
+				}
+				resp.AddWarning(fmt.Sprintf("Certificate entry for serial %s is nil; tidying up since it is no longer useful for any server operations", serial))
+				if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting entry with nil value with serial %s: {{err}}", serial), err)
+				}
 			}
 
 			cert, err := x509.ParseCertificate(certEntry.Value)
@@ -104,14 +119,25 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 			if err != nil {
 				return nil, fmt.Errorf("unable to fetch revoked cert with serial %s: %s", serial, err)
 			}
+
 			if revokedEntry == nil {
-				return nil, fmt.Errorf("revoked certificate entry for serial %s is nil", serial)
+				if resp == nil {
+					resp = &logical.Response{}
+				}
+				resp.AddWarning(fmt.Sprintf("Revoked entry for serial %s is nil; tidying up since it is no longer useful for any server operations", serial))
+				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
+					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting nil revoked entry with serial %s: {{err}}", serial), err)
+				}
 			}
+
 			if revokedEntry.Value == nil || len(revokedEntry.Value) == 0 {
-				// TODO: In this case, remove it and continue? How likely is this to
-				// happen? Alternately, could skip it entirely, or could implement a
-				// delete function so that there is a way to remove these
-				return nil, fmt.Errorf("found revoked serial but actual certificate is empty")
+				if resp == nil {
+					resp = &logical.Response{}
+				}
+				resp.AddWarning(fmt.Sprintf("Revoked entry for serial %s has nil value; tidying up since it is no longer useful for any server operations", serial))
+				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
+					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting revoked entry with nil value with serial %s: {{err}}", serial), err)
+				}
 			}
 
 			err = revokedEntry.DecodeJSON(&revInfo)
@@ -139,7 +165,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 const pathTidyHelpSyn = `
@@ -164,7 +190,7 @@ seconds or a string duration like "72h".
 All certificates and/or revocation information currently stored in the backend
 will be checked when this endpoint is hit. The expiration of the
 certificate/revocation information of each certificate being held in
-certificate storage or in revocation infomation will then be checked. If the
+certificate storage or in revocation information will then be checked. If the
 current time, minus the value of 'safety_buffer', is greater than the
 expiration, it will be removed.
 `

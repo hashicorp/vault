@@ -194,7 +194,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PAYLOAD>` includes policy name and
-stringfied policy.
+stringified policy.
 
 **Example:**
 
@@ -207,7 +207,7 @@ $ cat payload.json
 
 # API call to create a policy named, "apps"
 $ curl --header "X-Vault-Token: ..." --request PUT --data @payload.json \
-       https://vault.rocks/v1/sys/policy/apps
+       http://127.0.0.1:8200/v1/sys/policy/apps
 ```
 
 Response wrapping is per-request and is triggered by providing to Vault the
@@ -235,7 +235,7 @@ $ curl --header "X-Vault-Wrap-TTL: 120" \
        --header "X-Vault-Token: ..." \
        --request POST \
        --data '{"policies":["apps"]}' \
-       https://vault.rocks/v1/auth/token/create | jq
+       http://127.0.0.1:8200/v1/auth/token/create | jq
 {
   "request_id": "",
   "lease_id": "",
@@ -355,7 +355,7 @@ First, create a token with `default` policy:
 # Create a new token default policy
 $ curl --header "X-Vault-Token: ..." --request POST \
      --data '{"policies": "default"}' \
-     https://vault.rocks/v1/auth/token/create | jq
+     http://127.0.0.1:8200/v1/auth/token/create | jq
 {
   ...
   "auth": {
@@ -371,7 +371,7 @@ $ curl --header "X-Vault-Token: ..." --request POST \
 # Verify that you can NOT read secret/dev using default token
 $ curl --header "X-Vault-Token: 5fe14760-b0fd-22dc-403c-14a05003b67f" \
        --request GET \
-       https://vault.rocks/v1/secret/dev | jq
+       http://127.0.0.1:8200/v1/secret/dev | jq
 {
  "errors": [
    "permission denied"
@@ -392,7 +392,7 @@ $ curl --header "X-Vault-Token: <WRAPPING_TOKEN>" \
 ```shell
 $ curl --header "X-Vault-Token: e095129f-123a-4fef-c007-1f6a487cfa78" \
        --request POST \
-       https://vault.rocks/v1/sys/wrapping/unwrap | jq
+       http://127.0.0.1:8200/v1/sys/wrapping/unwrap | jq
 {
   "request_id": "d704435d-c1cf-b8a3-52f6-ec50bc8246c4",
   "lease_id": "",
@@ -421,7 +421,7 @@ token.
 ```plaintext
 $ curl --header "X-Vault-Token: af5f7682-aa55-fa37-5039-ee116df56600" \
        --request GET \
-       https://vault.rocks/v1/secret/dev | jq
+       http://127.0.0.1:8200/v1/secret/dev | jq
 {
   "errors": []
 }
@@ -509,11 +509,11 @@ Write secrets under `cubbyhole/private/` path, and read it back.
 # Write "token" to cubbyhole/private/access-token path
 $ curl --header "X-Vault-Token: e095129f-123a-4fef-c007-1f6a487cfa78" --request POST \
        --data '{"token": "123456789abcdefg87654321"}' \
-       https://vault.rocks/v1/cubbyhole/private/access-token
+       http://127.0.0.1:8200/v1/cubbyhole/private/access-token
 
 # Read value from cubbyhole/private/access-token path
 $ curl --header "X-Vault-Token: e095129f-123a-4fef-c007-1f6a487cfa78" --request GET \
-       https://vault.rocks/v1/cubbyhole/private/access-token  | jq
+       http://127.0.0.1:8200/v1/cubbyhole/private/access-token  | jq
 {
  "request_id": "b2ff9f04-7a72-7eb0-672f-225b5eb652df",
  "lease_id": "",
@@ -533,7 +533,7 @@ secret.
 
 ```shell
 $ curl --header "X-Vault-Token: root" --request GET \
-       https://vault.rocks/v1/cubbyhole/private/access-token  | jq
+       http://127.0.0.1:8200/v1/cubbyhole/private/access-token  | jq
 {
  "errors": []
 }

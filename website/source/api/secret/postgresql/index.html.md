@@ -62,7 +62,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/postgresql/config/connection
+    http://127.0.0.1:8200/v1/postgresql/config/connection
 ```
 
 ## Configure Lease
@@ -99,7 +99,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/postgresql/config/lease
+    http://127.0.0.1:8200/v1/postgresql/config/lease
 ```
 
 ## Create Role
@@ -142,7 +142,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/postgresql/roles/my-role
+    http://127.0.0.1:8200/v1/postgresql/roles/my-role
 ```
 
 ## Read Role
@@ -163,7 +163,7 @@ This endpoint queries the role definition.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/postgresql/roles/my-role
+    http://127.0.0.1:8200/v1/postgresql/roles/my-role
 ```
 
 ### Sample Response
@@ -191,7 +191,7 @@ returned, not any values.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/postgresql/roles
+    http://127.0.0.1:8200/v1/postgresql/roles
 ```
 
 ### Sample Response
@@ -227,7 +227,7 @@ This endpoint deletes the role definition.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/postgresql/roles/my-role
+    http://127.0.0.1:8200/v1/postgresql/roles/my-role
 ```
 
 ## Generate Credentials
@@ -249,7 +249,7 @@ role.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/postgresql/creds/my-role
+    http://127.0.0.1:8200/v1/postgresql/creds/my-role
 ```
 
 ### Sample Response

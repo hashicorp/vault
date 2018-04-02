@@ -230,7 +230,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	}
 
 	if strategy != c.generateRootConfig.Strategy {
-		return nil, fmt.Errorf("incorrect stategy supplied; a generate root operation of another type is already in progress")
+		return nil, fmt.Errorf("incorrect strategy supplied; a generate root operation of another type is already in progress")
 	}
 
 	// Check if we already have this piece

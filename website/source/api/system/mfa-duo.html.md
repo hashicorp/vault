@@ -24,7 +24,7 @@ This endpoint defines a MFA method of type Duo.
   - alias.name: The name returned by the mount configured via the `mount_accessor` parameter
   - entity.name: The name configured for the Entity
   - alias.metadata.`<key>`: The value of the Alias's metadata parameter
-  - entity.metadata.`<key>`: The value of the Entity's metadata paramater
+  - entity.metadata.`<key>`: The value of the Entity's metadata parameter
 
 - `secret_key` `(string)` - Secret key for Duo.
 
@@ -52,7 +52,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/mfa/method/duo/my_duo
+    http://127.0.0.1:8200/v1/sys/mfa/method/duo/my_duo
 ```
 
 ## Read Duo MFA Method
@@ -74,7 +74,7 @@ name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/sys/mfa/method/duo/my_duo
+    http://127.0.0.1:8200/v1/sys/mfa/method/duo/my_duo
 
 ```
 
@@ -114,6 +114,6 @@ This endpoint deletes a Duo MFA method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/mfa/method/duo/my_duo
+    http://127.0.0.1:8200/v1/sys/mfa/method/duo/my_duo
 
 ```

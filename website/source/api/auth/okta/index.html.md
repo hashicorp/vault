@@ -57,7 +57,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/okta/config
+    http://127.0.0.1:8200/v1/auth/okta/config
 ```
 
 ## Read Configuration
@@ -73,7 +73,7 @@ Reads the Okta configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/okta/config
+    http://127.0.0.1:8200/v1/auth/okta/config
 ```
 
 ### Sample Response
@@ -109,7 +109,7 @@ List the users configurated in the Okta method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/okta/users
+    http://127.0.0.1:8200/v1/auth/okta/users
 ```
 
 ### Sample Response
@@ -161,7 +161,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/okta/users/fred
+    http://127.0.0.1:8200/v1/auth/okta/users/fred
 ```
 
 ## Read User
@@ -181,7 +181,7 @@ Reads the properties of an existing username.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/okta/users/test-user
+    http://127.0.0.1:8200/v1/auth/okta/users/test-user
 ```
 
 ### Sample Response
@@ -221,7 +221,7 @@ Deletes an existing username from the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/okta/users/test-user
+    http://127.0.0.1:8200/v1/auth/okta/users/test-user
 ```
 
 ## List Groups
@@ -238,7 +238,7 @@ List the groups configurated in the Okta method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/okta/groups
+    http://127.0.0.1:8200/v1/auth/okta/groups
 ```
 
 ### Sample Response
@@ -289,7 +289,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/okta/groups/admins
+    http://127.0.0.1:8200/v1/auth/okta/groups/admins
 ```
 
 ## Read Group
@@ -309,7 +309,7 @@ Reads the properties of an existing group.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/okta/groups/admins
+    http://127.0.0.1:8200/v1/auth/okta/groups/admins
 ```
 
 ### Sample Response
@@ -348,7 +348,7 @@ Deletes an existing group from the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/okta/users/test-user
+    http://127.0.0.1:8200/v1/auth/okta/users/test-user
 ```
 
 ## Login
@@ -362,7 +362,7 @@ Login with the username and password.
 ### Parameters
 
 - `username` `(string: <required>)` - Username for this user.
-- `password` `(string: <required>)` - Password for the autheticating user.
+- `password` `(string: <required>)` - Password for the authenticating user.
 
 ### Sample Payload
 
@@ -378,7 +378,7 @@ Login with the username and password.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/okta/login/fred
+    http://127.0.0.1:8200/v1/auth/okta/login/fred
 ```
 
 ### Sample Response

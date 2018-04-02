@@ -114,7 +114,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		}
 
 		if versionValue < p.MinDecryptionVersion {
-			return logical.ErrorResponse("version for export is below minimun decryption version"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("version for export is below minimum decryption version"), logical.ErrInvalidRequest
 		}
 		key, ok := p.Keys[strconv.Itoa(versionValue)]
 		if !ok {

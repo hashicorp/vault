@@ -76,7 +76,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/ldap/config
+    http://127.0.0.1:8200/v1/auth/ldap/config
 ```
 
 ### Sample Payload
@@ -112,7 +112,7 @@ This endpoint retrieves the LDAP configuration for the auth method.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/ldap/config
+    http://127.0.0.1:8200/v1/auth/ldap/config
 ```
 
 ### Sample Response
@@ -160,7 +160,7 @@ This endpoint returns a list of existing groups in the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/ldap/groups
+    http://127.0.0.1:8200/v1/auth/ldap/groups
 ```
 
 ### Sample Response
@@ -199,7 +199,7 @@ This endpoint returns the policies associated with a LDAP group.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/ldap/groups/admins
+    http://127.0.0.1:8200/v1/auth/ldap/groups/admins
 ```
 
 ### Sample Response
@@ -248,7 +248,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/ldap/groups/admins
+    http://127.0.0.1:8200/v1/auth/ldap/groups/admins
 ```
 
 ## Delete LDAP Group
@@ -269,7 +269,7 @@ This endpoint deletes the LDAP group and policy association.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/ldap/groups/admins
+    http://127.0.0.1:8200/v1/auth/ldap/groups/admins
 ```
 
 ## List LDAP Users
@@ -286,7 +286,7 @@ This endpoint returns a list of existing users in the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/ldap/users
+    http://127.0.0.1:8200/v1/auth/ldap/users
 ```
 
 ### Sample Response
@@ -325,7 +325,7 @@ This endpoint returns the policies associated with a LDAP user.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/ldap/users/mitchellh
+    http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
 ```
 
 ### Sample Response
@@ -377,7 +377,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/ldap/users/mitchellh
+    http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
 ```
 
 ## Delete LDAP User
@@ -398,7 +398,7 @@ This endpoint deletes the LDAP user and policy association.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/ldap/users/mitchellh
+    http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
 ```
 
 ## Login with LDAP User
@@ -428,7 +428,7 @@ This endpoint allows you to log in with LDAP credentials
 $ curl \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/ldap/login/mitchellh
+    http://127.0.0.1:8200/v1/auth/ldap/login/mitchellh
 ```
 
 ### Sample Response

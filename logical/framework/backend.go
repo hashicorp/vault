@@ -95,7 +95,7 @@ type periodicFunc func(context.Context, *logical.Request) error
 // OperationFunc is the callback called for an operation on a path.
 type OperationFunc func(context.Context, *logical.Request, *FieldData) (*logical.Response, error)
 
-// ExistenceFunc is the callback called for an existenc check on a path.
+// ExistenceFunc is the callback called for an existence check on a path.
 type ExistenceFunc func(context.Context, *logical.Request, *FieldData) (bool, error)
 
 // WALRollbackFunc is the callback for rollbacks.

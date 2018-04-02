@@ -250,7 +250,7 @@ func Combine(parts [][]byte) ([]byte, error) {
 			y_samples[i] = part[idx]
 		}
 
-		// Interpolte the polynomial and compute the value at 0
+		// Interpolate the polynomial and compute the value at 0
 		val := interpolatePolynomial(x_samples, y_samples, 0)
 
 		// Evaluate the 0th value to get the intercept

@@ -77,7 +77,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/aws/config/root
+    http://127.0.0.1:8200/v1/aws/config/root
 ```
 
 ## Configure Lease
@@ -114,7 +114,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/aws/config/lease
+    http://127.0.0.1:8200/v1/aws/config/lease
 ```
 
 ## Read Lease
@@ -130,7 +130,7 @@ This endpoint returns the current lease settings for the AWS secrets engine.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/aws/config/lease
+    http://127.0.0.1:8200/v1/aws/config/lease
 ```
 
 ### Sample Response
@@ -172,7 +172,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/aws/roles/example-role
+    http://127.0.0.1:8200/v1/aws/roles/example-role
 ```
 
 ### Sample Payloads
@@ -212,7 +212,7 @@ exist, a 404 is returned.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/aws/roles/example-role
+    http://127.0.0.1:8200/v1/aws/roles/example-role
 ```
 
 ### Sample Responses
@@ -251,7 +251,7 @@ This endpoint lists all existing roles in the secrets engine.
 $ curl
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/aws/roles
+    http://127.0.0.1:8200/v1/aws/roles
 ```
 
 ### Sample Response
@@ -286,7 +286,7 @@ exist, a 404 is returned.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/aws/roles/example-role
+    http://127.0.0.1:8200/v1/aws/roles/example-role
 ```
 
 ## Generate IAM Credentials
@@ -308,7 +308,7 @@ role must be created before queried.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/aws/creds/example-role
+    http://127.0.0.1:8200/v1/aws/creds/example-role
 ```
 
 ### Sample Response
@@ -361,7 +361,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/aws/sts/example-role
+    http://127.0.0.1:8200/v1/aws/sts/example-role
 ```
 
 ### Sample Response

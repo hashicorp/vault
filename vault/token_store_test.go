@@ -333,7 +333,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := logical.TestRequest(t, logical.ListOperation, "accessors")
+	req := logical.TestRequest(t, logical.ListOperation, "accessors/")
 
 	resp, err := ts.HandleRequest(context.Background(), req)
 	if err != nil {
@@ -626,7 +626,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 		t.Fatalf("bad: ent:%#v ent2:%#v", ent, ent2)
 	}
 
-	// Create a retstricted token
+	// Create a restricted token
 	ent = &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}, NumUses: 2}
 	if err := ts.create(context.Background(), ent); err != nil {
 		t.Fatalf("err: %v", err)
@@ -780,6 +780,10 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// Unset the expected token parent's ID
+	ent2.Parent = ""
+
 	if !reflect.DeepEqual(out, ent2) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", ent2, out)
 	}
@@ -1437,6 +1441,19 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	}
 	if out != nil {
 		t.Fatalf("bad: %v", out)
+	}
+
+	// Check that the parent entry is properly cleaned up
+	saltedID, err := ts.SaltID(context.Background(), "child")
+	if err != nil {
+		t.Fatal(err)
+	}
+	children, err := ts.view.List(context.Background(), parentPrefix+saltedID+"/")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(children) != 0 {
+		t.Fatalf("bad: %v", children)
 	}
 
 	// Sub-child should exist!

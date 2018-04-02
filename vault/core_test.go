@@ -2025,7 +2025,7 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Verify our token is still valid (e.g. we did not get invalided by the revoke)
+	// Verify our token is still valid (e.g. we did not get invalidated by the revoke)
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/lookup")
 	req.Data = map[string]interface{}{
 		"token": newClient,
@@ -2274,5 +2274,90 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	// Verify the response
 	if resp.Data["term"] != 2 {
 		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+// Ensure that InternalData is never returned
+func TestCore_HandleRequest_Headers(t *testing.T) {
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Data: map[string]interface{}{},
+		},
+	}
+
+	c, _, root := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the backend
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Mount tune
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo/tune")
+	req.Data["passthrough_request_headers"] = []string{"Should-Passthrough", "should-passthrough-case-insensitive"}
+	req.ClientToken = root
+	_, err = c.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to read
+	lreq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "foo/test",
+		ClientToken: root,
+		Headers: map[string][]string{
+			"X-Vault-Kv-Client":                   []string{"foo"},
+			"Should-Passthrough":                  []string{"foo"},
+			"Should-Passthrough-Case-Insensitive": []string{"baz"},
+			"Should-Not-Passthrough":              []string{"bar"},
+		},
+	}
+	_, err = c.HandleRequest(lreq)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check the headers
+	headers := noop.Requests[0].Headers
+
+	// Test whitelisted values
+	if val, ok := headers["X-Vault-Kv-Client"]; ok {
+		expected := []string{"foo"}
+		if !reflect.DeepEqual(val, expected) {
+			t.Fatalf("expected: %v, got: %v", expected, val)
+		}
+	} else {
+		t.Fatalf("expected 'X-Vault-Kv-Client' to be present in the headers map")
+	}
+
+	// Test passthrough values
+	if val, ok := headers["Should-Passthrough"]; ok {
+		expected := []string{"foo"}
+		if !reflect.DeepEqual(val, expected) {
+			t.Fatalf("expected: %v, got: %v", expected, val)
+		}
+	} else {
+		t.Fatalf("expected 'Should-Passthrough' to be present in the headers map")
+	}
+
+	if val, ok := headers["Should-Passthrough-Case-Insensitive"]; ok {
+		expected := []string{"baz"}
+		if !reflect.DeepEqual(val, expected) {
+			t.Fatalf("expected: %v, got: %v", expected, val)
+		}
+	} else {
+		t.Fatalf("expected 'Should-Passthrough-Case-Insensitive' to be present in the headers map")
+	}
+
+	if _, ok := headers["Should-Not-Passthrough"]; ok {
+		t.Fatalf("did not expect 'Should-Not-Passthrough' to be in the headers map")
 	}
 }

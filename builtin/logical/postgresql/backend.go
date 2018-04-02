@@ -100,7 +100,7 @@ func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
 		conn = connConfig.ConnectionString
 	}
 
-	// Ensure timezone is set to UTC for all the conenctions
+	// Ensure timezone is set to UTC for all the connections
 	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
 		if strings.Contains(conn, "?") {
 			conn += "&timezone=utc"

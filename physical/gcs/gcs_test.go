@@ -7,82 +7,56 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
-
 	"cloud.google.com/go/storage"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/physical"
+	log "github.com/mgutz/logxi/v1"
 	"golang.org/x/net/context"
-	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
+	"google.golang.org/api/googleapi"
 )
 
-func TestGCSBackend(t *testing.T) {
-	credentialsFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+func testCleanup(t testing.TB, client *storage.Client, bucket string) {
+	t.Helper()
 
-	// projectID is only required for creating a bucket for this test
+	ctx := context.Background()
+	if err := client.Bucket(bucket).Delete(ctx); err != nil {
+		if terr, ok := err.(*googleapi.Error); !ok || terr.Code != 404 {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestBackend(t *testing.T) {
 	projectID := os.Getenv("GOOGLE_PROJECT_ID")
-
-	if credentialsFile == "" || projectID == "" {
-		t.SkipNow()
+	if projectID == "" {
+		t.Skip("GOOGLE_PROJECT_ID not set")
 	}
 
-	client, err := storage.NewClient(
-		context.Background(),
-		option.WithServiceAccountFile(credentialsFile),
-	)
+	r := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	bucket := fmt.Sprintf("vault-gcs-testacc-%d", r)
 
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
 	if err != nil {
-		t.Fatalf("error creating storage client: '%v'", err)
+		t.Fatal(err)
 	}
 
-	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
-	bucketName := fmt.Sprintf("vault-gcs-testacc-%d", randInt)
+	testCleanup(t, client, bucket)
+	defer testCleanup(t, client, bucket)
 
-	bucket := client.Bucket(bucketName)
-	err = bucket.Create(context.Background(), projectID, nil)
+	b := client.Bucket(bucket)
+	if err := b.Create(context.Background(), projectID, nil); err != nil {
+		t.Fatal(err)
+	}
 
+	backend, err := NewBackend(map[string]string{
+		"bucket":     bucket,
+		"ha_enabled": "false",
+	}, logformat.NewVaultLogger(log.LevelTrace))
 	if err != nil {
-		t.Fatalf("error creating bucket '%v': '%v'", bucketName, err)
+		t.Fatal(err)
 	}
 
-	// test bucket teardown
-	defer func() {
-		objects_it := bucket.Objects(context.Background(), nil)
-
-		// have to delete all objects before deleting bucket
-		for {
-			objAttrs, err := objects_it.Next()
-			if err == iterator.Done {
-				break
-			}
-			if err != nil {
-				t.Fatalf("error listing bucket '%v' contents: '%v'", bucketName, err)
-			}
-
-			// ignore errors in deleting a single object, we only care about deleting the bucket
-			// occassionally we get "storage: object doesn't exist" which is fine
-			bucket.Object(objAttrs.Name).Delete(context.Background())
-		}
-
-		err := bucket.Delete(context.Background())
-		if err != nil {
-			t.Fatalf("error deleting bucket '%s': '%v'", bucketName, err)
-		}
-	}()
-
-	logger := logformat.NewVaultLogger(log.LevelTrace)
-
-	b, err := NewGCSBackend(map[string]string{
-		"bucket":           bucketName,
-		"credentials_file": credentialsFile,
-	}, logger)
-
-	if err != nil {
-		t.Fatalf("error creating google cloud storage backend: '%s'", err)
-	}
-
-	physical.ExerciseBackend(t, b)
-	physical.ExerciseBackend_ListPrefix(t, b)
-
+	physical.ExerciseBackend(t, backend)
+	physical.ExerciseBackend_ListPrefix(t, backend)
 }

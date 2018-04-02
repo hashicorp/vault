@@ -96,7 +96,7 @@ secret_id        b31fb56c-0936-5428-8c5f-ed010431aba9
 ```
 
 Here we can see that Vault has generated a new Nomad ACL token for us.
-We can test this token out, by reading it in Nomad (by it's accesor):
+We can test this token out, by reading it in Nomad (by it's accessor):
 
 ```
 $ nomad acl token info a715994d-f5fd-1194-73df-ae9dad616307

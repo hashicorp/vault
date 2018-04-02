@@ -53,8 +53,19 @@
             </ul>
           </li>
 
+          <li<%= sidebar_current("docs-http-secret-gcp") %>>
+            <a href="/api/secret/gcp/index.html">Google Cloud<sup>BETA</sup></a>
+          </li>
           <li<%= sidebar_current("docs-http-secret-kv") %>>
-            <a href="/api/secret/kv/index.html">Key/Value</a>
+              <a href="/api/secret/kv/index.html">Key/Value</a>
+              <ul class="nav">
+              <li<%= sidebar_current("docs-http-secret-kv-nonversioned") %>>
+                <a href="/api/secret/kv/kv.html">K/V</a>
+              </li>
+              <li<%= sidebar_current("docs-http-secret-kv-versioned") %>>
+                <a href="/api/secret/kv/versioned-kv.html">Versioned K/V</a>
+              </li>
+            </ul>
           </li>
           <li<%= sidebar_current("docs-http-secret-identity") %>>
             <a href="/api/secret/identity/index.html">Identity</a>
@@ -123,6 +134,9 @@
           </li>
           <li<%= sidebar_current("docs-http-auth-aws") %>>
             <a href="/api/auth/aws/index.html">AWS</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-azure") %>>
+            <a href="/api/auth/azure/index.html">Azure</a>
           </li>
           <li<%= sidebar_current("docs-http-auth-github") %>>
             <a href="/api/auth/github/index.html">Github</a>

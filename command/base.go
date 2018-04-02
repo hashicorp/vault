@@ -43,6 +43,8 @@ type BaseCommand struct {
 	flagFormat string
 	flagField  string
 
+	flagMFA []string
+
 	tokenHelper token.TokenHelper
 
 	client *api.Client
@@ -108,6 +110,8 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	if token != "" {
 		client.SetToken(token)
 	}
+
+	client.SetMFACreds(c.flagMFA)
 
 	c.client = client
 
@@ -192,7 +196,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded CA " +
 					"certificate to verify the Vault server's SSL certificate. This " +
-					"takes precendence over -ca-path.",
+					"takes precedence over -ca-path.",
 			})
 
 			f.StringVar(&StringVar{
@@ -256,6 +260,15 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					"TTL. The response is available via the \"vault unwrap\" command. " +
 					"The TTL is specified as a numeric string with suffix like \"30s\" " +
 					"or \"5m\".",
+			})
+
+			f.StringSliceVar(&StringSliceVar{
+				Name:       "mfa",
+				Target:     &c.flagMFA,
+				Default:    nil,
+				EnvVar:     api.EnvVaultMFA,
+				Completion: complete.PredictAnything,
+				Usage:      "Supply MFA credentials as part of X-Vault-MFA header.",
 			})
 		}
 

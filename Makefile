@@ -11,11 +11,11 @@ EXTERNAL_TOOLS=\
 BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
-GO_VERSION_MIN=1.9
+GO_VERSION_MIN=1.10
 
 default: dev
 
-# bin generates the releaseable binaries for Vault
+# bin generates the releasable binaries for Vault
 bin: prep
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/build.sh'"
 

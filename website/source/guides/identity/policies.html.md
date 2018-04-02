@@ -341,7 +341,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 ```
 
 Where `<TOKEN>` is your valid token, and `<PAYLOAD>` includes the policy name and
-stringfied policy.
+stringified policy.
 
 **Example:**
 
@@ -350,7 +350,7 @@ Now, create `admin` and `provisioner` policies:
 ```shell
 # Create admin policy
 $ curl --request PUT --header "X-Vault-Token: ..." --data @admin-payload.json \
-    https://vault.rocks/v1/sys/policy/admin
+    http://127.0.0.1:8200/v1/sys/policy/admin
 
 $ cat admin-payload.json
 {
@@ -359,7 +359,7 @@ $ cat admin-payload.json
 
 # Create provisioner policy
 $ curl --request PUT --header "X-Vault-Token: ..." --data @provisioner-payload.json \
-    https://vault.rocks/v1/sys/policy/provisioner
+    http://127.0.0.1:8200/v1/sys/policy/provisioner
 
 $ cat provisioner-payload.json
 {
@@ -424,7 +424,7 @@ path "sys/policy/*"
 To list existing ACL policies, use the `/sys/policy` endpoint.
 
 ```shell
-$ curl --request LIST --header "X-Vault-Token: ..." https://vault.rocks/v1/sys/policy | jq
+$ curl --request LIST --header "X-Vault-Token: ..." http://127.0.0.1:8200/v1/sys/policy | jq
 ```
 
 To read a specific policy, the endpoint path should be
@@ -435,7 +435,7 @@ To read a specific policy, the endpoint path should be
 Read the admin policy:
 
 ```plaintext
-$ curl --request GET --header "X-Vault-Token: ..." https://vault.rocks/v1/sys/policy/admin | jq
+$ curl --request GET --header "X-Vault-Token: ..." http://127.0.0.1:8200/v1/sys/policy/admin | jq
 {
   "name": "admin",
   "rules": "# Mount and manage auth methods broadly across Vault\npath \"auth/*\"\n{\n  ...",
@@ -506,7 +506,7 @@ First, create a token attached to the `admin` policy:
 
 ```shell
 $ curl --request POST --header "X-Vault-Token: ..." --data '{ "policies":"admin" }' \
-       https://vault.rocks/v1/auth/token/create
+       http://127.0.0.1:8200/v1/auth/token/create
 {
  "request_id": "870ef38c-1401-7beb-633c-ff09cca3db68",
  "lease_id": "",
@@ -540,7 +540,7 @@ $ cat payload.json
 }
 
 $ curl --request POST --header "X-Vault-Token: ..." --data @payload.json \
-    https://vault.rocks/v1/sys/capabilities
+    http://127.0.0.1:8200/v1/sys/capabilities
 {
   "capabilities": [
     "create",
@@ -577,7 +577,7 @@ the `sys/capabilities-self` endpoint.
 
 ```plaintext
 $ curl --request POST --header "X-Vault-Token: ..." --data '{"path":"sys/auth/approle"}' \
-    https://vault.rocks/v1/sys/capabilities-self
+    http://127.0.0.1:8200/v1/sys/capabilities-self
 ```
 
 

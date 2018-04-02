@@ -89,7 +89,7 @@ type SecurityBarrier interface {
 	VerifyMaster(key []byte) error
 
 	// SetMasterKey is used to directly set a new master key. This is used in
-	// repliated scenarios due to the chicken and egg problem of reloading the
+	// replicated scenarios due to the chicken and egg problem of reloading the
 	// keyring from disk before we have the master key to decrypt it.
 	SetMasterKey(key []byte) error
 

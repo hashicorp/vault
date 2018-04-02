@@ -81,7 +81,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/aws/config/client
+    http://127.0.0.1:8200/v1/auth/aws/config/client
 ```
 
 ## Read Config
@@ -97,7 +97,7 @@ Returns the previously configured AWS access credentials.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/aws/config/client
+    http://127.0.0.1:8200/v1/auth/aws/config/client
 ```
 
 ### Sample Response
@@ -129,7 +129,7 @@ Deletes the previously configured AWS access credentials.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/aws/config/client
+    http://127.0.0.1:8200/v1/auth/aws/config/client
 ```
 
 ## Create Certificate Configuration
@@ -170,7 +170,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/aws/config/certificate/test-cert
+    http://127.0.0.1:8200/v1/auth/aws/config/certificate/test-cert
 ```
 
 ## Read Certificate Configuration
@@ -190,7 +190,7 @@ Returns the previously configured AWS public key.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/aws/config/certificate/test-cert
+    http://127.0.0.1:8200/v1/auth/aws/config/certificate/test-cert
 ```
 
 ### Sample Response
@@ -218,7 +218,7 @@ Removes the previously configured AWS public key.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/aws/config/certificate/test-cert
+    http://127.0.0.1:8200/v1/auth/aws/config/certificate/test-cert
 ```
 
 ## List Certificate Configurations
@@ -235,7 +235,7 @@ Lists all the AWS public certificates that are registered with the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/aws/config/certificates
+    http://127.0.0.1:8200/v1/auth/aws/config/certificates
 ```
 
 ### Sample Response
@@ -285,7 +285,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/aws/config/sts/111122223333
+    http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
 ```
 
 ## Read STS Role
@@ -307,7 +307,7 @@ Returns the previously configured STS role.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/aws/config/sts/111122223333
+    http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
 ```
 
 ### Sample Response
@@ -334,7 +334,7 @@ Lists all the AWS Account IDs for which an STS role is registered.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/aws/config/sts
+    http://127.0.0.1:8200/v1/auth/aws/config/sts
 ```
 
 ### Sample Response
@@ -364,7 +364,7 @@ Deletes a previously configured AWS account/STS role association.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/aws/config/sts
+    http://127.0.0.1:8200/v1/auth/aws/config/sts
 ```
 
 ## Configure Identity Whitelist Tidy Operation
@@ -398,7 +398,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/aws/config/tidy/identity-whitelist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-whitelist
 ```
 
 ## Read Identity Whitelist Tidy Settings
@@ -414,7 +414,7 @@ Returns the previously configured periodic whitelist tidying settings.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/aws/config/tidy/identity-whitelist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-whitelist
 ```
 
 ### Sample Response
@@ -442,7 +442,7 @@ Deletes the previously configured periodic whitelist tidying settings.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/aws/config/tidy/identity-whitelist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-whitelist
 ```
 
 ## Configure Role Tag Blacklist Tidy Operation
@@ -476,10 +476,10 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/aws/config/tidy/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-blacklist
 ```
 
-## Read Role Tag Blackist Tidy Settings
+## Read Role Tag Blacklist Tidy Settings
 
 Returns the previously configured periodic blacklist tidying settings.
 
@@ -492,7 +492,7 @@ Returns the previously configured periodic blacklist tidying settings.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/aws/config/tidy/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-blacklist
 ```
 
 ### Sample Response
@@ -506,7 +506,7 @@ $ curl \
 }
 ```
 
-## Delete Role Tag Blackist Tidy Settings
+## Delete Role Tag Blacklist Tidy Settings
 
 Deletes the previously configured periodic blacklist tidying settings.
 
@@ -520,14 +520,14 @@ Deletes the previously configured periodic blacklist tidying settings.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/aws/config/tidy/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-blacklist
 ```
 
 ## Create Role
 
 Registers a role in the method. Only those instances or principals which
 are using the role registered using this endpoint, will be able to perform
-the login operation. Contraints can be specified on the role, that are
+the login operation. Constraints can be specified on the role, that are
 applied on the instances or principals attempting to login. At least one
 constraint must be specified on the role. The available constraints you
 can choose are dependent on the `auth_type` of the role and, if the
@@ -605,7 +605,7 @@ list in order to satisfy that constraint.
   end of the ARN, e.g., "arn:aws:iam::123456789012:\*" will match any IAM
   principal in the AWS account 123456789012. When `resolve_aws_unique_ids` is
   `false` and you are binding to IAM roles (as opposed to users) and you are not
-  using a wildcard at the end, then you must specify the ARN by ommitting any
+  using a wildcard at the end, then you must specify the ARN by omitting any
   path component; see the documentation for `resolve_aws_unique_ids` below.
   This constraint is only checked by
   the iam auth method. Wildcards are supported at the end of the ARN, e.g.,
@@ -705,7 +705,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/aws/role/dev-role
+    http://127.0.0.1:8200/v1/auth/aws/role/dev-role
 ```
 
 ## Read Role
@@ -725,7 +725,7 @@ Returns the previously registered role configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/aws/role/dev-role
+    http://127.0.0.1:8200/v1/auth/aws/role/dev-role
 ```
 
 ### Sample Response
@@ -761,7 +761,7 @@ Lists all the roles that are registered with the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/aws/roles
+    http://127.0.0.1:8200/v1/auth/aws/roles
 ```
 
 ### Sample Response
@@ -795,7 +795,7 @@ Deletes the previously registered role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/aws/role/dev-role
+    http://127.0.0.1:8200/v1/auth/aws/role/dev-role
 ```
 
 ## Create Role Tags
@@ -855,7 +855,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/aws/role/dev-api-and-web-role/tag
+    http://127.0.0.1:8200/v1/auth/aws/role/dev-api-and-web-role/tag
 ```
 
 ### Sample Response
@@ -948,7 +948,7 @@ along with its RSA digest can be supplied to this endpoint.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/aws/login
+    http://127.0.0.1:8200/v1/auth/aws/login
 ```
 
 ### Sample Response
@@ -999,7 +999,7 @@ token.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
+    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
 ```
 
 ### Read Role Tag Blacklist Information
@@ -1021,7 +1021,7 @@ Returns the blacklist entry of a previously blacklisted role tag.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
+    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
 ```
 
 
@@ -1050,7 +1050,7 @@ Lists all the role tags that are blacklisted.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/aws/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist
 ```
 
 ### Sample Response
@@ -1086,7 +1086,7 @@ Deletes a blacklisted role tag.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
+    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
 ```
 
 ## Tidy Blacklist Tags
@@ -1110,7 +1110,7 @@ Cleans up the entries in the blacklist based on expiration time on the entry and
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/auth/aws/tidy/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/tidy/roletag-blacklist
 ```
 
 ### Read Identity Whitelist Information
@@ -1133,7 +1133,7 @@ successful login.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/aws/identity-whitelist/i-aab47d37
+    http://127.0.0.1:8200/v1/auth/aws/identity-whitelist/i-aab47d37
 ```
 
 
@@ -1165,7 +1165,7 @@ $ curl \
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/aws/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist
 ```
 
 ### Sample Response
@@ -1200,7 +1200,7 @@ Deletes a cache of the successful login from an instance.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/aws/identity-whitelist/i-aab47d37
+    http://127.0.0.1:8200/v1/auth/aws/identity-whitelist/i-aab47d37
 ```
 
 ## Tidy Identity Whitelist Entries
@@ -1224,5 +1224,5 @@ Cleans up the entries in the whitelist based on expiration time and
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    https://vault.rocks/v1/auth/aws/tidy/identity-whitelist
+    http://127.0.0.1:8200/v1/auth/aws/tidy/identity-whitelist
 ```

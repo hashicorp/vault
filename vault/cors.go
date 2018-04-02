@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -26,6 +27,7 @@ var StdAllowedHeaders = []string{
 	"X-Vault-Wrap-Format",
 	"X-Vault-Wrap-TTL",
 	"X-Vault-Policy-Override",
+	consts.VaultKVCLIClientHeader,
 }
 
 // CORSConfig stores the state of the CORS configuration.
@@ -85,7 +87,7 @@ func (c *Core) loadCORSConfig(ctx context.Context) error {
 	return nil
 }
 
-// Enable takes either a '*' or a comma-seprated list of URLs that can make
+// Enable takes either a '*' or a comma-separated list of URLs that can make
 // cross-origin requests to Vault.
 func (c *CORSConfig) Enable(ctx context.Context, urls []string, headers []string) error {
 	if len(urls) == 0 {

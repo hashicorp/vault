@@ -42,7 +42,7 @@ at a different path, use that value instead of `github`.
 $ curl \
     --request POST \
     --data '{"token": "MY_TOKEN"}' \
-    https://vault.rocks/v1/auth/github/login
+    http://127.0.0.1:8200/v1/auth/github/login
 ```
 
 The response will contain a token at `auth.client_token`:
@@ -78,8 +78,7 @@ management tool.
     $ vault auth enable github
     ```
 
-1. Use the `/config` endpoint to configure Vault to talk to GitHub. For the list
-   of available configuration options, please see the API documentation.
+1. Use the `/config` endpoint to configure Vault to talk to GitHub.
 
     ```text
     $ vault write auth/github/config organization=hashicorp

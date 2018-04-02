@@ -13,7 +13,7 @@ REM Run target.
 for %%a in (%_TARGETS%) do (if x%1==x%%a goto %%a)
 goto usage
 
-REM bin generates the releaseable binaries for Vault
+REM bin generates the releasable binaries for Vault
 :bin
 	call :generate
 	call .\scripts\windows\build.bat "%CD%"

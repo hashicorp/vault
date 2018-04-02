@@ -24,7 +24,7 @@ This endpoint defines a MFA method of type PingID.
   - alias.name: The name returned by the mount configured via the `mount_accessor` parameter
   - entity.name: The name configured for the Entity
   - alias.metadata.`<key>`: The value of the Alias's metadata parameter
-  - entity.metadata.`<key>`: The value of the Entity's metadata paramater
+  - entity.metadata.`<key>`: The value of the Entity's metadata parameter
 
 - `settings_file_base64` `(string)` - A base64-encoded third-party settings file retrieved from PingID's configuration page.
 
@@ -44,7 +44,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/mfa/method/pingid/ping
+    http://127.0.0.1:8200/v1/sys/mfa/method/pingid/ping
 ```
 
 ## Read PingiD MFA Method
@@ -66,7 +66,7 @@ name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    https://vault.rocks/v1/sys/mfa/method/pingid/ping
+    http://127.0.0.1:8200/v1/sys/mfa/method/pingid/ping
 
 ```
 
@@ -106,6 +106,6 @@ This endpoint deletes a PingID MFA method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/sys/mfa/method/pingid/ping
+    http://127.0.0.1:8200/v1/sys/mfa/method/pingid/ping
 
 ```

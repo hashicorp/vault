@@ -37,7 +37,7 @@ measures to secure access to the filesystem.
 
 ## `file` Examples
 
-This example shows the Filesytem storage backend being mounted at
+This example shows the Filesystem storage backend being mounted at
 `/mnt/vault/data`.
 
 ```hcl

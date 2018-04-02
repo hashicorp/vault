@@ -55,13 +55,13 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/database/config/oracle
+    http://127.0.0.1:8200/v1/database/config/oracle
 ```
 
 ## Statements
 
 Statements are configured during role creation and are used by the plugin to
-determine what is sent to the datatabse on user creation, renewing, and
+determine what is sent to the database on user creation, renewing, and
 revocation. For more information on configuring roles see the [Role
 API](/api/secret/databases/index.html#create-role) in the database secrets engine docs.
 

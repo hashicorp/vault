@@ -52,7 +52,7 @@ type IdentityStore struct {
 	// to enable richer queries based on multiple indexes.
 	db *memdb.MemDB
 
-	// validateMountAccessorFunc is a utility from router which returnes the
+	// validateMountAccessorFunc is a utility from router which returns the
 	// properties of the mount given the mount accessor.
 	validateMountAccessorFunc func(string) *validateMountResponse
 

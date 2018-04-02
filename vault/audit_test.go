@@ -551,7 +551,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	}
 	respErr := fmt.Errorf("permission denied")
 
-	// Copy so we can verify nothing canged
+	// Copy so we can verify nothing changed
 	authCopyRaw, err := copystructure.Copy(auth)
 	if err != nil {
 		t.Fatal(err)
@@ -650,7 +650,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	}
 	respErr := fmt.Errorf("permission denied")
 
-	// Copy so we can verify nothing canged
+	// Copy so we can verify nothing changed
 	reqCopyRaw, err := copystructure.Copy(req)
 	if err != nil {
 		t.Fatal(err)

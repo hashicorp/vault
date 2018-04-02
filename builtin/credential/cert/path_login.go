@@ -266,7 +266,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
 	return !b.checkForChainInCRLs(trustedChain) &&
 		b.matchesNames(clientCert, config) &&
-		b.matchesCertificateExtenions(clientCert, config)
+		b.matchesCertificateExtensions(clientCert, config)
 }
 
 // matchesNames verifies that the certificate matches at least one configured
@@ -297,9 +297,9 @@ func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert)
 	return false
 }
 
-// matchesCertificateExtenions verifies that the certificate matches configured
+// matchesCertificateExtensions verifies that the certificate matches configured
 // required extensions
-func (b *backend) matchesCertificateExtenions(clientCert *x509.Certificate, config *ParsedCert) bool {
+func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, config *ParsedCert) bool {
 	// If no required extensions, nothing to check here
 	if len(config.Entry.RequiredExtensions) == 0 {
 		return true
@@ -439,28 +439,12 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 		}
 	}
 
-	var chains [][]*x509.Certificate
-	var err error
-	switch {
-	case len(certs[0].DNSNames) > 0:
-		for _, dnsName := range certs[0].DNSNames {
-			opts.DNSName = dnsName
-			chains, err = certs[0].Verify(opts)
-			if err != nil {
-				if _, ok := err.(x509.UnknownAuthorityError); ok {
-					return nil, nil
-				}
-				return nil, errors.New("failed to verify client's certificate: " + err.Error())
-			}
+	chains, err := certs[0].Verify(opts)
+	if err != nil {
+		if _, ok := err.(x509.UnknownAuthorityError); ok {
+			return nil, nil
 		}
-	default:
-		chains, err = certs[0].Verify(opts)
-		if err != nil {
-			if _, ok := err.(x509.UnknownAuthorityError); ok {
-				return nil, nil
-			}
-			return nil, errors.New("failed to verify client's certificate: " + err.Error())
-		}
+		return nil, errors.New("failed to verify client's certificate: " + err.Error())
 	}
 
 	return chains, nil

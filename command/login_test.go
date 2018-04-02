@@ -211,7 +211,7 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		// Verify the token was not stored
 		if storedToken, err := tokenHelper.Get(); err != nil || storedToken != "" {
-			t.Fatalf("expted token to not be stored: %s: %q", err, storedToken)
+			t.Fatalf("expected token to not be stored: %s: %q", err, storedToken)
 		}
 	})
 

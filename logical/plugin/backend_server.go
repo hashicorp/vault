@@ -28,7 +28,7 @@ type backendPluginServer struct {
 }
 
 func inMetadataMode() bool {
-	return os.Getenv(pluginutil.PluginMetadaModeEnv) == "true"
+	return os.Getenv(pluginutil.PluginMetadataModeEnv) == "true"
 }
 
 func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *HandleRequestReply) error {
@@ -140,6 +140,7 @@ func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 		Logger:      logger,
 		System:      sysView,
 		Config:      args.Config,
+		BackendUUID: args.BackendUUID,
 	}
 
 	// Call the underlying backend factory after shims have been created
