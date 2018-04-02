@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -72,11 +71,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, nil
 	}
 
-	ttl := matched.Entry.TTL
-	if ttl == 0 {
-		ttl = b.System().DefaultLeaseTTL()
-	}
-
 	clientCerts := req.Connection.ConnState.PeerCertificates
 	if len(clientCerts) == 0 {
 		return logical.ErrorResponse("no client certificate found"), nil
@@ -101,26 +95,13 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
-				TTL:       ttl,
+				TTL:       matched.Entry.TTL,
+				MaxTTL:    matched.Entry.MaxTTL,
 			},
 			Alias: &logical.Alias{
 				Name: clientCerts[0].SerialNumber.String(),
 			},
 		},
-	}
-
-	if matched.Entry.MaxTTL > time.Duration(0) {
-		// Cap maxTTL to the sysview's max TTL
-		maxTTL := matched.Entry.MaxTTL
-		if maxTTL > b.System().MaxLeaseTTL() {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-
-		// Cap TTL to MaxTTL
-		if resp.Auth.TTL > maxTTL {
-			resp.AddWarning(fmt.Sprintf("Effective TTL of '%s' exceeded the effective max_ttl of '%s'; TTL value is capped accordingly", (resp.Auth.TTL / time.Second), (maxTTL / time.Second)))
-			resp.Auth.TTL = maxTTL
-		}
 	}
 
 	// Generate a response
@@ -175,17 +156,11 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	// If a period is provided, set that as part of resp.Auth.Period and return a
-	// response immediately. Let expiration manager handle renewal from there on.
-	if cert.Period > time.Duration(0) {
-		resp := &logical.Response{
-			Auth: req.Auth,
-		}
-		resp.Auth.Period = cert.Period
-		return resp, nil
-	}
-
-	return framework.LeaseExtend(cert.TTL, cert.MaxTTL, b.System())(ctx, req, d)
+	resp := &logical.Response{Auth: req.Auth}
+	resp.Auth.TTL = cert.TTL
+	resp.Auth.MaxTTL = cert.MaxTTL
+	resp.Auth.Period = cert.Period
+	return resp, nil
 }
 
 func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {

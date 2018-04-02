@@ -32,8 +32,7 @@ func secretDynamicKey(b *backend) *framework.Secret {
 }
 
 func (b *backend) secretDynamicKeyRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	f := framework.LeaseExtend(0, 0, b.System())
-	return f(ctx, req, d)
+	return &logical.Response{Secret: req.Secret}, nil
 }
 
 func (b *backend) secretDynamicKeyRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

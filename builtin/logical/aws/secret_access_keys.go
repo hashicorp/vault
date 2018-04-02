@@ -243,6 +243,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	resp.Secret.TTL = lease.Lease
+	resp.Secret.MaxTTL = lease.LeaseMax
 
 	if usernameWarning != "" {
 		resp.AddWarning(usernameWarning)
