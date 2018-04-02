@@ -400,13 +400,6 @@ func (s *StoragePackerV2) bucketExceedsSizeLimit(bucket *PackedBucket, item *Ite
 
 	max := math.Ceil((float64(s.config.BucketMaxSize) * float64(60)) / float64(100))
 
-	/*
-		limitExceeded := float64(size) > max
-		if limitExceeded {
-			fmt.Printf("bucket %q exceeded size limit: max: %v; bucketSize: %v\n", bucket.Data.Key, max, size)
-		}
-	*/
-
 	return float64(size) > max, nil
 }
 

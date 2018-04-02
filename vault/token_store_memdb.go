@@ -110,7 +110,7 @@ func (ts *TokenStore) loadTokenMappings(ctx context.Context) error {
 			return nil
 		}
 
-		err = ts.UpsertTokenMapping(tokenMapping)
+		err = ts.MemDBUpsertTokenMapping(tokenMapping)
 		if err != nil {
 			return fmt.Errorf("failed to update token mapping in memdb: %v", err)
 		}
@@ -157,41 +157,10 @@ func (ts *TokenStore) CreateTokenMapping(te *TokenEntry) (*token.TokenMapping, e
 		CubbyholeID: cubbyholeID,
 	}
 
-	// Insert the mapping into MemDB and persist it
-	err = ts.UpsertTokenMapping(tokenMapping)
-	if err != nil {
-		return nil, err
-	}
-
-	return tokenMapping, nil
-}
-
-// UpsertTokenMapping inserts the token mapping into MemDB and persists the
-// mapping in the packed storage.
-func (ts *TokenStore) UpsertTokenMapping(tokenMapping *token.TokenMapping) error {
-	txn := ts.db.Txn(true)
-	defer txn.Abort()
-
-	err := ts.UpsertTokenMappingInTxn(txn, tokenMapping)
-	if err != nil {
-		return err
-	}
-
-	txn.Commit()
-	return nil
-}
-
-func (ts *TokenStore) UpsertTokenMappingInTxn(txn *memdb.Txn, tokenMapping *token.TokenMapping) error {
-	var err error
-
-	err = ts.MemDBUpsertTokenMappingInTxn(txn, tokenMapping)
-	if err != nil {
-		return err
-	}
-
+	// Persist the token mapping
 	tokenMappingAsAny, err := ptypes.MarshalAny(tokenMapping)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	item := &storagepacker.Item{
 		ID:      tokenMapping.ID,
@@ -200,11 +169,30 @@ func (ts *TokenStore) UpsertTokenMappingInTxn(txn *memdb.Txn, tokenMapping *toke
 
 	bucketKey, err := ts.mappingPacker.PutItem(item)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tokenMapping.BucketKey = bucketKey
 
+	// Insert the mapping into MemDB
+	err = ts.MemDBUpsertTokenMapping(tokenMapping)
+	if err != nil {
+		return nil, err
+	}
+
+	return tokenMapping, nil
+}
+
+func (ts *TokenStore) MemDBUpsertTokenMapping(tokenMapping *token.TokenMapping) error {
+	txn := ts.db.Txn(true)
+	defer txn.Abort()
+
+	err := ts.MemDBUpsertTokenMappingInTxn(txn, tokenMapping)
+	if err != nil {
+		return err
+	}
+
+	txn.Commit()
 	return nil
 }
 
