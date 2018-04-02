@@ -1087,10 +1087,10 @@
 			"revisionTime": "2018-02-23T19:15:17Z"
 		},
 		{
-			"checksumSHA1": "xTdKLI1gAJOTqswvr15a/fI8ucA=",
+			"checksumSHA1": "fg18dhgqDts2CI/Dz+6v5jX/xow=",
 			"path": "github.com/hashicorp/go-hclog",
-			"revision": "5bcb0f17e36442247290887cc914a6e507afa5c4",
-			"revisionTime": "2018-01-22T23:24:01Z"
+			"revision": "9b9aacd44f1c18bbf913afa45ecd1cb8ec515713",
+			"revisionTime": "2018-04-02T16:24:28Z"
 		},
 		{
 			"checksumSHA1": "y+AeKVZoX0gB+DZW4Arzkb3tTVc=",
@@ -1117,10 +1117,10 @@
 			"revisionTime": "2017-12-04T18:29:08Z"
 		},
 		{
-			"checksumSHA1": "7SheX5w6+xGsTMxPI3LiJx0iz7s=",
+			"checksumSHA1": "lbG9uwM7qJlTIBg+8mjCC88sCPc=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "baa83ead6ff956b3f99bcd609ae3499c028e019e",
-			"revisionTime": "2018-02-16T15:44:16Z"
+			"revision": "e8d22c780116115ae5624720c9af0c97afe4f551",
+			"revisionTime": "2018-03-31T00:25:53Z"
 		},
 		{
 			"checksumSHA1": "yzoWV7yrS/TvOrKy5ZrdUjsYaOA=",
