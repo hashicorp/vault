@@ -1495,12 +1495,6 @@
 			"revisionTime": "2017-02-06T15:57:36Z"
 		},
 		{
-			"checksumSHA1": "DUdWW5gRHBk2zTxGQZoH1KLxFtc=",
-			"path": "github.com/mgutz/logxi/v1",
-			"revision": "aebf8a7d67ab4625e0fd4a665766fef9a709161b",
-			"revisionTime": "2016-10-27T14:08:23Z"
-		},
-		{
 			"checksumSHA1": "0sodX5Pa1TxO+QslATEY81VGklc=",
 			"path": "github.com/michaelklishin/rabbit-hole",
 			"revision": "60d56241ac2b927bf272b94c9dc693a3c28c4b85",
