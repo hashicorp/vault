@@ -8,9 +8,13 @@ import (
 )
 
 func calculateTTL(sysView logical.SystemView, increment, backendTTL, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, errors error) {
-	now := time.Now()
+	// Truncate all times to the second since that is the lowest precision for
+	// TTLs
+	now := time.Now().Truncate(time.Second)
 	if startTime.IsZero() {
 		startTime = now
+	} else {
+		startTime = startTime.Truncate(time.Second)
 	}
 
 	// Start off with the sys default value, and update according to period/TTL
@@ -63,10 +67,8 @@ func calculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 	}
 
 	if !maxValidTime.IsZero() {
-		// Determine the max valid TTL, set to the next second since
-		// some time has elapsed and we don't want to cap TTL if ttl
-		// equals max_ttl
-		maxValidTTL := maxValidTime.Add(time.Second).Truncate(time.Second).Sub(now)
+		// Determine the max valid TTL
+		maxValidTTL := maxValidTime.Sub(now)
 
 		// If we are past the max TTL, we shouldn't be in this function...but
 		// fast path out if we are
