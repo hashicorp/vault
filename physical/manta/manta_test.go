@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 	"github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
 	tt "github.com/joyent/triton-go/errors"
 	"github.com/joyent/triton-go/storage"
-	log "github.com/mgutz/logxi/v1"
 )
 
 func TestMantaBackend(t *testing.T) {
@@ -49,11 +49,11 @@ func TestMantaBackend(t *testing.T) {
 		t.Fatalf("failed initialising Storage client: %s", err.Error())
 	}
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 	mb := &MantaBackend{
 		client:     client,
 		directory:  testHarnessBucket,
-		logger:     logger,
+		logger:     logger.Named("storage.mantabackend"),
 		permitPool: physical.NewPermitPool(128),
 	}
 

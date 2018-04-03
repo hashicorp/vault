@@ -4,16 +4,14 @@ import (
 	"context"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendTracingMiddleware struct {
-	logger    log.Logger
-	transport string
-	typeStr   string
+	logger log.Logger
 
 	next logical.Backend
 }
@@ -23,19 +21,19 @@ var _ logical.Backend = &backendTracingMiddleware{}
 
 func (b *backendTracingMiddleware) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	defer func(then time.Time) {
-		b.logger.Trace("plugin.HandleRequest", "path", req.Path, "status", "finished", "type", b.typeStr, "transport", b.transport, "err", err, "took", time.Since(then))
+		b.logger.Trace("handle request", "path", req.Path, "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	b.logger.Trace("plugin.HandleRequest", "path", req.Path, "status", "started", "type", b.typeStr, "transport", b.transport)
+	b.logger.Trace("handle request", "path", req.Path, "status", "started")
 	return b.next.HandleRequest(ctx, req)
 }
 
 func (b *backendTracingMiddleware) SpecialPaths() *logical.Paths {
 	defer func(then time.Time) {
-		b.logger.Trace("plugin.SpecialPaths", "status", "finished", "type", b.typeStr, "transport", b.transport, "took", time.Since(then))
+		b.logger.Trace("special paths", "status", "finished", "took", time.Since(then))
 	}(time.Now())
 
-	b.logger.Trace("plugin.SpecialPaths", "status", "started", "type", b.typeStr, "transport", b.transport)
+	b.logger.Trace("special paths", "status", "started")
 	return b.next.SpecialPaths()
 }
 
@@ -49,45 +47,45 @@ func (b *backendTracingMiddleware) Logger() log.Logger {
 
 func (b *backendTracingMiddleware) HandleExistenceCheck(ctx context.Context, req *logical.Request) (found bool, exists bool, err error) {
 	defer func(then time.Time) {
-		b.logger.Trace("plugin.HandleExistenceCheck", "path", req.Path, "status", "finished", "type", b.typeStr, "transport", b.transport, "err", err, "took", time.Since(then))
+		b.logger.Trace("handle existence check", "path", req.Path, "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	b.logger.Trace("plugin.HandleExistenceCheck", "path", req.Path, "status", "started", "type", b.typeStr, "transport", b.transport)
+	b.logger.Trace("handle existence check", "path", req.Path, "status", "started")
 	return b.next.HandleExistenceCheck(ctx, req)
 }
 
 func (b *backendTracingMiddleware) Cleanup(ctx context.Context) {
 	defer func(then time.Time) {
-		b.logger.Trace("plugin.Cleanup", "status", "finished", "type", b.typeStr, "transport", b.transport, "took", time.Since(then))
+		b.logger.Trace("cleanup", "status", "finished", "took", time.Since(then))
 	}(time.Now())
 
-	b.logger.Trace("plugin.Cleanup", "status", "started", "type", b.typeStr, "transport", b.transport)
+	b.logger.Trace("cleanup", "status", "started")
 	b.next.Cleanup(ctx)
 }
 
 func (b *backendTracingMiddleware) InvalidateKey(ctx context.Context, key string) {
 	defer func(then time.Time) {
-		b.logger.Trace("plugin.InvalidateKey", "key", key, "status", "finished", "type", b.typeStr, "transport", b.transport, "took", time.Since(then))
+		b.logger.Trace("invalidate key", "key", key, "status", "finished", "took", time.Since(then))
 	}(time.Now())
 
-	b.logger.Trace("plugin.InvalidateKey", "key", key, "status", "started", "type", b.typeStr, "transport", b.transport)
+	b.logger.Trace("invalidate key", "key", key, "status", "started")
 	b.next.InvalidateKey(ctx, key)
 }
 
 func (b *backendTracingMiddleware) Setup(ctx context.Context, config *logical.BackendConfig) (err error) {
 	defer func(then time.Time) {
-		b.logger.Trace("plugin.Setup", "status", "finished", "type", b.typeStr, "transport", b.transport, "err", err, "took", time.Since(then))
+		b.logger.Trace("setup", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
 
-	b.logger.Trace("plugin.Setup", "status", "started", "type", b.typeStr, "transport", b.transport)
+	b.logger.Trace("setup", "status", "started")
 	return b.next.Setup(ctx, config)
 }
 
 func (b *backendTracingMiddleware) Type() logical.BackendType {
 	defer func(then time.Time) {
-		b.logger.Trace("plugin.Type", "status", "finished", "type", b.typeStr, "transport", b.transport, "took", time.Since(then))
+		b.logger.Trace("type", "status", "finished", "took", time.Since(then))
 	}(time.Now())
 
-	b.logger.Trace("plugin.Type", "status", "started", "type", b.typeStr, "transport", b.transport)
+	b.logger.Trace("type", "status", "started")
 	return b.next.Type()
 }

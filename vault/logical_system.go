@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
@@ -24,7 +25,6 @@ import (
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	log "github.com/mgutz/logxi/v1"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -55,10 +55,10 @@ var (
 	}
 )
 
-func NewSystemBackend(core *Core) *SystemBackend {
+func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b := &SystemBackend{
 		Core:   core,
-		logger: core.logger,
+		logger: logger,
 	}
 
 	b.Backend = &framework.Backend{
@@ -1116,7 +1116,7 @@ func (b *SystemBackend) handleCORSDelete(ctx context.Context, req *logical.Reque
 func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	err := b.Core.expiration.Tidy()
 	if err != nil {
-		b.Backend.Logger().Error("sys: failed to tidy leases", "error", err)
+		b.Backend.Logger().Error("failed to tidy leases", "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, err
@@ -1125,7 +1125,7 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 func (b *SystemBackend) invalidate(ctx context.Context, key string) {
 	/*
 		if b.Core.logger.IsTrace() {
-			b.Core.logger.Trace("sys: invalidating key", "key", key)
+			b.Core.logger.Trace("invalidating key", "key", key)
 		}
 	*/
 	switch {
@@ -1642,7 +1642,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	// Attempt mount
 	if err := b.Core.mount(ctx, me); err != nil {
-		b.Backend.Logger().Error("sys: mount failed", "path", me.Path, "error", err)
+		b.Backend.Logger().Error("mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 
@@ -1698,7 +1698,7 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 
 	// Attempt unmount
 	if err := b.Core.unmount(ctx, path); err != nil {
-		b.Backend.Logger().Error("sys: unmount failed", "path", path, "error", err)
+		b.Backend.Logger().Error("unmount failed", "path", path, "error", err)
 		return handleError(err)
 	}
 
@@ -1728,7 +1728,7 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 
 	// Attempt remount
 	if err := b.Core.remount(ctx, fromPath, toPath); err != nil {
-		b.Backend.Logger().Error("sys: remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
+		b.Backend.Logger().Error("remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
 		return handleError(err)
 	}
 
@@ -1767,13 +1767,13 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 
 	sysView := b.Core.router.MatchingSystemView(path)
 	if sysView == nil {
-		b.Backend.Logger().Error("sys: cannot fetch sysview", "path", path)
+		b.Backend.Logger().Error("cannot fetch sysview", "path", path)
 		return handleError(fmt.Errorf("sys: cannot fetch sysview for path %s", path))
 	}
 
 	mountEntry := b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
-		b.Backend.Logger().Error("sys: cannot fetch mount entry", "path", path)
+		b.Backend.Logger().Error("cannot fetch mount entry", "path", path)
 		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %s", path))
 	}
 
@@ -1840,14 +1840,14 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	// Prevent protected paths from being changed
 	for _, p := range untunableMounts {
 		if strings.HasPrefix(path, p) {
-			b.Backend.Logger().Error("sys: cannot tune this mount", "path", path)
+			b.Backend.Logger().Error("cannot tune this mount", "path", path)
 			return handleError(fmt.Errorf("sys: cannot tune '%s'", path))
 		}
 	}
 
 	mountEntry := b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
-		b.Backend.Logger().Error("sys: tune failed: no mount entry found", "path", path)
+		b.Backend.Logger().Error("tune failed: no mount entry found", "path", path)
 		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
@@ -1868,7 +1868,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	// Check again after grabbing the lock
 	mountEntry = b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
-		b.Backend.Logger().Error("sys: tune failed: no mount entry found", "path", path)
+		b.Backend.Logger().Error("tune failed: no mount entry found", "path", path)
 		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
@@ -1910,7 +1910,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			newMax != mountEntry.Config.MaxLeaseTTL {
 
 			if err := b.tuneMountTTLs(ctx, path, mountEntry, newDefault, newMax); err != nil {
-				b.Backend.Logger().Error("sys: tuning failed", "path", path, "error", err)
+				b.Backend.Logger().Error("tuning failed", "path", path, "error", err)
 				return handleError(err)
 			}
 		}
@@ -2109,7 +2109,7 @@ func (b *SystemBackend) handleLeaseLookup(ctx context.Context, req *logical.Requ
 
 	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
 	if err != nil {
-		b.Backend.Logger().Error("sys: error retrieving lease", "lease_id", leaseID, "error", err)
+		b.Backend.Logger().Error("error retrieving lease", "lease_id", leaseID, "error", err)
 		return handleError(err)
 	}
 	if leaseTimes == nil {
@@ -2146,7 +2146,7 @@ func (b *SystemBackend) handleLeaseLookupList(ctx context.Context, req *logical.
 
 	keys, err := b.Core.expiration.idView.List(ctx, prefix)
 	if err != nil {
-		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
+		b.Backend.Logger().Error("error listing leases", "prefix", prefix, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
 	return logical.ListResponse(keys), nil
@@ -2171,7 +2171,7 @@ func (b *SystemBackend) handleRenew(ctx context.Context, req *logical.Request, d
 	// Invoke the expiration manager directly
 	resp, err := b.Core.expiration.Renew(leaseID, increment)
 	if err != nil {
-		b.Backend.Logger().Error("sys: lease renewal failed", "lease_id", leaseID, "error", err)
+		b.Backend.Logger().Error("lease renewal failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
 	return resp, err
@@ -2191,7 +2191,7 @@ func (b *SystemBackend) handleRevoke(ctx context.Context, req *logical.Request, 
 
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.Revoke(leaseID); err != nil {
-		b.Backend.Logger().Error("sys: lease revocation failed", "lease_id", leaseID, "error", err)
+		b.Backend.Logger().Error("lease revocation failed", "lease_id", leaseID, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, nil
@@ -2221,7 +2221,7 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 		err = b.Core.expiration.RevokePrefix(prefix)
 	}
 	if err != nil {
-		b.Backend.Logger().Error("sys: revoke prefix failed", "prefix", prefix, "error", err)
+		b.Backend.Logger().Error("revoke prefix failed", "prefix", prefix, "error", err)
 		return handleErrorNoReadOnlyForward(err)
 	}
 	return nil, nil
@@ -2388,7 +2388,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	// Attempt enabling
 	if err := b.Core.enableCredential(ctx, me); err != nil {
-		b.Backend.Logger().Error("sys: enable auth mount failed", "path", me.Path, "error", err)
+		b.Backend.Logger().Error("enable auth mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -2416,7 +2416,7 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 
 	// Attempt disable
 	if err := b.Core.disableCredential(ctx, path); err != nil {
-		b.Backend.Logger().Error("sys: disable auth mount failed", "path", path, "error", err)
+		b.Backend.Logger().Error("disable auth mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -2672,7 +2672,7 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 
 	// Attempt enabling
 	if err := b.Core.enableAudit(ctx, me); err != nil {
-		b.Backend.Logger().Error("sys: enable audit mount failed", "path", me.Path, "error", err)
+		b.Backend.Logger().Error("enable audit mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -2684,7 +2684,7 @@ func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Req
 
 	// Attempt disable
 	if existed, err := b.Core.disableAudit(ctx, path); existed && err != nil {
-		b.Backend.Logger().Error("sys: disable audit mount failed", "path", path, "error", err)
+		b.Backend.Logger().Error("disable audit mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -2822,22 +2822,22 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 	// Rotate to the new term
 	newTerm, err := b.Core.barrier.Rotate(ctx)
 	if err != nil {
-		b.Backend.Logger().Error("sys: failed to create new encryption key", "error", err)
+		b.Backend.Logger().Error("failed to create new encryption key", "error", err)
 		return handleError(err)
 	}
-	b.Backend.Logger().Info("sys: installed new encryption key")
+	b.Backend.Logger().Info("installed new encryption key")
 
 	// In HA mode, we need to an upgrade path for the standby instances
 	if b.Core.ha != nil {
 		// Create the upgrade path to the new term
 		if err := b.Core.barrier.CreateUpgrade(ctx, newTerm); err != nil {
-			b.Backend.Logger().Error("sys: failed to create new upgrade", "term", newTerm, "error", err)
+			b.Backend.Logger().Error("failed to create new upgrade", "term", newTerm, "error", err)
 		}
 
 		// Schedule the destroy of the upgrade path
 		time.AfterFunc(keyRotateGracePeriod, func() {
 			if err := b.Core.barrier.DestroyUpgrade(ctx, newTerm); err != nil {
-				b.Backend.Logger().Error("sys: failed to destroy upgrade", "term", newTerm, "error", err)
+				b.Backend.Logger().Error("failed to destroy upgrade", "term", newTerm, "error", err)
 			}
 		})
 	}

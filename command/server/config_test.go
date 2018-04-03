@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/logformat"
-	log "github.com/mgutz/logxi/v1"
+	"github.com/hashicorp/vault/helper/logging"
 )
 
 func TestLoadConfigFile(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	config, err := LoadConfigFile("./test-fixtures/config.hcl", logger)
 	if err != nil {
@@ -79,7 +79,7 @@ func TestLoadConfigFile(t *testing.T) {
 }
 
 func TestLoadConfigFile_topLevel(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	config, err := LoadConfigFile("./test-fixtures/config2.hcl", logger)
 	if err != nil {
@@ -150,7 +150,7 @@ func TestLoadConfigFile_topLevel(t *testing.T) {
 }
 
 func TestLoadConfigFile_json(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	config, err := LoadConfigFile("./test-fixtures/config.hcl.json", logger)
 	if err != nil {
@@ -215,7 +215,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 }
 
 func TestLoadConfigFile_json2(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	config, err := LoadConfigFile("./test-fixtures/config2.hcl.json", logger)
 	if err != nil {
@@ -283,7 +283,7 @@ func TestLoadConfigFile_json2(t *testing.T) {
 }
 
 func TestLoadConfigDir(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	config, err := LoadConfigDir("./test-fixtures/config-dir", logger)
 	if err != nil {
@@ -383,7 +383,7 @@ listener "tcp" {
 }
 
 func TestParseConfig_badTopLevel(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	_, err := ParseConfig(strings.TrimSpace(`
 backend {}
@@ -405,7 +405,7 @@ nope = "yes"
 }
 
 func TestParseConfig_badListener(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	_, err := ParseConfig(strings.TrimSpace(`
 listener "tcp" {
@@ -429,7 +429,7 @@ listener "tcp" {
 }
 
 func TestParseConfig_badTelemetry(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	_, err := ParseConfig(strings.TrimSpace(`
 telemetry {

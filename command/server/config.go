@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"

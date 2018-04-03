@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
-	log "github.com/mgutz/logxi/v1"
 )
 
 var (
@@ -41,7 +41,7 @@ func TestClusterFetching(t *testing.T) {
 }
 
 func TestClusterHAFetching(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Trace)
 
 	redirect := "http://127.0.0.1:8200"
 

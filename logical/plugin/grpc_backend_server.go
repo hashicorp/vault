@@ -3,10 +3,10 @@ package plugin
 import (
 	"context"
 
+	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
-	log "github.com/mgutz/logxi/v1"
 	"google.golang.org/grpc"
 )
 

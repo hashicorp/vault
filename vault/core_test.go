@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
-	log "github.com/mgutz/logxi/v1"
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 )
 
 func TestNewCore_badRedirectAddr(t *testing.T) {
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
@@ -1117,7 +1117,7 @@ func TestCore_LimitedUseToken(t *testing.T) {
 
 func TestCore_Standby_Seal(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1235,7 +1235,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 
 func TestCore_StepDown(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1433,7 +1433,7 @@ func TestCore_StepDown(t *testing.T) {
 
 func TestCore_CleanLeaderPrefix(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1602,7 +1602,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 }
 
 func TestCore_Standby(t *testing.T) {
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1613,7 +1613,7 @@ func TestCore_Standby(t *testing.T) {
 }
 
 func TestCore_Standby_SeparateHA(t *testing.T) {
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -2192,7 +2192,7 @@ func TestCore_HandleRequest_MountPointType(t *testing.T) {
 
 func TestCore_Standby_Rotate(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logformat.NewVaultLogger(log.LevelTrace)
+	logger = logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {

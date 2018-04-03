@@ -7,9 +7,9 @@ import (
 	"time"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
 )
@@ -29,7 +29,7 @@ func TestAzureBackend(t *testing.T) {
 	cleanupClient, _ := storage.NewBasicClient(accountName, accountKey)
 	cleanupClient.HTTPClient = cleanhttp.DefaultPooledClient()
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.Debug)
 
 	backend, err := NewAzureBackend(map[string]string{
 		"container":   name,

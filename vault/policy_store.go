@@ -9,11 +9,11 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
-	log "github.com/mgutz/logxi/v1"
 )
 
 const (
@@ -173,7 +173,7 @@ func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, syst
 
 	keys, err := logical.CollectKeys(ctx, ps.aclView)
 	if err != nil {
-		ps.logger.Error("policy: error collecting acl policy keys", "error", err)
+		ps.logger.Error("error collecting acl policy keys", "error", err)
 		return nil
 	}
 	for _, key := range keys {
@@ -189,7 +189,7 @@ func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, syst
 func (c *Core) setupPolicyStore(ctx context.Context) error {
 	// Create the policy store
 	sysView := &dynamicSystemView{core: c}
-	c.policyStore = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, c.logger)
+	c.policyStore = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, c.logger.ResetNamed("policy"))
 
 	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		// Policies will sync from the primary
@@ -235,7 +235,7 @@ func (ps *PolicyStore) invalidate(ctx context.Context, name string, policyType P
 	// Force a reload
 	_, err := ps.GetPolicy(ctx, name, policyType)
 	if err != nil {
-		ps.logger.Error("policy: error fetching policy after invalidation", "name", saneName)
+		ps.logger.Error("error fetching policy after invalidation", "name", saneName)
 	}
 }
 

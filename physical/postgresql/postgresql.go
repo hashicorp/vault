@@ -10,7 +10,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
+	//log "github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/lib/pq"
@@ -56,7 +57,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("postgres: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("max_parallel set", "max_parallel", maxParInt)
 		}
 	} else {
 		maxParInt = physical.DefaultParallelOperations
