@@ -53,6 +53,11 @@ FEATURES:
    through to backends on a per-mount basis. This is useful in various cases
    when plugins are interacting with external services.
  * HA for Google Cloud Storage: The GCS storage type now supports HA.
+ * UI support for identity - add and edit entities, groups, and their associated
+   aliases.
+ * UI auth method support - enable, disable, and configure all of the built-in 
+   authentication methods.
+ * UI (Enterprise) - View and edit Sentinel policies.
 
 IMPROVEMENTS:
 
@@ -62,6 +67,7 @@ IMPROVEMENTS:
  * storage/mysql: Allow setting max idle connections and connection lifetime
    [GH-4211]
  * storage/gcs: Add HA support [GH-4226]
+ * ui - add Nomad to the list of available secret engines
 
 BUG FIXES:
 
@@ -78,6 +84,14 @@ BUG FIXES:
  * secret/pki: When tidying if a value is unexpectedly nil, delete it and move
    on [GH-4214]
  * storage/s3: Fix panic if S3 returns no Content-Length header [GH-4222]
+ * ui: Fixed an issue where the UI was checking incorrect paths when operating 
+   on transit keys. Capabilities are now checked when attempting to encrypt / 
+   decrypt, etc.
+ * ui: Fixed IE 11 layout issues and JS errors that would stop the application
+   from running.
+ * ui: Fixed the link that gets rendered when a user doesn't have permissions 
+   to view the root of a secret engine. The link now sends them back to the list
+   of secret engines.
 
 ## 0.9.6 (March 20th, 2018)
 
