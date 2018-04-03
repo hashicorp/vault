@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/logging"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
@@ -84,7 +82,7 @@ func (n *NoopBackend) Setup(ctx context.Context, config *logical.BackendConfig) 
 }
 
 func (n *NoopBackend) Logger() log.Logger {
-	return logging.NewNullLogger()
+	return log.NewNullLogger()
 }
 
 func (n *NoopBackend) Initialize(ctx context.Context) error {

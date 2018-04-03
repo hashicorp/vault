@@ -3,13 +3,13 @@ package command
 import (
 	"context"
 	"encoding/base64"
-	"github.com/hashicorp/vault/helper/logging"
 	"net"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	defaultVaultLogger = logging.NewNullLogger()
+	defaultVaultLogger = log.NewNullLogger()
 
 	defaultVaultCredentialBackends = map[string]logical.Factory{
 		"userpass": credUserpass.Factory,
