@@ -36,6 +36,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"rotate",
 		"config/cors",
 		"config/auditing/*",
+		"config/ui/headers/*",
 		"plugins/catalog/*",
 		"revoke-prefix/*",
 		"revoke-force/*",
@@ -47,7 +48,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	b := testSystemBackend(t)
 	actual := b.SpecialPaths().Root
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: mismatch\nexpected:\n%#v\ngot:\n%#v", expected, actual)
 	}
 }
 
