@@ -50,7 +50,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	switch format {
 	case "json", "jsonx":
 	default:
-		return nil, fmt.Errorf("unknown format type %s", format)
+		return nil, fmt.Errorf("unknown format type %q", format)
 	}
 
 	// Check if hashing of accessor is disabled
