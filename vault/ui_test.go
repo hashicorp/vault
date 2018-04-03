@@ -6,13 +6,13 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 
-	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical/inmem"
 	log "github.com/mgutz/logxi/v1"
 )
 
 func TestConfig_Enabled(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.LevelTrace)
 	phys, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +31,7 @@ func TestConfig_Enabled(t *testing.T) {
 }
 
 func TestConfig_Headers(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.LevelTrace)
 	phys, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +125,7 @@ func TestConfig_Headers(t *testing.T) {
 }
 
 func TestConfig_DefaultHeaders(t *testing.T) {
-	logger := logformat.NewVaultLogger(log.LevelTrace)
+	logger := logging.NewVaultLogger(log.LevelTrace)
 	phys, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
