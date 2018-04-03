@@ -31,7 +31,7 @@ secret's path.
 To enable a non-versioned kv store:
 
 ```
-vault secrets enable -options="versioned=false" kv
+vault secrets enable kv
 ```
 
 ## Usage
@@ -43,18 +43,34 @@ allows for writing keys with arbitrary values.
 1. Write arbitrary data:
 
     ```text
-    $ vault kv put secret/my-secret my-value=s3cr3t
-    Success! Data written to: secret/my-secret
+    $ vault kv put kv/my-secret my-value=s3cr3t
+    Success! Data written to: kv/my-secret
     ```
 
 1. Read arbitrary data:
 
     ```text
-    $ vault kv get secret/my-secret
+    $ vault kv get kv/my-secret
     Key                 Value
     ---                 -----
     refresh_interval    768h
     my-value            s3cr3t
+    ```
+
+1. List the keys:
+
+    ```text
+    $ vault kv list kv/my-secret
+    Keys
+    ----
+    my-secret
+    ```
+
+1. Delete a key:
+
+    ```
+    $ vault kv delete kv/my-secret
+    Success! Data deleted (if it existed) at: kv/my-secret
     ```
 
 ## TTLs
@@ -68,8 +84,8 @@ If provided a key of `ttl`, the KV secrets engine will utilize this value
 as the lease duration:
 
 ```text
-$ vault kv put secret/my-secret ttl=30m my-value=s3cr3t
-Success! Data written to: secret/my-secret
+$ vault kv put kv/my-secret ttl=30m my-value=s3cr3t
+Success! Data written to: kv/my-secret
 ```
 
 Even will a `ttl` set, the secrets engine _never_ removes data on its own. The
@@ -79,7 +95,7 @@ When reading a value with a `ttl`, both the `ttl` key _and_ the refresh interval
 will reflect the value:
 
 ```text
-$ vault kv get secret/my-secret
+$ vault kv get kv/my-secret
 Key                 Value
 ---                 -----
 refresh_interval    30m
@@ -90,5 +106,5 @@ ttl                 30m
 ## API
 
 The KV secrets engine has a full HTTP API. Please see the
-[KV secrets engine API](/api/secret/kv/index.html) for more
+[KV secrets engine API](/api/secret/kv/kv.html) for more
 details.

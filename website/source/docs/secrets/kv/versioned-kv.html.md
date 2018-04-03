@@ -6,7 +6,7 @@ description: |-
   The KV secrets engine can store arbitrary secrets.
 ---
 
-# KV Secrets Engine
+# Versioned KV Secrets Engine
 
 The `kv` secrets engine is used to store arbitrary secrets within the
 configured physical storage for Vault.
@@ -25,9 +25,15 @@ Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
 
-The `kv` secrets engine is enabled by default at the path `secret/`. It can
-be disabled, moved, or enabled multiple times at different paths. Each instance
-of the KV secrets engine is isolated and unique.
+A versioned `kv` secrets engine can be enabled by:
+
+```
+$ vault secrets enable vkv
+```
+
+Additionally, the versioned `kv` secrets engine is enabled by default at the
+path `secret/`. It can be disabled, moved, or enabled multiple times at
+different paths. Each instance of the KV secrets engine is isolated and unique.
 
 ## Upgrading from Non-Versioned
 
@@ -57,6 +63,89 @@ $ curl \
 This will start an upgrade process to upgrade the existing key/value data to
 a versioned format. The mount will be inaccessible during this process. This
 process could take a long time, so plan accordingly.  
+
+## ACL Rules
+
+The versioned kv store uses a prefixed API, which is different from the
+non-versioned store. Before upgrading from a non-versioned kv the ACL rules
+should be changed. Also different paths in the versioned API can be ACL'ed
+differently.
+
+Writing and reading versions are prefixed with the `data/` path. This policy
+that worked for the non-versioned kv:
+
+```
+path "secret/dev/team-1/*" {
+  capabilities = ["create", "update", "read"]
+}
+```
+
+Should be changed to:
+
+```
+path "secret/data/dev/team-1/*" {
+  capabilities = ["create", "update", "read"]
+}
+```
+
+There are different levels of data deletion for this backend. To grant a policy
+the permissions to delete the latest version of a key:
+
+```
+path "secret/data/dev/team-1/*" {
+  capabilities = ["delete"]
+}
+```
+To allow the policy to delete any version of a key:
+
+```
+path "secret/delete/dev/team-1/*" {
+  capabilities = ["create"]
+}
+```
+
+To allow a policy to undelete data:
+
+```
+path "secret/undelete/dev/team-1/*" {
+  capabilities = ["create"]
+}
+```
+
+To allow a policy to destroy versions:
+
+```
+path "secret/destroy/dev/team-1/*" {
+  capabilities = ["create"]
+}
+```
+
+To allow a policy to list keys:
+
+```
+path "secret/metadata/dev/team-1/*" {
+  capabilities = ["list"]
+}
+```
+
+To allow a policy to view metadata for each version:
+
+```
+path "secret/metadata/dev/team-1/*" {
+  capabilities = ["read"]
+}
+```
+
+To allow a policy to permanently remove all versions and metadata for a key:
+
+```
+path "secret/metadata/dev/team-1/*" {
+  capabilities = ["delete"]
+}
+```
+
+See the [API Specification](/api/secret/kv/versioned-kv.html) for more
+information.
 
 ## Usage
 
