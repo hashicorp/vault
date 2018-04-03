@@ -20,7 +20,7 @@ through a management web interface.
 Vault similarly is designed as a comprehensive secret management solution. The
 client interaction with Vault is flexible both for authentication and usage of
 secrets. Vault supports [mTLS authentication](/docs/auth/cert.html) along with
-many [other mechanisms](/docs/auth/index.html). The goal being to make it easy
+many [other mechanisms](/docs/auth/index.html). The goal is to make it easy
 to authenticate as a machine for programmatic access and as a human for
 operator usage.
 
