@@ -1,0 +1,27 @@
+<div class="columns">
+  {{#menu-sidebar title="Access" class="is-3" data-test-sidebar=true}}
+    <li>
+      {{#link-to "vault.cluster.access.methods" data-test-link=true current-when="vault.cluster.access.methods vault.cluster.access.method"}}
+        Auth Methods
+      {{/link-to}}
+    </li>
+    <li>
+      {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
+        Entities
+      {{/link-to}}
+    </li>
+    <li>
+      {{#link-to "vault.cluster.access.identity" "groups" data-test-link=true }}
+        Groups
+      {{/link-to}}
+    </li>
+    <li>
+      {{#link-to "vault.cluster.access.leases" data-test-link=true}}
+        Leases
+      {{/link-to}}
+    </li>
+  {{/menu-sidebar}}
+  <div class="column is-9">
+    {{outlet}}
+  </div>
+</div>

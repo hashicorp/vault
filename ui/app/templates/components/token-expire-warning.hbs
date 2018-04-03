@@ -1,0 +1,28 @@
+{{#unless (and isDismissed (is-before (now interval=1000) auth.tokenExpirationDate))}}
+  {{#if (is-after (now interval=1000) auth.tokenExpirationDate)}}
+    {{#message-in-page type="danger"}}
+      <div class="content">
+        <p>
+        Your auth token expired at {{moment-format auth.tokenExpirationDate 'YYYY-MM-DD HH:mm:ss'}}.
+        </p>
+      </div>
+      <button type="button" class="button" {{action "reauthenticate"}}>
+        Reauthenticate
+      </button>
+    {{/message-in-page}}
+  {{else if auth.allowExpiration}}
+    {{#message-in-page type="warning"}}
+      <div class="content">
+        <p>
+          We've determined you are inactive, and have stopped auto-renewing your current auth token.
+          Your token will expire in {{moment-from-now auth.tokenExpirationDate interval=1000 hideSuffix=true}} at
+          {{moment-format auth.tokenExpirationDate 'YYYY-MM-DD HH:mm:ss'}}
+        </p>
+        <button type="button" class="button" {{action "renewToken"}}>Resume auto-renewal</button>
+      </div>
+      <button type="button" class="button is-transparent close-button" {{action "dismiss"}}>
+        {{i-con size=12 glyph="close"}}
+      </button>
+    {{/message-in-page}}
+  {{/if}}
+{{/unless}}

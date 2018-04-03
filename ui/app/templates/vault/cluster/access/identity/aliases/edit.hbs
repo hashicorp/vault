@@ -1,0 +1,11 @@
+<header class="page-header">
+  <div class="level">
+    <div class="level-left">
+      <h1 class="title is-3">
+        Edit {{model.name}}
+      </h1>
+    </div>
+  </div>
+</header>
+
+{{identity/edit-form mode="edit" model=model onSave=(perform navToShow)}}
