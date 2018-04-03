@@ -156,7 +156,7 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 func pathInvalid(b *versionedKVBackend) []*framework.Path {
 	handler := func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		resp := &logical.Response{}
-		resp.AddWarning("Invalid path for a versioned K/V store. See the API docs for the appropriate endpoints. If using the Vault CLI, ensure you are using 'vault kv' for operations on K/V endpoints.")
+		resp.AddWarning("Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, try using 'vault kv' for operations on K/V secrets engine mounts.")
 		return logical.RespondWithStatusCode(resp, req, http.StatusNotFound)
 	}
 
