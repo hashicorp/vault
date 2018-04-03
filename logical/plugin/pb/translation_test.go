@@ -94,6 +94,8 @@ func TestTranslation_Request(t *testing.T) {
 					TTL:       time.Second,
 					MaxTTL:    time.Second,
 					Renewable: true,
+					Increment: time.Second,
+					IssueTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				},
 				InternalData: map[string]interface{}{
 					"role": "test",
@@ -105,6 +107,8 @@ func TestTranslation_Request(t *testing.T) {
 					TTL:       time.Second,
 					MaxTTL:    time.Second,
 					Renewable: true,
+					Increment: time.Second,
+					IssueTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				},
 				InternalData: map[string]interface{}{
 					"role": "test",
@@ -192,6 +196,8 @@ func TestTranslation_Response(t *testing.T) {
 					TTL:       time.Second,
 					MaxTTL:    time.Second,
 					Renewable: true,
+					Increment: time.Second,
+					IssueTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				},
 				InternalData: map[string]interface{}{
 					"role": "test",
@@ -203,6 +209,8 @@ func TestTranslation_Response(t *testing.T) {
 					TTL:       time.Second,
 					MaxTTL:    time.Second,
 					Renewable: true,
+					Increment: time.Second,
+					IssueTime: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				},
 				InternalData: map[string]interface{}{
 					"role": "test",

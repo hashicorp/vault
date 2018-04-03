@@ -61,14 +61,11 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 	}
 
 	// Make sure we increase the VALID UNTIL endpoint for this user.
-	if req.Secret.EstimatedTTL > 0 {
-		ttl := req.Secret.EstimatedTTL
-		if lease.Lease > 0 && lease.Lease < ttl {
-			ttl = lease.Lease
-		}
-		if lease.LeaseMax > 0 && lease.LeaseMax < ttl {
-			ttl = lease.LeaseMax
-		}
+	ttl, _, err := framework.CalculateTTL(b.System(), req.Secret.Increment, lease.Lease, 0, lease.LeaseMax, 0, req.Secret.IssueTime)
+	if err != nil {
+		return nil, err
+	}
+	if ttl > 0 {
 		expireTime := time.Now().Add(ttl)
 		expiration := expireTime.Format("2006-01-02 15:04:05-0700")
 

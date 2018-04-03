@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 )
 
 const (
@@ -644,13 +645,8 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
-	estimatedTTL, _, err := calculateTTL(sysView, increment, 0, 0, 0, 0, le.IssueTime)
-	if err != nil {
-		return nil, err
-	}
-
 	// Attempt to renew the entry
-	resp, err := m.renewEntry(le, estimatedTTL)
+	resp, err := m.renewEntry(le, increment)
 	if err != nil {
 		return nil, err
 	}
@@ -666,7 +662,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 		return nil, nil
 	}
 
-	ttl, warnings, err := calculateTTL(sysView, increment, resp.Secret.TTL, 0, resp.Secret.MaxTTL, 0, le.IssueTime)
+	ttl, warnings, err := framework.CalculateTTL(sysView, increment, resp.Secret.TTL, 0, resp.Secret.MaxTTL, 0, le.IssueTime)
 	if err != nil {
 		return nil, err
 	}
@@ -763,13 +759,8 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		return nil, fmt.Errorf("expiration: unable to retrieve system view from router")
 	}
 
-	estimatedTTL, _, err := calculateTTL(sysView, increment, 0, 0, 0, 0, le.IssueTime)
-	if err != nil {
-		return nil, err
-	}
-
 	// Attempt to renew the auth entry
-	resp, err := m.renewAuthEntry(req, le, estimatedTTL)
+	resp, err := m.renewAuthEntry(req, le, increment)
 	if err != nil {
 		return nil, err
 	}
@@ -785,7 +776,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 		return nil, nil
 	}
 
-	ttl, warnings, err := calculateTTL(sysView, increment, resp.Auth.TTL, resp.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, le.IssueTime)
+	ttl, warnings, err := framework.CalculateTTL(sysView, increment, resp.Auth.TTL, resp.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, le.IssueTime)
 	if err != nil {
 		return nil, err
 	}
@@ -1066,10 +1057,11 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 }
 
 // renewEntry is used to attempt renew of an internal entry
-func (m *ExpirationManager) renewEntry(le *leaseEntry, estimatedTTL time.Duration) (*logical.Response, error) {
+func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	secret := *le.Secret
+	secret.IssueTime = le.IssueTime
+	secret.Increment = increment
 	secret.LeaseID = ""
-	secret.EstimatedTTL = estimatedTTL
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
 	resp, err := m.router.Route(m.quitContext, req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1080,9 +1072,10 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, estimatedTTL time.Duratio
 
 // renewAuthEntry is used to attempt renew of an auth entry. Only the token
 // store should get the actual token ID intact.
-func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry, estimatedTTL time.Duration) (*logical.Response, error) {
+func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry, increment time.Duration) (*logical.Response, error) {
 	auth := *le.Auth
-	auth.EstimatedTTL = estimatedTTL
+	auth.IssueTime = le.IssueTime
+	auth.Increment = increment
 	if strings.HasPrefix(le.Path, "auth/token/") {
 		auth.ClientToken = le.ClientToken
 	} else {

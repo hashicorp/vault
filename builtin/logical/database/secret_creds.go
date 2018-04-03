@@ -52,18 +52,12 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		db.RLock()
 		defer db.RUnlock()
 
-		// Make sure we increase the VALID UNTIL endpoint for this user.  This value is estimated and does not
-		// take into account any backend specific values.  These value will be calculated by core and will only
-		// reduce the TTL based on any running max ttl.  Since vault still manages the lease, it will still get
-		// revokes at the lesser time.
-		if req.Secret.EstimatedTTL > 0 {
-			ttl := req.Secret.EstimatedTTL
-			if role.DefaultTTL > 0 && role.DefaultTTL < ttl {
-				ttl = role.DefaultTTL
-			}
-			if role.MaxTTL > 0 && role.MaxTTL < ttl {
-				ttl = role.MaxTTL
-			}
+		// Make sure we increase the VALID UNTIL endpoint for this user.
+		ttl, _, err := framework.CalculateTTL(b.System(), req.Secret.Increment, role.DefaultTTL, 0, role.MaxTTL, 0, req.Secret.IssueTime)
+		if err != nil {
+			return nil, err
+		}
+		if ttl > 0 {
 			expireTime := time.Now().Add(ttl)
 			err := db.RenewUser(ctx, role.Statements, username, expireTime)
 			if err != nil {
