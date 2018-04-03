@@ -125,7 +125,20 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 		return nil, err
 	}
 
-	if _, ok := conf.Config["upgrade"]; ok {
+	upgradeEntry, err := conf.StorageView.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
+	if err != nil {
+		return nil, err
+	}
+
+	var upgradeInfo UpgradeInfo
+	if upgradeEntry != nil {
+		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !upgradeInfo.Done {
 		err := b.Upgrade(ctx, conf.StorageView)
 		if err != nil {
 			return nil, err
