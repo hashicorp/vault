@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
@@ -140,4 +141,13 @@ func getHeaderForMap(header string, data map[string]interface{}) string {
 	}
 
 	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
+}
+
+func kvParseVersionsFlags(versions []string) []string {
+	versionsOut := make([]string, len(versions))
+	for _, v := range versions {
+		versionsOut = append(versionsOut, strutil.ParseStringSlice(v, ",")...)
+	}
+
+	return versionsOut
 }

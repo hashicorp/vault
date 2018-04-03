@@ -90,7 +90,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	path := sanitizePath(args[0])
 	var err error
 	if len(c.flagVersions) > 0 {
-		err = c.deleteVersions(path, c.flagVersions)
+		err = c.deleteVersions(path, kvParseVersionsFlags(c.flagVersions))
 	} else {
 		err = c.deleteLatest(path)
 	}

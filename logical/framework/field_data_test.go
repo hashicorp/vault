@@ -344,16 +344,6 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			[]int{},
 		},
-		"comma int slice type, slice of comma interface": {
-			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaIntSlice},
-			},
-			map[string]interface{}{
-				"foo": []interface{}{"1,3", "4,5"},
-			},
-			"foo",
-			[]int{1, 3, 4, 5},
-		},
 		"name string type, valid string": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeNameString},
