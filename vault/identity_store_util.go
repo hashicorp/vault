@@ -178,7 +178,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 			}
 
 			for _, item := range bucket.Items {
-				entity, err := i.parseEntityFromBucketItem(item)
+				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {
 					return err
 				}
