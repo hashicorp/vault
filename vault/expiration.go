@@ -1069,6 +1069,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 func (m *ExpirationManager) renewEntry(le *leaseEntry, estimatedTTL time.Duration) (*logical.Response, error) {
 	secret := *le.Secret
 	secret.LeaseID = ""
+	secret.EstimatedTTL = estimatedTTL
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
 	resp, err := m.router.Route(m.quitContext, req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1081,6 +1082,7 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, estimatedTTL time.Duratio
 // store should get the actual token ID intact.
 func (m *ExpirationManager) renewAuthEntry(req *logical.Request, le *leaseEntry, estimatedTTL time.Duration) (*logical.Response, error) {
 	auth := *le.Auth
+	auth.EstimatedTTL = estimatedTTL
 	if strings.HasPrefix(le.Path, "auth/token/") {
 		auth.ClientToken = le.ClientToken
 	} else {
