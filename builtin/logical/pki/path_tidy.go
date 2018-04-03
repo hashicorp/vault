@@ -60,13 +60,13 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	if tidyCertStore {
 		serials, err := req.Storage.List(ctx, "certs/")
 		if err != nil {
-			return nil, fmt.Errorf("error fetching list of certs: %s", err)
+			return nil, errwrap.Wrapf("error fetching list of certs: {{err}}", err)
 		}
 
 		for _, serial := range serials {
 			certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
 			if err != nil {
-				return nil, fmt.Errorf("error fetching certificate %s: %s", serial, err)
+				return nil, errwrap.Wrapf(fmt.Sprintf("error fetching certificate %q: {{err}}", serial), err)
 			}
 
 			if certEntry == nil {
@@ -91,12 +91,12 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 			cert, err := x509.ParseCertificate(certEntry.Value)
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse stored certificate with serial %s: %s", serial, err)
+				return nil, errwrap.Wrapf(fmt.Sprintf("unable to parse stored certificate with serial %q: {{err}}", serial), err)
 			}
 
 			if time.Now().After(cert.NotAfter.Add(bufferDuration)) {
 				if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
-					return nil, fmt.Errorf("error deleting serial %s from storage: %s", serial, err)
+					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from storage: {{err}}", serial), err)
 				}
 			}
 		}
@@ -110,14 +110,14 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 		revokedSerials, err := req.Storage.List(ctx, "revoked/")
 		if err != nil {
-			return nil, fmt.Errorf("error fetching list of revoked certs: %s", err)
+			return nil, errwrap.Wrapf("error fetching list of revoked certs: {{err}}", err)
 		}
 
 		var revInfo revocationInfo
 		for _, serial := range revokedSerials {
 			revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
 			if err != nil {
-				return nil, fmt.Errorf("unable to fetch revoked cert with serial %s: %s", serial, err)
+				return nil, errwrap.Wrapf(fmt.Sprintf("unable to fetch revoked cert with serial %q: {{err}}", serial), err)
 			}
 
 			if revokedEntry == nil {
@@ -142,17 +142,17 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 			err = revokedEntry.DecodeJSON(&revInfo)
 			if err != nil {
-				return nil, fmt.Errorf("error decoding revocation entry for serial %s: %s", serial, err)
+				return nil, errwrap.Wrapf(fmt.Sprintf("error decoding revocation entry for serial %q: {{err}}", serial), err)
 			}
 
 			revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse stored revoked certificate with serial %s: %s", serial, err)
+				return nil, errwrap.Wrapf(fmt.Sprintf("unable to parse stored revoked certificate with serial %q: {{err}}", serial), err)
 			}
 
 			if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
 				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
-					return nil, fmt.Errorf("error deleting serial %s from revoked list: %s", serial, err)
+					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting serial %q from revoked list: {{err}}", serial), err)
 				}
 				tidiedRevoked = true
 			}

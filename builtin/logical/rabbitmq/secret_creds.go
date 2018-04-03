@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -59,7 +60,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	if _, err = client.DeleteUser(username); err != nil {
-		return nil, fmt.Errorf("could not delete user: %s", err)
+		return nil, errwrap.Wrapf("could not delete user: {{err}}", err)
 	}
 
 	return nil, nil

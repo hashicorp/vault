@@ -146,7 +146,7 @@ func (r *zeroAddressRoles) remove(roleName string) error {
 	}
 	length := len(r.Roles)
 	if index >= length || index < 0 {
-		return fmt.Errorf("invalid index [%d]", index)
+		return fmt.Errorf("invalid index %d", index)
 	}
 	// If slice has zero or one item, remove the item by setting slice to nil.
 	if length < 2 {

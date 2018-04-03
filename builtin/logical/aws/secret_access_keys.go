@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -174,7 +175,7 @@ func (b *backend) secretAccessKeysCreate(
 		UserName: username,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Error writing WAL entry: %s", err)
+		return nil, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
 	}
 
 	// Create the user
@@ -223,7 +224,7 @@ func (b *backend) secretAccessKeysCreate(
 	// the secret because it'll get rolled back anyways, so we have to return
 	// an error here.
 	if err := framework.DeleteWAL(ctx, s, walId); err != nil {
-		return nil, fmt.Errorf("Failed to commit WAL entry: %s", err)
+		return nil, errwrap.Wrapf("failed to commit WAL entry: {{err}}", err)
 	}
 
 	// Return the info!

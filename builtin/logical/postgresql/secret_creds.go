@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -218,10 +219,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 		// can't drop if not all privileges are revoked
 		if rows.Err() != nil {
-			return nil, fmt.Errorf("could not generate revocation statements for all rows: %s", rows.Err())
+			return nil, errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
 		}
 		if lastStmtError != nil {
-			return nil, fmt.Errorf("could not perform all revocation statements: %s", lastStmtError)
+			return nil, errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
 		}
 
 		// Drop this user

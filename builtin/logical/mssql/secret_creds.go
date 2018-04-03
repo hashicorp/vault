@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -141,10 +142,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return nil, fmt.Errorf("could not generate sql statements for all rows: %s", rows.Err())
+		return nil, errwrap.Wrapf("could not generate sql statements for all rows: {{err}}", rows.Err())
 	}
 	if lastStmtError != nil {
-		return nil, fmt.Errorf("could not perform all sql statements: %s", lastStmtError)
+		return nil, errwrap.Wrapf("could not perform all sql statements: {{err}}", lastStmtError)
 	}
 
 	// Drop this login
