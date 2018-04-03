@@ -84,19 +84,19 @@ func (h *configHandler) Path() *framework.Path {
 
 			"default_password_ttl": {
 				Type:        framework.TypeInt,
-				Default:     46080,
+				Default:     defaultPasswordTTLs,
 				Description: "In minutes, the default password time-to-live.",
 			},
 
 			"max_password_ttl": {
 				Type:        framework.TypeInt,
-				Default:     46080,
+				Default:     defaultPasswordTTLs,
 				Description: "In minutes, the maximum password time-to-live.",
 			},
 
 			"password_length": {
 				Type:        framework.TypeInt,
-				Default:     64,
+				Default:     defaultPasswordLength,
 				Description: "The desired length of passwords that Vault generates.",
 			},
 		},
@@ -189,7 +189,12 @@ func (c *engineConfig) IsSet() bool {
 }
 
 func (c *engineConfig) Map() map[string]interface{} {
+
 	combined := make(map[string]interface{})
+	if !c.IsSet() {
+		return combined
+	}
+
 	for k, v := range structs.New(c.PasswordConfig).Map() {
 		combined[k] = v
 	}
@@ -201,9 +206,9 @@ func (c *engineConfig) Map() map[string]interface{} {
 
 func newPasswordConfig(fieldData *framework.FieldData) *passwordConfig {
 	return &passwordConfig{
-		DefaultPasswordTTL: getOrDefault("default_password_ttl", defaultPasswordTTLs, fieldData),
-		MaxPasswordTTL:     getOrDefault("max_password_ttl", defaultPasswordTTLs, fieldData),
-		PasswordLength:     getOrDefault("password_length", defaultPasswordLength, fieldData),
+		DefaultPasswordTTL: fieldData.Get("default_password_ttl").(int),
+		MaxPasswordTTL:     fieldData.Get("max_password_ttl").(int),
+		PasswordLength:     fieldData.Get("password_length").(int),
 	}
 }
 
@@ -211,16 +216,4 @@ type passwordConfig struct {
 	DefaultPasswordTTL int `json:"default_password_ttl" structs:"default_password_ttl" mapstructure:"default_password_ttl"`
 	MaxPasswordTTL     int `json:"max_password_ttl" structs:"max_password_ttl" mapstructure:"max_password_ttl"`
 	PasswordLength     int `json:"password_length" structs:"password_length" mapstructure:"password_length"`
-}
-
-func getOrDefault(fieldName string, defaultTo int, fieldData *framework.FieldData) int {
-	settingIfc, ok := fieldData.GetOk(fieldName)
-	if !ok {
-		return defaultTo
-	}
-	setting, ok := settingIfc.(int)
-	if !ok {
-		return defaultTo
-	}
-	return setting
 }
