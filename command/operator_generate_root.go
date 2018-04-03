@@ -252,14 +252,14 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 // verifyOTP verifies the given OTP code is exactly 16 bytes.
 func (c *OperatorGenerateRootCommand) verifyOTP(otp string) error {
 	if len(otp) == 0 {
-		return fmt.Errorf("No OTP passed in")
+		return fmt.Errorf("no OTP passed in")
 	}
 	otpBytes, err := base64.StdEncoding.DecodeString(otp)
 	if err != nil {
-		return fmt.Errorf("Error decoding base64 OTP value: %s", err)
+		return fmt.Errorf("error decoding base64 OTP value: %s", err)
 	}
 	if otpBytes == nil || len(otpBytes) != 16 {
-		return fmt.Errorf("Decoded OTP value is invalid or wrong length")
+		return fmt.Errorf("decoded OTP value is invalid or wrong length")
 	}
 
 	return nil
