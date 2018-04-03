@@ -144,7 +144,7 @@ func getHeaderForMap(header string, data map[string]interface{}) string {
 }
 
 func kvParseVersionsFlags(versions []string) []string {
-	versionsOut := make([]string, len(versions))
+	versionsOut := make([]string, 0, len(versions))
 	for _, v := range versions {
 		versionsOut = append(versionsOut, strutil.ParseStringSlice(v, ",")...)
 	}

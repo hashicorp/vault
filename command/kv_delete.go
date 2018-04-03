@@ -128,7 +128,7 @@ func (c *KVDeleteCommand) deleteVersions(path string, versions []string) error {
 	}
 
 	data := map[string]interface{}{
-		"versions": c.flagVersions,
+		"versions": versions,
 	}
 
 	client, err := c.Client()
