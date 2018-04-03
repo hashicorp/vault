@@ -82,9 +82,14 @@ func (c *ListCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))
 		return 2
 	}
-	if secret == nil || secret.Data == nil {
+	if secret == nil {
 		c.UI.Error(fmt.Sprintf("No value found at %s", path))
 		return 2
+	}
+	if secret.Data == nil {
+		// If secret wasn't nil, we have warnings, so output them anyways. We
+		// may also have non-keys info.
+		return OutputSecret(c.UI, secret)
 	}
 
 	// If the secret is wrapped, return the wrapped response.

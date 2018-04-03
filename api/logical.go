@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -50,6 +51,17 @@ func (c *Logical) Read(path string) (*Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, err := ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
@@ -70,6 +82,17 @@ func (c *Logical) List(path string) (*Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
+		secret, err := ParseSecret(resp.Body)
+		switch err {
+		case nil:
+		case io.EOF:
+			return nil, nil
+		default:
+			return nil, err
+		}
+		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
+			return secret, nil
+		}
 		return nil, nil
 	}
 	if err != nil {
