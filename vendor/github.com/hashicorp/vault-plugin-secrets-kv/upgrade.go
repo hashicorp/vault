@@ -122,7 +122,7 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 		// process has finished.
 	READONLY_LOOP:
 		for {
-			err = s.Put(ctx, &logical.StorageEntry{
+			err := s.Put(ctx, &logical.StorageEntry{
 				Key:   path.Join(b.storagePrefix, "upgrading"),
 				Value: info,
 			})
