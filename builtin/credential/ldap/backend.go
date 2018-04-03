@@ -190,15 +190,13 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// Merge local and LDAP groups
 	allGroups = append(allGroups, ldapGroups...)
 
-	var canonicalGroups []string
+	canonicalGroups := allGroups
 	// If not case sensitive, lowercase all
 	if !cs {
 		canonicalGroups = make([]string, len(allGroups))
 		for i, v := range allGroups {
 			canonicalGroups[i] = strings.ToLower(v)
 		}
-	} else {
-		canonicalGroups = allGroups
 	}
 
 	// Retrieve policies
