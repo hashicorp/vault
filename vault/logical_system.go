@@ -1628,6 +1628,15 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
 	}
 
+	// Alias versioned KV
+	if logicalType == "vkv" {
+		logicalType = "kv"
+		if options == nil {
+			options = map[string]string{}
+		}
+		options["versioned"] = "true"
+	}
+
 	// Create the mount entry
 	me := &MountEntry{
 		Table:       mountTableType,
