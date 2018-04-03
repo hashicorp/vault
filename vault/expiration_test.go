@@ -1298,7 +1298,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 		ExpireTime: time.Now(),
 	}
 
-	resp, err := exp.renewEntry(le)
+	resp, err := exp.renewEntry(le, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1359,7 +1359,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		ExpireTime: time.Now().Add(time.Minute),
 	}
 
-	resp, err := exp.renewAuthEntry(&logical.Request{}, le)
+	resp, err := exp.renewAuthEntry(&logical.Request{}, le, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
